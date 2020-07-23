@@ -23,7 +23,9 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -64,7 +66,7 @@ import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
-class WalletFragment : Fragment(R.layout.home_content) {
+class WalletFragment : Fragment() {
 
     private var clipboardManager: ClipboardManager? = null
     private var blockchainState: BlockchainState? = null
@@ -78,6 +80,14 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private val wallet by lazy { walletApplication.wallet }
     private val config by lazy { walletApplication.configuration }
     private val coinsSendReceivedListener = OnCoinsSentReceivedListener()
+    private var walletFragmentView: View? = null
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        if (walletFragmentView == null) {
+            walletFragmentView = inflater.inflate(R.layout.home_content, container, false)
+        }
+        return walletFragmentView
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -108,14 +118,15 @@ class WalletFragment : Fragment(R.layout.home_content) {
         registerOnCoinsSentReceivedListener()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        unregisterWalletListener()
+    }
+
     override fun onResume() {
         super.onResume()
         showHideSecureAction()
-    }
-
-    override fun onDestroy() {
-        unregisterWalletListener()
-        super.onDestroy()
+        showHideJoinDashPayAction()
     }
 
     private fun registerOnCoinsSentReceivedListener() {

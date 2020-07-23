@@ -146,12 +146,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        recyclerView.setAdapter(null);
-    }
-
-    @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                              final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
