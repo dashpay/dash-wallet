@@ -123,7 +123,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     }
 
     private fun goHome() {
-        startActivity(Intent(this, WalletActivity::class.java))
+        startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
 

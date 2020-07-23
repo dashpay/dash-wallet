@@ -37,7 +37,9 @@ import org.dashevo.dpp.util.HashUtils
 import java.math.BigInteger
 
 
-class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView.Adapter<ContactSearchResultsAdapter.ViewHolder>() {
+class ContactSearchResultsAdapter(private val listener: Listener,
+                                  private val onViewAllRequestsListener: OnViewAllRequestsListener) :
+        RecyclerView.Adapter<ContactSearchResultsAdapter.ViewHolder>() {
 
     companion object {
         const val CONTACT_REQUEST_HEADER = 0
@@ -55,6 +57,7 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
     init {
         setHasStableIds(true)
     }
+
     var itemClickListener: OnItemClickListener? = null
     var results: ArrayList<ViewItem> = arrayListOf()
         set(value) {
@@ -100,6 +103,7 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
             else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")
         }
     }
+
     override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any?>) {
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads)
@@ -132,7 +136,7 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
                 username.text = usernameSearchResult.username
             }
 
-            if(dashPayProfile.avatarUrl.isNotEmpty()) {
+            if (dashPayProfile.avatarUrl.isNotEmpty()) {
                 Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
                         .placeholder(defaultAvatar).into(avatar)
             } else {
@@ -226,7 +230,7 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
                 contact_request_header.text = resources.getString(R.string.contacts_contact_requests_count, requestCount)
 
                 view_all_contacts.setOnClickListener {
-                    listener.onViewAllRequests()
+                    onViewAllRequestsListener.onViewAllRequests()
                 }
             }
         }
@@ -234,9 +238,12 @@ class ContactSearchResultsAdapter(private val listener: Listener) : RecyclerView
 
     interface Listener {
         fun onSortOrderChanged(direction: UsernameSortOrderBy)
-        fun onViewAllRequests()
         fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
         fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
+    }
+
+    interface OnViewAllRequestsListener {
+        fun onViewAllRequests()
     }
 
     fun searchContacts(direction: UsernameSortOrderBy) {
