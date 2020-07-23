@@ -351,11 +351,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<DashPayContactRequest> {
-        //TODO: This can be removed after DashPay Contract is updated. For now it requires
-        //the toUserId field to have 44 characters, however, some userIds starting at 0 will have Base58[43]
-        if (toUserId.length != 44) {
-            return Resource.error("This user doesn't meet the requirements to receive a contact request")
-        }
         return try {
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
@@ -675,7 +670,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayProfileDaoAsync.insert(profile!!)
                 }
             }
-            queueContactsUpdatedListeners()
+            fireContactsUpdatedListeners()
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
             log.error(formatExceptionMessage("error updating contacts", e))
@@ -691,7 +686,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     // Define the code block to be executed
     private val executeUpdateContacts = object : Runnable {
         override fun run() {
-            // Do something here on the main thread
             log.info("Timer: Update contacts")
             // Repeat this the same runnable code block again another 2 seconds
             GlobalScope.launch {
@@ -723,7 +717,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         onContactsUpdatedListeners.remove(listener)
     }
 
-    fun queueContactsUpdatedListeners() {
+    private fun fireContactsUpdatedListeners() {
         backgroundHandler.post {
             for (listener in onContactsUpdatedListeners)
                 listener.onContactsUpdated()

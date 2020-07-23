@@ -5,9 +5,9 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/dash_lighter_gray"
     app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintTop_toTopOf="parent"
-    android:background="@color/dash_lighter_gray">
+    app:layout_constraintTop_toTopOf="parent">
 
     <EditText
         android:id="@+id/search"
@@ -47,10 +47,10 @@
         android:layout_height="0dp"
         android:layout_marginLeft="0dp"
         android:layout_marginRight="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/search"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/search" />
 
     <!--include layout="@layout/user_search_empty_result" />
 

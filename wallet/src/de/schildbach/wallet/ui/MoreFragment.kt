@@ -18,8 +18,8 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.MenuItem
-import androidx.appcompat.widget.Toolbar
+import android.view.View
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
@@ -29,69 +29,48 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
-class MoreActivity : GlobalFooterActivity() {
+class MoreFragment : Fragment(R.layout.activity_more) {
 
     private var blockchainState: BlockchainState? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentViewWithFooter(R.layout.activity_more)
-        activateMoreButton()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
-
-        setTitle(R.string.more_title)
-
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, Observer {
+        setupActionBarWithTitle(R.string.more_title)
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer {
             blockchainState = it
         })
 
         buy_and_sell.setOnClickListener {
             if (blockchainState != null && blockchainState?.replaying!!) {
-                showBlockchainSyncingMessage()
+                requireActivity().showBlockchainSyncingMessage()
             } else {
                 startBuyAndSellActivity()
             }
         }
         security.setOnClickListener {
-            startActivity(Intent(this, SecurityActivity::class.java))
+            startActivity(Intent(requireContext(), SecurityActivity::class.java))
         }
         settings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
         tools.setOnClickListener {
-            startActivity(Intent(this, ToolsActivity::class.java))
+            startActivity(Intent(requireContext(), ToolsActivity::class.java))
         }
         contact_support.setOnClickListener {
-            ReportIssueDialogBuilder.createReportIssueDialog(this,
+            ReportIssueDialogBuilder.createReportIssueDialog(requireContext(),
                     WalletApplication.getInstance()).show()
         }
     }
 
     override fun startActivity(intent: Intent) {
         super.startActivity(intent)
-        overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
+        requireActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
     }
 
     private fun startBuyAndSellActivity() {
         val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(this, wallet))
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
+        startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
     }
 
 }

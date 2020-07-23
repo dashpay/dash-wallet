@@ -436,7 +436,7 @@ class SetPinActivity : AppCompatActivity() {
     }
 
     private fun goHome() {
-        val intent = Intent(this, WalletActivity::class.java)
+        val intent = Intent(this, MainActivity::class.java)
         startActivityNewTask(intent)
     }
 }

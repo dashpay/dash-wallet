@@ -225,7 +225,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
             intent = VerifySeedActivity.createIntent(this, pin)
             configuration.resetBackupSeedReminderTimer()
         } else {
-            intent = WalletActivity.createIntent(this)
+            intent = MainActivity.createIntent(this)
         }
         startActivity(intent)
         finish()
