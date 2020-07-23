@@ -24,6 +24,7 @@ import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
@@ -42,8 +43,7 @@ class MoreFragment : Fragment(R.layout.activity_more) {
 
         buy_and_sell.setOnClickListener {
             if (blockchainState != null && blockchainState?.replaying!!) {
-                //TODO: ???
-                //showBlockchainSyncingMessage()
+                requireActivity().showBlockchainSyncingMessage()
             } else {
                 startBuyAndSellActivity()
             }
