@@ -34,10 +34,10 @@ import static androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 
 @RunWith(AndroidJUnit4.class)
-public class WalletActivityTest {
+public class MainActivityTest {
 
     @Rule
-    public IntentsTestRule<WalletActivity> activityRule = new IntentsTestRule<>(WalletActivity.class);
+    public IntentsTestRule<MainActivity> activityRule = new IntentsTestRule<>(MainActivity.class);
 
     @Test
     public void clickOnBalanceOpenExchangeRates() {

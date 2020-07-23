@@ -17,19 +17,16 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
-import android.view.MenuItem
+import android.view.MenuInflater
 import android.view.View
-import android.view.Window
 import android.widget.Toast
-import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -41,13 +38,11 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.GlobalFooterActivity
-import de.schildbach.wallet.ui.SearchUserActivity
+import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
 
-
-class ContactsActivity : GlobalFooterActivity(), TextWatcher,
+class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
         ContactSearchResultsAdapter.OnItemClickListener {
 
@@ -59,49 +54,45 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
         const val MODE_VIEW_REQUESTS = 2
 
         @JvmStatic
-        fun createIntent(context: Context, mode: Int): Intent {
-            val intent = Intent(context, ContactsActivity::class.java)
-            intent.putExtra(EXTRA_MODE, mode)
-            return intent
+        fun newInstance(mode: Int = MODE_SEARCH_CONTACTS): ContactsFragment {
+            val args = Bundle()
+            args.putInt(EXTRA_MODE, mode)
+
+            val instance = ContactsFragment()
+            instance.arguments = args
+
+            return instance
         }
     }
 
     private lateinit var dashPayViewModel: DashPayViewModel
-    private lateinit var walletApplication: WalletApplication
+    private val walletApplication: WalletApplication by lazy { WalletApplication.getInstance() }
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
-    private val contactsAdapter: ContactSearchResultsAdapter = ContactSearchResultsAdapter(this)
+    private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
     private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.USERNAME
-    private var mode = MODE_SEARCH_CONTACTS
+    private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
     private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
 
-        walletApplication = application as WalletApplication
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
-            mode = intent.extras.getInt(EXTRA_MODE)
-        }
-
-        if (mode == MODE_SEARCH_CONTACTS) {
-            setContentViewWithFooter(R.layout.activity_contacts_root)
-            activateContactsButton()
+        if (requireActivity() is ContactSearchResultsAdapter.OnViewAllRequestsListener) {
+            val viewAllRequestsListener = requireActivity() as ContactSearchResultsAdapter.OnViewAllRequestsListener
+            contactsAdapter = ContactSearchResultsAdapter(this, viewAllRequestsListener)
         } else {
-            setContentView(R.layout.activity_contacts_root)
+            throw java.lang.IllegalStateException("The activity hosting this fragment should implement" +
+                    "ContactSearchResultsAdapter.Listener")
         }
 
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        val actionBar = supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
-        }
-
-        contacts_rv.layoutManager = LinearLayoutManager(this)
+        contacts_rv.layoutManager = LinearLayoutManager(requireContext())
         contacts_rv.adapter = this.contactsAdapter
         this.contactsAdapter.itemClickListener = this
 
@@ -110,13 +101,13 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
         if (mode == MODE_VIEW_REQUESTS) {
             search.visibility = View.GONE
             icon.visibility = View.GONE
-            setTitle(R.string.contact_requests_title)
+            setupActionBarWithTitle(R.string.contact_requests_title)
         } else {
             // search should be available for all other modes
             search.addTextChangedListener(this)
             search.visibility = View.VISIBLE
             icon.visibility = View.VISIBLE
-            setTitle(R.string.contacts_title)
+            setupActionBarWithTitle(R.string.contacts_title)
         }
 
         searchContacts()
@@ -124,14 +115,14 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
 
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
-        dashPayViewModel.searchContactsLiveData.observe(this, Observer {
+        dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner, Observer {
             if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
                     processResults(it.data)
                 }
             }
         })
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, Observer {
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(viewLifecycleOwner, Observer {
             if (it != null) {
                 //TODO: we don't have an easy way of getting the identity id (userId)
                 val tx = walletApplication.wallet.getTransaction(it.creditFundingTxId)
@@ -140,44 +131,42 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
             }
         })
 
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
-            override fun onChanged(it: Resource<DashPayContactRequest>?) {
-                if (it != null && currentPosition != -1) {
-                    when (it.status) {
-                        Status.LOADING -> {
+        dashPayViewModel.getContactRequestLiveData.observe(viewLifecycleOwner, Observer<Resource<DashPayContactRequest>> { it ->
+            if (it != null && currentPosition != -1) {
+                when (it.status) {
+                    Status.LOADING -> {
 
+                    }
+                    Status.ERROR -> {
+                        var msg = it.message
+                        if (msg == null) {
+                            msg = "!!Error!!  ${it.exception!!.message}"
                         }
-                        Status.ERROR -> {
-                            var msg = it.message
-                            if (msg == null) {
-                                msg = "!!Error!!  ${it.exception!!.message}"
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    }
+                    Status.SUCCESS -> {
+                        // update the data
+                        contactsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
+                        when (mode) {
+                            MODE_VIEW_REQUESTS -> {
+                                contactsAdapter.results.removeAt(currentPosition)
+                                contactsAdapter.notifyItemRemoved(currentPosition)
                             }
-                            Toast.makeText(this@ContactsActivity, msg, Toast.LENGTH_LONG).show()
-                        }
-                        Status.SUCCESS -> {
-                            // update the data
-                            contactsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
-                            when (mode) {
-                                MODE_VIEW_REQUESTS -> {
-                                    contactsAdapter.results.removeAt(currentPosition)
-                                    contactsAdapter.notifyItemRemoved(currentPosition)
-                                }
-                                MODE_SEARCH_CONTACTS -> {
-                                    // instead of removing the contact request and add a contact
-                                    // just reload all the items
-                                    searchContacts()
-                                }
-                                MODE_SELECT_CONTACT -> {
-                                    // will there be contact requests in this mode?
-                                }
-                                else -> {
-                                    throw IllegalStateException("invalid mode for ContactsActivity")
-                                }
+                            MODE_SEARCH_CONTACTS -> {
+                                // instead of removing the contact request and add a contact
+                                // just reload all the items
+                                searchContacts()
                             }
-
-                            currentPosition = -1
-
+                            MODE_SELECT_CONTACT -> {
+                                // will there be contact requests in this mode?
+                            }
+                            else -> {
+                                throw IllegalStateException("invalid mode for ContactsActivity")
+                            }
                         }
+
+                        currentPosition = -1
+
                     }
                 }
             }
@@ -215,11 +204,12 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
         contactsAdapter.results = results
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+
+    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
         if (mode == MODE_SEARCH_CONTACTS) {
             menuInflater.inflate(R.menu.contacts_menu, menu)
         }
-        return super.onCreateOptionsMenu(menu)
+        return super.onCreateOptionsMenu(menu, menuInflater)
     }
 
     override fun onSortOrderChanged(direction: UsernameSortOrderBy) {
@@ -252,31 +242,20 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        startActivityForResult(DashPayUserActivity.createIntent(this,
-                usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
-    }
+        when {
+            usernameSearchResult.isPendingRequest -> {
+                startActivity(DashPayUserActivity.createIntent(requireContext(),
+                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = false,
+                        contactRequestReceived = true))
 
-
-    override fun onGotoClick() {
-        finish()
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                return true
             }
-            R.id.contacts_add_contact -> {
-                startActivity(Intent(this, SearchUserActivity::class.java))
+            !usernameSearchResult.isPendingRequest -> {
+                // How do we handle if this activity was started from the Payments Screen?
+                startActivity(DashPayUserActivity.createIntent(requireContext(),
+                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
+                        contactRequestReceived = usernameSearchResult.requestReceived))
             }
         }
-        return super.onOptionsItemSelected(item)
-    }
-
-    override fun onViewAllRequests() {
-        startActivity(createIntent(this, MODE_VIEW_REQUESTS))
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
@@ -295,4 +274,5 @@ class ContactsActivity : GlobalFooterActivity(), TextWatcher,
             searchContacts()
         }
     }
+
 }

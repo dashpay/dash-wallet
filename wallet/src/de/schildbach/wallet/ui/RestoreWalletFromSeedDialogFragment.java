@@ -190,7 +190,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
     @SuppressLint("StringFormatInvalid")
     private void restoreWalletFromSeed(final List<String> words) {
-        final WalletActivity activity = (WalletActivity) this.activity;
+        final MainActivity activity = (MainActivity) this.activity;
         try {
             MnemonicCodeExt.getInstance().check(activity, words);
             activity.restoreWallet(WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS));

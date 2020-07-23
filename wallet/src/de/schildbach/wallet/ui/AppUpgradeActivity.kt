@@ -98,7 +98,7 @@ class AppUpgradeActivity : AppCompatActivity() {
 
     private fun onCorrectPin(pin: String) {
         configuration.pinLength = pin.length
-        startActivity(WalletActivity.createIntent(this))
+        startActivity(MainActivity.createIntent(this))
     }
 
     private fun walletLocked() {

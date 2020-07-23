@@ -89,18 +89,18 @@
             android:screenOrientation="portrait"/>
 
         <activity
-            android:name="de.schildbach.wallet.ui.WalletActivity"
+            android:name="de.schildbach.wallet.ui.MainActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:windowSoftInputMode="stateAlwaysHidden"
             android:exported="true"
             android:label="@string/app_name_short"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.NoStatusBar" />
+            android:theme="@style/My.Theme.NoActionBar" />
 
         <activity-alias
-            android:name="de.schildbach.wallet.WalletActivity"
-            android:targetActivity="de.schildbach.wallet.ui.WalletActivity">
+            android:name="de.schildbach.wallet.MainActivity"
+            android:targetActivity="de.schildbach.wallet.ui.MainActivity">
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <data android:mimeType="application/x-drktx" />
@@ -229,10 +229,6 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.MoreActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
         <activity android:name="de.schildbach.wallet.ui.SecurityActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
@@ -255,10 +251,6 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity android:name="de.schildbach.wallet.ui.ToolsActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity android:name="de.schildbach.wallet.ui.PaymentsActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
@@ -303,11 +295,6 @@
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
-        <activity
-            android:name="de.schildbach.wallet.ui.dashpay.ContactsActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:windowSoftInputMode="stateHidden|adjustResize" />
         <activity
             android:name="de.schildbach.wallet.ui.dashpay.NotificationsActivity"
             android:screenOrientation="portrait"

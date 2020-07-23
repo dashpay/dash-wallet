@@ -16,14 +16,6 @@
         app:pb_sub_title="@string/payments_pay_to_contact_sub_title"
         app:pb_title="@string/payments_pay_to_contact_title" />
 
-    <FrameLayout
-        android:id="@+id/pay_by_contact_select_divider"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
-        android:background="@color/dash_light_gray" />
-
     <de.schildbach.wallet.ui.widget.PaymentsButtonView
         android:id="@+id/pay_by_qr_button"
         style="@style/MenuRow"
@@ -32,13 +24,6 @@
         app:pb_icon="@drawable/ic_scan_qr"
         app:pb_sub_title="@string/payments_pay_by_qr_sub_title"
         app:pb_title="@string/payments_pay_by_qr_title" />
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp"
-        android:background="@color/dash_light_gray" />
 
     <de.schildbach.wallet.ui.widget.PaymentsButtonView
         android:id="@+id/pay_to_address"
