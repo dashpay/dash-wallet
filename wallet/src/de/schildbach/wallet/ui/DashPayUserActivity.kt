@@ -50,6 +50,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
     private val username by lazy { intent.getStringExtra(USERNAME) }
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
+    private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, this)
 
     companion object {
         private const val USERNAME = "username"

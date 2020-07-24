@@ -16,9 +16,9 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -73,7 +73,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
-    protected val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this)
+    private lateinit var notificationsAdapter: NotificationsAdapter
     private var query = ""
     private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.DATE_ADDED
@@ -86,6 +86,8 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
 
         walletApplication = application as WalletApplication
         lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
+
+        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet, this)
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
             mode = intent.extras.getInt(EXTRA_MODE)
