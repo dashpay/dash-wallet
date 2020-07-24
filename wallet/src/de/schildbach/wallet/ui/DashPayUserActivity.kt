@@ -40,8 +40,11 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.InteractionAwareActivity
+import kotlin.collections.ArrayList
 
-class DashPayUserActivity : InteractionAwareActivity() {
+class DashPayUserActivity : InteractionAwareActivity(),
+        NotificationsAdapter.OnItemClickListener,
+        NotificationsAdapter.OnContactRequestButtonClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private val username by lazy { intent.getStringExtra(USERNAME) }
@@ -118,6 +121,19 @@ class DashPayUserActivity : InteractionAwareActivity() {
                 }
             }
         })
+
+        notifications_rv.layoutManager = LinearLayoutManager(this)
+        notifications_rv.adapter = this.notificationsAdapter
+        this.notificationsAdapter.itemClickListener = this
+
+        dashPayViewModel.searchNotificationsForUser(profile.userId)
+        dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
+            if (Status.SUCCESS == it.status) {
+                if (it.data != null) {
+                    processResults(it.data)
+                }
+            }
+        })
     }
 
     private fun startLoading() {
@@ -142,20 +158,24 @@ class DashPayUserActivity : InteractionAwareActivity() {
             //No Relationship
             false to false -> {
                 sendContactRequestBtn.visibility = View.VISIBLE
+                notifications_rv.visibility = View.GONE
             }
             //Contact Established
             true to true -> {
                 payContactBtn.visibility = View.VISIBLE
+                notifications_rv.visibility = View.VISIBLE
             }
             //Request Sent / Pending
             true to false -> {
                 contactRequestSentBtn.visibility = View.VISIBLE
+                notifications_rv.visibility = View.GONE
             }
             //Request Received
             false to true -> {
                 payContactBtn.visibility = View.VISIBLE
                 contactRequestReceivedContainer.visibility = View.VISIBLE
                 requestTitle.text = getString(R.string.contact_request_received_title, username)
+                notifications_rv.visibility = View.GONE
             }
         }
     }
@@ -199,4 +219,44 @@ class DashPayUserActivity : InteractionAwareActivity() {
         }.parse()
     }
 
+    override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
+        //do nothing if an item is clicked for now
+    }
+
+    override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        // do nothing
+    }
+
+    override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        //do nothing if an item is clicked for now
+    }
+
+    private fun processResults(data: List<NotificationItem>) {
+
+        val results = ArrayList<NotificationsAdapter.ViewItem>()
+
+        data.forEach { results.add(NotificationsAdapter.ViewItem(it, getViewType(it), false)) }
+
+        results.sortByDescending {
+            it.notificationItem!!.date
+        }
+
+        notificationsAdapter.results = results
+    }
+
+    private fun getViewType(notificationItem: NotificationItem): Int {
+        return when (notificationItem.type) {
+            NotificationItem.Type.CONTACT_REQUEST,
+            NotificationItem.Type.CONTACT -> return when (notificationItem.usernameSearchResult!!.requestSent to notificationItem.usernameSearchResult.requestReceived) {
+                true to true -> {
+                    NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
+                }
+                false to true -> {
+                    NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
+                }
+                else -> throw IllegalArgumentException("View not supported")
+            }
+            NotificationItem.Type.PAYMENT -> NotificationsAdapter.NOTIFICATION_PAYMENT
+        }
+    }
 }
