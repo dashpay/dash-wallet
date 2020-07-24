@@ -24,12 +24,15 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dashevo.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 
 /**
@@ -75,7 +78,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
         val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
         setContentView(R.layout.activity_successful_transaction)
 
-        val transactionResultViewBinder = TransactionResultViewBinder(container)
+        val blockchainIdentity: BlockchainIdentity? = runBlocking { PlatformRepo.getInstance().getBlockchainIdentity() }
+
+        val transactionResultViewBinder = TransactionResultViewBinder(container, blockchainIdentity)
         val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)

@@ -38,6 +38,7 @@ import android.view.ViewGroup;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 
 import org.bitcoinj.core.Address;
@@ -74,6 +75,7 @@ import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet_test.R;
 
 public class SendCoinsFragment extends Fragment {
@@ -90,6 +92,7 @@ public class SendCoinsFragment extends Fragment {
 
     private SendCoinsViewModel viewModel;
     private EnterAmountSharedViewModel enterAmountSharedViewModel;
+    private DashPayViewModel dashPayViewModel;
 
     private boolean wasAmountChangedByTheUser = false;
 
@@ -254,6 +257,8 @@ public class SendCoinsFragment extends Fragment {
             }
         });
 
+        dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
+
         if (savedInstanceState == null) {
             final Intent intent = activity.getIntent();
 
@@ -270,7 +275,8 @@ public class SendCoinsFragment extends Fragment {
                     public void onChanged(DashPayProfile dashPayProfile) {
                         //For now pay back to the Dash Core wallet
                         if(dashPayProfile != null) {
-                            PaymentIntent payToAddress = PaymentIntent.fromAddress(Address.fromBase58(Constants.NETWORK_PARAMETERS, "yMJbuZxDJi7CB7YCCJ5H85rp2yYv6GVtmW"), dashPayProfile.getUsername());
+                            Address address = dashPayViewModel.getNextContactAddress(paymentIntent.payeeUserId);
+                            PaymentIntent payToAddress = PaymentIntent.fromAddress(Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()), dashPayProfile.getUsername());
 
                             viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
 
@@ -591,12 +597,13 @@ public class SendCoinsFragment extends Fragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
         DashPayProfile dashPayProfile = enterAmountSharedViewModel.getDashPayProfileData().getValue();
-        String username = dashPayProfile.getUsername();
-        String displayName = dashPayProfile.getDisplayName().isEmpty() ? username : dashPayProfile.getDisplayName();
+        String username = dashPayProfile != null ? dashPayProfile.getUsername() : null;
+        String displayName = dashPayProfile == null || dashPayProfile.getDisplayName().isEmpty() ? username : dashPayProfile.getDisplayName();
+        String avatarUrl = dashPayProfile != null ? dashPayProfile.getAvatarUrl() : null;
 
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null,
-                username, displayName, dashPayProfile.getAvatarUrl());
+                username, displayName, avatarUrl);
         dialog.show(Objects.requireNonNull(getFragmentManager()), "ConfirmTransactionDialog");
     }
 

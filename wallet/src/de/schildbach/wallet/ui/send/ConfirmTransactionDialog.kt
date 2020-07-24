@@ -70,9 +70,11 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             bundle.putString(ARG_PAYEE_NAME, payeeName)
             bundle.putString(ARG_PAYEE_VERIFIED_BY, payeeVerifiedBy)
             bundle.putString(ARG_BUTTON_TEXT, buttonText)
-            bundle.putString(ARG_PAYEE_DISPLAYNAME, displayName)
-            bundle.putString(ARG_PAYEE_AVATAR_URL, avatarUrl)
-            bundle.putString(ARG_PAYEE_USERNAME, username)
+            if (displayName != null) {
+                bundle.putString(ARG_PAYEE_DISPLAYNAME, displayName)
+                bundle.putString(ARG_PAYEE_AVATAR_URL, avatarUrl)
+                bundle.putString(ARG_PAYEE_USERNAME, username)
+            }
             dialog.arguments = bundle
             return dialog
         }

@@ -102,6 +102,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
     private val securityGuard = SecurityGuard()
 
+    suspend fun getBlockchainIdentity(): BlockchainIdentity? {
+        val fromUserIdentityData = blockchainIdentityDataDaoAsync.load() ?: return null
+        return initBlockchainIdentity(fromUserIdentityData,
+                walletApplication.wallet)
+    }
+
     fun isPlatformAvailable(): Resource<Boolean> {
         // this checks only one random node, but should check several.
         // it is possible that some nodes are not available due to location,
@@ -380,6 +386,27 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    /*suspend fun acceptContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Boolean> {
+        return try {
+            val potentialContactIdentity = platform.identities.get(toUserId)
+            log.info("potential contact identity: $potentialContactIdentity")
+
+            //Load our own identity
+            val ourIdentityData = blockchainIdentityDataDaoAsync.load()!!
+            this.blockchainIdentity = initBlockchainIdentity(ourIdentityData,
+                    walletApplication.wallet)
+
+            val fromUserContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(ourIdentityData.)
+
+            // Create Contact Request
+            blockchainIdentity.addContactPaymentKeyChain(potentialContactIdentity!!, fromUserContactRequest.toDocument(), encryptionKey)
+
+            Resource.success(true)
+        } catch (e: Exception) {
+            Resource.error(formatExceptionMessage("accept contact request", e))
+        }
+    }*/
+
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
@@ -619,6 +646,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 updateDashPayProfile(dashPayProfile!!)
             }
         }
+    }
+
+    suspend fun getNextContactAddress(userId: String): Address {
+        val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
+        val blockchainIdentity = initBlockchainIdentity(blockchainIdentityData!!, walletApplication.wallet)
+        return blockchainIdentity.getContactNextPaymentAddress(userId)
     }
 
     // contacts

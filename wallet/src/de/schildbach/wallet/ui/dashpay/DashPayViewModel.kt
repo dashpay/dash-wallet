@@ -28,6 +28,8 @@ import de.schildbach.wallet.ui.send.DeriveKeyTask
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import java.lang.Exception
@@ -42,8 +44,10 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     val notificationCountLiveData = NotificationCountLiveData(walletApplication, platformRepo)
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo)
+    val notificationsForUserLiveData = NotificationsForUserLiveData(walletApplication, platformRepo)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
+    private val contactIdLiveData = MutableLiveData<String>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
@@ -116,6 +120,10 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         notificationsLiveData.searchNotifications(text)
     }
 
+    fun searchNotificationsForUser(userId: String) {
+        notificationsForUserLiveData.searchNotifications(userId)
+    }
+
     fun getNotificationCount(date: Long) {
         notificationCountLiveData.getNotificationCount()
     }
@@ -130,6 +138,14 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             platformRepo.updateContactRequests()
         }
+    }
+
+    fun getNextContactAddress(userId: String): Address {
+        var address: Address? = null
+        runBlocking {
+            address = platformRepo.getNextContactAddress(userId)
+        }
+        return address!!
     }
 
     //TODO: this can probably be simplified using coroutines
@@ -158,6 +174,21 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
             contactRequestLiveData.value = Pair(toUserId, null)
         })
     }
+
+    fun acceptContactRequest(toUserId: String) {
+
+    }
+
+    /*val getContactNextAddressLiveData = Transformations.switchMap(contactIdLiveData) { it ->
+        liveData(Dispatchers.IO) {
+            if (it.second != null) {
+                emit(Resource.loading(null))
+                emit(platformRepo.sendContactRequest(it.first, it.second!!))
+            } else {
+                emit(Resource.error("Failed to decrypt keys"))
+            }
+        }
+    }*/
 
     val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) { it ->
         liveData(context = contactRequestJob + Dispatchers.IO) {

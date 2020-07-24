@@ -10,12 +10,15 @@ import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dashevo.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 
 /**
@@ -46,7 +49,8 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         tx = wallet.getTransaction(txId)
-        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
+        val blockchainIdentity: BlockchainIdentity? = runBlocking { PlatformRepo.getInstance().getBlockchainIdentity() }
+        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, blockchainIdentity)
         if (tx != null) {
             transactionResultViewBinder.bind(tx!!)
         } else {

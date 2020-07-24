@@ -272,6 +272,7 @@ class EnterAmountFragment : Fragment() {
             }
             applyNewValue(it.toPlainString())
         })
+        userinfo.visibility = View.GONE
         sharedViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
             userinfo.visibility = View.VISIBLE
             displayname.text = if (it.displayName.isNotEmpty())
