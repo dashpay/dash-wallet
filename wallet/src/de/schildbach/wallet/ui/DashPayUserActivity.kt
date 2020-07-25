@@ -52,6 +52,8 @@ class DashPayUserActivity : InteractionAwareActivity(),
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
     private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, this)
+    private var contactRequestReceived: Boolean = false
+    private var contactRequestSent: Boolean = false
 
     companion object {
         private const val USERNAME = "username"
@@ -80,6 +82,10 @@ class DashPayUserActivity : InteractionAwareActivity(),
         setContentView(R.layout.activity_dashpay_user)
 
         close.setOnClickListener { finish() }
+        contactRequestSent = intent.getBooleanExtra(CONTACT_REQUEST_SENT, false)
+        contactRequestReceived = intent.getBooleanExtra(CONTACT_REQUEST_RECEIVED, false)
+
+        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this, username[0])
         if (profile.avatarUrl.isNotEmpty()) {
@@ -95,8 +101,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
             displayNameTxt.text = username
         }
         updateContactRelationUi()
-
-        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         sendContactRequestBtn.setOnClickListener { sendContactRequest(profile.userId) }
         accept.setOnClickListener { sendContactRequest(profile.userId) }
@@ -128,14 +132,15 @@ class DashPayUserActivity : InteractionAwareActivity(),
         notifications_rv.adapter = this.notificationsAdapter
         this.notificationsAdapter.itemClickListener = this
 
-        dashPayViewModel.searchNotificationsForUser(profile.userId)
-        dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
-            if (Status.SUCCESS == it.status) {
-                if (it.data != null) {
-                    processResults(it.data)
+        if (contactRequestReceived && contactRequestSent) {
+            dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
+                if (Status.SUCCESS == it.status) {
+                    if (it.data != null) {
+                        processResults(it.data)
+                    }
                 }
-            }
-        })
+            })
+        }
     }
 
     private fun startLoading() {
@@ -150,9 +155,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
     }
 
     private fun updateContactRelationUi() {
-        val contactRequestSent = intent.getBooleanExtra(CONTACT_REQUEST_SENT, false)
-        val contactRequestReceived = intent.getBooleanExtra(CONTACT_REQUEST_RECEIVED, false)
-
         listOf<View>(sendContactRequestBtn, sendingContactRequestBtn, contactRequestSentBtn,
                 contactRequestReceivedContainer, payContactBtn).forEach { it.visibility = View.GONE }
 
@@ -166,6 +168,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             true to true -> {
                 payContactBtn.visibility = View.VISIBLE
                 notifications_rv.visibility = View.VISIBLE
+                dashPayViewModel.searchNotificationsForUser(profile.userId)
             }
             //Request Sent / Pending
             true to false -> {
