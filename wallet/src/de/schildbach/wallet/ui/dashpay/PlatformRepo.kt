@@ -15,6 +15,7 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
@@ -22,14 +23,11 @@ import com.google.common.base.Stopwatch
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityBaseData
-import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.DashPayContactRequest
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.BlockchainService
+import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
@@ -51,7 +49,6 @@ import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dpp.document.Document
-import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
@@ -664,10 +661,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
         val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+        if (blockchainIdentityData.username == null) {
+            return // this is here because the wallet is being reset without removing blockchainIdentityData
+        }
         val blockchainIdentity = initBlockchainIdentity(blockchainIdentityData, walletApplication.wallet)
 
         val userIdList = HashSet<String>()
         val watch = Stopwatch.createStarted()
+        var addedContact = false
         Context.propagate(walletApplication.wallet.context)
 
         try {
@@ -691,6 +692,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                             encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                         }
                         blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, it, encryptionKey!!)
+                        addedContact = true
                     }
                 } catch (e: KeyCrypterException) {
                     // we can't send payments to this contact due to an invalid encryptedPublicKey
@@ -716,6 +718,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                             encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                         }
                         blockchainIdentity.addContactPaymentKeyChain(contactIdentity!!, it, encryptionKey!!)
+                        addedContact = true
                     }
                 } catch (e: KeyCrypterException) {
                     // we can't send payments to this contact due to an invalid encryptedPublicKey
@@ -743,6 +746,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             }
             queueContactsUpdatedListeners()
+
+            // If new keychains were added to the wallet, then update the bloom filters
+            if (addedContact) {
+                val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                        BlockchainServiceImpl::class.java)
+                walletApplication.startService(intent)
+            }
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
             log.error(formatExceptionMessage("error updating contacts", e))
