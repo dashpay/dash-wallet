@@ -217,7 +217,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             data.filter { r -> r.requestSent && r.requestReceived }
         else ArrayList()
 
-        if (contacts.isNotEmpty() && mode == MODE_SEARCH_CONTACTS)
+        if (contacts.isNotEmpty() && mode != MODE_VIEW_REQUESTS)
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
         contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
 

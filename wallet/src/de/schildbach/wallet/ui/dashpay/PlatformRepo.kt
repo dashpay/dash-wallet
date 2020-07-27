@@ -679,7 +679,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 dashPayContactRequestDaoAsync.insert(contactRequest)
 
                 // add our receiving from this contact keychain if it doesn't exist
-                val contact = EvolutionContact(Sha256Hash.wrap(Base58.decode(userId)), Sha256Hash.wrap(Base58.decode(contactRequest.toUserId)))
+                val contact = EvolutionContact(userId, contactRequest.toUserId)
                 try {
                     if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
                         val contactIdentity = platform.identities.get(contactRequest.toUserId)
