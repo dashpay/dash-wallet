@@ -745,7 +745,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayProfileDaoAsync.insert(profile!!)
                 }
             }
-            queueContactsUpdatedListeners()
+            fireContactsUpdatedListeners()
 
             // If new keychains were added to the wallet, then update the bloom filters
             if (addedContact) {
@@ -768,7 +768,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     // Define the code block to be executed
     private val executeUpdateContacts = object : Runnable {
         override fun run() {
-            // Do something here on the main thread
             log.info("Timer: Update contacts")
             // Repeat this the same runnable code block again another 2 seconds
             GlobalScope.launch {
@@ -800,7 +799,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         onContactsUpdatedListeners.remove(listener)
     }
 
-    fun queueContactsUpdatedListeners() {
+    private fun fireContactsUpdatedListeners() {
         backgroundHandler.post {
             for (listener in onContactsUpdatedListeners)
                 listener.onContactsUpdated()

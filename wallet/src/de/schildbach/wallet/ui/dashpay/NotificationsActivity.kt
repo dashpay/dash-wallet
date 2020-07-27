@@ -40,17 +40,16 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.GlobalFooterActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
+import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.max
 
-class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
-        NotificationsAdapter.OnItemClickListener,
-        NotificationsAdapter.OnContactRequestButtonClickListener {
+class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
+        NotificationsAdapter.OnItemClickListener, NotificationsAdapter.OnContactRequestButtonClickListener {
 
     companion object {
         private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
@@ -93,12 +92,7 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
             mode = intent.extras.getInt(EXTRA_MODE)
         }
 
-        if (mode and MODE_NOTIFICATIONS_GLOBAL_FOOTER != 0) {
-            setContentViewWithFooter(R.layout.activity_notifications)
-            activateContactsButton()
-        } else {
-            setContentView(R.layout.activity_notifications)
-        }
+        setContentView(R.layout.activity_notifications)
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -253,10 +247,6 @@ class NotificationsActivity : GlobalFooterActivity(), TextWatcher,
                 usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
                 contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
 
-    }
-
-    override fun onGotoClick() {
-        finish()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

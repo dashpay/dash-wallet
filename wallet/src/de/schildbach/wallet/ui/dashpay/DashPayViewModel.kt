@@ -124,7 +124,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         notificationsForUserLiveData.searchNotifications(userId)
     }
 
-    fun getNotificationCount(date: Long) {
+   fun getNotificationCount() {
         notificationCountLiveData.getNotificationCount()
     }
 
