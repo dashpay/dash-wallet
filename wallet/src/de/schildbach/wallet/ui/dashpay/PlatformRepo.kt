@@ -31,10 +31,7 @@ import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
@@ -53,6 +50,7 @@ import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
+import java.lang.Runnable
 import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -809,5 +807,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun getIdentityForName(nameDocument: Document): String {
         val records = nameDocument.data["records"] as Map<String, Any?>
         return records["dashIdentity"] as String
+    }
+
+    suspend fun getLocalUsernameSearchResult(userId: String): UsernameSearchResult {
+        val profile = dashPayProfileDaoAsync.load(userId)
+        val receivedContactRequest = dashPayContactRequestDaoAsync.loadToOthers(userId)?.let { it[0] }
+        val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { it[0] }
+
+        return UsernameSearchResult(profile!!.username, profile, sentContactRequest, receivedContactRequest)
     }
 }

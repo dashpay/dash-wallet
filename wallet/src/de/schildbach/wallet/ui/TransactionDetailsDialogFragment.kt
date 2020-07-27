@@ -9,7 +9,9 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import androidx.fragment.app.DialogFragment
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R

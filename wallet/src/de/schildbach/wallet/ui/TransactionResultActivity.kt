@@ -23,6 +23,7 @@ import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.WalletUtils
@@ -47,10 +48,16 @@ class TransactionResultActivity : AbstractWalletActivity() {
         const val EXTRA_USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
         private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
+        private const val EXTRA_USERID = "payee_userid"
 
         @JvmStatic
         fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean): Intent {
-            return createIntent(context, action, transaction, userAuthorized, null, null)
+            return createIntent(context, action, transaction, userAuthorized, null, null, null)
+        }
+
+        @JvmStatic
+        fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean, userId: String? = null): Intent {
+            return createIntent(context, action, transaction, userAuthorized, null, null, userId)
         }
 
         @JvmStatic
@@ -60,13 +67,14 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
 
         fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
-                         paymentMemo: String? = null, payeeVerifiedBy: String? = null): Intent {
+                         paymentMemo: String? = null, payeeVerifiedBy: String? = null, userId: String? = null): Intent {
             return Intent(context, TransactionResultActivity::class.java).apply {
                 setAction(action)
                 putExtra(EXTRA_TX_ID, transaction.txId)
                 putExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, userAuthorized)
                 putExtra(EXTRA_PAYMENT_MEMO, paymentMemo)
                 putExtra(EXTRA_PAYEE_VERIFIED_BY, payeeVerifiedBy)
+                putExtra(EXTRA_USERID, userId)
             }
         }
     }
@@ -91,6 +99,11 @@ class TransactionResultActivity : AbstractWalletActivity() {
                 when {
                     intent.action == Intent.ACTION_VIEW -> {
                         finish()
+                    }
+                    intent.getStringExtra(EXTRA_USERID) != null -> {
+                        finish()
+                        val userId = intent.getStringExtra(EXTRA_USERID)
+                        startActivity(DashPayUserActivity.createIntent(this, userId, true))
                     }
                     intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                         startActivity(MainActivity.createIntent(this))

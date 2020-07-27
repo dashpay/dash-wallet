@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
@@ -28,15 +27,18 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -61,6 +63,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
         private const val PROFILE = "profile"
         private const val CONTACT_REQUEST_SENT = "contact_request_sent"
         private const val CONTACT_REQUEST_RECEIVED = "contact_request_received"
+        private const val RETURN_HOME = "return_home" //return to home screen on close
 
         const val REQUEST_CODE_DEFAULT = 0
         const val RESULT_CODE_OK = 1
@@ -68,13 +71,21 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         @JvmStatic
         fun createIntent(context: Context, username: String, profile: DashPayProfile?,
-                         contactRequestSent: Boolean, contactRequestReceived: Boolean): Intent {
+                         contactRequestSent: Boolean, contactRequestReceived: Boolean, returnToHomeScreen: Boolean = false): Intent {
             val intent = Intent(context, DashPayUserActivity::class.java)
             intent.putExtra(USERNAME, username)
             intent.putExtra(PROFILE, profile)
             intent.putExtra(CONTACT_REQUEST_SENT, contactRequestSent)
             intent.putExtra(CONTACT_REQUEST_RECEIVED, contactRequestReceived)
+            intent.putExtra(RETURN_HOME, returnToHomeScreen)
             return intent
+        }
+
+        @JvmStatic
+        fun createIntent(context: Context, userId: String, returnToHomeScreen: Boolean): Intent {
+            val usernameSearchResult = runBlocking { PlatformRepo.getInstance().getLocalUsernameSearchResult(userId) }
+            return createIntent(context, usernameSearchResult.dashPayProfile.username, usernameSearchResult.dashPayProfile,
+                usernameSearchResult.requestSent, usernameSearchResult.requestReceived, returnToHomeScreen)
         }
     }
 
@@ -197,6 +208,14 @@ class DashPayUserActivity : InteractionAwareActivity(),
     override fun finish() {
         super.finish()
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_bottom)
+
+        /*
+        if (intent.getBooleanExtra(RETURN_HOME, false)) {
+            val intent = MainActivity.createIntent(this)
+            intent.putExtra(MainActivity.EXTRA_RESET_BLOCKCHAIN, true)
+            startActivity(intent)
+        }
+         */
     }
 
     private fun startPayActivity() {

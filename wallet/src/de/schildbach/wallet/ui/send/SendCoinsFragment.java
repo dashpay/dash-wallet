@@ -273,10 +273,9 @@ public class SendCoinsFragment extends Fragment {
                 AppDatabase.getAppDatabase().dashPayProfileDao().load(paymentIntent.payeeUserId).observe(getViewLifecycleOwner(), new Observer<DashPayProfile>() {
                     @Override
                     public void onChanged(DashPayProfile dashPayProfile) {
-                        //For now pay back to the Dash Core wallet
                         if(dashPayProfile != null) {
                             Address address = dashPayViewModel.getNextContactAddress(paymentIntent.payeeUserId);
-                            PaymentIntent payToAddress = PaymentIntent.fromAddress(Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()), dashPayProfile.getUsername());
+                            PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()), dashPayProfile.getUserId());
 
                             viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
 
@@ -439,7 +438,7 @@ public class SendCoinsFragment extends Fragment {
         }
 
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                activity.getIntent().getAction(), transaction, activity.isUserAuthorized());
+                activity.getIntent().getAction(), transaction, activity.isUserAuthorized(), viewModel.getBasePaymentIntentValue().payeeUserId);
         startActivity(transactionResultIntent);
     }
 

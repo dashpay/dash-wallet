@@ -33,14 +33,21 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayContactRequest
+import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.InputParser
+import de.schildbach.wallet.ui.MainActivity
+import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_contacts.*
+import org.bitcoinj.core.PrefixedChecksummedBytes
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.VerificationException
 
 class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
@@ -172,7 +179,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             }
         })
 
-        dashPayViewModel.contactsUpdatedLiveData.observe(this, Observer<Resource<Boolean>> {
+        dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner, Observer<Resource<Boolean>> {
             if(it?.data != null && it.data) {
                 searchContacts()
             }
@@ -188,9 +195,11 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
 
         val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
         // process the requests
-        val requests = if (mode != MODE_SELECT_CONTACT)
+        val requests = if (mode != MODE_SELECT_CONTACT) {
             data.filter { r -> r.isPendingRequest }.toMutableList()
-        else ArrayList()
+        } else {
+            ArrayList()
+        }
 
         val requestCount = requests.size
         if (mode != MODE_VIEW_REQUESTS) {
@@ -199,7 +208,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             }
         }
 
-        if (requests.isNotEmpty() && mode != MODE_VIEW_REQUESTS)
+        if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS)
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
         requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT_REQUEST)) }
 
@@ -208,7 +217,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             data.filter { r -> r.requestSent && r.requestReceived }
         else ArrayList()
 
-        if (contacts.isNotEmpty())
+        if (contacts.isNotEmpty() && mode == MODE_SEARCH_CONTACTS)
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
         contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
 
@@ -253,18 +262,14 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        when {
-            usernameSearchResult.isPendingRequest -> {
-                startActivity(DashPayUserActivity.createIntent(requireContext(),
-                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = false,
-                        contactRequestReceived = true))
-
-            }
-            !usernameSearchResult.isPendingRequest -> {
-                // How do we handle if this activity was started from the Payments Screen?
+        when (mode) {
+            MODE_SEARCH_CONTACTS, MODE_VIEW_REQUESTS -> {
                 startActivity(DashPayUserActivity.createIntent(requireContext(),
                         usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
                         contactRequestReceived = usernameSearchResult.requestReceived))
+            }
+            MODE_SELECT_CONTACT -> {
+                handleString(usernameSearchResult.toContactRequest!!.toUserId, true, R.string.scan_to_pay_username_dialog_message)
             }
         }
     }
@@ -284,6 +289,36 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
             searchContacts()
         }
+    }
+
+    private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {
+        object : InputParser.StringInputParser(input, true) {
+
+            override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
+                if (fireAction) {
+                    SendCoinsInternalActivity.start(context, paymentIntent, true)
+                } else {
+
+                }
+            }
+
+            override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
+                if (fireAction) {
+                    dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
+                } else {
+
+                }
+            }
+
+            override fun handlePrivateKey(key: PrefixedChecksummedBytes) {
+                // ignore
+            }
+
+            @Throws(VerificationException::class)
+            override fun handleDirectTransaction(tx: Transaction) {
+                // ignore
+            }
+        }.parse()
     }
 
 }
