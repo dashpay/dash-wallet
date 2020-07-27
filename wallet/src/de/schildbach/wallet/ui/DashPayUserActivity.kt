@@ -54,6 +54,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
     private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, this)
     private var contactRequestReceived: Boolean = false
     private var contactRequestSent: Boolean = false
+    private var sendingRequest: Boolean = true
 
     companion object {
         private const val USERNAME = "username"
@@ -102,8 +103,14 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }
         updateContactRelationUi()
 
-        sendContactRequestBtn.setOnClickListener { sendContactRequest(profile.userId) }
-        accept.setOnClickListener { sendContactRequest(profile.userId) }
+        sendContactRequestBtn.setOnClickListener {
+            sendingRequest = true
+            sendContactRequest(profile.userId)
+        }
+        accept.setOnClickListener {
+            sendingRequest = false
+            sendContactRequest(profile.userId)
+        }
         payContactBtn.setOnClickListener { startPayActivity() }
 
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
@@ -119,7 +126,9 @@ class DashPayUserActivity : InteractionAwareActivity(),
                         }
                         Status.SUCCESS -> {
                             setResult(RESULT_CODE_CHANGED)
-                            intent.putExtra(CONTACT_REQUEST_SENT, true)
+                            if (sendingRequest)
+                                contactRequestSent = true
+                            else contactRequestReceived = true
                             updateContactRelationUi()
                             dashPayViewModel.getContactRequestLiveData.removeObserver(this)
                         }
