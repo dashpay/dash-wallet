@@ -103,7 +103,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
                     intent.getStringExtra(EXTRA_USERID) != null -> {
                         finish()
                         val userId = intent.getStringExtra(EXTRA_USERID)
-                        startActivity(DashPayUserActivity.createIntent(this, userId, true))
+                        startActivity(DashPayUserActivity.createIntent(this, userId))
                     }
                     intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                         startActivity(MainActivity.createIntent(this))

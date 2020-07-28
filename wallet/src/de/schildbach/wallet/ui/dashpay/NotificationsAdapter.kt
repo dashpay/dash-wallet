@@ -69,21 +69,20 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
         fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
     }
 
-
+    // TransactionViewHolder related items
     val colorBackground: Int by lazy { context.resources.getColor(R.color.bg_bright) }
-    val colorBackgroundSelected : Int by lazy {  context.resources.getColor(R.color.bg_panel) }
-    val colorPrimaryStatus : Int by lazy {  context.resources.getColor(R.color.primary_status) }
-    val colorSecondaryStatus : Int by lazy { context.resources.getColor(R.color.secondary_status) }
-    val colorInsignificant : Int by lazy {  context.resources.getColor(R.color.fg_insignificant) }
-    val colorValuePositve : Int by lazy {  context.resources.getColor(R.color.colorPrimary) }
-    val colorValueNegative : Int by lazy {  context.resources.getColor(android.R.color.black) }
-    val colorError : Int by lazy { context.resources.getColor(R.color.fg_error) }
+    val colorBackgroundSelected: Int by lazy { context.resources.getColor(R.color.bg_panel) }
+    val colorPrimaryStatus: Int by lazy { context.resources.getColor(R.color.primary_status) }
+    val colorSecondaryStatus: Int by lazy { context.resources.getColor(R.color.secondary_status) }
+    val colorInsignificant: Int by lazy { context.resources.getColor(R.color.fg_insignificant) }
+    val colorValuePositve: Int by lazy { context.resources.getColor(R.color.colorPrimary) }
+    val colorValueNegative: Int by lazy { context.resources.getColor(android.R.color.black) }
+    val colorError: Int by lazy { context.resources.getColor(R.color.fg_error) }
     private var format: MonetaryFormat? = null
-
 
     init {
         setHasStableIds(true)
-        format = WalletApplication.getInstance().configuration.format
+        format = WalletApplication.getInstance().configuration.format.noCode()
     }
 
     var itemClickListener: OnItemClickListener? = null
@@ -151,18 +150,10 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
         return results[position].viewType
     }
 
-
     fun setFormat(format: MonetaryFormat) {
         this.format = format.noCode()
         notifyDataSetChanged()
     }
-    /*fun getItemPosition(usernameSearchResult: UsernameSearchResult): Int {
-        val viewItem = results.find {
-            val usernameSearchResult = it.usernameSearchResult ?: false
-            usernameSearchResult == it.usernameSearchResult
-        }
-        return results.indexOf(viewItem)
-    }*/
 
     open inner class ViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {
@@ -171,7 +162,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
         private val date by lazy { itemView.findViewById<TextView>(R.id.date) }
         private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
         private val contactAdded by lazy { itemView.findViewById<ImageView>(R.id.contact_added) }
-        private val guildline by lazy { itemView.findViewById<Guideline>(R.id.center_guideline)}
+        private val guildline by lazy { itemView.findViewById<Guideline>(R.id.center_guideline) }
         private val dateFormat by lazy { itemView.context.getString(R.string.transaction_row_time_text) }
 
         private fun formatDate(timeStamp: Long): String {
@@ -238,7 +229,6 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
             }
         }
     }
-
 
     inner class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             ViewHolder(R.layout.notification_contact_added_row, inflater, parent) {
@@ -311,9 +301,9 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
     private val transactionCache: HashMap<Sha256Hash, TransactionCacheEntry> = HashMap()
 
     private class TransactionCacheEntry constructor(val value: Coin, val sent: Boolean, val self: Boolean, val showFee: Boolean, val address: Address?,
-                                                            val addressLabel: String?, val type: Transaction.Type)
+                                                    val addressLabel: String?, val type: Transaction.Type)
 
-    inner class TransactionViewHolder (inflater: LayoutInflater, parent: ViewGroup) : ViewHolder(R.layout.notification_transaction_row, inflater, parent) {
+    inner class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) : ViewHolder(R.layout.notification_transaction_row, inflater, parent) {
         private val primaryStatusView: TextView = itemView.findViewById(R.id.transaction_row_primary_status) as TextView
         private val secondaryStatusView: TextView = itemView.findViewById(R.id.transaction_row_secondary_status) as TextView
         private val timeView: TextView = itemView.findViewById(R.id.transaction_row_time) as TextView
@@ -322,6 +312,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
         private val signalView: TextView = itemView.findViewById(R.id.transaction_amount_signal) as TextView
         private val fiatView: CurrencyTextView = itemView.findViewById(R.id.transaction_row_fiat) as CurrencyTextView
         private val rateNotAvailableView: TextView
+
         fun bind(tx: Transaction) {
             if (itemView is CardView) {
                 itemView.setCardBackgroundColor(if (itemView.isActivated()) colorBackgroundSelected else colorBackground)
@@ -395,14 +386,18 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
             valueView.setTextColor(valueColor)
             signalView.setTextColor(valueColor)
             dashSymbolView.setColorFilter(valueColor)
-            if (value.isPositive) {
-                signalView.text = String.format("%c", Constants.CURRENCY_PLUS_SIGN)
-                valueView.setAmount(value)
-            } else if (value.isNegative) {
-                signalView.text = String.format("%c", Constants.CURRENCY_MINUS_SIGN)
-                valueView.setAmount(value.negate())
-            } else {
-                valueView.setAmount(Coin.ZERO)
+            when {
+                value.isPositive -> {
+                    signalView.text = String.format("%c", Constants.CURRENCY_PLUS_SIGN)
+                    valueView.setAmount(value)
+                }
+                value.isNegative -> {
+                    signalView.text = String.format("%c", Constants.CURRENCY_MINUS_SIGN)
+                    valueView.setAmount(value.negate())
+                }
+                else -> {
+                    valueView.setAmount(Coin.ZERO)
+                }
             }
 
             // fiat value
@@ -422,7 +417,6 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
                 fiatView.visibility = View.GONE
                 rateNotAvailableView.visibility = View.GONE
             }
-
 
             //
             // Show the secondary status:

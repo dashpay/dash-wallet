@@ -4,8 +4,8 @@ import org.bitcoinj.core.Transaction
 import java.util.*
 
 data class NotificationItem private constructor(val type: Type,
-                             val usernameSearchResult: UsernameSearchResult? = null,
-                             val tx: Transaction? = null) {
+                                                val usernameSearchResult: UsernameSearchResult? = null,
+                                                val tx: Transaction? = null) {
 
     constructor(usernameSearchResult: UsernameSearchResult) : this(Type.CONTACT_REQUEST, usernameSearchResult = usernameSearchResult)
 
@@ -17,6 +17,7 @@ data class NotificationItem private constructor(val type: Type,
         PAYMENT
     }
 
+    /* date is in milliseconds */
     val date = when (type) {
         Type.CONTACT_REQUEST, Type.CONTACT -> usernameSearchResult!!.date * 1000
         else -> tx!!.updateTime.time * 1000

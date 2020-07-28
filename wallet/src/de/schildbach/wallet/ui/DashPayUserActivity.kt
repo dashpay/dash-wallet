@@ -27,7 +27,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
@@ -63,7 +62,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
         private const val PROFILE = "profile"
         private const val CONTACT_REQUEST_SENT = "contact_request_sent"
         private const val CONTACT_REQUEST_RECEIVED = "contact_request_received"
-        private const val RETURN_HOME = "return_home" //return to home screen on close
 
         const val REQUEST_CODE_DEFAULT = 0
         const val RESULT_CODE_OK = 1
@@ -71,21 +69,20 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         @JvmStatic
         fun createIntent(context: Context, username: String, profile: DashPayProfile?,
-                         contactRequestSent: Boolean, contactRequestReceived: Boolean, returnToHomeScreen: Boolean = false): Intent {
+                         contactRequestSent: Boolean, contactRequestReceived: Boolean): Intent {
             val intent = Intent(context, DashPayUserActivity::class.java)
             intent.putExtra(USERNAME, username)
             intent.putExtra(PROFILE, profile)
             intent.putExtra(CONTACT_REQUEST_SENT, contactRequestSent)
             intent.putExtra(CONTACT_REQUEST_RECEIVED, contactRequestReceived)
-            intent.putExtra(RETURN_HOME, returnToHomeScreen)
             return intent
         }
 
         @JvmStatic
-        fun createIntent(context: Context, userId: String, returnToHomeScreen: Boolean): Intent {
+        fun createIntent(context: Context, userId: String): Intent {
             val usernameSearchResult = runBlocking { PlatformRepo.getInstance().getLocalUsernameSearchResult(userId) }
             return createIntent(context, usernameSearchResult.dashPayProfile.username, usernameSearchResult.dashPayProfile,
-                usernameSearchResult.requestSent, usernameSearchResult.requestReceived, returnToHomeScreen)
+                    usernameSearchResult.requestSent, usernameSearchResult.requestReceived)
         }
     }
 
@@ -208,18 +205,11 @@ class DashPayUserActivity : InteractionAwareActivity(),
     override fun finish() {
         super.finish()
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_bottom)
-
-        /*
-        if (intent.getBooleanExtra(RETURN_HOME, false)) {
-            val intent = MainActivity.createIntent(this)
-            intent.putExtra(MainActivity.EXTRA_RESET_BLOCKCHAIN, true)
-            startActivity(intent)
-        }
-         */
     }
 
     private fun startPayActivity() {
         handleString(profile.userId, true, R.string.scan_to_pay_username_dialog_message)
+        finish()
     }
 
     private fun handleString(input: String, fireAction: Boolean, errorDialogTitleResId: Int) {
@@ -228,16 +218,12 @@ class DashPayUserActivity : InteractionAwareActivity(),
             override fun handlePaymentIntent(paymentIntent: PaymentIntent) {
                 if (fireAction) {
                     SendCoinsInternalActivity.start(this@DashPayUserActivity, paymentIntent, true)
-                } else {
-
                 }
             }
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
                     dialog(this@DashPayUserActivity, null, errorDialogTitleResId, messageResId, *messageArgs)
-                } else {
-
                 }
             }
 
@@ -269,10 +255,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
         val results = ArrayList<NotificationsAdapter.ViewItem>()
 
         data.forEach { results.add(NotificationsAdapter.ViewItem(it, getViewType(it), false)) }
-
-        results.sortByDescending {
-            it.notificationItem!!.date
-        }
 
         notificationsAdapter.results = results
     }

@@ -37,15 +37,4 @@ data class DashPayContactRequest(@PrimaryKey val entropy: String,
                     timestamp, false, 0)
         }
     }
-/*
-    fun toDocument(): Document {
-        val rawDocument = hashMapOf<String, Any?>(
-                "encryptedPublicKey" to encryptedPublicKey.toBase64(),
-                "senderKeyIndex" to senderKeyIndex,
-                "recipientKeyIndex" to recipientKeyIndex,
-                "timestamp" to timestamp
-        )
-
-        return Document(rawDocument)
-    }*/
 }

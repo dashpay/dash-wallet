@@ -668,6 +668,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val watch = Stopwatch.createStarted()
         var addedContact = false
         Context.propagate(walletApplication.wallet.context)
+        var encryptionKey: KeyParameter? = null
 
         try {
             updatingContacts.set(true)
@@ -683,7 +684,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 try {
                     if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
                         val contactIdentity = platform.identities.get(contactRequest.toUserId)
-                        var encryptionKey: KeyParameter? = null
                         if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
                             val password = securityGuard.retrievePassword()
                             // Don't bother with DeriveKeyTask here, just call deriveKey
@@ -705,11 +705,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 dashPayContactRequestDaoAsync.insert(contactRequest)
 
                 // add the sending to contact keychain if it doesn't exist
-                val contact = EvolutionContact(Sha256Hash.wrap(Base58.decode(userId)), Sha256Hash.wrap(Base58.decode(contactRequest.userId)))
+                val contact = EvolutionContact(userId, contactRequest.userId)
                 try {
                     if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
                         val contactIdentity = platform.identities.get(contactRequest.userId)
-                        var encryptionKey: KeyParameter? = null
                         if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
                             val password = securityGuard.retrievePassword()
                             // Don't bother with DeriveKeyTask here, just call deriveKey

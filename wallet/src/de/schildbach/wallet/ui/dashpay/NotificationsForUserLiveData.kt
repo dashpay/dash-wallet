@@ -6,7 +6,6 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.bitcoinj.evolution.EvolutionContact
 
 class NotificationsForUserLiveData(walletApplication: WalletApplication, platformRepo: PlatformRepo) : NotificationsLiveData(walletApplication, platformRepo) {
 
@@ -15,11 +14,6 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication, platfor
         GlobalScope.launch {
             val results = arrayListOf<NotificationItem>()
             val contactRequests = platformRepo.searchContacts("", UsernameSortOrderBy.DATE_ADDED)
-
-            //TODO: gather other notification types
-            // * invitations
-            // * payments
-            // * other
 
             if(contactRequests.data != null) {
                 contactRequests.data.filter {
@@ -31,12 +25,18 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication, platfor
 
             val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
 
-            val contact = EvolutionContact(blockchainIdentity.uniqueIdString, userId)
-
-            val txs = walletApplication.wallet.getTransactionsWithFriend(contact)
+            val txs = blockchainIdentity.getContactTransactions(userId)
 
             txs.forEach {
                 results.add(NotificationItem(it))
+            }
+
+            //TODO: gather other notification types
+            // * invitations
+            // * other
+
+            results.sortByDescending {
+                it.date
             }
 
             postValue(Resource.success(results))
