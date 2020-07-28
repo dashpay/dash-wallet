@@ -306,4 +306,6 @@ public final class Constants {
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.01");
+
+    public static boolean IS_TESTNET_BUILD = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_TESTNET);
 }
