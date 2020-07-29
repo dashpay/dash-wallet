@@ -13,7 +13,7 @@ data class DashPayProfile(@PrimaryKey val userId: String, val username: String, 
     companion object {
         fun fromDocument(document: Document, username: String): DashPayProfile? {
             return try {
-                DashPayProfile(document.userId,
+                DashPayProfile(document.ownerId,
                         username,
                         document.data["displayName"] as String,
                         document.data["publicMessage"] as String,
