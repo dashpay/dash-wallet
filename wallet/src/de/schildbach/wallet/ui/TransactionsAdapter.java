@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
@@ -62,6 +63,11 @@ import de.schildbach.wallet_test.R;
  * @author Andreas Schildbach
  */
 public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    private static final String PREFS_FILE_NAME = TransactionsAdapter.class.getSimpleName() + ".prefs";
+    private static final String PREFS_KEY_HIDE_HELLO_CARD = "hide_hello_card";
+
+    private final SharedPreferences preferences;
 
     private final Context context;
     private final LayoutInflater inflater;
@@ -116,6 +122,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         this.context = context;
         inflater = LayoutInflater.from(context);
 
+        this.preferences = getPreferences(context);
+
         this.wallet = wallet;
         this.onClickListener = onClickListener;
 
@@ -128,10 +136,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         colorValuePositve = res.getColor(R.color.colorPrimary);
         colorValueNegative = res.getColor(android.R.color.black);
         colorError = res.getColor(R.color.fg_error);
-        String textCoinBase = context.getString(R.string.wallet_transactions_fragment_coinbase);
-        String textInternal = context.getString(R.string.symbol_internal) + " "
-                + context.getString(R.string.wallet_transactions_fragment_internal);
-        float textSizeNormal = res.getDimension(R.dimen.font_size_normal);
 
         setHasStableIds(true);
     }
@@ -172,7 +176,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public int getItemCount() {
         int count = transactions.size();
 
-        if (blockchainIdentityData != null && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
+        if (helloCardActiveAndNotHidden() && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
             count += 1;
         }
 
@@ -184,7 +188,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         if (position == RecyclerView.NO_POSITION)
             return RecyclerView.NO_ID;
 
-        if (blockchainIdentityData != null) {
+        if (helloCardActiveAndNotHidden()) {
             if (position == 0) {
                 return blockchainIdentityData.getId();
             } else {
@@ -197,7 +201,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     @Override
     public int getItemViewType(final int position) {
-        if (blockchainIdentityData != null && position == 0 && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
+        if (helloCardActiveAndNotHidden() && position == 0 && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
             return VIEW_TYPE_PROCESSING_IDENTITY;
         }
         return VIEW_TYPE_TRANSACTION;
@@ -223,7 +227,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
             Transaction tx;
-            if (blockchainIdentityData != null && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
+            if (helloCardActiveAndNotHidden() && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
                 tx = transactions.get(position - 1);
             } else {
                 tx = transactions.get(position);
@@ -260,6 +264,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 public void onClick(final View v) {
                     if (onClickListener != null) {
                         onClickListener.onProcessingIdentityRowClicked(blockchainIdentityData, false);
+
+                        //hide "Hello Card" after first click
+                        if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
+                            preferences.edit().putBoolean(PREFS_KEY_HIDE_HELLO_CARD, true).apply();
+                            notifyDataSetChanged();
+                        }
                     }
                 }
             });
@@ -435,4 +445,16 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         notifyDataSetChanged();
     }
 
+    private boolean helloCardActiveAndNotHidden() {
+        boolean hideHelloCard = preferences.getBoolean(PREFS_KEY_HIDE_HELLO_CARD, false);
+        return blockchainIdentityData != null && !hideHelloCard;
+    }
+
+    public static void resetPreferences(Context context) {
+        getPreferences(context).edit().clear().apply();
+    }
+
+    public static SharedPreferences getPreferences(Context context) {
+        return context.getSharedPreferences(PREFS_FILE_NAME, Context.MODE_PRIVATE);
+    }
 }

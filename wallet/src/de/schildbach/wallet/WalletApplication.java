@@ -96,6 +96,7 @@ import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
+import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -763,6 +764,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         config.clear();
         PinRetryController.getInstance().clearPinFailPrefs();
         MnemonicCodeExt.clearWordlistPath(this);
+        TransactionsAdapter.resetPreferences(this);
         try {
             new SecurityGuard().removeKeys();
         } catch (GeneralSecurityException | IOException e) {
