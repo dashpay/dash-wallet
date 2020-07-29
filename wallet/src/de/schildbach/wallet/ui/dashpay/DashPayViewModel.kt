@@ -175,21 +175,6 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         })
     }
 
-    fun acceptContactRequest(toUserId: String) {
-
-    }
-
-    /*val getContactNextAddressLiveData = Transformations.switchMap(contactIdLiveData) { it ->
-        liveData(Dispatchers.IO) {
-            if (it.second != null) {
-                emit(Resource.loading(null))
-                emit(platformRepo.sendContactRequest(it.first, it.second!!))
-            } else {
-                emit(Resource.error("Failed to decrypt keys"))
-            }
-        }
-    }*/
-
     val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) { it ->
         liveData(context = contactRequestJob + Dispatchers.IO) {
             if (it.second != null) {

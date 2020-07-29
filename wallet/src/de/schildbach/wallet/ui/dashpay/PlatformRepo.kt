@@ -381,27 +381,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    /*suspend fun acceptContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<Boolean> {
-        return try {
-            val potentialContactIdentity = platform.identities.get(toUserId)
-            log.info("potential contact identity: $potentialContactIdentity")
-
-            //Load our own identity
-            val ourIdentityData = blockchainIdentityDataDaoAsync.load()!!
-            this.blockchainIdentity = initBlockchainIdentity(ourIdentityData,
-                    walletApplication.wallet)
-
-            val fromUserContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(ourIdentityData.)
-
-            // Create Contact Request
-            blockchainIdentity.addContactPaymentKeyChain(potentialContactIdentity!!, fromUserContactRequest.toDocument(), encryptionKey)
-
-            Resource.success(true)
-        } catch (e: Exception) {
-            Resource.error(formatExceptionMessage("accept contact request", e))
-        }
-    }*/
-
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
