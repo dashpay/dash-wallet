@@ -257,18 +257,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         return walletTransactionsFragmentView;
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        //reloadTransactions();
-    }
-
-    @Override
-    public void onPause() {
-
-        super.onPause();
-    }
-
     private void reloadTransactions() {
         final Bundle args = new Bundle();
         args.putSerializable(ARG_DIRECTION, direction);
@@ -279,7 +267,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     public void onTransactionRowClicked(Transaction tx) {
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
                 TransactionDetailsDialogFragment.newInstance(tx.getTxId());
-        transactionDetailsDialogFragment.show(getChildFragmentManager(), null);
+        requireActivity().getSupportFragmentManager().beginTransaction()
+                .add(transactionDetailsDialogFragment, null).commitAllowingStateLoss();
     }
 
     @Override

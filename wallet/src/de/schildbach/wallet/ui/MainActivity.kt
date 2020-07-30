@@ -342,6 +342,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private fun handleIntent(intent: Intent) {
         if (intent.hasExtra(EXTRA_RESET_BLOCKCHAIN)) {
             goBack(true)
+            supportFragmentManager.beginTransaction().remove(wallet_fragment).commit()
             recreate()
             return
         }
