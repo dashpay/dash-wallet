@@ -636,7 +636,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             return
         }
 
+        if (!platform.hasApp("dashpay")) {
+            return
+        }
+
         val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
+        if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+            return
+        }
         val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
         if (blockchainIdentityData.username == null) {
             return // this is here because the wallet is being reset without removing blockchainIdentityData
