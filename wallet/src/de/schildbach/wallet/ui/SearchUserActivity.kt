@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Build
@@ -63,7 +62,6 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     private lateinit var searchUserRunnable: Runnable
     private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter(this)
     private var query = ""
-    private val contactRequestCode = 1
     private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -242,7 +240,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
 
         startActivityForResult(DashPayUserActivity.createIntent(this@SearchUserActivity,
                 usernameSearchResult.username, dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                contactRequestReceived = usernameSearchResult.requestReceived), contactRequestCode)
+                contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
 
         overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
     }
