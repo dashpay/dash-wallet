@@ -41,6 +41,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
+import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
 import kotlinx.android.synthetic.main.users_orbit.*
@@ -117,8 +118,18 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             }
             ACTION_REUSE_TRANSACTION -> {
                 reuseTransaction = true
+                showKeyBoard()
+            }
+            else -> {
+                showKeyBoard()
             }
         }
+    }
+
+    private fun showKeyBoard() {
+        handler.postDelayed({
+            KeyboardUtil.showSoftKeyboard(this@CreateUsernameActivity, username)
+        }, 1333)
     }
 
     private fun initViewModel() {
