@@ -23,8 +23,15 @@ import android.graphics.drawable.Animatable
 import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -79,6 +86,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
     }
 
+    lateinit var dashPayViewModel: DashPayViewModel
+
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,8 +97,28 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         val blockchainIdentity: BlockchainIdentity? = runBlocking { PlatformRepo.getInstance().getBlockchainIdentity() }
 
-        val transactionResultViewBinder = TransactionResultViewBinder(container, blockchainIdentity)
         val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
+
+        var profile: DashPayProfile? = null
+        var userId: String? = null
+        if (blockchainIdentity != null) {
+            val userId = blockchainIdentity.getContactForTransaction(tx!!)
+            if (userId != null) {
+                AppDatabase.getAppDatabase().dashPayProfileDao().load(userId).observe(this,  Observer {
+                    if (it != null) {
+                        profile = it
+                        finishInitialization(txId, tx, profile)
+                    }
+                })
+            }
+        }
+
+        if (blockchainIdentity == null || userId == null)
+            finishInitialization(txId, tx!!, null)
+    }
+
+    private fun finishInitialization(txId: Sha256Hash, tx: Transaction, dashPayProfile: DashPayProfile?) {
+        val transactionResultViewBinder = TransactionResultViewBinder(container, dashPayProfile)
         if (tx != null) {
             val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
             val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
@@ -103,7 +132,13 @@ class TransactionResultActivity : AbstractWalletActivity() {
                     intent.getStringExtra(EXTRA_USERID) != null -> {
                         finish()
                         val userId = intent.getStringExtra(EXTRA_USERID)
-                        startActivity(DashPayUserActivity.createIntent(this, userId))
+                        dashPayViewModel.getContact(userId)
+                        dashPayViewModel.getContactLiveData.observe(this, Observer<Resource<UsernameSearchResult>> {
+                            if (it != null && it.status == Status.SUCCESS && it.data != null) {
+                                startActivity(DashPayUserActivity.createIntent(this@TransactionResultActivity,
+                                        it.data.username, it.data.dashPayProfile, it.data.requestSent, it.data.requestReceived))
+                            }
+                        })
                     }
                     intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                         startActivity(MainActivity.createIntent(this))
@@ -113,6 +148,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
                     }
                 }
             }
+
         } else {
             log.error("Transaction not found. TxId:", txId)
             finish()
@@ -125,6 +161,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
             check_icon.visibility = View.VISIBLE
             (check_icon.drawable as Animatable).start()
         }, 400)
+
+        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
     }
 
     private fun viewOnExplorer(tx: Transaction) {

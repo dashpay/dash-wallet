@@ -24,6 +24,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
@@ -41,7 +42,7 @@ import org.dashevo.dashpay.BlockchainIdentity
 /**
  * @author Samuel Barbosa
  */
-class TransactionResultViewBinder(private val containerView: View, private val blockchainIdentity: BlockchainIdentity?) {
+class TransactionResultViewBinder(private val containerView: View, private val profile: DashPayProfile?) {
 
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
@@ -199,13 +200,6 @@ class TransactionResultViewBinder(private val containerView: View, private val b
         }
 
         // handle dashpay
-        var profile: DashPayProfile? = null
-        if (blockchainIdentity != null) {
-            val userId = blockchainIdentity.getContactForTransaction(tx)
-            if (userId != null) {
-                profile = runBlocking { AppDatabase.getAppDatabase().dashPayProfileDaoAsync().load(userId) }
-            }
-        }
 
         if (profile != null) {
             sendToUserContainer.visibility = View.VISIBLE

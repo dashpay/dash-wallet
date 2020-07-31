@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
@@ -52,7 +53,30 @@ class TransactionDetailsDialogFragment : DialogFragment() {
 
         tx = wallet.getTransaction(txId)
         val blockchainIdentity: BlockchainIdentity? = runBlocking { PlatformRepo.getInstance().getBlockchainIdentity() }
-        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, blockchainIdentity)
+
+        var profile: DashPayProfile? = null
+        var userId: String? = null
+        if (blockchainIdentity != null) {
+            val userId = blockchainIdentity.getContactForTransaction(tx!!)
+            if (userId != null) {
+                AppDatabase.getAppDatabase().dashPayProfileDao().load(userId).observe(viewLifecycleOwner,  Observer {
+                    if (it != null) {
+                        profile = it
+                        finishInitialization(profile)
+                    }
+                })
+            }
+        }
+
+        if (blockchainIdentity == null || userId == null)
+            finishInitialization(null)
+
+        view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
+        transaction_close_btn.setOnClickListener { dismissAnimation() }
+    }
+
+    private fun finishInitialization(dashPayProfile: DashPayProfile?) {
+        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile)
         if (tx != null) {
             transactionResultViewBinder.bind(tx!!)
         } else {
@@ -60,8 +84,6 @@ class TransactionDetailsDialogFragment : DialogFragment() {
             dismiss()
             return
         }
-        view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
-        transaction_close_btn.setOnClickListener { dismissAnimation() }
         showAnimation()
     }
 
