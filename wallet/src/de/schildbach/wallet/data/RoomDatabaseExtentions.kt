@@ -1,4 +1,4 @@
-package de.schildbach.wallet
+package de.schildbach.wallet.data
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
