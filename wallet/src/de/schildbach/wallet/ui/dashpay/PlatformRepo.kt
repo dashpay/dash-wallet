@@ -376,11 +376,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
 
-            //Load our own identity
-            val fromUserIdentityData = blockchainIdentityDataDaoAsync.load()!!
-            this.blockchainIdentity = initBlockchainIdentity(fromUserIdentityData,
-                    walletApplication.wallet)
-
             //Create Contact Request
             val contactRequests = ContactRequests(platform)
             contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
