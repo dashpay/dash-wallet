@@ -633,9 +633,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    suspend fun getNextContactAddress(userId: String): Address {
-        val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
-        val blockchainIdentity = initBlockchainIdentity(blockchainIdentityData!!, walletApplication.wallet)
+    fun getNextContactAddress(userId: String): Address {
         return blockchainIdentity.getContactNextPaymentAddress(userId)
     }
 
@@ -659,7 +657,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         if (blockchainIdentityData.username == null) {
             return // this is here because the wallet is being reset without removing blockchainIdentityData
         }
-        val blockchainIdentity = initBlockchainIdentity(blockchainIdentityData, walletApplication.wallet)
 
         val userIdList = HashSet<String>()
         val watch = Stopwatch.createStarted()
@@ -763,7 +760,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val executeUpdateContacts = object : Runnable {
         override fun run() {
             log.info("Timer: Update contacts")
-            // Repeat this the same runnable code block again another 2 seconds
             GlobalScope.launch {
                 updateContactRequests()
             }

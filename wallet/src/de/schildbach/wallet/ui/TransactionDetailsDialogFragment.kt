@@ -18,7 +18,6 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
-import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dashevo.dashpay.BlockchainIdentity
@@ -52,7 +51,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         tx = wallet.getTransaction(txId)
-        val blockchainIdentity: BlockchainIdentity? = runBlocking { PlatformRepo.getInstance().getBlockchainIdentity() }
+        val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
 
         var profile: DashPayProfile? = null
         var userId: String? = null

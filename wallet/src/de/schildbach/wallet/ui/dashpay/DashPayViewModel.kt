@@ -50,7 +50,6 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     val notificationsForUserLiveData = NotificationsForUserLiveData(walletApplication, platformRepo)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
-    private val contactIdLiveData = MutableLiveData<String>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)
     private var getUsernameJob = Job()
@@ -145,11 +144,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun getNextContactAddress(userId: String): Address {
-        var address: Address? = null
-        runBlocking {
-            address = platformRepo.getNextContactAddress(userId)
-        }
-        return address!!
+        return platformRepo.getNextContactAddress(userId)
     }
 
     //TODO: this can probably be simplified using coroutines
