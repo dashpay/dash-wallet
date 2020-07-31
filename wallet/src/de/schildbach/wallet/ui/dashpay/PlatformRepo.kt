@@ -77,8 +77,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
+            platformRepoInstance.startUpdateTimer()
             GlobalScope.launch {
-                getInstance().loadBlockchainIdentity()
+                platformRepoInstance.loadBlockchainIdentity()
             }
         }
 
