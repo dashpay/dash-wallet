@@ -31,8 +31,14 @@ import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
-import kotlinx.coroutines.*
-import org.bitcoinj.core.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.evolution.EvolutionContact
@@ -50,7 +56,6 @@ import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.slf4j.LoggerFactory
-import java.lang.Runnable
 import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -97,10 +102,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
     private val securityGuard = SecurityGuard()
 
-    suspend fun getBlockchainIdentity(): BlockchainIdentity? {
-        val fromUserIdentityData = blockchainIdentityDataDaoAsync.load() ?: return null
-        return initBlockchainIdentity(fromUserIdentityData,
-                walletApplication.wallet)
+    init {
+        GlobalScope.launch {
+            loadBlockchainIdentity()
+        }
+    }
+
+    suspend fun loadBlockchainIdentity() {
+        blockchainIdentityDataDaoAsync.load()?.let {
+            blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
+        }
+    }
+
+    fun getBlockchainIdentity(): BlockchainIdentity? {
+        return if (this::blockchainIdentity.isInitialized) {
+            this.blockchainIdentity;
+        } else {
+            null
+        }
     }
 
     fun isPlatformAvailable(): Resource<Boolean> {
