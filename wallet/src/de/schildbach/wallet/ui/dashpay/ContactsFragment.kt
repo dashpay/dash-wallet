@@ -78,7 +78,6 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
-    private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.USERNAME
     private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
     private var currentPosition = -1
@@ -127,14 +126,6 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
                 if (it.data != null) {
                     processResults(it.data)
                 }
-            }
-        })
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(viewLifecycleOwner, Observer {
-            if (it != null) {
-                //TODO: we don't have an easy way of getting the identity id (userId)
-                val tx = walletApplication.wallet.getTransaction(it.creditFundingTxId)
-                val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
-                blockchainIdentityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
             }
         })
 

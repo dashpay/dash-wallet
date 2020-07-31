@@ -74,7 +74,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var notificationsAdapter: NotificationsAdapter
     private var query = ""
-    private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.DATE_ADDED
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
@@ -129,15 +128,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 if (it.data != null) {
                     processResults(it.data)
                 }
-            }
-        })
-        //This is not used
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, Observer {
-            if (it != null) {
-                //TODO: we don't have an easy way of getting the identity id (userId)
-                val tx = walletApplication.wallet.getTransaction(it.creditFundingTxId)
-                val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
-                blockchainIdentityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
             }
         })
 
