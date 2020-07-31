@@ -270,7 +270,7 @@ public class SendCoinsFragment extends Fragment {
             viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
 
             if (paymentIntent.isIdentityPaymentRequest()) {
-                AppDatabase.getAppDatabase().dashPayProfileDao().load(paymentIntent.payeeUserId).observe(getViewLifecycleOwner(), new Observer<DashPayProfile>() {
+                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(paymentIntent.payeeUserId).observe(getViewLifecycleOwner(), new Observer<DashPayProfile>() {
                     @Override
                     public void onChanged(DashPayProfile dashPayProfile) {
                         if(dashPayProfile != null) {

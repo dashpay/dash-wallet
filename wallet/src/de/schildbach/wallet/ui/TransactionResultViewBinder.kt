@@ -24,20 +24,15 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.enter_amount_fragment.*
-import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.ui.CurrencyTextView
-import org.dashevo.dashpay.BlockchainIdentity
 
 /**
  * @author Samuel Barbosa

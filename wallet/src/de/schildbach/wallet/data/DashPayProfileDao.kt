@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import de.schildbach.wallet.getDistinct
 
 @Dao
 interface DashPayProfileDao {
@@ -13,6 +14,9 @@ interface DashPayProfileDao {
 
     @Query("SELECT * FROM dashpay_profile where userId = :userId")
     fun load(userId: String): LiveData<DashPayProfile?>
+
+    fun loadDistinct(userId: String):
+            LiveData<DashPayProfile?> = load(userId).getDistinct()
 
     @Query("DELETE FROM dashpay_profile")
     fun clear()

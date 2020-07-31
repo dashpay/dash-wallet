@@ -57,9 +57,9 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         var profile: DashPayProfile? = null
         var userId: String? = null
         if (blockchainIdentity != null) {
-            val userId = blockchainIdentity.getContactForTransaction(tx!!)
+            userId = blockchainIdentity.getContactForTransaction(tx!!)
             if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDao().load(userId).observe(viewLifecycleOwner,  Observer {
+                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(userId).observe(viewLifecycleOwner, Observer {
                     if (it != null) {
                         profile = it
                         finishInitialization(profile)

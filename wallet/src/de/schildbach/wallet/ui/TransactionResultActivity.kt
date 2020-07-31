@@ -102,9 +102,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
         var profile: DashPayProfile? = null
         var userId: String? = null
         if (blockchainIdentity != null) {
-            val userId = blockchainIdentity.getContactForTransaction(tx!!)
+            userId = blockchainIdentity.getContactForTransaction(tx!!)
             if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDao().load(userId).observe(this,  Observer {
+                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(userId).observe(this,  Observer {
                     if (it != null) {
                         profile = it
                         finishInitialization(txId, tx, profile)
