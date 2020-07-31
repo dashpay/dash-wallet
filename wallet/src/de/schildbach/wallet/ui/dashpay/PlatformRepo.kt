@@ -77,6 +77,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
+            platformRepoInstance.startUpdateTimer()
+            GlobalScope.launch {
+                platformRepoInstance.loadBlockchainIdentity()
+            }
         }
 
         fun getInstance() : PlatformRepo {
@@ -101,12 +105,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         Handler(backgroundThread.looper)
     }
     private val securityGuard = SecurityGuard()
-
-    init {
-        GlobalScope.launch {
-            loadBlockchainIdentity()
-        }
-    }
 
     suspend fun loadBlockchainIdentity() {
         blockchainIdentityDataDaoAsync.load()?.let {
@@ -375,11 +373,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             Context.propagate(walletApplication.wallet.context)
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
-
-            //Load our own identity
-            val fromUserIdentityData = blockchainIdentityDataDaoAsync.load()!!
-            this.blockchainIdentity = initBlockchainIdentity(fromUserIdentityData,
-                    walletApplication.wallet)
 
             //Create Contact Request
             val contactRequests = ContactRequests(platform)
