@@ -77,6 +77,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
+            GlobalScope.launch {
+                getInstance().loadBlockchainIdentity()
+            }
         }
 
         fun getInstance() : PlatformRepo {
@@ -101,12 +104,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         Handler(backgroundThread.looper)
     }
     private val securityGuard = SecurityGuard()
-
-    init {
-        GlobalScope.launch {
-            loadBlockchainIdentity()
-        }
-    }
 
     suspend fun loadBlockchainIdentity() {
         blockchainIdentityDataDaoAsync.load()?.let {
