@@ -709,14 +709,19 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
             log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");
-            ComponentName jobService = new ComponentName(context, BlockchainSyncJobService.class);
-            JobInfo jobInfo = new JobInfo.Builder(BLOCKCHAIN_SYNC_JOB_ID, jobService)
-                    .setPeriodic(alarmInterval)
-                    .setPersisted(true)
-                    .build();
             JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-            int scheduleResult = jobScheduler.schedule(jobInfo);
-            log.info("job scheduling result: {}", scheduleResult);
+            JobInfo pendingJob = jobScheduler.getPendingJob(BLOCKCHAIN_SYNC_JOB_ID);
+            if(pendingJob == null || pendingJob.getIntervalMillis() != alarmInterval) {
+                ComponentName jobService = new ComponentName(context, BlockchainSyncJobService.class);
+                JobInfo jobInfo = new JobInfo.Builder(BLOCKCHAIN_SYNC_JOB_ID, jobService)
+                        .setPeriodic(alarmInterval)
+                        .setPersisted(true)
+                        .build();
+                int scheduleResult = jobScheduler.schedule(jobInfo);
+                log.info("scheduling blockchain sync job with interval of {}s, result: {}", alarmInterval/1000, scheduleResult);
+            } else {
+                log.info("blockchain sync job already scheduled with interval of {}s", alarmInterval / 1000);
+            }
 
         } else {
 
