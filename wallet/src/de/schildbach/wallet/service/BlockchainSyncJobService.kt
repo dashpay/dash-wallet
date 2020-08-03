@@ -18,32 +18,42 @@ package de.schildbach.wallet.service
 
 import android.app.job.JobParameters
 import android.app.job.JobService
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.Handler
+import android.os.IBinder
 import androidx.annotation.RequiresApi
-import androidx.core.content.ContextCompat
-import de.schildbach.wallet.WalletApplication
 import org.slf4j.LoggerFactory
+
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 class BlockchainSyncJobService : JobService() {
 
     private val log = LoggerFactory.getLogger(BlockchainSyncJobService::class.java)
 
-    private val serviceIntent: Intent
-    private val context: Context
+    private val serviceConnection: ServiceConnection = object : ServiceConnection {
 
-    init {
-        context = WalletApplication.getInstance()
-        serviceIntent = Intent(context, BlockchainServiceImpl::class.java)
-        serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true)
+        override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+            log.info("blockchain sync job service connected")
+            if (binder is BlockchainServiceImpl.LocalBinder) {
+                log.info("blockchain sync job force foreground from ServiceConnection")
+                binder.service.forceForeground()
+            }
+            unbindService(this)
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+
+        }
     }
 
     override fun onStartJob(params: JobParameters): Boolean {
         log.info("blockchain sync job started")
-        ContextCompat.startForegroundService(context, serviceIntent)
+        bindService(Intent(this, BlockchainServiceImpl::class.java), serviceConnection, Context.BIND_AUTO_CREATE)
+
         //wait some time just to make sure that the service started
         Handler().postDelayed({ jobFinished(params, false) }, 3000)
         return true
@@ -51,7 +61,7 @@ class BlockchainSyncJobService : JobService() {
 
     override fun onStopJob(params: JobParameters): Boolean {
         log.info("blockchain sync job cancelled before completion")
-        context.stopService(serviceIntent)
+        stopService(Intent(this, BlockchainServiceImpl::class.java))
         return false
     }
 }

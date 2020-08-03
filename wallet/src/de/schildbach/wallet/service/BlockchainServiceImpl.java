@@ -41,6 +41,7 @@ import android.os.PowerManager.WakeLock;
 import android.text.format.DateUtils;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleService;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -652,7 +653,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     };
 
     public class LocalBinder extends Binder {
-        public BlockchainService getService() {
+        public BlockchainServiceImpl getService() {
             return BlockchainServiceImpl.this;
         }
     }
@@ -1070,5 +1071,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private void updateAppWidget() {
         WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
+    }
+
+    public void forceForeground() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent intent = new Intent(this, BlockchainServiceImpl.class);
+            ContextCompat.startForegroundService(this, intent);
+            // call startForeground just after startForegroundService.
+            startForeground();
+        }
     }
 }
