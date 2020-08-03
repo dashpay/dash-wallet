@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -25,7 +26,10 @@ import android.app.KeyguardManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -85,6 +89,7 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
+import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
@@ -122,6 +127,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     public static final long TIME_CREATE_APPLICATION = System.currentTimeMillis();
 
     private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
+
+    private static final int BLOCKCHAIN_SYNC_JOB_ID = 1;
 
     private boolean deviceWasLocked = false;
 
@@ -682,6 +689,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         return (isLowRamDevice() || !is64bitABI) ? Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM : Constants.SCRYPT_ITERATIONS_TARGET;
     }
 
+    @SuppressLint("NewApi")
     public static void scheduleStartBlockchainService(final Context context) {
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
                 context.getResources());
@@ -699,24 +707,38 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         log.info("last used {} minutes ago, rescheduling blockchain sync in roughly {} minutes",
                 lastUsedAgo / DateUtils.MINUTE_IN_MILLIS, alarmInterval / DateUtils.MINUTE_IN_MILLIS);
 
-        final AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        PendingIntent alarmIntent;
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
+            log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");
+            ComponentName jobService = new ComponentName(context, BlockchainSyncJobService.class);
+            JobInfo jobInfo = new JobInfo.Builder(BLOCKCHAIN_SYNC_JOB_ID, jobService)
+                    .setPeriodic(alarmInterval)
+                    .setPersisted(true)
+                    .build();
+            JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+            int scheduleResult = jobScheduler.schedule(jobInfo);
+            log.info("job scheduling result: {}", scheduleResult);
 
-        Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
-            alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT);
         } else {
-            alarmIntent = PendingIntent.getService(context, 0, serviceIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT);
-        }
-        alarmManager.cancel(alarmIntent);
 
-        // workaround for no inexact set() before KitKat
-        final long now = System.currentTimeMillis();
-        alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
-                alarmIntent);
+            final AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            PendingIntent alarmIntent;
+
+            Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
+                alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT);
+            } else {
+                alarmIntent = PendingIntent.getService(context, 0, serviceIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT);
+            }
+            alarmManager.cancel(alarmIntent);
+
+            // workaround for no inexact set() before KitKat
+            final long now = System.currentTimeMillis();
+            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
+                    alarmIntent);
+        }
     }
 
     /**
