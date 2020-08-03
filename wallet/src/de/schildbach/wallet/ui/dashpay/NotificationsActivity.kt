@@ -41,7 +41,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_contacts.*
+import kotlinx.android.synthetic.main.fragment_notifications.*
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 import java.util.*

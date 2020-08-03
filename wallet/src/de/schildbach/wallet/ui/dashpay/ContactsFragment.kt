@@ -40,14 +40,15 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.InputParser
-import de.schildbach.wallet.ui.MainActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.setupActionBarWithTitle
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_contacts.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import de.schildbach.wallet.ui.SearchUserActivity
+import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
+import kotlinx.android.synthetic.main.contacts_list_layout.*
 
 class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
@@ -81,6 +82,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     private var direction = UsernameSortOrderBy.USERNAME
     private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
     private var currentPosition = -1
+    private var initialSearch = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,6 +118,10 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             setupActionBarWithTitle(R.string.contacts_title)
         }
 
+        search_for_user.setOnClickListener{
+            startActivity(Intent(context, SearchUserActivity::class.java))
+        }
+
         searchContacts()
     }
 
@@ -123,6 +129,16 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner, Observer {
             if (Status.SUCCESS == it.status) {
+                if (initialSearch && (mode != MODE_VIEW_REQUESTS)) {
+                    if (it.data == null || it.data.isEmpty()) {
+                        empty_state_pane.visibility = View.VISIBLE
+                        contacts_pane.visibility = View.GONE
+                    } else {
+                        empty_state_pane.visibility = View.GONE
+                        contacts_pane.visibility = View.VISIBLE
+                    }
+                    initialSearch = false
+                }
                 if (it.data != null) {
                     processResults(it.data)
                 }
@@ -183,7 +199,6 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     }
 
     private fun processResults(data: List<UsernameSearchResult>) {
-
         val results = ArrayList<ContactSearchResultsAdapter.ViewItem>()
         // process the requests
         val requests = if (mode != MODE_SELECT_CONTACT) {
