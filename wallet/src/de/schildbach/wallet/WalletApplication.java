@@ -57,7 +57,6 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
-import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
@@ -707,38 +706,36 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         log.info("last used {} minutes ago, rescheduling blockchain sync in roughly {} minutes",
                 lastUsedAgo / DateUtils.MINUTE_IN_MILLIS, alarmInterval / DateUtils.MINUTE_IN_MILLIS);
 
+        final AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        PendingIntent alarmIntent;
+
+        Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
+            alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT);
+        } else {
+            alarmIntent = PendingIntent.getService(context, 0, serviceIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT);
+        }
+        alarmManager.cancel(alarmIntent);
+
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
             log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");
             JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
             JobInfo pendingJob = jobScheduler.getPendingJob(BLOCKCHAIN_SYNC_JOB_ID);
-            if(pendingJob == null || pendingJob.getIntervalMillis() != alarmInterval) {
+            if (pendingJob == null || pendingJob.getIntervalMillis() != alarmInterval) {
                 ComponentName jobService = new ComponentName(context, BlockchainSyncJobService.class);
                 JobInfo jobInfo = new JobInfo.Builder(BLOCKCHAIN_SYNC_JOB_ID, jobService)
                         .setPeriodic(alarmInterval)
                         .setPersisted(true)
                         .build();
                 int scheduleResult = jobScheduler.schedule(jobInfo);
-                log.info("scheduling blockchain sync job with interval of {}s, result: {}", alarmInterval/1000, scheduleResult);
+                log.info("scheduling blockchain sync job with interval of {}s, result: {}", alarmInterval / 1000, scheduleResult);
             } else {
                 log.info("blockchain sync job already scheduled with interval of {}s", alarmInterval / 1000);
             }
-
         } else {
-
-            final AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-            PendingIntent alarmIntent;
-
-            Intent serviceIntent = new Intent(context, BlockchainServiceImpl.class);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                serviceIntent.putExtra(BlockchainServiceImpl.START_AS_FOREGROUND_EXTRA, true);
-                alarmIntent = PendingIntent.getForegroundService(context, 0, serviceIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT);
-            } else {
-                alarmIntent = PendingIntent.getService(context, 0, serviceIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT);
-            }
-            alarmManager.cancel(alarmIntent);
-
             // workaround for no inexact set() before KitKat
             final long now = System.currentTimeMillis();
             alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
