@@ -752,8 +752,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    // Create the Handler object (on the main thread by default)
-    val timerHandler = Handler()
     var timerStarted = false
 
     // Define the code block to be executed
@@ -763,7 +761,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             GlobalScope.launch {
                 updateContactRequests()
             }
-            timerHandler.postDelayed(this, UPDATE_TIMER_DELAY)
+            backgroundHandler.postDelayed(this, UPDATE_TIMER_DELAY)
         }
     }
 
@@ -771,14 +769,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun startUpdateTimer() {
         log.info("Starting timer for updating DashPay")
         if (!timerStarted) {
-            timerHandler.post(executeUpdateContacts)
+            backgroundHandler.post(executeUpdateContacts)
             timerStarted = true
         }
     }
 
     fun stopUpdateTimer() {
         timerStarted = false
-        timerHandler.removeCallbacks(executeUpdateContacts)
+        backgroundHandler.removeCallbacks(executeUpdateContacts)
     }
 
     fun addContactsUpdatedListener(listener: OnContactsUpdated) {
