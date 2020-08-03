@@ -77,13 +77,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
             intent.putExtra(CONTACT_REQUEST_RECEIVED, contactRequestReceived)
             return intent
         }
-
-        @JvmStatic
-        fun createIntent(context: Context, userId: String): Intent {
-            val usernameSearchResult = runBlocking { PlatformRepo.getInstance().getLocalUsernameSearchResult(userId) }
-            return createIntent(context, usernameSearchResult.dashPayProfile.username, usernameSearchResult.dashPayProfile,
-                    usernameSearchResult.requestSent, usernameSearchResult.requestReceived)
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
