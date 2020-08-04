@@ -75,6 +75,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         private lateinit var platformRepoInstance: PlatformRepo
 
+        @JvmStatic
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
             GlobalScope.launch {
@@ -82,6 +83,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
         }
 
+        @JvmStatic
         fun getInstance() : PlatformRepo {
             return platformRepoInstance
         }
@@ -97,13 +99,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
 
-    private lateinit var blockchainIdentity: BlockchainIdentity
-    private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
-    private val backgroundHandler by lazy {
-        backgroundThread.start()
-        Handler(backgroundThread.looper)
-    }
     private val securityGuard = SecurityGuard()
+    private lateinit var blockchainIdentity: BlockchainIdentity
+
+    private val timerHandler = Handler()
+    private var timerStarted = false
+    private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
+    private val backgroundHandler: Handler
+
+    init {
+        backgroundThread.start()
+        backgroundHandler = Handler(backgroundThread.looper)
+    }
 
     suspend fun loadBlockchainIdentity() {
         blockchainIdentityDataDaoAsync.load()?.let {
@@ -752,8 +759,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    var timerStarted = false
-
     // Define the code block to be executed
     private val executeUpdateContacts = object : Runnable {
         override fun run() {
@@ -761,7 +766,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             GlobalScope.launch {
                 updateContactRequests()
             }
-            backgroundHandler.postDelayed(this, UPDATE_TIMER_DELAY)
+            timerHandler.postDelayed(this, UPDATE_TIMER_DELAY)
         }
     }
 
@@ -769,14 +774,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun startUpdateTimer() {
         log.info("Starting timer for updating DashPay")
         if (!timerStarted) {
-            backgroundHandler.post(executeUpdateContacts)
+            timerHandler.post(executeUpdateContacts)
             timerStarted = true
         }
     }
 
     fun stopUpdateTimer() {
         timerStarted = false
-        backgroundHandler.removeCallbacks(executeUpdateContacts)
+        timerHandler.removeCallbacks(executeUpdateContacts)
     }
 
     fun addContactsUpdatedListener(listener: OnContactsUpdated) {

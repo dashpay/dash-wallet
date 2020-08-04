@@ -303,8 +303,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     private void initPlatform() {
-        PlatformRepo.Companion.initPlatformRepo(this);
-        PlatformRepo.Companion.getInstance().startUpdateTimer();
+        PlatformRepo.initPlatformRepo(this);
+        PlatformRepo.getInstance().startUpdateTimer();
     }
 
     public void maybeStartAutoLogoutTimer() {
