@@ -394,6 +394,7 @@ class CreateIdentityService : LifecycleService() {
         // Complete the entire process
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
 
+        PlatformRepo.getInstance().init()
     }
 
     /**
