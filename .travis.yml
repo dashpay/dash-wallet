@@ -39,7 +39,7 @@ before_script:
   - export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
   - git clone https://github.com/dashevo/dashj.git
   - cd dashj
-  - git checkout evonet
+  - git checkout master
   - git submodule update  --init --recursive
   - mvn clean install -Pno-build-bls -DskipTests
   - cd ..
