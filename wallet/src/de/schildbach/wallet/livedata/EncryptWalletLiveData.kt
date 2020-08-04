@@ -95,10 +95,6 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
                 // initialize the authentication key chains to allow recovery of the username
                 wallet.initializeAuthenticationKeyChains(decryptedSeed, newKey);
 
-                if(initialize) {
-                    walletApplication.saveWalletAndFinalizeInitialization()
-                }
-
                 securityGuard.savePassword(password)
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")

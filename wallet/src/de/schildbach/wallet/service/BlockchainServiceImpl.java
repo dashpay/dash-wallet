@@ -875,6 +875,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     log.info("peergroup not available, not broadcasting transaction " + tx.getHashAsString());
                     tx.getConfidence().setPeerInfo(0, 1);
                 }
+            } else if(BlockchainService.ACTION_RESET_BLOOMFILTERS.equals(action)) {
+                if (peerGroup != null) {
+                    log.info("recalulating bloom filters");
+                    peerGroup.recalculateFastCatchupAndFilter(PeerGroup.FilterRecalculateMode.SEND_IF_CHANGED);
+                } else {
+                    log.info("peergroup not available, not resetting bloom filers");
+                }
             }
         } else {
             log.warn("service restart, although it was started as non-sticky");

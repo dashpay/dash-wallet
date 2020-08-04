@@ -233,6 +233,7 @@
     <string name="transaction_details_sent_from">Sent from</string>
     <string name="transaction_details_sent_to">Sent to</string>
     <string name="transaction_details_received_at">Received at</string>
+    <string name="transaction_details_received_from">Received from</string>
     <string name="transaction_details_moved_from">Moved from</string>
     <string name="transaction_details_moved_internally_to">Internally moved to</string>
 
@@ -408,4 +409,8 @@
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
+
+    <string name="scan_to_pay_username_dialog_message">Not a valid Dash Username or Identity\n\n%s</string>
+    <string name="send_coins_to_username">Sending to</string>
+
 </resources>

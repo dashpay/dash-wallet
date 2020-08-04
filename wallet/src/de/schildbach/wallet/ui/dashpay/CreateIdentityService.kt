@@ -317,6 +317,8 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
         }
 
+        PlatformRepo.getInstance().init()
+
         // aaaand we're done :)
         log.info("username registration complete")
     }
@@ -392,6 +394,7 @@ class CreateIdentityService : LifecycleService() {
         // Complete the entire process
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
 
+        PlatformRepo.getInstance().init()
     }
 
     /**

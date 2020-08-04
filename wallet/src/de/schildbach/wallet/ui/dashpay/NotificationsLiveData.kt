@@ -2,15 +2,16 @@ package de.schildbach.wallet.ui.dashpay
 
 import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.bitcoinj.evolution.EvolutionContact
 
-class NotificationsLiveData(val walletApplication: WalletApplication, private val platformRepo: PlatformRepo) : LiveData<Resource<List<UsernameSearchResult>>>(), OnContactsUpdated {
+open class NotificationsLiveData(protected val walletApplication: WalletApplication, protected val platformRepo: PlatformRepo) : LiveData<Resource<List<NotificationItem>>>(), OnContactsUpdated {
     private var listening = false
-    private var query = ""
+    protected var query = ""
 
     override fun onActive() {
         maybeAddEventListener()
@@ -39,9 +40,10 @@ class NotificationsLiveData(val walletApplication: WalletApplication, private va
         searchNotifications(query)
     }
 
-    fun searchNotifications(text: String = "") {
+    open fun searchNotifications(text: String = "") {
         query = text
         GlobalScope.launch {
+            val results = arrayListOf<NotificationItem>()
             val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)
 
             //TODO: gather other notification types
@@ -49,7 +51,11 @@ class NotificationsLiveData(val walletApplication: WalletApplication, private va
             // * payments
             // * other
 
-            postValue(contactRequests)
+            contactRequests.data!!.forEach {
+                results.add(NotificationItem(it))
+            }
+
+            postValue(Resource.success(results))
         }
     }
 }

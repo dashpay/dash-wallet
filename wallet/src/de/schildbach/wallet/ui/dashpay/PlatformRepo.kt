@@ -15,6 +15,7 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
@@ -22,25 +23,22 @@ import com.google.common.base.Stopwatch
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityBaseData
-import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.DashPayContactRequest
-import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.BlockchainService
+import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.evolution.EvolutionContact
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
@@ -51,7 +49,6 @@ import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dpp.document.Document
-import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
@@ -75,10 +72,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         private lateinit var platformRepoInstance: PlatformRepo
 
+        @JvmStatic
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
+            platformRepoInstance.init()
         }
 
+        @JvmStatic
         fun getInstance() : PlatformRepo {
             return platformRepoInstance
         }
@@ -94,11 +94,36 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
 
+    private val securityGuard = SecurityGuard()
     private lateinit var blockchainIdentity: BlockchainIdentity
+
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
-    private val backgroundHandler by lazy {
+    private val backgroundHandler: Handler
+
+    init {
         backgroundThread.start()
-        Handler(backgroundThread.looper)
+        backgroundHandler = Handler(backgroundThread.looper)
+    }
+
+    fun init() {
+        GlobalScope.launch {
+            blockchainIdentityDataDaoAsync.load()?.let {
+                blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
+                while (isActive) {
+                    log.info("Timer: Update contacts")
+                    platformRepoInstance.updateContactRequests()
+                    delay(UPDATE_TIMER_DELAY)
+                }
+            }
+        }
+    }
+
+    fun getBlockchainIdentity(): BlockchainIdentity? {
+        return if (this::blockchainIdentity.isInitialized) {
+            this.blockchainIdentity;
+        } else {
+            null
+        }
     }
 
     fun isPlatformAvailable(): Resource<Boolean> {
@@ -333,7 +358,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     /**
      *  Wraps callbacks of DeriveKeyTask as Coroutine
      */
-    private suspend fun deriveKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
+    private suspend fun deriveEncryptionKey(handler: Handler, wallet: Wallet, password: String): KeyParameter {
         return suspendCoroutine { continuation ->
             object : DeriveKeyTask(handler, walletApplication.scryptIterationsTarget()) {
 
@@ -342,7 +367,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
 
                 override fun onFailure(ex: KeyCrypterException?) {
-                    //CreateIdentityService.log.error("unable to decrypt wallet", ex)
                     continuation.resumeWithException(ex as Throwable)
                 }
 
@@ -352,13 +376,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<DashPayContactRequest> {
         return try {
+            Context.propagate(walletApplication.wallet.context)
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
-
-            //Load our own identity
-            val fromUserIdentityData = blockchainIdentityDataDaoAsync.load()!!
-            this.blockchainIdentity = initBlockchainIdentity(fromUserIdentityData,
-                    walletApplication.wallet)
 
             //Create Contact Request
             val contactRequests = ContactRequests(platform)
@@ -620,6 +640,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun getNextContactAddress(userId: String): Address {
+        return blockchainIdentity.getContactNextPaymentAddress(userId)
+    }
+
     // contacts
     suspend fun updateContactRequests() {
         // only allow this method to execute once at a time
@@ -628,11 +652,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             return
         }
 
+        if (!platform.hasApp("dashpay")) {
+            return
+        }
+
         val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
+        if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+            return
+        }
         val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+        if (blockchainIdentityData.username == null) {
+            return // this is here because the wallet is being reset without removing blockchainIdentityData
+        }
 
         val userIdList = HashSet<String>()
         val watch = Stopwatch.createStarted()
+        var addedContact = false
+        Context.propagate(walletApplication.wallet.context)
+        var encryptionKey: KeyParameter? = null
 
         try {
             updatingContacts.set(true)
@@ -642,6 +679,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.toUserId)
                 dashPayContactRequestDaoAsync.insert(contactRequest)
+
+                // add our receiving from this contact keychain if it doesn't exist
+                val contact = EvolutionContact(userId, contactRequest.toUserId)
+                try {
+                    if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+                        val contactIdentity = platform.identities.get(contactRequest.toUserId)
+                        if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                            val password = securityGuard.retrievePassword()
+                            // Don't bother with DeriveKeyTask here, just call deriveKey
+                            encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                        }
+                        blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, it, encryptionKey!!)
+                        addedContact = true
+                    }
+                } catch (e: KeyCrypterException) {
+                    // we can't send payments to this contact due to an invalid encryptedPublicKey
+                    log.info("ContactRequest: error ${e.message}")
+                }
             }
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
@@ -649,6 +704,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.userId)
                 dashPayContactRequestDaoAsync.insert(contactRequest)
+
+                // add the sending to contact keychain if it doesn't exist
+                val contact = EvolutionContact(userId, contactRequest.userId)
+                try {
+                    if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
+                        val contactIdentity = platform.identities.get(contactRequest.userId)
+                        if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                            val password = securityGuard.retrievePassword()
+                            // Don't bother with DeriveKeyTask here, just call deriveKey
+                            encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                        }
+                        blockchainIdentity.addContactPaymentKeyChain(contactIdentity!!, it, encryptionKey!!)
+                        addedContact = true
+                    }
+                } catch (e: KeyCrypterException) {
+                    // we can't send payments to this contact due to an invalid encryptedPublicKey
+                    log.info("ContactRequest: error ${e.message}")
+                }
             }
 
             if (userIdList.isNotEmpty()) {
@@ -671,42 +744,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             }
             fireContactsUpdatedListeners()
+
+            // If new keychains were added to the wallet, then update the bloom filters
+            if (addedContact) {
+                val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                        BlockchainServiceImpl::class.java)
+                walletApplication.startService(intent)
+            }
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
             log.error(formatExceptionMessage("error updating contacts", e))
         } finally {
             updatingContacts.set(false)
         }
-    }
-
-    // Create the Handler object (on the main thread by default)
-    val timerHandler = Handler()
-    var timerStarted = false
-
-    // Define the code block to be executed
-    private val executeUpdateContacts = object : Runnable {
-        override fun run() {
-            log.info("Timer: Update contacts")
-            // Repeat this the same runnable code block again another 2 seconds
-            GlobalScope.launch {
-                updateContactRequests()
-            }
-            timerHandler.postDelayed(this, UPDATE_TIMER_DELAY)
-        }
-    }
-
-    // Start the initial runnable task by posting through the handler
-    fun startUpdateTimer() {
-        log.info("Starting timer for updating DashPay")
-        if (!timerStarted) {
-            timerHandler.post(executeUpdateContacts)
-            timerStarted = true
-        }
-    }
-
-    fun stopUpdateTimer() {
-        timerStarted = false
-        timerHandler.removeCallbacks(executeUpdateContacts)
     }
 
     fun addContactsUpdatedListener(listener: OnContactsUpdated) {
@@ -727,5 +777,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun getIdentityForName(nameDocument: Document): String {
         val records = nameDocument.data["records"] as Map<String, Any?>
         return records["dashIdentity"] as String
+    }
+
+    suspend fun getLocalUsernameSearchResult(userId: String): UsernameSearchResult {
+        val profile = dashPayProfileDaoAsync.load(userId)
+        val receivedContactRequest = dashPayContactRequestDaoAsync.loadToOthers(userId)?.let { it[0] }
+        val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { it[0] }
+
+        return UsernameSearchResult(profile!!.username, profile, sentContactRequest, receivedContactRequest)
     }
 }

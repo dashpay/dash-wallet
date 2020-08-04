@@ -22,9 +22,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
@@ -34,7 +37,7 @@ import org.dash.wallet.common.ui.CurrencyTextView
 /**
  * @author Samuel Barbosa
  */
-class TransactionResultViewBinder(private val containerView: View) {
+class TransactionResultViewBinder(private val containerView: View, private val profile: DashPayProfile?) {
 
     private val ctx by lazy { containerView.context }
     private val checkIcon by lazy { containerView.findViewById<ImageView>(R.id.check_icon) }
@@ -65,6 +68,10 @@ class TransactionResultViewBinder(private val containerView: View) {
     private val paymentMemoContainer by lazy { containerView.findViewById<View>(R.id.payment_memo_container) }
     private val payeeSecuredByContainer by lazy { containerView.findViewById<View>(R.id.payee_verified_by_container) }
     private val payeeSecuredBy by lazy { containerView.findViewById<TextView>(R.id.payee_secured_by) }
+    private val sendToUserContainer by lazy { containerView.findViewById<ConstraintLayout>(R.id.user_container) }
+    private val userLabel by lazy { containerView.findViewById<TextView>(R.id.user_label) }
+    private val userAvatar by lazy { containerView.findViewById<ImageView>(R.id.avatar) }
+    private val userDisplayName by lazy { containerView.findViewById<TextView>(R.id.displayname) }
 
     fun bind(tx: Transaction, payeeName: String? = null, payeeSecuredBy: String? = null) {
         val noCodeFormat = WalletApplication.getInstance().configuration.format.noCode()
@@ -185,6 +192,31 @@ class TransactionResultViewBinder(private val containerView: View) {
             } else {
                 secondaryStatusTxt.visibility = View.GONE
             }
+        }
+
+        // handle dashpay
+
+        if (profile != null) {
+            sendToUserContainer.visibility = View.VISIBLE
+            inputsContainer.visibility = View.GONE
+            outputsContainer.visibility = View.GONE
+            userLabel.text = ctx.getString(if (tx.getValue(wallet).isNegative) R.string.transaction_details_sent_to else R.string.transaction_details_received_from)
+
+            userDisplayName.text = if (profile.displayName.isNotEmpty())
+                profile.displayName
+            else
+                profile.username
+
+            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(ctx!!, profile.username[0])
+
+            if (profile.avatarUrl.isNotEmpty()) {
+                Glide.with(userAvatar).load(profile.avatarUrl).circleCrop()
+                        .placeholder(defaultAvatar).into(userAvatar)
+            } else {
+                userAvatar.background = defaultAvatar
+            }
+        } else {
+            sendToUserContainer.visibility = View.GONE
         }
 
         setTransactionDirection(tx)
