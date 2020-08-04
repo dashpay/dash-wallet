@@ -37,8 +37,8 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ] || [ "${T
     echo "* [dash-wallet-prod-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-prod-debug.apk)"
     echo "* [dash-wallet-_testNet3-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-_testNet3-debug.apk)"
     echo "* [dash-wallet-mobile-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-mobile-debug.apk)"
-    echo "* [dash-wallet-palinka-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-evnonet-debug.apk)"
-    echo "* [dash-wallet-evonet-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-palinka-debug.apk)"
+    echo "* [dash-wallet-palinka-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-palinka-debug.apk)"
+    echo "* [dash-wallet-evonet-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-evonet-debug.apk)"
     if [ "${TRAVIS_TAG:0:4}" = "NMA-" ]; then
       printf 'https://dashpay.atlassian.net/browse/%s\n\n' "$TRAVIS_TAG"
     fi
