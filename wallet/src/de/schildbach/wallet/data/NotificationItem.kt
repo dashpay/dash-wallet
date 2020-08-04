@@ -19,7 +19,7 @@ data class NotificationItem private constructor(val type: Type,
 
     /* date is in milliseconds */
     val date = when (type) {
-        Type.CONTACT_REQUEST, Type.CONTACT -> usernameSearchResult!!.date * 1000
+        Type.CONTACT_REQUEST, Type.CONTACT -> usernameSearchResult!!.date
         else -> tx!!.updateTime.time * 1000
     }
 

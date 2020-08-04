@@ -25,6 +25,6 @@ data class UsernameSearchResult(val username: String,
                         fromContactRequest!!.timestamp
                     }
                     else -> 0.00
-                }.toLong() * 1000
+                }.toLong()
             }
 }

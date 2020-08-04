@@ -19,12 +19,7 @@ data class DashPayContactRequest(@PrimaryKey val entropy: String,
 ) {
     companion object {
         fun fromDocument(document: Document): DashPayContactRequest {
-            val timestamp: Double = when(document.data["timestamp"]) {
-                is Double -> document.data["timestamp"] as Double
-                is Long -> (document.data["timestamp"] as Long).toDouble()
-                is Int -> (document.data["timestamp"] as Int).toDouble()
-                else -> 0.0
-            }
+            val timestamp: Double = if (document.createdAt != null) document.createdAt!!.toDouble() else 0.00
             val privateData = if (document.data.containsKey("privateData"))
                 HashUtils.byteArrayFromString(document.data["privateData"] as String)
             else null

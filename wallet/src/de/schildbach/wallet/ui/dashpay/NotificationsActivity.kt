@@ -150,7 +150,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                             notificationsAdapter.results[currentPosition].notificationItem!!.usernameSearchResult!!.toContactRequest = it.data!!
                             notificationsAdapter.notifyItemChanged(currentPosition)
                             currentPosition = -1
-                            lastSeenNotificationTime = it.data.timestamp.toLong() * 1000
+                            lastSeenNotificationTime = it.data.timestamp.toLong()
                         }
                     }
                 }
