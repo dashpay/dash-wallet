@@ -290,7 +290,6 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             }
         });
         initUphold();
-        initPlatform();
     }
 
     private void initUphold() {
@@ -495,6 +494,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
 
         finalizeInitialization();
+        initPlatform();
     }
 
     private Wallet restoreWalletFromBackup() {
