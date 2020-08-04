@@ -23,6 +23,8 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ] || [ "${T
   cp wallet/build/outputs/apk/_testNet3/debug/dash-wallet-_testNet3-debug.apk "$DEPLOY_DIR"/dash-wallet-_testNet3-debug.apk
   cp wallet/build/outputs/apk/mobile/debug/dash-wallet-mobile-debug.apk "$DEPLOY_DIR"/dash-wallet-mobile-debug.apk
   cp wallet/build/outputs/apk/prod/debug/dash-wallet-prod-debug.apk "$DEPLOY_DIR"/dash-wallet-prod-debug.apk
+  cp wallet/build/outputs/apk/devNet/debug/dash-wallet-prod-debug.apk "$DEPLOY_DIR"/dash-wallet-palinka-debug.apk
+  cp wallet/build/outputs/apk/evonet/debug/dash-wallet-prod-debug.apk "$DEPLOY_DIR"/dash-wallet-evonet-debug.apk
 #  cp wallet/build/outputs/apk/prod/debug/dash-wallet-prod-release.apk "$DEPLOY_DIR"/dash-wallet-prod-release.apk
 
   # generate README.md file
@@ -35,6 +37,8 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ] || [ "${T
     echo "* [dash-wallet-prod-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-prod-debug.apk)"
     echo "* [dash-wallet-_testNet3-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-_testNet3-debug.apk)"
     echo "* [dash-wallet-mobile-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-mobile-debug.apk)"
+    echo "* [dash-wallet-palinka-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-evnonet-debug.apk)"
+    echo "* [dash-wallet-evonet-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-palinka-debug.apk)"
     if [ "${TRAVIS_TAG:0:4}" = "NMA-" ]; then
       printf 'https://dashpay.atlassian.net/browse/%s\n\n' "$TRAVIS_TAG"
     fi
