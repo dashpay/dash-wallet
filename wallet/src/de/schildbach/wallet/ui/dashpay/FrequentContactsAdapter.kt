@@ -19,12 +19,25 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+/*
+ * Copyright 2020 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import androidx.recyclerview.widget.RecyclerView
-import de.schildbach.wallet.data.OnContactItemClickListener
 import de.schildbach.wallet.data.UsernameSearchResult
 import org.dashevo.dpp.util.HashUtils
 import java.math.BigInteger
-
 
 class FrequentContactsAdapter() :
         RecyclerView.Adapter<FrequentContactViewHolder>() {
@@ -61,12 +74,4 @@ class FrequentContactsAdapter() :
     override fun onBindViewHolder(holder: FrequentContactViewHolder, position: Int) {
         holder.bind(results[position])
     }
-
-    /*override fun onBindViewHolder(holder: FrequentContactViewHolder, position: Int, payloads: List<Any?>) {
-        if (payloads.isEmpty()) {
-            super.onBindViewHolder(holder, position, payloads)
-        } else {
-            holder.itemView.alpha = 1f
-        }
-    }*/
 }
