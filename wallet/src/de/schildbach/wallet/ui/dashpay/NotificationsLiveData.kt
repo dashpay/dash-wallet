@@ -5,9 +5,9 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.bitcoinj.evolution.EvolutionContact
 
 open class NotificationsLiveData(protected val walletApplication: WalletApplication, protected val platformRepo: PlatformRepo) : LiveData<Resource<List<NotificationItem>>>(), OnContactsUpdated {
     private var listening = false
@@ -48,14 +48,17 @@ open class NotificationsLiveData(protected val walletApplication: WalletApplicat
 
             //TODO: gather other notification types
             // * invitations
-            // * payments
+            // * payments are not included
             // * other
 
-            contactRequests.data!!.forEach {
-                results.add(NotificationItem(it))
-            }
+            if (contactRequests.status == Status.SUCCESS) {
 
-            postValue(Resource.success(results))
+                contactRequests.data!!.forEach {
+                    results.add(NotificationItem(it))
+                }
+
+                postValue(Resource.success(results))
+            }
         }
     }
 }
