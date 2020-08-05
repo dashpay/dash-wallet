@@ -79,7 +79,6 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
 
     fun createSendRequest(wallet: Wallet, mayEditAmount: Boolean, paymentIntent: PaymentIntent, signInputs: Boolean, forceEnsureMinRequiredFee: Boolean): SendRequest {
 
-        paymentIntent.setInstantX(false) //to make sure the correct instance of Transaction class is used in toSendRequest() method
         val sendRequest = paymentIntent.toSendRequest()
         sendRequest.coinSelector = ZeroConfCoinSelector.get()
         sendRequest.useInstantSend = false

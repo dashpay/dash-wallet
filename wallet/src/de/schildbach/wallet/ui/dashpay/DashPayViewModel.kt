@@ -21,6 +21,7 @@ import android.os.Process
 import androidx.lifecycle.*
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
+import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
@@ -28,6 +29,8 @@ import de.schildbach.wallet.ui.send.DeriveKeyTask
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import java.lang.Exception
@@ -40,8 +43,11 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
+    private val contactUserIdLiveData = MutableLiveData<String>()
+
     val notificationCountLiveData = NotificationCountLiveData(walletApplication, platformRepo)
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo)
+    val notificationsForUserLiveData = NotificationsForUserLiveData(walletApplication, platformRepo)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
@@ -50,6 +56,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private var searchUsernamesJob = Job()
     private var searchContactsJob = Job()
     private var contactRequestJob = Job()
+    private var getContactJob = Job()
 
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
@@ -116,7 +123,11 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         notificationsLiveData.searchNotifications(text)
     }
 
-    fun getNotificationCount() {
+    fun searchNotificationsForUser(userId: String) {
+        notificationsForUserLiveData.searchNotifications(userId)
+    }
+
+   fun getNotificationCount() {
         notificationCountLiveData.getNotificationCount()
     }
 
@@ -130,6 +141,10 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             platformRepo.updateContactRequests()
         }
+    }
+
+    fun getNextContactAddress(userId: String): Address {
+        return platformRepo.getNextContactAddress(userId)
     }
 
     //TODO: this can probably be simplified using coroutines
@@ -168,6 +183,23 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
                 emit(Resource.error("Failed to decrypt keys"))
             }
         }
+    }
+
+    val getContactLiveData = Transformations.switchMap(contactUserIdLiveData) { userId ->
+        getContactJob.cancel()
+        getContactJob = Job()
+        liveData(context = getContactJob + Dispatchers.IO) {
+            if (userId != null) {
+                emit(Resource.loading(null))
+                emit(Resource.success(platformRepo.getLocalUsernameSearchResult(userId)))
+            } else {
+                emit(Resource.canceled())
+            }
+        }
+    }
+
+    fun getContact(username: String?) {
+        contactUserIdLiveData.value = username
     }
 
 }

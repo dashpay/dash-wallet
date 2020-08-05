@@ -38,6 +38,7 @@ import android.view.ViewGroup;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 
 import org.bitcoinj.core.Address;
@@ -65,6 +66,7 @@ import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
@@ -73,6 +75,7 @@ import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet_test.R;
 
 public class SendCoinsFragment extends Fragment {
@@ -89,6 +92,7 @@ public class SendCoinsFragment extends Fragment {
 
     private SendCoinsViewModel viewModel;
     private EnterAmountSharedViewModel enterAmountSharedViewModel;
+    private DashPayViewModel dashPayViewModel;
 
     private boolean wasAmountChangedByTheUser = false;
 
@@ -149,7 +153,7 @@ public class SendCoinsFragment extends Fragment {
             }
         });
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
             @Override
             public void onChanged(BlockchainState blockchainState) {
                 SendCoinsFragment.this.blockchainState = blockchainState;
@@ -253,6 +257,8 @@ public class SendCoinsFragment extends Fragment {
             }
         });
 
+        dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
+
         if (savedInstanceState == null) {
             final Intent intent = activity.getIntent();
 
@@ -262,6 +268,24 @@ public class SendCoinsFragment extends Fragment {
                 throw new IllegalArgumentException();
             }
             viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
+
+            if (paymentIntent.isIdentityPaymentRequest()) {
+                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(paymentIntent.payeeUserId).observe(getViewLifecycleOwner(), new Observer<DashPayProfile>() {
+                    @Override
+                    public void onChanged(DashPayProfile dashPayProfile) {
+                        if(dashPayProfile != null) {
+                            Address address = dashPayViewModel.getNextContactAddress(paymentIntent.payeeUserId);
+                            PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()), dashPayProfile.getUserId());
+
+                            viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
+
+                            enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
+                        }
+                    }
+                });
+            } else {
+                viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
+            }
         }
     }
 
@@ -414,7 +438,7 @@ public class SendCoinsFragment extends Fragment {
         }
 
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                activity.getIntent().getAction(), transaction, activity.isUserAuthorized());
+                activity.getIntent().getAction(), transaction, activity.isUserAuthorized(), viewModel.getBasePaymentIntentValue().payeeUserId);
         startActivity(transactionResultIntent);
     }
 
@@ -571,9 +595,14 @@ public class SendCoinsFragment extends Fragment {
         String amountFiat = fiatAmount != null ? Constants.LOCAL_FORMAT.format(fiatAmount).toString() : getString(R.string.transaction_row_rate_not_available);
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
+        DashPayProfile dashPayProfile = enterAmountSharedViewModel.getDashPayProfileData().getValue();
+        String username = dashPayProfile != null ? dashPayProfile.getUsername() : null;
+        String displayName = dashPayProfile == null || dashPayProfile.getDisplayName().isEmpty() ? username : dashPayProfile.getDisplayName();
+        String avatarUrl = dashPayProfile != null ? dashPayProfile.getAvatarUrl() : null;
 
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
-                fiatSymbol, fee, total, null, null, null);
+                fiatSymbol, fee, total, null, null, null,
+                username, displayName, avatarUrl);
         dialog.show(Objects.requireNonNull(getFragmentManager()), "ConfirmTransactionDialog");
     }
 

@@ -26,12 +26,16 @@ import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProviders
+import com.bumptech.glide.Glide
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
+import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
+import kotlinx.android.synthetic.main.dialog_confirm_transaction.avatar
+import kotlinx.android.synthetic.main.dialog_confirm_transaction.displayname
 
 
 class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
@@ -47,10 +51,14 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         private const val ARG_BUTTON_TEXT = "arg_button_text"
         private const val ARG_PAYEE_NAME = "arg_payee_name"
         private const val ARG_PAYEE_VERIFIED_BY = "arg_payee_verified_by"
+        private const val ARG_PAYEE_USERNAME = "arg_payee_username"
+        private const val ARG_PAYEE_DISPLAYNAME = "arg_payee_displayname"
+        private const val ARG_PAYEE_AVATAR_URL = "arg_payee_avatar_url"
 
         @JvmStatic
         fun createDialog(address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String, total: String,
-                         payeeName: String? = null, payeeVerifiedBy: String? = null, buttonText: String? = null): DialogFragment {
+                         payeeName: String? = null, payeeVerifiedBy: String? = null, buttonText: String? = null,
+                         username: String? = null, displayName: String? = null, avatarUrl: String? = null): DialogFragment {
             val dialog = ConfirmTransactionDialog()
             val bundle = Bundle()
             bundle.putString(ARG_ADDRESS, address)
@@ -62,6 +70,11 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             bundle.putString(ARG_PAYEE_NAME, payeeName)
             bundle.putString(ARG_PAYEE_VERIFIED_BY, payeeVerifiedBy)
             bundle.putString(ARG_BUTTON_TEXT, buttonText)
+            if (displayName != null) {
+                bundle.putString(ARG_PAYEE_DISPLAYNAME, displayName)
+                bundle.putString(ARG_PAYEE_AVATAR_URL, avatarUrl)
+                bundle.putString(ARG_PAYEE_USERNAME, username)
+            }
             dialog.arguments = bundle
             return dialog
         }
@@ -81,9 +94,13 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             fiat_value.text = getString(ARG_AMOUNT_FIAT)
             transaction_fee.text = getString(ARG_FEE)
             total_amount.text = getString(ARG_TOTAL)
+            val username = getString(ARG_PAYEE_USERNAME)
+            val displayNameText = getString(ARG_PAYEE_DISPLAYNAME)
+            val avatarUrl = getString(ARG_PAYEE_AVATAR_URL)
             val payeeName = getString(ARG_PAYEE_NAME)
             val payeeVerifiedBy = getString(ARG_PAYEE_VERIFIED_BY)
             if (payeeName != null && payeeVerifiedBy != null) {
+                sendtouser.visibility = View.GONE
                 address.text = payeeName
                 payee_secured_by.text = payeeVerifiedBy
                 payee_verified_by_pane.visibility = View.VISIBLE
@@ -93,7 +110,20 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
                 }
                 address.setOnClickListener(forceMarqueeOnClickListener)
                 payee_secured_by.setOnClickListener(forceMarqueeOnClickListener)
+            } else if (displayNameText != null) {
+                sendtoaddress.visibility = View.GONE
+                displayname.text = displayNameText
+                val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context!!,
+                        username[0])
+
+                if(avatarUrl.isNotEmpty()) {
+                    Glide.with(avatar).load(avatarUrl).circleCrop()
+                            .placeholder(defaultAvatar).into(avatar)
+                } else {
+                    avatar.background = defaultAvatar
+                }
             } else {
+                sendtouser.visibility = View.GONE
                 address.ellipsize = TextUtils.TruncateAt.MIDDLE
                 address.text = getString(ARG_ADDRESS)
             }

@@ -9,13 +9,18 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.Observer
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.dashevo.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 
 /**
@@ -46,7 +51,31 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         tx = wallet.getTransaction(txId)
-        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container)
+        val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
+
+        var profile: DashPayProfile? = null
+        var userId: String? = null
+        if (blockchainIdentity != null) {
+            userId = blockchainIdentity.getContactForTransaction(tx!!)
+            if (userId != null) {
+                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(userId).observe(viewLifecycleOwner, Observer {
+                    if (it != null) {
+                        profile = it
+                        finishInitialization(profile)
+                    }
+                })
+            }
+        }
+
+        if (blockchainIdentity == null || userId == null)
+            finishInitialization(null)
+
+        view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
+        transaction_close_btn.setOnClickListener { dismissAnimation() }
+    }
+
+    private fun finishInitialization(dashPayProfile: DashPayProfile?) {
+        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile)
         if (tx != null) {
             transactionResultViewBinder.bind(tx!!)
         } else {
@@ -54,8 +83,6 @@ class TransactionDetailsDialogFragment : DialogFragment() {
             dismiss()
             return
         }
-        view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
-        transaction_close_btn.setOnClickListener { dismissAnimation() }
         showAnimation()
     }
 

@@ -14,8 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- TODO: Rename, layout belows doesn't seem to be a fragment -->
-        <include layout="@layout/fragment_contacts" />
+        <include layout="@layout/contacts_list_layout" />
 
     </FrameLayout>
 

@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -33,13 +34,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayContactRequest
+import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_contacts.*
+import kotlinx.android.synthetic.main.fragment_notifications.*
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -70,9 +72,8 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
-    protected val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this)
+    private lateinit var notificationsAdapter: NotificationsAdapter
     private var query = ""
-    private var blockchainIdentityId: String? = null
     private var direction = UsernameSortOrderBy.DATE_ADDED
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
@@ -83,6 +84,8 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
         walletApplication = application as WalletApplication
         lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
+
+        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet, this)
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
             mode = intent.extras.getInt(EXTRA_MODE)
@@ -127,15 +130,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 }
             }
         })
-        //This is not used
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(this, Observer {
-            if (it != null) {
-                //TODO: we don't have an easy way of getting the identity id (userId)
-                val tx = walletApplication.wallet.getTransaction(it.creditFundingTxId)
-                val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
-                blockchainIdentityId = cftx.creditBurnIdentityIdentifier.toStringBase58()
-            }
-        })
 
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
@@ -153,7 +147,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                         }
                         Status.SUCCESS -> {
                             // update the data
-                            notificationsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
+                            notificationsAdapter.results[currentPosition].notificationItem!!.usernameSearchResult!!.toContactRequest = it.data!!
                             notificationsAdapter.notifyItemChanged(currentPosition)
                             currentPosition = -1
                             lastSeenNotificationTime = it.data.timestamp.toLong() * 1000
@@ -164,19 +158,23 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         })
     }
 
-    private fun getViewType(usernameSearchResult: UsernameSearchResult): Int {
-        return when (usernameSearchResult.requestSent to usernameSearchResult.requestReceived) {
-            true to true -> {
-                NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
+    private fun getViewType(notificationItem: NotificationItem): Int {
+        when (notificationItem.type) {
+            NotificationItem.Type.CONTACT_REQUEST,
+            NotificationItem.Type.CONTACT -> return when (notificationItem.usernameSearchResult!!.requestSent to notificationItem.usernameSearchResult.requestReceived) {
+                true to true -> {
+                    NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
+                }
+                false to true -> {
+                    NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
+                }
+                else -> throw IllegalArgumentException("View not supported")
             }
-            false to true -> {
-                NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
-            }
-            else -> throw IllegalArgumentException("View not supported")
+            NotificationItem.Type.PAYMENT -> throw IllegalStateException()
         }
     }
 
-    private fun processResults(data: List<UsernameSearchResult>) {
+    private fun processResults(data: List<NotificationItem>) {
 
         val results = ArrayList<NotificationsAdapter.ViewItem>()
 

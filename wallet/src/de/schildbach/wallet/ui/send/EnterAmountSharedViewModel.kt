@@ -21,6 +21,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.ui.SingleLiveEvent
@@ -59,6 +60,8 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
     val buttonClickEvent = SingleLiveEvent<Coin>()
 
     val maxButtonClickEvent = SingleLiveEvent<Boolean>()
+
+    val dashPayProfileData = MutableLiveData<DashPayProfile>()
 
     init {
         val currencyCode = (application as WalletApplication).configuration.exchangeCurrencyCode
