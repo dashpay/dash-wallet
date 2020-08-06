@@ -36,8 +36,7 @@ import android.view.ViewGroup
  */
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.UsernameSearchResult
-import org.dashevo.dpp.util.HashUtils
-import java.math.BigInteger
+import de.schildbach.wallet.util.PlatformUtils
 
 class FrequentContactsAdapter() :
         RecyclerView.Adapter<FrequentContactViewHolder>() {
@@ -61,14 +60,8 @@ class FrequentContactsAdapter() :
         return results.size
     }
 
-    private fun getLongValue(s: String): Long {
-        val byteArray = HashUtils.byteArrayFromString(s)
-        val bigInteger = BigInteger(byteArray)
-        return bigInteger.toLong()
-    }
-
     override fun getItemId(position: Int): Long {
-        return getLongValue(results[position].fromContactRequest!!.userId)
+        return PlatformUtils.longHashFromEncodedString(results[position].fromContactRequest!!.userId)
     }
 
     override fun onBindViewHolder(holder: FrequentContactViewHolder, position: Int) {

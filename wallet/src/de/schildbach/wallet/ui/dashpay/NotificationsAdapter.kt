@@ -32,6 +32,7 @@ import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
+import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet.util.TransactionUtil
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -45,8 +46,6 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.CurrencyTextView
 import org.dash.wallet.common.util.GenericUtils
-import org.dashevo.dpp.util.HashUtils
-import java.math.BigInteger
 import java.util.*
 import kotlin.math.max
 
@@ -108,20 +107,14 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
         return results.size
     }
 
-    private fun getLongValue(s: String): Long {
-        val byteArray = HashUtils.byteArrayFromString(s)
-        val bigInteger = BigInteger(byteArray)
-        return bigInteger.toLong()
-    }
-
     override fun getItemId(position: Int): Long {
         return when (results[position].viewType) {
             NOTIFICATION_NEW_HEADER -> 1L
             NOTIFICATION_NEW_EMPTY -> 2L
-            NOTIFICATION_CONTACT_REQUEST_RECEIVED -> getLongValue(results[position].notificationItem!!.id)
+            NOTIFICATION_CONTACT_REQUEST_RECEIVED -> PlatformUtils.longHashFromEncodedString(results[position].notificationItem!!.id)
             NOTIFICATION_EARLIER_HEADER -> 3L
-            NOTIFICATION_CONTACT_ADDED -> getLongValue(results[position].notificationItem!!.id)
-            NOTIFICATION_PAYMENT -> getLongValue(results[position].notificationItem!!.id)
+            NOTIFICATION_CONTACT_ADDED -> PlatformUtils.longHashFromEncodedString(results[position].notificationItem!!.id)
+            NOTIFICATION_PAYMENT -> PlatformUtils.longHashFromEncodedString(results[position].notificationItem!!.id)
             else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")
         }
     }
