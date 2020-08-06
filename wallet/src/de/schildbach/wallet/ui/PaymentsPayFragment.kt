@@ -98,7 +98,9 @@ class PaymentsPayFragment : Fragment(),
                 }
 
                 if (it.data != null) {
-                    processResults(it.data)
+                    val results = arrayListOf<UsernameSearchResult>()
+                    results.addAll(it.data)
+                    frequentContactsAdapter.results = results
                 }
             }
         })
@@ -225,16 +227,6 @@ class PaymentsPayFragment : Fragment(),
 
     interface OnSelectContactToPayListener {
         fun selectContactToPay()
-    }
-
-    private fun processResults(data: List<UsernameSearchResult>) {
-        val results = ArrayList<UsernameSearchResult>()
-
-        val contacts = data.filter { /*it.requestSent &&*/ it.requestReceived }
-
-        contacts.forEach { results.add(it) }
-
-        frequentContactsAdapter.results = results
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {

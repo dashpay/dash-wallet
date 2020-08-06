@@ -80,7 +80,10 @@ class FrequentContactsLiveData(val walletApplication: WalletApplication, private
         val results = arrayListOf<UsernameSearchResult>()
         val contactScores = hashMapOf<String, Int>()
         val contactIds = arrayListOf<String>()
-        items.forEach {
+        // only include fully established contacts
+        val contacts = items.filter { it.requestSent && it.requestReceived }
+
+        contacts.forEach {
             val transactions = blockchainIdentity.getContactTransactions(it.fromContactRequest!!.userId)
             var count = 0
 
