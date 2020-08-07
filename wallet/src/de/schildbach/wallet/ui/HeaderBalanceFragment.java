@@ -150,7 +150,6 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         notificationBell = view.findViewById(R.id.notification_bell);
         dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
 
-
         notifications.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
