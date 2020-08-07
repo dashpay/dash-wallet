@@ -75,6 +75,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     private CurrencyTextView viewBalanceLocal;
     private TextView notifications;
     private ImageButton notificationBell;
+    private ImageView dashpayUserAvatar;
 
     private boolean showLocalBalance;
 
@@ -147,18 +148,27 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
 
         notifications = view.findViewById(R.id.notifications);
         notificationBell = view.findViewById(R.id.notification_bell);
+        dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
+
 
         notifications.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+                startActivity(NotificationsActivity.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
             }
         });
 
         notificationBell.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(NotificationsActivity.Companion.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+                startActivity(NotificationsActivity.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+            }
+        });
+
+        dashpayUserAvatar.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(NotificationsActivity.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
             }
         });
 
@@ -235,7 +245,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     }
 
     private void setDefaultUserAvatar(String letters) {
-        ImageView dashpayUserAvatar = view.findViewById(R.id.dashpay_user_avatar);
+
         if (letters == null) {
             // there is no username, so hide the image
             dashpayUserAvatar.setVisibility(View.GONE);
