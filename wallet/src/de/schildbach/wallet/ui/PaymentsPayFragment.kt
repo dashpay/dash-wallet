@@ -102,6 +102,8 @@ class PaymentsPayFragment : Fragment(),
                     results.addAll(it.data)
                     frequentContactsAdapter.results = results
                 }
+            } else if (it.status == Status.ERROR) {
+                frequent_contacts_rv.visibility = View.GONE
             }
         })
     }
