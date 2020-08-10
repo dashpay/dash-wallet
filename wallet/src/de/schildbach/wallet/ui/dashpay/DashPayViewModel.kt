@@ -49,7 +49,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo)
     val notificationsForUserLiveData = NotificationsForUserLiveData(walletApplication, platformRepo)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
-    val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo)
+    val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, viewModelScope)
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
 
     // Job instance (https://stackoverflow.com/questions/57723714/how-to-cancel-a-running-livedata-coroutine-block/57726583#57726583)

@@ -7,13 +7,13 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.dashevo.dashpay.BlockchainIdentity
 import java.util.*
 
-class FrequentContactsLiveData(val walletApplication: WalletApplication, private val platformRepo: PlatformRepo) : LiveData<Resource<List<UsernameSearchResult>>>(), OnContactsUpdated {
+class FrequentContactsLiveData(val walletApplication: WalletApplication, private val platformRepo: PlatformRepo, val scope: CoroutineScope) : LiveData<Resource<List<UsernameSearchResult>>>(), OnContactsUpdated {
 
     companion object {
         const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
@@ -50,7 +50,7 @@ class FrequentContactsLiveData(val walletApplication: WalletApplication, private
     }
 
     fun getFrequentContacts() {
-        GlobalScope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             val contactRequests = platformRepo.searchContacts("", UsernameSortOrderBy.DATE_ADDED)
             when (contactRequests.status) {
                 Status.SUCCESS -> {
