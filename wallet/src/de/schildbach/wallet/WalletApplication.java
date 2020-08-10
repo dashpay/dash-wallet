@@ -703,6 +703,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         else
             alarmInterval = AlarmManager.INTERVAL_DAY;
 
+        final long alarmIntervalMinutes = TimeUnit.MILLISECONDS.toMinutes(alarmInterval);
+
         log.info("last used {} minutes ago, rescheduling blockchain sync in roughly {} minutes",
                 lastUsedAgo / DateUtils.MINUTE_IN_MILLIS, alarmInterval / DateUtils.MINUTE_IN_MILLIS);
 
@@ -731,9 +733,9 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
                         .setPersisted(true)
                         .build();
                 int scheduleResult = jobScheduler.schedule(jobInfo);
-                log.info("scheduling blockchain sync job with interval of {}s, result: {}", alarmInterval / 1000, scheduleResult);
+                log.info("scheduling blockchain sync job with interval of {} minutes, result: {}", alarmIntervalMinutes, scheduleResult);
             } else {
-                log.info("blockchain sync job already scheduled with interval of {}s", alarmInterval / 1000);
+                log.info("blockchain sync job already scheduled with interval of {} minutes", alarmIntervalMinutes);
             }
         } else {
             // workaround for no inexact set() before KitKat
