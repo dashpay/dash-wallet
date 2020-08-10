@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
@@ -31,7 +30,6 @@ import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.NotificationItem
@@ -40,6 +38,7 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.dashpay.notification.ContactRequestViewHolder
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_notifications.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -49,7 +48,7 @@ import kotlin.collections.ArrayList
 import kotlin.math.max
 
 class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
-        NotificationsAdapter.OnItemClickListener, NotificationsAdapter.OnContactRequestButtonClickListener {
+        NotificationsAdapter.OnItemClickListener, ContactRequestViewHolder.OnContactRequestButtonClickListener {
 
     companion object {
         private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
@@ -147,7 +146,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                         }
                         Status.SUCCESS -> {
                             // update the data
-                            notificationsAdapter.results[currentPosition].notificationItem!!.usernameSearchResult!!.toContactRequest = it.data!!
+                            notificationsAdapter.getAsNotificationViewItem(currentPosition).notificationItem.usernameSearchResult!!.toContactRequest = it.data!!
                             notificationsAdapter.notifyItemChanged(currentPosition)
                             currentPosition = -1
                             lastSeenNotificationTime = it.data.timestamp.toLong() * 1000
@@ -156,22 +155,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 }
             }
         })
-    }
-
-    private fun getViewType(notificationItem: NotificationItem): Int {
-        when (notificationItem.type) {
-            NotificationItem.Type.CONTACT_REQUEST,
-            NotificationItem.Type.CONTACT -> return when (notificationItem.usernameSearchResult!!.requestSent to notificationItem.usernameSearchResult.requestReceived) {
-                true to true -> {
-                    NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
-                }
-                false to true -> {
-                    NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
-                }
-                else -> throw IllegalArgumentException("View not supported")
-            }
-            NotificationItem.Type.PAYMENT -> throw IllegalStateException()
-        }
     }
 
     private fun processResults(data: List<NotificationItem>) {
@@ -188,20 +171,20 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         val newItems = data.filter { r -> r.date >= newDate }.toMutableList()
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
-        results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_HEADER))
+        results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_new))
         if (newItems.isEmpty()) {
-            results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_NEW_EMPTY))
+            results.add(NotificationsAdapter.ImageViewItem(R.drawable.ic_notification_new_empty, R.string.notifications_none_new))
         } else {
-            newItems.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, getViewType(r), true)) }
+            newItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r, true)) }
         }
 
         supportActionBar!!.title = getString(R.string.notifications_title_with_count, newItems.size)
-        results.add(NotificationsAdapter.ViewItem(null, NotificationsAdapter.NOTIFICATION_EARLIER_HEADER))
+        results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_earlier))
 
         // process contacts
         val earlierItems = data.filter { r -> r.date < newDate }
 
-        earlierItems.forEach { r -> results.add(NotificationsAdapter.ViewItem(r, getViewType(r))) }
+        earlierItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r)) }
 
         notificationsAdapter.results = results
         lastSeenNotificationTime = lastNotificationTime
@@ -231,12 +214,21 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
     }
 
-    override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
+    override fun onItemClicked(view: View, notificationItem: NotificationItem) {
 
-        startActivityForResult(DashPayUserActivity.createIntent(this,
-                usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
-
+        when (notificationItem.type) {
+            NotificationItem.Type.CONTACT,
+            NotificationItem.Type.CONTACT_REQUEST -> {
+                val usernameSearchResult = notificationItem.usernameSearchResult!!
+                startActivityForResult(DashPayUserActivity.createIntent(this,
+                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
+                        contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
+            }
+            NotificationItem.Type.PAYMENT -> {
+                val tx = notificationItem.tx!!
+                Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

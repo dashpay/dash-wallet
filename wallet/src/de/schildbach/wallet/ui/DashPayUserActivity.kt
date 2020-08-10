@@ -33,20 +33,18 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.notification.ContactRequestViewHolder
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
-import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.InteractionAwareActivity
-import kotlin.collections.ArrayList
 
 class DashPayUserActivity : InteractionAwareActivity(),
         NotificationsAdapter.OnItemClickListener,
-        NotificationsAdapter.OnContactRequestButtonClickListener {
+        ContactRequestViewHolder.OnContactRequestButtonClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private val username by lazy { intent.getStringExtra(USERNAME) }
@@ -231,7 +229,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }.parse()
     }
 
-    override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
+    override fun onItemClicked(view: View, notificationItem: NotificationItem) {
         //do nothing if an item is clicked for now
     }
 
@@ -247,24 +245,8 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         val results = ArrayList<NotificationsAdapter.ViewItem>()
 
-        data.forEach { results.add(NotificationsAdapter.ViewItem(it, getViewType(it), false)) }
+        data.forEach { results.add(NotificationsAdapter.NotificationViewItem(it, false)) }
 
         notificationsAdapter.results = results
-    }
-
-    private fun getViewType(notificationItem: NotificationItem): Int {
-        return when (notificationItem.type) {
-            NotificationItem.Type.CONTACT_REQUEST,
-            NotificationItem.Type.CONTACT -> return when (notificationItem.usernameSearchResult!!.requestSent to notificationItem.usernameSearchResult.requestReceived) {
-                true to true -> {
-                    NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
-                }
-                false to true -> {
-                    NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
-                }
-                else -> throw IllegalArgumentException("View not supported")
-            }
-            NotificationItem.Type.PAYMENT -> NotificationsAdapter.NOTIFICATION_PAYMENT
-        }
     }
 }
