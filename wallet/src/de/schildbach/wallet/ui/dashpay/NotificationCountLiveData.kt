@@ -2,10 +2,13 @@ package de.schildbach.wallet.ui.dashpay
 
 import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class NotificationCountLiveData(val walletApplication: WalletApplication, private val platformRepo: PlatformRepo) : LiveData<Int>(), OnContactsUpdated {
+class NotificationCountLiveData(val walletApplication: WalletApplication,
+                                private val platformRepo: PlatformRepo,
+                                private val scope: CoroutineScope) : LiveData<Int>(), OnContactsUpdated {
     private var listening = false
 
     override fun onActive() {
@@ -36,7 +39,7 @@ class NotificationCountLiveData(val walletApplication: WalletApplication, privat
     }
 
     fun getNotificationCount() {
-        GlobalScope.launch {
+        scope.launch(Dispatchers.IO) {
             val notificationCount = platformRepo.getNotificationCount(walletApplication.configuration.lastSeenNotificationTime)
 
             // TODO: Count other types of notifications such as:
