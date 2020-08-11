@@ -22,50 +22,50 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.NotificationItem
-import de.schildbach.wallet.ui.dashpay.notification.*
+import de.schildbach.wallet.data.NotificationItemContact
+import de.schildbach.wallet.data.NotificationItemPayment
+import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.HeaderViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.ImageViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.TransactionViewHolder
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.wallet.Wallet
 import org.dashevo.dpp.util.HashUtils
 import java.math.BigInteger
 import java.util.*
 
-class NotificationsAdapter(val context: Context, val wallet: Wallet, val onContactRequestButtonClickListener: ContactRequestViewHolder.OnContactRequestButtonClickListener)
+class NotificationsAdapter(val context: Context, val wallet: Wallet, private val onContactActionClickListener: ContactViewHolder.OnContactActionClickListener, private val itemClickListener: OnItemClickListener)
     : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
         const val NOTIFICATION_HEADER = 1
         const val NOTIFICATION_EMPTY = 2
-        const val NOTIFICATION_CONTACT_ADDED = 3
-        const val NOTIFICATION_CONTACT_REQUEST_RECEIVED = 4
-        const val NOTIFICATION_PAYMENT = 5
+        const val NOTIFICATION_CONTACT = 3
+        const val NOTIFICATION_PAYMENT = 4
     }
 
     interface ViewItem
     data class HeaderViewItem(val titleResId: Int) : ViewItem
-    data class ImageViewItem(val imageResId: Int, val textResId: Int) : ViewItem
+    data class EmptyViewItem(val imageResId: Int, val textResId: Int) : ViewItem
     data class NotificationViewItem(val notificationItem: NotificationItem, val isNew: Boolean = false) : ViewItem
-
-    interface OnItemClickListener {
-        fun onItemClicked(view: View, notificationItem: NotificationItem)
-    }
 
     init {
         setHasStableIds(true)
     }
 
-    var itemClickListener: OnItemClickListener? = null
     var results: List<ViewItem> = arrayListOf()
         set(value) {
             field = value
             notifyDataSetChanged()
         }
 
+    private val transactionCache: HashMap<Sha256Hash, TransactionViewHolder.TransactionCacheEntry> = HashMap()
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
             NOTIFICATION_HEADER -> HeaderViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_EMPTY -> ImageViewHolder(LayoutInflater.from(parent.context), parent)
-            NOTIFICATION_CONTACT_REQUEST_RECEIVED -> ContactRequestViewHolder(LayoutInflater.from(parent.context), parent)
-            NOTIFICATION_CONTACT_ADDED -> ContactViewHolder(LayoutInflater.from(parent.context), parent)
+            NOTIFICATION_CONTACT -> ContactViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_PAYMENT -> TransactionViewHolder(LayoutInflater.from(parent.context), parent)
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
         }
@@ -85,30 +85,26 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
         return when (getItemViewType(position)) {
             NOTIFICATION_HEADER -> 1L
             NOTIFICATION_EMPTY -> 2L
-            NOTIFICATION_CONTACT_REQUEST_RECEIVED -> getLongValue(getAsNotificationViewItem(position).notificationItem.id)
-            NOTIFICATION_CONTACT_ADDED -> getLongValue(getAsNotificationViewItem(position).notificationItem.id)
-            NOTIFICATION_PAYMENT -> getLongValue(getAsNotificationViewItem(position).notificationItem.id)
-            else -> throw IllegalArgumentException("Invalid viewType ${getItemViewType(position)}")
+            else -> getLongValue(getNotificationItem(position).getId())
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (getItemViewType(position)) {
-            NOTIFICATION_CONTACT_REQUEST_RECEIVED -> {
-                val usernameSearchResult = getAsNotificationViewItem(position).notificationItem.usernameSearchResult!!
-                (holder as ContactRequestViewHolder).bind(
-                        usernameSearchResult, getAsNotificationViewItem(position).isNew,
-                        onContactRequestButtonClickListener)
-            }
-            NOTIFICATION_CONTACT_ADDED -> {
-                val usernameSearchResult = getAsNotificationViewItem(position).notificationItem.usernameSearchResult!!
-                (holder as ContactViewHolder).bind(
-                        usernameSearchResult, getAsNotificationViewItem(position).isNew)
-            }
             NOTIFICATION_HEADER -> (holder as HeaderViewHolder).bind(results[position] as HeaderViewItem)
-            NOTIFICATION_EMPTY -> (holder as ImageViewHolder).bind(results[position] as ImageViewItem)
+            NOTIFICATION_EMPTY -> (holder as ImageViewHolder).bind(results[position] as EmptyViewItem)
+            NOTIFICATION_CONTACT -> {
+                val notificationItem = getNotificationItem(position) as NotificationItemContact
+                val usernameSearchResult = notificationItem.usernameSearchResult
+                (holder as ContactViewHolder).bind(
+                        usernameSearchResult,
+                        notificationItem.isNew,
+                        notificationItem.isInvitationOfEstablished,
+                        onContactActionClickListener)
+            }
             NOTIFICATION_PAYMENT -> {
-                val tx = getAsNotificationViewItem(position).notificationItem.tx!!
+                val notificationItem = getNotificationItem(position) as NotificationItemPayment
+                val tx = notificationItem.tx!!
                 val txCache = transactionCache[tx.txId]
                 (holder as TransactionViewHolder).bind(tx, txCache, wallet)?.let {
                     transactionCache[tx.txId] = it
@@ -117,16 +113,16 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
             else -> throw IllegalArgumentException("Invalid viewType ${getItemViewType(position)}")
         }
         if (results[position] is NotificationViewItem) {
-            itemClickListener?.let { l ->
-                holder.itemView.setOnClickListener {
-                    l.onItemClicked(it, getAsNotificationViewItem(position).notificationItem)
+            holder.itemView.setOnClickListener {
+                itemClickListener.run {
+                    onItemClicked(it, getNotificationItem(position))
                 }
             }
         }
     }
 
-    fun getAsNotificationViewItem(position: Int): NotificationViewItem {
-        return (results[position] as NotificationViewItem)
+    fun getNotificationItem(position: Int): NotificationItem {
+        return (results[position] as NotificationViewItem).notificationItem
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: List<Any?>) {
@@ -141,25 +137,16 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, val onConta
         val item = results[position]
         return when {
             (item is HeaderViewItem) -> NOTIFICATION_HEADER
-            (item is ImageViewItem) -> NOTIFICATION_EMPTY
-            else -> {
-                val notificationItem = getAsNotificationViewItem(position).notificationItem
-                when (notificationItem.type) {
-                    NotificationItem.Type.CONTACT_REQUEST,
-                    NotificationItem.Type.CONTACT -> return when (notificationItem.usernameSearchResult!!.requestSent to notificationItem.usernameSearchResult.requestReceived) {
-                        true to true -> {
-                            NOTIFICATION_CONTACT_ADDED
-                        }
-                        false to true -> {
-                            NOTIFICATION_CONTACT_REQUEST_RECEIVED
-                        }
-                        else -> throw IllegalArgumentException("View not supported")
-                    }
-                    NotificationItem.Type.PAYMENT -> NOTIFICATION_PAYMENT
-                }
+            (item is EmptyViewItem) -> NOTIFICATION_EMPTY
+            else -> when (getNotificationItem(position)) {
+                is NotificationItemContact -> NOTIFICATION_CONTACT
+                is NotificationItemPayment -> NOTIFICATION_PAYMENT
+                else -> throw IllegalStateException("Unsupported item type $item")
             }
         }
     }
 
-    private val transactionCache: HashMap<Sha256Hash, TransactionViewHolder.TransactionCacheEntry> = HashMap()
+    interface OnItemClickListener {
+        fun onItemClicked(view: View, notificationItem: NotificationItem)
+    }
 }

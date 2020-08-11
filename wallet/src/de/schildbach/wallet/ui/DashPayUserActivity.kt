@@ -33,7 +33,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
-import de.schildbach.wallet.ui.dashpay.notification.ContactRequestViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
@@ -44,13 +44,13 @@ import org.dash.wallet.common.InteractionAwareActivity
 
 class DashPayUserActivity : InteractionAwareActivity(),
         NotificationsAdapter.OnItemClickListener,
-        ContactRequestViewHolder.OnContactRequestButtonClickListener {
+        ContactViewHolder.OnContactActionClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private val username by lazy { intent.getStringExtra(USERNAME) }
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
-    private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, this)
+    private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, this, this)
     private var contactRequestReceived: Boolean = false
     private var contactRequestSent: Boolean = false
     private var sendingRequest: Boolean = true
@@ -138,7 +138,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         notifications_rv.layoutManager = LinearLayoutManager(this)
         notifications_rv.adapter = this.notificationsAdapter
-        this.notificationsAdapter.itemClickListener = this
 
         if (contactRequestReceived && contactRequestSent) {
             dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {

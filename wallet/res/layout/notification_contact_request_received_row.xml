@@ -15,18 +15,19 @@
         android:layout_height="36dp"
         android:layout_marginLeft="15dp"
         android:layout_marginTop="17dp"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/displayName"
-        style="@style/MontserratSemiBold"
+        style="@style/MontserratRegular"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:layout_marginEnd="28dp"
         android:textColor="@android:color/black"
-        android:textSize="16sp"
+        android:textSize="14sp"
         app:layout_constraintEnd_toStartOf="@id/buttons"
         app:layout_constraintStart_toEndOf="@id/avatar"
         app:layout_constraintTop_toTopOf="@id/avatar"
@@ -84,6 +85,7 @@
             android:layout_height="36dp"
             android:layout_marginEnd="15dp"
             app:srcCompat="@drawable/ic_contact_added" />
+
     </LinearLayout>
 
 

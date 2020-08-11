@@ -26,10 +26,10 @@ import kotlinx.android.synthetic.main.notification_image_row.view.*
 class ImageViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         RecyclerView.ViewHolder(inflater.inflate(R.layout.notification_image_row, parent, false)) {
 
-    fun bind(imageViewItem: NotificationsAdapter.ImageViewItem) {
+    fun bind(emptyViewItem: NotificationsAdapter.EmptyViewItem) {
         itemView.apply {
-            image.setImageResource(imageViewItem.imageResId)
-            description.text = context.getString(imageViewItem.textResId)
+            image.setImageResource(emptyViewItem.imageResId)
+            description.text = context.getString(emptyViewItem.textResId)
         }
     }
 }

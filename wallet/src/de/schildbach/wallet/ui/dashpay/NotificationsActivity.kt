@@ -31,14 +31,11 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayContactRequest
-import de.schildbach.wallet.data.NotificationItem
-import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.dashpay.notification.ContactRequestViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_notifications.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -48,7 +45,7 @@ import kotlin.collections.ArrayList
 import kotlin.math.max
 
 class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
-        NotificationsAdapter.OnItemClickListener, ContactRequestViewHolder.OnContactRequestButtonClickListener {
+        NotificationsAdapter.OnItemClickListener, ContactViewHolder.OnContactActionClickListener {
 
     companion object {
         private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
@@ -84,7 +81,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         walletApplication = application as WalletApplication
         lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
 
-        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet, this)
+        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet, this, this)
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
             mode = intent.extras.getInt(EXTRA_MODE)
@@ -102,7 +99,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
         contacts_rv.layoutManager = LinearLayoutManager(this)
         contacts_rv.adapter = this.notificationsAdapter
-        this.notificationsAdapter.itemClickListener = this
 
         initViewModel()
 
@@ -146,7 +142,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                         }
                         Status.SUCCESS -> {
                             // update the data
-                            notificationsAdapter.getAsNotificationViewItem(currentPosition).notificationItem.usernameSearchResult!!.toContactRequest = it.data!!
+                            (notificationsAdapter.getNotificationItem(currentPosition) as NotificationItemContact).usernameSearchResult.toContactRequest = it.data!!
                             notificationsAdapter.notifyItemChanged(currentPosition)
                             currentPosition = -1
                             lastSeenNotificationTime = it.data.timestamp.toLong() * 1000
@@ -166,14 +162,14 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
         // find the most recent notification timestamp
         var lastNotificationTime = 0L
-        data.forEach { lastNotificationTime = max(lastNotificationTime, it.date) }
+        data.forEach { lastNotificationTime = max(lastNotificationTime, it.getDate()) }
 
-        val newItems = data.filter { r -> r.date >= newDate }.toMutableList()
+        val newItems = data.filter { r -> r.getDate() >= newDate }.toMutableList()
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
         results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_new))
         if (newItems.isEmpty()) {
-            results.add(NotificationsAdapter.ImageViewItem(R.drawable.ic_notification_new_empty, R.string.notifications_none_new))
+            results.add(NotificationsAdapter.EmptyViewItem(R.drawable.ic_notification_new_empty, R.string.notifications_none_new))
         } else {
             newItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r, true)) }
         }
@@ -182,7 +178,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_earlier))
 
         // process contacts
-        val earlierItems = data.filter { r -> r.date < newDate }
+        val earlierItems = data.filter { r -> r.getDate() < newDate }
 
         earlierItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r)) }
 
@@ -216,15 +212,14 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
     override fun onItemClicked(view: View, notificationItem: NotificationItem) {
 
-        when (notificationItem.type) {
-            NotificationItem.Type.CONTACT,
-            NotificationItem.Type.CONTACT_REQUEST -> {
-                val usernameSearchResult = notificationItem.usernameSearchResult!!
+        when (notificationItem) {
+            is NotificationItemContact -> {
+                val usernameSearchResult = notificationItem.usernameSearchResult
                 startActivityForResult(DashPayUserActivity.createIntent(this,
                         usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
                         contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
             }
-            NotificationItem.Type.PAYMENT -> {
+            is NotificationItemPayment -> {
                 val tx = notificationItem.tx!!
                 Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
             }
