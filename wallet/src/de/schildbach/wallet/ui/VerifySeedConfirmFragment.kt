@@ -26,14 +26,13 @@ import android.view.animation.AnimationUtils
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
-import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.verify_seed_verify.*
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedConfirmFragment : Fragment() {
+class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
 
     private val shakeAnimation by lazy { AnimationUtils.loadAnimation(context, R.anim.shake) }
     private val wordButtonsContainer by lazy { word_buttons_container }
