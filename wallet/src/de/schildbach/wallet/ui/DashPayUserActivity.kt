@@ -235,8 +235,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             }
             is NotificationItemPayment -> {
                 val transactionDetailsDialogFragment = TransactionDetailsDialogFragment.newInstance(notificationItem.tx!!.txId)
-                supportFragmentManager.beginTransaction()
-                        .add(transactionDetailsDialogFragment, "null").commitAllowingStateLoss()
+                transactionDetailsDialogFragment.show(supportFragmentManager, null)
             }
         }
     }
