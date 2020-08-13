@@ -7,9 +7,10 @@
 
     <ImageView
         android:id="@+id/close"
-        android:layout_width="26dp"
-        android:layout_height="26dp"
-        android:layout_margin="20dp"
+        android:layout_width="?attr/actionBarSize"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/selectableItemBackground"
+        android:padding="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/ic_close_blue" />

@@ -1,6 +1,6 @@
 package de.schildbach.wallet.data
 
-class NotificationItemContact(val usernameSearchResult: UsernameSearchResult, override val isNew: Boolean = false, val isInvitationOfEstablished: Boolean = false)
+class NotificationItemContact(val usernameSearchResult: UsernameSearchResult, val isInvitationOfEstablished: Boolean = false)
     : NotificationItem() {
 
     override fun getId(): String {

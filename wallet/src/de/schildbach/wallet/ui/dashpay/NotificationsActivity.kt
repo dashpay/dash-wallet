@@ -81,7 +81,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         walletApplication = application as WalletApplication
         lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
 
-        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet, this, this)
+        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet, true, this, this)
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
             mode = intent.extras.getInt(EXTRA_MODE)
@@ -142,7 +142,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                         }
                         Status.SUCCESS -> {
                             // update the data
-                            (notificationsAdapter.getNotificationItem(currentPosition) as NotificationItemContact).usernameSearchResult.toContactRequest = it.data!!
+                            (notificationsAdapter.getItem(currentPosition).notificationItem as NotificationItemContact).usernameSearchResult.toContactRequest = it.data!!
                             notificationsAdapter.notifyItemChanged(currentPosition)
                             currentPosition = -1
                             lastSeenNotificationTime = it.data.timestamp.toLong() * 1000
@@ -155,7 +155,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
     private fun processResults(data: List<NotificationItem>) {
 
-        val results = ArrayList<NotificationsAdapter.ViewItem>()
+        val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
         // get the last seen date from the configuration
         val newDate = walletApplication.configuration.lastSeenNotificationTime
@@ -169,7 +169,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
         results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_new))
         if (newItems.isEmpty()) {
-            results.add(NotificationsAdapter.EmptyViewItem(R.drawable.ic_notification_new_empty, R.string.notifications_none_new))
+            results.add(NotificationsAdapter.ImageViewItem(R.string.notifications_none_new, R.drawable.ic_notification_new_empty))
         } else {
             newItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r, true)) }
         }

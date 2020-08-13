@@ -50,7 +50,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
     private val username by lazy { intent.getStringExtra(USERNAME) }
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
-    private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, this, this)
+    private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, false, this, this)
     private var contactRequestReceived: Boolean = false
     private var contactRequestSent: Boolean = false
     private var sendingRequest: Boolean = true
@@ -229,7 +229,16 @@ class DashPayUserActivity : InteractionAwareActivity(),
     }
 
     override fun onItemClicked(view: View, notificationItem: NotificationItem) {
-        //do nothing if an item is clicked for now
+        when (notificationItem) {
+            is NotificationItemContact -> {
+
+            }
+            is NotificationItemPayment -> {
+                val transactionDetailsDialogFragment = TransactionDetailsDialogFragment.newInstance(notificationItem.tx!!.txId)
+                supportFragmentManager.beginTransaction()
+                        .add(transactionDetailsDialogFragment, "null").commitAllowingStateLoss()
+            }
+        }
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
@@ -242,8 +251,9 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
     private fun processResults(data: List<NotificationItem>) {
 
-        val results = ArrayList<NotificationsAdapter.ViewItem>()
+        val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
+        results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_profile_activity))
         data.forEach { results.add(NotificationsAdapter.NotificationViewItem(it, false)) }
 
         notificationsAdapter.results = results

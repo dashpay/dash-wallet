@@ -402,6 +402,7 @@
 
     <string name="notifications_title">Notifications</string>
     <string name="notifications_title_with_count">Notifications (%d)</string>
+    <string name="notifications_profile_activity">Activity</string>
     <string name="notifications_new">New</string>
     <string name="notifications_earlier">Earlier</string>
     <string name="notifications_none_new">There are no new notifications</string>

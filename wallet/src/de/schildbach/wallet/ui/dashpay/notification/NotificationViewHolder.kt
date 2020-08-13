@@ -18,20 +18,13 @@ package de.schildbach.wallet.ui.dashpay.notification
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.NotificationItem
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.notification_header_row.view.*
 
-class HeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        NotificationViewHolder(R.layout.notification_header_row, inflater, parent) {
+open class NotificationViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
+        RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {
 
-    override fun bind(notificationItem: NotificationItem, vararg args: Any) {
-        bind(args[0] as Int)
-    }
+    open fun bind(notificationItem: NotificationItem, vararg args: Any) {
 
-    private fun bind(textResId: Int) {
-        itemView.apply {
-            title.text = context.getString(textResId)
-        }
     }
 }

@@ -3,92 +3,99 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="70dp"
+    android:layout_height="wrap_content"
     android:layout_marginTop="3dp"
     android:layout_marginBottom="3dp"
-    android:background="@drawable/selectable_round_corners">
+    android:background="@drawable/selectable_round_corners"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
     <ImageView
         android:id="@+id/avatar"
-        android:transitionName="avatar"
         android:layout_width="36dp"
         android:layout_height="36dp"
-        android:layout_marginLeft="15dp"
-        android:layout_marginTop="17dp"
-        android:visibility="gone"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="4dp"
+        android:transitionName="avatar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="@+id/labels" />
 
-    <TextView
-        android:id="@+id/displayName"
-        style="@style/MontserratRegular"
+    <LinearLayout
+        android:id="@+id/labels"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:layout_marginEnd="28dp"
-        android:textColor="@android:color/black"
-        android:textSize="14sp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="@+id/center_guideline"
         app:layout_constraintEnd_toStartOf="@id/buttons"
         app:layout_constraintStart_toEndOf="@id/avatar"
-        app:layout_constraintTop_toTopOf="@id/avatar"
-        android:maxLines="1"
-        android:ellipsize="end"
-        tools:text="John Doe" />
+        app:layout_constraintTop_toTopOf="@+id/center_guideline">
 
-    <TextView
-        android:id="@+id/date"
-        style="@style/MontserratRegular"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:textColor="@color/gray"
-        android:textSize="12sp"
-        app:layout_constraintStart_toStartOf="@id/displayName"
-        app:layout_constraintEnd_toStartOf="@id/buttons"
-        app:layout_constraintTop_toBottomOf="@id/displayName"
-        tools:text="johndoe_01" />
+        <TextView
+            android:id="@+id/displayName"
+            style="@style/MontserratRegular"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            tools:text="John Doe" />
+
+        <TextView
+            android:id="@+id/date"
+            style="@style/MontserratRegular"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/gray"
+            android:textSize="12sp"
+            tools:text="johndoe_01" />
+
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/buttons"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/center_guideline"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="@+id/center_guideline"
-        android:orientation="horizontal">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/center_guideline">
 
         <Button
             android:id="@+id/accept_contact_request"
+            style="@style/DashButton.Blue"
             android:layout_width="67dp"
             android:layout_height="30dp"
-            android:fontFamily="@font/montserrat_medium"
-            android:textSize="12sp"
+            android:layout_gravity="center_vertical"
             android:layout_weight="1"
+            android:fontFamily="@font/montserrat_medium"
+            android:text="@string/contact_request_accept"
             android:textAllCaps="false"
             android:textColor="@color/white"
-            style="@style/DashButton.Blue"
-            android:text="@string/contact_request_accept" />
+            android:textSize="12sp" />
 
         <ImageButton
             android:id="@+id/ignore_contact_request"
+            style="@style/DashButton.Gray"
             android:layout_width="30dp"
             android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
             android:layout_marginStart="5dp"
             android:layout_marginEnd="15dp"
             android:layout_weight="1"
-            app:srcCompat="@drawable/ic_ignore_x"
-            style="@style/DashButton.Gray"
-            android:text="X" />
+            android:text="X"
+            app:srcCompat="@drawable/ic_ignore_x" />
 
         <ImageView
             android:id="@+id/contact_added"
             android:layout_width="36dp"
             android:layout_height="36dp"
+            android:layout_gravity="center_vertical"
             android:layout_marginEnd="15dp"
             app:srcCompat="@drawable/ic_contact_added" />
 
     </LinearLayout>
-
-
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/center_guideline"
@@ -96,6 +103,5 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.50" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

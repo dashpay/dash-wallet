@@ -4,9 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="70dp"
-    android:layout_marginLeft="11dp"
-    android:layout_marginRight="15dp"
     android:layout_marginBottom="10dp"
+    android:background="@drawable/selectable_round_corners_dark"
     android:gravity="center">
 
     <TextView
@@ -14,8 +13,8 @@
         style="@style/MontserratMedium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:paddingLeft="10dp"
-        android:paddingRight="6dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="6dp"
         android:textColor="@color/primary_status"
         android:textSize="14sp"
         tools:text="Receiving" />

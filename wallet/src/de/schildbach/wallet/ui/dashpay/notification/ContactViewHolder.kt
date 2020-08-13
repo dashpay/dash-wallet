@@ -16,72 +16,80 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
-import android.text.format.DateUtils
+import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import de.schildbach.wallet.data.NotificationItem
+import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.notification_contact_request_received_row.view.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        RecyclerView.ViewHolder(inflater.inflate(R.layout.notification_contact_request_received_row, parent, false)) {
+        NotificationViewHolder(R.layout.notification_contact_request_received_row, inflater, parent) {
 
-    private val dateFormat by lazy { itemView.context.getString(R.string.transaction_row_time_text) }
+    private val dateFormat = SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault())
 
     private fun formatDate(timeStamp: Long): String {
-        return String.format(dateFormat,
-                DateUtils.formatDateTime(itemView.context, timeStamp, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR),
-                DateUtils.formatDateTime(itemView.context, timeStamp, DateUtils.FORMAT_SHOW_TIME))
+        return dateFormat.format(timeStamp).replace("AM", "am").replace("PM","pm")
     }
 
-    fun bind(usernameSearchResult: UsernameSearchResult, isNew: Boolean, isInvitationOfEstablished: Boolean,
-             onActionClickListener: OnContactActionClickListener? = null) {
+    override fun bind(notificationItem: NotificationItem, vararg args: Any) {
+        (notificationItem as NotificationItemContact).run {
+            bind(usernameSearchResult, (args[0] as Boolean), isInvitationOfEstablished, (args[1] as Boolean), (args[2] as OnContactActionClickListener))
+        }
+    }
+
+    private fun bind(usernameSearchResult: UsernameSearchResult, isNew: Boolean, isInvitationOfEstablished: Boolean,
+                     showAvatar: Boolean, onActionClickListener: OnContactActionClickListener? = null) {
 
         val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
                 usernameSearchResult.username[0])
 
         itemView.apply {
-            setBackgroundResource(if (isNew) R.drawable.selectable_round_corners else R.drawable.selectable_background_dark)
+            setBackgroundResource(if (isNew) R.drawable.selectable_round_corners else R.drawable.selectable_round_corners_dark)
             date.text = formatDate(usernameSearchResult.date)
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
-            if (dashPayProfile.displayName.isEmpty()) {
-                displayName.text = dashPayProfile.username
+            val name = if (dashPayProfile.displayName.isEmpty()) {
+                dashPayProfile.username
             } else {
-                displayName.text = dashPayProfile.displayName
+                dashPayProfile.displayName
             }
 
-            when (usernameSearchResult.type) {
+            val displayNameResId = when (usernameSearchResult.type) {
                 UsernameSearchResult.Type.CONTACT_ESTABLISHED -> {
+                    contact_added.setImageResource(R.drawable.ic_contact_added)
                     val sentDate = usernameSearchResult.toContactRequest!!.timestamp
                     val receivedDate = usernameSearchResult.fromContactRequest!!.timestamp
-
                     if (sentDate > receivedDate) {
-                        // we accepted last
-                        displayName.text = itemView.context.getString(R.string.notifications_you_have_accepted, displayName.text)
+                        R.string.notifications_you_have_accepted
                     } else {
-                        displayName.text = itemView.context.getString(R.string.notifications_contact_has_accepted, displayName.text)
+                        R.string.notifications_contact_has_accepted
                     }
-                    displayName.maxLines = 2
-                    displayName.textSize = 14.0f
-                    contact_added.visibility = View.VISIBLE
-                    val scale: Float = itemView.resources.displayMetrics.density
-                    itemView.layoutParams.height = (79 * scale + 0.5f).toInt()
-                    center_guideline.setGuidelinePercent(0.473f)
                 }
                 UsernameSearchResult.Type.REQUEST_RECEIVED -> {
-                    displayName.text = itemView.context.getString(R.string.notifications_you_received, displayName.text)
-                    contact_added.visibility = View.GONE
+                    contact_added.setImageResource(R.drawable.ic_add_contact)
+                    R.string.notifications_you_received
                 }
                 UsernameSearchResult.Type.REQUEST_SENT -> {
-                    displayName.text = itemView.context.getString(R.string.notifications_you_sent, displayName.text)
-                    contact_added.visibility = View.GONE
+                    contact_added.setImageResource(R.drawable.ic_add_contact)
+                    R.string.notifications_you_sent
                 }
             }
+
+            @Suppress("DEPRECATION")
+            val displayNameText = context.getString(displayNameResId, "<b>$name</b>")
+            displayName.text = Html.fromHtml(displayNameText)
+
+            val scale: Float = itemView.resources.displayMetrics.density
+            itemView.layoutParams.height = (79 * scale + 0.5f).toInt()
+            center_guideline.setGuidelinePercent(0.473f)
 
             if (dashPayProfile.avatarUrl.isNotEmpty()) {
                 Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
@@ -89,13 +97,16 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             } else {
                 avatar.background = defaultAvatar
             }
+            avatar.visibility = if (showAvatar) View.VISIBLE else View.GONE
 
             if (usernameSearchResult.isPendingRequest && !isInvitationOfEstablished) {
                 accept_contact_request.visibility = View.VISIBLE
                 ignore_contact_request.visibility = View.VISIBLE
+                contact_added.visibility = View.GONE
             } else {
                 accept_contact_request.visibility = View.GONE
                 ignore_contact_request.visibility = View.GONE
+                contact_added.visibility = View.VISIBLE
             }
             accept_contact_request.setOnClickListener {
                 onActionClickListener?.run {

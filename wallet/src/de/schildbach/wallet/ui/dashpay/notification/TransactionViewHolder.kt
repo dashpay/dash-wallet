@@ -24,14 +24,16 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
-import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.AddressBookProvider
+import de.schildbach.wallet.data.NotificationItem
+import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.util.TransactionUtil
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Constants
@@ -39,7 +41,7 @@ import org.dash.wallet.common.ui.CurrencyTextView
 import org.dash.wallet.common.util.GenericUtils
 
 class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-        RecyclerView.ViewHolder(inflater.inflate(R.layout.notification_transaction_row, parent, false)) {
+        NotificationViewHolder(R.layout.notification_transaction_row, inflater, parent) {
 
     data class TransactionCacheEntry(val value: Coin, val sent: Boolean, val self: Boolean,
                                      val showFee: Boolean, val address: Address?,
@@ -64,16 +66,25 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
     private val fiatView: CurrencyTextView = itemView.findViewById(R.id.transaction_row_fiat) as CurrencyTextView
     private val rateNotAvailableView: TextView
 
-    fun bind(tx: Transaction, txCacheEntry: TransactionCacheEntry?, wallet: Wallet): TransactionCacheEntry? {
+    override fun bind(notificationItem: NotificationItem, vararg args: Any) {
+        val notificationItemPayment = notificationItem as NotificationItemPayment
+        val tx = notificationItemPayment.tx!!
+
+        @Suppress("UNCHECKED_CAST")
+        val transactionCache = (args[0] as HashMap<Sha256Hash, TransactionCacheEntry>)
+        val wallet = (args[1] as Wallet)
+        bind(tx, transactionCache, wallet)
+    }
+
+    private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, wallet: Wallet) {
         if (itemView is CardView) {
             itemView.setCardBackgroundColor(if (itemView.isActivated()) colorBackgroundSelected else colorBackground)
         }
+
         val confidence = tx.confidence
         val fee = tx.fee
 
-        val txCache = if (txCacheEntry != null) {
-            txCacheEntry
-        } else {
+        if (!transactionCache.containsKey(tx.txId)) {
             val value = tx.getValue(wallet)
             val sent = value.signum() < 0
             val self = WalletUtils.isEntirelySelf(tx, wallet)
@@ -87,8 +98,10 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             }
             val addressLabel = if (address != null) AddressBookProvider.resolveLabel(itemView.context, address.toBase58()) else null
             val txType = tx.type
-            TransactionCacheEntry(value, sent, self, showFee, address, addressLabel, txType)
+
+            transactionCache[tx.txId] = TransactionCacheEntry(value, sent, self, showFee, address, addressLabel, txType)
         }
+        val txCache = transactionCache[tx.txId]!!
 
         //
         // Assign the colors of text and values
@@ -177,8 +190,6 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         if (confidence.hasErrors()) secondaryStatusId = TransactionUtil.getErrorName(tx) else if (!txCache.sent) secondaryStatusId = TransactionUtil.getReceivedStatusString(tx, wallet)
         if (secondaryStatusId != -1) secondaryStatusView.setText(secondaryStatusId) else secondaryStatusView.text = null
         secondaryStatusView.setTextColor(secondaryStatusColor)
-
-        return if (txCacheEntry == null) txCache else null
     }
 
     init {
