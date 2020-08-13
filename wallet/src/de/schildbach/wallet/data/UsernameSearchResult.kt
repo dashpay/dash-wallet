@@ -34,9 +34,6 @@ data class UsernameSearchResult(val username: String,
             else -> throw IllegalStateException("toContactRequest and fromContactRequest can't both be null at the same time")
         }
 
-    val incoming: Boolean
-        get() = toContactRequest!!.timestamp > fromContactRequest!!.timestamp
-
     enum class Type {
         REQUEST_SENT,
         REQUEST_RECEIVED,

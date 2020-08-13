@@ -20,7 +20,9 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication, platfor
                 }.forEach {
                     results.add(NotificationItemContact(it))
                     if (it.type == UsernameSearchResult.Type.CONTACT_ESTABLISHED) {
-                        val invitationItem = if (it.incoming) it.copy(toContactRequest = null) else it.copy(fromContactRequest = null)
+                        val incoming = (it.toContactRequest!!.timestamp > it.fromContactRequest!!.timestamp)
+                        val invitationItem =
+                                if (incoming) it.copy(toContactRequest = null) else it.copy(fromContactRequest = null)
                         results.add(NotificationItemContact(invitationItem, isInvitationOfEstablished = true))
                     }
                 }
