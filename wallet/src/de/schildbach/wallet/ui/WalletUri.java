@@ -153,9 +153,6 @@ public class WalletUri {
         Coin amount = getAmount();
         String sender = getSender();
         String bitcoinUri = BitcoinURI.convertToBitcoinURI(address, amount, sender, null);
-        if (useInstantSend() || forceInstantSend()) {
-            bitcoinUri += "&" + BitcoinURI.FIELD_INSTANTSEND + "=1";
-        }
         return new BitcoinURI(bitcoinUri);
     }
 

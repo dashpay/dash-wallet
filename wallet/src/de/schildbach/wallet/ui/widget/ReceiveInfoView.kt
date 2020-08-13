@@ -27,9 +27,11 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import androidx.core.text.toSpannable
+import com.bumptech.glide.Glide
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ReceiveActivity
+import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.Qr
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
@@ -39,6 +41,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.Configuration
+import org.dashevo.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 
 
@@ -47,6 +50,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     private val log = LoggerFactory.getLogger(ReceiveInfoView::class.java)
 
     private var config: Configuration? = null
+    private var blockchainIdentity: BlockchainIdentity? = null
 
     private lateinit var address: Address
     var amount: Coin? = null
@@ -68,10 +72,12 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             val showShareAction = attrsArray.getBoolean(R.styleable.ReceiveInfoView_ri_show_share_action, true)
             share_button.visibility = if (showShareAction) View.VISIBLE else View.GONE
 
+            /*
+            //TODO: is this really needed?
             val qrPreviewScale = attrsArray.getFloat(R.styleable.ReceiveInfoView_ri_qr_code_scale, 1.0f)
             (qr_preview.layoutParams as LayoutParams).matchConstraintPercentWidth = qrPreviewScale
             (qr_dash_logo.layoutParams as LayoutParams).matchConstraintPercentWidth = (qrPreviewScale / 5.5f)
-
+             */
         } finally {
             attrsArray.recycle()
         }
@@ -79,6 +85,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         if (!isInEditMode) {
             val walletApplication = context.applicationContext as WalletApplication
             config = walletApplication.configuration
+            blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
 
             address_preview_pane.setOnClickListener {
                 handleCopyAddress()
@@ -89,8 +96,12 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             share_button.setOnClickListener {
                 handleShare()
             }
+            share_button2.setOnClickListener {
+                handleShare()
+            }
 
             refresh()
+            setupUser()
         }
     }
 
@@ -112,11 +123,41 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         address_preview.text = addressSpannable
     }
 
+    private fun setupUser() {
+        if (blockchainIdentity != null) {
+            qr_dash_logo.visibility = View.GONE
+            username_1.visibility = View.VISIBLE
+            username_2.visibility = View.VISIBLE
+            val username = blockchainIdentity!!.currentUsername!!
+            val profile = blockchainIdentity!!.getProfile()
+            val displayName = profile?.get("displayName") as String?
+            if (displayName != null && displayName.isNotEmpty()) {
+                username_1.text = displayName
+                username_2.text = username
+            } else {
+                username_1.text = username
+                username_2.visibility = View.GONE
+            }
+
+            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context, username[0])
+            if (profile != null) {
+                Glide.with(avatar).load(profile.get("avatarUrl")).circleCrop()
+                        .placeholder(defaultAvatar).into(avatar)
+            } else {
+                avatar.setImageDrawable(defaultAvatar)
+            }
+        } else {
+            username_1.visibility = View.GONE
+            username_2.visibility = View.GONE
+        }
+    }
+
     private fun refreshData() {
         val walletApplication = context.applicationContext as WalletApplication
         address = walletApplication.wallet.freshReceiveAddress()
         val ownName = config!!.ownName
-        paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, ownName, null)
+        paymentRequestUri = BitcoinURI.convertToBitcoinURI(address.parameters, address.toString(),
+                amount, ownName, null, blockchainIdentity?.currentUsername)
     }
 
     private fun handleCopyAddress() {
@@ -144,5 +185,12 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         intent.putExtra(Intent.EXTRA_TEXT, paymentRequestUri)
         context.startActivity(Intent.createChooser(intent, resources.getString(R.string.request_coins_share_dialog_title)))
         log.info("payment request shared via intent: {}", paymentRequestUri)
+    }
+
+    fun setupForDialog() {
+        username_1.visibility = View.GONE
+        username_2.visibility = View.GONE
+        share_button.visibility = View.GONE
+        share_button2.visibility = View.VISIBLE
     }
 }
