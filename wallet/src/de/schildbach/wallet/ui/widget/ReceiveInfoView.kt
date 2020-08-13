@@ -71,13 +71,6 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             specify_amount_button.visibility = if (showAmountAction) View.VISIBLE else View.GONE
             val showShareAction = attrsArray.getBoolean(R.styleable.ReceiveInfoView_ri_show_share_action, true)
             share_button.visibility = if (showShareAction) View.VISIBLE else View.GONE
-
-            /*
-            //TODO: is this really needed?
-            val qrPreviewScale = attrsArray.getFloat(R.styleable.ReceiveInfoView_ri_qr_code_scale, 1.0f)
-            (qr_preview.layoutParams as LayoutParams).matchConstraintPercentWidth = qrPreviewScale
-            (qr_dash_logo.layoutParams as LayoutParams).matchConstraintPercentWidth = (qrPreviewScale / 5.5f)
-             */
         } finally {
             attrsArray.recycle()
         }
