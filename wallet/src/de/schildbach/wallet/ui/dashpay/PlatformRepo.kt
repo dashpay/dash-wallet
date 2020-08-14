@@ -670,10 +670,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         Context.propagate(walletApplication.wallet.context)
         var encryptionKey: KeyParameter? = null
 
+        var lastContactRequestTime = if (dashPayContactRequestDaoAsync.countAllRequests() > 0)
+            dashPayContactRequestDaoAsync.getLastTimestamp()
+        else 0L
+
         try {
             updatingContacts.set(true)
             // Get all out our contact requests
-            val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
+            val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
             toContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.toUserId)
@@ -698,7 +702,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             }
             // Get all contact requests where toUserId == userId, the users who have added me
-            val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
+            val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.userId)
@@ -742,7 +746,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayProfileDaoAsync.insert(profile!!)
                 }
             }
-            fireContactsUpdatedListeners()
+
+            // fire listeners if there were new contacts
+            if (fromContactDocuments.isNotEmpty() || toContactDocuments.isNotEmpty()) {
+                fireContactsUpdatedListeners()
+            }
 
             // If new keychains were added to the wallet, then update the bloom filters
             if (addedContact) {

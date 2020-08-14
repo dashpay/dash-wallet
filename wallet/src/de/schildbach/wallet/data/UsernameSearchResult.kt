@@ -23,7 +23,7 @@ data class UsernameSearchResult(val username: String,
                 Type.REQUEST_RECEIVED -> {
                     fromContactRequest!!.timestamp
                 }
-            }.toLong() * 1000
+            }.toLong()
         }
 
     val type: Type

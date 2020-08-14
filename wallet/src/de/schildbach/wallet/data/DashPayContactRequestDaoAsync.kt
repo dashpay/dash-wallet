@@ -19,6 +19,12 @@ interface DashPayContactRequestDaoAsync {
     @Query("SELECT * FROM dashpay_contact_request WHERE toUserId = :toUserId")
     suspend fun loadFromOthers(toUserId: String): List<DashPayContactRequest>?
 
+    @Query("SELECT MAX(timestamp) FROM dashpay_contact_request")
+    suspend fun getLastTimestamp() : Long
+
+    @Query("SELECT COUNT(*) FROM dashpay_contact_request")
+    suspend fun countAllRequests(): Int
+
     @Query("DELETE FROM dashpay_contact_request")
     suspend fun clear()
 }
