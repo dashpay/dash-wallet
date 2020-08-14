@@ -18,12 +18,18 @@
 package de.schildbach.wallet.util
 
 import org.dashevo.dpp.util.HashUtils
+import java.lang.IllegalArgumentException
 import java.math.BigInteger
+import java.util.*
 
 object PlatformUtils {
     fun longHashFromEncodedString(s: String): Long {
-        val byteArray = HashUtils.byteArrayFromString(s)
-        val bigInteger = BigInteger(byteArray)
-        return bigInteger.toLong()
+        return try {
+            val byteArray = HashUtils.byteArrayFromString(s)
+            val bigInteger = BigInteger(byteArray)
+            bigInteger.toLong()
+        } catch (e: IllegalArgumentException) {
+            UUID.fromString(s).mostSignificantBits
+        }
     }
 }
