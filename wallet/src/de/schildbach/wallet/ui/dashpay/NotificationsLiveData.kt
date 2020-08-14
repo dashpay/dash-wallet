@@ -51,7 +51,7 @@ open class NotificationsLiveData(protected val walletApplication: WalletApplicat
 
             //TODO: gather other notification types
             // * invitations
-            // * payments
+            // * payments are not included
             // * other
 
             contactRequests.data?.forEach {

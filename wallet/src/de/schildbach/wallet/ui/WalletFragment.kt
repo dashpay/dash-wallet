@@ -40,7 +40,6 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.CheckPinDialog.Companion.show
@@ -51,7 +50,6 @@ import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import de.schildbach.wallet.ui.VerifySeedActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRetry
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
@@ -59,8 +57,6 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.home_content.*
 import kotlinx.android.synthetic.main.quick_actions_layout.*
 import kotlinx.android.synthetic.main.sync_status_pane.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
@@ -69,7 +65,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
-import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion as PlatformRepo1
 
 class WalletFragment : Fragment() {
 
@@ -92,20 +87,7 @@ class WalletFragment : Fragment() {
             walletFragmentView = inflater.inflate(R.layout.home_content, container, false)
         }
 
-        process()
-
         return walletFragmentView
-    }
-
-    private fun process() {
-        GlobalScope.launch {
-            val contactRequests = PlatformRepo1.getInstance().searchContacts("", UsernameSortOrderBy.DATE_ADDED, true)
-            if(contactRequests.data != null) {
-                contactRequests.data.forEach {
-                    println("contactRequests:\t$it")
-                }
-            }
-        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -277,7 +259,7 @@ class WalletFragment : Fragment() {
     }
 
     private fun handleScan(clickView: View?) {
-        ScanActivity.startForResult(requireActivity(), clickView, MainActivity.REQUEST_CODE_SCAN)
+        ScanActivity.startForResult(requireActivity(), clickView, REQUEST_CODE_SCAN)
     }
 
     private fun startVerifySeedActivity(pin: String) {

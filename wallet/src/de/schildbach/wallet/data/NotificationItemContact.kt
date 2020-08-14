@@ -6,7 +6,7 @@ class NotificationItemContact(val usernameSearchResult: UsernameSearchResult, va
     override fun getId(): String {
         return when (usernameSearchResult.type) {
             UsernameSearchResult.Type.REQUEST_RECEIVED -> usernameSearchResult.fromContactRequest!!.userId
-            UsernameSearchResult.Type.REQUEST_SENT -> usernameSearchResult.toContactRequest!!.toUserId
+            UsernameSearchResult.Type.REQUEST_SENT,
             UsernameSearchResult.Type.CONTACT_ESTABLISHED -> usernameSearchResult.toContactRequest!!.toUserId
         }
     }
