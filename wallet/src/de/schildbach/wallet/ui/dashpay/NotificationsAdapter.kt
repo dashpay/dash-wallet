@@ -75,11 +75,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     }
 
     override fun getItemId(position: Int): Long {
-        return when (getItemViewType(position)) {
-            NOTIFICATION_HEADER -> 1L
-            NOTIFICATION_EMPTY -> 2L
-            else -> PlatformUtils.longHashFromEncodedString(getItem(position).notificationItem.getId())
-        }
+        return PlatformUtils.longHashFromEncodedString(getItem(position).notificationItem.getId())
     }
 
     override fun onBindViewHolder(holder: NotificationViewHolder, position: Int) {
