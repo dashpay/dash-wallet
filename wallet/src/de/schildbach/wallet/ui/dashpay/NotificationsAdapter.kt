@@ -46,8 +46,8 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     }
 
     open class NotificationViewItem(val notificationItem: NotificationItem, val isNew: Boolean = false)
-    data class HeaderViewItem(val textResId: Int) : NotificationViewItem(NotificationItemStub("0"))
-    data class ImageViewItem(val textResId: Int, val imageResId: Int) : NotificationViewItem(NotificationItemStub("1"))
+    data class HeaderViewItem(val textResId: Int) : NotificationViewItem(NotificationItemStub(UUID.randomUUID().toString()))
+    data class ImageViewItem(val textResId: Int, val imageResId: Int) : NotificationViewItem(NotificationItemStub(UUID.randomUUID().toString()))
 
     init {
         setHasStableIds(true)
