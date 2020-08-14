@@ -6,10 +6,13 @@ import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-open class NotificationsLiveData(protected val walletApplication: WalletApplication, protected val platformRepo: PlatformRepo) : LiveData<Resource<List<NotificationItem>>>(), OnContactsUpdated {
+open class NotificationsLiveData(protected val walletApplication: WalletApplication,
+                                 protected val platformRepo: PlatformRepo,
+                                 protected val scope: CoroutineScope) : LiveData<Resource<List<NotificationItem>>>(), OnContactsUpdated {
     private var listening = false
     protected var query = ""
 
@@ -42,7 +45,7 @@ open class NotificationsLiveData(protected val walletApplication: WalletApplicat
 
     open fun searchNotifications(text: String = "") {
         query = text
-        GlobalScope.launch {
+        scope.launch(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
             val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)
 

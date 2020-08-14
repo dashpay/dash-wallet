@@ -16,6 +16,9 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-interface OnContactsUpdated {
-    fun onContactsUpdated()
+import android.view.View
+import de.schildbach.wallet.data.UsernameSearchResult
+
+interface OnContactItemClickListener {
+    fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
 }

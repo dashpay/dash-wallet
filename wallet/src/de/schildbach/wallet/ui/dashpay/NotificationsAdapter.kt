@@ -22,14 +22,13 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.NotificationItem
+import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.NotificationItemStub
 import de.schildbach.wallet.ui.dashpay.notification.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.wallet.Wallet
-import org.dashevo.dpp.util.HashUtils
-import java.math.BigInteger
 import java.util.*
 
 class NotificationsAdapter(val context: Context, val wallet: Wallet, private val showAvatars: Boolean = false,
@@ -75,17 +74,11 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
         return results.size
     }
 
-    private fun getLongValue(s: String): Long {
-        val byteArray = HashUtils.byteArrayFromString(s)
-        val bigInteger = BigInteger(byteArray)
-        return bigInteger.toLong()
-    }
-
     override fun getItemId(position: Int): Long {
         return when (getItemViewType(position)) {
             NOTIFICATION_HEADER -> 1L
             NOTIFICATION_EMPTY -> 2L
-            else -> getLongValue(getItem(position).notificationItem.getId())
+            else -> PlatformUtils.longHashFromEncodedString(getItem(position).notificationItem.getId())
         }
     }
 

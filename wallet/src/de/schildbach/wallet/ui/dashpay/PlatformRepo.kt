@@ -250,6 +250,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             val wallet = walletApplication.wallet
             val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
+                    ?: return Resource.error("search contacts: no blockchain identity")
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
 

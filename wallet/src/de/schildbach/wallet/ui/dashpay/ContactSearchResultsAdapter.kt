@@ -29,12 +29,11 @@ import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
+import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contact_header_row.view.*
 import kotlinx.android.synthetic.main.contact_request_header_row.view.*
 import kotlinx.android.synthetic.main.contact_request_row.view.*
-import org.dashevo.dpp.util.HashUtils
-import java.math.BigInteger
 
 
 class ContactSearchResultsAdapter(private val listener: Listener,
@@ -79,16 +78,10 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         return results.size
     }
 
-    private fun getLongValue(s: String): Long {
-        val byteArray = HashUtils.byteArrayFromString(s)
-        val bigInteger = BigInteger(byteArray)
-        return bigInteger.toLong()
-    }
-
     override fun getItemId(position: Int): Long {
         return when (results[position].viewType) {
-            CONTACT -> getLongValue(results[position].usernameSearchResult!!.toContactRequest!!.toUserId)
-            CONTACT_REQUEST -> getLongValue(results[position].usernameSearchResult!!.fromContactRequest!!.userId)
+            CONTACT -> PlatformUtils.longHashFromEncodedString(results[position].usernameSearchResult!!.toContactRequest!!.toUserId)
+            CONTACT_REQUEST -> PlatformUtils.longHashFromEncodedString(results[position].usernameSearchResult!!.fromContactRequest!!.userId)
             CONTACT_REQUEST_HEADER -> 1L
             CONTACT_HEADER -> 2L
             else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")

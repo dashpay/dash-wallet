@@ -3,14 +3,17 @@ package de.schildbach.wallet.ui.dashpay
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class NotificationsForUserLiveData(walletApplication: WalletApplication, platformRepo: PlatformRepo) : NotificationsLiveData(walletApplication, platformRepo) {
+class NotificationsForUserLiveData(walletApplication: WalletApplication,
+                                   platformRepo: PlatformRepo,
+                                   scope: CoroutineScope) : NotificationsLiveData(walletApplication, platformRepo, scope) {
 
     override fun searchNotifications(userId: String) {
         this.query = userId
-        GlobalScope.launch {
+        scope.launch(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
             val contactRequests = platformRepo.searchContacts("", UsernameSortOrderBy.DATE_ADDED, true)
 
