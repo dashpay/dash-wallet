@@ -118,6 +118,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
 
     private fun setupUser() {
         if (blockchainIdentity != null) {
+            avatar_container.visibility = View.VISIBLE
             qr_dash_logo.visibility = View.GONE
             username_1.visibility = View.VISIBLE
             username_2.visibility = View.VISIBLE

@@ -23,27 +23,39 @@
         tools:background="@color/menu_gray"
         tools:src="@drawable/ic_scan_qr" />
 
-    <ImageView
-        android:id="@+id/avatar"
-        android:layout_width="90dp"
-        android:layout_height="90dp"
-        android:scaleType="fitXY"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/avatar_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/qr_preview"
         app:layout_constraintEnd_toEndOf="@+id/qr_preview"
         app:layout_constraintStart_toStartOf="@+id/qr_preview"
         app:layout_constraintTop_toTopOf="@+id/qr_preview"
-        app:srcCompat="@drawable/user1"
-        tools:src="@drawable/user1" />
+        tools:visibility="visible">
 
-    <ImageView
-        android:id="@+id/avatar_outline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/qr_avatar_outline"
-        app:layout_constraintBottom_toBottomOf="@id/avatar"
-        app:layout_constraintEnd_toEndOf="@id/avatar"
-        app:layout_constraintStart_toStartOf="@id/avatar"
-        app:layout_constraintTop_toTopOf="@id/avatar" />
+        <ImageView
+            android:id="@+id/avatar"
+            android:layout_width="90dp"
+            android:layout_height="90dp"
+            android:scaleType="fitXY"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/user1"
+            tools:src="@drawable/user1" />
+
+        <ImageView
+            android:id="@+id/avatar_outline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/qr_avatar_outline"
+            app:layout_constraintBottom_toBottomOf="@id/avatar"
+            app:layout_constraintEnd_toEndOf="@id/avatar"
+            app:layout_constraintStart_toStartOf="@id/avatar"
+            app:layout_constraintTop_toTopOf="@id/avatar" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
         android:id="@+id/qr_dash_logo"

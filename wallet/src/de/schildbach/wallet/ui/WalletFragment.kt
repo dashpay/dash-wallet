@@ -258,7 +258,7 @@ class WalletFragment : Fragment() {
     }
 
     private fun handleScan(clickView: View?) {
-        ScanActivity.startForResult(requireActivity(), clickView, MainActivity.REQUEST_CODE_SCAN)
+        ScanActivity.startForResult(requireActivity(), clickView, REQUEST_CODE_SCAN)
     }
 
     private fun startVerifySeedActivity(pin: String) {

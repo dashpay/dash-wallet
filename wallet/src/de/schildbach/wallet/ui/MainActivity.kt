@@ -674,4 +674,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         showContacts(MODE_VIEW_REQUESTS)
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        (wallet_fragment as WalletFragment).onActivityResult(requestCode, resultCode, data)
+    }
+
 }
