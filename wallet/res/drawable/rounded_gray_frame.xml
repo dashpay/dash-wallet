@@ -9,7 +9,7 @@
     </item>
     <item android:state_pressed="true">
         <layer-list>
-            <item android:drawable="@drawable/selectable_background_dark" />
+            <item android:drawable="@drawable/selectable_round_corners_dark" />
             <item>
                 <shape android:shape="rectangle">
                     <corners android:radius="5dp" />

@@ -3,6 +3,7 @@ package de.schildbach.wallet.ui.dashpay
 import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.NotificationItem
+import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.CoroutineScope
@@ -53,10 +54,9 @@ open class NotificationsLiveData(protected val walletApplication: WalletApplicat
             // * payments
             // * other
 
-            contactRequests.data!!.forEach {
-                results.add(NotificationItem(it))
+            contactRequests.data?.forEach {
+                results.add(NotificationItemContact(it))
             }
-
             postValue(Resource.success(results))
         }
     }

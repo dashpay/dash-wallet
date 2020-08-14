@@ -402,11 +402,14 @@
 
     <string name="notifications_title">Notifications</string>
     <string name="notifications_title_with_count">Notifications (%d)</string>
+    <string name="notifications_profile_activity">Activity</string>
     <string name="notifications_new">New</string>
     <string name="notifications_earlier">Earlier</string>
     <string name="notifications_none_new">There are no new notifications</string>
     <string name="notifications_contact_has_accepted">%s has accepted your contact request.</string>
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
+    <string name="notifications_you_sent">You sent a contact request to %s</string>
+    <string name="notifications_you_received">%s sent a contact request to you</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 

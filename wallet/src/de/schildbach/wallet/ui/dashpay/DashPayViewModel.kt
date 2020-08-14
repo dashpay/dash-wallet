@@ -26,10 +26,7 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
@@ -128,18 +125,18 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         notificationsForUserLiveData.searchNotifications(userId)
     }
 
-   fun getNotificationCount() {
+    fun getNotificationCount() {
         notificationCountLiveData.getNotificationCount()
     }
 
     fun usernameDoneAndDismiss() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             platformRepo.doneAndDismiss()
         }
     }
 
     fun updateDashPayState() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             platformRepo.updateContactRequests()
         }
     }
