@@ -80,7 +80,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
             transactionResultViewBinder.bind(tx!!)
         } else {
             log.error("Transaction not found. TxId:", txId)
-            dismiss()
+            dismissAllowingStateLoss()
             return
         }
         showAnimation()
@@ -122,7 +122,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         }, 150)
         containerAnimation.setAnimationListener(object : Animation.AnimationListener {
             override fun onAnimationEnd(animation: Animation?) {
-                dismiss()
+                dismissAllowingStateLoss()
             }
 
             override fun onAnimationRepeat(animation: Animation?) {}
