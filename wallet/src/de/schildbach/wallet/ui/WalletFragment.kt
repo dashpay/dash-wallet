@@ -86,6 +86,7 @@ class WalletFragment : Fragment() {
         if (walletFragmentView == null) {
             walletFragmentView = inflater.inflate(R.layout.home_content, container, false)
         }
+
         return walletFragmentView
     }
 
