@@ -252,7 +252,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
-        results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_profile_activity))
+        results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_profile_activity))
         data.forEach { results.add(NotificationsAdapter.NotificationViewItem(it, false)) }
 
         notificationsAdapter.results = results

@@ -167,15 +167,15 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         val newItems = data.filter { r -> r.getDate() >= newDate }.toMutableList()
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
-        results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_new))
+        results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
         if (newItems.isEmpty()) {
-            results.add(NotificationsAdapter.ImageViewItem(R.string.notifications_none_new, R.drawable.ic_notification_new_empty))
+            results.add(NotificationsAdapter.ImageViewItem(2, R.string.notifications_none_new, R.drawable.ic_notification_new_empty))
         } else {
             newItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r, true)) }
         }
 
         supportActionBar!!.title = getString(R.string.notifications_title_with_count, newItems.size)
-        results.add(NotificationsAdapter.HeaderViewItem(R.string.notifications_earlier))
+        results.add(NotificationsAdapter.HeaderViewItem(3, R.string.notifications_earlier))
 
         // process contacts
         val earlierItems = data.filter { r -> r.getDate() < newDate }

@@ -22,11 +22,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.NotificationItem
-import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.NotificationItemStub
 import de.schildbach.wallet.ui.dashpay.notification.*
+import de.schildbach.wallet.util.PlatformUtils
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.wallet.Wallet
 import java.util.*
@@ -45,8 +45,8 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     }
 
     open class NotificationViewItem(val notificationItem: NotificationItem, val isNew: Boolean = false)
-    data class HeaderViewItem(val textResId: Int) : NotificationViewItem(NotificationItemStub(UUID.randomUUID().toString()))
-    data class ImageViewItem(val textResId: Int, val imageResId: Int) : NotificationViewItem(NotificationItemStub(UUID.randomUUID().toString()))
+    data class HeaderViewItem(private val idValue: Int, val textResId: Int) : NotificationViewItem(NotificationItemStub(idValue.toString()))
+    data class ImageViewItem(private val idValue: Int, val textResId: Int, val imageResId: Int) : NotificationViewItem(NotificationItemStub(idValue.toString()))
 
     init {
         setHasStableIds(true)
@@ -75,11 +75,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     }
 
     override fun getItemId(position: Int): Long {
-        return when (getItemViewType(position)) {
-            NOTIFICATION_HEADER -> 1L
-            NOTIFICATION_EMPTY -> 2L
-            else -> PlatformUtils.longHashFromEncodedString(getItem(position).notificationItem.getId())
-        }
+        return PlatformUtils.longHashFromEncodedString(getItem(position).notificationItem.getId())
     }
 
     override fun onBindViewHolder(holder: NotificationViewHolder, position: Int) {
