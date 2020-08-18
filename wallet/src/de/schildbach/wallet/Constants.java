@@ -27,8 +27,10 @@ import com.google.common.io.BaseEncoding;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
@@ -41,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet_test.BuildConfig;
@@ -65,6 +68,12 @@ public final class Constants {
 
     public static final boolean IS_PROD_BUILD;
 
+    public static boolean SUPPORTS_PLATFORM;
+
+    public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
+    public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
+    public static final EnumSet<MasternodeSync.FEATURE_FLAGS> FEATURE_FLAGS = MasternodeSync.FEATURES_SPV;
+
     static {
         switch (BuildConfig.FLAVOR) {
             case "prod":
@@ -75,6 +84,7 @@ public final class Constants {
                 IS_PROD_BUILD = true;
                 FILENAME_NETWORK_SUFFIX = "";
                 WALLET_NAME_CURRENCY_CODE = "dash";
+                SUPPORTS_PLATFORM = false;
                 break;
             }
             case "_testNet3": {
@@ -84,6 +94,7 @@ public final class Constants {
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
+                SUPPORTS_PLATFORM = false;
                 break;
             }
             case "devNet": {
@@ -94,6 +105,9 @@ public final class Constants {
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-palinka";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
+                SUPPORTS_PLATFORM = true;
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 break;
             }
             case "evonet": {
@@ -103,6 +117,9 @@ public final class Constants {
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-evonet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
+                SUPPORTS_PLATFORM = true;
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 break;
             }
             case "mobile": {
@@ -112,6 +129,9 @@ public final class Constants {
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-mobile";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
+                SUPPORTS_PLATFORM = true;
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 break;
             }
             default: {
