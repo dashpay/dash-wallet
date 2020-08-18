@@ -20,6 +20,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import com.google.common.base.Stopwatch
+import com.google.common.util.concurrent.SettableFuture
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -86,6 +87,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val updatingContacts = AtomicBoolean(false)
+    private val preDownloadBlocks = AtomicBoolean(true)
+    private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
 
     val platform = Platform(Constants.NETWORK_PARAMETERS)
     private val profiles = Profiles(platform)
@@ -387,6 +390,28 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             //Verify that the Contact Request was seen on the network
             val cr = contactRequests.watchContactRequest(this.blockchainIdentity.uniqueIdString,
                     toUserId, 100, 500, RetryDelayType.LINEAR)
+
+            // add our receiving from this contact keychain if it doesn't exist
+            val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
+            var encryptionKey: KeyParameter? = null
+            try {
+                if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+                    val contactIdentity = platform.identities.get(toUserId)
+                    if (walletApplication.wallet.isEncrypted) {
+                        val password = securityGuard.retrievePassword()
+                        encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                    }
+                    blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey!!)
+
+                    // update bloom filters now
+                    val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                            BlockchainServiceImpl::class.java)
+                    walletApplication.startService(intent)
+                }
+            } catch (e: KeyCrypterException) {
+                // we can't send payments to this contact due to an invalid encryptedPublicKey
+                log.info("ContactRequest: error ${e.message}")
+            }
 
             log.info("contact request: $cr")
             val dashPayContactRequest = DashPayContactRequest.fromDocument(cr!!)
@@ -763,6 +788,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             log.error(formatExceptionMessage("error updating contacts", e))
         } finally {
             updatingContacts.set(false)
+            if (preDownloadBlocks.get()) {
+                log.info("PreDownloadBlocks: complete")
+                preDownloadBlocksFuture?.set(true)
+                preDownloadBlocks.set(false)
+            }
         }
     }
 
@@ -792,5 +822,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { it[0] }
 
         return UsernameSearchResult(profile!!.username, profile, sentContactRequest, receivedContactRequest)
+    }
+
+    /**
+     * Called before DashJ starts synchronizing the blockchain
+     */
+    fun preBlockDownload(future: SettableFuture<Boolean>) {
+        GlobalScope.launch(Dispatchers.IO) {
+            preDownloadBlocks.set(true)
+            preDownloadBlocksFuture = future
+            log.info("PreDownloadBlocks: starting")
+            if(!updatingContacts.get()) {
+                updateContactRequests()
+            }
+        }
     }
 }
