@@ -85,7 +85,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.jetbrains.annotations.NotNull;
+import org.dashevo.dapiclient.DapiClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -802,8 +802,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         if (Constants.NETWORK_PARAMETERS instanceof DevNetParams) {
             masternodes = new ArrayList(Arrays.asList(((DevNetParams) Constants.NETWORK_PARAMETERS).getDefaultMasternodeList()));
         }
-        PlatformRepo.Companion.getInstance().getPlatform().getClient().setSimplifiedMasternodeListManager(
-                application.getWallet().getContext().masternodeListManager, masternodes);
+
+        DapiClient client = PlatformRepo.getInstance().getPlatform().getClient();
+        client.setSimplifiedMasternodeListManager(application.getWallet().getContext().masternodeListManager, masternodes);
+        // this is a mobile masternode that has a bad server time
+        client.getDapiAddressListProvider().addBannedAddress("34.217.130.113");
 
         updateAppWidget();
 

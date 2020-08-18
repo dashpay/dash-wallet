@@ -79,7 +79,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
 
         @JvmStatic
-        fun getInstance() : PlatformRepo {
+        fun getInstance(): PlatformRepo {
             return platformRepoInstance
         }
     }
@@ -243,13 +243,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * @param orderBy the field that is used to sort the list of matching entries in ascending order
      * @return
      */
-    suspend fun searchContacts(text: String, orderBy: UsernameSortOrderBy): Resource<List<UsernameSearchResult>> {
+    suspend fun searchContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Resource<List<UsernameSearchResult>> {
         return try {
             // TODO: Replace this Platform call with a query into the local database
             val userIdList = HashSet<String>()
 
             val wallet = walletApplication.wallet
             val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
+                    ?: return Resource.error("search contacts: no blockchain identity")
             val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
 
@@ -299,9 +300,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val usernameSearchResult = UsernameSearchResult(profile.value!!.username,
                         profile.value!!, toContact, fromContact)
 
-                // only include contacts that have sent requests to us (we may have accepted them)
-                // do not include contactRequest that we have sent but have not been accepted
-                if (usernameSearchResult.requestReceived)
+                if (usernameSearchResult.requestReceived || (includeSentPending && usernameSearchResult.requestSent))
                     usernameSearchResults.add(usernameSearchResult)
             }
             when (orderBy) {
@@ -671,10 +670,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         Context.propagate(walletApplication.wallet.context)
         var encryptionKey: KeyParameter? = null
 
+        var lastContactRequestTime = if (dashPayContactRequestDaoAsync.countAllRequests() > 0)
+            dashPayContactRequestDaoAsync.getLastTimestamp()
+        else 0L
+
         try {
             updatingContacts.set(true)
             // Get all out our contact requests
-            val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, retrieveAll = true)
+            val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
             toContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.toUserId)
@@ -699,7 +702,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             }
             // Get all contact requests where toUserId == userId, the users who have added me
-            val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, retrieveAll = true)
+            val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.userId)
@@ -729,7 +732,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
                 val nameDocuments = platform.names.getList(userIdList.toList())
-                val nameById = nameDocuments.associateBy({getIdentityForName(it) }, { it })
+                val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
 
                 for (id in userIdList) {
                     val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
@@ -743,7 +746,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayProfileDaoAsync.insert(profile!!)
                 }
             }
-            fireContactsUpdatedListeners()
+
+            // fire listeners if there were new contacts
+            if (fromContactDocuments.isNotEmpty() || toContactDocuments.isNotEmpty()) {
+                fireContactsUpdatedListeners()
+            }
 
             // If new keychains were added to the wallet, then update the bloom filters
             if (addedContact) {

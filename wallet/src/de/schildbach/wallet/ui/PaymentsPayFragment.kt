@@ -29,8 +29,16 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
@@ -39,7 +47,8 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 
-class PaymentsPayFragment : Fragment() {
+class PaymentsPayFragment : Fragment(),
+        OnContactItemClickListener {
 
     companion object {
 
@@ -48,6 +57,9 @@ class PaymentsPayFragment : Fragment() {
         @JvmStatic
         fun newInstance() = PaymentsPayFragment()
     }
+
+    private var frequentContactsAdapter: FrequentContactsAdapter = FrequentContactsAdapter()
+    private lateinit var dashPayViewModel: DashPayViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_payments_pay, container, false)
@@ -62,13 +74,37 @@ class PaymentsPayFragment : Fragment() {
         pay_to_address.setOnClickListener { handlePaste(true) }
         handlePaste(false)
 
+        frequent_contacts_rv.layoutManager = LinearLayoutManager(requireContext(), RecyclerView.HORIZONTAL, false)
+        frequent_contacts_rv.adapter = this.frequentContactsAdapter
+        this.frequentContactsAdapter.itemClickListener = this
+
         initViewModel(view)
+        dashPayViewModel.getFrequentContacts()
     }
 
     private fun initViewModel(view: View) {
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(viewLifecycleOwner, Observer {
             val visibility = if (it == null) View.GONE else View.VISIBLE
             pay_by_contact_select.visibility = visibility
+        })
+
+        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
+        dashPayViewModel.frequentContactsLiveData.observe(viewLifecycleOwner, Observer {
+            if (Status.SUCCESS == it.status) {
+                if (it.data == null || it.data.isEmpty()) {
+                    frequent_contacts_rv.visibility = View.GONE
+                } else {
+                    frequent_contacts_rv.visibility = View.VISIBLE
+                }
+
+                if (it.data != null) {
+                    val results = arrayListOf<UsernameSearchResult>()
+                    results.addAll(it.data)
+                    frequentContactsAdapter.results = results
+                }
+            } else if (it.status == Status.ERROR) {
+                frequent_contacts_rv.visibility = View.GONE
+            }
         })
     }
 
@@ -193,6 +229,10 @@ class PaymentsPayFragment : Fragment() {
 
     interface OnSelectContactToPayListener {
         fun selectContactToPay()
+    }
+
+    override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
+        handleString(usernameSearchResult.fromContactRequest!!.userId, true, R.string.scan_to_pay_username_dialog_message)
     }
 
 }

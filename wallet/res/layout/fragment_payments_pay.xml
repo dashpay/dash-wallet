@@ -16,6 +16,13 @@
         app:pb_sub_title="@string/payments_pay_to_contact_sub_title"
         app:pb_title="@string/payments_pay_to_contact_title" />
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/frequent_contacts_rv"
+        android:layout_marginStart="30dp"
+        android:layout_marginBottom="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="84dp" />
+
     <de.schildbach.wallet.ui.widget.PaymentsButtonView
         android:id="@+id/pay_by_qr_button"
         style="@style/MenuRow"

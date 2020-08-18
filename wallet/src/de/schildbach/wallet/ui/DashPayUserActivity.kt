@@ -33,26 +33,24 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
-import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.InteractionAwareActivity
-import kotlin.collections.ArrayList
 
 class DashPayUserActivity : InteractionAwareActivity(),
         NotificationsAdapter.OnItemClickListener,
-        NotificationsAdapter.OnContactRequestButtonClickListener {
+        ContactViewHolder.OnContactActionClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private val username by lazy { intent.getStringExtra(USERNAME) }
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
-    private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, this)
+    private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, false, this, this)
     private var contactRequestReceived: Boolean = false
     private var contactRequestSent: Boolean = false
     private var sendingRequest: Boolean = true
@@ -140,7 +138,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         notifications_rv.layoutManager = LinearLayoutManager(this)
         notifications_rv.adapter = this.notificationsAdapter
-        this.notificationsAdapter.itemClickListener = this
 
         if (contactRequestReceived && contactRequestSent) {
             dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
@@ -231,8 +228,16 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }.parse()
     }
 
-    override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        //do nothing if an item is clicked for now
+    override fun onItemClicked(view: View, notificationItem: NotificationItem) {
+        when (notificationItem) {
+            is NotificationItemContact -> {
+
+            }
+            is NotificationItemPayment -> {
+                val transactionDetailsDialogFragment = TransactionDetailsDialogFragment.newInstance(notificationItem.tx!!.txId)
+                transactionDetailsDialogFragment.show(supportFragmentManager, null)
+            }
+        }
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
@@ -245,26 +250,11 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
     private fun processResults(data: List<NotificationItem>) {
 
-        val results = ArrayList<NotificationsAdapter.ViewItem>()
+        val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
-        data.forEach { results.add(NotificationsAdapter.ViewItem(it, getViewType(it), false)) }
+        results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_profile_activity))
+        data.forEach { results.add(NotificationsAdapter.NotificationViewItem(it, false)) }
 
         notificationsAdapter.results = results
-    }
-
-    private fun getViewType(notificationItem: NotificationItem): Int {
-        return when (notificationItem.type) {
-            NotificationItem.Type.CONTACT_REQUEST,
-            NotificationItem.Type.CONTACT -> return when (notificationItem.usernameSearchResult!!.requestSent to notificationItem.usernameSearchResult.requestReceived) {
-                true to true -> {
-                    NotificationsAdapter.NOTIFICATION_CONTACT_ADDED
-                }
-                false to true -> {
-                    NotificationsAdapter.NOTIFICATION_CONTACT_REQUEST_RECEIVED
-                }
-                else -> throw IllegalArgumentException("View not supported")
-            }
-            NotificationItem.Type.PAYMENT -> NotificationsAdapter.NOTIFICATION_PAYMENT
-        }
     }
 }
