@@ -104,10 +104,9 @@ class WalletFragment : Fragment() {
         val behaviour = params.behavior as AppBarLayout.Behavior?
         behaviour!!.setDragCallback(object : DragCallback() {
             override fun canDrag(appBarLayout: AppBarLayout): Boolean {
-                //TODO: WalletFragment and WalletTransactionsFragment can probably be merged.
                 val walletTransactionsFragment = childFragmentManager
-                        .findFragmentById(R.id.wallet_transactions_fragment) as WalletTransactionsFragment?
-                return walletTransactionsFragment != null && !walletTransactionsFragment.isHistoryEmpty
+                        .findFragmentByTag("wallet_transactions_fragment") as WalletTransactionsFragment
+                return !walletTransactionsFragment.isHistoryEmpty
             }
         })
 
