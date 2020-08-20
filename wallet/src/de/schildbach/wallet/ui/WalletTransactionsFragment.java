@@ -86,7 +86,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
 
     public enum Direction {
-        RECEIVED, SENT;
+        RECEIVED, SENT
     }
 
     private AbstractWalletActivity activity;
@@ -102,8 +102,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
     private Spinner filterSpinner;
-    private View walletTransactionsFragmentView;
-    private boolean viewCreated = false;
 
     @Nullable
     private Direction direction;
@@ -149,86 +147,90 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     }
 
     @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        recyclerView.setAdapter(null);
+    }
+
+    @Override
     public void onViewCreated(@NonNull View view, @androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        if (!viewCreated) {
-            viewCreated = true;
-            emptyView = view.findViewById(R.id.wallet_transactions_empty);
-            loading = view.findViewById(R.id.loading);
-            filterSpinner = view.findViewById(R.id.history_filter);
 
-            recyclerView = view.findViewById(R.id.wallet_transactions_list);
-            recyclerView.setHasFixedSize(true);
-            recyclerView.setLayoutManager(new LinearLayoutManager(activity));
-            recyclerView.setAdapter(adapter);
-            recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
-                private final int PADDING = 2
-                        * activity.getResources().getDimensionPixelOffset(R.dimen.card_padding_vertical);
+        emptyView = view.findViewById(R.id.wallet_transactions_empty);
+        loading = view.findViewById(R.id.loading);
+        filterSpinner = view.findViewById(R.id.history_filter);
 
-                @Override
-                public void getItemOffsets(final Rect outRect, final View view, final RecyclerView parent,
-                                           final RecyclerView.State state) {
-                    super.getItemOffsets(outRect, view, parent, state);
+        recyclerView = view.findViewById(R.id.wallet_transactions_list);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
+        recyclerView.setAdapter(adapter);
+        recyclerView.addItemDecoration(new RecyclerView.ItemDecoration() {
+            private final int PADDING = 2
+                    * activity.getResources().getDimensionPixelOffset(R.dimen.card_padding_vertical);
 
-                    final int position = parent.getChildAdapterPosition(view);
-                    if (position == 0)
-                        outRect.top += PADDING;
-                    else if (position == parent.getAdapter().getItemCount() - 1)
-                        outRect.bottom += PADDING;
+            @Override
+            public void getItemOffsets(final Rect outRect, final View view, final RecyclerView parent,
+                                       final RecyclerView.State state) {
+                super.getItemOffsets(outRect, view, parent, state);
+
+                final int position = parent.getChildAdapterPosition(view);
+                if (position == 0)
+                    outRect.top += PADDING;
+                else if (position == parent.getAdapter().getItemCount() - 1)
+                    outRect.bottom += PADDING;
+            }
+        });
+
+        final ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        filterSpinner.setAdapter(adapter);
+        filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                switch (position) {
+                    case 0:
+                        direction = null;
+                        break;
+                    case 1:
+                        direction = Direction.RECEIVED;
+                        break;
+                    case 2:
+                        direction = Direction.SENT;
+                        break;
                 }
-            });
+                reloadTransactions();
+            }
 
-            final ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            filterSpinner.setAdapter(adapter);
-            filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    switch (position) {
-                        case 0:
-                            direction = null;
-                            break;
-                        case 1:
-                            direction = Direction.RECEIVED;
-                            break;
-                        case 2:
-                            direction = Direction.SENT;
-                            break;
-                    }
-                    reloadTransactions();
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
+            @Override
+            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
+                if (blockchainIdentityData != null) {
+                    WalletTransactionsFragment.this.adapter.setBlockchainIdentityData(blockchainIdentityData);
                 }
+            }
+        });
 
-                @Override
-                public void onNothingSelected(AdapterView<?> parent) {
+        resolver.registerContentObserver(AddressBookProvider.contentUri(activity.getPackageName()), true,
+                addressBookObserver);
 
-                }
-            });
+        config.registerOnSharedPreferenceChangeListener(this);
 
-            AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
-                @Override
-                public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
-                    if (blockchainIdentityData != null) {
-                        WalletTransactionsFragment.this.adapter.setBlockchainIdentityData(blockchainIdentityData);
-                    }
-                }
-            });
+        final Bundle args = new Bundle();
+        args.putSerializable(ARG_DIRECTION, direction);
+        loaderManager.initLoader(ID_TRANSACTION_LOADER, args, this);
 
-            resolver.registerContentObserver(AddressBookProvider.contentUri(activity.getPackageName()), true,
-                    addressBookObserver);
+        wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, transactionChangeListener);
+        wallet.addCoinsSentEventListener(Threading.SAME_THREAD, transactionChangeListener);
+        wallet.addChangeEventListener(Threading.SAME_THREAD, transactionChangeListener);
+        wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, transactionChangeListener);
 
-            config.registerOnSharedPreferenceChangeListener(this);
-
-            final Bundle args = new Bundle();
-            args.putSerializable(ARG_DIRECTION, direction);
-            loaderManager.initLoader(ID_TRANSACTION_LOADER, args, this);
-
-            wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, transactionChangeListener);
-            wallet.addCoinsSentEventListener(Threading.SAME_THREAD, transactionChangeListener);
-            wallet.addChangeEventListener(Threading.SAME_THREAD, transactionChangeListener);
-            wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, transactionChangeListener);
-
-            updateView();
-        }
+        updateView();
     }
 
     @Override
@@ -250,11 +252,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                              final Bundle savedInstanceState) {
-        if (walletTransactionsFragmentView == null) {
-            walletTransactionsFragmentView = inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
-        }
-
-        return walletTransactionsFragmentView;
+        return inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
     }
 
     private void reloadTransactions() {

@@ -15,9 +15,10 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription">
 
-        <fragment
+        <androidx.fragment.app.FragmentContainerView
             android:id="@+id/wallet_transactions_fragment"
             android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
+            android:tag="wallet_transactions_fragment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:layout_behavior="@string/appbar_scrolling_view_behavior"
@@ -39,7 +40,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <fragment
+                    <androidx.fragment.app.FragmentContainerView
                         android:id="@+id/wallet_balance_fragment"
                         android:name="de.schildbach.wallet.ui.HeaderBalanceFragment"
                         android:layout_width="match_parent"
