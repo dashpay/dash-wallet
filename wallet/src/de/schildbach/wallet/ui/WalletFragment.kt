@@ -82,10 +82,6 @@ class WalletFragment : Fragment() {
     private val coinsSendReceivedListener = OnCoinsSentReceivedListener()
     private var walletFragmentView: View? = null
 
-    companion object {
-        fun newInstance() = WalletFragment()
-    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         if (walletFragmentView == null) {
             walletFragmentView = inflater.inflate(R.layout.home_content, container, false)
