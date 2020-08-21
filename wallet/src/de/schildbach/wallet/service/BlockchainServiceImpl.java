@@ -135,8 +135,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private Configuration config;
 
     private BlockStore blockStore;
+    private BlockStore headerStore;
     private File blockChainFile;
+    private File headerChainFile;
     private BlockChain blockChain;
+    private BlockChain headerChain;
     private InputStream bootStrapStream;
     @Nullable
     private PeerGroup peerGroup;
@@ -374,6 +377,77 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 delayHandler.postDelayed(runnable, BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);
         }
 
+        @Override
+        public void onHeadersDownloaded(final Peer peer, final Block block,
+                                       final int blocksLeft) {
+            super.onHeadersDownloaded(peer, block, blocksLeft);
+            delayHandler.removeCallbacksAndMessages(null);
+
+            final long now = System.currentTimeMillis();
+            if (now - lastMessageTime.get() > BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS)
+                delayHandler.post(runnable);
+            else
+                delayHandler.postDelayed(runnable, BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);
+        }
+
+        private final Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                lastMessageTime.set(System.currentTimeMillis());
+
+                config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
+                if(config.isRestoringBackup()) {
+                    long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
+                    //if the app was restoring a backup from a file or seed and block chain is nearly synced
+                    //then turn off the restoring indicator
+                    if(timeAgo < DateUtils.DAY_IN_MILLIS)
+                        config.setRestoringBackup(false);
+                }
+                // this method is always called after progress or doneDownload
+                updateBlockchainState();
+            }
+        };
+
+        /*
+            This method is called by super.onBlocksDownloaded when the percentage
+            of the chain downloaded is 0.0, 1.0, 2.0, 3.0 .. 99.0% (whole numbers)
+
+            The pct value is relative to the blocks that need to be downloaded to sync,
+            rather than the relative to the entire blockchain.
+         */
+        @Override
+        protected void progress(double pct, int blocksLeft, Date date) {
+            super.progress(pct, blocksLeft, date);
+            syncPercentage = pct > 0.0 ? (int)pct : 0;
+        }
+
+        /*
+            This method is called by super.onBlocksDownloaded when the percentage
+            of the chain downloaded is 100.0% (completely done)
+        */
+        @Override
+        protected void doneDownload() {
+            super.doneDownload();
+            syncPercentage = 100;
+        }
+    };
+
+    private final PeerDataEventListener headerDownloadListener = new DownloadProgressTracker() {
+        private final AtomicLong lastMessageTime = new AtomicLong(0);
+
+        @Override
+        public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
+                                       final int blocksLeft) {
+            super.onBlocksDownloaded(peer, block, filteredBlock, blocksLeft);
+            delayHandler.removeCallbacksAndMessages(null);
+
+            final long now = System.currentTimeMillis();
+            if (now - lastMessageTime.get() > BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS)
+                delayHandler.post(runnable);
+            else
+                delayHandler.postDelayed(runnable, BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);
+        }
+
         private final Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -483,7 +557,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 }
 
                 log.info("starting peergroup");
-                peerGroup = new PeerGroup(Constants.NETWORK_PARAMETERS, blockChain);
+                peerGroup = new PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain);
                 peerGroup.setDownloadTxDependencies(0); // recursive implementation causes StackOverflowError
                 peerGroup.addWallet(wallet);
                 peerGroup.setUserAgent(Constants.USER_AGENT, application.packageInfo().versionName);
@@ -721,6 +795,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
         final boolean blockChainFileExists = blockChainFile.exists();
 
+        headerChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.HEADERS_FILENAME);
+        final boolean headersFileExists = headerChainFile.exists();
+
         try {
             bootStrapStream = getAssets().open(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
             SimplifiedMasternodeListManager.setBootStrapStream(bootStrapStream);
@@ -745,14 +822,21 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             blockStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile);
             blockStore.getChainHead(); // detect corruptions as early as possible
 
+            headerStore = new SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile);
+            headerStore.getChainHead(); // detect corruptions as early as possible
+
             final long earliestKeyCreationTime = wallet.getEarliestKeyCreationTime();
 
             if (!blockChainFileExists && earliestKeyCreationTime > 0) {
                 try {
                     final Stopwatch watch = Stopwatch.createStarted();
-                    final InputStream checkpointsInputStream = getAssets().open(Constants.Files.CHECKPOINTS_FILENAME);
+                    InputStream checkpointsInputStream = getAssets().open(Constants.Files.CHECKPOINTS_FILENAME);
                     CheckpointManager.checkpoint(Constants.NETWORK_PARAMETERS, checkpointsInputStream, blockStore,
                             earliestKeyCreationTime);
+                    //the headerStore should be set to the most recent checkpoint
+                    checkpointsInputStream = getAssets().open(Constants.Files.CHECKPOINTS_FILENAME);
+                    CheckpointManager.checkpoint(Constants.NETWORK_PARAMETERS, checkpointsInputStream, headerStore,
+                            System.currentTimeMillis() / 1000);
                     watch.stop();
                     log.info("checkpoints loaded from '{}', took {}", Constants.Files.CHECKPOINTS_FILENAME, watch);
                 } catch (final IOException x) {
@@ -761,9 +845,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             }
         } catch (final BlockStoreException x) {
             blockChainFile.delete();
+            headerChainFile.delete();
             SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
             if(manager != null) {
-                manager.resetMNList(true, true);
+                manager.resetMNList(true, false);
             }
 
             final String msg = "blockstore cannot be created";
@@ -773,6 +858,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         try {
             blockChain = new BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore);
+            headerChain = new BlockChain(Constants.NETWORK_PARAMETERS, headerStore);
         } catch (final BlockStoreException x) {
             throw new Error("blockchain cannot be created", x);
         }
@@ -945,6 +1031,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             log.info("removing blockchain");
             //noinspection ResultOfMethodCallIgnored
             blockChainFile.delete();
+            headerChainFile.delete();
             SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
             if(manager != null) {
                 manager.resetMNList(true, false);
