@@ -670,36 +670,36 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     // contacts
     suspend fun updateContactRequests() {
-        // only allow this method to execute once at a time
-        if (updatingContacts.get()) {
-            log.info("updateContactRequests is already running")
-            return
-        }
-
-        if (!platform.hasApp("dashpay")) {
-            return
-        }
-
-        val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
-        if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
-            return
-        }
-        val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
-        if (blockchainIdentityData.username == null) {
-            return // this is here because the wallet is being reset without removing blockchainIdentityData
-        }
-
-        val userIdList = HashSet<String>()
-        val watch = Stopwatch.createStarted()
-        var addedContact = false
-        Context.propagate(walletApplication.wallet.context)
-        var encryptionKey: KeyParameter? = null
-
-        var lastContactRequestTime = if (dashPayContactRequestDaoAsync.countAllRequests() > 0)
-            dashPayContactRequestDaoAsync.getLastTimestamp()
-        else 0L
-
         try {
+            // only allow this method to execute once at a time
+            if (updatingContacts.get()) {
+                log.info("updateContactRequests is already running")
+                return
+            }
+
+            if (!platform.hasApp("dashpay")) {
+                return
+            }
+
+            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
+            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+                return
+            }
+            val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+            if (blockchainIdentityData.username == null) {
+                return // this is here because the wallet is being reset without removing blockchainIdentityData
+            }
+
+            val userIdList = HashSet<String>()
+            val watch = Stopwatch.createStarted()
+            var addedContact = false
+            Context.propagate(walletApplication.wallet.context)
+            var encryptionKey: KeyParameter? = null
+
+            var lastContactRequestTime = if (dashPayContactRequestDaoAsync.countAllRequests() > 0)
+                dashPayContactRequestDaoAsync.getLastTimestamp()
+            else 0L
+
             updatingContacts.set(true)
             // Get all out our contact requests
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
