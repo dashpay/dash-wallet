@@ -85,6 +85,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "";
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 SUPPORTS_PLATFORM = false;
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 break;
             }
             case "_testNet3": {
@@ -95,6 +96,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = false;
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 break;
             }
             case "devNet": {
@@ -173,6 +175,9 @@ public final class Constants {
 
         /** Filename of the block store for storing the chain. */
         public static final String BLOCKCHAIN_FILENAME = "blockchain" + FILENAME_NETWORK_SUFFIX;
+
+        /** Filename of the block store for storing the chain. */
+        public static final String HEADERS_FILENAME = "headers" + FILENAME_NETWORK_SUFFIX;
 
         /** Filename of the block checkpoints file. */
         public static final String CHECKPOINTS_FILENAME = "checkpoints" + FILENAME_NETWORK_SUFFIX + ".txt";
