@@ -184,6 +184,10 @@
         <item name="android:visibility">gone</item>
     </style>
 
+    <style name="ContactRequestButton.White" parent="ContactRequestButton">
+        <item name="android:background">@drawable/blue_outline_button_bg</item>
+    </style>
+
     <style name="ContactRequestButtonText" parent="MontserratMedium">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">0dp</item>
