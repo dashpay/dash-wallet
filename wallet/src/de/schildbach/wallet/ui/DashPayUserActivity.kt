@@ -148,6 +148,8 @@ class DashPayUserActivity : InteractionAwareActivity(),
                 }
             })
         }
+
+        sendContactRequestBtnStrangerQR.setOnClickListener {  }
     }
 
     private fun startLoading() {
