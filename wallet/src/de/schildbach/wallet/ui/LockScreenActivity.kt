@@ -22,6 +22,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.telephony.TelephonyManager
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
@@ -123,7 +124,9 @@ class LockScreenActivity : SendCoinsQrActivity() {
     }
 
     private fun hasNavBar(): Boolean {
-        if (Build.FINGERPRINT.startsWith("generic")) {  // emulator
+        val tm: TelephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        // emulator
+        if ("Android" == tm.networkOperatorName || Build.FINGERPRINT.startsWith("generic")) {
             return true
         }
         val id: Int = resources.getIdentifier("config_showNavigationBar", "bool", "android")
