@@ -796,7 +796,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         final boolean blockChainFileExists = blockChainFile.exists();
 
         headerChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.HEADERS_FILENAME);
-        final boolean headersFileExists = headerChainFile.exists();
 
         try {
             bootStrapStream = getAssets().open(Constants.Files.MNLIST_BOOTSTRAP_FILENAME);
@@ -1010,6 +1009,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         try {
             blockStore.close();
+            headerStore.close();
         } catch (final BlockStoreException x) {
             throw new RuntimeException(x);
         }
