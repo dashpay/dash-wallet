@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Подтверждение PIN-кода</string>
     <string name="set_pin_message">Этот PIN нужно будет вводить для разблокировки приложения при каждом его использовании.</string>
 
-    <string name="home_pay">Отправить</string>
-    <string name="home_receive">Получить</string>
     <string name="home_available_balance">Доступный баланс</string>
     <string name="home_balance_hidden">Баланс скрыт</string>
     <string name="home_balance_show_hint">Нажмите, чтобы показать баланс</string>
@@ -29,17 +27,19 @@
     <string name="dialog_confirm_total">Итого</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Сохраните кошелёк</string>
+    <string name="shortcut_secure_now">Сохраните кошелёк</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Оплатить по QR-коду</string>
+    <string name="shortcut_scan_to_pay">Оплатить по QR-коду</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Отправить на адрес</string>
+    <string name="shortcut_pay_to_address">Отправить на адрес</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Купить / Продать</string>
+    <string name="shortcut_receive">Получить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Импорт ключа</string>
+    <string name="shortcut_buy_sell">Купить / Продать</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Добавить</string>
+    <string name="shortcut_import_key">Импорт ключа</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Добавить</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Получить быстро</string>

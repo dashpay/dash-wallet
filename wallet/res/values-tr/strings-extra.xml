@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">PİN Doğrulanıyor</string>
     <string name="set_pin_message">Bu PİN uygulamanın açılması için her zaman gerekecektir.</string>
 
-    <string name="home_pay">Gönder</string>
-    <string name="home_receive">Al</string>
     <string name="home_available_balance">Mevcut bakiye</string>
     <string name="home_balance_hidden">Bakiye gizlendi</string>
     <string name="home_balance_show_hint">Bakiyeyi görmek için tıkla</string>
@@ -29,17 +27,19 @@
     <string name="dialog_confirm_total">Toplam</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Şimdi Cüzdanını Korumaya Al</string>
+    <string name="shortcut_secure_now">Şimdi Cüzdanını Korumaya Al</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Göndermek için Tara</string>
+    <string name="shortcut_scan_to_pay">Göndermek için Tara</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Adrese Gönder</string>
+    <string name="shortcut_pay_to_address">Adrese Gönder</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Dash Al / Sat</string>
+    <string name="shortcut_receive">Al</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Özel Anahtarı İçe Aktar</string>
+    <string name="shortcut_buy_sell">Dash Al / Sat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Kısayol Ekle</string>
+    <string name="shortcut_import_key">Özel Anahtarı İçe Aktar</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Kısayol Ekle</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Hızlı Al</string>

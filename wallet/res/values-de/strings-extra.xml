@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Verifiziere PIN</string>
     <string name="set_pin_message">Die PIN muss bei jedem Verwenden der App zum Entsperren eingegeben werden.</string>
 
-    <string name="home_pay">Senden</string>
-    <string name="home_receive">Empfangen</string>
     <string name="home_available_balance">Verfügbares Guthaben</string>
     <string name="home_balance_hidden">Guthaben nicht angezeigt</string>
     <string name="home_balance_show_hint">Zum Anzeigen des Guthabens tippen</string>
@@ -29,17 +27,19 @@
     <string name="dialog_confirm_total">Gesamt</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Wallet jetzt absichern</string>
+    <string name="shortcut_secure_now">Wallet jetzt absichern</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Zum Senden scannen</string>
+    <string name="shortcut_scan_to_pay">Zum Senden scannen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Zur Adresse senden</string>
+    <string name="shortcut_pay_to_address">Zur Adresse senden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Kaufe / Verkaufe Dash</string>
+    <string name="shortcut_receive">Empfangen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Privaten Schlüssel importieren</string>
+    <string name="shortcut_buy_sell">Kaufe / Verkaufe Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Shortcut hinzufügen</string>
+    <string name="shortcut_import_key">Privaten Schlüssel importieren</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Shortcut hinzufügen</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Schnell Empfangen</string>

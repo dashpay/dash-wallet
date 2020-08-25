@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
     <string name="set_pin_message">Ten kod PIN będzie wymagany do odblokowania Twojej aplikacji za każdym razem, gdy z niej korzystasz.</string>
 
-    <string name="home_pay">Wyślij</string>
-    <string name="home_receive">Otrzymaj</string>
     <string name="home_available_balance">Dostępne saldo</string>
     <string name="home_balance_hidden">Saldo ukryte</string>
     <string name="home_balance_show_hint">Stuknij by odkryć saldo</string>
@@ -30,17 +28,19 @@
     <string name="dialog_confirm_total">Całkowite</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Zabezpiecz Portfel Teraz</string>
+    <string name="shortcut_secure_now">Zabezpiecz Portfel Teraz</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Skanuj by Wysłać</string>
+    <string name="shortcut_scan_to_pay">Skanuj by Wysłać</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Zapłać na Adres</string>
+    <string name="shortcut_pay_to_address">Zapłać na Adres</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Kupuj / Sprzedawaj Dash</string>
+    <string name="shortcut_receive">Otrzymaj</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Zaimportuj Klucz Prywatny</string>
+    <string name="shortcut_buy_sell">Kupuj / Sprzedawaj Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Dodaj skrót</string>
+    <string name="shortcut_import_key">Zaimportuj Klucz Prywatny</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Dodaj skrót</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Szybki Odbierz</string>

@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Verifieer pin</string>
     <string name="set_pin_message">Deze PIN is vereist om uw app elke keer te ontgrendelen wanneer u deze gebruikt.</string>
 
-    <string name="home_pay">Verstuur</string>
-    <string name="home_receive">Ontvang</string>
     <string name="home_available_balance">Beschikbaar saldo</string>
     <string name="home_balance_hidden">Saldo verborgen</string>
     <string name="home_balance_show_hint">Tik om saldo te zien</string>
@@ -29,17 +27,19 @@
     <string name="dialog_confirm_total">Totaal</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Beveilig portemonnee nu</string>
+    <string name="shortcut_secure_now">Beveilig portemonnee nu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Scan om te verzenden</string>
+    <string name="shortcut_scan_to_pay">Scan om te verzenden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Versturen naar adres</string>
+    <string name="shortcut_pay_to_address">Versturen naar adres</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Koop / verkoop Dash</string>
+    <string name="shortcut_receive">Ontvang</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Importeer persoonlijke sleutel</string>
+    <string name="shortcut_buy_sell">Koop / verkoop Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Voeg snelkoppeling toe</string>
+    <string name="shortcut_import_key">Importeer persoonlijke sleutel</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Voeg snelkoppeling toe</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Snel Ontvangen</string>
