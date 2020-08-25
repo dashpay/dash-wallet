@@ -18,23 +18,15 @@ repositories {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
     implementation 'androidx.annotation:annotation:1.1.0'
-    implementation 'androidx.core:core:1.2.0'
-    implementation('androidx.legacy:legacy-support-v13:1.0.0') {
-        exclude(group: 'com.android.support', module: 'support-fragment')
-        exclude(group: 'com.android.support', module: 'support-media-compat')
-    }
-    implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'androidx.core:core:1.3.1'
+    implementation 'androidx.recyclerview:recyclerview:1.1.0'
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android:flexbox:1.1.0'
-    implementation 'androidx.preference:preference:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.0-beta4'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.0-rc1'
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'org.dashevo:dashpay:0.14-SNAPSHOT'
     implementation 'org.dashevo:platform-core:0.14-SNAPSHOT'
@@ -47,12 +39,11 @@ dependencies {
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
 
     implementation 'com.squareup.moshi:moshi:1.9.2'
-    implementation 'org.slf4j:slf4j-api:1.7.25'
+    implementation 'org.slf4j:slf4j-api:1.7.28'
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
     }
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
-    implementation 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.tbuonomo.andrui:viewpagerdotsindicator:4.1.2'
     implementation 'com.sambarboza:orbitview:0.2.0'
     implementation 'com.amulyakhare:com.amulyakhare.textdrawable:1.0.1'
@@ -87,14 +78,14 @@ dependencies {
 
     testImplementation 'junit:junit:4.12'
     //Espresso
-    androidTestImplementation ('androidx.test:runner:1.1.0') {
+    androidTestImplementation ('androidx.test:runner:1.2.0') {
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    androidTestImplementation ('androidx.test.espresso:espresso-core:3.1.0') {
+    androidTestImplementation ('androidx.test.espresso:espresso-core:3.2.0') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    androidTestImplementation ('androidx.test.espresso:espresso-intents:3.1.0') {
+    androidTestImplementation ('androidx.test.espresso:espresso-intents:3.2.0') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
