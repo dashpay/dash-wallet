@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Επαλήθευση PIN</string>
     <string name="set_pin_message">Αυτός ο κωδικός PIN θα χρειαστεί να ξεκλειδώσετε την εφαρμογή σας κάθε φορά που την χρησιμοποιείτε.</string>
 
-    <string name="home_pay">Αποστολή</string>
-    <string name="home_receive">Λήψη</string>
     <string name="home_available_balance">Διαθέσιμο υπόλοιπο</string>
     <string name="home_balance_hidden">Το υπόλοιπο αποκρύφτηκε</string>
     <string name="home_balance_show_hint">Πατήστε για να αποκαλύψετε το υπόλοιπο</string>
@@ -34,6 +32,8 @@
     <string name="quick_action_scan_to_pay">Σαρώστε για να στείλετε</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Αποστολή στη διεύθυνση</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">Λήψη</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Αγορά / Πώληση Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

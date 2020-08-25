@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Ověřování PIN kódu</string>
     <string name="set_pin_message">Tento PIN bude požadován pro odemčení aplikace pokaždé, když ji budete chtít použít.</string>
 
-    <string name="home_pay">Poslat</string>
-    <string name="home_receive">Přijmout</string>
     <string name="home_available_balance">Dostupný zůstatek</string>
     <string name="home_balance_hidden">Skrytý zůstatek</string>
     <string name="home_balance_show_hint">Klepněte pro zobrazení zůstatku</string>
@@ -34,6 +32,8 @@
     <string name="quick_action_scan_to_pay">Poslat skenováním</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Odeslat na adresu</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">Přijmout</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Koupit / Prodat Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

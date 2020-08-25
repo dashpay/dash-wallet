@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">PIN 인증 중</string>
     <string name="set_pin_message">당신이 어플을 잠금 해제하실 때마다 이 PIN이 필요합니다.</string>
 
-    <string name="home_pay">보내기</string>
-    <string name="home_receive">받기</string>
     <string name="home_available_balance">이용 가능한 잔고</string>
     <string name="home_balance_hidden">숨긴 잔고</string>
     <string name="home_balance_show_hint">잔고를 확인하시려면 탭하세요</string>
@@ -34,6 +32,8 @@
     <string name="quick_action_scan_to_pay">전송을 위해 스캔합니다</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">주소로 전송합니다</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">받기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">대시 매수 / 매도</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

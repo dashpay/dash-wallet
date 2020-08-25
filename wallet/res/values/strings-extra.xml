@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Verifying PIN</string>
     <string name="set_pin_message">This PIN will be required to unlock your app every time when you use it.</string>
 
-    <string name="home_pay">Send</string>
-    <string name="home_receive">Receive</string>
     <string name="home_available_balance">Available balance</string>
     <string name="home_balance_hidden">Balance hidden</string>
     <string name="home_balance_show_hint">Tap to unhide balance</string>
@@ -34,11 +32,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_join_dashpay">Join DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Scan to Send</string>
+    <string name="quick_action_scan_to_pay">Scan to Pay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Send to Address</string>
+    <string name="quick_action_pay_to_address">Pay to Address</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Buy / Sell Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">Receive</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_import_key">Import Private Key</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

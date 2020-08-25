@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Este PIN será requerido para desbloquear tu app cada vez que la utilices.</string>
 
-    <string name="home_pay">Enviar</string>
-    <string name="home_receive">Recibir</string>
     <string name="home_available_balance">Saldo disponible</string>
     <string name="home_balance_hidden">Saldo oculto</string>
     <string name="home_balance_show_hint">Tocar para mostrar saldo</string>
@@ -35,6 +33,8 @@
     <string name="quick_action_scan_to_pay">Escanear para Enviar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Enviar a Dirección</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">Recibir</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Comprar / Vender Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

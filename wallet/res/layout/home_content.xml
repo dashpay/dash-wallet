@@ -13,14 +13,16 @@
         android:background="@color/dash_lighter_gray"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="ContentDescription">
+        app:layout_constraintVertical_bias="1.0"
+        tools:ignore="ContentDescription"
+        tools:layout_editor_absoluteX="0dp">
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/wallet_transactions_fragment"
             android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
-            android:tag="wallet_transactions_fragment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:tag="wallet_transactions_fragment"
             app:layout_behavior="@string/appbar_scrolling_view_behavior"
             tools:layout="@layout/wallet_transactions_fragment" />
 
@@ -53,31 +55,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="0dp" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@color/dash_lighter_gray"
-                        android:orientation="vertical"
-                        android:paddingStart="16dp"
-                        android:paddingTop="32dp"
-                        android:paddingEnd="16dp"
-                        android:paddingBottom="16dp">
-
-                        <include
-                            android:id="@+id/sync_status_pane"
-                            layout="@layout/sync_status_pane"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="14dp" />
-
-                        <include
-                            android:id="@+id/quick_actions_pane"
-                            layout="@layout/quick_actions_layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
-
-                    </LinearLayout>
-
                 </LinearLayout>
 
                 <androidx.appcompat.widget.Toolbar
@@ -102,57 +79,70 @@
 
         </com.google.android.material.appbar.AppBarLayout>
 
-        <LinearLayout
+        <org.dash.wallet.ui.widget.ShortcutsPane
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:baselineAligned="false"
-            android:orientation="horizontal"
+            android:layout_height="94dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
             app:layout_anchor="@id/buttons_anchor"
             app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior">
 
-            <FrameLayout
-                android:id="@+id/pay_btn"
-                style="@style/DashButton.White"
+            <org.dash.wallet.ui.widget.QuickActionButton
+                android:id="@+id/secure_action"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginLeft="16dp"
-                android:layout_marginEnd="4dp"
-                android:layout_marginRight="4dp"
-                android:layout_weight="1">
+                android:layout_height="match_parent"
+                app:action_icon="@drawable/ic_quick_action_secure"
+                app:action_text="@string/quick_action_secure_now" />
 
-                <TextView
-                    style="@style/TextViewStyle.Body"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:drawablePadding="5dp"
-                    android:text="@string/home_pay"
-                    app:drawableStartCompat="@drawable/ic_arrow_upward_blue_24dp" />
-
-            </FrameLayout>
-
-            <FrameLayout
-                android:id="@+id/receive_btn"
-                style="@style/DashButton.White"
+            <org.dash.wallet.ui.widget.QuickActionButton
+                android:id="@+id/secure_action_asdf"
                 android:layout_width="0dp"
+                android:layout_height="match_parent"
+                app:action_icon="@drawable/ic_quick_action_scan_to_pay"
+                app:action_text="@string/quick_action_scan_to_pay" />
+
+            <org.dash.wallet.ui.widget.QuickActionButton
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                app:action_icon="@drawable/ic_quick_action_pay_to_address"
+                app:action_text="@string/quick_action_pay_to_address" />
+
+            <org.dash.wallet.ui.widget.QuickActionButton
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                app:action_icon="@drawable/ic_quick_action_receive"
+                app:action_text="@string/quick_action_receive" />
+
+            <include
+                android:id="@+id/quick_actions_pane"
+                layout="@layout/quick_actions_layout"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:layout_marginLeft="4dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginRight="16dp"
-                android:layout_weight="1">
+                android:visibility="gone" />
 
-                <TextView
-                    style="@style/TextViewStyle.Body"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:drawablePadding="5dp"
-                    android:text="@string/home_receive"
-                    app:drawableStartCompat="@drawable/ic_arrow_downward_blue_24dp" />
+        </org.dash.wallet.ui.widget.ShortcutsPane>
 
-            </FrameLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/dash_lighter_gray"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="32dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="16dp"
+            app:layout_anchor="@+id/app_bar"
+            app:layout_anchorGravity="center">
+
+            <include
+                android:id="@+id/sync_status_pane"
+                layout="@layout/sync_status_pane"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="14dp" />
 
         </LinearLayout>
 

@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Đang kiểm tra mã PIN</string>
     <string name="set_pin_message">Mã PIN này sẽ được hỏi để mở ứng dụng của bạn mỗi khi bạn sử dụng nó.</string>
 
-    <string name="home_pay">Gửi</string>
-    <string name="home_receive">Nhận</string>
     <string name="home_available_balance">Số dư hiện có</string>
     <string name="home_balance_hidden">Số dư ẩn</string>
     <string name="home_balance_show_hint">Bấm để hiện số dư</string>
@@ -34,6 +32,8 @@
     <string name="quick_action_scan_to_pay">Quét để gửi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Gửi đến địa chỉ</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">Nhận</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Mua &amp; Bán Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

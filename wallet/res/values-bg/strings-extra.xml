@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Потвърждаване на ПИН</string>
     <string name="set_pin_message">Този ПИН ще бъде необходим за отключване на приложението ви всеки път, когато го използвате.</string>
 
-    <string name="home_pay">Изпрати</string>
-    <string name="home_receive">Получени</string>
     <string name="home_available_balance">Наличен баланс</string>
     <string name="home_balance_hidden">Скрит баланс</string>
     <string name="home_balance_show_hint">Докоснете, за да покажете баланса</string>
@@ -34,6 +32,8 @@
     <string name="quick_action_scan_to_pay">Сканиране за изпращане</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Изпрати до адрес</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">Получени</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Купи/Продай Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">تأكيد الرقم السري</string>
     <string name="set_pin_message">سيكون الرقم  السري هذا مطلوبًا لإلغاء قفل تطبيقك في كل مرة تستخدمه.</string>
 
-    <string name="home_pay">إرسال</string>
-    <string name="home_receive">إستقبال</string>
     <string name="home_available_balance">الرصيد المتاح</string>
     <string name="home_balance_hidden">الرصيد مخفي</string>
     <string name="home_balance_show_hint">اضغط لاظهار الرصيد</string>

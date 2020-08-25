@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Pagpapatunay ng PIN</string>
     <string name="set_pin_message">Ang PIN na ito ay kailangan upang i-unlock ang iyong app kapag nais gamitin.</string>
 
-    <string name="home_pay">Ipadala</string>
-    <string name="home_receive">Tumanggap</string>
     <string name="home_available_balance">Magagamit na balanse</string>
     <string name="home_balance_hidden">Nakatagong balanse</string>
     <string name="home_balance_show_hint">Pindutin upang ipakita ang balanse</string>
@@ -34,6 +32,8 @@
     <string name="quick_action_scan_to_pay">I-scan para magpadala</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Ipadala sa address</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">Tumanggap</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Bumili/ Magbenta ng Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

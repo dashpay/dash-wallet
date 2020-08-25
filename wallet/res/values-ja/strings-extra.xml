@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">PINを検証中</string>
     <string name="set_pin_message">このアプリをアンロックして使用するときは必ずこのPINが必要となります</string>
 
-    <string name="home_pay">送金</string>
-    <string name="home_receive">入金</string>
     <string name="home_available_balance">ご利用可能な残高</string>
     <string name="home_balance_hidden">非表示にされた残高</string>
     <string name="home_balance_show_hint">タップして残高を表示させる</string>
@@ -34,6 +32,8 @@
     <string name="quick_action_scan_to_pay">スキャンして送金する</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">アドレスへ送金する</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">入金</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Dashを買う/売る</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

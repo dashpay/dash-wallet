@@ -1,23 +1,33 @@
 package org.dash.wallet.ui.widget
 
 import android.content.Context
+import android.content.res.Resources
 import android.util.AttributeSet
-import android.widget.TextView
+import android.widget.LinearLayout
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
 import kotlinx.android.synthetic.main.quick_action_button.view.*
+import kotlin.math.roundToInt
 
 
-class QuickActionButton(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs, R.style.DashButton_White) {
+class QuickActionButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
+
+    companion object {
+        val DEFAULT_MARGIN_PX = dpToPx(4)
+
+        private fun dpToPx(dp: Int): Int {
+            val density = Resources.getSystem().displayMetrics.density
+            return (dp.toFloat() * density).roundToInt()
+        }
+    }
+
+    var marginsSet = false
 
     init {
-        inflate(context, R.layout.quick_action_button, this)
-
-
-        maxWidth = 300
-        maxHeight = 300
+        inflate(context, R.layout.quick_action_button_2, this)
+        setBackgroundResource(R.drawable.white_background_rounded)
+        orientation = VERTICAL
+        setPadding(DEFAULT_MARGIN_PX, DEFAULT_MARGIN_PX, DEFAULT_MARGIN_PX, DEFAULT_MARGIN_PX)
 
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.QuickActionButton)
         try {
@@ -28,27 +38,32 @@ class QuickActionButton(context: Context, attrs: AttributeSet) : ConstraintLayou
                     action_icon.setImageDrawable(actionIconDrawable)
                 }
             }
-            val actionIconSize = attrsArray.getFloat(R.styleable.QuickActionButton_action_icon_size_percent, 0.4f)
-            if (actionIconSize > 0) {
-                val constraintSet = ConstraintSet()
-                constraintSet.clone(this)
-                constraintSet.constrainPercentWidth(action_icon.id, actionIconSize)
-                constraintSet.applyTo(this)
-            }
             val actionText = attrsArray.getString(R.styleable.QuickActionButton_action_text)
             if (actionText != null) {
-                findViewById<TextView>(R.id.action_text).text = actionText
+                action_text.text = actionText
             }
             val actionDarkMode = attrsArray.getBoolean(R.styleable.QuickActionButton_action_dark_mode, false)
             if (actionDarkMode) {
-                setBackgroundResource(R.drawable.gray_button_background)
+                setBackgroundResource(R.drawable.gray_button_background_2)
             } else {
-                setBackgroundResource(R.drawable.white_button_background)
+                setBackgroundResource(R.drawable.white_button_background_2)
             }
             val actionActive = attrsArray.getBoolean(R.styleable.QuickActionButton_action_active, true)
             setActive(actionActive)
         } finally {
             attrsArray.recycle()
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(heightMeasureSpec, heightMeasureSpec)
+        if (!marginsSet) {
+            layoutParams = (layoutParams as MarginLayoutParams).run {
+                leftMargin = DEFAULT_MARGIN_PX; topMargin = DEFAULT_MARGIN_PX
+                rightMargin = DEFAULT_MARGIN_PX; bottomMargin = DEFAULT_MARGIN_PX
+                this
+            }
+            marginsSet = true
         }
     }
 

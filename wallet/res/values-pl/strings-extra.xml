@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
     <string name="set_pin_message">Ten kod PIN będzie wymagany do odblokowania Twojej aplikacji za każdym razem, gdy z niej korzystasz.</string>
 
-    <string name="home_pay">Wyślij</string>
-    <string name="home_receive">Otrzymaj</string>
     <string name="home_available_balance">Dostępne saldo</string>
     <string name="home_balance_hidden">Saldo ukryte</string>
     <string name="home_balance_show_hint">Stuknij by odkryć saldo</string>
@@ -34,6 +32,8 @@
     <string name="quick_action_scan_to_pay">Skanuj by Wysłać</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_pay_to_address">Zapłać na Adres</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="quick_action_receive">Otrzymaj</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_buy_sell">Kupuj / Sprzedawaj Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
