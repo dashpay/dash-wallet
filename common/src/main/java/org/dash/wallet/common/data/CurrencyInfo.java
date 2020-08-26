@@ -67,7 +67,6 @@ public class CurrencyInfo {
         obsoleteCurrencyMap.put("MRO", "MRU"); // Mauritania Ouguiya, changed in 2018
 
         otherCurrencyMap = new HashMap<>();
-        otherCurrencyMap.put("VES", R.string.currency_VES);
         otherCurrencyMap.put("GGP", R.string.currency_GGP);
         otherCurrencyMap.put("JEP", R.string.currency_JEP);
         otherCurrencyMap.put("IMP", R.string.currency_IMP);
@@ -80,6 +79,7 @@ public class CurrencyInfo {
 
         useOtherNameMap = new HashMap<>();
         useOtherNameMap.put("CNH", "CNY");
+        useOtherNameMap.put("VES", "VEF");
     }
 
     public static boolean hasObsoleteCurrency(String code) {
