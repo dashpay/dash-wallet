@@ -432,64 +432,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
     };
 
-    private final PeerDataEventListener headerDownloadListener = new DownloadProgressTracker() {
-        private final AtomicLong lastMessageTime = new AtomicLong(0);
-
-        @Override
-        public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
-                                       final int blocksLeft) {
-            super.onBlocksDownloaded(peer, block, filteredBlock, blocksLeft);
-            delayHandler.removeCallbacksAndMessages(null);
-
-            final long now = System.currentTimeMillis();
-            if (now - lastMessageTime.get() > BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS)
-                delayHandler.post(runnable);
-            else
-                delayHandler.postDelayed(runnable, BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);
-        }
-
-        private final Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                lastMessageTime.set(System.currentTimeMillis());
-
-                config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
-                if(config.isRestoringBackup()) {
-                    long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
-                    //if the app was restoring a backup from a file or seed and block chain is nearly synced
-                    //then turn off the restoring indicator
-                    if(timeAgo < DateUtils.DAY_IN_MILLIS)
-                        config.setRestoringBackup(false);
-                }
-                // this method is always called after progress or doneDownload
-                updateBlockchainState();
-            }
-        };
-
-        /*
-            This method is called by super.onBlocksDownloaded when the percentage
-            of the chain downloaded is 0.0, 1.0, 2.0, 3.0 .. 99.0% (whole numbers)
-
-            The pct value is relative to the blocks that need to be downloaded to sync,
-            rather than the relative to the entire blockchain.
-         */
-        @Override
-        protected void progress(double pct, int blocksLeft, Date date) {
-            super.progress(pct, blocksLeft, date);
-            syncPercentage = pct > 0.0 ? (int)pct : 0;
-        }
-
-        /*
-            This method is called by super.onBlocksDownloaded when the percentage
-            of the chain downloaded is 100.0% (completely done)
-        */
-        @Override
-        protected void doneDownload() {
-            super.doneDownload();
-            syncPercentage = 100;
-        }
-    };
-
     private final BroadcastReceiver connectivityReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(final Context context, final Intent intent) {
