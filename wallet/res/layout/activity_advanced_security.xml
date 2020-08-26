@@ -72,9 +72,10 @@
                     android:layout_marginRight="10dp"
                     android:layout_marginBottom="20dp"
                     android:text="@string/auto_logout"
-                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:layout_width="0dp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/auto_logout_switch"
                     app:layout_constraintVertical_bias="0"
                     tools:ignore="ContentDescription" />
 
@@ -110,7 +111,10 @@
                         android:layout_marginTop="28dp"
                         android:text="@string/logout_after"
                         android:textSize="14sp"
+                        android:layout_width="0dp"
+                        android:gravity="start"
                         app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/logout_after_time"
                         app:layout_constraintTop_toBottomOf="@id/auto_logout_separator"
                         tools:ignore="ContentDescription" />
 
@@ -189,9 +193,11 @@
                     style="@style/MontserratRegular.MenuRowTitle.Internal"
                     android:layout_marginTop="20dp"
                     android:layout_marginBottom="20dp"
+                    android:layout_width="0dp"
                     android:text="@string/spending_confirmation"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/spending_confirmation_switch"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintVertical_bias="0"
                     tools:ignore="ContentDescription" />
