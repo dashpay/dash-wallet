@@ -130,7 +130,13 @@ class LockScreenActivity : SendCoinsQrActivity() {
             return true
         }
         val id: Int = resources.getIdentifier("config_showNavigationBar", "bool", "android")
-        return if (id > 0) {
+
+        // Krip devices seem to incorrectly report config_showNavigationBar
+        val isKripDeviceWithoutNavBar = Build.BRAND == "KRIP" && when (Build.MODEL) {
+            "K5", "K5c", "K5b", "K4m", "KRIP_K4", "K6" -> true
+            else -> false
+        }
+        return if (id > 0 && !isKripDeviceWithoutNavBar) {
             id > 0 && resources.getBoolean(id)
         } else {
             // Check for keys
