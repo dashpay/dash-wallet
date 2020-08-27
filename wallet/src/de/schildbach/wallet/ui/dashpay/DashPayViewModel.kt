@@ -21,7 +21,6 @@ import android.os.Process
 import androidx.lifecycle.*
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
-import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
@@ -41,6 +40,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private val userSearchLiveData = MutableLiveData<String>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String>()
+    private val getUserLiveData = MutableLiveData<String>()
 
     val notificationCountLiveData = NotificationCountLiveData(walletApplication, platformRepo, viewModelScope)
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, viewModelScope)
@@ -94,6 +94,16 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     fun searchUsernames(text: String) {
         userSearchLiveData.value = text
+    }
+
+    fun loadUser(username: String) {
+        getUserLiveData.value = username
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = platformRepo.searchUsernames(username, true)
+            if (result.exception == null && result.data != null && result.data.isNotEmpty()) {
+                platformRepo.lastLoadedUser = result.data.first()
+            }
+        }
     }
 
     //
