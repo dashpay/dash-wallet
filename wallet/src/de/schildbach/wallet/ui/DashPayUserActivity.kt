@@ -75,6 +75,12 @@ class DashPayUserActivity : InteractionAwareActivity(),
             intent.putExtra(CONTACT_REQUEST_RECEIVED, contactRequestReceived)
             return intent
         }
+
+        @JvmStatic
+        fun createIntent(context: TransactionResultActivity, usernameSearchResult: UsernameSearchResult): Intent {
+            return createIntent(context, usernameSearchResult.username, usernameSearchResult.dashPayProfile,
+                    usernameSearchResult.requestSent, usernameSearchResult.requestReceived)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -149,7 +155,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             })
         }
 
-        sendContactRequestBtnStrangerQR.setOnClickListener {  }
+        sendContactRequestBtnStrangerQR.setOnClickListener { }
     }
 
     private fun startLoading() {
