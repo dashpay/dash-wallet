@@ -27,19 +27,19 @@
     <string name="dialog_confirm_total">Total</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Amankan Dompet Sekarang</string>
+    <string name="shortcut_secure_now">Amankan Dompet Sekarang</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Pindai untuk mengirim</string>
+    <string name="shortcut_scan_to_pay">Pindai untuk mengirim</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Kirim ke alamat</string>
+    <string name="shortcut_pay_to_address">Kirim ke alamat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_receive">Terima</string>
+    <string name="shortcut_receive">Terima</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Beli / Jual Dash</string>
+    <string name="shortcut_buy_sell">Beli / Jual Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Impor kunci pribadi</string>
+    <string name="shortcut_import_key">Impor kunci pribadi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Tambah Pintasan</string>
+    <string name="shortcut_add_shortcut">Tambah Pintasan</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Terima Cepat</string>

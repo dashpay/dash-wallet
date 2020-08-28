@@ -27,19 +27,19 @@
     <string name="dialog_confirm_total">總共</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">立即確保錢包安全</string>
+    <string name="shortcut_secure_now">立即確保錢包安全</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">掃描發送</string>
+    <string name="shortcut_scan_to_pay">掃描發送</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">發送到位址</string>
+    <string name="shortcut_pay_to_address">發送到位址</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_receive">接收</string>
+    <string name="shortcut_receive">接收</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">買 / 賣 達世幣</string>
+    <string name="shortcut_buy_sell">買 / 賣 達世幣</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">導入私鑰</string>
+    <string name="shortcut_import_key">導入私鑰</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">添加捷徑</string>
+    <string name="shortcut_add_shortcut">添加捷徑</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">快速接收</string>

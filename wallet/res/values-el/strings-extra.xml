@@ -27,19 +27,19 @@
     <string name="dialog_confirm_total">Σύνολο</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Ασφαλίστε το πορτοφόλι τώρα</string>
+    <string name="shortcut_secure_now">Ασφαλίστε το πορτοφόλι τώρα</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Σαρώστε για να στείλετε</string>
+    <string name="shortcut_scan_to_pay">Σαρώστε για να στείλετε</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Αποστολή στη διεύθυνση</string>
+    <string name="shortcut_pay_to_address">Αποστολή στη διεύθυνση</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_receive">Λήψη</string>
+    <string name="shortcut_receive">Λήψη</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Αγορά / Πώληση Dash</string>
+    <string name="shortcut_buy_sell">Αγορά / Πώληση Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Εισάγετε το ιδιωτικό κλειδί</string>
+    <string name="shortcut_import_key">Εισάγετε το ιδιωτικό κλειδί</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Προσθήκη Συντόμευσης</string>
+    <string name="shortcut_add_shortcut">Προσθήκη Συντόμευσης</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Γρήγορη Λήψη</string>

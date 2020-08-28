@@ -27,19 +27,19 @@
     <string name="dialog_confirm_total">Tổng số</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Bảo mật ví ngay</string>
+    <string name="shortcut_secure_now">Bảo mật ví ngay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Quét để gửi</string>
+    <string name="shortcut_scan_to_pay">Quét để gửi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Gửi đến địa chỉ</string>
+    <string name="shortcut_pay_to_address">Gửi đến địa chỉ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_receive">Nhận</string>
+    <string name="shortcut_receive">Nhận</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Mua &amp; Bán Dash</string>
+    <string name="shortcut_buy_sell">Mua &amp; Bán Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Nhập khoá riêng</string>
+    <string name="shortcut_import_key">Nhập khoá riêng</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Thêm shortcut</string>
+    <string name="shortcut_add_shortcut">Thêm shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Nhận nhanh</string>

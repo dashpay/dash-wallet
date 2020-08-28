@@ -28,19 +28,19 @@
     <string name="dialog_confirm_total">Total</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Asegurar Billetera Ahora</string>
+    <string name="shortcut_secure_now">Asegurar Billetera Ahora</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Escanear para Enviar</string>
+    <string name="shortcut_scan_to_pay">Escanear para Enviar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Enviar a Dirección</string>
+    <string name="shortcut_pay_to_address">Enviar a Dirección</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_receive">Recibir</string>
+    <string name="shortcut_receive">Recibir</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Comprar / Vender Dash</string>
+    <string name="shortcut_buy_sell">Comprar / Vender Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Importar llave privada</string>
+    <string name="shortcut_import_key">Importar llave privada</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Agregar atajo</string>
+    <string name="shortcut_add_shortcut">Agregar atajo</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Recibir Rápidamente </string>

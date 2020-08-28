@@ -27,19 +27,19 @@
     <string name="dialog_confirm_total">Kabuuan</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Protektahan ang iyong wallet ngayon</string>
+    <string name="shortcut_secure_now">Protektahan ang iyong wallet ngayon</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">I-scan para magpadala</string>
+    <string name="shortcut_scan_to_pay">I-scan para magpadala</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Ipadala sa address</string>
+    <string name="shortcut_pay_to_address">Ipadala sa address</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_receive">Tumanggap</string>
+    <string name="shortcut_receive">Tumanggap</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Bumili/ Magbenta ng Dash</string>
+    <string name="shortcut_buy_sell">Bumili/ Magbenta ng Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">I-import ang private key</string>
+    <string name="shortcut_import_key">I-import ang private key</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Maglagay ng shortcut</string>
+    <string name="shortcut_add_shortcut">Maglagay ng shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Tanggapin ng mabilis</string>

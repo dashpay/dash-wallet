@@ -23,7 +23,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.DisplayMetrics
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -34,7 +33,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
-import androidx.lifecycle.observe
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import de.schildbach.wallet.AppDatabase
@@ -55,7 +53,6 @@ import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.home_content.*
-import kotlinx.android.synthetic.main.quick_actions_layout.*
 import kotlinx.android.synthetic.main.sync_status_pane.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -92,7 +89,7 @@ class WalletFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        initView()
+        initShortcutActions()
         initViewModel()
         clipboardManager = activity?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
 
@@ -113,6 +110,7 @@ class WalletFragment : Fragment() {
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer<BlockchainState?> { t ->
             blockchainState = t
             updateSyncState()
+            showHideJoinDashPayAction()
         })
         registerOnCoinsSentReceivedListener()
     }
@@ -125,6 +123,7 @@ class WalletFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         showHideSecureAction()
+        showHideJoinDashPayAction()
     }
 
     private fun registerOnCoinsSentReceivedListener() {
@@ -180,10 +179,6 @@ class WalletFragment : Fragment() {
         }
     }
 
-    private fun initView() {
-        initQuickActions()
-    }
-
     private fun initViewModel() {
         //
         // Currently this is only used to check the status of Platform before showing
@@ -200,12 +195,14 @@ class WalletFragment : Fragment() {
                 } else {
                     isPlatformAvailable = false
                 }
+                showHideJoinDashPayAction()
             }
         })
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(viewLifecycleOwner,
                 Observer {
                     if (it != null) {
                         noIdentityCreatedOrInProgress = it.creationState == BlockchainIdentityData.CreationState.NONE
+                        showHideJoinDashPayAction()
                         if (retryCreationIfInProgress && it.creationInProgress) {
                             retryCreationIfInProgress = false
                             activity?.startService(createIntentForRetry(requireActivity(), false))
@@ -216,11 +213,21 @@ class WalletFragment : Fragment() {
         )
     }
 
+    fun showHideJoinDashPayAction() {
+        if (noIdentityCreatedOrInProgress && syncComplete && isPlatformAvailable) {
+            val walletBalance: Coin = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+            val canAffordIt = (walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
+                    || walletBalance == Constants.DASH_PAY_FEE)
+            val show = canAffordIt && config.showJoinDashPay
+            shortcuts_pane.showJoinDashPay(show)
+        } else {
+            shortcuts_pane.showJoinDashPay(false)
+        }
+        shortcuts_pane.showPayToContact(!noIdentityCreatedOrInProgress)
+    }
+
     private fun showHideSecureAction() {
-//        secure_action.visibility = if (config.remindBackupSeed) View.VISIBLE else View.GONE
-//        secure_action_space.visibility = secure_action.visibility
-//        buy_sell_action.visibility = if (config.remindBackupSeed) View.GONE else View.VISIBLE
-//        buy_sell_action_space.visibility = buy_sell_action.visibility
+        shortcuts_pane.showSecureNow(config.remindBackupSeed)
     }
 
     private fun handleVerifySeed() {
@@ -279,7 +286,7 @@ class WalletFragment : Fragment() {
 
             @Throws(VerificationException::class)
             override fun handleDirectTransaction(tx: Transaction) {
-                walletApplication.processDirectTransaction(tx);
+                walletApplication.processDirectTransaction(tx)
             }
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
@@ -293,23 +300,27 @@ class WalletFragment : Fragment() {
         }.parse()
     }
 
-    private fun initQuickActions() {
+    private fun initShortcutActions() {
+        shortcuts_pane.apply {
+            setOnShortcutClickListener(View.OnClickListener {
+                when (it) {
+                    secureNowButton -> handleVerifySeed()
+                    joinDashPayButton -> startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
+                    scanToPayButton -> handleScan(it)
+                    buySellButton -> startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
+                    payToAddressButton -> handlePaste()
+                    payToContactButton -> {
+                        Toast.makeText(requireContext(), "Not yet implemented", Toast.LENGTH_LONG).show()
+                    }
+                    receiveButton -> {
+                        (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(ACTIVE_TAB_RECEIVE)
+                    }
+                    importPrivateKey -> SweepWalletActivity.start(requireContext(), true)
+                }
+            })
+        }
         showHideSecureAction()
-        secure_action_asdf.setOnClickListener {
-            Toast.makeText(requireContext(), "asasasas", Toast.LENGTH_LONG).show()
-        }
-//        secure_action.setOnClickListener { handleVerifySeed() }
-        scan_to_pay_action.setOnClickListener(View.OnClickListener { v -> handleScan(v) })
-        buy_sell_action.setOnClickListener {
-            startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
-        }
-        pay_to_address_action.setOnClickListener(View.OnClickListener { handlePaste() })
-        receive_action.setOnClickListener {
-            (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(ACTIVE_TAB_RECEIVE)
-        }
-        import_key_action.setOnClickListener {
-            SweepWalletActivity.start(requireContext(), true)
-        }
+        showHideJoinDashPayAction()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
@@ -334,7 +345,7 @@ class WalletFragment : Fragment() {
         }
 
         private fun onCoinsSentReceived() {
-
+            showHideJoinDashPayAction()
         }
     }
 
