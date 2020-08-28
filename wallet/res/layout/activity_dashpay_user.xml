@@ -126,18 +126,22 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contactRequestSentBtn"
-        style="@style/ContactRequestButton"
-        android:background="@drawable/light_gray_button_background"
+        style="@style/ContactRequestButton.Sent"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@null"
         android:text="@string/send_contact_request"
+        android:layout_marginTop="18dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/usernameContainer">
+        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
+        tools:visibility="visible">
 
         <TextView
             android:id="@+id/contact_request_sent_text"
             style="@style/ContactRequestButtonText"
             android:text="@string/contact_request_sent"
-            android:textColor="@color/medium_gray"
+            android:textColor="@color/dash_golden"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -268,27 +272,28 @@
             android:layout_marginStart="26dp"
             android:layout_marginTop="20dp"
             android:layout_marginEnd="26dp"
-            android:layout_marginBottom="40dp"
+            android:layout_marginBottom="32dp"
             android:gravity="center"
             android:textColor="@android:color/black"
             android:textSize="16sp"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/ic_add_stranger"
-            tools:text=" Add Katie Rennie as your contact to Pay Directly to Username and Retain Mutual Transaction History" />
+            app:layout_constraintVertical_bias="0"
+            tools:text="Add Katie Rennie as your contact to Pay Directly to Username and Retain Mutual Transaction History" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/sendContactRequestBtnStrangerQR"
             style="@style/ContactRequestButton.White"
-            android:layout_marginTop="40dp"
-            android:layout_marginBottom="36dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="32dp"
             android:text="@string/send_contact_request"
             android:visibility="visible"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text"
-            tools:visibility="visible">
+            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text">
 
             <TextView
                 android:id="@+id/send_contact_request_text_stranger"
@@ -310,6 +315,38 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:srcCompat="@drawable/inverted_contact_icon" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/sendingContactRequestDisclaimerBtn"
+            style="@style/ContactRequestButton.White"
+            android:layout_marginTop="40dp"
+            android:layout_marginBottom="36dp"
+            android:text="@string/send_contact_request"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text">
+
+            <TextView
+                android:id="@+id/sending_contact_request_disclaimer_text"
+                style="@style/ContactRequestButtonText"
+                android:text="@string/sending_contact_request"
+                android:textColor="@color/medium_gray"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageView
+                android:id="@+id/sendingContactRequestBtnDisclaimerImage"
+                style="@style/ContactRequestButtonImage"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/sending_contact_request_disclaimer_text"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_hourglass" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
