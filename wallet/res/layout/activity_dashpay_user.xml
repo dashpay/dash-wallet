@@ -236,21 +236,8 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/notifications_rv"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginStart="15dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="15dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/payContactBtn"
-        tools:visibility="gone" />
-
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/add_stranger_container"
+        android:id="@+id/contact_history_disclaimer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
@@ -274,7 +261,7 @@
             app:srcCompat="@drawable/ic_add_stranger" />
 
         <TextView
-            android:id="@+id/add_stranger_text"
+            android:id="@+id/contact_history_disclaimer_text"
             style="@style/MontserratRegular"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -300,7 +287,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/add_stranger_text"
+            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text"
             tools:visibility="visible">
 
             <TextView
@@ -327,5 +314,18 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/notifications_rv"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="28dp"
+        android:layout_marginEnd="15dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer"
+        tools:visibility="gone" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
