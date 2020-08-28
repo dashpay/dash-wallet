@@ -111,7 +111,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
         } else {
             displayNameTxt.text = username
         }
-        updateContactRelationUi()
 
         sendContactRequestBtn.setOnClickListener {
             sendContactRequest(true)
@@ -159,41 +158,52 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }
 
         if (showContactHistoryDisclaimer && !contactRequestReceived) {
-            sendContactRequestBtn.visibility = View.GONE
             contact_history_disclaimer.visibility = View.VISIBLE
-            var disclaimerText = getString(R.string.contact_history_disclaimer)
-            disclaimerText = disclaimerText.replace("%", username)
-            contact_history_disclaimer_text.text = HtmlCompat.fromHtml(disclaimerText,
-                    HtmlCompat.FROM_HTML_MODE_COMPACT)
         } else {
             contact_history_disclaimer.visibility = View.GONE
         }
         sendContactRequestBtnStrangerQR.setOnClickListener {
-            sendContactRequest(true)
+            sendContactRequest(isSendingRequest = true, fromDisclaimer = true)
         }
+
+        updateContactRelationUi()
     }
 
-    private fun sendContactRequest(isSendingRequest: Boolean) {
+    private fun sendContactRequest(isSendingRequest: Boolean, fromDisclaimer: Boolean = false) {
         sendingRequest = isSendingRequest
         dashPayViewModel.sendContactRequest(profile.userId)
-        startLoading()
+        startLoading(fromDisclaimer)
     }
 
-    private fun startLoading() {
-        sendContactRequestBtn.visibility = View.GONE
-        sendingContactRequestBtn.visibility = View.VISIBLE
-        (sendingContactRequestBtnImage.drawable as AnimationDrawable).start()
+    private fun startLoading(fromDisclaimer: Boolean = false) {
+        if (fromDisclaimer) {
+            sendContactRequestBtnStrangerQR.visibility = View.GONE
+            sendingContactRequestDisclaimerBtn.visibility = View.VISIBLE
+            (sendingContactRequestBtnDisclaimerImage.drawable as AnimationDrawable).start()
+        } else {
+            sendContactRequestBtn.visibility = View.GONE
+            sendingContactRequestBtn.visibility = View.VISIBLE
+            (sendingContactRequestBtnImage.drawable as AnimationDrawable).start()
+        }
     }
 
     private fun updateContactRelationUi() {
         listOf<View>(sendContactRequestBtn, sendingContactRequestBtn, contactRequestSentBtn,
-                contactRequestReceivedContainer, payContactBtn).forEach { it.visibility = View.GONE }
+                contactRequestReceivedContainer, sendingContactRequestDisclaimerBtn,
+                payContactBtn).forEach { it.visibility = View.GONE }
 
         when (contactRequestSent to contactRequestReceived) {
             //No Relationship
             false to false -> {
                 sendContactRequestBtn.visibility = View.VISIBLE
                 notifications_rv.visibility = View.GONE
+                if (contact_history_disclaimer.visibility == View.VISIBLE) {
+                    sendContactRequestBtn.visibility = View.GONE
+                    var disclaimerText = getString(R.string.contact_history_disclaimer)
+                    disclaimerText = disclaimerText.replace("%", username)
+                    contact_history_disclaimer_text.text = HtmlCompat.fromHtml(disclaimerText,
+                            HtmlCompat.FROM_HTML_MODE_COMPACT)
+                }
             }
             //Contact Established
             true to true -> {
@@ -203,8 +213,21 @@ class DashPayUserActivity : InteractionAwareActivity(),
             }
             //Request Sent / Pending
             true to false -> {
-                contactRequestSentBtn.visibility = View.VISIBLE
-                notifications_rv.visibility = View.GONE
+                if (contact_history_disclaimer.visibility == View.VISIBLE) {
+                    sendContactRequestBtn.visibility = View.GONE
+                    sendingContactRequestDisclaimerBtn.visibility = View.GONE
+                    sendContactRequestBtnStrangerQR.visibility = View.GONE
+                    contactRequestSentBtn.visibility = View.VISIBLE
+                    if (contact_history_disclaimer.visibility == View.VISIBLE) {
+                        var disclaimerText = getString(R.string.contact_history_disclaimer_pending)
+                        disclaimerText = disclaimerText.replace("%", username)
+                        contact_history_disclaimer_text.text = HtmlCompat.fromHtml(disclaimerText,
+                                HtmlCompat.FROM_HTML_MODE_COMPACT)
+                    }
+                } else {
+                    contactRequestSentBtn.visibility = View.VISIBLE
+                    notifications_rv.visibility = View.GONE
+                }
             }
             //Request Received
             false to true -> {
