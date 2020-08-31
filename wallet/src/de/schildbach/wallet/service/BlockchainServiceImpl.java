@@ -682,6 +682,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         super.onCreate();
 
+        application = (WalletApplication) getApplication();
+
         nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
