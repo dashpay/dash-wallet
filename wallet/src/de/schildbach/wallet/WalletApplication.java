@@ -688,8 +688,16 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         return (isLowRamDevice() || !is64bitABI) ? Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM : Constants.SCRYPT_ITERATIONS_TARGET;
     }
 
-    @SuppressLint("NewApi")
     public static void scheduleStartBlockchainService(final Context context) {
+        scheduleStartBlockchainService(context, false);
+    }
+
+    public void cancelScheduledStartBlockchainService() {
+        scheduleStartBlockchainService(this, true);
+    }
+
+    @SuppressLint("NewApi")
+    public static void scheduleStartBlockchainService(final Context context, Boolean cancelOnly) {
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
                 context.getResources());
         final long lastUsedAgo = config.getLastUsedAgo();
@@ -725,6 +733,10 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
             log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");
             JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+            if (cancelOnly) {
+                jobScheduler.cancel(BLOCKCHAIN_SYNC_JOB_ID);
+                return;
+            }
             JobInfo pendingJob = jobScheduler.getPendingJob(BLOCKCHAIN_SYNC_JOB_ID);
             if (pendingJob == null || pendingJob.getIntervalMillis() != alarmInterval) {
                 ComponentName jobService = new ComponentName(context, BlockchainSyncJobService.class);
@@ -737,7 +749,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             } else {
                 log.info("blockchain sync job already scheduled with interval of {} minutes", alarmIntervalMinutes);
             }
-        } else {
+        } else if (!cancelOnly) {
             // workaround for no inexact set() before KitKat
             final long now = System.currentTimeMillis();
             alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
@@ -763,6 +775,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public void finalizeWipe() {
+        cancelScheduledStartBlockchainService();
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
