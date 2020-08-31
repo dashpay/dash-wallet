@@ -25,6 +25,7 @@
 
     <string name="dialog_confirm_confirm">Bevestig</string>
     <string name="dialog_confirm_pay_to">Verstuur naar</string>
+    <string name="dialog_confirm_secured_by">Beveiligd door</string>
     <string name="dialog_confirm_fee">Netwerk transactiekosten</string>
     <string name="dialog_confirm_total">Totaal</string>
 
