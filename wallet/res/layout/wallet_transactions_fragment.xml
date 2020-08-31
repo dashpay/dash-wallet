@@ -26,9 +26,10 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:paddingStart="16dp"
             android:paddingLeft="16dp"
             android:paddingTop="8dp"
@@ -37,9 +38,10 @@
             android:paddingBottom="8dp">
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
+                android:layout_weight="1"
                 android:text="@string/history_title"
                 android:textSize="@dimen/font_size_small"
                 android:textStyle="bold"
@@ -47,14 +49,15 @@
 
             <Spinner
                 android:id="@+id/history_filter"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
+                android:layout_weight="1"
                 android:background="@android:color/transparent"
                 android:gravity="end"
                 android:textAlignment="textEnd" />
 
-        </FrameLayout>
+        </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/wallet_transactions_list"
