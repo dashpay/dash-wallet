@@ -24,13 +24,13 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/goto_button_view" />
+        app:layout_constraintTop_toTopOf="@+id/goto_button_back" />
 
     <FrameLayout
         android:id="@+id/goto_button_back"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@drawable/global_footer_goto_back"
+        android:background="@android:color/transparent"
         app:layout_constraintBottom_toBottomOf="@+id/goto_button_view"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="@+id/center_guideline"
@@ -47,7 +47,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/goto_button_view" />
+        app:layout_constraintTop_toTopOf="@+id/goto_button_back" />
 
     <ImageView
         android:id="@+id/home_button_view"
