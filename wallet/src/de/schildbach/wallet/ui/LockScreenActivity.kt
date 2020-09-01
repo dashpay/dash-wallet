@@ -22,7 +22,11 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.telephony.TelephonyManager
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -120,8 +124,26 @@ class LockScreenActivity : SendCoinsQrActivity() {
     }
 
     private fun hasNavBar(): Boolean {
+        val tm: TelephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        // emulator
+        if ("Android" == tm.networkOperatorName || Build.FINGERPRINT.startsWith("generic")) {
+            return true
+        }
         val id: Int = resources.getIdentifier("config_showNavigationBar", "bool", "android")
-        return id > 0 && resources.getBoolean(id)
+
+        // Krip devices seem to incorrectly report config_showNavigationBar
+        val isKripDeviceWithoutNavBar = Build.BRAND == "KRIP" && when (Build.MODEL) {
+            "K5", "K5c", "K5b", "K4m", "KRIP_K4" -> true
+            else -> false
+        }
+        return if (id > 0 && !isKripDeviceWithoutNavBar) {
+            id > 0 && resources.getBoolean(id)
+        } else {
+            // Check for keys
+            val hasMenuKey = ViewConfiguration.get(this).hasPermanentMenuKey();
+            val hasBackKey = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK);
+            !hasMenuKey && !hasBackKey;
+        }
     }
 
     override fun onStart() {
