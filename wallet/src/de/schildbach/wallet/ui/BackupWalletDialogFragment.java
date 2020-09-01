@@ -25,15 +25,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.security.GeneralSecurityException;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
 import javax.annotation.Nullable;
 
+import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.wallet.Protos;
+import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +47,8 @@ import com.google.common.base.Charsets;
 import androidx.appcompat.app.AppCompatActivity;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.security.SecurityGuard;
+import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Iso8601Format;
 import de.schildbach.wallet_test.R;
@@ -56,6 +62,10 @@ import android.os.Bundle;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.appcompat.app.AlertDialog;
+
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Process;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -89,6 +99,10 @@ public class BackupWalletDialogFragment extends DialogFragment {
     private View passwordMismatchView;
     private CheckBox showView;
     private Button positiveButton;
+    private HandlerThread backgroundThread;
+    private Handler backgroundHandler;
+    private FragmentManager fragmentManager;
+
 
     private static final Logger log = LoggerFactory.getLogger(BackupWalletDialogFragment.class);
 
@@ -167,6 +181,8 @@ public class BackupWalletDialogFragment extends DialogFragment {
             }
         });
 
+        fragmentManager = getFragmentManager();
+
         return dialog;
     }
 
@@ -232,7 +248,39 @@ public class BackupWalletDialogFragment extends DialogFragment {
         positiveButton.setEnabled(hasPassword && hasPasswordAgain);
     }
 
-    private void backupWallet(final String password) {
+    private void backupWallet(final String backupPassword) {
+        try {
+            final Protos.Wallet walletProto = new WalletProtobufSerializer().walletToProto(wallet);
+
+            SecurityGuard securityGuard = new SecurityGuard();
+            if (wallet.isEncrypted()) {
+                String walletPassword = securityGuard.retrievePassword();
+                backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
+                backgroundThread.start();
+                backgroundHandler = new Handler(backgroundThread.getLooper());
+                final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, null, walletProto);
+                new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
+                    @Override
+                    protected void onSuccess(KeyParameter encryptionKey, boolean changed) {
+                        decryptedWallet.decrypt(encryptionKey);
+                        backupWallet(decryptedWallet, backupPassword);
+                    }
+
+                    @Override
+                    protected void onFailure(KeyCrypterException ex) {
+                        super.onFailure(ex);
+                        handleError(ex);
+                    }
+                }.deriveKey(decryptedWallet, walletPassword);
+            } else {
+                backupWallet(wallet, backupPassword);
+            }
+        } catch (GeneralSecurityException | IOException | UnreadableWalletException x) {
+            handleError(x);
+        }
+    }
+
+    private void backupWallet(final Wallet wallet, final String password) {
         final File file = determineBackupFile();
 
         final Protos.Wallet walletProto = new WalletProtobufSerializer().walletToProto(wallet);
@@ -251,14 +299,9 @@ public class BackupWalletDialogFragment extends DialogFragment {
 
             log.info("backed up wallet to: '" + file + "'");
 
-            ArchiveBackupDialogFragment.show(getFragmentManager(), file);
+            ArchiveBackupDialogFragment.show(fragmentManager, file);
         } catch (final IOException x) {
-            final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.import_export_keys_dialog_failure_title);
-            dialog.setMessage(getString(R.string.export_keys_dialog_failure, x.getMessage()));
-            dialog.singleDismissButton(null);
-            dialog.show();
-
-            log.error("problem backing up wallet", x);
+            handleError(x);
         } finally {
             if (cipherOut != null) {
                 try {
@@ -268,6 +311,15 @@ public class BackupWalletDialogFragment extends DialogFragment {
                 }
             }
         }
+    }
+
+    private void handleError(Exception x) {
+        final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.import_export_keys_dialog_failure_title);
+        dialog.setMessage(getString(R.string.export_keys_dialog_failure, x.getMessage()));
+        dialog.singleDismissButton(null);
+        dialog.show();
+
+        log.error("problem backing up wallet", x);
     }
 
     private File determineBackupFile() {
