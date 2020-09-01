@@ -25,7 +25,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/transaction_row_secondary_status"
-        tools:text="Receiving a lot of text and biscuits and gravy" />
+        tools:text="Receiving" />
 
     <TextView
         android:id="@+id/transaction_row_secondary_status"
