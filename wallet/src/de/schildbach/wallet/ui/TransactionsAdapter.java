@@ -17,11 +17,13 @@
 
 package de.schildbach.wallet.ui;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -56,7 +58,6 @@ import android.content.res.Resources;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -264,6 +265,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final CurrencyTextView fiatView;
         private final TextView rateNotAvailableView;
 
+        private SimpleDateFormat dateFormat;
+
+        private String formatDate(long timeStamp) {
+            return dateFormat.format(timeStamp).replace("AM", "am").replace("PM","pm");
+        }
+
         private TransactionViewHolder(final View itemView) {
             super(itemView);
             primaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_primary_status);
@@ -277,6 +284,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
             fiatView.setApplyMarkup(false);
             rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
+            dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault());
         }
 
         private void bind(final Transaction tx) {
@@ -326,14 +334,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             }
 
             //
-            // Set the time. eg.  "On <date> at <time>"
+            // Set the time. eg.  "<date> <time>"
             //
             final Date time = tx.getUpdateTime();
-            String onTimeText = context.getString(R.string.transaction_row_time_text);
-
-            timeView.setText(String.format(onTimeText,
-                    DateUtils.formatDateTime(context, time.getTime(), DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR),
-                    DateUtils.formatDateTime(context, time.getTime(), DateUtils.FORMAT_SHOW_TIME)));
+            timeView.setText(formatDate(time.getTime()));
 
             //
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
