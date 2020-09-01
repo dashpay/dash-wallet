@@ -87,6 +87,7 @@ import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet.ui.widget.ShortcutsPane;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.FingerprintHelper;
@@ -121,7 +122,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private DrawerLayout viewDrawer;
     private View viewFakeForSafetySubmenu;
-    private View payBtn;
+    private ShortcutsPane shortcutsPane;
 
     private Handler handler = new Handler();
 
@@ -206,7 +207,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void initView() {
         initNavigationDrawer();
-        initQuickActions();
+        initShortcutActions();
         findViewById(R.id.uphold_account_section).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -214,58 +215,33 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 viewDrawer.closeDrawer(GravityCompat.START);
             }
         });
-        findViewById(R.id.pay_btn).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_PAY));
-            }
-        });
-        findViewById(R.id.receive_btn).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
-            }
-        });
     }
 
-    private void initQuickActions() {
+    private void initShortcutActions() {
+        shortcutsPane = findViewById(R.id.shortcuts_pane);
+        shortcutsPane.setOnShortcutClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (v == shortcutsPane.getSecureNowButton()) {
+                    handleBackupWalletToSeed();
+                } else if (v == shortcutsPane.getScanToPayButton()) {
+                    handleScan(v);
+                } else if (v == shortcutsPane.getBuySellButton()) {
+                    startUpholdActivity();
+                } else if (v == shortcutsPane.getPayToAddressButton()) {
+                    handlePaste();
+                } else if (v == shortcutsPane.getReceiveButton()) {
+                    startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
+                } else if (v == shortcutsPane.getImportPrivateKey()) {
+                    SweepWalletActivity.start(WalletActivity.this, true);
+                }
+            }
+        });
         showHideSecureAction();
-        findViewById(R.id.secure_action).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handleBackupWalletToSeed();
-            }
-        });
-        findViewById(R.id.scan_to_pay_action).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handleScan(v);
-            }
-        });
-        findViewById(R.id.buy_sell_action).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startUpholdActivity();
-            }
-        });
-        findViewById(R.id.pay_to_address_action).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handlePaste();
-            }
-        });
-        findViewById(R.id.import_key_action).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                SweepWalletActivity.start(WalletActivity.this, true);
-            }
-        });
     }
 
     private void showHideSecureAction() {
-        View secureActionView = findViewById(R.id.secure_action);
-        secureActionView.setVisibility(config.getRemindBackupSeed() ? View.VISIBLE : View.GONE);
-        findViewById(R.id.secure_action_space).setVisibility(secureActionView.getVisibility());
+        shortcutsPane.showSecureNow(config.getRemindBackupSeed());
     }
 
     private void initNavigationDrawer() {
@@ -1086,7 +1062,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void setDefaultCurrency() {
         String countryCode = getCurrentCountry();
         log.info("Setting default currency:");
-        if(countryCode != null) {
+        if (countryCode != null) {
             try {
                 log.info("Local Country: " + countryCode);
                 Locale l = new Locale("", countryCode);
@@ -1120,9 +1096,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private String getCurrentCountry() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             return LocaleList.getDefault().get(0).getCountry();
-        } else{
+        } else {
             return Locale.getDefault().getCountry();
         }
     }
@@ -1147,7 +1123,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
             if (config.wasUpgraded()) {
                 showFiatCurrencyChangeDetectedDialog(currentCurrencyCode, newCurrencyCode);
             } else {
-                if(CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+                if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
                     log.info("found obsolete currency: " + newCurrencyCode);
                     newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
                 }

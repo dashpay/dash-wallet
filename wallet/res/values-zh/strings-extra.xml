@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">验证PIN</string>
     <string name="set_pin_message">每次使用时都需要输入PIN以解锁您的app。</string>
 
-    <string name="home_pay">发送</string>
-    <string name="home_receive">接收</string>
     <string name="home_available_balance">可用余额</string>
     <string name="home_balance_hidden">余额已隐藏</string>
     <string name="home_balance_show_hint">点击显示余额</string>
@@ -29,17 +27,19 @@
     <string name="dialog_confirm_total">总计</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">立刻保护钱包</string>
+    <string name="shortcut_secure_now">立刻保护钱包</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">扫描发送</string>
+    <string name="shortcut_scan_to_pay">扫描发送</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">发送至地址</string>
+    <string name="shortcut_pay_to_address">发送至地址</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">买 / 卖 达世币</string>
+    <string name="shortcut_receive">接收</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">导入私钥</string>
+    <string name="shortcut_buy_sell">买 / 卖 达世币</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">添加快捷方式</string>
+    <string name="shortcut_import_key">导入私钥</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">添加快捷方式</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">快速接收</string>
