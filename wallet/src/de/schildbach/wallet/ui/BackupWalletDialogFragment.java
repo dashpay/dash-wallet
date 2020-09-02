@@ -182,6 +182,9 @@ public class BackupWalletDialogFragment extends DialogFragment {
         });
 
         fragmentManager = getFragmentManager();
+        backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
+        backgroundThread.start();
+        backgroundHandler = new Handler(backgroundThread.getLooper());
 
         return dialog;
     }
@@ -255,9 +258,6 @@ public class BackupWalletDialogFragment extends DialogFragment {
             SecurityGuard securityGuard = new SecurityGuard();
             if (wallet.isEncrypted()) {
                 String walletPassword = securityGuard.retrievePassword();
-                backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
-                backgroundThread.start();
-                backgroundHandler = new Handler(backgroundThread.getLooper());
                 final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, null, walletProto);
                 new DeriveKeyTask(backgroundHandler, application.scryptIterationsTarget()) {
                     @Override
