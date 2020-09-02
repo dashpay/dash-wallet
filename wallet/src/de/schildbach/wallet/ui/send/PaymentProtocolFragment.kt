@@ -110,18 +110,7 @@ class PaymentProtocolFragment : Fragment() {
 
     private fun confirmWhenAuthorizedAndNoException() {
         if (paymentProtocolModel.baseSendRequest != null) {
-
-            if (paymentProtocolModel.finalPaymentIntent!!.hasPaymentUrl()) {
-                paymentProtocolModel.signAndSendPayment()
-            } else if (isAdded) {
-                view_flipper.displayedChild = VIEW_ERROR
-                error_view.title = R.string.payment_request_missing_payment_url
-                error_view.setMessage(null)
-                error_view.hideConfirmButton()
-                error_view.setOnConfirmClickListener(R.string.payment_request_close, View.OnClickListener { _ ->
-                    activity!!.finish()
-                })
-            }
+            paymentProtocolModel.signAndSendPayment()
         } else {
             handleSendRequestException()
         }

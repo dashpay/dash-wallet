@@ -31,7 +31,6 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
-import org.bitcoinj.core.Transaction
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
@@ -128,8 +127,12 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
     }
 
     override fun signAndSendPayment(sendRequest: SendRequest, txAlreadyCompleted: Boolean) {
-        wallet.completeTx(sendRequest)
-        directPay(sendRequest)
+        if (finalPaymentIntent!!.hasPaymentUrl()) {
+            wallet.completeTx(sendRequest)
+            directPay(sendRequest)
+        } else {
+            super.signAndSendPayment(sendRequest, txAlreadyCompleted)
+        }
     }
 
     fun directPay(sendRequest: SendRequest) {
