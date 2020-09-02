@@ -23,6 +23,7 @@ import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.core.text.HtmlCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -50,6 +51,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
     private val username by lazy { intent.getStringExtra(USERNAME) }
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
+    private val showContactHistoryDisclaimer by lazy { intent.getBooleanExtra(SHOW_CONTACT_HISTORY_DISCLAIMER, false) }
     private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, false, this, this)
     private var contactRequestReceived: Boolean = false
     private var contactRequestSent: Boolean = false
@@ -60,6 +62,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
         private const val PROFILE = "profile"
         private const val CONTACT_REQUEST_SENT = "contact_request_sent"
         private const val CONTACT_REQUEST_RECEIVED = "contact_request_received"
+        private const val SHOW_CONTACT_HISTORY_DISCLAIMER = "show_contact_history_disclaimer"
 
         const val REQUEST_CODE_DEFAULT = 0
         const val RESULT_CODE_OK = 1
@@ -67,13 +70,21 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         @JvmStatic
         fun createIntent(context: Context, username: String, profile: DashPayProfile?,
-                         contactRequestSent: Boolean, contactRequestReceived: Boolean): Intent {
+                         contactRequestSent: Boolean, contactRequestReceived: Boolean,
+                         showContactHistoryDisclaimer: Boolean = false): Intent {
             val intent = Intent(context, DashPayUserActivity::class.java)
             intent.putExtra(USERNAME, username)
             intent.putExtra(PROFILE, profile)
             intent.putExtra(CONTACT_REQUEST_SENT, contactRequestSent)
             intent.putExtra(CONTACT_REQUEST_RECEIVED, contactRequestReceived)
+            intent.putExtra(SHOW_CONTACT_HISTORY_DISCLAIMER, showContactHistoryDisclaimer)
             return intent
+        }
+
+        @JvmStatic
+        fun createIntent(context: TransactionResultActivity, usernameSearchResult: UsernameSearchResult): Intent {
+            return createIntent(context, usernameSearchResult.username, usernameSearchResult.dashPayProfile,
+                    usernameSearchResult.requestSent, usernameSearchResult.requestReceived, true)
         }
     }
 
@@ -100,15 +111,12 @@ class DashPayUserActivity : InteractionAwareActivity(),
         } else {
             displayNameTxt.text = username
         }
-        updateContactRelationUi()
 
         sendContactRequestBtn.setOnClickListener {
-            sendingRequest = true
-            sendContactRequest(profile.userId)
+            sendContactRequest(true)
         }
         accept.setOnClickListener {
-            sendingRequest = false
-            sendContactRequest(profile.userId)
+            sendContactRequest(false)
         }
         payContactBtn.setOnClickListener { startPayActivity() }
 
@@ -125,9 +133,11 @@ class DashPayUserActivity : InteractionAwareActivity(),
                         }
                         Status.SUCCESS -> {
                             setResult(RESULT_CODE_CHANGED)
-                            if (sendingRequest)
+                            if (sendingRequest) {
                                 contactRequestSent = true
-                            else contactRequestReceived = true
+                            } else {
+                                contactRequestReceived = true
+                            }
                             updateContactRelationUi()
                             dashPayViewModel.getContactRequestLiveData.removeObserver(this)
                         }
@@ -136,10 +146,10 @@ class DashPayUserActivity : InteractionAwareActivity(),
             }
         })
 
-        notifications_rv.layoutManager = LinearLayoutManager(this)
-        notifications_rv.adapter = this.notificationsAdapter
+        activity_rv.layoutManager = LinearLayoutManager(this)
+        activity_rv.adapter = this.notificationsAdapter
 
-        if (contactRequestReceived && contactRequestSent) {
+        if (contactRequestReceived || contactRequestSent) {
             dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
                 if (Status.SUCCESS == it.status) {
                     if (it.data != null) {
@@ -148,46 +158,85 @@ class DashPayUserActivity : InteractionAwareActivity(),
                 }
             })
         }
+
+        if (showContactHistoryDisclaimer && !contactRequestReceived) {
+            contact_history_disclaimer.visibility = View.VISIBLE
+        } else {
+            contact_history_disclaimer.visibility = View.GONE
+        }
+        sendContactRequestBtnStrangerQR.setOnClickListener {
+            sendContactRequest(isSendingRequest = true, fromDisclaimer = true)
+        }
+
+        updateContactRelationUi()
     }
 
-    private fun startLoading() {
-        sendContactRequestBtn.visibility = View.GONE
-        sendingContactRequestBtn.visibility = View.VISIBLE
-        (sendingContactRequestBtnImage.drawable as AnimationDrawable).start()
+    private fun sendContactRequest(isSendingRequest: Boolean, fromDisclaimer: Boolean = false) {
+        sendingRequest = isSendingRequest
+        dashPayViewModel.sendContactRequest(profile.userId)
+        startLoading(fromDisclaimer)
     }
 
-    private fun sendContactRequest(userId: String) {
-        dashPayViewModel.sendContactRequest(userId)
-        startLoading()
+    private fun startLoading(fromDisclaimer: Boolean = false) {
+        if (fromDisclaimer) {
+            sendContactRequestBtnStrangerQR.visibility = View.GONE
+            sendingContactRequestDisclaimerBtn.visibility = View.VISIBLE
+            (sendingContactRequestBtnDisclaimerImage.drawable as AnimationDrawable).start()
+        } else {
+            sendContactRequestBtn.visibility = View.GONE
+            sendingContactRequestBtn.visibility = View.VISIBLE
+            (sendingContactRequestBtnImage.drawable as AnimationDrawable).start()
+        }
     }
 
     private fun updateContactRelationUi() {
         listOf<View>(sendContactRequestBtn, sendingContactRequestBtn, contactRequestSentBtn,
-                contactRequestReceivedContainer, payContactBtn).forEach { it.visibility = View.GONE }
+                contactRequestReceivedContainer, sendingContactRequestDisclaimerBtn,
+                payContactBtn).forEach { it.visibility = View.GONE }
 
         when (contactRequestSent to contactRequestReceived) {
             //No Relationship
             false to false -> {
                 sendContactRequestBtn.visibility = View.VISIBLE
-                notifications_rv.visibility = View.GONE
+                activity_rv.visibility = View.GONE
+                if (contact_history_disclaimer.visibility == View.VISIBLE) {
+                    sendContactRequestBtn.visibility = View.GONE
+                    var disclaimerText = getString(R.string.contact_history_disclaimer)
+                    disclaimerText = disclaimerText.replace("%", username)
+                    contact_history_disclaimer_text.text = HtmlCompat.fromHtml(disclaimerText,
+                            HtmlCompat.FROM_HTML_MODE_COMPACT)
+                }
             }
             //Contact Established
             true to true -> {
                 payContactBtn.visibility = View.VISIBLE
-                notifications_rv.visibility = View.VISIBLE
+                activity_rv.visibility = View.VISIBLE
                 dashPayViewModel.searchNotificationsForUser(profile.userId)
             }
             //Request Sent / Pending
             true to false -> {
                 contactRequestSentBtn.visibility = View.VISIBLE
-                notifications_rv.visibility = View.GONE
+                activity_rv.visibility = View.VISIBLE
+                dashPayViewModel.searchNotificationsForUser(profile.userId)
+                if (contact_history_disclaimer.visibility == View.VISIBLE) {
+                    sendContactRequestBtn.visibility = View.GONE
+                    sendingContactRequestDisclaimerBtn.visibility = View.GONE
+                    sendContactRequestBtnStrangerQR.visibility = View.GONE
+                    if (contact_history_disclaimer.visibility == View.VISIBLE) {
+                        var disclaimerText = getString(R.string.contact_history_disclaimer_pending)
+                        disclaimerText = disclaimerText.replace("%", username)
+                        contact_history_disclaimer_text.text = HtmlCompat.fromHtml(disclaimerText,
+                                HtmlCompat.FROM_HTML_MODE_COMPACT)
+                    }
+                }
             }
             //Request Received
             false to true -> {
                 payContactBtn.visibility = View.VISIBLE
+                activity_rv.visibility = View.VISIBLE
+                dashPayViewModel.searchNotificationsForUser(profile.userId)
                 contactRequestReceivedContainer.visibility = View.VISIBLE
                 requestTitle.text = getString(R.string.contact_request_received_title, username)
-                notifications_rv.visibility = View.GONE
             }
         }
     }

@@ -55,6 +55,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
         private const val EXTRA_USERID = "payee_userid"
+        private const val EXTRA_DASHPAY_USERNAME = "payee_dashpay_username"
 
         @JvmStatic
         fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean): Intent {
@@ -62,8 +63,10 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
 
         @JvmStatic
-        fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean, userId: String? = null): Intent {
-            return createIntent(context, action, transaction, userAuthorized, null, null, userId)
+        fun createIntent(context: Context, action: String? = null, transaction: Transaction,
+                         userAuthorized: Boolean, userId: String? = null, dashPayUsername: String? = null): Intent {
+            return createIntent(context, action, transaction, userAuthorized, null,
+                    null, userId, dashPayUsername)
         }
 
         @JvmStatic
@@ -73,7 +76,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
 
         fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
-                         paymentMemo: String? = null, payeeVerifiedBy: String? = null, userId: String? = null): Intent {
+                         paymentMemo: String? = null, payeeVerifiedBy: String? = null,
+                         userId: String? = null, dashPayUsername: String? = null): Intent {
             return Intent(context, TransactionResultActivity::class.java).apply {
                 setAction(action)
                 putExtra(EXTRA_TX_ID, transaction.txId)
@@ -81,6 +85,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
                 putExtra(EXTRA_PAYMENT_MEMO, paymentMemo)
                 putExtra(EXTRA_PAYEE_VERIFIED_BY, payeeVerifiedBy)
                 putExtra(EXTRA_USERID, userId)
+                putExtra(EXTRA_DASHPAY_USERNAME, dashPayUsername)
             }
         }
     }
@@ -103,7 +108,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         if (blockchainIdentity != null) {
             userId = blockchainIdentity.getContactForTransaction(tx!!)
             if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(userId).observe(this,  Observer {
+                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(userId).observe(this, Observer {
                     if (it != null) {
                         profile = it
                         finishInitialization(txId, tx, profile)
@@ -139,6 +144,10 @@ class TransactionResultActivity : AbstractWalletActivity() {
                             }
                         })
                     }
+                    intent.getStringExtra(EXTRA_DASHPAY_USERNAME) != null -> {
+                        startActivity(MainActivity.createIntent(this))
+                        finish()
+                    }
                     intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                         startActivity(MainActivity.createIntent(this))
                     }
@@ -147,7 +156,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
                     }
                 }
             }
-
         } else {
             log.error("Transaction not found. TxId:", txId)
             finish()
@@ -162,6 +170,15 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }, 400)
 
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
+    }
+
+    override fun finish() {
+        val dashPayUsername = intent.extras?.getString(EXTRA_DASHPAY_USERNAME)
+        val lastLoadedUser = PlatformRepo.getInstance().lastLoadedUser
+        if (dashPayUsername != null && lastLoadedUser != null && dashPayUsername == lastLoadedUser.username) {
+            startActivity(DashPayUserActivity.createIntent(this, lastLoadedUser))
+        }
+        super.finish()
     }
 
     private fun viewOnExplorer(tx: Transaction) {

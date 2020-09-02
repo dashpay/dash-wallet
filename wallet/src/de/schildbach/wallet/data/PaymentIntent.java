@@ -17,36 +17,35 @@
 
 package de.schildbach.wallet.data;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import android.os.Parcel;
+import android.os.Parcelable;
 
-import java.util.Arrays;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import com.google.common.io.BaseEncoding;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.SendRequest;
+import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.BaseEncoding;
+import java.util.Arrays;
+
+import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.Bluetooth;
-import org.dash.wallet.common.util.GenericUtils;
 
-import android.os.Parcel;
-import android.os.Parcelable;
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * @author Andreas Schildbach
@@ -167,13 +166,16 @@ public final class PaymentIntent implements Parcelable {
     @Nullable
     public final String payeeUserId;
 
+    @Nullable
+    public final String payeeDashPayUsername;
+
     private static final Logger log = LoggerFactory.getLogger(PaymentIntent.class);
 
     public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName,
-            @Nullable final String payeeVerifiedBy, @Nullable final Output[] outputs, @Nullable final String memo,
-            @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
-            @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash,
-            @Nullable final String payeeUserId) {
+                         @Nullable final String payeeVerifiedBy, @Nullable final Output[] outputs, @Nullable final String memo,
+                         @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
+                         @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash,
+                         @Nullable final String payeeUserId, @Nullable final String payeeDashPayUsername) {
         this.standard = standard;
         this.payeeName = payeeName;
         this.payeeVerifiedBy = payeeVerifiedBy;
@@ -184,15 +186,17 @@ public final class PaymentIntent implements Parcelable {
         this.paymentRequestUrl = paymentRequestUrl;
         this.paymentRequestHash = paymentRequestHash;
         this.payeeUserId = payeeUserId;
+        this.payeeDashPayUsername = payeeDashPayUsername;
     }
 
     private PaymentIntent(final Address address, @Nullable final String addressLabel) {
-        this(null, null, null, buildSimplePayTo(Coin.ZERO, address), addressLabel, null, null, null, null, null);
+        this(null, null, null, buildSimplePayTo(Coin.ZERO, address), addressLabel, null, null, null,
+                null, null, null);
     }
 
 
     public static PaymentIntent blank() {
-        return new PaymentIntent(null, null, null, null, null, null, null, null, null, null);
+        return new PaymentIntent(null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public static PaymentIntent fromAddress(final Address address, @Nullable final String addressLabel) {
@@ -200,7 +204,8 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public static PaymentIntent fromAddressWithIdentity(final Address address, @Nullable final String payeeUserId) {
-        return new PaymentIntent(null, null, null, buildSimplePayTo(Coin.ZERO, address), null, null, null, null, null, payeeUserId);
+        return new PaymentIntent(null, null, null, buildSimplePayTo(Coin.ZERO, address), null, null,
+                null, null, null, payeeUserId, null);
     }
 
     public static PaymentIntent fromAddress(final String address, @Nullable final String addressLabel)
@@ -209,14 +214,15 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public static PaymentIntent fromUserId(final String payeeUserId) {
-            return new PaymentIntent(null, null, null, null, null, null, null, null, null, payeeUserId);
+        return new PaymentIntent(null, null, null, null, null, null, null, null, null,
+                payeeUserId, null);
     }
 
     public static PaymentIntent from(final String address, @Nullable final String addressLabel,
-            @Nullable final Coin amount) throws AddressFormatException {
+                                     @Nullable final Coin amount) throws AddressFormatException {
         return new PaymentIntent(null, null, null,
                 buildSimplePayTo(amount, Address.fromString(Constants.NETWORK_PARAMETERS, address)), addressLabel, null,
-                null, null, null, null);
+                null, null, null, null, null);
     }
 
     public static PaymentIntent fromBitcoinUri(final BitcoinURI bitcoinUri) {
@@ -225,10 +231,11 @@ public final class PaymentIntent implements Parcelable {
         final String bluetoothMac = (String) bitcoinUri.getParameterByName(Bluetooth.MAC_URI_PARAM);
         final String paymentRequestHashStr = (String) bitcoinUri.getParameterByName("h");
         final byte[] paymentRequestHash = paymentRequestHashStr != null ? base64UrlDecode(paymentRequestHashStr) : null;
+        final String dashPayUsername = bitcoinUri.getUser();
 
         return new PaymentIntent(PaymentIntent.Standard.BIP21, null, null, outputs, bitcoinUri.getLabel(),
                 bluetoothMac != null ? "bt:" + bluetoothMac : null, null, bitcoinUri.getPaymentRequestUrl(),
-                paymentRequestHash, null);
+                paymentRequestHash, null, dashPayUsername);
     }
 
     private static final BaseEncoding BASE64URL = BaseEncoding.base64Url().omitPadding();
@@ -243,7 +250,7 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public PaymentIntent mergeWithEditedValues(@Nullable final Coin editedAmount,
-            @Nullable final Address editedAddress) {
+                                               @Nullable final Address editedAddress) {
         final Output[] outputs;
 
         if (hasOutputs()) {
@@ -251,7 +258,7 @@ public final class PaymentIntent implements Parcelable {
                 checkArgument(editedAmount != null);
 
                 // put all coins on first output, skip the others
-                outputs = new Output[] { new Output(editedAmount, this.outputs[0].script) };
+                outputs = new Output[]{new Output(editedAmount, this.outputs[0].script)};
             } else {
                 // exact copy of outputs
                 outputs = this.outputs;
@@ -264,7 +271,7 @@ public final class PaymentIntent implements Parcelable {
             outputs = buildSimplePayTo(editedAmount, editedAddress);
         }
 
-        return new PaymentIntent(standard, payeeName, payeeVerifiedBy, outputs, memo, null, payeeData, null, null, null);
+        return new PaymentIntent(standard, payeeName, payeeVerifiedBy, outputs, memo, null, payeeData, null, null, null, null);
     }
 
     public SendRequest toSendRequest() {
@@ -275,7 +282,7 @@ public final class PaymentIntent implements Parcelable {
     }
 
     private static Output[] buildSimplePayTo(final Coin amount, final Address address) {
-        return new Output[] { new Output(amount, ScriptBuilder.createOutputScript(address)) };
+        return new Output[]{new Output(amount, ScriptBuilder.createOutputScript(address))};
     }
 
     public boolean hasPayee() {
@@ -374,11 +381,10 @@ public final class PaymentIntent implements Parcelable {
     /**
      * Check if given payment intent is only extending on <i>this</i> one, that is it does not alter any of
      * the fields. Address and amount fields must be equal, respectively (non-existence included).
-     *
+     * <p>
      * Alternatively, a BIP21+BIP72 request can provide a hash of the BIP70 request.
      *
-     * @param other
-     *            payment intent that is checked if it extends this one
+     * @param other payment intent that is checked if it extends this one
      * @return true if it extends
      */
     public boolean isExtendedBy(final PaymentIntent other, boolean ignoreDetails) {
@@ -481,6 +487,7 @@ public final class PaymentIntent implements Parcelable {
             dest.writeInt(0);
         }
         dest.writeString(payeeUserId);
+        dest.writeString(payeeDashPayUsername);
     }
 
     public static final Parcelable.Creator<PaymentIntent> CREATOR = new Parcelable.Creator<PaymentIntent>() {
@@ -532,5 +539,6 @@ public final class PaymentIntent implements Parcelable {
         }
 
         payeeUserId = in.readString();
+        payeeDashPayUsername = in.readString();
     }
 }

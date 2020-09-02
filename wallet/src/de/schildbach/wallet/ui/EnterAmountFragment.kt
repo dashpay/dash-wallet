@@ -87,7 +87,7 @@ class EnterAmountFragment : Fragment() {
 
             override fun onNumber(number: Int) {
                 refreshValue()
-                if(value.toString() == "0") {
+                if (value.toString() == "0") {
                     // avoid entering leading zeros without decimal separator
                     return
                 }
@@ -203,7 +203,8 @@ class EnterAmountFragment : Fragment() {
                 val dashAmount = viewModel.dashAmountData.value!!
                 input_amount.text = if (dashAmount.isZero) "" else dashFormat.format(viewModel.dashAmountData.value)
             } else {
-                val currencyCode = sharedViewModel.exchangeRateData.value?.currencyCode ?: viewModel.fiatAmountData.value!!.currencyCode
+                val currencyCode = sharedViewModel.exchangeRateData.value?.currencyCode
+                        ?: viewModel.fiatAmountData.value!!.currencyCode
                 viewModel.fiatAmountData.value = Fiat.parseFiat(currencyCode, calc_amount.text.toString())
                 input_amount.text = if (viewModel.fiatAmountData.value!!.isZero) "" else fiatFormat.format(viewModel.fiatAmountData.value)
             }
@@ -275,15 +276,16 @@ class EnterAmountFragment : Fragment() {
         userinfo.visibility = View.GONE
         sharedViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
             userinfo.visibility = View.VISIBLE
-            displayname.text = if (it.displayName.isNotEmpty())
+            displayname.text = if (it.displayName.isNotEmpty()) {
                 it.displayName
-            else
+            } else {
                 it.username
+            }
 
             val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context!!,
                     it.username[0])
 
-            if(it.avatarUrl.isNotEmpty()) {
+            if (it.avatarUrl.isNotEmpty()) {
                 Glide.with(avatar).load(it.avatarUrl).circleCrop()
                         .placeholder(defaultAvatar).into(avatar)
             } else {

@@ -100,6 +100,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
     private val backgroundHandler: Handler
 
+    var lastLoadedUser: UsernameSearchResult? = null
+
     init {
         backgroundThread.start()
         backgroundHandler = Handler(backgroundThread.looper)
@@ -164,13 +166,17 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    suspend fun getUser(username: String): Resource<List<UsernameSearchResult>> {
+        return searchUsernames(username, true)
+    }
+
     /**
      * gets all the name documents for usernames starting with text
      *
      * @param text The beginning of a username to search for
      * @return
      */
-    suspend fun searchUsernames(text: String): Resource<List<UsernameSearchResult>> {
+    suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false): Resource<List<UsernameSearchResult>> {
         return try {
             val wallet = walletApplication.wallet
             val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()!!
@@ -182,7 +188,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
 
-            val userIds = nameDocuments.map { getIdentityForName(it) }
+            val userIds = if (onlyExactUsername) {
+                val result = mutableListOf<String>()
+                val exactNameDoc = try {
+                    nameDocuments.first { text == it.data["normalizedLabel"] }
+                } catch (e: NoSuchElementException) {
+                    null
+                }
+                if (exactNameDoc != null) {
+                    result.add(getIdentityForName(exactNameDoc))
+                }
+                result
+            } else {
+                nameDocuments.map { getIdentityForName(it) }
+            }
 
             val profileDocuments = Profiles(platform).getList(userIds)
             val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
