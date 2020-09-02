@@ -47,8 +47,6 @@ import org.slf4j.LoggerFactory
 
 class PaymentProtocolFragment : Fragment() {
 
-    // enhance bleak pony smart never vivid abandon aerobic flight lake brain goddess
-
     companion object {
 
         private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)
