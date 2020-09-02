@@ -102,7 +102,7 @@ class PaymentProtocolFragment : Fragment() {
                 CheckPinDialog.show(activity!!, 0, true)
             }
             val checkPinSharedModel = ViewModelProviders.of(activity!!)[CheckPinSharedModel::class.java]
-            checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (_, _) ->
+            checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner, Observer<Pair<Int?, String?>> { (_, _) ->
                 confirmWhenAuthorizedAndNoException()
             })
         }
@@ -110,7 +110,18 @@ class PaymentProtocolFragment : Fragment() {
 
     private fun confirmWhenAuthorizedAndNoException() {
         if (paymentProtocolModel.baseSendRequest != null) {
-            paymentProtocolModel.signAndSendPayment()
+
+            if (paymentProtocolModel.finalPaymentIntent!!.hasPaymentUrl()) {
+                paymentProtocolModel.signAndSendPayment()
+            } else if (isAdded) {
+                view_flipper.displayedChild = VIEW_ERROR
+                error_view.title = R.string.payment_request_missing_payment_url
+                error_view.setMessage(null)
+                error_view.hideConfirmButton()
+                error_view.setOnConfirmClickListener(R.string.payment_request_close, View.OnClickListener { _ ->
+                    activity!!.finish()
+                })
+            }
         } else {
             handleSendRequestException()
         }
@@ -197,36 +208,13 @@ class PaymentProtocolFragment : Fragment() {
                 }
             }
         })
-        paymentProtocolModel.onSendCoinsOffline.observe(viewLifecycleOwner,
-                Observer<Pair<SendCoinsBaseViewModel.SendCoinsOfflineStatus, Any?>> { (status, data) ->
-                    when (status) {
-                        SendCoinsBaseViewModel.SendCoinsOfflineStatus.SENDING -> {
-                            view_flipper.displayedChild = VIEW_LOADING
-                        }
-                        SendCoinsBaseViewModel.SendCoinsOfflineStatus.SUCCESS -> {
-                            if (paymentProtocolModel.finalPaymentIntent!!.hasPaymentUrl()) {
-                                paymentProtocolModel.directPay(data as Transaction)
-                            } else {
-                                showTransactionResult(data as Transaction)
-                            }
-                        }
-                        else -> {
-                            view_flipper.displayedChild = VIEW_ERROR
-                            error_view.title = R.string.payment_request_unable_to_send
-                            error_view.message = R.string.payment_request_please_try_again
-                            error_view.setOnConfirmClickListener(R.string.payment_request_try_again, View.OnClickListener {
-                                paymentProtocolModel.signAndSendPayment()
-                            })
-                        }
-                    }
-                })
         paymentProtocolModel.directPaymentAckLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.LOADING -> {
                     view_flipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
-                    showTransactionResult(it.data!!.first)
+                    paymentProtocolModel.commitAndBroadcast(it.data!!.first)
                 }
                 Status.ERROR -> {
                     if (isAdded) {
@@ -237,14 +225,33 @@ class PaymentProtocolFragment : Fragment() {
                             paymentProtocolModel.directPay(it.data!!.first)
                         })
                         error_view.setOnCancelClickListener(R.string.payment_request_skip, View.OnClickListener { _ ->
-                            showTransactionResult(it.data!!.first)
+                            showTransactionResult(it.data!!.first.tx)
                         })
                     } else {
-                        showTransactionResult(it.data!!.first)
+                        showTransactionResult(it.data!!.first.tx)
                     }
                 }
             }
         })
+        paymentProtocolModel.onSendCoinsOffline.observe(viewLifecycleOwner,
+                Observer<Pair<SendCoinsBaseViewModel.SendCoinsOfflineStatus, Any?>> { (status, data) ->
+                    when (status) {
+                        SendCoinsBaseViewModel.SendCoinsOfflineStatus.SENDING -> {
+                            view_flipper.displayedChild = VIEW_LOADING
+                        }
+                        SendCoinsBaseViewModel.SendCoinsOfflineStatus.SUCCESS -> {
+                            showTransactionResult((data as SendRequest).tx)
+                        }
+                        else -> {
+                            view_flipper.displayedChild = VIEW_ERROR
+                            error_view.title = R.string.payment_request_unable_to_send
+                            error_view.message = R.string.payment_request_please_try_again
+                            error_view.setOnConfirmClickListener(R.string.payment_request_try_again, View.OnClickListener {
+                                paymentProtocolModel.commitAndBroadcast(data as SendRequest)
+                            })
+                        }
+                    }
+                })
     }
 
     private fun showTransactionResult(transaction: Transaction) {

@@ -133,17 +133,14 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
         }.deriveKey(wallet, securityGuard.retrievePassword())
     }
 
-    protected open fun signAndSendPayment(sendRequest: SendRequest) {
-
-//        wallet.completeTx(sendRequest)
-//        onSendCoinsOffline.value = Pair(SendCoinsOfflineStatus.SUCCESS, sendRequest.tx)
+    protected open fun signAndSendPayment(sendRequest: SendRequest, txAlreadyCompleted: Boolean = false) {
 
         object : SendCoinsOfflineTask(wallet, backgroundHandler) {
 
             override fun onSuccess(transaction: Transaction) {
                 walletApplication.broadcastTransaction(transaction)
                 sentTransaction = transaction
-                onSendCoinsOffline.value = Pair(SendCoinsOfflineStatus.SUCCESS, transaction)
+                onSendCoinsOffline.value = Pair(SendCoinsOfflineStatus.SUCCESS, sendRequest)
             }
 
             override fun onInsufficientMoney(missing: Coin) {
@@ -162,7 +159,7 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
                 onSendCoinsOffline.value = Pair(SendCoinsOfflineStatus.FAILURE, exception)
             }
 
-        }.sendCoinsOffline(sendRequest) // send asynchronously
+        }.sendCoinsOffline(sendRequest, txAlreadyCompleted) // send asynchronously
     }
 
     override fun onCleared() {
