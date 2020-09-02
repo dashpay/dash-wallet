@@ -327,7 +327,7 @@
     <string name="payment_request_please_try_again">Please try again</string>
     <string name="payment_request_try_again">Try Again</string>
     <string name="payment_request_problem_title">Payment was not acknowledged</string>
-    <string name="payment_request_problem_message">Your payment was processed but the server was not able to acknowledge it</string>
+    <string name="payment_request_problem_message">Your payment could not be processed by the server, please inquire with the merchant</string>
     <string name="payment_request_missing_payment_url">Payment URL not specified</string>
     <string name="payment_request_expired_title">Payment Request Expired</string>
     <string name="payment_request_close">Close</string>
