@@ -133,9 +133,11 @@ class DashPayUserActivity : InteractionAwareActivity(),
                         }
                         Status.SUCCESS -> {
                             setResult(RESULT_CODE_CHANGED)
-                            if (sendingRequest)
+                            if (sendingRequest) {
                                 contactRequestSent = true
-                            else contactRequestReceived = true
+                            } else {
+                                contactRequestReceived = true
+                            }
                             updateContactRelationUi()
                             dashPayViewModel.getContactRequestLiveData.removeObserver(this)
                         }
@@ -144,10 +146,10 @@ class DashPayUserActivity : InteractionAwareActivity(),
             }
         })
 
-        notifications_rv.layoutManager = LinearLayoutManager(this)
-        notifications_rv.adapter = this.notificationsAdapter
+        activity_rv.layoutManager = LinearLayoutManager(this)
+        activity_rv.adapter = this.notificationsAdapter
 
-        if (contactRequestReceived && contactRequestSent) {
+        if (contactRequestReceived || contactRequestSent) {
             dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
                 if (Status.SUCCESS == it.status) {
                     if (it.data != null) {
@@ -196,7 +198,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             //No Relationship
             false to false -> {
                 sendContactRequestBtn.visibility = View.VISIBLE
-                notifications_rv.visibility = View.GONE
+                activity_rv.visibility = View.GONE
                 if (contact_history_disclaimer.visibility == View.VISIBLE) {
                     sendContactRequestBtn.visibility = View.GONE
                     var disclaimerText = getString(R.string.contact_history_disclaimer)
@@ -208,33 +210,33 @@ class DashPayUserActivity : InteractionAwareActivity(),
             //Contact Established
             true to true -> {
                 payContactBtn.visibility = View.VISIBLE
-                notifications_rv.visibility = View.VISIBLE
+                activity_rv.visibility = View.VISIBLE
                 dashPayViewModel.searchNotificationsForUser(profile.userId)
             }
             //Request Sent / Pending
             true to false -> {
+                contactRequestSentBtn.visibility = View.VISIBLE
+                activity_rv.visibility = View.VISIBLE
+                dashPayViewModel.searchNotificationsForUser(profile.userId)
                 if (contact_history_disclaimer.visibility == View.VISIBLE) {
                     sendContactRequestBtn.visibility = View.GONE
                     sendingContactRequestDisclaimerBtn.visibility = View.GONE
                     sendContactRequestBtnStrangerQR.visibility = View.GONE
-                    contactRequestSentBtn.visibility = View.VISIBLE
                     if (contact_history_disclaimer.visibility == View.VISIBLE) {
                         var disclaimerText = getString(R.string.contact_history_disclaimer_pending)
                         disclaimerText = disclaimerText.replace("%", username)
                         contact_history_disclaimer_text.text = HtmlCompat.fromHtml(disclaimerText,
                                 HtmlCompat.FROM_HTML_MODE_COMPACT)
                     }
-                } else {
-                    contactRequestSentBtn.visibility = View.VISIBLE
-                    notifications_rv.visibility = View.GONE
                 }
             }
             //Request Received
             false to true -> {
                 payContactBtn.visibility = View.VISIBLE
+                activity_rv.visibility = View.VISIBLE
+                dashPayViewModel.searchNotificationsForUser(profile.userId)
                 contactRequestReceivedContainer.visibility = View.VISIBLE
                 requestTitle.text = getString(R.string.contact_request_received_title, username)
-                notifications_rv.visibility = View.GONE
             }
         }
     }

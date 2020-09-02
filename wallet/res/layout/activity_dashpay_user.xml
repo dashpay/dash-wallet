@@ -129,9 +129,9 @@
         style="@style/ContactRequestButton.Sent"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
         android:background="@null"
         android:text="@string/send_contact_request"
-        android:layout_marginTop="18dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/usernameContainer"
@@ -293,7 +293,8 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text">
+            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text"
+            tools:visibility="gone">
 
             <TextView
                 android:id="@+id/send_contact_request_text_stranger"
@@ -319,6 +320,7 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
+            android:clipToPadding="false"
             android:id="@+id/sendingContactRequestDisclaimerBtn"
             style="@style/ContactRequestButton.White"
             android:layout_marginTop="40dp"
@@ -328,7 +330,8 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text">
+            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text"
+            tools:visibility="visible">
 
             <TextView
                 android:id="@+id/sending_contact_request_disclaimer_text"
@@ -342,9 +345,12 @@
 
             <ImageView
                 android:id="@+id/sendingContactRequestBtnDisclaimerImage"
-                style="@style/ContactRequestButtonImage"
+                android:layout_width="24dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/sending_contact_request_disclaimer_text"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:srcCompat="@drawable/ic_hourglass" />
 
@@ -353,7 +359,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/notifications_rv"
+        android:id="@+id/activity_rv"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="15dp"
@@ -363,6 +369,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer"
-        tools:visibility="gone" />
+        tools:listitem="@layout/notification_contact_request_received_row" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
