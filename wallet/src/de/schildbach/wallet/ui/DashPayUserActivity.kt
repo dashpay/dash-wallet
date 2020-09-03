@@ -23,6 +23,7 @@ import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -234,6 +235,10 @@ class DashPayUserActivity : InteractionAwareActivity(),
             false to true -> {
                 payContactBtn.visibility = View.VISIBLE
                 activity_rv.visibility = View.VISIBLE
+                // manually set the activity_rv below the Accept button since it was too hard with the layout file
+                val params = activity_rv.layoutParams as ConstraintLayout.LayoutParams
+                params.topToBottom = R.id.contactRequestReceivedContainer
+                activity_rv.requestLayout()
                 dashPayViewModel.searchNotificationsForUser(profile.userId)
                 contactRequestReceivedContainer.visibility = View.VISIBLE
                 requestTitle.text = getString(R.string.contact_request_received_title, username)
