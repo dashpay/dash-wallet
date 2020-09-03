@@ -130,7 +130,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner, Observer {
             if (Status.SUCCESS == it.status) {
                 if (initialSearch && (mode != MODE_VIEW_REQUESTS)) {
-                    if (it.data == null || it.data.isEmpty()) {
+                    if (it.data == null || it.data.isEmpty() || it.data.find { u -> u.requestReceived } == null) {
                         empty_state_pane.visibility = View.VISIBLE
                         contacts_pane.visibility = View.GONE
                     } else {
