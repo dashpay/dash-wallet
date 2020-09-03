@@ -34,4 +34,9 @@
     <dimen name="transaction_fee_text_size">12sp</dimen>
     <dimen name="transaction_detail_dialog_content_vertical_padding">24dp</dimen>
 
+    <dimen name="verify_seed_buttons_tip_bottom_margin">12dp</dimen>
+    <dimen name="verify_seed_word_text_size">14dp</dimen>
+    <dimen name="verify_seed_word_margin">4dp</dimen>
+    <dimen name="verify_seed_word_text_button_size">12dp</dimen>
+    <dimen name="verify_seed_word_button_padding">10dp</dimen>
 </resources>
