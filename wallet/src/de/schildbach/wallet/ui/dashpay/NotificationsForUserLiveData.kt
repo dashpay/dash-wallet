@@ -21,7 +21,11 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication,
                 contactRequests.data.filter { cr ->
                     cr.dashPayProfile.userId == userId
                 }.forEach {
-                    results.add(NotificationItemContact(it))
+                    if (it.type == UsernameSearchResult.Type.REQUEST_RECEIVED) {
+                        results.add(NotificationItemContact(it, true))
+                    } else {
+                        results.add(NotificationItemContact(it))
+                    }
                     if (it.type == UsernameSearchResult.Type.CONTACT_ESTABLISHED) {
                         val incoming = (it.toContactRequest!!.timestamp > it.fromContactRequest!!.timestamp)
                         val invitationItem =
