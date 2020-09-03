@@ -191,7 +191,7 @@ Instructions for preparing an NFC tag with your address:
 
 ### DASHJ
 
-Dash Wallet uses dashj for Dash specific logic.  This project is forked from [bitcoinj] https://bitcoinj.github.io/
+Dash Wallet uses dashj for Dash specific logic.  This project is forked from [bitcoinj](https://bitcoinj.github.io/)
 
 
 ### EXCHANGE RATES
