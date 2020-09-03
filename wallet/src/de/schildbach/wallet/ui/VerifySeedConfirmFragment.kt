@@ -58,7 +58,7 @@ class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
+        view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify)
 
         if (arguments?.containsKey("seed")!!) {
             words.addAll(arguments!!.getStringArray("seed"))
