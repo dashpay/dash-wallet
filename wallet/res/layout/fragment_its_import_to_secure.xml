@@ -13,6 +13,8 @@
         android:layout_height="0dp"
         android:clipChildren="false"
         android:orientation="vertical"
+        android:paddingBottom="20dp"
+        android:clipToPadding="false"
         app:layout_constraintBottom_toTopOf="@+id/verify_show_recovery_phrase_button"
         app:layout_constraintTop_toBottomOf="@+id/app_bar">
 

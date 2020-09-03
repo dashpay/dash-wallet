@@ -62,20 +62,21 @@
                 android:layout_marginBottom="10dp"
                 android:animateLayoutChanges="true"
                 android:background="@drawable/round_corners_white_bg"
+                android:paddingTop="20dp"
+                android:paddingBottom="20dp"
                 app:layout_constraintTop_toBottomOf="@id/security_level">
 
                 <TextView
                     android:id="@+id/auto_logout_label"
                     style="@style/MontserratRegular.MenuRowTitle.Internal"
-                    android:layout_marginTop="20dp"
+                    android:layout_width="0dp"
                     android:layout_marginEnd="10dp"
                     android:layout_marginRight="10dp"
                     android:layout_marginBottom="20dp"
                     android:text="@string/auto_logout"
-                    android:layout_width="0dp"
+                    app:layout_constraintEnd_toStartOf="@id/auto_logout_switch"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintEnd_toStartOf="@id/auto_logout_switch"
                     app:layout_constraintVertical_bias="0"
                     tools:ignore="ContentDescription" />
 
@@ -108,26 +109,27 @@
                     <TextView
                         android:id="@+id/logout_after_label"
                         style="@style/MontserratRegular.MenuRowTitle.Internal"
+                        android:layout_width="0dp"
+                        android:layout_marginStart="0dp"
                         android:layout_marginTop="28dp"
+                        android:gravity="center"
                         android:text="@string/logout_after"
                         android:textSize="14sp"
-                        android:layout_width="0dp"
-                        android:gravity="start"
+                        app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/logout_after_time"
                         app:layout_constraintTop_toBottomOf="@id/auto_logout_separator"
                         tools:ignore="ContentDescription" />
 
                     <TextView
                         android:id="@+id/logout_after_time"
                         style="@style/MontserratRegular.MenuRowTitle.Internal"
-                        android:layout_marginEnd="22dp"
-                        android:layout_marginRight="22dp"
+                        android:layout_marginStart="0dp"
+                        android:layout_marginTop="14dp"
                         android:text="@string/immediately"
                         android:textSize="24sp"
-                        app:layout_constraintBottom_toBottomOf="@id/logout_after_label"
                         app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="@id/logout_after_label" />
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/logout_after_label" />
 
                     <TextView
                         android:id="@+id/immediately"
@@ -191,13 +193,13 @@
                 <TextView
                     android:id="@+id/spending_confirmation_label"
                     style="@style/MontserratRegular.MenuRowTitle.Internal"
+                    android:layout_width="0dp"
                     android:layout_marginTop="20dp"
                     android:layout_marginBottom="20dp"
-                    android:layout_width="0dp"
                     android:text="@string/spending_confirmation"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/spending_confirmation_switch"
+                    app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintVertical_bias="0"
                     tools:ignore="ContentDescription" />
@@ -335,7 +337,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="18dp"
-                        android:layout_marginBottom="30dp"
+                        android:layout_marginBottom="12dp"
                         android:paddingLeft="20dp"
                         android:paddingRight="20dp"
                         app:layout_constraintBottom_toBottomOf="parent"
