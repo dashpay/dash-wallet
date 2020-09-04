@@ -66,15 +66,19 @@ import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.DashPayContactRequest;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.data.UsernameSearchResult;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
+import de.schildbach.wallet.livedata.Status;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
+import de.schildbach.wallet.ui.dashpay.AutoAcceptContactRequestViewModel;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet_test.R;
 
@@ -272,8 +276,10 @@ public class SendCoinsFragment extends Fragment {
                 dashPayViewModel.loadUser(paymentIntent.payeeDashPayUsername);
             }
 
-            if (paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUserId != null) {
-                Observer<DashPayProfile> observer = new Observer<DashPayProfile>() {
+            if ((paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUserId != null) ||
+                    (paymentIntent.payeeDashPayUsername != null)) {
+
+                final Observer<DashPayProfile> observer = new Observer<DashPayProfile>() {
                     @Override
                     public void onChanged(DashPayProfile dashPayProfile) {
                         if (dashPayProfile != null) {
@@ -285,15 +291,52 @@ public class SendCoinsFragment extends Fragment {
                             viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
 
                             enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
+
+                            dashPayViewModel.getContact(dashPayProfile.getUserId());
                         }
                     }
                 };
-                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(paymentIntent.payeeUserId)
-                        .observe(getViewLifecycleOwner(), observer);
+
+                final Observer<Resource<UsernameSearchResult>> contactRequestObserver = new Observer<Resource<UsernameSearchResult>>() {
+                    @Override
+                    public void onChanged(Resource<UsernameSearchResult> result) {
+                        if (result.getStatus() == Status.SUCCESS) {
+                            UsernameSearchResult usernameSearchResult = result.getData();
+                            DashPayProfile dashPayProfile = usernameSearchResult.getDashPayProfile();
+                            boolean allowAccept = dashPayViewModel.shouldAutoAcceptContactRequest(dashPayProfile.getUserId());
+                            enterAmountSharedViewModel.getPendingContactRequest().setValue(allowAccept && result.getData().isPendingRequest());
+                        }
+                    }
+                };
+
+                if (paymentIntent.payeeDashPayUsername != null) {
+                    AppDatabase.getAppDatabase().dashPayProfileDao().loadFromUsernameDistinct(paymentIntent.payeeDashPayUsername)
+                            .observe(getViewLifecycleOwner(), new Observer<DashPayProfile>() {
+                                @Override
+                                public void onChanged(DashPayProfile dashPayProfile) {
+                                    if (dashPayProfile != null) {
+                                        AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(dashPayProfile.getUserId())
+                                                .observe(getViewLifecycleOwner(), observer);
+                                    }
+                                }
+                            });
+                } else {
+                    AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(paymentIntent.payeeUserId)
+                            .observe(getViewLifecycleOwner(), observer);
+                }
+                dashPayViewModel.getGetContactLiveData().observe(getViewLifecycleOwner(), contactRequestObserver);
             } else {
                 viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
             }
         }
+
+        AutoAcceptContactRequestViewModel autoAcceptContactRequestViewModel = new ViewModelProvider(activity).get(AutoAcceptContactRequestViewModel.class);
+        autoAcceptContactRequestViewModel.getAutoAcceptContactRequest().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
+            @Override
+            public void onChanged(Boolean aBoolean) {
+                handleAutoAcceptContactRequest(aBoolean);
+            }
+        });
     }
 
     private void updateStateFrom(final PaymentIntent paymentIntent) {
@@ -375,6 +418,17 @@ public class SendCoinsFragment extends Fragment {
         ExchangeRate exchangeRate = enterAmountSharedViewModel.getExchangeRate();
 
         viewModel.signAndSendPayment(editedAmount, exchangeRate);
+    }
+
+    private void handleAutoAcceptContactRequest(Boolean autoAccept) {
+        String userId = enterAmountSharedViewModel.getDashPayProfileData().getValue().getUserId();
+        if (autoAccept) {
+            // I wonder if this will work? will it get canceled when this Fragment is closed?
+            dashPayViewModel.sendContactRequestGlobal(userId);
+        } else {
+            // save preferences
+            dashPayViewModel.forgetAutoAcceptContactRequest(userId);
+        }
     }
 
     private void onSignAndSendPaymentSuccess(Transaction transaction) {
@@ -605,13 +659,15 @@ public class SendCoinsFragment extends Fragment {
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
         DashPayProfile dashPayProfile = enterAmountSharedViewModel.getDashPayProfileData().getValue();
+        Boolean isPendingContactRequest = enterAmountSharedViewModel.getPendingContactRequest().getValue();
+        isPendingContactRequest = (isPendingContactRequest == null) ? false : isPendingContactRequest;
         String username = dashPayProfile != null ? dashPayProfile.getUsername() : null;
         String displayName = dashPayProfile == null || dashPayProfile.getDisplayName().isEmpty() ? username : dashPayProfile.getDisplayName();
         String avatarUrl = dashPayProfile != null ? dashPayProfile.getAvatarUrl() : null;
 
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null,
-                username, displayName, avatarUrl);
+                username, displayName, avatarUrl, isPendingContactRequest);
         dialog.show(Objects.requireNonNull(getFragmentManager()), "ConfirmTransactionDialog");
     }
 

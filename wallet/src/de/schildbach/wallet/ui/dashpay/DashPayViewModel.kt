@@ -16,6 +16,8 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.HandlerThread
 import android.os.Process
 import androidx.lifecycle.*
@@ -182,6 +184,12 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         })
     }
 
+    fun sendContactRequestGlobal(toUserId: String) {
+        GlobalScope.launch(Dispatchers.IO) {
+            platformRepo.sendContactRequest(toUserId)
+        }
+    }
+
     val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) { it ->
         liveData(context = contactRequestJob + Dispatchers.IO) {
             if (it.second != null) {
@@ -206,12 +214,25 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun getContact(username: String?) {
-        contactUserIdLiveData.value = username
+    fun getContact(userId: String?) {
+        contactUserIdLiveData.value = userId
     }
 
     fun getFrequentContacts() {
         frequentContactsLiveData.getFrequentContacts()
+    }
+
+    // is there a better place for this
+    fun forgetAutoAcceptContactRequest(userId: String) {
+        val sharedPreferences = walletApplication.getSharedPreferences("forgetPendingRequestUserId", Context.MODE_PRIVATE)
+        sharedPreferences.edit()
+                .putBoolean(userId, false)
+                .apply()
+    }
+
+    fun shouldAutoAcceptContactRequest(userId: String): Boolean {
+        val sharedPreferences = walletApplication.getSharedPreferences("forgetPendingRequestUserId", Context.MODE_PRIVATE)
+        return sharedPreferences.getBoolean(userId, true)
     }
 
 }
