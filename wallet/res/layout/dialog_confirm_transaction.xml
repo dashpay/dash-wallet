@@ -305,13 +305,31 @@
 
     </LinearLayout>
 
-    <CheckBox
-        android:id="@+id/confirm_auto_accept"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/confirm_auto_accept_container"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:textSize="16sp"
-        android:text="@string/dialog_confirm_accept_contact_request" />
+        android:gravity="center_horizontal"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="19dp"
+        android:orientation="horizontal">
+
+        <CheckBox
+            android:id="@+id/confirm_auto_accept"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:button="@drawable/round_checkbox"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/confirm_auto_accept_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="18dp"
+            android:text="@string/dialog_confirm_accept_contact_request"
+            android:textSize="16sp" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/confirm_payment"
