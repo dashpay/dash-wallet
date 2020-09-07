@@ -15,8 +15,8 @@
     <string name="currency_USDC">USD Coin</string>
     <!-- Local Currency List: Litecoin cryptocurrency -->
     <string name="currency_LTC">Litecoin</string>
-    <!-- Local Currency List: Etherium cryptocurrency -->
-    <string name="currency_ETH">Etherium</string>
+    <!-- Local Currency List: Ethereum cryptocurrency -->
+    <string name="currency_ETH">Ethereum</string>
     <!-- Local Currency List: Bitcoin cryptocurrency -->
     <string name="currency_BTC">Bitcoin</string>
     <!-- Local Currency List: PAX is a stablecoin that is pegged to the United States dollar -->
