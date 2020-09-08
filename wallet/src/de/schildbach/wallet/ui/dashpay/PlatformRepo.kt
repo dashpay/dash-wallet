@@ -416,6 +416,24 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val cr = contactRequests.watchContactRequest(this.blockchainIdentity.uniqueIdString,
                     toUserId, 100, 500, RetryDelayType.LINEAR)
 
+            // add our receiving from this contact keychain if it doesn't exist
+            val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
+            var encryptionKey: KeyParameter? = null
+
+            if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+                val contactIdentity = platform.identities.get(toUserId)
+                if (walletApplication.wallet.isEncrypted) {
+                    val password = securityGuard.retrievePassword()
+                    encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                }
+                blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey!!)
+
+                // update bloom filters now
+                val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                        BlockchainServiceImpl::class.java)
+                walletApplication.startService(intent)
+            }
+
             log.info("contact request: $cr")
             val dashPayContactRequest = DashPayContactRequest.fromDocument(cr!!)
             updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
