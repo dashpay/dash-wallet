@@ -20,6 +20,7 @@ package de.schildbach.wallet.data;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Arrays;
+import java.util.Date;
 
 import javax.annotation.Nullable;
 
@@ -163,6 +164,8 @@ public final class PaymentIntent implements Parcelable {
     @Nullable
     public final byte[] paymentRequestHash;
 
+    public final Date expirationDate;
+
     public boolean useInstantX = false;
 
     public void setInstantX(boolean set) {
@@ -175,6 +178,14 @@ public final class PaymentIntent implements Parcelable {
             @Nullable final String payeeVerifiedBy, @Nullable final Output[] outputs, @Nullable final String memo,
             @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
             @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash) {
+        this(standard, payeeName, payeeVerifiedBy, outputs, memo, paymentUrl, payeeData, paymentRequestUrl, paymentRequestHash, null);
+    }
+
+    public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName,
+            @Nullable final String payeeVerifiedBy, @Nullable final Output[] outputs, @Nullable final String memo,
+            @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
+            @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash,
+            @Nullable final Date expirationDate) {
         this.standard = standard;
         this.payeeName = payeeName;
         this.payeeVerifiedBy = payeeVerifiedBy;
@@ -184,6 +195,7 @@ public final class PaymentIntent implements Parcelable {
         this.payeeData = payeeData;
         this.paymentRequestUrl = paymentRequestUrl;
         this.paymentRequestHash = paymentRequestHash;
+        this.expirationDate = expirationDate;
     }
 
     public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName, @Nullable final String payeeVerifiedBy,
@@ -475,6 +487,11 @@ public final class PaymentIntent implements Parcelable {
         } else {
             dest.writeInt(0);
         }
+        if (expirationDate != null) {
+            dest.writeLong(expirationDate.getTime());
+        } else {
+            dest.writeLong(0);
+        }
         dest.writeByte(useInstantX ? (byte) 1 : (byte) 0);
     }
 
@@ -525,7 +542,17 @@ public final class PaymentIntent implements Parcelable {
         } else {
             paymentRequestHash = null;
         }
+        final long expirationDateLong = in.readLong();
+        expirationDate = (expirationDateLong > 0) ? new Date(expirationDateLong) : null;
         useInstantX = in.readByte() == 1;
+    }
+
+    public boolean getExpired() {
+        if (expirationDate != null) {
+            return new Date().after(expirationDate);
+        } else {
+            return false;
+        }
     }
 
     public boolean getUseInstantSend() {

@@ -109,11 +109,22 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun confirmWhenAuthorizedAndNoException() {
+        if(paymentProtocolModel.finalPaymentIntent!!.expired) {
+            showRequestExpiredMessage()
+            return
+        }
         if (paymentProtocolModel.baseSendRequest != null) {
             paymentProtocolModel.signAndSendPayment()
         } else {
             handleSendRequestException()
         }
+    }
+
+    private fun showRequestExpiredMessage() {
+        error_view.title = R.string.payment_request_expired_title
+        error_view.setMessage(null)
+        error_view.hideConfirmButton()
+        view_flipper.displayedChild = VIEW_ERROR
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -173,10 +184,7 @@ class PaymentProtocolFragment : Fragment() {
                 }
                 Status.ERROR -> {
                     if (it.exception is PaymentProtocolException.Expired) {
-                        error_view.title = R.string.payment_request_expired_title
-                        error_view.setMessage(null)
-                        error_view.hideConfirmButton()
-                        view_flipper.displayedChild = VIEW_ERROR
+                        showRequestExpiredMessage()
                     } else if (paymentProtocolModel.finalPaymentIntent == null) {
                         // server error
                         error_view.title = R.string.payment_request_unable_to_connect
