@@ -208,6 +208,11 @@ public final class PaymentIntent implements Parcelable {
                 null, null, null, payeeUserId, null);
     }
 
+    public static PaymentIntent fromAddressWithIdentity(final Address address, @Nullable final String payeeUserId, Coin amount) {
+        return new PaymentIntent(null, null, null, buildSimplePayTo(amount, address), null, null,
+                null, null, null, payeeUserId, null);
+    }
+
     public static PaymentIntent fromAddress(final String address, @Nullable final String addressLabel)
             throws AddressFormatException {
         return new PaymentIntent(Address.fromString(Constants.NETWORK_PARAMETERS, address), addressLabel);
