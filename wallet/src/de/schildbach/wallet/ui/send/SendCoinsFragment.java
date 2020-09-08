@@ -279,20 +279,12 @@ public class SendCoinsFragment extends Fragment {
             if ((paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUserId != null) ||
                     (paymentIntent.payeeDashPayUsername != null)) {
 
+                //TODO: This is not current used, remove?
                 final Observer<DashPayProfile> observer = new Observer<DashPayProfile>() {
                     @Override
                     public void onChanged(DashPayProfile dashPayProfile) {
                         if (dashPayProfile != null) {
-                            Address address = dashPayViewModel.getNextContactAddress(paymentIntent.payeeUserId);
-                            PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
-                                    Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
-                                    dashPayProfile.getUserId());
-
-                            viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
-
-                            enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
-
-                            dashPayViewModel.getContact(dashPayProfile.getUserId());
+                            handleDashIdentity(dashPayProfile, paymentIntent);
                         }
                     }
                 };
@@ -302,9 +294,12 @@ public class SendCoinsFragment extends Fragment {
                     public void onChanged(Resource<UsernameSearchResult> result) {
                         if (result.getStatus() == Status.SUCCESS) {
                             UsernameSearchResult usernameSearchResult = result.getData();
-                            DashPayProfile dashPayProfile = usernameSearchResult.getDashPayProfile();
-                            boolean allowAccept = dashPayViewModel.shouldAutoAcceptContactRequest(dashPayProfile.getUserId());
-                            enterAmountSharedViewModel.getPendingContactRequest().setValue(allowAccept && result.getData().isPendingRequest());
+                            if (usernameSearchResult.getRequestReceived()) {
+                                DashPayProfile dashPayProfile = usernameSearchResult.getDashPayProfile();
+                                boolean allowAccept = dashPayViewModel.shouldAutoAcceptContactRequest(dashPayProfile.getUserId());
+                                enterAmountSharedViewModel.getPendingContactRequest().setValue(allowAccept && result.getData().isPendingRequest());
+                                handleDashIdentity(dashPayProfile, paymentIntent);
+                            }
                         }
                     }
                 };
@@ -315,16 +310,17 @@ public class SendCoinsFragment extends Fragment {
                                 @Override
                                 public void onChanged(DashPayProfile dashPayProfile) {
                                     if (dashPayProfile != null) {
-                                        AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(dashPayProfile.getUserId())
-                                                .observe(getViewLifecycleOwner(), observer);
+                                        dashPayViewModel.getGetContactLiveData().observe(getViewLifecycleOwner(), contactRequestObserver);
+                                        dashPayViewModel.getContact(dashPayProfile.getUserId());
+                                    } else {
+                                        //TODO: Handle Dash Username that is not a contact
                                     }
                                 }
                             });
                 } else {
-                    AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(paymentIntent.payeeUserId)
-                            .observe(getViewLifecycleOwner(), observer);
+                    dashPayViewModel.getGetContactLiveData().observe(getViewLifecycleOwner(), contactRequestObserver);
+                    dashPayViewModel.getContact(paymentIntent.payeeUserId);
                 }
-                dashPayViewModel.getGetContactLiveData().observe(getViewLifecycleOwner(), contactRequestObserver);
             } else {
                 viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
             }
@@ -337,6 +333,20 @@ public class SendCoinsFragment extends Fragment {
                 handleAutoAcceptContactRequest(aBoolean);
             }
         });
+    }
+
+    private void handleDashIdentity(DashPayProfile dashPayProfile, PaymentIntent paymentIntent) {
+        Address address = dashPayViewModel.getNextContactAddress(dashPayProfile.getUserId());
+        PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
+                Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+                dashPayProfile.getUserId(), paymentIntent.getAmount());
+        viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
+
+        enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
+
+        if (paymentIntent.getAmount() != null && paymentIntent.getAmount().isGreaterThan(Coin.ZERO)) {
+            authenticateOrConfirm();
+        }
     }
 
     private void updateStateFrom(final PaymentIntent paymentIntent) {
