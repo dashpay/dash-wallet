@@ -92,7 +92,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         config.touchLastUsed()
         handleIntent(intent)
-        MaybeMaintenanceFragment.add(supportFragmentManager)
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
         if (savedInstanceState == null) {
@@ -342,7 +341,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private fun handleIntent(intent: Intent) {
         if (intent.hasExtra(EXTRA_RESET_BLOCKCHAIN)) {
             goBack(true)
-            supportFragmentManager.beginTransaction().remove(wallet_fragment).commit()
             recreate()
             return
         }
@@ -676,7 +674,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        (wallet_fragment as WalletFragment).onActivityResult(requestCode, resultCode, data)
+        supportFragmentManager.fragments.forEach {
+            it.onActivityResult(requestCode, resultCode, data)
+        }
     }
 
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">Dash [Mobile]</string>
-	<string name="app_name_short">Dash [Mobile]</string>
+	<string name="app_name">DashPay Evonet</string>
+	<string name="app_name_short">DashPay [Mobile]</string>
 
 	<string-array name="preferences_precision_values">
 		<item>8</item>

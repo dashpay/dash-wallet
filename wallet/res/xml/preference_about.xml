@@ -46,10 +46,4 @@
         </Preference>
     </PreferenceCategory>
 
-	<Preference
-		android:key="firebase_instance_id_label"
-
-		android:persistent="false"
-		android:title="FIAM Instance ID" />
-
 </PreferenceScreen>
