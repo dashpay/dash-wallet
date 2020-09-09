@@ -428,6 +428,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         protected void doneDownload() {
             super.doneDownload();
+            updateBlockchainState();
             syncPercentage = 100;
         }
     };
