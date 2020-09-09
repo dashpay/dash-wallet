@@ -66,7 +66,6 @@ import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
-import de.schildbach.wallet.data.DashPayContactRequest;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.UsernameSearchResult;
@@ -434,7 +433,7 @@ public class SendCoinsFragment extends Fragment {
         String userId = enterAmountSharedViewModel.getDashPayProfileData().getValue().getUserId();
         if (autoAccept) {
             // I wonder if this will work? will it get canceled when this Fragment is closed?
-            dashPayViewModel.sendContactRequestGlobal(userId);
+            dashPayViewModel.sendContactRequestWork(userId);
         } else {
             // save preferences
             dashPayViewModel.forgetAutoAcceptContactRequest(userId);

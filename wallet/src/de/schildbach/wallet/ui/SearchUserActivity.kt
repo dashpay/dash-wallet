@@ -258,7 +258,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         if (currentPosition == -1) {
             currentPosition = position
-            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+            dashPayViewModel.sendContactRequestWork(usernameSearchResult.fromContactRequest!!.userId)
         }
     }
 

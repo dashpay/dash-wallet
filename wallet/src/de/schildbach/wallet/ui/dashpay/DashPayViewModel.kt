@@ -17,26 +17,26 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
 import android.content.Context
-import android.content.SharedPreferences
-import android.os.HandlerThread
-import android.os.Process
 import androidx.lifecycle.*
+import androidx.work.*
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.security.SecurityGuard
-import de.schildbach.wallet.ui.send.DeriveKeyTask
+import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.*
 import org.bitcoinj.core.Address
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
-import java.lang.Exception
 
 class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
     private val platformRepo = PlatformRepo.getInstance()
     private val walletApplication = application as WalletApplication
+
+    private val mWorkManager: WorkManager = WorkManager.getInstance(application)
+
+    private val outputStatus: LiveData<List<WorkInfo>>
+        get() = mWorkManager.getWorkInfosByTagLiveData(SendContactRequestOperation.TAG)
 
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
@@ -157,37 +157,11 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         return platformRepo.getNextContactAddress(userId)
     }
 
-    //TODO: this can probably be simplified using coroutines
-    private fun deriveEncryptionKey(onSuccess: (KeyParameter) -> Unit, onError: (Exception) -> Unit) {
-        val walletApplication = WalletApplication.getInstance()
-        val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
-        backgroundThread.start()
-        val backgroundHandler = android.os.Handler(backgroundThread.looper)
-        val securityGuard = SecurityGuard()
-        val password = securityGuard.retrievePassword()
-        object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
-            override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
-                onSuccess(encryptionKey)
-            }
-
-            override fun onFailure(ex: KeyCrypterException) {
-                onError(ex)
-            }
-        }.deriveKey(walletApplication.wallet, password)
-    }
-
-    fun sendContactRequest(toUserId: String) {
-        deriveEncryptionKey({ encryptionKey: KeyParameter ->
-            contactRequestLiveData.value = Pair(toUserId, encryptionKey)
-        }, {
-            contactRequestLiveData.value = Pair(toUserId, null)
-        })
-    }
-
-    fun sendContactRequestGlobal(toUserId: String) {
-        GlobalScope.launch(Dispatchers.IO) {
-            platformRepo.sendContactRequest(toUserId)
-        }
+    fun sendContactRequestWork(toUserId: String) {
+        println("doWork#0")
+        SendContactRequestOperation()
+                .create(walletApplication, toUserId)
+                .enqueue()
     }
 
     val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) { it ->
@@ -235,4 +209,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         return sharedPreferences.getBoolean(userId, true)
     }
 
+    internal fun cancelSendContactRequest() {
+        mWorkManager.cancelUniqueWork(SendContactRequestOperation.WORK_NAME)
+    }
 }
