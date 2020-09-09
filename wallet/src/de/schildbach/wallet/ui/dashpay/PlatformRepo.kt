@@ -28,6 +28,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.ui.dashpay.work.SendContactRequestWorker
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
@@ -401,13 +402,17 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return Resource.error("sendContactRequest doesn't support non-encrypted wallets")
     }
 
-    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<DashPayContactRequest> {
+    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter, worker: SendContactRequestWorker? = null): Resource<DashPayContactRequest> {
         return try {
             Context.propagate(walletApplication.wallet.context)
+
+            worker?.setProgress(SendContactRequestWorker.Progress.INIT)
+
             val potentialContactIdentity = platform.identities.get(toUserId)
             log.info("potential contact identity: $potentialContactIdentity")
 
             //Create Contact Request
+            worker?.setProgress(SendContactRequestWorker.Progress.SEND)
             val contactRequests = ContactRequests(platform)
             contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
             log.info("contact request sent")
@@ -439,9 +444,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
             updateDashPayProfile(toUserId) // update the profile
             fireContactsUpdatedListeners() // trigger listeners
+            worker?.setProgress(SendContactRequestWorker.Progress.DONE)
             Resource.success(dashPayContactRequest)
         } catch (e: Exception) {
             log.error(e.localizedMessage)
+            worker?.setProgress(SendContactRequestWorker.Progress.ERROR)
             Resource.error(formatExceptionMessage("send contact request", e))
         }
     }
@@ -907,7 +914,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun getLocalUsernameSearchResult(userId: String): UsernameSearchResult {
         val profile = dashPayProfileDaoAsync.load(userId)
         val receivedContactRequest = dashPayContactRequestDaoAsync.loadToOthers(userId)?.let { it[0] }
-        val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { if(it.isNotEmpty()) it[0] else null }
+        val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { if (it.isNotEmpty()) it[0] else null }
 
         return UsernameSearchResult(profile!!.username, profile, sentContactRequest, receivedContactRequest)
     }

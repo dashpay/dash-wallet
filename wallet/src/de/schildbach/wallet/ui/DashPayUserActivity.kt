@@ -174,7 +174,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
     private fun sendContactRequest(isSendingRequest: Boolean, fromDisclaimer: Boolean = false) {
         sendingRequest = isSendingRequest
-        dashPayViewModel.sendContactRequest(profile.userId)
+        dashPayViewModel.sendContactRequestWork(profile.userId)
         startLoading(fromDisclaimer)
     }
 
