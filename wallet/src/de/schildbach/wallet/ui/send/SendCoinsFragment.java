@@ -344,7 +344,9 @@ public class SendCoinsFragment extends Fragment {
         enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
 
         if (paymentIntent.getAmount() != null && paymentIntent.getAmount().isGreaterThan(Coin.ZERO)) {
-            authenticateOrConfirm();
+            if (blockchainState != null && !blockchainState.getReplaying()) {
+                authenticateOrConfirm();
+            }
         }
     }
 
