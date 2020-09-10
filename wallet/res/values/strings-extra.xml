@@ -416,5 +416,6 @@
     <string name="send_coins_to_username">Sending to</string>
     <string name="contact_history_disclaimer">Add % as your contact to &lt;b>Pay Directly to Username&lt;/b> and &lt;b>Retain Mutual Transaction History&lt;/b></string>
     <string name="contact_history_disclaimer_pending">Once % accepts your request you can &lt;b>Pay Directly to Username&lt;/b></string>
+    <string name="stranger_activity_disclaimer_text">Payments made directly to addresses won’t be retained in activity.</string>
 
 </resources>

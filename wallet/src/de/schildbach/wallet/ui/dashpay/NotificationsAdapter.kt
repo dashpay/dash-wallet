@@ -33,7 +33,9 @@ import java.util.*
 
 class NotificationsAdapter(val context: Context, val wallet: Wallet, private val showAvatars: Boolean = false,
                            private val onContactActionClickListener: ContactViewHolder.OnContactActionClickListener,
-                           private val itemClickListener: OnItemClickListener)
+                           private val itemClickListener: OnItemClickListener,
+                           private val fromProfile: Boolean = false,
+                           private val fromStrangerQr: Boolean = false)
 
     : RecyclerView.Adapter<NotificationViewHolder>() {
 
@@ -62,7 +64,11 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NotificationViewHolder {
         return when (viewType) {
-            NOTIFICATION_HEADER -> HeaderViewHolder(LayoutInflater.from(parent.context), parent)
+            NOTIFICATION_HEADER -> if (fromProfile) {
+                ProfileActivityHeaderHolder(LayoutInflater.from(parent.context), parent, fromStrangerQr)
+            } else {
+                HeaderViewHolder(LayoutInflater.from(parent.context), parent)
+            }
             NOTIFICATION_EMPTY -> ImageViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_CONTACT -> ContactViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_PAYMENT -> TransactionViewHolder(LayoutInflater.from(parent.context), parent)

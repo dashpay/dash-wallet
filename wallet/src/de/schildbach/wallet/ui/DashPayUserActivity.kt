@@ -52,7 +52,11 @@ class DashPayUserActivity : InteractionAwareActivity(),
     private val profile: DashPayProfile by lazy { intent.getParcelableExtra(PROFILE) as DashPayProfile }
     private val displayName by lazy { profile.displayName }
     private val showContactHistoryDisclaimer by lazy { intent.getBooleanExtra(SHOW_CONTACT_HISTORY_DISCLAIMER, false) }
-    private val notificationsAdapter: NotificationsAdapter = NotificationsAdapter(this, WalletApplication.getInstance().wallet, false, this, this)
+    private val notificationsAdapter: NotificationsAdapter by lazy {
+        NotificationsAdapter(this,
+                WalletApplication.getInstance().wallet, false, this,
+                this, true, showContactHistoryDisclaimer)
+    }
     private var contactRequestReceived: Boolean = false
     private var contactRequestSent: Boolean = false
     private var sendingRequest: Boolean = true
@@ -121,43 +125,43 @@ class DashPayUserActivity : InteractionAwareActivity(),
         payContactBtn.setOnClickListener { startPayActivity() }
 
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
-            override fun onChanged(it: Resource<DashPayContactRequest>?) {
-                if (it != null) {
-                    when (it.status) {
-                        Status.ERROR -> {
-                            var msg = it.message
-                            if (msg == null) {
-                                msg = "!!Error!!"
-                            }
-                            Toast.makeText(this@DashPayUserActivity, msg, Toast.LENGTH_LONG).show()
+        override fun onChanged(it: Resource<DashPayContactRequest>?) {
+            if (it != null) {
+                when (it.status) {
+                    Status.ERROR -> {
+                        var msg = it.message
+                        if (msg == null) {
+                            msg = "!!Error!!"
                         }
-                        Status.SUCCESS -> {
-                            setResult(RESULT_CODE_CHANGED)
-                            if (sendingRequest) {
-                                contactRequestSent = true
-                            } else {
-                                contactRequestReceived = true
-                            }
-                            updateContactRelationUi()
-                            dashPayViewModel.getContactRequestLiveData.removeObserver(this)
+                        Toast.makeText(this@DashPayUserActivity, msg, Toast.LENGTH_LONG).show()
+                    }
+                    Status.SUCCESS -> {
+                        setResult(RESULT_CODE_CHANGED)
+                        if (sendingRequest) {
+                            contactRequestSent = true
+                        } else {
+                            contactRequestReceived = true
                         }
+                        updateContactRelationUi()
+                        dashPayViewModel.getContactRequestLiveData.removeObserver(this)
                     }
                 }
             }
-        })
-
-        activity_rv.layoutManager = LinearLayoutManager(this)
-        activity_rv.adapter = this.notificationsAdapter
-
-        if (contactRequestReceived || contactRequestSent) {
-            dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
-                if (Status.SUCCESS == it.status) {
-                    if (it.data != null) {
-                        processResults(it.data)
-                    }
-                }
-            })
         }
+    })
+
+    activity_rv.layoutManager = LinearLayoutManager(this)
+    activity_rv.adapter = this.notificationsAdapter
+
+    if (contactRequestReceived || contactRequestSent) {
+        dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
+            if (Status.SUCCESS == it.status) {
+                if (it.data != null) {
+                    processResults(it.data)
+                }
+            }
+        })
+    }
 
         if (showContactHistoryDisclaimer && !contactRequestReceived) {
             contact_history_disclaimer.visibility = View.VISIBLE
