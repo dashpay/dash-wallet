@@ -913,7 +913,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     suspend fun getLocalUsernameSearchResult(userId: String): UsernameSearchResult {
         val profile = dashPayProfileDaoAsync.load(userId)
-        val receivedContactRequest = dashPayContactRequestDaoAsync.loadToOthers(userId)?.let { it[0] }
+        val receivedContactRequest = dashPayContactRequestDaoAsync.loadToOthers(userId)?.let { if (it.isNotEmpty()) it[0] else null }
         val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { if (it.isNotEmpty()) it[0] else null }
 
         return UsernameSearchResult(profile!!.username, profile, sentContactRequest, receivedContactRequest)
