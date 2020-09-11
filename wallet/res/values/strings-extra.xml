@@ -386,7 +386,6 @@
     <string name="contact_request_ignore">Ignore</string>
 
     <string name="contacts_no_results">There are no contacts that match</string>
-    <string name="contacts_loading">Searching for contact <b>"%"</b> on the Dash Network</string>
 
     <string name="contacts_title">Contacts</string>
     <string name="contact_requests_title">Contact Requests</string>
@@ -415,5 +414,8 @@
 
     <string name="scan_to_pay_username_dialog_message">Not a valid Dash Username or Identity\n\n%s</string>
     <string name="send_coins_to_username">Sending to</string>
+    <string name="contact_history_disclaimer">Add % as your contact to &lt;b>Pay Directly to Username&lt;/b> and &lt;b>Retain Mutual Transaction History&lt;/b></string>
+    <string name="contact_history_disclaimer_pending">Once % accepts your request you can &lt;b>Pay Directly to Username&lt;/b></string>
+    <string name="stranger_activity_disclaimer_text">Payments made directly to addresses won’t be retained in activity.</string>
 
 </resources>
