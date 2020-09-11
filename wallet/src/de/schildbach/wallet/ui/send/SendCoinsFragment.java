@@ -268,21 +268,28 @@ public class SendCoinsFragment extends Fragment {
                 throw new IllegalArgumentException();
             }
             viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
+            if (paymentIntent.payeeDashPayUsername != null) {
+                dashPayViewModel.loadUser(paymentIntent.payeeDashPayUsername);
+            }
 
-            if (paymentIntent.isIdentityPaymentRequest()) {
-                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(paymentIntent.payeeUserId).observe(getViewLifecycleOwner(), new Observer<DashPayProfile>() {
+            if (paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUserId != null) {
+                Observer<DashPayProfile> observer = new Observer<DashPayProfile>() {
                     @Override
                     public void onChanged(DashPayProfile dashPayProfile) {
-                        if(dashPayProfile != null) {
+                        if (dashPayProfile != null) {
                             Address address = dashPayViewModel.getNextContactAddress(paymentIntent.payeeUserId);
-                            PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()), dashPayProfile.getUserId());
+                            PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
+                                    Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+                                    dashPayProfile.getUserId());
 
                             viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
 
                             enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
                         }
                     }
-                });
+                };
+                AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(paymentIntent.payeeUserId)
+                        .observe(getViewLifecycleOwner(), observer);
             } else {
                 viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
             }
@@ -438,14 +445,16 @@ public class SendCoinsFragment extends Fragment {
         }
 
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                activity.getIntent().getAction(), transaction, activity.isUserAuthorized(), viewModel.getBasePaymentIntentValue().payeeUserId);
+                activity.getIntent().getAction(), transaction, activity.isUserAuthorized(),
+                viewModel.getBasePaymentIntentValue().payeeUserId,
+                viewModel.getBasePaymentIntentValue().payeeDashPayUsername);
         startActivity(transactionResultIntent);
     }
 
     private void handleEmpty() {
         final Coin available = viewModel.getWallet().getBalance(BalanceType.ESTIMATED);
         enterAmountSharedViewModel.getApplyMaxAmountEvent().setValue(available);
-        
+
         handler.post(dryrunRunnable);
     }
 
