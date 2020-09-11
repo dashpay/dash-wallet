@@ -863,60 +863,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         log.info("check database integrity complete in $watch")
     }
 
-    // This will check for missing profiles, download them and update the database
-    private suspend fun checkDatabaseIntegrity() {
-        val watch = Stopwatch.createStarted()
-        log.info("check database integrity: starting");
-
-        val userIdList = HashSet<String>()
-        val missingProfiles = HashSet<String>()
-        val userId = blockchainIdentity.uniqueIdString
-
-        var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
-        val toContactMap = HashMap<String, DashPayContactRequest>()
-        toContactDocuments!!.forEach {
-            userIdList.add(it.toUserId)
-            toContactMap[it.toUserId] = it
-        }
-        // Get all contact requests where toUserId == userId, the users who have added me
-        val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)
-        val fromContactMap = HashMap<String, DashPayContactRequest>()
-        fromContactDocuments!!.forEach {
-            userIdList.add(it.userId)
-            fromContactMap[it.userId] = it
-        }
-
-        for (user in userIdList) {
-            val profile = dashPayProfileDaoAsync.load(user)
-            if (profile == null) {
-                missingProfiles.add(user)
-            }
-        }
-
-        if (missingProfiles.isNotEmpty()) {
-            val profileDocuments = Profiles(platform).getList(missingProfiles.toList()) //only handles 100 userIds
-            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
-
-            val nameDocuments = platform.names.getList(missingProfiles.toList())
-            val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
-
-            for (id in missingProfiles) {
-                val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
-                val username = nameDocument!!.data["normalizedLabel"] as String
-                val identityId = getIdentityForName(nameDocument)
-
-                val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                        "", platform.identities.get(identityId)!!)
-
-                val profile = DashPayProfile.fromDocument(profileDocument, username)
-                dashPayProfileDaoAsync.insert(profile!!)
-                log.info("check database integrity: adding missing profile $username:$id")
-            }
-        }
-
-        log.info("check database integrity complete in $watch")
-    }
-
     fun addContactsUpdatedListener(listener: OnContactsUpdated) {
         onContactsUpdatedListeners.add(listener)
     }
