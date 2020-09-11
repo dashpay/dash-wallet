@@ -201,7 +201,7 @@ class WalletFragment : Fragment() {
         // the Join DashPay (evolution) button on the shortcuts bar.
         // If that is the only function that the platform required for, then we can
         // conditionally execute this code when a username hasn't been registered.
-        dashPayViewModel = ViewModelProvider(this)[DashPayViewModel::class.java]
+        dashPayViewModel = ViewModelProvider(requireActivity())[DashPayViewModel::class.java]
         dashPayViewModel!!.isPlatformAvailableLiveData.observe(viewLifecycleOwner, object : Observer<Resource<Boolean?>?> {
             override fun onChanged(status: Resource<Boolean?>?) {
                 if (status?.status === Status.SUCCESS) {
@@ -212,6 +212,11 @@ class WalletFragment : Fragment() {
                     isPlatformAvailable = false
                 }
                 showHideJoinDashPayAction()
+            }
+        })
+        dashPayViewModel!!.sendContactRequestWorkInfo.observe(viewLifecycleOwner, Observer {
+            it.forEach { workInfo ->
+                println("sendContactRequestWorkInfo:\t$workInfo")
             }
         })
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(viewLifecycleOwner,

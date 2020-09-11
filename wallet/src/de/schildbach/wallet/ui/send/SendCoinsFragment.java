@@ -260,7 +260,7 @@ public class SendCoinsFragment extends Fragment {
             }
         });
 
-        dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
+        dashPayViewModel = new ViewModelProvider(activity).get(DashPayViewModel.class);
 
         if (savedInstanceState == null) {
             final Intent intent = activity.getIntent();

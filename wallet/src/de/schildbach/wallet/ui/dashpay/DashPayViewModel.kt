@@ -35,7 +35,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     private val mWorkManager: WorkManager = WorkManager.getInstance(application)
 
-    private val outputStatus: LiveData<List<WorkInfo>>
+    val sendContactRequestWorkInfo: LiveData<List<WorkInfo>>
         get() = mWorkManager.getWorkInfosByTagLiveData(SendContactRequestOperation.TAG)
 
     private val usernameLiveData = MutableLiveData<String>()
