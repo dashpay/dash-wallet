@@ -20,6 +20,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import com.google.common.base.Stopwatch
+import com.google.common.util.concurrent.SettableFuture
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -86,6 +87,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val updatingContacts = AtomicBoolean(false)
+    private val preDownloadBlocks = AtomicBoolean(true)
+    private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
 
     val platform = Platform(Constants.NETWORK_PARAMETERS)
     private val profiles = Profiles(platform)
@@ -697,36 +700,36 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     // contacts
     suspend fun updateContactRequests() {
-        // only allow this method to execute once at a time
-        if (updatingContacts.get()) {
-            log.info("updateContactRequests is already running")
-            return
-        }
-
-        if (!platform.hasApp("dashpay")) {
-            return
-        }
-
-        val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
-        if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
-            return
-        }
-        val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
-        if (blockchainIdentityData.username == null) {
-            return // this is here because the wallet is being reset without removing blockchainIdentityData
-        }
-
-        val userIdList = HashSet<String>()
-        val watch = Stopwatch.createStarted()
-        var addedContact = false
-        Context.propagate(walletApplication.wallet.context)
-        var encryptionKey: KeyParameter? = null
-
-        var lastContactRequestTime = if (dashPayContactRequestDaoAsync.countAllRequests() > 0)
-            dashPayContactRequestDaoAsync.getLastTimestamp()
-        else 0L
-
         try {
+            // only allow this method to execute once at a time
+            if (updatingContacts.get()) {
+                log.info("updateContactRequests is already running")
+                return
+            }
+
+            if (!platform.hasApp("dashpay")) {
+                return
+            }
+
+            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
+            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+                return
+            }
+            val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+            if (blockchainIdentityData.username == null) {
+                return // this is here because the wallet is being reset without removing blockchainIdentityData
+            }
+
+            val userIdList = HashSet<String>()
+            val watch = Stopwatch.createStarted()
+            var addedContact = false
+            Context.propagate(walletApplication.wallet.context)
+            var encryptionKey: KeyParameter? = null
+
+            var lastContactRequestTime = if (dashPayContactRequestDaoAsync.countAllRequests() > 0)
+                dashPayContactRequestDaoAsync.getLastTimestamp()
+            else 0L
+
             updatingContacts.set(true)
             checkDatabaseIntegrity()
 
@@ -817,6 +820,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             log.error(formatExceptionMessage("error updating contacts", e))
         } finally {
             updatingContacts.set(false)
+            if (preDownloadBlocks.get()) {
+                log.info("PreDownloadBlocks: complete")
+                preDownloadBlocksFuture?.set(true)
+                preDownloadBlocks.set(false)
+            }
         }
     }
 
@@ -900,5 +908,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { it[0] }
 
         return UsernameSearchResult(profile!!.username, profile, sentContactRequest, receivedContactRequest)
+    }
+
+    /**
+     * Called before DashJ starts synchronizing the blockchain
+     */
+    fun preBlockDownload(future: SettableFuture<Boolean>) {
+        GlobalScope.launch(Dispatchers.IO) {
+            preDownloadBlocks.set(true)
+            preDownloadBlocksFuture = future
+            log.info("PreDownloadBlocks: starting")
+            if(!updatingContacts.get()) {
+                updateContactRequests()
+            }
+        }
     }
 }

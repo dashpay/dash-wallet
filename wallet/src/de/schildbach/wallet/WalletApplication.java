@@ -263,7 +263,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public void finalizeInitialization() {
-        wallet.getContext().initDash(true, true);
+        wallet.getContext().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
