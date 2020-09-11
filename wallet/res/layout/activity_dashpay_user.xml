@@ -1,374 +1,384 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ImageView
-        android:id="@+id/close"
-        android:layout_width="?attr/actionBarSize"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?attr/selectableItemBackground"
-        android:padding="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_close_blue" />
-
-    <ImageView
-        android:id="@+id/avatar"
-        android:layout_width="128dp"
-        android:layout_height="128dp"
-        android:layout_marginTop="78dp"
-        android:transitionName="avatar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:src="@drawable/user4" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/usernameContainer"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="17dp"
-        app:layout_constraintTop_toBottomOf="@id/avatar">
-
-        <TextView
-            android:id="@+id/displayNameTxt"
-            style="@style/MontserratMedium"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/black_text"
-            android:textSize="16sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="Bean Swanson" />
-
-        <TextView
-            android:id="@+id/usernameTxt"
-            style="@style/MontserratMedium"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textColor="@color/dash_gray"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/displayNameTxt"
-            tools:text="Bean_Swason_98" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/background_container"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="63dp"
-        android:background="@color/bg_less_bright"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/usernameContainer" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/sendContactRequestBtn"
-        style="@style/ContactRequestButton"
-        android:text="@string/send_contact_request"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/usernameContainer">
-
-        <TextView
-            android:id="@+id/send_contact_request_text"
-            style="@style/ContactRequestButtonText"
-            android:text="@string/send_contact_request"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ImageView
-            style="@style/ContactRequestButtonImage"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/send_contact_request_text"
-            app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_add_contact_white" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/sendingContactRequestBtn"
-        style="@style/ContactRequestButton"
-        android:background="@drawable/light_gray_button_background"
-        android:text="@string/send_contact_request"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/usernameContainer">
-
-        <TextView
-            android:id="@+id/sending_contact_request_text"
-            style="@style/ContactRequestButtonText"
-            android:text="@string/sending_contact_request"
-            android:textColor="@color/medium_gray"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ImageView
-            android:id="@+id/sendingContactRequestBtnImage"
-            style="@style/ContactRequestButtonImage"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/sending_contact_request_text"
-            app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_hourglass" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/contactRequestSentBtn"
-        style="@style/ContactRequestButton.Sent"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
-        android:background="@null"
-        android:text="@string/send_contact_request"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
-        tools:visibility="visible">
-
-        <TextView
-            android:id="@+id/contact_request_sent_text"
-            style="@style/ContactRequestButtonText"
-            android:text="@string/contact_request_sent"
-            android:textColor="@color/dash_golden"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ImageView
-            style="@style/ContactRequestButtonImage"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/contact_request_sent_text"
-            app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_pending_contact_request" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <Button
-        android:id="@+id/payContactBtn"
-        style="@style/DashButton.Blue"
-        android:layout_width="0dp"
-        android:layout_height="40dp"
-        android:layout_marginStart="30dp"
-        android:layout_marginTop="43dp"
-        android:layout_marginEnd="30dp"
-        android:paddingStart="26dp"
-        android:paddingEnd="26dp"
-        android:text="@string/pay"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/usernameContainer"
-        tools:alpha="0.5"
-        tools:visibility="gone" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/contactRequestReceivedContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/payContactBtn"
-        tools:visibility="gone">
-
-        <TextView
-            android:id="@+id/requestTitle"
-            style="@style/MontserratRegular"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="34dp"
-            android:layout_marginTop="26dp"
-            android:layout_marginRight="34dp"
-            android:textColor="@android:color/black"
-            android:textSize="13sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="@string/contact_request_received_title" />
-
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/request_buttons_guide"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.5"
-            app:layout_constraintTop_toBottomOf="@id/requestTitle" />
-
-        <Button
-            android:id="@+id/accept"
-            style="@style/DashButton.AquaGreen"
-            android:layout_width="100dp"
-            android:layout_height="39dp"
-            android:layout_marginTop="14dp"
-            android:layout_marginEnd="5dp"
-            android:text="@string/contact_request_accept"
-            app:layout_constraintEnd_toStartOf="@id/request_buttons_guide"
-            app:layout_constraintTop_toBottomOf="@id/requestTitle" />
-
-        <Button
-            android:id="@+id/ignore"
-            style="@style/DashButton.MediumGray"
-            android:layout_width="100dp"
-            android:layout_height="39dp"
-            android:layout_marginStart="5dp"
-            android:layout_marginTop="14dp"
-            android:text="@string/contact_request_ignore"
-            app:layout_constraintStart_toEndOf="@id/request_buttons_guide"
-            app:layout_constraintTop_toBottomOf="@id/requestTitle" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginStart="15dp"
-            android:layout_marginTop="32dp"
-            android:layout_marginEnd="15dp"
-            android:alpha="0.37"
-            android:background="@color/dash_light_gray"
-            app:layout_constraintTop_toBottomOf="@id/ignore" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/contact_history_disclaimer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="38dp"
-        android:layout_marginEnd="32dp"
-        android:background="@drawable/round_corners_white_bg"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/background_container"
-        tools:visibility="visible">
-
-        <ImageView
-            android:id="@+id/ic_add_stranger"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_add_stranger" />
-
-        <TextView
-            android:id="@+id/contact_history_disclaimer_text"
-            style="@style/MontserratRegular"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="26dp"
-            android:layout_marginTop="20dp"
-            android:layout_marginEnd="26dp"
-            android:layout_marginBottom="32dp"
-            android:gravity="center"
-            android:textColor="@android:color/black"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/ic_add_stranger"
-            app:layout_constraintVertical_bias="0"
-            tools:text="Add Katie Rennie as your contact to Pay Directly to Username and Retain Mutual Transaction History" />
+        android:orientation="vertical">
 
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/sendContactRequestBtnStrangerQR"
-            style="@style/ContactRequestButton.White"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="32dp"
-            android:text="@string/send_contact_request"
-            android:visibility="visible"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text"
-            tools:visibility="gone">
-
-            <TextView
-                android:id="@+id/send_contact_request_text_stranger"
-                style="@style/ContactRequestButtonText"
-                android:text="@string/send_contact_request"
-                android:textColor="@color/inverted_button"
-                android:visibility="visible"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
             <ImageView
-                style="@style/ContactRequestButtonImage"
-                android:layout_width="0dp"
-                android:scaleType="centerInside"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/send_contact_request_text_stranger"
+                android:id="@+id/close"
+                android:layout_width="?attr/actionBarSize"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/selectableItemBackground"
+                android:padding="16dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_close_blue" />
+
+            <ImageView
+                android:id="@+id/avatar"
+                android:layout_width="128dp"
+                android:layout_height="128dp"
+                android:layout_marginTop="78dp"
+                android:transitionName="avatar"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/inverted_contact_icon" />
+                tools:src="@drawable/user4" />
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:clipToPadding="false"
-            android:id="@+id/sendingContactRequestDisclaimerBtn"
-            style="@style/ContactRequestButton.White"
-            android:layout_marginTop="40dp"
-            android:layout_marginBottom="36dp"
-            android:text="@string/send_contact_request"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text"
-            tools:visibility="visible">
-
-            <TextView
-                android:id="@+id/sending_contact_request_disclaimer_text"
-                style="@style/ContactRequestButtonText"
-                android:text="@string/sending_contact_request"
-                android:textColor="@color/medium_gray"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <ImageView
-                android:id="@+id/sendingContactRequestBtnDisclaimerImage"
-                android:layout_width="24dp"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/usernameContainer"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
+                android:layout_marginTop="17dp"
+                app:layout_constraintTop_toBottomOf="@id/avatar">
+
+                <TextView
+                    android:id="@+id/displayNameTxt"
+                    style="@style/MontserratMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/black_text"
+                    android:textSize="16sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="Bean Swanson" />
+
+                <TextView
+                    android:id="@+id/usernameTxt"
+                    style="@style/MontserratMedium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/dash_gray"
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/displayNameTxt"
+                    tools:text="Bean_Swason_98" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/background_container"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="63dp"
+                android:background="@color/bg_less_bright"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/sending_contact_request_disclaimer_text"
+                app:layout_constraintTop_toBottomOf="@id/usernameContainer" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/sendContactRequestBtn"
+                style="@style/ContactRequestButton"
+                android:text="@string/send_contact_request"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/ic_hourglass" />
+                app:layout_constraintTop_toBottomOf="@id/usernameContainer">
+
+                <TextView
+                    android:id="@+id/send_contact_request_text"
+                    style="@style/ContactRequestButtonText"
+                    android:text="@string/send_contact_request"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    style="@style/ContactRequestButtonImage"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/send_contact_request_text"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:srcCompat="@drawable/ic_add_contact_white" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/sendingContactRequestBtn"
+                style="@style/ContactRequestButton"
+                android:background="@drawable/light_gray_button_background"
+                android:text="@string/send_contact_request"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/usernameContainer">
+
+                <TextView
+                    android:id="@+id/sending_contact_request_text"
+                    style="@style/ContactRequestButtonText"
+                    android:text="@string/sending_contact_request"
+                    android:textColor="@color/medium_gray"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    android:id="@+id/sendingContactRequestBtnImage"
+                    style="@style/ContactRequestButtonImage"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/sending_contact_request_text"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:srcCompat="@drawable/ic_hourglass" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/contactRequestSentBtn"
+                style="@style/ContactRequestButton.Sent"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:background="@null"
+                android:text="@string/send_contact_request"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/usernameContainer"
+                tools:visibility="visible">
+
+                <TextView
+                    android:id="@+id/contact_request_sent_text"
+                    style="@style/ContactRequestButtonText"
+                    android:text="@string/contact_request_sent"
+                    android:textColor="@color/dash_golden"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    style="@style/ContactRequestButtonImage"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/contact_request_sent_text"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:srcCompat="@drawable/ic_pending_contact_request" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <Button
+                android:id="@+id/payContactBtn"
+                style="@style/DashButton.Blue"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="30dp"
+                android:layout_marginTop="43dp"
+                android:layout_marginEnd="30dp"
+                android:paddingStart="26dp"
+                android:paddingEnd="26dp"
+                android:text="@string/pay"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/usernameContainer"
+                tools:alpha="0.5"
+                tools:visibility="gone" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/contactRequestReceivedContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/payContactBtn"
+                tools:visibility="gone">
+
+                <TextView
+                    android:id="@+id/requestTitle"
+                    style="@style/MontserratRegular"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="34dp"
+                    android:layout_marginTop="26dp"
+                    android:layout_marginRight="34dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="13sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="@string/contact_request_received_title" />
+
+                <androidx.constraintlayout.widget.Guideline
+                    android:id="@+id/request_buttons_guide"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:orientation="vertical"
+                    app:layout_constraintGuide_percent="0.5"
+                    app:layout_constraintTop_toBottomOf="@id/requestTitle" />
+
+                <Button
+                    android:id="@+id/accept"
+                    style="@style/DashButton.AquaGreen"
+                    android:layout_width="100dp"
+                    android:layout_height="39dp"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginEnd="5dp"
+                    android:text="@string/contact_request_accept"
+                    app:layout_constraintEnd_toStartOf="@id/request_buttons_guide"
+                    app:layout_constraintTop_toBottomOf="@id/requestTitle" />
+
+                <Button
+                    android:id="@+id/ignore"
+                    style="@style/DashButton.MediumGray"
+                    android:layout_width="100dp"
+                    android:layout_height="39dp"
+                    android:layout_marginStart="5dp"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/contact_request_ignore"
+                    app:layout_constraintStart_toEndOf="@id/request_buttons_guide"
+                    app:layout_constraintTop_toBottomOf="@id/requestTitle" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="15dp"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginEnd="15dp"
+                    android:alpha="0.37"
+                    android:background="@color/dash_light_gray"
+                    app:layout_constraintTop_toBottomOf="@id/ignore" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/contact_history_disclaimer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:layout_marginTop="38dp"
+                android:layout_marginEnd="32dp"
+                android:background="@drawable/round_corners_white_bg"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/background_container"
+                tools:visibility="visible">
+
+                <ImageView
+                    android:id="@+id/ic_add_stranger"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="32dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:srcCompat="@drawable/ic_add_stranger" />
+
+                <TextView
+                    android:id="@+id/contact_history_disclaimer_text"
+                    style="@style/MontserratRegular"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="26dp"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginEnd="26dp"
+                    android:layout_marginBottom="32dp"
+                    android:gravity="center"
+                    android:textColor="@android:color/black"
+                    android:textSize="16sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/ic_add_stranger"
+                    app:layout_constraintVertical_bias="0"
+                    tools:text="Add Katie Rennie as your contact to Pay Directly to Username and Retain Mutual Transaction History" />
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/sendContactRequestBtnStrangerQR"
+                    style="@style/ContactRequestButton.White"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginBottom="32dp"
+                    android:text="@string/send_contact_request"
+                    android:visibility="visible"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text"
+                    tools:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/send_contact_request_text_stranger"
+                        style="@style/ContactRequestButtonText"
+                        android:text="@string/send_contact_request"
+                        android:textColor="@color/inverted_button"
+                        android:visibility="visible"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <ImageView
+                        style="@style/ContactRequestButtonImage"
+                        android:layout_width="0dp"
+                        android:scaleType="centerInside"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/send_contact_request_text_stranger"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/inverted_contact_icon" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/sendingContactRequestDisclaimerBtn"
+                    style="@style/ContactRequestButton.White"
+                    android:layout_marginTop="40dp"
+                    android:layout_marginBottom="36dp"
+                    android:clipToPadding="false"
+                    android:text="@string/send_contact_request"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer_text"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/sending_contact_request_disclaimer_text"
+                        style="@style/ContactRequestButtonText"
+                        android:text="@string/sending_contact_request"
+                        android:textColor="@color/medium_gray"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <ImageView
+                        android:id="@+id/sendingContactRequestBtnDisclaimerImage"
+                        android:layout_width="24dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/sending_contact_request_disclaimer_text"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_hourglass" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/activity_rv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="28dp"
+            android:layout_marginEnd="15dp"
+            android:overScrollMode="never"
+            tools:listitem="@layout/notification_contact_request_received_row" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/activity_rv"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginStart="15dp"
-        android:layout_marginTop="28dp"
-        android:layout_marginEnd="15dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/contact_history_disclaimer"
-        tools:listitem="@layout/notification_contact_request_received_row" />
+    </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

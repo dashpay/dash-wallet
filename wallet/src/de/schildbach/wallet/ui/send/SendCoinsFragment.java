@@ -278,6 +278,8 @@ public class SendCoinsFragment extends Fragment {
             if ((paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUserId != null) ||
                     (paymentIntent.payeeDashPayUsername != null)) {
 
+            if (paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUserId != null) {
+                Observer<DashPayProfile> observer = new Observer<DashPayProfile>() {
                 //TODO: This is not current used, remove?
                 final Observer<DashPayProfile> observer = new Observer<DashPayProfile>() {
                     @Override
@@ -306,9 +308,9 @@ public class SendCoinsFragment extends Fragment {
                 if (paymentIntent.payeeDashPayUsername != null) {
                     AppDatabase.getAppDatabase().dashPayProfileDao().loadFromUsernameDistinct(paymentIntent.payeeDashPayUsername)
                             .observe(getViewLifecycleOwner(), new Observer<DashPayProfile>() {
-                                @Override
-                                public void onChanged(DashPayProfile dashPayProfile) {
-                                    if (dashPayProfile != null) {
+                    @Override
+                    public void onChanged(DashPayProfile dashPayProfile) {
+                        if (dashPayProfile != null) {
                                         dashPayViewModel.getGetContactLiveData().observe(getViewLifecycleOwner(), contactRequestObserver);
                                         dashPayViewModel.getContact(dashPayProfile.getUserId());
                                     } else {
