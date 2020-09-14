@@ -10,11 +10,9 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bouncycastle.crypto.params.KeyParameter
 
 class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
-    : CoroutineWorker(context, parameters) {
+    : BaseWorker(context, parameters) {
 
     companion object {
-        const val TAG = "SendContactRequestWorker.TAG"
-
         const val KEY_USER_ID = "SendContactRequestWorker.KEY_USER_ID"
         const val KEY_TO_USER_ID = "SendContactRequestWorker.KEY_TO_USER_ID"
 
@@ -43,7 +41,7 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
                     KEY_USER_ID to sendContactRequestResult.data!!.userId,
                     KEY_TO_USER_ID to sendContactRequestResult.data.toUserId
             ))
-            else -> Result.failure()
+            else -> Result.failure(workDataOf(KEY_ERROR_MESSAGE to sendContactRequestResult.message))
         }
     }
 

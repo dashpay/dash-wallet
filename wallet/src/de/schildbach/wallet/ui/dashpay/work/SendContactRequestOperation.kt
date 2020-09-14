@@ -26,10 +26,14 @@ class SendContactRequestOperation(application: Application) {
     val operationStatus: LiveData<Resource<Pair<String, String>?>> = workStatus.switchMap {
         val statuses = mutableSetOf<WorkInfo.State>()
         var sendContactRequestWorkInfo: WorkInfo? = null
+        var errorMessage: String? = null
         it.forEach { workInfo ->
             statuses.add(workInfo.state)
             if (workInfo.tags.contains(SendContactRequestWorker::class.qualifiedName)) {
                 sendContactRequestWorkInfo = workInfo
+            }
+            if (workInfo.outputData.hasKeyWithValueOfType<String>(BaseWorker.KEY_ERROR_MESSAGE)) {
+                errorMessage = BaseWorker.extractError(workInfo.outputData)
             }
         }
         val allWorkersSucceeded = statuses.size == 1 && statuses.contains(WorkInfo.State.SUCCEEDED)
@@ -45,7 +49,11 @@ class SendContactRequestOperation(application: Application) {
                         }
                     }
                     statuses.contains(WorkInfo.State.FAILED) -> {
-                        value = Resource.error(Exception())
+                        if (errorMessage != null) {
+                            value = Resource.error(errorMessage!!)
+                        } else {
+                            value = Resource.error(Exception())
+                        }
                     }
                     statuses.contains(WorkInfo.State.ENQUEUED) || statuses.contains(WorkInfo.State.RUNNING) -> {
                         if (value?.status != Status.LOADING) {
