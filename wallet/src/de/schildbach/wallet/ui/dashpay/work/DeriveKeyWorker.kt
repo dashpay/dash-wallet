@@ -16,15 +16,11 @@ class DeriveKeyWorker(context: Context, parameters: WorkerParameters)
     }
 
     override suspend fun doWork(): Result {
-        println("doWork#1")
         val password = inputData.getString(KEY_PASSWORD) ?: return Result.failure()
         return try {
-            println("doWork#2")
             val encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)
-            println("doWork#3")
             Result.success(workDataOf(KEY_ENCRYPTION_KEY to encryptionKey.key))
         } catch (ex: KeyCrypterException) {
-            println("doWork#error")
             Result.failure()
         }
     }

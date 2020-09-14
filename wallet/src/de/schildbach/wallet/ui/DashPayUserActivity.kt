@@ -25,7 +25,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.core.text.HtmlCompat
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.text.HtmlCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -126,6 +125,9 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }
         payContactBtn.setOnClickListener { startPayActivity() }
 
+        dashPayViewModel!!.sendContactRequestOperation.operationStatus.observe(this, Observer {
+            println("sendContactRequestWorkInfo:\t$it")
+        })
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
         override fun onChanged(it: Resource<DashPayContactRequest>?) {
             if (it != null) {
@@ -179,7 +181,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
     private fun sendContactRequest(isSendingRequest: Boolean, fromDisclaimer: Boolean = false) {
         sendingRequest = isSendingRequest
-        dashPayViewModel.sendContactRequest(profile.userId)
+        dashPayViewModel.sendContactRequestWork(profile.userId)
         startLoading(fromDisclaimer)
     }
 
