@@ -25,7 +25,6 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewTreeObserver;
-import android.widget.TextView;
 
 import de.schildbach.wallet_test.R;
 
@@ -76,11 +75,6 @@ public class KeyboardResponsiveCoordinatorLayout extends CoordinatorLayout {
                 } else {
                     viewToHide.setVisibility(View.VISIBLE);
                 }
-            }
-
-            TextView debugText = findViewById(R.id.debug_text);
-            if (debugText != null) {
-                debugText.setText("difference: " + difference);
             }
         }
     };
