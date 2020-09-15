@@ -390,7 +390,7 @@ public abstract class InputParser {
 
             final PaymentIntent paymentIntent = new PaymentIntent(PaymentIntent.Standard.BIP70, pkiName, pkiCaName,
                     outputs.toArray(new PaymentIntent.Output[0]), memo, paymentUrl, merchantData, null,
-                    paymentRequestHash);
+                    paymentRequestHash, paymentSession.getExpires());
 
             if (paymentIntent.hasPaymentUrl() && !paymentIntent.isSupportedPaymentUrl())
                 throw new PaymentProtocolException.InvalidPaymentURL(

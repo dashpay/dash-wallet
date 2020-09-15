@@ -52,8 +52,8 @@ class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(appl
         super.signAndSendPayment(finalPaymentIntent!!, dryrunSendRequest!!.ensureMinRequiredFee, exchangeRate, basePaymentIntentValue.memo)
     }
 
-    override fun signAndSendPayment(sendRequest: SendRequest) {
+    override fun signAndSendPayment(sendRequest: SendRequest, txAlreadyCompleted: Boolean) {
         state.value = State.SIGNING
-        super.signAndSendPayment(sendRequest)
+        super.signAndSendPayment(sendRequest, false)
     }
 }
