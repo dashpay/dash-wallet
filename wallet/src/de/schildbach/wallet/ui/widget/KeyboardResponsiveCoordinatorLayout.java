@@ -68,7 +68,9 @@ public class KeyboardResponsiveCoordinatorLayout extends CoordinatorLayout {
             int difference = calculateDifferenceBetweenHeightAndUsableArea();
 
             if (viewToHide != null) {
-                if (difference != 0) {
+                // If difference > 0, keyboard is showing.
+                // If difference =< 0, keyboard is not showing or is in multiview mode.
+                if (difference > 0) {
                     viewToHide.setVisibility(View.GONE);
                 } else {
                     viewToHide.setVisibility(View.VISIBLE);
