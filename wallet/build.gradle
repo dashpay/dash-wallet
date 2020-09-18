@@ -36,10 +36,10 @@ dependencies {
     implementation 'androidx.preference:preference:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-beta4'
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'org.dashevo:dashpay:0.14-SNAPSHOT'
-    implementation 'org.dashevo:platform-core:0.14-SNAPSHOT'
-    implementation 'org.dashevo:dpp:0.14-SNAPSHOT'
-    implementation 'org.dashevo:dapi-client:0.14-SNAPSHOT'
+    implementation 'org.dashevo:dashpay:0.15-SNAPSHOT'
+    implementation 'org.dashevo:platform-core:0.15-SNAPSHOT'
+    implementation 'org.dashevo:dpp:0.15-SNAPSHOT'
+    implementation 'org.dashevo:dapi-client:0.15-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:27.0.1-android'
     implementation 'com.google.zxing:core:3.3.3'
