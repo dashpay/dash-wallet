@@ -899,7 +899,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     fun getIdentityForName(nameDocument: Document): String {
         val records = nameDocument.data["records"] as Map<String, Any?>
-        return records["dashIdentity"] as String
+        return records["dashUniqueIdentityId"] as String
     }
 
     suspend fun getLocalUsernameSearchResult(userId: String): UsernameSearchResult {
