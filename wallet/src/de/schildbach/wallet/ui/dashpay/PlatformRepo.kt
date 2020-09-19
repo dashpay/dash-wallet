@@ -46,6 +46,7 @@ import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
+import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_UNIQUE
 import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dashpay.RetryDelayType
@@ -581,6 +582,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 if (blockchainIdentityData.usernameStatus != null) {
                     usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
                 }
+                usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
                 usernameStatuses[currentUsername!!] = usernameStatus
 
                 creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
