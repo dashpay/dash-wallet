@@ -3,27 +3,30 @@ package de.schildbach.wallet.ui.dashpay.work
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.work.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.security.SecurityGuard
-import java.lang.Exception
 
 class SendContactRequestOperation(application: Application) {
 
     companion object {
-        const val WORK_NAME = "SendContactRequest.WORK"
+        const val WORK_NAME = "SendContactRequest.WORK#"
     }
 
     private val workManager: WorkManager = WorkManager.getInstance(application)
-    private val workStatus: LiveData<List<WorkInfo>>
-        get() = workManager.getWorkInfosForUniqueWorkLiveData(WORK_NAME)
 
-    private val operationStatusData = MutableLiveData<Resource<Pair<String, String>?>>()
-    val operationStatus: LiveData<Resource<Pair<String, String>?>> = workStatus.switchMap {
+    private val operationStatusData = mutableMapOf<String, MutableLiveData<Resource<Pair<String, String>>>>()
+    fun operationStatus(userId: String) = workManager.getWorkInfosForUniqueWorkLiveData(WORK_NAME + userId).switchMap {
+        if (!operationStatusData.containsKey(userId)) {
+            operationStatusData[userId] = MutableLiveData()
+        }
+        val userOperationStatusData = operationStatusData[userId]!!
+        if (it == null) {
+            return@switchMap userOperationStatusData
+        }
         val statuses = mutableSetOf<WorkInfo.State>()
         var sendContactRequestWorkInfo: WorkInfo? = null
         var errorMessage: String? = null
@@ -37,22 +40,22 @@ class SendContactRequestOperation(application: Application) {
             }
         }
         val allWorkersSucceeded = statuses.size == 1 && statuses.contains(WorkInfo.State.SUCCEEDED)
-        // ignore the very first shoot if all workers succeeded
-        operationStatusData.apply {
+
+        userOperationStatusData.apply {
             if (value != null || !allWorkersSucceeded) {
                 when {
                     allWorkersSucceeded -> {
                         sendContactRequestWorkInfo!!.apply {
-                            val userId = SendContactRequestWorker.extractUserId(outputData)!!
-                            val toUserId = SendContactRequestWorker.extractToUserId(outputData)!!
-                            value = Resource.success(Pair(userId, toUserId))
+                            val userIdOut = SendContactRequestWorker.extractUserId(outputData)!!
+                            val toUserIdOut = SendContactRequestWorker.extractToUserId(outputData)!!
+                            value = Resource.success(Pair(userIdOut, toUserIdOut))
                         }
                     }
                     statuses.contains(WorkInfo.State.FAILED) -> {
-                        if (errorMessage != null) {
-                            value = Resource.error(errorMessage!!)
+                        value = if (errorMessage != null) {
+                            Resource.error(errorMessage!!)
                         } else {
-                            value = Resource.error(Exception())
+                            Resource.error(Exception())
                         }
                     }
                     statuses.contains(WorkInfo.State.ENQUEUED) || statuses.contains(WorkInfo.State.RUNNING) -> {
@@ -63,7 +66,7 @@ class SendContactRequestOperation(application: Application) {
                 }
             }
         }
-        return@switchMap operationStatusData
+        return@switchMap userOperationStatusData
     }
 
     @SuppressLint("EnqueueWork")
@@ -79,7 +82,7 @@ class SendContactRequestOperation(application: Application) {
                 .build()
 
         return WorkManager.getInstance(context)
-                .beginUniqueWork(WORK_NAME,
+                .beginUniqueWork(WORK_NAME + userId,
                         ExistingWorkPolicy.REPLACE,
                         deriveKeyWorker)
                 .then(sendContactRequestWorker)

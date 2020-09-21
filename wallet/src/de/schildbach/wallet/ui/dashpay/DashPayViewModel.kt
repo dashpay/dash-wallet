@@ -18,13 +18,16 @@ package de.schildbach.wallet.ui.dashpay
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.*
-import androidx.work.*
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bouncycastle.crypto.params.KeyParameter
 
@@ -155,12 +158,12 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun sendContactRequestWork(toUserId: String) {
-        sendContactRequestOperation
+        SendContactRequestOperation(walletApplication)
                 .create(walletApplication, toUserId)
                 .enqueue()
     }
 
-    val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) { it ->
+    val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) {
         liveData(context = contactRequestJob + Dispatchers.IO) {
             if (it.second != null) {
                 emit(Resource.loading(null))
@@ -190,19 +193,6 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
 
     fun getFrequentContacts() {
         frequentContactsLiveData.getFrequentContacts()
-    }
-
-    // is there a better place for this
-    fun forgetAutoAcceptContactRequest(userId: String) {
-        val sharedPreferences = walletApplication.getSharedPreferences("forgetPendingRequestUserId", Context.MODE_PRIVATE)
-        sharedPreferences.edit()
-                .putBoolean(userId, false)
-                .apply()
-    }
-
-    fun shouldAutoAcceptContactRequest(userId: String): Boolean {
-        val sharedPreferences = walletApplication.getSharedPreferences("forgetPendingRequestUserId", Context.MODE_PRIVATE)
-        return sharedPreferences.getBoolean(userId, true)
     }
 
     internal fun cancelSendContactRequest(context: Context) {

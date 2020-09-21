@@ -17,9 +17,9 @@ package de.schildbach.wallet.ui.send
 
 import android.app.Application
 import androidx.lifecycle.MutableLiveData
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.PaymentIntent
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.SendRequest
 
@@ -41,6 +41,10 @@ class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(appl
 
     @JvmField
     var dryrunException: Exception? = null
+
+    var dashPayProfileData: DashPayProfile? = null
+
+    var pendingContactRequest = false
 
     fun createSendRequest(finalPaymentIntent: PaymentIntent, signInputs: Boolean, forceEnsureMinRequiredFee: Boolean): SendRequest {
         return createSendRequest(wallet, basePaymentIntentValue.mayEditAmount(), finalPaymentIntent, signInputs, forceEnsureMinRequiredFee)

@@ -17,7 +17,9 @@
 package de.schildbach.wallet.ui.send
 
 
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -26,18 +28,14 @@ import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import com.bumptech.glide.Glide
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
-import de.schildbach.wallet.ui.dashpay.AutoAcceptContactRequestViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
-import kotlinx.android.synthetic.main.dialog_confirm_transaction.avatar
-import kotlinx.android.synthetic.main.dialog_confirm_transaction.displayname
 
 
 class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
@@ -86,7 +84,6 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     }
 
     private lateinit var sharedViewModel: SingleActionSharedViewModel
-    private lateinit var autoAcceptViewModel: AutoAcceptContactRequestViewModel
     private var pendingContactRequest = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -109,7 +106,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             pendingContactRequest = getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
             if (payeeName != null && payeeVerifiedBy != null) {
                 sendtouser.visibility = View.GONE
-                confirm_auto_accept_container.visibility = View.GONE
+                confirm_auto_accept.visibility = View.GONE
                 address.text = payeeName
                 payee_secured_by.text = payeeVerifiedBy
                 payee_verified_by_pane.visibility = View.VISIBLE
@@ -125,23 +122,21 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
                 val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context!!,
                         username[0])
 
-                if(avatarUrl.isNotEmpty()) {
+                if (avatarUrl.isNotEmpty()) {
                     Glide.with(avatar).load(avatarUrl).circleCrop()
                             .placeholder(defaultAvatar).into(avatar)
                 } else {
                     avatar.background = defaultAvatar
                 }
+                confirm_auto_accept.isChecked = autoAcceptContactRequestLastValue
                 if (pendingContactRequest) {
-                    confirm_auto_accept_container.visibility = View.VISIBLE
-                    confirm_auto_accept_label.setOnClickListener {
-                        confirm_auto_accept.performClick()
-                    }
+                    confirm_auto_accept.visibility = View.VISIBLE
                 } else {
-                    confirm_auto_accept_container.visibility = View.GONE
+                    confirm_auto_accept.visibility = View.GONE
                 }
             } else {
                 sendtouser.visibility = View.GONE
-                confirm_auto_accept_container.visibility = View.GONE
+                confirm_auto_accept.visibility = View.GONE
                 address.ellipsize = TextUtils.TruncateAt.MIDDLE
                 address.text = getString(ARG_ADDRESS)
             }
@@ -154,12 +149,9 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         }
         confirm_payment.setOnClickListener {
             dismiss()
+            autoAcceptContactRequestLastValue = confirm_auto_accept.isChecked
+            sharedViewModel.autoAcceptContactRequest = pendingContactRequest && confirm_auto_accept.isChecked
             sharedViewModel.clickConfirmButtonEvent.call(true)
-
-            // handle the auto accept checkbox
-            if (pendingContactRequest)
-                autoAcceptViewModel.autoAcceptContactRequest.call(confirm_auto_accept.isChecked)
-
         }
         dialog?.setOnShowListener { dialog ->
             // apply wrap_content height
@@ -177,8 +169,15 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         sharedViewModel = activity?.run {
             ViewModelProvider(this)[SingleActionSharedViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
-        autoAcceptViewModel = activity?.run {
-            ViewModelProvider(this)[AutoAcceptContactRequestViewModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
     }
+
+    private var autoAcceptContactRequestLastValue: Boolean
+        get() {
+            val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity)
+            return prefs.getBoolean("autoAcceptContactRequest", true)
+        }
+        set(value) {
+            val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity)
+            prefs.edit().putBoolean("autoAcceptContactRequest", value).apply()
+        }
 }

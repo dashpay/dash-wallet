@@ -63,8 +63,6 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
 
     val dashPayProfileData = MutableLiveData<DashPayProfile>()
 
-    val pendingContactRequest = MutableLiveData<Boolean>()
-
     init {
         val currencyCode = (application as WalletApplication).configuration.exchangeCurrencyCode
         exchangeRateData = ExchangeRatesRepository.getInstance().getRate(currencyCode)

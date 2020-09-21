@@ -24,7 +24,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.core.text.HtmlCompat
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -125,13 +124,24 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }
         payContactBtn.setOnClickListener { startPayActivity() }
 
-        dashPayViewModel!!.sendContactRequestOperation.operationStatus.observe(this, Observer {
-            println("sendContactRequestWorkInfo:\t$it")
-            if (it.status == Status.SUCCESS) {
-                println("success:\tuserId= ${it.data!!.first}, toUserId= ${it.data.second}")
-            } else if (it.status == Status.ERROR) {
-                println("error:\t${it.message}")
+        dashPayViewModel.sendContactRequestOperation.operationStatus(profile.userId).observe(this, Observer {
+            contact_request_progress.visibility = if (it.status == Status.LOADING) View.VISIBLE else View.GONE
+            when (it.status) {
+                Status.SUCCESS -> {
+                    contactRequestSent = true
+                    updateContactRelationUi()
+                }
+                Status.ERROR -> {
+                    Toast.makeText(this@DashPayUserActivity, "error", Toast.LENGTH_LONG).show()
+                }
+                Status.LOADING -> {
+
+                }
+                Status.CANCELED -> {
+
+                }
             }
+            updateContactRelationUi()
         })
         dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
             override fun onChanged(it: Resource<DashPayContactRequest>?) {
@@ -249,9 +259,9 @@ class DashPayUserActivity : InteractionAwareActivity(),
                 activity_rv.visibility = View.VISIBLE
                 dashPayViewModel.searchNotificationsForUser(profile.userId)
                 // manually set the activity_rv below the Accept button since it was too hard with the layout file
-                val params = activity_rv.layoutParams as ConstraintLayout.LayoutParams
-                params.topToBottom = R.id.contactRequestReceivedContainer
-                activity_rv.requestLayout()
+//                val params = activity_rv.layoutParams as ConstraintLayout.LayoutParams
+//                params.topToBottom = R.id.contactRequestReceivedContainer
+//                activity_rv.requestLayout()
                 dashPayViewModel.searchNotificationsForUser(profile.userId)
                 contactRequestReceivedContainer.visibility = View.VISIBLE
                 requestTitle.text = getString(R.string.contact_request_received_title, username)

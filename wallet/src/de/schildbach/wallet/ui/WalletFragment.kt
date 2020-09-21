@@ -214,9 +214,6 @@ class WalletFragment : Fragment() {
                 showHideJoinDashPayAction()
             }
         })
-        dashPayViewModel!!.sendContactRequestOperation.operationStatus.observe(viewLifecycleOwner, Observer {
-            println("sendContactRequestWorkInfo:\t$it")
-        })
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(viewLifecycleOwner,
                 Observer {
                     if (it != null) {

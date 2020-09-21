@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import kotlinx.coroutines.delay
 import org.bouncycastle.crypto.params.KeyParameter
 
 class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
