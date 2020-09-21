@@ -25,7 +25,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.core.text.HtmlCompat
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.text.HtmlCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -126,44 +125,52 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }
         payContactBtn.setOnClickListener { startPayActivity() }
 
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
-        override fun onChanged(it: Resource<DashPayContactRequest>?) {
-            if (it != null) {
-                when (it.status) {
-                    Status.ERROR -> {
-                        var msg = it.message
-                        if (msg == null) {
-                            msg = "!!Error!!"
-                        }
-                        Toast.makeText(this@DashPayUserActivity, msg, Toast.LENGTH_LONG).show()
-                    }
-                    Status.SUCCESS -> {
-                        setResult(RESULT_CODE_CHANGED)
-                        if (sendingRequest) {
-                            contactRequestSent = true
-                        } else {
-                            contactRequestReceived = true
-                        }
-                        updateContactRelationUi()
-                        dashPayViewModel.getContactRequestLiveData.removeObserver(this)
-                    }
-                }
+        dashPayViewModel!!.sendContactRequestOperation.operationStatus.observe(this, Observer {
+            println("sendContactRequestWorkInfo:\t$it")
+            if (it.status == Status.SUCCESS) {
+                println("success:\tuserId= ${it.data!!.first}, toUserId= ${it.data.second}")
+            } else if (it.status == Status.ERROR) {
+                println("error:\t${it.message}")
             }
-        }
-    })
-
-    activity_rv.layoutManager = LinearLayoutManager(this)
-    activity_rv.adapter = this.notificationsAdapter
-
-    if (contactRequestReceived || contactRequestSent) {
-        dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
-            if (Status.SUCCESS == it.status) {
-                if (it.data != null) {
-                    processResults(it.data)
+        })
+        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
+            override fun onChanged(it: Resource<DashPayContactRequest>?) {
+                if (it != null) {
+                    when (it.status) {
+                        Status.ERROR -> {
+                            var msg = it.message
+                            if (msg == null) {
+                                msg = "!!Error!!"
+                            }
+                            Toast.makeText(this@DashPayUserActivity, msg, Toast.LENGTH_LONG).show()
+                        }
+                        Status.SUCCESS -> {
+                            setResult(RESULT_CODE_CHANGED)
+                            if (sendingRequest) {
+                                contactRequestSent = true
+                            } else {
+                                contactRequestReceived = true
+                            }
+                            updateContactRelationUi()
+                            dashPayViewModel.getContactRequestLiveData.removeObserver(this)
+                        }
+                    }
                 }
             }
         })
-    }
+
+        activity_rv.layoutManager = LinearLayoutManager(this)
+        activity_rv.adapter = this.notificationsAdapter
+
+        if (contactRequestReceived || contactRequestSent) {
+            dashPayViewModel.notificationsForUserLiveData.observe(this, Observer {
+                if (Status.SUCCESS == it.status) {
+                    if (it.data != null) {
+                        processResults(it.data)
+                    }
+                }
+            })
+        }
 
         if (showContactHistoryDisclaimer && !contactRequestReceived) {
             contact_history_disclaimer.visibility = View.VISIBLE
@@ -179,7 +186,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
     private fun sendContactRequest(isSendingRequest: Boolean, fromDisclaimer: Boolean = false) {
         sendingRequest = isSendingRequest
-        dashPayViewModel.sendContactRequest(profile.userId)
+        dashPayViewModel.sendContactRequestWork(profile.userId)
         startLoading(fromDisclaimer)
     }
 

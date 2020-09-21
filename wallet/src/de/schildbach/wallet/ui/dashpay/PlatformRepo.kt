@@ -423,15 +423,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             // add our receiving from this contact keychain if it doesn't exist
             val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
-            var encryptionKey: KeyParameter? = null
 
             if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
                 val contactIdentity = platform.identities.get(toUserId)
-                if (walletApplication.wallet.isEncrypted) {
-                    val password = securityGuard.retrievePassword()
-                    encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
-                }
-                blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey!!)
+                blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey)
 
                 // update bloom filters now
                 val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,

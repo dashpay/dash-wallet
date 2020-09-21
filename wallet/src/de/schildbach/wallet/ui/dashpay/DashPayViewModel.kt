@@ -33,10 +33,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     private val platformRepo = PlatformRepo.getInstance()
     private val walletApplication = application as WalletApplication
 
-    private val mWorkManager: WorkManager = WorkManager.getInstance(application)
-
-    val sendContactRequestWorkInfo: LiveData<List<WorkInfo>>
-        get() = mWorkManager.getWorkInfosByTagLiveData(SendContactRequestOperation.TAG)
+    val sendContactRequestOperation = SendContactRequestOperation(application)
 
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
@@ -158,8 +155,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun sendContactRequestWork(toUserId: String) {
-        println("doWork#0")
-        SendContactRequestOperation()
+        sendContactRequestOperation
                 .create(walletApplication, toUserId)
                 .enqueue()
     }
@@ -209,7 +205,7 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         return sharedPreferences.getBoolean(userId, true)
     }
 
-    internal fun cancelSendContactRequest() {
-        mWorkManager.cancelUniqueWork(SendContactRequestOperation.WORK_NAME)
+    internal fun cancelSendContactRequest(context: Context) {
+        WorkManager.getInstance(context).cancelUniqueWork(SendContactRequestOperation.WORK_NAME)
     }
 }
