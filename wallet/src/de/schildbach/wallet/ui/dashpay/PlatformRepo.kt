@@ -19,6 +19,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
+import android.text.format.DateUtils
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import de.schildbach.wallet.AppDatabase
@@ -729,7 +730,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             var encryptionKey: KeyParameter? = null
 
             var lastContactRequestTime = if (dashPayContactRequestDaoAsync.countAllRequests() > 0)
-                dashPayContactRequestDaoAsync.getLastTimestamp()
+                dashPayContactRequestDaoAsync.getLastTimestamp() - DateUtils.MINUTE_IN_MILLIS * 12
             else 0L
 
             updatingContacts.set(true)
@@ -786,25 +787,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             }
 
+            //obtain profiles from new contacts
             if (userIdList.isNotEmpty()) {
-                val profileDocuments = Profiles(platform).getList(userIdList.toList()) //only handles 100 userIds
-                val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
-
-                val nameDocuments = platform.names.getList(userIdList.toList())
-                val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
-
-                for (id in userIdList) {
-                    val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
-                    val username = nameDocument!!.data["normalizedLabel"] as String
-                    val identityId = getIdentityForName(nameDocument)
-
-                    val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                            "", platform.identities.get(identityId)!!)
-
-                    val profile = DashPayProfile.fromDocument(profileDocument, username)
-                    dashPayProfileDaoAsync.insert(profile!!)
-                }
+                updateContactProfiles(userIdList.toList(), 0L)
             }
+
+
+            // fetch updated profiles from the network
+            updateContactProfiles(userId, lastContactRequestTime)
 
             // fire listeners if there were new contacts
             if (fromContactDocuments.isNotEmpty() || toContactDocuments.isNotEmpty()) {
@@ -830,6 +820,56 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    /**
+     * Fetches updated profiles associated with contacts of userId after lastContactRequestTime
+     */
+    private suspend fun updateContactProfiles(userId: String, lastContactRequestTime: Long) {
+        val watch = Stopwatch.createStarted()
+        val userIdList = arrayListOf<String>()
+
+        val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
+        toContactDocuments!!.forEach {
+            userIdList.add(it.toUserId)
+        }
+        val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)
+        fromContactDocuments!!.forEach {
+            userIdList.add(it.userId)
+        }
+
+        updateContactProfiles(userIdList, lastContactRequestTime)
+        log.info("updating contacts and profiles took $watch")
+    }
+
+    /**
+     * Fetches updated profiles of users in userIdList after lastContactRequestTime
+     *
+     * if lastContactRequestTime is 0, then all profiles are retrieved
+     */
+    private suspend fun updateContactProfiles(userIdList: List<String>, lastContactRequestTime: Long, checkingIntegrity: Boolean = false) {
+        if (userIdList.isNotEmpty()) {
+            val profileDocuments = Profiles(platform).getList(userIdList, lastContactRequestTime) //only handles 100 userIds
+            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+
+            val nameDocuments = platform.names.getList(userIdList)
+            val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
+
+            for (id in userIdList) {
+                val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
+                val username = nameDocument!!.data["normalizedLabel"] as String
+                val identityId = getIdentityForName(nameDocument)
+
+                val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
+                        "", platform.identities.get(identityId)!!)
+
+                val profile = DashPayProfile.fromDocument(profileDocument, username)
+                dashPayProfileDaoAsync.insert(profile!!)
+                if (checkingIntegrity) {
+                    log.info("check database integrity: adding missing profile $username:$id")
+                }
+            }
+        }
+    }
+
     // This will check for missing profiles, download them and update the database
     private suspend fun checkDatabaseIntegrity() {
         val watch = Stopwatch.createStarted()
@@ -839,7 +879,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val missingProfiles = HashSet<String>()
         val userId = blockchainIdentity.uniqueIdString
 
-        var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
+        val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
         val toContactMap = HashMap<String, DashPayContactRequest>()
         toContactDocuments!!.forEach {
             userIdList.add(it.toUserId)
@@ -861,24 +901,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
 
         if (missingProfiles.isNotEmpty()) {
-            val profileDocuments = Profiles(platform).getList(missingProfiles.toList()) //only handles 100 userIds
-            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
-
-            val nameDocuments = platform.names.getList(missingProfiles.toList())
-            val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
-
-            for (id in missingProfiles) {
-                val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
-                val username = nameDocument!!.data["normalizedLabel"] as String
-                val identityId = getIdentityForName(nameDocument)
-
-                val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                        "", platform.identities.get(identityId)!!)
-
-                val profile = DashPayProfile.fromDocument(profileDocument, username)
-                dashPayProfileDaoAsync.insert(profile!!)
-                log.info("check database integrity: adding missing profile $username:$id")
-            }
+            updateContactProfiles(missingProfiles.toList(), 0, true)
         }
 
         log.info("check database integrity complete in $watch")
@@ -906,8 +929,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     suspend fun getLocalUsernameSearchResult(userId: String): UsernameSearchResult {
         val profile = dashPayProfileDaoAsync.load(userId)
-        val receivedContactRequest = dashPayContactRequestDaoAsync.loadToOthers(userId)?.let { it[0] }
-        val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { it[0] }
+        val receivedContactRequest = dashPayContactRequestDaoAsync.loadToOthers(userId)?.let { if (it.isNotEmpty()) it[0] else null }
+        val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { if (it.isNotEmpty()) it[0] else null }
 
         return UsernameSearchResult(profile!!.username, profile, sentContactRequest, receivedContactRequest)
     }
