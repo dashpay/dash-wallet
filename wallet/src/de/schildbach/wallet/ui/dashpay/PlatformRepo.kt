@@ -20,6 +20,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import android.text.format.DateUtils
+import androidx.core.content.ContextCompat
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import de.schildbach.wallet.AppDatabase
@@ -30,17 +31,21 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRestore
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Base58
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.evolution.EvolutionContact
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
@@ -52,6 +57,7 @@ import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dpp.document.Document
+import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
@@ -183,12 +189,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false): Resource<List<UsernameSearchResult>> {
         return try {
-            val wallet = walletApplication.wallet
-            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()!!
-            //We don't check for nullity here because if it's null, it'll be thrown, captured below
-            //and sent as a Resource.error
-            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentityData!!.creditFundingTxId))
-            val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
+            val userId = blockchainIdentity.uniqueIdString
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
             val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
@@ -269,14 +270,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     suspend fun searchContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Resource<List<UsernameSearchResult>> {
         return try {
-            // TODO: Replace this Platform call with a query into the local database
             val userIdList = HashSet<String>()
 
-            val wallet = walletApplication.wallet
-            val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
-                    ?: return Resource.error("search contacts: no blockchain identity")
-            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
-            val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
+            val userId = blockchainIdentity.uniqueIdString
 
             var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
             val toContactMap = HashMap<String, DashPayContactRequest>()
@@ -493,6 +489,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    suspend fun recoverIdentityAsync(blockchainIdentity: BlockchainIdentity, publicKeyHash: ByteArray) {
+        withContext(Dispatchers.IO) {
+            blockchainIdentity.recoverIdentity(publicKeyHash)
+        }
+    }
+
     //
     // Step 4: Preorder the username
     //
@@ -571,8 +573,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
-        if (creditFundingTransaction != null) {
-            return BlockchainIdentity(platform, creditFundingTransaction, wallet).apply {
+        val blockchainIdentity = if (creditFundingTransaction != null) {
+            return BlockchainIdentity(platform, creditFundingTransaction, wallet)
+        } else {
+            BlockchainIdentity(platform, 0, wallet).apply {
+                uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
+            }
+        }
+        return blockchainIdentity.apply {
                 identity = platform.identities.get(uniqueIdString)
                 currentUsername = blockchainIdentityData.username
                 registrationStatus = blockchainIdentityData.registrationStatus!!
@@ -593,14 +601,36 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
                 currentMainKeyType = blockchainIdentityData.currentMainKeyType
                         ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
-            }
         }
-        return BlockchainIdentity(platform, 0, wallet)
+        /*return BlockchainIdentity(platform, 0, wallet).apply {
+            uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
+            identity = platform.identities.get(uniqueIdString)
+            currentUsername = blockchainIdentityData.username
+            registrationStatus = blockchainIdentityData.registrationStatus!!
+            val usernameStatus = HashMap<String, Any>()
+            if (blockchainIdentityData.preorderSalt != null) {
+                usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
+            }
+            if (blockchainIdentityData.usernameStatus != null) {
+                usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
+            }
+            usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
+            usernameStatuses[currentUsername!!] = usernameStatus
+
+            creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
+            activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
+            totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
+            keysCreated = blockchainIdentityData.keysCreated ?: 0
+            currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
+            currentMainKeyType = blockchainIdentityData.currentMainKeyType
+                    ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
+        }*/
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
         blockchainIdentityData.apply {
             creditFundingTxId = blockchainIdentity.creditFundingTransaction?.txId
+            userId = blockchainIdentity.uniqueIdString
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null) {
                 username = blockchainIdentity.currentUsername
@@ -943,9 +973,46 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             preDownloadBlocks.set(true)
             preDownloadBlocksFuture = future
             log.info("PreDownloadBlocks: starting")
-            if(!updatingContacts.get()) {
+
+            //first check to see if there is a blockchain identity
+            if (blockchainIdentityDataDaoAsync.load() == null) {
+                log.info("PreDownloadBlocks: checking for existing associated identity")
+
+                val fundingKey = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
+                val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
+                //log.info("key hash: ${fundingKey.pubKeyHash.toHexString()}, identityBytes: ${identityBytes != null}")
+                if (identityBytes != null) {
+                    val identity = platform.dpp.identity.createFromSerialized(identityBytes.toByteArray())
+                    log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id}")
+                    ContextCompat.startForegroundService(walletApplication, createIntentForRestore(walletApplication, identity.id))
+                    return@launch
+                } else {
+                    log.info("PreDownloadBlocks: no existing identity found")
+                }
+            }
+
+            // update contacts, profiles and other platform data
+            if (!updatingContacts.get()) {
                 updateContactRequests()
             }
         }
+    }
+
+    fun clearDatabases() {
+        val database = AppDatabase.getAppDatabase()
+        database.blockchainIdentityDataDao().clear()
+        database.dashPayProfileDao().clear()
+        database.dashPayContactRequestDao().clear()
+
+        // TODO: how do we make the blockchainIdentity == null
+    }
+
+    fun getIdentityFromPublicKeyId(): Identity? {
+        val fundingKey = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
+        val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
+        //log.info("key hash: ${fundingKey.pubKeyHash.toHexString()}, identityBytes: ${identityBytes != null}")
+        return if (identityBytes != null) {
+            platform.dpp.identity.createFromSerialized(identityBytes.toByteArray())
+        } else null
     }
 }

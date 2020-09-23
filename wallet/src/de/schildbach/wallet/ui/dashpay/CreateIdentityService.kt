@@ -8,6 +8,7 @@ import android.os.HandlerThread
 import android.os.PowerManager
 import android.os.Process
 import androidx.lifecycle.LifecycleService
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
@@ -21,6 +22,7 @@ import org.bitcoinj.core.RejectedTransactionException
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
@@ -207,7 +209,7 @@ class CreateIdentityService : LifecycleService() {
                 }
             }
             (username != null) -> {
-                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username, false)
+                blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, username, null, false)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {
@@ -336,12 +338,32 @@ class CreateIdentityService : LifecycleService() {
         log.info("Restoring identity and username")
 
         // use an "empty" state for each
-        blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, true)
+        blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
 
         val cftxs = walletApplication.wallet.creditFundingTransactions
 
-        val creditFundingTransaction: CreditFundingTransaction = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
-                ?: throw IllegalArgumentException("identity $identity does not match a credit funding transaction")
+        val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
+                //?: throw IllegalArgumentException("identity $identity does not match a credit funding transaction")
+
+        val existingBlockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().load()
+        if (existingBlockchainIdentityData != null) {
+            log.info("Attempting restore of existing identity and username; save credit funding txid")
+            val blockchainIdentity = platformRepo.getBlockchainIdentity()
+            blockchainIdentity!!.creditFundingTransaction = creditFundingTransaction
+            existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
+            platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
+            return
+        }
+
+        val loadingFromCreditFundingTransaction = creditFundingTransaction != null
+        var existingIdentity: Identity? = null
+
+        if (!loadingFromCreditFundingTransaction) {
+            existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+            if (existingIdentity == null) {
+                throw IllegalArgumentException("identity $identity does not match a credit funding transaction or it doesn't exist on the network")
+            }
+        }
 
         val wallet = walletApplication.wallet
         val password = securityGuard.retrievePassword()
@@ -363,7 +385,14 @@ class CreateIdentityService : LifecycleService() {
         // Step 3: Find the identity
         //
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
-        platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
+        if (loadingFromCreditFundingTransaction) {
+            platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
+        } else {
+            platformRepo.recoverIdentityAsync(blockchainIdentity,
+                    walletApplication.wallet.currentAuthenticationKey(
+                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY
+                    ).pubKeyHash)
+        }
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
 
