@@ -1025,7 +1025,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         final String message = (blockchainState != null)
                 ? BlockchainStateUtils.getSyncStateString(blockchainState, this)
-                : getString(R.string.blockchain_state_progress_downloading);
+                : getString(R.string.blockchain_state_progress_downloading, 0);
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)

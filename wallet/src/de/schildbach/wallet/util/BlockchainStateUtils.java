@@ -40,11 +40,12 @@ public class BlockchainStateUtils {
         final long blockchainLag = System.currentTimeMillis() - blockchainState.getBestChainDate().getTime();
         final boolean blockchainUptodate = blockchainLag < BLOCKCHAIN_UPTODATE_THRESHOLD_MS;
         final boolean noImpediments = blockchainState.getImpediments().isEmpty();
+        final int percentComplete = blockchainState.getPercentageSync();
 
         if (!blockchainUptodate || blockchainState.getReplaying()) {
             String progressMessage;
             final String downloading = context.getString(noImpediments ? R.string.blockchain_state_progress_downloading
-                    : R.string.blockchain_state_progress_stalled);
+                    : R.string.blockchain_state_progress_stalled, percentComplete);
 
             if (blockchainLag < 2 * DateUtils.DAY_IN_MILLIS) {
                 final long hours = blockchainLag / DateUtils.HOUR_IN_MILLIS;
