@@ -285,6 +285,7 @@ public final class Constants {
 
     public static int USERNAME_MIN_LENGTH = 3;
     public static int USERNAME_MAX_LENGTH = 23;
+    public static int ABOUT_ME_MAX_LENGTH = 256;
 
     /** Desired number of scrypt iterations for deriving the spending PIN */
     public static final int SCRYPT_ITERATIONS_TARGET = 65536;

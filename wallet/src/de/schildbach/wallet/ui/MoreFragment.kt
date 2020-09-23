@@ -24,9 +24,12 @@ import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable.Companion.getDrawable
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
+import kotlinx.android.synthetic.main.contact_row.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreFragment : Fragment(R.layout.activity_more) {
@@ -60,6 +63,19 @@ class MoreFragment : Fragment(R.layout.activity_more) {
         contact_support.setOnClickListener {
             ReportIssueDialogBuilder.createReportIssueDialog(requireContext(),
                     WalletApplication.getInstance()).show()
+        }
+
+        val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
+        if (blockchainIdentity?.currentUsername != null) {
+            userInfoContainer.visibility = View.VISIBLE
+            //TODO: Show profile displayName in username1 and username in username2 if profile was created
+            username1.text = blockchainIdentity.currentUsername
+            username2.visibility = View.GONE
+            dashpayUserAvatar.background = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
+                    blockchainIdentity.currentUsername!!.toCharArray()[0])
+            editProfile.setOnClickListener {
+                startActivity(Intent(requireContext(), EditProfileActivity::class.java))
+            }
         }
     }
 

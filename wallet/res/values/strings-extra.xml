@@ -419,5 +419,9 @@
     <string name="stranger_activity_disclaimer_text">Payments made directly to addresses won’t be retained in activity.</string>
 
     <string name="edit_profile">Edit Profile</string>
+    <string name="display_name">Display Name</string>
+    <string name="about_me">About me</string>
+    <string name="char_count">%1$d/%2$dCharacters</string>
+    <string name="save">Save</string>
 
 </resources>
