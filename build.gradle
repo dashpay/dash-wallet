@@ -1,5 +1,5 @@
 ext {
-    dashjVersion = "0.17.4-SNAPSHOT"
+    dashjVersion = "0.17.4"
 }
 
 buildscript {
