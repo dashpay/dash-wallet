@@ -238,9 +238,11 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         val dashPayProfile = usernameSearchResult.dashPayProfile
 
-        startActivityForResult(DashPayUserActivity.createIntent(this@SearchUserActivity,
-                usernameSearchResult.username, dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
+//        startActivityForResult(DashPayUserActivity.createIntent(this@SearchUserActivity,
+//                usernameSearchResult.username, dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
+//                contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
+        startActivityForResult(DashPayUserActivity.createIntent(this@SearchUserActivity, usernameSearchResult),
+                DashPayUserActivity.REQUEST_CODE_DEFAULT)
 
         overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
     }

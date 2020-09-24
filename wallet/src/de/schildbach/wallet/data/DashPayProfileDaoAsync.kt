@@ -11,7 +11,10 @@ interface DashPayProfileDaoAsync {
     suspend fun insert(dashPayProfile: DashPayProfile)
 
     @Query("SELECT * FROM dashpay_profile WHERE userId = :userId")
-    suspend fun load(userId: String): DashPayProfile?
+    suspend fun loadByUserId(userId: String): DashPayProfile?
+
+    @Query("SELECT * FROM dashpay_profile WHERE username = :username")
+    suspend fun loadByUsername(username: String): DashPayProfile?
 
     @Query("SELECT * FROM dashpay_profile")
     suspend fun loadAll(): List<DashPayProfile>

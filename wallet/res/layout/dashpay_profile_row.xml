@@ -52,7 +52,7 @@
         android:textSize="12sp"
         android:maxLines="1"
         android:ellipsize="end"
-        android:text="@string/contact_request_sent"
+        android:text="@string/contact_request_pending"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/center_guideline"
         app:layout_constraintBottom_toBottomOf="@id/center_guideline" />

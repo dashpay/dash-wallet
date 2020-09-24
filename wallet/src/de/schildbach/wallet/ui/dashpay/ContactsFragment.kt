@@ -270,9 +270,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
         when (mode) {
             MODE_SEARCH_CONTACTS, MODE_VIEW_REQUESTS -> {
-                startActivity(DashPayUserActivity.createIntent(requireContext(),
-                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                        contactRequestReceived = usernameSearchResult.requestReceived))
+                startActivity(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult))
             }
             MODE_SELECT_CONTACT -> {
                 handleString(usernameSearchResult.toContactRequest!!.toUserId, true, R.string.scan_to_pay_username_dialog_message)

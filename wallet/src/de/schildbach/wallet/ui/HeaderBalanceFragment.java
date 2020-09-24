@@ -221,7 +221,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
 
         if (username != null) {
             // Update notification count by requesting an update of the DashPayState
-            dashPayViewModel.getNotificationCount();
+            dashPayViewModel.forceUpdateNotificationCount();
             dashPayViewModel.updateDashPayState();
         }
         if (config.getHideBalance()) {
@@ -355,7 +355,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME.equals(key)) {
-            dashPayViewModel.getNotificationCount();
+            dashPayViewModel.forceUpdateNotificationCount();
         }
     }
 }

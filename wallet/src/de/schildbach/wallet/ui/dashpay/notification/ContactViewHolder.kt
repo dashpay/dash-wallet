@@ -81,6 +81,9 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
                     contact_added.setImageResource(R.drawable.ic_add_contact)
                     R.string.notifications_you_sent
                 }
+                UsernameSearchResult.Type.NO_RELATIONSHIP -> {
+                    0
+                }
             }
 
             @Suppress("DEPRECATION")

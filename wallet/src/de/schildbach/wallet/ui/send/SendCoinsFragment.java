@@ -34,6 +34,7 @@ import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
@@ -102,7 +103,7 @@ public class SendCoinsFragment extends Fragment {
 
     private BlockchainState blockchainState;
 
-    private boolean handlePaymentRequest = false;
+    private boolean autoAcceptContactRequest = false;
 
     private boolean isUserAuthorized() {
         return activity.isUserAuthorized() || userAuthorizedDuring;
@@ -213,8 +214,8 @@ public class SendCoinsFragment extends Fragment {
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {
+                autoAcceptContactRequest = confirmTransactionSharedViewModel.getAutoAcceptContactRequest();
                 handleGo();
-                handleAutoAcceptContactRequest(confirmTransactionSharedViewModel.getAutoAcceptContactRequest());
             }
         });
         viewModel.state.observe(getViewLifecycleOwner(), new Observer<SendCoinsViewModel.State>() {
@@ -270,54 +271,34 @@ public class SendCoinsFragment extends Fragment {
             if (paymentIntent == null || paymentIntent.hasPaymentRequestUrl()) {
                 throw new IllegalArgumentException();
             }
-            viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
-            if (paymentIntent.payeeDashPayUsername != null) {
-                dashPayViewModel.loadUser(paymentIntent.payeeDashPayUsername);
-            }
 
-            if ((paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUserId != null) ||
-                    (paymentIntent.payeeDashPayUsername != null)) {
-
-                //TODO: This is not current used, remove?
-                final Observer<DashPayProfile> observer = new Observer<DashPayProfile>() {
-                    @Override
-                    public void onChanged(DashPayProfile dashPayProfile) {
-                        if (dashPayProfile != null) {
-                            handleDashIdentity(dashPayProfile, paymentIntent);
-                        }
-                    }
-                };
-
-                final Observer<Resource<UsernameSearchResult>> contactRequestObserver = new Observer<Resource<UsernameSearchResult>>() {
-                    @Override
-                    public void onChanged(Resource<UsernameSearchResult> result) {
-                        if (result.getStatus() == Status.SUCCESS) {
-                            UsernameSearchResult usernameSearchResult = result.getData();
-                            if (usernameSearchResult.getRequestReceived()) {
-                                DashPayProfile dashPayProfile = usernameSearchResult.getDashPayProfile();
-                                viewModel.setPendingContactRequest(result.getData().isPendingRequest());
-                                handleDashIdentity(dashPayProfile, paymentIntent);
+            if (paymentIntent.isIdentityPaymentRequest()) {
+                if (paymentIntent.payeeUsername != null) {
+                    viewModel.loadUserDataByUsername(paymentIntent.payeeUsername).observe(getViewLifecycleOwner(), new Observer<Resource<UsernameSearchResult>>() {
+                        @Override
+                        public void onChanged(Resource<UsernameSearchResult> result) {
+                            if (result.getStatus() == Status.SUCCESS && result.getData() != null) {
+                                handleDashIdentity(result.getData(), paymentIntent);
+                            } else {
+                                log.error("error loading load identity for username {}", paymentIntent.payeeUsername);
+                                Toast.makeText(getContext(), "error loading load identity", Toast.LENGTH_LONG).show();
                             }
                         }
-                    }
-                };
-
-                if (paymentIntent.payeeDashPayUsername != null) {
-                    AppDatabase.getAppDatabase().dashPayProfileDao().loadFromUsernameDistinct(paymentIntent.payeeDashPayUsername)
-                            .observe(getViewLifecycleOwner(), new Observer<DashPayProfile>() {
-                                @Override
-                                public void onChanged(DashPayProfile dashPayProfile) {
-                                    if (dashPayProfile != null) {
-                                        dashPayViewModel.getGetContactLiveData().observe(getViewLifecycleOwner(), contactRequestObserver);
-                                        dashPayViewModel.getContact(dashPayProfile.getUserId());
-                                    } else {
-                                        //TODO: Handle Dash Username that is not a contact
-                                    }
-                                }
-                            });
+                    });
+                } else if (paymentIntent.payeeUserId != null) {
+                    viewModel.loadUserDataByUserId(paymentIntent.payeeUserId).observe(getViewLifecycleOwner(), new Observer<Resource<UsernameSearchResult>>() {
+                        @Override
+                        public void onChanged(Resource<UsernameSearchResult> result) {
+                            if (result.getStatus() == Status.SUCCESS && result.getData() != null) {
+                                handleDashIdentity(result.getData(), paymentIntent);
+                            } else {
+                                log.error("error loading load identity for userId {}", paymentIntent.payeeUserId);
+                                Toast.makeText(getContext(), "error loading load identity", Toast.LENGTH_LONG).show();
+                            }
+                        }
+                    });
                 } else {
-                    dashPayViewModel.getGetContactLiveData().observe(getViewLifecycleOwner(), contactRequestObserver);
-                    dashPayViewModel.getContact(paymentIntent.payeeUserId);
+                    throw new IllegalStateException("not identity payment request");
                 }
             } else {
                 viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
@@ -325,20 +306,24 @@ public class SendCoinsFragment extends Fragment {
         }
     }
 
-    private void handleDashIdentity(DashPayProfile dashPayProfile, PaymentIntent paymentIntent) {
-        Address address = dashPayViewModel.getNextContactAddress(dashPayProfile.getUserId());
-        PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
-                Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
-                dashPayProfile.getUserId(), paymentIntent.getAmount());
-        viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
+    private void handleDashIdentity(UsernameSearchResult userData, PaymentIntent paymentIntent) {
+        viewModel.setUserData(userData);
+        if (userData.getRequestReceived()) {
+            DashPayProfile dashPayProfile = userData.getDashPayProfile();
+            Address address = dashPayViewModel.getNextContactAddress(dashPayProfile.getUserId());
+            PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
+                    Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+                    dashPayProfile.getUserId(), paymentIntent.getAmount());
+            viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
+            enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
 
-        viewModel.setDashPayProfileData(dashPayProfile);
-        enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
-
-        if (paymentIntent.getAmount() != null && paymentIntent.getAmount().isGreaterThan(Coin.ZERO)) {
-            if (blockchainState != null && !blockchainState.getReplaying()) {
-                authenticateOrConfirm();
+            if (paymentIntent.getAmount() != null && paymentIntent.getAmount().isGreaterThan(Coin.ZERO)) {
+                if (blockchainState != null && !blockchainState.getReplaying()) {
+                    authenticateOrConfirm();
+                }
             }
+        } else {
+            viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
         }
     }
 
@@ -423,13 +408,6 @@ public class SendCoinsFragment extends Fragment {
         viewModel.signAndSendPayment(editedAmount, exchangeRate);
     }
 
-    private void handleAutoAcceptContactRequest(Boolean autoAccept) {
-        String userId = enterAmountSharedViewModel.getDashPayProfileData().getValue().getUserId();
-        if (autoAccept) {
-            dashPayViewModel.sendContactRequestWork(userId);
-        }
-    }
-
     private void onSignAndSendPaymentSuccess(Transaction transaction) {
         final ComponentName callingActivity = activity.getCallingActivity();
         if (callingActivity != null) {
@@ -499,8 +477,7 @@ public class SendCoinsFragment extends Fragment {
 
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
                 activity.getIntent().getAction(), transaction, activity.isUserAuthorized(),
-                viewModel.getBasePaymentIntentValue().payeeUserId,
-                viewModel.getBasePaymentIntentValue().payeeDashPayUsername);
+                viewModel.getUserData(), autoAcceptContactRequest);
         startActivity(transactionResultIntent);
     }
 
@@ -547,16 +524,6 @@ public class SendCoinsFragment extends Fragment {
                 viewModel.dryrunSendRequest = sendRequest;
             } catch (final Exception x) {
                 viewModel.dryrunException = x;
-            }
-
-            if (handlePaymentRequest) {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        handlePaymentRequest = false;
-                        authenticateOrConfirm();
-                    }
-                });
             }
         }
     };
@@ -657,8 +624,12 @@ public class SendCoinsFragment extends Fragment {
         String amountFiat = fiatAmount != null ? Constants.LOCAL_FORMAT.format(fiatAmount).toString() : getString(R.string.transaction_row_rate_not_available);
         String fiatSymbol = fiatAmount != null ? GenericUtils.currencySymbol(fiatAmount.currencyCode) : "";
         String fee = txFee.toPlainString();
-        DashPayProfile dashPayProfile = enterAmountSharedViewModel.getDashPayProfileData().getValue();
-        boolean isPendingContactRequest = viewModel.getPendingContactRequest();
+
+        DashPayProfile dashPayProfile = null;
+        if (viewModel.getUserData() != null) {
+            dashPayProfile = viewModel.getUserData().getDashPayProfile();
+        }
+        boolean isPendingContactRequest = viewModel.getUserData() != null && viewModel.getUserData().isPendingRequest();
         String username = dashPayProfile != null ? dashPayProfile.getUsername() : null;
         String displayName = dashPayProfile == null || dashPayProfile.getDisplayName().isEmpty() ? username : dashPayProfile.getDisplayName();
         String avatarUrl = dashPayProfile != null ? dashPayProfile.getAvatarUrl() : null;
@@ -666,7 +637,7 @@ public class SendCoinsFragment extends Fragment {
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null,
                 username, displayName, avatarUrl, isPendingContactRequest);
-        dialog.show(Objects.requireNonNull(getFragmentManager()), "ConfirmTransactionDialog");
+        dialog.show(getParentFragmentManager(), "ConfirmTransactionDialog");
     }
 
 
