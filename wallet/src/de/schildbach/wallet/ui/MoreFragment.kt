@@ -21,15 +21,15 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
+import com.bumptech.glide.Glide
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
-import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable.Companion.getDrawable
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
-import kotlinx.android.synthetic.main.contact_row.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreFragment : Fragment(R.layout.activity_more) {
@@ -66,16 +66,36 @@ class MoreFragment : Fragment(R.layout.activity_more) {
         }
 
         val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
-        if (blockchainIdentity?.currentUsername != null) {
-            userInfoContainer.visibility = View.VISIBLE
-            //TODO: Show profile displayName in username1 and username in username2 if profile was created
-            username1.text = blockchainIdentity.currentUsername
+        if (blockchainIdentity != null) {
+            AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(blockchainIdentity!!.uniqueIdString)
+                    .observe(viewLifecycleOwner, Observer {
+                        if (it != null) {
+                            showProfileSection(it)
+                        }
+                    })
+        }
+    }
+
+    private fun showProfileSection(profile: DashPayProfile) {
+        userInfoContainer.visibility = View.VISIBLE
+        if (profile.displayName.isNotEmpty()) {
+            username1.text = profile.displayName
+            username2.text = profile.username
+        } else {
+            username1.text = profile.username
             username2.visibility = View.GONE
-            dashpayUserAvatar.background = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
-                    blockchainIdentity.currentUsername!!.toCharArray()[0])
-            editProfile.setOnClickListener {
-                startActivity(Intent(requireContext(), EditProfileActivity::class.java))
-            }
+        }
+
+        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
+                profile.username.toCharArray()[0])
+        if (profile.avatarUrl.isNotEmpty()) {
+            Glide.with(dashpayUserAvatar).load(profile.avatarUrl).circleCrop()
+                    .placeholder(defaultAvatar).into(dashpayUserAvatar)
+        } else {
+            dashpayUserAvatar.setImageDrawable(defaultAvatar)
+        }
+        editProfile.setOnClickListener {
+            startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
     }
 
