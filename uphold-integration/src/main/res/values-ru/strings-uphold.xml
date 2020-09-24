@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Сервис Uphold недоступен. Пожалуйста, попробуйте позже.</string>
     <string name="uphold_error_report_issue">Пожалуйста, сообщите об этой проблеме в службу поддержки Dash Wallet, используя пункт "Сообщить о проблеме" в главном меню.</string>
 
+    <string name="uphold_general_error_title">Ошибка</string>
+    <string name="uphold_api_error_title">Ошибка Uphold </string>
+    <string name="uphold_api_error_identity">Ваш аккаунт Uphold ещё не верифицирован. Вывод средств невозможен.</string>
+    <string name="uphold_api_error_403_description">Ваш Uphold аккаунт был отмечен для изучения.\n\nUphold временно забанил ваш аккаунт, вы не сможете вывести средства.\n\nUphold остаётся на связи, чтобы помочь вам быстро решить эту проблему.</string>
+    <string name="uphold_api_error_400_description">Средства на Uphold заблокированы на 24 часа.\n\nСредства для этой транзакции станут доступны через %s.</string>
 </resources>

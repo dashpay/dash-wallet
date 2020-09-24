@@ -30,15 +30,15 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Asegurar Billetera Ahora</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Escanear para Enviar</string>
+    <string name="shortcut_scan_to_pay">Escanear para Paga</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Enviar a Dirección</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Recibir</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Comprar / Vender Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_import_key">Importar llave privada</string>
+    <string name="shortcut_receive">Recibir</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_import_key">Barrer billetera de papel</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_add_shortcut">Agregar atajo</string>
 
@@ -81,10 +81,8 @@
     <string name="payments_tab_receive_label">Recibir</string>
     <string name="payments_pay_by_qr_title">Enviar por</string>
     <string name="payments_pay_by_qr_sub_title">Escaneando código QR</string>
-    <string name="payments_pay_by_qr_button">Escanear</string>
     <string name="payments_pay_to_clipboard_title">Enviar a dirección copiada</string>
     <string name="payments_pay_to_clipboard_sub_title">Ninguna dirección copiada</string>
-    <string name="payments_pay_to_clipboard_button">Enviar</string>
 
     <string name="forgot_pin_title">¿Olvidaste el PIN?</string>
     <string name="forgot_pin_message">Puedes establecer un nuevo PIN con la ayuda de tu frase de recuperación</string>
@@ -190,8 +188,8 @@
     <string name="touch_fingerprint_sensor">Sensor de huella dactilar táctil</string>
     <string name="touch_fingerprint_to_enable">Toque el sensor de huellas para habilitar desbloqueo con huella.</string>
     <string name="fingerprint_changed_title">Datos de huella dactilar cambiados</string>
-	<string name="fingerprint_changed_message">Detectamos un cambio en tus datos de autenticación de huellas dactilares. Necesitas usar PIN esta vez.</string>
-	<string name="exchange_rate_missing">Este pago es muy antiguo para obtenerse el valor en fiat.</string>
+    <string name="fingerprint_changed_message">Detectamos un cambio en tus datos de autenticación de huellas dactilares. Necesitas usar PIN esta vez.</string>
+    <string name="exchange_rate_missing">Este pago es muy antiguo para obtenerse el valor en fiat.</string>
 
     <string name="preferences_enable_payment_request_summary">Usar protocolo de pago para pagos iniciados por código QR</string>
     <string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
@@ -216,13 +214,13 @@
     <string name="verify_seed_success_message">Tu billetera está segura ahora. Podrás utilizar tu frase de recuperación en cualquier momento para recuperar tu cuenta en otro dispositivo.</string>
     <string name="view_seed_done">Hecho</string>
     <string name="view_seed_title">Frase de recuperación</string>
-	<string name="transaction_result_view_on_explorer">Ver en el explorador de bloques</string>
-	<string name="transaction_result_paid_successfully">Enviado exitosamente</string>
-	<string name="transaction_result_sent_to">Enviado para</string>
-	<string name="transaction_date_and_time">Fecha</string>
-	<string name="transaction_close">Cerrar</string>
-	<string name="transaction_details_amount_received">Monto Recibido</string>
-	<string name="transaction_details_amount_sent">Monto Enviado</string>
+    <string name="transaction_result_view_on_explorer">Ver en el explorador de bloques</string>
+    <string name="transaction_result_paid_successfully">Enviado exitosamente</string>
+    <string name="transaction_result_sent_to">Enviado para</string>
+    <string name="transaction_date_and_time">Fecha</string>
+    <string name="transaction_close">Cerrar</string>
+    <string name="transaction_details_amount_received">Monto Recibido</string>
+    <string name="transaction_details_amount_sent">Monto Enviado</string>
     <string name="transaction_details_sent_from">Enviado de</string>
     <string name="transaction_details_sent_to">Enviado a</string>
     <string name="transaction_details_received_at">Recibido en</string>

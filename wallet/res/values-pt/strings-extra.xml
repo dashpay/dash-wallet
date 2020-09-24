@@ -30,13 +30,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Proteger Carteira Agora</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scanear para Enviar</string>
+    <string name="shortcut_scan_to_pay">Scanear para Pagar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Enviar para Endereço</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Receber</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Comprar / Vender Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_receive">Receber</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importar Chave Privada</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -81,10 +81,8 @@
     <string name="payments_tab_receive_label">Receber</string>
     <string name="payments_pay_by_qr_title">Enviar por</string>
     <string name="payments_pay_by_qr_sub_title">Scaneando código QR</string>
-    <string name="payments_pay_by_qr_button">Escanear</string>
     <string name="payments_pay_to_clipboard_title">Enviar para endereço copiado</string>
     <string name="payments_pay_to_clipboard_sub_title">Nenhum endereço copiado</string>
-    <string name="payments_pay_to_clipboard_button">Enviar</string>
 
     <string name="forgot_pin_title">Esqueceu o PIN?</string>
     <string name="forgot_pin_message">Você pode definir um novo PIN com a ajuda da sua frase de recuperação.</string>
@@ -190,8 +188,8 @@
     <string name="touch_fingerprint_sensor">Toque o sensor de digital</string>
     <string name="touch_fingerprint_to_enable">Toque o sensor de digital para habilitar o desbloqueio por digital.</string>
     <string name="fingerprint_changed_title">Dados de Impressão Digital mudaram</string>
-	<string name="fingerprint_changed_message">Detectamos uma mudança nos dados de autenticação por digital. Você precisa usar o seu PIN essa vez.</string>
-	<string name="exchange_rate_missing">Esse pagamento é muito antigo para obter-se o valor em fiat</string>
+    <string name="fingerprint_changed_message">Detectamos uma mudança nos dados de autenticação por digital. Você precisa usar o seu PIN essa vez.</string>
+    <string name="exchange_rate_missing">Esse pagamento é muito antigo para obter-se o valor em fiat</string>
 
     <string name="preferences_enable_payment_request_summary">Usar protocolo de pagamento para pagamentos iniciados por código QR</string>
     <string name="preferences_enable_payment_request_title">Escanear para pagar con BIP70</string>
@@ -216,13 +214,13 @@
     <string name="verify_seed_success_message"> Sua carteira está segura agora. Você pode usar sua frase de recuperação em qualquer momento para recuperar sua conta em outro dispositivo.</string>
     <string name="view_seed_done">Feito</string>
     <string name="view_seed_title">Frase de Recuperação</string>
-	<string name="transaction_result_view_on_explorer">Ver no Explorador de Blocos</string>
-	<string name="transaction_result_paid_successfully">Enviado com sucesso</string>
-	<string name="transaction_result_sent_to">Enviado para</string>
-	<string name="transaction_date_and_time">Data</string>
-	<string name="transaction_close">Fechar</string>
-	<string name="transaction_details_amount_received">Valor Recebido</string>
-	<string name="transaction_details_amount_sent">Valor Enviado</string>
+    <string name="transaction_result_view_on_explorer">Ver no Explorador de Blocos</string>
+    <string name="transaction_result_paid_successfully">Enviado com sucesso</string>
+    <string name="transaction_result_sent_to">Enviado para</string>
+    <string name="transaction_date_and_time">Data</string>
+    <string name="transaction_close">Fechar</string>
+    <string name="transaction_details_amount_received">Valor Recebido</string>
+    <string name="transaction_details_amount_sent">Valor Enviado</string>
     <string name="transaction_details_sent_from">Enviar para</string>
     <string name="transaction_details_sent_to">Enviado para</string>
     <string name="transaction_details_received_at">Recebido em</string>
@@ -246,7 +244,7 @@
     <string name="menu_local_currency">Moeda Local</string>
     <string name="menu_rescan_blockchain">Reexaminar blockchain</string>
     <string name="menu_contact_support_title">Contato com o Suporte</string>
-    <string name="menu_contact_support_subtitle">Reportar um Problema</string>
+    <string name="menu_contact_support_subtitle">Reportar um problema</string>
 
     <string name="tools_address_book">Livro de endereços</string>
     <string name="tools_import_private_key">Importar Chave Privada</string>

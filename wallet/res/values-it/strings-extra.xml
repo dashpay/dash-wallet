@@ -30,13 +30,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Il Portafoglio ora è sicuro </string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scansiona per inviare</string>
+    <string name="shortcut_scan_to_pay">Scansiona per pagare</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Invia all\'indirizzo</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Ricevi</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Compra / Vendi Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_receive">Ricevi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importa chiave privata</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -81,10 +81,8 @@
     <string name="payments_tab_receive_label">Ricevi</string>
     <string name="payments_pay_by_qr_title">Inviato da</string>
     <string name="payments_pay_by_qr_sub_title">Scansiona QR Code</string>
-    <string name="payments_pay_by_qr_button">Scansiona</string>
     <string name="payments_pay_to_clipboard_title">Invia all\'indirizzo copiato</string>
     <string name="payments_pay_to_clipboard_sub_title">Nessun indirizzo copiato</string>
-    <string name="payments_pay_to_clipboard_button">Invia</string>
 
     <string name="forgot_pin_title">Hai dimenticato il PIN?</string>
     <string name="forgot_pin_message">È possibile impostare un nuovo PIN con l\'aiuto della frase di recupero.</string>
@@ -190,8 +188,8 @@
     <string name="touch_fingerprint_sensor">Toccare il sensore di impronta digitale</string>
     <string name="touch_fingerprint_to_enable">Toccare il sensore di impronte digitali per abilitare lo sblocco con l\'impronta digitale.</string>
     <string name="fingerprint_changed_title">Dati biometrici dell\'impronta digitale modificati</string>
-	<string name="fingerprint_changed_message">Abbiamo rilevato un cambiamento nei dati di autenticazione delle tue impronte digitali. Questa volta devi usare il PIN.</string>
-	<string name="exchange_rate_missing">Questo pagamento è troppo vecchio per ottenere il valore fiat</string>
+    <string name="fingerprint_changed_message">Abbiamo rilevato un cambiamento nei dati di autenticazione delle tue impronte digitali. Questa volta devi usare il PIN.</string>
+    <string name="exchange_rate_missing">Questo pagamento è troppo vecchio per ottenere il valore fiat</string>
 
     <string name="preferences_enable_payment_request_summary">Utilizza il protocollo di pagamento dal codice QR per i pagamenti avviati </string>
     <string name="preferences_enable_payment_request_title">BIP70 per scan-to-pay</string>
@@ -216,13 +214,13 @@
     <string name="verify_seed_success_message">Il tuo Wallet ora è protetto. Puoi utilizzare la frase di recupero in qualsiasi momento per ripristinare il tuo account su un altro dispositivo.</string>
     <string name="view_seed_done">Fatto</string>
     <string name="view_seed_title">Frase di recupero</string>
-	<string name="transaction_result_view_on_explorer">Visualizza in Block Explorer</string>
-	<string name="transaction_result_paid_successfully">Correttamente Inviato</string>
-	<string name="transaction_result_sent_to">Inviato a</string>
-	<string name="transaction_date_and_time">Data</string>
-	<string name="transaction_close">Chiudi</string>
-	<string name="transaction_details_amount_received">Importo Ricevuto</string>
-	<string name="transaction_details_amount_sent">Importo Inviato</string>
+    <string name="transaction_result_view_on_explorer">Visualizza in Block Explorer</string>
+    <string name="transaction_result_paid_successfully">Correttamente Inviato</string>
+    <string name="transaction_result_sent_to">Inviato a</string>
+    <string name="transaction_date_and_time">Data</string>
+    <string name="transaction_close">Chiudi</string>
+    <string name="transaction_details_amount_received">Importo Ricevuto</string>
+    <string name="transaction_details_amount_sent">Importo Inviato</string>
     <string name="transaction_details_sent_from">Inviato da</string>
     <string name="transaction_details_sent_to">Inviato a</string>
     <string name="transaction_details_received_at">Ricevuto a</string>

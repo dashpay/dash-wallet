@@ -30,13 +30,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Zabezpečiť peňaženku teraz</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Skenovať pre poslanie</string>
+    <string name="shortcut_scan_to_pay">Skenovať pre platbu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Poslať na adresu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Prijať</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Kúpiť/Predať Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_receive">Prijať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importovať privátny Kľúč</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -81,10 +81,8 @@
     <string name="payments_tab_receive_label">Prijať</string>
     <string name="payments_pay_by_qr_title">Poslať od</string>
     <string name="payments_pay_by_qr_sub_title">Skenuje sa QR kód</string>
-    <string name="payments_pay_by_qr_button">Skenovať</string>
     <string name="payments_pay_to_clipboard_title">Poslať na skopírovanú adresu</string>
     <string name="payments_pay_to_clipboard_sub_title">Nebola skopírovaná žiadna adresa</string>
-    <string name="payments_pay_to_clipboard_button">Poslať</string>
 
     <string name="forgot_pin_title">Zabudli ste PIN?</string>
     <string name="forgot_pin_message">Pomocou frázy pre obnovenie môžete nastaviť nový PIN kód.</string>
@@ -196,8 +194,8 @@
     <string name="touch_fingerprint_sensor">Dotknite sa snímača odtlačkov prstov</string>
     <string name="touch_fingerprint_to_enable">Pre povolenie odomknutia otlačkom prsta, sa dotknite snímača odtlačkov prstov.</string>
     <string name="fingerprint_changed_title">Údaje o odtlačkoch prstov sa zmenili</string>
-	<string name="fingerprint_changed_message">Zistili sme zmenu v údajoch o overení odtlačkov prstov. Pre tentokrát musíte použiť PIN kód.</string>
-	<string name="exchange_rate_missing">Táto platba je príliš stará na to, aby sa získala hodnota v klasickej mene.</string>
+    <string name="fingerprint_changed_message">Zistili sme zmenu v údajoch o overení odtlačkov prstov. Pre tentokrát musíte použiť PIN kód.</string>
+    <string name="exchange_rate_missing">Táto platba je príliš stará na to, aby sa získala hodnota v klasickej mene.</string>
 
     <string name="preferences_enable_payment_request_summary">Použiť platobný protokol pre platby iniciované pomocou QR kódu</string>
     <string name="preferences_enable_payment_request_title">BIP70 pre skenuj-a-plať</string>
@@ -222,13 +220,13 @@
     <string name="verify_seed_success_message">Vaša peňaženka je zabezpečená. Frázu pre obnovenie môžete kedykoľvek použiť na obnovenie svojho účtu na inom zariadení.</string>
     <string name="view_seed_done">Hotovo</string>
     <string name="view_seed_title">Fráza pre obnovenie</string>
-	<string name="transaction_result_view_on_explorer">Zobraziť v prehliadači blokov</string>
-	<string name="transaction_result_paid_successfully">Úspešne poslané</string>
-	<string name="transaction_result_sent_to">Poslané ku</string>
-	<string name="transaction_date_and_time">Dátum</string>
-	<string name="transaction_close">Ukončiť</string>
-	<string name="transaction_details_amount_received">Prijatá suma</string>
-	<string name="transaction_details_amount_sent">Odoslaná suma</string>
+    <string name="transaction_result_view_on_explorer">Zobraziť v prehliadači blokov</string>
+    <string name="transaction_result_paid_successfully">Úspešne poslané</string>
+    <string name="transaction_result_sent_to">Poslané ku</string>
+    <string name="transaction_date_and_time">Dátum</string>
+    <string name="transaction_close">Ukončiť</string>
+    <string name="transaction_details_amount_received">Prijatá suma</string>
+    <string name="transaction_details_amount_sent">Odoslaná suma</string>
     <string name="transaction_details_sent_from">Poslané od</string>
     <string name="transaction_details_sent_to">Poslané ku</string>
     <string name="transaction_details_received_at">Prijaté z</string>
@@ -252,8 +250,6 @@
     <string name="menu_local_currency">Miestna mena</string>
     <string name="menu_rescan_blockchain">Znova prehľadať blockchain</string>
     <string name="menu_contact_support_title">Kontaktovať Podporu</string>
-    <string name="menu_contact_support_subtitle">Nahlásiť problém</string>
-
     <string name="tools_address_book">Adresár</string>
     <string name="tools_import_private_key">Importovať privátny Kľúč</string>
     <string name="tools_network_monitor">Stav siete</string>

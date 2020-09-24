@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Služba Uphold není dostupná. Zkuste to prosím později.</string>
     <string name="uphold_error_report_issue">Nahlaste tento problém týmu podpory peněženky Dash pomocí položky ‚Nahlásit problém‘ z hlavní nabídky.</string>
 
+    <string name="uphold_general_error_title">Chyba</string>
+    <string name="uphold_api_error_title">Chyba služby Uphold</string>
+    <string name="uphold_api_error_identity">Váš účet Uphold ještě není verifikován. Prostředky nemohou být vybrány.</string>
+    <string name="uphold_api_error_403_description">Váš účet Uphold byl označen ke kontrole.\n\nUphold dočasně váš účet omezil a nebudete moci vybírat prostředky.\n\nUphold vás bude kontaktovat, aby to s vámi rychle vyřešil.</string>
+    <string name="uphold_api_error_400_description">Prostředky účtu Uphol jsou blokovány na 24 hodin.\n\nPro uskutečnění převodu budete mít dostatek prostředků k%s.</string>
 </resources>

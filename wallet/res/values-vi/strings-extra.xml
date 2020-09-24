@@ -30,13 +30,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Bảo mật ví ngay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Quét để gửi</string>
+    <string name="shortcut_scan_to_pay">Quét để thanh toán</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Gửi đến địa chỉ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Nhận</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Mua &amp; Bán Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_receive">Nhận</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Nhập khoá riêng</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -81,10 +81,8 @@
     <string name="payments_tab_receive_label">Nhận</string>
     <string name="payments_pay_by_qr_title">Gửi bởi</string>
     <string name="payments_pay_by_qr_sub_title">Quét mã QR</string>
-    <string name="payments_pay_by_qr_button">Quét</string>
     <string name="payments_pay_to_clipboard_title">Gửi đến địa chỉ đã được copy</string>
     <string name="payments_pay_to_clipboard_sub_title">Không có địa chỉ nào được copy</string>
-    <string name="payments_pay_to_clipboard_button">Gửi</string>
 
     <string name="forgot_pin_title">Quên mã PIN</string>
     <string name="forgot_pin_message">Bạn có thể thiết lập mã PIN mới với sự giúp đỡ của câu phục hồi.</string>
@@ -187,8 +185,8 @@
     <string name="touch_fingerprint_sensor">Hãy chạm tay vào cảm biến vân tay</string>
     <string name="touch_fingerprint_to_enable">Hãy chạm vào cảm biến vân tay để bật tính năng mở khoá vằng vân tay.</string>
     <string name="fingerprint_changed_title">Dữ liệu vân tay đã bị thay đổi</string>
-	<string name="fingerprint_changed_message">Chúng tôi phát hiện thấy có một thay đổi trong dữ liệu xác thực vân tay của bạn. Bạn cần sử dụng mã PIN lần này.</string>
-	<string name="exchange_rate_missing">Giao dịch này đã quá lâu để có thể tìm được giá quy đổi ra tiền thông thường.</string>
+    <string name="fingerprint_changed_message">Chúng tôi phát hiện thấy có một thay đổi trong dữ liệu xác thực vân tay của bạn. Bạn cần sử dụng mã PIN lần này.</string>
+    <string name="exchange_rate_missing">Giao dịch này đã quá lâu để có thể tìm được giá quy đổi ra tiền thông thường.</string>
 
     <string name="preferences_enable_payment_request_summary">Sử dụng giao thức thanh toán cho việc khởi tạo giao dịch bằng mã QR.</string>
     <string name="preferences_enable_payment_request_title">BIP70 dùng cho việc quét-mã-để-thanh-toán</string>
@@ -213,13 +211,13 @@
     <string name="verify_seed_success_message">Ví của bạn bây giờ đã được bảo mật. Bạn có thể sử dụng câu phục hồi của mình bất cứ khi nào để khôi phục lại tiền của mình trên một thiết bị khác.</string>
     <string name="view_seed_done">Xong</string>
     <string name="view_seed_title">Cụm từ phục hồi</string>
-	<string name="transaction_result_view_on_explorer">Xem trên công cụ khám phá khối</string>
-	<string name="transaction_result_paid_successfully">Đã gửi thành công</string>
-	<string name="transaction_result_sent_to">Gửi đến</string>
-	<string name="transaction_date_and_time">Ngày</string>
-	<string name="transaction_close">Đóng</string>
-	<string name="transaction_details_amount_received">Số tiền nhận được</string>
-	<string name="transaction_details_amount_sent">Số tiền đã gửi</string>
+    <string name="transaction_result_view_on_explorer">Xem trên công cụ khám phá khối</string>
+    <string name="transaction_result_paid_successfully">Đã gửi thành công</string>
+    <string name="transaction_result_sent_to">Gửi đến</string>
+    <string name="transaction_date_and_time">Ngày</string>
+    <string name="transaction_close">Đóng</string>
+    <string name="transaction_details_amount_received">Số tiền nhận được</string>
+    <string name="transaction_details_amount_sent">Số tiền đã gửi</string>
     <string name="transaction_details_sent_from">Gửi đến từ</string>
     <string name="transaction_details_sent_to">Gửi đến</string>
     <string name="transaction_details_received_at">Nhận được tại</string>

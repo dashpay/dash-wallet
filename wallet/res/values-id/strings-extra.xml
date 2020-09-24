@@ -30,13 +30,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Amankan Dompet Sekarang</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Pindai untuk mengirim</string>
+    <string name="shortcut_scan_to_pay">Pindai untuk membayar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Kirim ke alamat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Terima</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Beli / Jual Dash</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_receive">Terima</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Impor kunci pribadi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -81,10 +81,8 @@
     <string name="payments_tab_receive_label">Terima</string>
     <string name="payments_pay_by_qr_title">Dikirim oleh</string>
     <string name="payments_pay_by_qr_sub_title">Memindai kode QR</string>
-    <string name="payments_pay_by_qr_button">Pindai</string>
     <string name="payments_pay_to_clipboard_title">Kirim ke alamat yang disalin</string>
     <string name="payments_pay_to_clipboard_sub_title">Tak ada alamat tersalin</string>
-    <string name="payments_pay_to_clipboard_button">Kirim</string>
 
     <string name="forgot_pin_title">Lupa PIN?</string>
     <string name="forgot_pin_message">Anda dapat mengatur PIN baru dengan bantuan frasa pemulihan Anda.</string>
@@ -187,8 +185,8 @@
     <string name="touch_fingerprint_sensor">Sentuh sensor sidik jari</string>
     <string name="touch_fingerprint_to_enable">Sentuh sensor sidik jari untuk mengaktifkan membuka kunci dengan sidik jari.</string>
     <string name="fingerprint_changed_title">Data sidik jari berubah</string>
-	<string name="fingerprint_changed_message">Kami mendeteksi perubahan dalam data otentikasi sidik jari Anda. Anda perlu menggunakan PIN saat ini.</string>
-	<string name="exchange_rate_missing">Pembayaran ini terlalu lama untuk mendapatkan nilai fiat.</string>
+    <string name="fingerprint_changed_message">Kami mendeteksi perubahan dalam data otentikasi sidik jari Anda. Anda perlu menggunakan PIN saat ini.</string>
+    <string name="exchange_rate_missing">Pembayaran ini terlalu lama untuk mendapatkan nilai fiat.</string>
 
     <string name="preferences_enable_payment_request_summary">Gunakan protokol pembayaran untuk pembayaran yang dimulai dengan kode-QR</string>
     <string name="preferences_enable_payment_request_title">BIP70 untuk pindai-untuk-bayar</string>
@@ -213,13 +211,13 @@
     <string name="verify_seed_success_message">Dompet Anda aman sekarang. Anda dapat menggunakan frasa pemulihan kapan saja untuk memulihkan akun di perangkat lain.</string>
     <string name="view_seed_done">Selesai</string>
     <string name="view_seed_title">Frasa pemulihan</string>
-	<string name="transaction_result_view_on_explorer">Lihat di Blok Explorer</string>
-	<string name="transaction_result_paid_successfully">Pengiriman berhasil</string>
-	<string name="transaction_result_sent_to">Terkirim ke</string>
-	<string name="transaction_date_and_time">Tanggal</string>
-	<string name="transaction_close">Tutup</string>
-	<string name="transaction_details_amount_received">Jumlah Diterima</string>
-	<string name="transaction_details_amount_sent">Jumlah Dikirim</string>
+    <string name="transaction_result_view_on_explorer">Lihat di Blok Explorer</string>
+    <string name="transaction_result_paid_successfully">Pengiriman berhasil</string>
+    <string name="transaction_result_sent_to">Terkirim ke</string>
+    <string name="transaction_date_and_time">Tanggal</string>
+    <string name="transaction_close">Tutup</string>
+    <string name="transaction_details_amount_received">Jumlah Diterima</string>
+    <string name="transaction_details_amount_sent">Jumlah Dikirim</string>
     <string name="transaction_details_sent_from">Terkirim dari</string>
     <string name="transaction_details_sent_to">Terkirim ke</string>
     <string name="transaction_details_received_at">Diterima di</string>

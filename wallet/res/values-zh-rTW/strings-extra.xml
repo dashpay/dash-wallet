@@ -23,19 +23,20 @@
 
     <string name="dialog_confirm_confirm">確認:</string>
     <string name="dialog_confirm_pay_to">發給</string>
+    <string name="dialog_confirm_secured_by">由擔保</string>
     <string name="dialog_confirm_fee">網絡費用</string>
     <string name="dialog_confirm_total">總共</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">立即確保錢包安全</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">掃描發送</string>
+    <string name="shortcut_scan_to_pay">掃描支付</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">發送到位址</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">接收</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">買 / 賣 達世幣</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_receive">接收</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">導入私鑰</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">接收</string>
     <string name="payments_pay_by_qr_title">發送者</string>
     <string name="payments_pay_by_qr_sub_title">掃描二維碼</string>
-    <string name="payments_pay_by_qr_button">掃描</string>
     <string name="payments_pay_to_clipboard_title">發送到復制的位址</string>
     <string name="payments_pay_to_clipboard_sub_title">未能復制位址</string>
-    <string name="payments_pay_to_clipboard_button">付款</string>
 
     <string name="forgot_pin_title">忘記密碼了嗎?</string>
     <string name="forgot_pin_message">您可以在恢復詞組的幫助下設置新的密碼。</string>
@@ -186,8 +185,8 @@
     <string name="touch_fingerprint_sensor">觸控指紋感應器</string>
     <string name="touch_fingerprint_to_enable">觸摸指紋傳感器以啟用指紋解鎖。</string>
     <string name="fingerprint_changed_title">指紋數據已更改</string>
-	<string name="fingerprint_changed_message">我們檢測到您的指紋身份驗證數據發生了變化。 您這次需要使用密碼。</string>
-	<string name="exchange_rate_missing">這筆付款太舊，無法獲得它的法定價值。</string>
+    <string name="fingerprint_changed_message">我們檢測到您的指紋身份驗證數據發生了變化。 您這次需要使用密碼。</string>
+    <string name="exchange_rate_missing">這筆付款太舊，無法獲得它的法定價值。</string>
 
     <string name="preferences_enable_payment_request_summary">使用支付協議來進行二維碼啟動的付款</string>
     <string name="preferences_enable_payment_request_title">BIP70 用於掃描付費</string>
@@ -212,13 +211,13 @@
     <string name="verify_seed_success_message">您的錢包現在已經安全了。 您可以隨時使用恢復詞組在另一台設備上恢復帳戶。</string>
     <string name="view_seed_done">完成</string>
     <string name="view_seed_title">恢復詞組</string>
-	<string name="transaction_result_view_on_explorer">在區塊瀏覽器中查看</string>
-	<string name="transaction_result_paid_successfully">發送成功</string>
-	<string name="transaction_result_sent_to">發給</string>
-	<string name="transaction_date_and_time">日期</string>
-	<string name="transaction_close">關閉</string>
-	<string name="transaction_details_amount_received">收到的金額</string>
-	<string name="transaction_details_amount_sent">發送金額</string>
+    <string name="transaction_result_view_on_explorer">在區塊瀏覽器中查看</string>
+    <string name="transaction_result_paid_successfully">發送成功</string>
+    <string name="transaction_result_sent_to">發給</string>
+    <string name="transaction_date_and_time">日期</string>
+    <string name="transaction_close">關閉</string>
+    <string name="transaction_details_amount_received">收到的金額</string>
+    <string name="transaction_details_amount_sent">發送金額</string>
     <string name="transaction_details_sent_from">來自</string>
     <string name="transaction_details_sent_to">發給</string>
     <string name="transaction_details_received_at">在......收到</string>

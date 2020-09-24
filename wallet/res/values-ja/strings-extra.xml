@@ -23,19 +23,20 @@
 
     <string name="dialog_confirm_confirm">承認</string>
     <string name="dialog_confirm_pay_to">へ送金する</string>
+    <string name="dialog_confirm_secured_by">Secured by</string>
     <string name="dialog_confirm_fee">ネットワーク手数料</string>
     <string name="dialog_confirm_total">総計</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">ウォレットをすぐに安全な状態にする</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">スキャンして送金する</string>
+    <string name="shortcut_scan_to_pay">スキャンして支払う</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">アドレスへ送金する</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">入金</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Dashを買う/売る</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_receive">入金</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">秘密鍵をインポート</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">入金</string>
     <string name="payments_pay_by_qr_title">で送金する</string>
     <string name="payments_pay_by_qr_sub_title">QRコードをスキャン中</string>
-    <string name="payments_pay_by_qr_button">スキャン</string>
     <string name="payments_pay_to_clipboard_title">コピーしたアドレスへ送金する</string>
     <string name="payments_pay_to_clipboard_sub_title">アドレスがコピーされていません</string>
-    <string name="payments_pay_to_clipboard_button">送金</string>
 
     <string name="forgot_pin_title">PINを忘れましたか?</string>
     <string name="forgot_pin_message">復元フレーズを用いて新しいPINを設定することができます。</string>
@@ -186,8 +185,8 @@
     <string name="touch_fingerprint_sensor">指紋認証センサーに触れて下さい。</string>
     <string name="touch_fingerprint_to_enable">指紋認証センサーに触れて、指紋によるロック解除を有効にします。</string>
     <string name="fingerprint_changed_title">指紋認証データが変更されました</string>
-	<string name="fingerprint_changed_message">指紋認証データの変更を検知しました。今回はPINを使用する必要があります。</string>
-	<string name="exchange_rate_missing">この支払いは古すぎるため額面価値を得ることができません。</string>
+    <string name="fingerprint_changed_message">指紋認証データの変更を検知しました。今回はPINを使用する必要があります。</string>
+    <string name="exchange_rate_missing">この支払いは古すぎるため額面価値を得ることができません。</string>
 
     <string name="preferences_enable_payment_request_summary">QRコードで開始された支払いに支払いプロトコルを使用する</string>
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
@@ -217,13 +216,13 @@
 他の端末であなたのアカウントを復元できます。</string>
     <string name="view_seed_done">完了</string>
     <string name="view_seed_title">復元フレーズ</string>
-	<string name="transaction_result_view_on_explorer">ブロックエクスプローラーで見る</string>
-	<string name="transaction_result_paid_successfully">送金が成功しました</string>
-	<string name="transaction_result_sent_to">へ送金済み</string>
-	<string name="transaction_date_and_time">日付け</string>
-	<string name="transaction_close">閉じる</string>
-	<string name="transaction_details_amount_received">入金総額</string>
-	<string name="transaction_details_amount_sent">総額送金</string>
+    <string name="transaction_result_view_on_explorer">ブロックエクスプローラーで見る</string>
+    <string name="transaction_result_paid_successfully">送金が成功しました</string>
+    <string name="transaction_result_sent_to">へ送金済み</string>
+    <string name="transaction_date_and_time">日付け</string>
+    <string name="transaction_close">閉じる</string>
+    <string name="transaction_details_amount_received">入金総額</string>
+    <string name="transaction_details_amount_sent">総額送金</string>
     <string name="transaction_details_sent_from">から送金済み</string>
     <string name="transaction_details_sent_to">へ送金済み</string>
     <string name="transaction_details_received_at">で入金済み</string>
@@ -247,8 +246,6 @@
     <string name="menu_local_currency">通貨表示</string>
     <string name="menu_rescan_blockchain">ブロックチェーンの再スキャン</string>
     <string name="menu_contact_support_title">サポートへ連絡する</string>
-    <string name="menu_contact_support_subtitle">問題を報告する</string>
-
     <string name="tools_address_book">アドレスブック</string>
     <string name="tools_import_private_key">秘密鍵をインポート</string>
     <string name="tools_network_monitor">ネットワークモニター</string>

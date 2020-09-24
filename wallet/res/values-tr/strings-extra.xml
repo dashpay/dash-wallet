@@ -29,13 +29,13 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Şimdi Cüzdanını Korumaya Al</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Göndermek için Tara</string>
+    <string name="shortcut_scan_to_pay">Ödemek için Tara</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Adrese Gönder</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_receive">Al</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Dash Al / Sat</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_receive">Al</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Özel Anahtarı İçe Aktar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -80,10 +80,8 @@
     <string name="payments_tab_receive_label">Al</string>
     <string name="payments_pay_by_qr_title">Tarafından Gönderildi</string>
     <string name="payments_pay_by_qr_sub_title">QR kodu taranıyor</string>
-    <string name="payments_pay_by_qr_button">Tara</string>
     <string name="payments_pay_to_clipboard_title">Kopyalanan adrese gönder</string>
     <string name="payments_pay_to_clipboard_sub_title">Kopyalanan adres yok</string>
-    <string name="payments_pay_to_clipboard_button">Gönder</string>
 
     <string name="forgot_pin_title">PİN\'inizi unuttunuz mu?</string>
     <string name="forgot_pin_message">Kurtarma sözcük grubuyla yeni bir PİN oluşturabilirsiniz.</string>
@@ -189,8 +187,8 @@
     <string name="touch_fingerprint_sensor">Parmak izi sensörüne dokunun</string>
     <string name="touch_fingerprint_to_enable">Parmak izi ile kilit açma için parmak izi okuyucusuna dokun.</string>
     <string name="fingerprint_changed_title">Parmak izi verileri değiştirildi</string>
-	<string name="fingerprint_changed_message">Parmak izi kimlik doğrulama verilerinizde bir değişiklik tespit ettik. Bu sefer PIN kodunuzu kullanmanız gerekiyor.</string>
-	<string name="exchange_rate_missing">Bu ödeme itibari para karşılığını göstermek için çok eskidir.</string>
+    <string name="fingerprint_changed_message">Parmak izi kimlik doğrulama verilerinizde bir değişiklik tespit ettik. Bu sefer PIN kodunuzu kullanmanız gerekiyor.</string>
+    <string name="exchange_rate_missing">Bu ödeme itibari para karşılığını göstermek için çok eskidir.</string>
 
     <string name="preferences_enable_payment_request_summary">QR-koduyla başlatılan ödemeler için ödeme protokolünü kullan</string>
     <string name="preferences_enable_payment_request_title">ödemeyi-tara için BIP70</string>
@@ -215,13 +213,13 @@
     <string name="verify_seed_success_message">Cüzdanınız artık güvende. Hesabınızı başka bir cihaza aktarmak için kurtarma sözcük grubunuzu istediğiniz zaman kullanabilirsiniz.</string>
     <string name="view_seed_done">Bitti</string>
     <string name="view_seed_title">Kurtarma Sözcük Grubu</string>
-	<string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>
-	<string name="transaction_result_paid_successfully">Başarıyla gönderildi</string>
-	<string name="transaction_result_sent_to">Gönder</string>
-	<string name="transaction_date_and_time">Tarih</string>
-	<string name="transaction_close">Kapat</string>
-	<string name="transaction_details_amount_received">Alınan Tutar</string>
-	<string name="transaction_details_amount_sent">Gönderilen Tutar</string>
+    <string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>
+    <string name="transaction_result_paid_successfully">Başarıyla gönderildi</string>
+    <string name="transaction_result_sent_to">Gönder</string>
+    <string name="transaction_date_and_time">Tarih</string>
+    <string name="transaction_close">Kapat</string>
+    <string name="transaction_details_amount_received">Alınan Tutar</string>
+    <string name="transaction_details_amount_sent">Gönderilen Tutar</string>
     <string name="transaction_details_sent_from">Tarafından Gönderildi</string>
     <string name="transaction_details_sent_to">Gönderildi</string>
     <string name="transaction_details_received_at">Alındı</string>
@@ -245,8 +243,6 @@
     <string name="menu_local_currency">Yerel Para Birimi</string>
     <string name="menu_rescan_blockchain">Blok Zincirini Tekrar Tara</string>
     <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
-    <string name="menu_contact_support_subtitle">Sorun rapor et</string>
-
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
