@@ -21,7 +21,11 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
+import com.bumptech.glide.Glide
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
@@ -39,12 +43,19 @@ class EditProfileActivity : BaseMenuActivity() {
 
         setTitle(R.string.edit_profile)
 
-        //TODO: Show displayName, aboutMe and possibly profile picture from profile
         val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
         if (blockchainIdentity?.currentUsername != null) {
             userInfoContainer.visibility = View.VISIBLE
+            AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(blockchainIdentity!!.uniqueIdString)
+                    .observe(this, Observer {
+                        if (it != null) {
+                            showProfileInfo(it)
+                        }
+                    })
             dashpayUserAvatar.background = UserAvatarPlaceholderDrawable.getDrawable(this,
                     blockchainIdentity.currentUsername!!.toCharArray()[0])
+        } else {
+            finish()
         }
 
         val redTextColor = ContextCompat.getColor(this, R.color.dash_red)
@@ -54,8 +65,8 @@ class EditProfileActivity : BaseMenuActivity() {
                 displayNameCharCount.visibility = View.VISIBLE
                 val charCount = s?.length ?: 0
                 displayNameCharCount.text = getString(R.string.char_count, charCount,
-                        Constants.USERNAME_MAX_LENGTH)
-                if (charCount !in Constants.USERNAME_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH) {
+                        Constants.DISPLAY_NAME_MAX_LENGTH)
+                if (charCount > Constants.DISPLAY_NAME_MAX_LENGTH) {
                     displayNameCharCount.setTextColor(redTextColor)
                 } else {
                     displayNameCharCount.setTextColor(mediumGrayTextColor)
@@ -93,6 +104,20 @@ class EditProfileActivity : BaseMenuActivity() {
             }
 
         })
+    }
+
+    private fun showProfileInfo(profile: DashPayProfile) {
+        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this,
+                profile.username.toCharArray()[0])
+        if (profile.avatarUrl.isNotEmpty()) {
+            Glide.with(dashpayUserAvatar).load(profile.avatarUrl).circleCrop()
+                    .placeholder(defaultAvatar).into(dashpayUserAvatar)
+        } else {
+            dashpayUserAvatar.setImageDrawable(defaultAvatar)
+        }
+
+        aboutMe.setText(profile.publicMessage)
+        displayName.setText(profile.displayName)
     }
 
 }
