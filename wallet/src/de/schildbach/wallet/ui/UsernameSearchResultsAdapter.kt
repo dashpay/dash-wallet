@@ -17,12 +17,15 @@
 
 package de.schildbach.wallet.ui
 
+import android.graphics.drawable.AnimationDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dashpay_profile_row.view.*
 
@@ -44,6 +47,12 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
             notifyDataSetChanged()
         }
 
+    var pending: Map<String, Resource<Nothing>> = mapOf()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return ViewHolder(LayoutInflater.from(parent.context), parent)
     }
@@ -53,13 +62,15 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(results[position])
+        val item = results[position]
+        val state = pending[item.dashPayProfile.userId]
+        holder.bind(results[position], state)
     }
 
     inner class ViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(R.layout.dashpay_profile_row, parent, false)) {
 
-        fun bind(usernameSearchResult: UsernameSearchResult) {
+        fun bind(usernameSearchResult: UsernameSearchResult, state: Resource<Nothing>?) {
             val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
                     usernameSearchResult.username[0])
 
@@ -79,27 +90,74 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
                 itemView.avatar.background = defaultAvatar
             }
 
-            when (usernameSearchResult.requestSent to usernameSearchResult.requestReceived) {
-                //No Relationship
-                false to false -> {
+            itemClickListener?.let { l ->
+                this.itemView.setOnClickListener {
+                    l.onItemClicked(it, usernameSearchResult)
+                }
+            }
+
+            if (state != null) {
+                @Suppress("NON_EXHAUSTIVE_WHEN")
+                println("state:\t$state")
+                when (state.status) {
+                    Status.LOADING -> {
+                        // NO_RELATIONSHIP
+                        itemView.request_status.visibility = View.GONE
+                        itemView.buttons.visibility = View.GONE
+                        itemView.contact_added.visibility = View.GONE
+                        itemView.pending_work_pane.visibility = View.VISIBLE
+                        (itemView.pending_work_icon.drawable as AnimationDrawable).start()
+                        @Suppress("NON_EXHAUSTIVE_WHEN")
+                        when (usernameSearchResult.type) {
+                            UsernameSearchResult.Type.REQUEST_RECEIVED -> {
+                                itemView.pending_work_text.text = "Accepting"
+                            }
+                            UsernameSearchResult.Type.NO_RELATIONSHIP -> {
+                                itemView.pending_work_text.text = "Sending"
+                            }
+                        }
+                        return
+                    }
+                    Status.SUCCESS -> {
+                        @Suppress("NON_EXHAUSTIVE_WHEN")
+                        when (usernameSearchResult.type) {
+                            UsernameSearchResult.Type.REQUEST_RECEIVED -> {
+                                // CONTACT_ESTABLISHED
+                                itemView.request_status.visibility = View.GONE
+                                itemView.buttons.visibility = View.GONE
+                                itemView.contact_added.visibility = View.VISIBLE
+                                return
+                            }
+                            UsernameSearchResult.Type.NO_RELATIONSHIP -> {
+                                //REQUEST_SENT
+                                itemView.request_status.visibility = View.VISIBLE
+                                itemView.buttons.visibility = View.GONE
+                                itemView.contact_added.visibility = View.GONE
+                                return
+                            }
+                        }
+                    }
+                }
+            }
+
+            itemView.pending_work_pane.visibility = View.GONE
+            when (usernameSearchResult.type) {
+                UsernameSearchResult.Type.NO_RELATIONSHIP -> {
                     itemView.request_status.visibility = View.GONE
                     itemView.buttons.visibility = View.GONE
                     itemView.contact_added.visibility = View.GONE
                 }
-                //Contact Established
-                true to true -> {
+                UsernameSearchResult.Type.CONTACT_ESTABLISHED -> {
                     itemView.request_status.visibility = View.GONE
                     itemView.buttons.visibility = View.GONE
                     itemView.contact_added.visibility = View.VISIBLE
                 }
-                //Request Sent / Pending
-                true to false -> {
+                UsernameSearchResult.Type.REQUEST_SENT -> {
                     itemView.request_status.visibility = View.VISIBLE
                     itemView.buttons.visibility = View.GONE
                     itemView.contact_added.visibility = View.GONE
                 }
-                //Request Received
-                false to true -> {
+                UsernameSearchResult.Type.REQUEST_RECEIVED -> {
                     itemView.request_status.visibility = View.GONE
                     itemView.buttons.visibility = View.VISIBLE
                     itemView.contact_added.visibility = View.GONE
@@ -111,13 +169,6 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
                     }
                 }
             }
-
-            itemClickListener?.let { l ->
-                this.itemView.setOnClickListener {
-                    l.onItemClicked(it, usernameSearchResult)
-                }
-            }
-
         }
     }
 }

@@ -147,9 +147,11 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         return platformRepo.getNextContactAddress(userId)
     }
 
-    fun sendContactRequestWork(toUserId: String) {
+    val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(application)
+
+    fun sendContactRequest(toUserId: String) {
         SendContactRequestOperation(walletApplication)
-                .create(walletApplication, toUserId)
+                .create(toUserId)
                 .enqueue()
     }
 

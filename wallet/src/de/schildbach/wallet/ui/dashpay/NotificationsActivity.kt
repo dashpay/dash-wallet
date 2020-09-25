@@ -243,7 +243,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         if (currentPosition == -1) {
             currentPosition = position
-            dashPayViewModel.sendContactRequestWork(usernameSearchResult.fromContactRequest!!.userId)
+            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
         }
     }
 

@@ -100,6 +100,15 @@ class DashPayUserActivity : InteractionAwareActivity(),
             }
             initialDataLoaded = true
         })
+        viewModel.sendContactRequestState.observe(this, Observer {
+            if (!viewModel.userData.requestSent) {
+                when (it.status) {
+                    Status.SUCCESS -> viewModel.refreshUserData()
+                    Status.LOADING -> updateContactRelationUi(viewModel.userData, true)
+                    else -> updateContactRelationUi(viewModel.userData)
+                }
+            }
+        })
         viewModel.notificationsForUser.observe(this, Observer {
             if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
@@ -125,15 +134,17 @@ class DashPayUserActivity : InteractionAwareActivity(),
         } else {
             displayNameTxt.text = username
         }
-
+        avatar.setOnClickListener {
+            viewModel.refreshUserData()
+        }
         contact_request_pane.setOnUserActionListener(object : ContactRequestPane.OnUserActionListener {
 
             override fun onSendContactRequestClick() {
-                viewModel.sendContactRequest(true)
+                viewModel.sendContactRequest()
             }
 
             override fun onAcceptClick() {
-                viewModel.sendContactRequest(true)
+                viewModel.sendContactRequest()
             }
 
             override fun onIgnoreClick() {
@@ -155,7 +166,27 @@ class DashPayUserActivity : InteractionAwareActivity(),
         }
     }
 
-    private fun updateContactRelationUi(userData: UsernameSearchResult) {
+    private fun updateContactRelationUi(userData: UsernameSearchResult, pendingWork: Boolean = false) {
+        if (userData.type != UsernameSearchResult.Type.NO_RELATIONSHIP) {
+            viewModel.initNotificationsForUser()
+        }
+        if (pendingWork) {
+            @Suppress("NON_EXHAUSTIVE_WHEN")
+            when (userData.type) {
+                UsernameSearchResult.Type.NO_RELATIONSHIP -> {
+                    if (showContactHistoryDisclaimer) {
+                        contact_request_pane.applyDisclaimerSendingState()
+                    } else {
+                        contact_request_pane.applySendingState()
+                    }
+                    return
+                }
+                UsernameSearchResult.Type.REQUEST_RECEIVED -> {
+                    contact_request_pane.applyAcceptingState()
+                    return
+                }
+            }
+        }
         when (userData.type) {
             UsernameSearchResult.Type.NO_RELATIONSHIP -> {
                 if (showContactHistoryDisclaimer) {
@@ -181,9 +212,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
                 contact_request_pane.applyReceivedState(userData.username)
                 activity_rv.visibility = View.VISIBLE
             }
-        }
-        if (userData.type != UsernameSearchResult.Type.NO_RELATIONSHIP) {
-            viewModel.initNotificationsForUser()
         }
     }
 

@@ -18,15 +18,26 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsForUserLiveData
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 
-class DashPayUserActivityViewModel(application: Application) : DashPayViewModel(application) {
+class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(application) {
+
+    companion object {
+        val log = LoggerFactory.getLogger(DashPayUserActivityViewModel::class.java)
+    }
+
+    private val platformRepo = PlatformRepo.getInstance()
+    private val walletApplication = application as WalletApplication
 
     val userLiveData = MutableLiveData<UsernameSearchResult?>()
     var userData: UsernameSearchResult
@@ -35,14 +46,18 @@ class DashPayUserActivityViewModel(application: Application) : DashPayViewModel(
             userLiveData.value = value
         }
 
-    fun sendContactRequest(refreshUserData: Boolean = false) {
+    val sendContactRequestState by lazy {
+        SendContactRequestOperation.operationStatus(application, userData.dashPayProfile.userId)
+    }
+
+    fun sendContactRequest(refreshUserData: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val toUserId = userLiveData.value!!.dashPayProfile.userId
                 val username = userLiveData.value!!.username
                 val result = platformRepo.sendContactRequest(toUserId)
                 if (refreshUserData) {
-                    userLiveData.postValue(platformRepo.getUser(username).first())
+                    userLiveData.postValue(platformRepo.getUser(userData.username).first())
                 } else {
                     userLiveData.value!!.toContactRequest = result
                     userLiveData.postValue(userLiveData.value)  //notify observers
@@ -52,6 +67,18 @@ class DashPayUserActivityViewModel(application: Application) : DashPayViewModel(
                 userLiveData.postValue(userLiveData.value)  //notify observers
             }
         }
+    }
+
+    fun refreshUserData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            userLiveData.postValue(platformRepo.getUser(userData.username).first())
+        }
+    }
+
+    fun sendContactRequest() {
+        SendContactRequestOperation(walletApplication)
+                .create(userData.dashPayProfile.userId)
+                .enqueue()
     }
 
     val notificationsForUser = NotificationsForUserLiveData(walletApplication, platformRepo, viewModelScope)

@@ -626,7 +626,7 @@ public class SendCoinsFragment extends Fragment {
         String fee = txFee.toPlainString();
 
         DashPayProfile dashPayProfile = null;
-        if (viewModel.getUserData() != null) {
+        if (viewModel.getUserData() != null && viewModel.getUserData().getRequestReceived()) {
             dashPayProfile = viewModel.getUserData().getDashPayProfile();
         }
         boolean isPendingContactRequest = viewModel.getUserData() != null && viewModel.getUserData().isPendingRequest();

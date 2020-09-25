@@ -145,6 +145,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
                     startActivity(DashPayUserActivity.createIntent(this@TransactionResultActivity,
                             userData, userData != null, autoAcceptContactRequest))
                 }
+                else -> {
+                    super.finish()
+                }
             }
         }
 

@@ -49,6 +49,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
+import kotlinx.android.synthetic.main.activity_search_dashpay_profile_root.*
 import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -138,9 +139,13 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchUsernamesLiveData.observe(this, Observer {
             if (Status.LOADING == it.status) {
-                startLoading()
+                if (clearList) {
+                    startLoading()
+                }
             } else {
-                stopLoading()
+                if (clearList) {
+                    stopLoading()
+                }
                 if (it.data != null) {
                     adapter.results = it.data
                     if (it.data.isEmpty()) {
@@ -178,7 +183,10 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
                 }
             }
         })
-
+        dashPayViewModel.sendContactRequestState.observe(this, Observer {
+            adapter.pending = it
+            searchUser(false)
+        })
     }
 
     private fun startLoading() {
@@ -208,9 +216,14 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         search_user_empty_result.visibility = View.GONE
     }
 
-    private fun searchUser() {
-        adapter.results = listOf()
-        hideEmptyResult()
+    var clearList: Boolean = true
+
+    private fun searchUser(clearList: Boolean = true) {
+        this.clearList = clearList
+        if (clearList) {
+            adapter.results = listOf()
+            hideEmptyResult()
+        }
         if (this::searchUserRunnable.isInitialized) {
             handler.removeCallbacks(searchUserRunnable)
         }
@@ -260,7 +273,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         if (currentPosition == -1) {
             currentPosition = position
-            dashPayViewModel.sendContactRequestWork(usernameSearchResult.fromContactRequest!!.userId)
+            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
         }
     }
 
@@ -270,7 +283,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
-            searchUser()
+            searchUser(false)
         }
     }
 }

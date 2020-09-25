@@ -68,7 +68,7 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         main_button_text.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_white, null))
     }
 
-    private fun applySendingState() {
+    fun applySendingState() {
         contact_history_disclaimer.visibility = View.GONE
         main_button.visibility = View.VISIBLE
         pay_button_pane.visibility = View.GONE
@@ -110,7 +110,7 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         request_received_pane_title.text = resources.getString(R.string.contact_request_received_title, username)
     }
 
-    private fun applyAcceptingState() {
+    fun applyAcceptingState() {
         contact_history_disclaimer.visibility = View.GONE
         contact_request_received_pane.visibility = View.GONE
         applySendingState()
@@ -140,7 +140,7 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         }
     }
 
-    private fun applyDisclaimerSendingState() {
+    fun applyDisclaimerSendingState() {
         applyDisclaimerState(null)
         disclaimer_button.isClickable = false
         disclaimer_button_text.setText(R.string.sending_contact_request)
