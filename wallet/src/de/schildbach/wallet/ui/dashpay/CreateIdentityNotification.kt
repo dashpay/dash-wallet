@@ -93,7 +93,7 @@ class CreateIdentityNotification(val service: LifecycleService) {
     }
 
     private fun startObservingIdentityCreationState() = AppDatabase.getAppDatabase()
-            .blockchainIdentityDataDao().loadBase().observe(service, Observer {
+            .blockchainIdentityDataDaoAsync().loadBase().observe(service, Observer {
                 notificationManager.cancel(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR)
                 when (it?.creationState) {
                     BlockchainIdentityData.CreationState.NONE,

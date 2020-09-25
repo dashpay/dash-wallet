@@ -25,7 +25,7 @@ class SendContactRequestOperation(application: Application) {
     val allOperationsData = workManager.getWorkInfosByTagLiveData(SendContactRequestWorker::class.qualifiedName!!)
 
     /**
-     * Gets the WorkInfo of SendContactRequestWorker for given toUserId
+     * Gets the WorkInfo of SendContactRequestWorker for given toUserId and converts it to Resource
      */
     fun operationStatus(toUserId: String) = workManager.getWorkInfosForUniqueWorkLiveData(uniqueWorkName(toUserId)).switchMap {
         return@switchMap liveData {
@@ -35,8 +35,7 @@ class SendContactRequestOperation(application: Application) {
             }
 
             if (it.size > 1) {
-                return@liveData //TODO repair
-//                throw RuntimeException("there should never be more than one unique work ${uniqueWorkName(toUserId)}")
+                throw RuntimeException("there should never be more than one unique work ${uniqueWorkName(toUserId)}")
             }
 
             val workInfo = it[0]
@@ -53,6 +52,9 @@ class SendContactRequestOperation(application: Application) {
                     } else {
                         Resource.error(Exception())
                     })
+                }
+                WorkInfo.State.CANCELLED -> {
+                    emit(Resource.canceled(null))
                 }
                 else -> {
                     emit(Resource.loading(null))
@@ -76,4 +78,5 @@ class SendContactRequestOperation(application: Application) {
                         ExistingWorkPolicy.REPLACE,
                         sendContactRequestWorker)
     }
+
 }

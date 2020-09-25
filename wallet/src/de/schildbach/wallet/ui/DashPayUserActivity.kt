@@ -100,6 +100,13 @@ class DashPayUserActivity : InteractionAwareActivity(),
             }
             initialDataLoaded = true
         })
+        viewModel.notificationsForUser.observe(this, Observer {
+            if (Status.SUCCESS == it.status) {
+                if (it.data != null) {
+                    processResults(it.data)
+                }
+            }
+        })
 
         val username = viewModel.userData.username
         val profile = viewModel.userData.dashPayProfile
@@ -176,13 +183,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             }
         }
         if (userData.type != UsernameSearchResult.Type.NO_RELATIONSHIP) {
-            viewModel.notificationsForUser.observe(this, Observer {
-                if (Status.SUCCESS == it.status) {
-                    if (it.data != null) {
-                        processResults(it.data)
-                    }
-                }
-            })
+            viewModel.initNotificationsForUser()
         }
     }
 

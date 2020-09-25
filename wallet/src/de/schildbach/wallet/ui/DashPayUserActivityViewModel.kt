@@ -55,8 +55,7 @@ class DashPayUserActivityViewModel(application: Application) : DashPayViewModel(
     }
 
     val notificationsForUser = NotificationsForUserLiveData(walletApplication, platformRepo, viewModelScope)
-        get() {
-            field.userId = userData.dashPayProfile.userId
-            return field
-        }
+    fun initNotificationsForUser() {
+        notificationsForUser.userId = userData.dashPayProfile.userId
+    }
 }

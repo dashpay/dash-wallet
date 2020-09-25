@@ -1,6 +1,5 @@
 package de.schildbach.wallet.data
 
-import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -9,23 +8,23 @@ import androidx.room.Query
 @Dao
 interface DashPayContactRequestDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(dashPayProfile: DashPayContactRequest)
+    suspend fun insert(dashPayContactRequest: DashPayContactRequest)
 
     @Query("SELECT * FROM dashpay_contact_request")
-    fun loadAll(): LiveData<DashPayContactRequest?>
+    suspend fun loadAll(): List<DashPayContactRequest>?
 
     @Query("SELECT * FROM dashpay_contact_request WHERE userId = :userId")
-    fun loadToOthers(userId: String): LiveData<DashPayContactRequest?>
+    suspend fun loadToOthers(userId: String): List<DashPayContactRequest>?
 
     @Query("SELECT * FROM dashpay_contact_request WHERE toUserId = :toUserId")
-    fun loadFromOthers(toUserId: String): LiveData<DashPayContactRequest?>
+    suspend fun loadFromOthers(toUserId: String): List<DashPayContactRequest>?
 
-    fun loadDistinctToOthers(id: String):
-            LiveData<DashPayContactRequest?> = loadToOthers(id).getDistinct()
+    @Query("SELECT MAX(timestamp) FROM dashpay_contact_request")
+    suspend fun getLastTimestamp() : Long
 
-    fun loadDistinctFromOthers(id: String):
-            LiveData<DashPayContactRequest?> = loadFromOthers(id).getDistinct()
+    @Query("SELECT COUNT(*) FROM dashpay_contact_request")
+    suspend fun countAllRequests(): Int
 
     @Query("DELETE FROM dashpay_contact_request")
-    fun clear()
+    suspend fun clear()
 }

@@ -214,7 +214,7 @@ class WalletFragment : Fragment() {
                 showHideJoinDashPayAction()
             }
         })
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(viewLifecycleOwner,
+        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(viewLifecycleOwner,
                 Observer {
                     if (it != null) {
                         noIdentityCreatedOrInProgress = it.creationState == BlockchainIdentityData.CreationState.NONE
