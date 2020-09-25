@@ -71,6 +71,7 @@ import kotlin.collections.HashSet
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import org.dashevo.dpp.toHexString
 
 class PlatformRepo private constructor(val walletApplication: WalletApplication) {
 
@@ -741,14 +742,21 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
 
             if (!platform.hasApp("dashpay")) {
+                log.info("update contacts not completed because there is no dashpay contract")
                 return
             }
 
             val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
             if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+                log.info("update contacts not completed username registration/recovery is not complete")
                 return
             }
-            val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+
+            if (blockchainIdentity == null) {
+                log.info("update contacts not completed: blockchainIdentity has not been initialized")
+            }
+
+            val userId = blockchainIdentity.uniqueIdString!! //blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
             if (blockchainIdentityData.username == null) {
                 return // this is here because the wallet is being reset without removing blockchainIdentityData
             }
@@ -817,6 +825,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             }
 
+            // If new keychains were added to the wallet, then update the bloom filters
+            if (addedContact) {
+                val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                        BlockchainServiceImpl::class.java)
+                walletApplication.startService(intent)
+            }
+
             //obtain profiles from new contacts
             if (userIdList.isNotEmpty()) {
                 updateContactProfiles(userIdList.toList(), 0L)
@@ -831,12 +846,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 fireContactsUpdatedListeners()
             }
 
-            // If new keychains were added to the wallet, then update the bloom filters
-            if (addedContact) {
-                val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
-                        BlockchainServiceImpl::class.java)
-                walletApplication.startService(intent)
-            }
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
             log.error(formatExceptionMessage("error updating contacts", e))
@@ -877,8 +886,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     private suspend fun updateContactProfiles(userIdList: List<String>, lastContactRequestTime: Long, checkingIntegrity: Boolean = false) {
         if (userIdList.isNotEmpty()) {
-            val profileDocuments = Profiles(platform).getList(userIdList, lastContactRequestTime) //only handles 100 userIds
-            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+
+            var profileDocuments: List<Document> = listOf<Document>()
+            var profileById: Map<String, Document> = hashMapOf<String, Document>()
+            try {
+                profileDocuments = Profiles(platform).getList(userIdList, lastContactRequestTime) //only handles 100 userIds
+                profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+            } catch (e: Exception) {
+                //swallow for now, there may be a bug in the in the profile fetching code
+            }
 
             val nameDocuments = platform.names.getList(userIdList)
             val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
@@ -978,11 +994,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (blockchainIdentityDataDaoAsync.load() == null) {
                 log.info("PreDownloadBlocks: checking for existing associated identity")
 
-                val fundingKey = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
-                val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
+                //val fundingKey = walletApplication.wallet.watchingKey
+                val identity = getIdentityFromPublicKeyId()
                 //log.info("key hash: ${fundingKey.pubKeyHash.toHexString()}, identityBytes: ${identityBytes != null}")
-                if (identityBytes != null) {
-                    val identity = platform.dpp.identity.createFromSerialized(identityBytes.toByteArray())
+                if (identity != null) {
                     log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id}")
                     ContextCompat.startForegroundService(walletApplication, createIntentForRestore(walletApplication, identity.id))
                     return@launch
@@ -1008,9 +1023,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val fundingKey = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
+        val fundingKey = walletApplication.wallet.blockchainIdentityKeyChain.watchingKey//currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
         val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
-        //log.info("key hash: ${fundingKey.pubKeyHash.toHexString()}, identityBytes: ${identityBytes != null}")
+        log.info("key hash: ${fundingKey.pubKeyHash.toHexString()}, identityBytes: ${identityBytes != null}")
         return if (identityBytes != null) {
             platform.dpp.identity.createFromSerialized(identityBytes.toByteArray())
         } else null
