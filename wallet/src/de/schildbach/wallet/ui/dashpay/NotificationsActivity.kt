@@ -151,6 +151,9 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 }
             }
         })
+        dashPayViewModel.sendContactRequestState.observe(this, Observer {
+            notificationsAdapter.pending = it
+        })
     }
 
     private fun processResults(data: List<NotificationItem>) {

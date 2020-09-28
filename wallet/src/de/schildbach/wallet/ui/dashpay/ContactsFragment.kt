@@ -25,34 +25,27 @@ import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.DashPayUserActivity
-import de.schildbach.wallet.ui.InputParser
+import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
-import de.schildbach.wallet.ui.setupActionBarWithTitle
-import org.bitcoinj.core.PrefixedChecksummedBytes
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.VerificationException
-import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
+import org.bitcoinj.core.PrefixedChecksummedBytes
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.VerificationException
 
 class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
-        ContactSearchResultsAdapter.OnItemClickListener {
+        ContactViewHolder.OnItemClickListener {
 
     companion object {
         private const val EXTRA_MODE = "extra_mode"
@@ -74,14 +67,12 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     }
 
     private lateinit var dashPayViewModel: DashPayViewModel
-    private val walletApplication: WalletApplication by lazy { WalletApplication.getInstance() }
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
     private var direction = UsernameSortOrderBy.USERNAME
     private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
-    private var currentPosition = -1
     private var initialSearch = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -118,7 +109,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             setupActionBarWithTitle(R.string.contacts_title)
         }
 
-        search_for_user.setOnClickListener{
+        search_for_user.setOnClickListener {
             startActivity(Intent(context, SearchUserActivity::class.java))
         }
 
@@ -145,49 +136,11 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             }
         })
 
-        dashPayViewModel.getContactRequestLiveData.observe(viewLifecycleOwner, Observer<Resource<DashPayContactRequest>> { it ->
-            if (it != null && currentPosition != -1) {
-                when (it.status) {
-                    Status.LOADING -> {
-
-                    }
-                    Status.ERROR -> {
-                        var msg = it.message
-                        if (msg == null) {
-                            msg = "!!Error!!  ${it.exception!!.message}"
-                        }
-                        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
-                    }
-                    Status.SUCCESS -> {
-                        // update the data
-                        contactsAdapter.results[currentPosition].usernameSearchResult!!.toContactRequest = it.data!!
-                        when (mode) {
-                            MODE_VIEW_REQUESTS -> {
-                                contactsAdapter.results.removeAt(currentPosition)
-                                contactsAdapter.notifyItemRemoved(currentPosition)
-                            }
-                            MODE_SEARCH_CONTACTS -> {
-                                // instead of removing the contact request and add a contact
-                                // just reload all the items
-                                searchContacts()
-                            }
-                            MODE_SELECT_CONTACT -> {
-                                // will there be contact requests in this mode?
-                            }
-                            else -> {
-                                throw IllegalStateException("invalid mode for ContactsActivity")
-                            }
-                        }
-
-                        currentPosition = -1
-
-                    }
-                }
-            }
+        dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner, Observer {
+            contactsAdapter.pending = it
         })
-
         dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner, Observer<Resource<Boolean>> {
-            if(it?.data != null && it.data) {
+            if (it?.data != null && it.data) {
                 searchContacts()
             }
         })
@@ -216,7 +169,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
 
         if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS)
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
-        requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT_REQUEST)) }
+        requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
 
         // process contacts
         val contacts = if (mode != MODE_VIEW_REQUESTS)
@@ -279,10 +232,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
-        if (currentPosition == -1) {
-            currentPosition = position
-            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
-        }
+        dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
