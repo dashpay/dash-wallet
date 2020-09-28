@@ -658,7 +658,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    private suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
+    suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
         dashPayProfileDao.insert(dashPayProfile)
     }
 
@@ -689,7 +689,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (platform.hasApp("dashpay")) {
                 val username = blockchainIdentity.currentUsername!!
                 // recovery will only get the information and place it in the database
-                val profile = blockchainIdentity.getProfile() ?: return@withContext
+                val profile = blockchainIdentity.getProfile()
+                        ?: profiles.createProfileDocument("", "",
+                                "", blockchainIdentity.identity!!)
+
 
                 // blockchainIdentity doesn't yet keep track of the profile, so we will load it
                 // into the database directly

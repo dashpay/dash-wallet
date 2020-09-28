@@ -12,6 +12,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
@@ -312,7 +313,9 @@ class CreateIdentityService : LifecycleService() {
 
         // Step 6: A profile will not be created, since the user has not yet specified
         //         a display name, public message (bio) or an avatarUrl
-
+        //         However, a default empty profile will be saved to the local database.
+        val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
+        platformRepo.updateDashPayProfile(emptyProfile)
         if (blockchainIdentityData.creationState < CreationState.DONE) {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
         }
