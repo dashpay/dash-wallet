@@ -46,7 +46,7 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
         fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 
-    fun bind(usernameSearchResult: UsernameSearchResult, state: Resource<WorkInfo>?, listener: OnItemClickListener?, contactRequestButtonClickListener: OnContactRequestButtonClickListener?) {
+    fun bind(usernameSearchResult: UsernameSearchResult, sendContactRequestWorkState: Resource<WorkInfo>?, listener: OnItemClickListener?, contactRequestButtonClickListener: OnContactRequestButtonClickListener?) {
         val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
                 usernameSearchResult.username[0])
 
@@ -70,7 +70,7 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
             listener?.onItemClicked(itemView, usernameSearchResult)
         }
 
-        ContactRelation.process(usernameSearchResult.type, state, object : ContactRelation.RelationshipCallback {
+        ContactRelation.process(usernameSearchResult.type, sendContactRequestWorkState, object : ContactRelation.RelationshipCallback {
 
             override fun none() {
                 itemView.relation_state.displayedChild = 4

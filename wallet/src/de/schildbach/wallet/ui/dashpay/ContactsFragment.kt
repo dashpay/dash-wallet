@@ -137,7 +137,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         })
 
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner, Observer {
-            contactsAdapter.pending = it
+            contactsAdapter.sendContactRequestWorkStateMap = it
         })
         dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner, Observer<Resource<Boolean>> {
             if (it?.data != null && it.data) {

@@ -154,7 +154,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             }
         })
         dashPayViewModel.sendContactRequestState.observe(this, Observer {
-            adapter.pending = it
+            adapter.sendContactRequestWorkStateMap = it
         })
     }
 

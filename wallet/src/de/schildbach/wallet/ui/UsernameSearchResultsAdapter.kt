@@ -33,7 +33,7 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
             notifyDataSetChanged()
         }
 
-    var pending: Map<String, Resource<WorkInfo>> = mapOf()
+    var sendContactRequestWorkStateMap: Map<String, Resource<WorkInfo>> = mapOf()
         set(value) {
             field = value
             notifyDataSetChanged()
@@ -49,7 +49,7 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
 
     override fun onBindViewHolder(holder: ContactViewHolder, position: Int) {
         val item = results[position]
-        val state = pending[item.dashPayProfile.userId]
-        holder.bind(results[position], state, itemClickListener, onContactRequestButtonClickListener)
+        val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.dashPayProfile.userId]
+        holder.bind(results[position], sendContactRequestWorkState, itemClickListener, onContactRequestButtonClickListener)
     }
 }

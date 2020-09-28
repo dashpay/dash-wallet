@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -72,7 +71,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         return results.size
     }
 
-    var pending: Map<String, Resource<WorkInfo>> = mapOf()
+    var sendContactRequestWorkStateMap: Map<String, Resource<WorkInfo>> = mapOf()
         set(value) {
             field = value
             notifyDataSetChanged()
@@ -98,9 +97,9 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         val item = results[position]
         when (item.viewType) {
             CONTACT -> {
-                val state = pending[item.usernameSearchResult!!.dashPayProfile.userId]
+                val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.usernameSearchResult!!.dashPayProfile.userId]
                 (holder as ContactViewHolder).apply {
-                    bind(item.usernameSearchResult, state, itemClickListener, listener)
+                    bind(item.usernameSearchResult, sendContactRequestWorkState, itemClickListener, listener)
                     if (item.usernameSearchResult.isPendingRequest) {
                         setMarginsDp(20, 3, 20, 3)
                         setBackgroundResource(R.drawable.selectable_round_corners)

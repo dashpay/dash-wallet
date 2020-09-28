@@ -62,7 +62,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             notifyDataSetChanged()
         }
 
-    var pending: Map<String, Resource<WorkInfo>> = mapOf()
+    var sendContactRequestWorkStateMap: Map<String, Resource<WorkInfo>> = mapOf()
         set(value) {
             field = value
             notifyDataSetChanged()
@@ -104,8 +104,8 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             }
             NOTIFICATION_CONTACT -> {
                 val item = notificationItem as NotificationItemContact
-                val state = pending[item.usernameSearchResult.dashPayProfile.userId]
-                (holder as ContactViewHolder).bind(item, state, notificationViewItem.isNew, showAvatars, onContactActionClickListener)
+                val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.usernameSearchResult.dashPayProfile.userId]
+                (holder as ContactViewHolder).bind(item, sendContactRequestWorkState, notificationViewItem.isNew, showAvatars, onContactActionClickListener)
             }
             NOTIFICATION_PAYMENT -> {
                 holder.bind(notificationItem, transactionCache, wallet)
