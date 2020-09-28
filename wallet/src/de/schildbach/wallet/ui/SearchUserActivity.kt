@@ -185,8 +185,10 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         })
         dashPayViewModel.sendContactRequestState.observe(this, Observer {
             adapter.pending = it
-            searchUser(false)
         })
+//        dashPayViewModel.allUsersLiveData().observe(this, Observer {
+//            searchUser(false)
+//        })
     }
 
     private fun startLoading() {

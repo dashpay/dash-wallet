@@ -17,6 +17,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
 import androidx.lifecycle.*
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
@@ -148,6 +149,8 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     }
 
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(application)
+
+    fun allUsersLiveData() = AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserId()
 
     fun sendContactRequest(toUserId: String) {
         SendContactRequestOperation(walletApplication)

@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import kotlinx.coroutines.delay
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 
@@ -41,6 +42,8 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
             val msg = formatExceptionMessage("derive encryption key", ex)
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
         }
+
+        delay(15000)
 
         return try {
             val sendContactRequestResult = platformRepo.sendContactRequest(toUserId, encryptionKey)

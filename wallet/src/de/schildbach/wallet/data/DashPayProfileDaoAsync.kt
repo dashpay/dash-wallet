@@ -11,17 +11,20 @@ interface DashPayProfileDaoAsync {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(dashPayProfile: DashPayProfile)
 
-    @Query("SELECT * FROM dashpay_profile where userId = :userId")
-    fun load(userId: String): LiveData<DashPayProfile?>
+    @Query("SELECT * FROM dashpay_profile")
+    fun loadByUserId(): LiveData<List<DashPayProfile?>>
 
-    fun loadDistinct(userId: String):
-            LiveData<DashPayProfile?> = load(userId).getDistinct()
+    @Query("SELECT * FROM dashpay_profile where userId = :userId")
+    fun loadByUserId(userId: String): LiveData<DashPayProfile?>
+
+    fun loadByUserIdDistinct(userId: String):
+            LiveData<DashPayProfile?> = loadByUserId(userId).getDistinct()
 
     @Query("SELECT * FROM dashpay_profile where username = :username")
-    fun loadFromUsername(username: String): LiveData<DashPayProfile?>
+    fun loadByUsername(username: String): LiveData<DashPayProfile?>
 
-    fun loadFromUsernameDistinct(userId: String):
-            LiveData<DashPayProfile?> = loadFromUsername(userId).getDistinct()
+    fun loadByUsernameDistinct(username: String):
+            LiveData<DashPayProfile?> = loadByUsername(username).getDistinct()
 
     @Query("DELETE FROM dashpay_profile")
     fun clear()

@@ -916,7 +916,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return loadContactRequestsAndReturn(profile)
     }
 
-    private suspend fun loadContactRequestsAndReturn(profile: DashPayProfile?): UsernameSearchResult? {
+    suspend fun loadContactRequestsAndReturn(profile: DashPayProfile?): UsernameSearchResult? {
         return profile?.run {
             val receivedContactRequest = dashPayContactRequestDao.loadToOthers(userId)?.firstOrNull()
             val sentContactRequest = dashPayContactRequestDao.loadFromOthers(userId)?.firstOrNull()

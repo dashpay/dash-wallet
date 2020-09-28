@@ -475,9 +475,12 @@ public class SendCoinsFragment extends Fragment {
             return;
         }
 
+        if (autoAcceptContactRequest && viewModel.getUserData() != null) {
+            dashPayViewModel.sendContactRequest(viewModel.getUserData().getDashPayProfile().getUserId());
+        }
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
                 activity.getIntent().getAction(), transaction, activity.isUserAuthorized(),
-                viewModel.getUserData(), autoAcceptContactRequest);
+                viewModel.getUserData());
         startActivity(transactionResultIntent);
     }
 

@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
@@ -49,7 +50,9 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
     private lateinit var viewModel: DashPayUserActivityViewModel
     private lateinit var dashPayViewModel: DashPayViewModel
-    private val showContactHistoryDisclaimer by lazy { intent.getBooleanExtra(EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER, false) }
+    private val showContactHistoryDisclaimer by lazy {
+        intent.getBooleanExtra(EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER, false)
+    }
     private val notificationsAdapter: NotificationsAdapter by lazy {
         NotificationsAdapter(this,
                 WalletApplication.getInstance().wallet, false, this,
@@ -59,24 +62,18 @@ class DashPayUserActivity : InteractionAwareActivity(),
     companion object {
         private const val EXTRA_INIT_USER_DATA = "extra_init_user_data"
         private const val EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER = "extra_show_contact_history_disclaimer"
-        private const val EXTRA_AUTO_ACCEPT = "extra_auto_accept"
 
         const val REQUEST_CODE_DEFAULT = 0
         const val RESULT_CODE_OK = 1
         const val RESULT_CODE_CHANGED = 2
 
         @JvmStatic
-        fun createIntent(context: Context, usernameSearchResult: UsernameSearchResult, showContactHistoryDisclaimer: Boolean = false, autoAccept: Boolean = false): Intent {
+        fun createIntent(context: Context, usernameSearchResult: UsernameSearchResult, showContactHistoryDisclaimer: Boolean = false): Intent {
             val intent = Intent(context, DashPayUserActivity::class.java)
             intent.putExtra(EXTRA_INIT_USER_DATA, usernameSearchResult)
             intent.putExtra(EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER, showContactHistoryDisclaimer)
-            intent.putExtra(EXTRA_AUTO_ACCEPT, autoAccept)
             return intent
         }
-    }
-
-    private val autoAccept: Boolean by lazy {
-        intent.extras!!.getBoolean(EXTRA_AUTO_ACCEPT)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,25 +86,13 @@ class DashPayUserActivity : InteractionAwareActivity(),
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)
+        updateContactRelationUi()
+
         viewModel.userLiveData.observe(this, Observer {
-            if (it != null) {
-                updateContactRelationUi(it)
-            } else {
-                Toast.makeText(this@DashPayUserActivity, "error loading user data", Toast.LENGTH_LONG).show()
-            }
-            if (initialDataLoaded) {
-                setResult(RESULT_CODE_CHANGED)
-            }
-            initialDataLoaded = true
+            updateContactRelationUi()
         })
         viewModel.sendContactRequestState.observe(this, Observer {
-            if (!viewModel.userData.requestSent) {
-                when (it.status) {
-                    Status.SUCCESS -> viewModel.refreshUserData()
-                    Status.LOADING -> updateContactRelationUi(viewModel.userData, true)
-                    else -> updateContactRelationUi(viewModel.userData)
-                }
-            }
+            updateContactRelationUi()
         })
         viewModel.notificationsForUser.observe(this, Observer {
             if (Status.SUCCESS == it.status) {
@@ -134,17 +119,16 @@ class DashPayUserActivity : InteractionAwareActivity(),
         } else {
             displayNameTxt.text = username
         }
-        avatar.setOnClickListener {
-            viewModel.refreshUserData()
-        }
         contact_request_pane.setOnUserActionListener(object : ContactRequestPane.OnUserActionListener {
 
             override fun onSendContactRequestClick() {
                 viewModel.sendContactRequest()
+                setResult(RESULT_CODE_CHANGED)
             }
 
             override fun onAcceptClick() {
                 viewModel.sendContactRequest()
+                setResult(RESULT_CODE_CHANGED)
             }
 
             override fun onIgnoreClick() {
@@ -158,37 +142,13 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         activity_rv.layoutManager = LinearLayoutManager(this)
         activity_rv.adapter = this.notificationsAdapter
-
-        updateContactRelationUi(viewModel.userData)
-
-        if (autoAccept && !viewModel.userData.requestSent) {
-            contact_request_pane.performAcceptClick()
-        }
     }
 
-    private fun updateContactRelationUi(userData: UsernameSearchResult, pendingWork: Boolean = false) {
-        if (userData.type != UsernameSearchResult.Type.NO_RELATIONSHIP) {
-            viewModel.initNotificationsForUser()
-        }
-        if (pendingWork) {
-            @Suppress("NON_EXHAUSTIVE_WHEN")
-            when (userData.type) {
-                UsernameSearchResult.Type.NO_RELATIONSHIP -> {
-                    if (showContactHistoryDisclaimer) {
-                        contact_request_pane.applyDisclaimerSendingState()
-                    } else {
-                        contact_request_pane.applySendingState()
-                    }
-                    return
-                }
-                UsernameSearchResult.Type.REQUEST_RECEIVED -> {
-                    contact_request_pane.applyAcceptingState()
-                    return
-                }
-            }
-        }
-        when (userData.type) {
-            UsernameSearchResult.Type.NO_RELATIONSHIP -> {
+    private fun updateContactRelationUi() {
+        val userData = viewModel.userData
+        val state = viewModel.sendContactRequestState.value
+        ContactRelation.process(viewModel.userData.type, state, object : ContactRelation.RelationshipCallback {
+            override fun none() {
                 if (showContactHistoryDisclaimer) {
                     contact_request_pane.applyDisclaimerState(userData.username)
                 } else {
@@ -196,11 +156,16 @@ class DashPayUserActivity : InteractionAwareActivity(),
                 }
                 activity_rv.visibility = View.GONE
             }
-            UsernameSearchResult.Type.CONTACT_ESTABLISHED -> {
-                contact_request_pane.applyFriendsState()
-                activity_rv.visibility = View.VISIBLE
+
+            override fun inviting() {
+                if (showContactHistoryDisclaimer) {
+                    contact_request_pane.applyDisclaimerSendingState()
+                } else {
+                    contact_request_pane.applySendingState()
+                }
             }
-            UsernameSearchResult.Type.REQUEST_SENT -> {
+
+            override fun invited() {
                 if (showContactHistoryDisclaimer) {
                     contact_request_pane.applySentStateWithDisclaimer(userData.username)
                 } else {
@@ -208,10 +173,24 @@ class DashPayUserActivity : InteractionAwareActivity(),
                 }
                 activity_rv.visibility = View.VISIBLE
             }
-            UsernameSearchResult.Type.REQUEST_RECEIVED -> {
+
+            override fun inviteReceived() {
                 contact_request_pane.applyReceivedState(userData.username)
                 activity_rv.visibility = View.VISIBLE
             }
+
+            override fun acceptingInvite() {
+                contact_request_pane.applyAcceptingState()
+            }
+
+            override fun friends() {
+                contact_request_pane.applyFriendsState()
+                activity_rv.visibility = View.VISIBLE
+            }
+
+        })
+        if (userData.type != UsernameSearchResult.Type.NO_RELATIONSHIP) {
+            viewModel.initNotificationsForUser()
         }
     }
 

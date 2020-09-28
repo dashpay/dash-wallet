@@ -51,7 +51,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
         private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
         private const val EXTRA_USER_DATA = "user_data"
-        private const val EXTRA_AUTO_ACCEPT_CONTACT_REQUEST = "auto_accept_contact_request"
 
         @JvmStatic
         fun createIntent(context: Context, action: String? = null, transaction: Transaction, userAuthorized: Boolean): Intent {
@@ -77,13 +76,12 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         @JvmStatic
         fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
-                         userData: UsernameSearchResult?, autoAccept: Boolean): Intent {
+                         userData: UsernameSearchResult?): Intent {
             return Intent(context, TransactionResultActivity::class.java).apply {
                 setAction(action)
                 putExtra(EXTRA_TX_ID, transaction.txId)
                 putExtra(EXTRA_USER_AUTHORIZED, userAuthorized)
                 putExtra(EXTRA_USER_DATA, userData)
-                putExtra(EXTRA_AUTO_ACCEPT_CONTACT_REQUEST, autoAccept)
             }
         }
     }
@@ -94,10 +92,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     private val userData by lazy {
         intent.extras!!.getParcelable<UsernameSearchResult>(EXTRA_USER_DATA)
-    }
-
-    private val autoAcceptContactRequest by lazy {
-        intent.extras!!.getBoolean(EXTRA_AUTO_ACCEPT_CONTACT_REQUEST)
     }
 
     @SuppressLint("SetTextI18n")
@@ -116,7 +110,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         if (blockchainIdentity != null) {
             userId = blockchainIdentity.getContactForTransaction(tx!!)
             if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadDistinct(userId).observe(this, Observer {
+                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(this, Observer {
                     if (it != null) {
                         profile = it
                         finishInitialization(tx, profile)
@@ -143,7 +137,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
                 userData != null -> {
                     finish()
                     startActivity(DashPayUserActivity.createIntent(this@TransactionResultActivity,
-                            userData, userData != null, autoAcceptContactRequest))
+                            userData, userData != null))
                 }
                 else -> {
                     super.finish()

@@ -55,7 +55,7 @@ class SendContactRequestOperation(val application: Application) {
             }
         }
 
-        fun allOperationsStatus(application: Application): LiveData<MutableMap<String, Resource<Nothing>>> {
+        fun allOperationsStatus(application: Application): LiveData<MutableMap<String, Resource<WorkInfo>>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
             workManager.pruneWork()
             return workManager.getWorkInfosByTagLiveData(SendContactRequestWorker::class.qualifiedName!!).switchMap {
@@ -65,7 +65,7 @@ class SendContactRequestOperation(val application: Application) {
                         return@liveData
                     }
 
-                    val result = mutableMapOf<String, Resource<Nothing>>()
+                    val result = mutableMapOf<String, Resource<WorkInfo>>()
                     it.forEach {
                         var toUserId = ""
                         it.tags.forEach { tag ->
@@ -80,24 +80,24 @@ class SendContactRequestOperation(val application: Application) {
             }
         }
 
-        private fun convertState(workInfo: WorkInfo): Resource<Nothing> {
+        private fun convertState(workInfo: WorkInfo): Resource<WorkInfo> {
             return when (workInfo.state) {
                 WorkInfo.State.SUCCEEDED -> {
-                    Resource.success(null)
+                    Resource.success(workInfo)
                 }
                 WorkInfo.State.FAILED -> {
                     val errorMessage = BaseWorker.extractError(workInfo.outputData)
                     if (errorMessage != null) {
-                        Resource.error(errorMessage)
+                        Resource.error(errorMessage, workInfo)
                     } else {
-                        Resource.error(Exception())
+                        Resource.error(Exception(), workInfo)
                     }
                 }
                 WorkInfo.State.CANCELLED -> {
-                    Resource.canceled(null)
+                    Resource.canceled(workInfo)
                 }
                 else -> {
-                    Resource.loading(null)
+                    Resource.loading(workInfo)
                 }
             }
         }

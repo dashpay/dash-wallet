@@ -18,16 +18,14 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.dashpay.NotificationsForUserLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
 class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(application) {
@@ -39,41 +37,65 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
     private val platformRepo = PlatformRepo.getInstance()
     private val walletApplication = application as WalletApplication
 
-    val userLiveData = MutableLiveData<UsernameSearchResult?>()
-    var userData: UsernameSearchResult
-        get() = userLiveData.value!!
-        set(value) {
-            userLiveData.value = value
+    lateinit var userData: UsernameSearchResult
+
+//    val userLiveData by lazy {
+//        AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userData.dashPayProfile.userId).switchMap {
+//            return@switchMap liveData(Dispatchers.IO) {
+//                userData = platformRepo.loadContactRequestsAndReturn(it)!!
+//                emit(userData)
+//            }
+//        }
+//    }
+
+    val userLiveData by lazy {
+        liveData(Dispatchers.IO) {
+            userData = platformRepo.getUser(userData.username).first()
+            sendContactRequestState
+            emit(userData)
         }
+    }
 
     val sendContactRequestState by lazy {
         SendContactRequestOperation.operationStatus(application, userData.dashPayProfile.userId)
     }
 
-    fun sendContactRequest(refreshUserData: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val toUserId = userLiveData.value!!.dashPayProfile.userId
-                val username = userLiveData.value!!.username
-                val result = platformRepo.sendContactRequest(toUserId)
-                if (refreshUserData) {
-                    userLiveData.postValue(platformRepo.getUser(userData.username).first())
-                } else {
-                    userLiveData.value!!.toContactRequest = result
-                    userLiveData.postValue(userLiveData.value)  //notify observers
-                }
-            } catch (ex: Exception) {
-                log.error(ex.message, ex)
-                userLiveData.postValue(userLiveData.value)  //notify observers
-            }
-        }
+//    val userLiveDataObservable by lazy {
+//        AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadDistinct(userData.dashPayProfile.userId)
+//    }
+
+    fun a() {
+        val a = MediatorLiveData<UsernameSearchResult>()
+        a.addSource(AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userData.dashPayProfile.userId), Observer {
+
+        })
+        a.addSource(AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync().loadDistinctToOthers(userData.dashPayProfile.userId), Observer {
+
+        })
+        a.addSource(AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync().loadDistinctFromOthers(userData.dashPayProfile.userId), Observer {
+
+        })
     }
 
-    fun refreshUserData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            userLiveData.postValue(platformRepo.getUser(userData.username).first())
-        }
-    }
+
+//    fun sendContactRequest(refreshUserData: Boolean) {
+//        viewModelScope.launch(Dispatchers.IO) {
+//            try {
+//                val toUserId = userLiveData.value!!.dashPayProfile.userId
+//                val username = userLiveData.value!!.username
+//                val result = platformRepo.sendContactRequest(toUserId)
+//                if (refreshUserData) {
+//                    userLiveData.postValue(platformRepo.getUser(userData.username).first())
+//                } else {
+//                    userLiveData.value!!.toContactRequest = result
+//                    userLiveData.postValue(userLiveData.value)  //notify observers
+//                }
+//            } catch (ex: Exception) {
+//                log.error(ex.message, ex)
+//                userLiveData.postValue(userLiveData.value)  //notify observers
+//            }
+//        }
+//    }
 
     fun sendContactRequest() {
         SendContactRequestOperation(walletApplication)

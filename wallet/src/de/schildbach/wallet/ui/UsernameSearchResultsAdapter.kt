@@ -22,10 +22,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import androidx.work.WorkInfo
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dashpay_profile_row.view.*
 
@@ -47,7 +47,7 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
             notifyDataSetChanged()
         }
 
-    var pending: Map<String, Resource<Nothing>> = mapOf()
+    var pending: Map<String, Resource<WorkInfo>> = mapOf()
         set(value) {
             field = value
             notifyDataSetChanged()
@@ -70,7 +70,7 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
     inner class ViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             RecyclerView.ViewHolder(inflater.inflate(R.layout.dashpay_profile_row, parent, false)) {
 
-        fun bind(usernameSearchResult: UsernameSearchResult, state: Resource<Nothing>?) {
+        fun bind(usernameSearchResult: UsernameSearchResult, state: Resource<WorkInfo>?) {
             val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
                     usernameSearchResult.username[0])
 
@@ -96,71 +96,24 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
                 }
             }
 
-            if (state != null) {
-                @Suppress("NON_EXHAUSTIVE_WHEN")
-                println("state:\t$state")
-                when (state.status) {
-                    Status.LOADING -> {
-                        // NO_RELATIONSHIP
-                        itemView.request_status.visibility = View.GONE
-                        itemView.buttons.visibility = View.GONE
-                        itemView.contact_added.visibility = View.GONE
-                        itemView.pending_work_pane.visibility = View.VISIBLE
-                        (itemView.pending_work_icon.drawable as AnimationDrawable).start()
-                        @Suppress("NON_EXHAUSTIVE_WHEN")
-                        when (usernameSearchResult.type) {
-                            UsernameSearchResult.Type.REQUEST_RECEIVED -> {
-                                itemView.pending_work_text.text = "Accepting"
-                            }
-                            UsernameSearchResult.Type.NO_RELATIONSHIP -> {
-                                itemView.pending_work_text.text = "Sending"
-                            }
-                        }
-                        return
-                    }
-                    Status.SUCCESS -> {
-                        @Suppress("NON_EXHAUSTIVE_WHEN")
-                        when (usernameSearchResult.type) {
-                            UsernameSearchResult.Type.REQUEST_RECEIVED -> {
-                                // CONTACT_ESTABLISHED
-                                itemView.request_status.visibility = View.GONE
-                                itemView.buttons.visibility = View.GONE
-                                itemView.contact_added.visibility = View.VISIBLE
-                                return
-                            }
-                            UsernameSearchResult.Type.NO_RELATIONSHIP -> {
-                                //REQUEST_SENT
-                                itemView.request_status.visibility = View.VISIBLE
-                                itemView.buttons.visibility = View.GONE
-                                itemView.contact_added.visibility = View.GONE
-                                return
-                            }
-                        }
-                    }
-                }
-            }
+            ContactRelation.process(usernameSearchResult.type, state, object : ContactRelation.RelationshipCallback {
 
-            itemView.pending_work_pane.visibility = View.GONE
-            when (usernameSearchResult.type) {
-                UsernameSearchResult.Type.NO_RELATIONSHIP -> {
-                    itemView.request_status.visibility = View.GONE
-                    itemView.buttons.visibility = View.GONE
-                    itemView.contact_added.visibility = View.GONE
+                override fun none() {
+                    itemView.relation_state.displayedChild = 4
                 }
-                UsernameSearchResult.Type.CONTACT_ESTABLISHED -> {
-                    itemView.request_status.visibility = View.GONE
-                    itemView.buttons.visibility = View.GONE
-                    itemView.contact_added.visibility = View.VISIBLE
+
+                override fun inviting() {
+                    itemView.relation_state.displayedChild = 3
+                    itemView.pending_work_text.setText(R.string.sending_contact_request_short)
+                    (itemView.pending_work_icon.drawable as AnimationDrawable).start()
                 }
-                UsernameSearchResult.Type.REQUEST_SENT -> {
-                    itemView.request_status.visibility = View.VISIBLE
-                    itemView.buttons.visibility = View.GONE
-                    itemView.contact_added.visibility = View.GONE
+
+                override fun invited() {
+                    itemView.relation_state.displayedChild = 1
                 }
-                UsernameSearchResult.Type.REQUEST_RECEIVED -> {
-                    itemView.request_status.visibility = View.GONE
-                    itemView.buttons.visibility = View.VISIBLE
-                    itemView.contact_added.visibility = View.GONE
+
+                override fun inviteReceived() {
+                    itemView.relation_state.displayedChild = 2
                     itemView.accept_contact_request.setOnClickListener {
                         onContactRequestButtonClickListener.onAcceptRequest(usernameSearchResult, adapterPosition)
                     }
@@ -168,7 +121,17 @@ class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListen
                         onContactRequestButtonClickListener.onIgnoreRequest(usernameSearchResult, adapterPosition)
                     }
                 }
-            }
+
+                override fun acceptingInvite() {
+                    itemView.relation_state.displayedChild = 3
+                    itemView.pending_work_text.setText(R.string.accepting_contact_request_short)
+                    (itemView.pending_work_icon.drawable as AnimationDrawable).start()
+                }
+
+                override fun friends() {
+                    itemView.relation_state.displayedChild = 0
+                }
+            })
         }
     }
 }
