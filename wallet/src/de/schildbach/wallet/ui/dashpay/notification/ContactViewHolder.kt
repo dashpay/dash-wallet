@@ -16,14 +16,17 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
+import android.graphics.drawable.AnimationDrawable
 import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.work.WorkInfo
 import com.bumptech.glide.Glide
-import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.notification_contact_request_received_row.view.*
@@ -36,17 +39,13 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault())
 
     private fun formatDate(timeStamp: Long): String {
-        return dateFormat.format(timeStamp).replace("AM", "am").replace("PM","pm")
+        return dateFormat.format(timeStamp).replace("AM", "am").replace("PM", "pm")
     }
 
-    override fun bind(notificationItem: NotificationItem, vararg args: Any) {
-        (notificationItem as NotificationItemContact).run {
-            bind(usernameSearchResult, (args[0] as Boolean), isInvitationOfEstablished, (args[1] as Boolean), (args[2] as OnContactActionClickListener))
-        }
-    }
+    fun bind(notificationItem: NotificationItemContact, state: Resource<WorkInfo>?, isNew: Boolean,
+             showAvatar: Boolean, onActionClickListener: OnContactActionClickListener? = null) {
 
-    private fun bind(usernameSearchResult: UsernameSearchResult, isNew: Boolean, isInvitationOfEstablished: Boolean,
-                     showAvatar: Boolean, onActionClickListener: OnContactActionClickListener? = null) {
+        val usernameSearchResult = notificationItem.usernameSearchResult
 
         val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
                 usernameSearchResult.username[0])
@@ -81,11 +80,14 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
                     contact_added.setImageResource(R.drawable.ic_add_contact)
                     R.string.notifications_you_sent
                 }
+                UsernameSearchResult.Type.NO_RELATIONSHIP -> {
+                    0
+                }
             }
 
             @Suppress("DEPRECATION")
             val displayNameText = context.getString(displayNameResId, "<b>$name</b>")
-            displayName.text = Html.fromHtml(displayNameText)
+            display_name.text = Html.fromHtml(displayNameText)
 
             val scale: Float = itemView.resources.displayMetrics.density
             itemView.layoutParams.height = (79 * scale + 0.5f).toInt()
@@ -99,14 +101,24 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
             }
             avatar.visibility = if (showAvatar) View.VISIBLE else View.GONE
 
-            if (usernameSearchResult.isPendingRequest && !isInvitationOfEstablished) {
-                accept_contact_request.visibility = View.VISIBLE
-                ignore_contact_request.visibility = View.VISIBLE
-                contact_added.visibility = View.GONE
+            if (usernameSearchResult.isPendingRequest && !notificationItem.isInvitationOfEstablished) {
+                if (state != null && state.status == Status.LOADING) {
+                    accept_contact_request.visibility = View.GONE
+                    ignore_contact_request.visibility = View.GONE
+                    contact_added.visibility = View.GONE
+                    pending_work_icon.visibility = View.VISIBLE
+                    (pending_work_icon.drawable as AnimationDrawable).start()
+                } else {
+                    accept_contact_request.visibility = View.VISIBLE
+                    ignore_contact_request.visibility = View.VISIBLE
+                    contact_added.visibility = View.GONE
+                    pending_work_icon.visibility = View.GONE
+                }
             } else {
                 accept_contact_request.visibility = View.GONE
                 ignore_contact_request.visibility = View.GONE
                 contact_added.visibility = View.VISIBLE
+                pending_work_icon.visibility = View.GONE
             }
             accept_contact_request.setOnClickListener {
                 onActionClickListener?.run {

@@ -17,7 +17,9 @@
 package de.schildbach.wallet.ui.send
 
 
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -25,7 +27,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -34,8 +36,6 @@ import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
-import kotlinx.android.synthetic.main.dialog_confirm_transaction.avatar
-import kotlinx.android.synthetic.main.dialog_confirm_transaction.displayname
 
 
 class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
@@ -54,11 +54,13 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         private const val ARG_PAYEE_USERNAME = "arg_payee_username"
         private const val ARG_PAYEE_DISPLAYNAME = "arg_payee_displayname"
         private const val ARG_PAYEE_AVATAR_URL = "arg_payee_avatar_url"
+        private const val ARG_PAYEE_PENDING_CONTACT_REQUEST = "arg_payee_contact_request"
 
         @JvmStatic
         fun createDialog(address: String, amount: String, amountFiat: String, fiatSymbol: String, fee: String, total: String,
                          payeeName: String? = null, payeeVerifiedBy: String? = null, buttonText: String? = null,
-                         username: String? = null, displayName: String? = null, avatarUrl: String? = null): DialogFragment {
+                         username: String? = null, displayName: String? = null, avatarUrl: String? = null,
+                         pendingContactRequest: Boolean = false): DialogFragment {
             val dialog = ConfirmTransactionDialog()
             val bundle = Bundle()
             bundle.putString(ARG_ADDRESS, address)
@@ -75,6 +77,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
                 bundle.putString(ARG_PAYEE_AVATAR_URL, avatarUrl)
                 bundle.putString(ARG_PAYEE_USERNAME, username)
             }
+            bundle.putBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, pendingContactRequest)
             dialog.arguments = bundle
             return dialog
         }
@@ -82,25 +85,42 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
 
     private lateinit var sharedViewModel: SingleActionSharedViewModel
 
+    private val autoAcceptPrefsKey by lazy {
+        "auto_accept:$username"
+    }
+
+    private val prefs: SharedPreferences by lazy {
+        PreferenceManager.getDefaultSharedPreferences(activity)
+    }
+
+    private val username by lazy {
+        arguments!!.getString(ARG_PAYEE_USERNAME)
+    }
+
+    private val pendingContactRequest by lazy {
+        arguments!!.getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        maybeCleanUpPrefs()
         arguments!!.apply {
             input_value.text = getString(ARG_AMOUNT)
             fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
             fiat_value.text = getString(ARG_AMOUNT_FIAT)
             transaction_fee.text = getString(ARG_FEE)
             total_amount.text = getString(ARG_TOTAL)
-            val username = getString(ARG_PAYEE_USERNAME)
             val displayNameText = getString(ARG_PAYEE_DISPLAYNAME)
             val avatarUrl = getString(ARG_PAYEE_AVATAR_URL)
             val payeeName = getString(ARG_PAYEE_NAME)
             val payeeVerifiedBy = getString(ARG_PAYEE_VERIFIED_BY)
             if (payeeName != null && payeeVerifiedBy != null) {
                 sendtouser.visibility = View.GONE
+                confirm_auto_accept.visibility = View.GONE
                 address.text = payeeName
                 payee_secured_by.text = payeeVerifiedBy
                 payee_verified_by_pane.visibility = View.VISIBLE
@@ -116,14 +136,21 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
                 val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context!!,
                         username[0])
 
-                if(avatarUrl.isNotEmpty()) {
+                if (avatarUrl.isNotEmpty()) {
                     Glide.with(avatar).load(avatarUrl).circleCrop()
                             .placeholder(defaultAvatar).into(avatar)
                 } else {
                     avatar.background = defaultAvatar
                 }
+                confirm_auto_accept.isChecked = autoAcceptLastValue
+                if (pendingContactRequest) {
+                    confirm_auto_accept.visibility = View.VISIBLE
+                } else {
+                    confirm_auto_accept.visibility = View.GONE
+                }
             } else {
                 sendtouser.visibility = View.GONE
+                confirm_auto_accept.visibility = View.GONE
                 address.ellipsize = TextUtils.TruncateAt.MIDDLE
                 address.text = getString(ARG_ADDRESS)
             }
@@ -136,6 +163,8 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         }
         confirm_payment.setOnClickListener {
             dismiss()
+            autoAcceptLastValue = confirm_auto_accept.isChecked
+            sharedViewModel.autoAcceptContactRequest = pendingContactRequest && confirm_auto_accept.isChecked
             sharedViewModel.clickConfirmButtonEvent.call(true)
         }
         dialog?.setOnShowListener { dialog ->
@@ -152,7 +181,23 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         sharedViewModel = activity?.run {
-            ViewModelProviders.of(this)[SingleActionSharedViewModel::class.java]
+            ViewModelProvider(this)[SingleActionSharedViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
+    }
+
+    private var autoAcceptLastValue: Boolean
+        get() = if (username != null) {
+            prefs.getBoolean(autoAcceptPrefsKey, true)
+        } else {
+            true
+        }
+        set(value) {
+            prefs.edit().putBoolean(autoAcceptPrefsKey, value).apply()
+        }
+
+    private fun maybeCleanUpPrefs() {
+        if (username != null && !pendingContactRequest && prefs.contains(autoAcceptPrefsKey)) {
+            prefs.edit().remove(autoAcceptPrefsKey).apply()
+        }
     }
 }

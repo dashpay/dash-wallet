@@ -17,9 +17,16 @@ package de.schildbach.wallet.ui.send
 
 import android.app.Application
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.SendRequest
 
@@ -29,6 +36,8 @@ class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(appl
         INPUT,  // asks for confirmation
         DECRYPTING, SIGNING, SENDING, SENT, FAILED // sending states
     }
+
+    private val platformRepo = PlatformRepo.getInstance()
 
     @JvmField
     val state = MutableLiveData<State>()
@@ -41,6 +50,8 @@ class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(appl
 
     @JvmField
     var dryrunException: Exception? = null
+
+    var userData: UsernameSearchResult? = null
 
     fun createSendRequest(finalPaymentIntent: PaymentIntent, signInputs: Boolean, forceEnsureMinRequiredFee: Boolean): SendRequest {
         return createSendRequest(wallet, basePaymentIntentValue.mayEditAmount(), finalPaymentIntent, signInputs, forceEnsureMinRequiredFee)
@@ -55,5 +66,22 @@ class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(appl
     override fun signAndSendPayment(sendRequest: SendRequest) {
         state.value = State.SIGNING
         super.signAndSendPayment(sendRequest)
+    }
+
+    fun loadUserDataByUsername(username: String) = liveData(Dispatchers.IO) {
+        platformRepo.getLocalUserDataByUsername(username)?.run {
+            emit(Resource.success(this))
+        } ?: try {
+            val userData = platformRepo.searchUsernames(username, true).firstOrNull()
+            emit(Resource.success(userData))
+        } catch (ex: Exception) {
+            emit(Resource.error(ex))
+        }
+    }
+
+    fun loadUserDataByUserId(userId: String) = liveData(Dispatchers.IO) {
+        platformRepo.getLocalUserDataByUserId(userId)?.run {
+            emit(Resource.success(this))
+        } ?: emit(Resource.error(Exception()))
     }
 }

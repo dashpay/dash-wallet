@@ -37,35 +37,29 @@ import android.os.Build;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
-import androidx.core.content.ContextCompat;
-import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
-import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.LinuxSecureRandom;
-import org.bitcoinj.crypto.MnemonicCode;
-import org.bitcoinj.evolution.CreditFundingTransaction;
-import org.bitcoinj.evolution.listeners.CreditFundingTransactionEventListener;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
-import org.dashevo.dashpay.BlockchainIdentity;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -110,7 +104,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler {
+public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler, androidx.work.Configuration.Provider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -776,9 +770,9 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                AppDatabase.getAppDatabase().blockchainIdentityDataDao().clear();
-                AppDatabase.getAppDatabase().dashPayProfileDao().clear();
-                AppDatabase.getAppDatabase().dashPayContactRequestDao().clear();
+                AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().clear();
+                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().clear();
+                AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync().clear();
                 ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });
@@ -810,5 +804,13 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             context.startActivity(lockScreenIntent);
         }
         deviceWasLocked = false;
+    }
+
+    @NonNull
+    @Override
+    public androidx.work.Configuration getWorkManagerConfiguration() {
+        return new androidx.work.Configuration.Builder()
+                .setMinimumLoggingLevel(Log.VERBOSE)
+                .build();
     }
 }

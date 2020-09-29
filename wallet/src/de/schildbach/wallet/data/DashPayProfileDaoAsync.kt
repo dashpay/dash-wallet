@@ -1,5 +1,6 @@
 package de.schildbach.wallet.data
 
+import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -8,14 +9,23 @@ import androidx.room.Query
 @Dao
 interface DashPayProfileDaoAsync {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(dashPayProfile: DashPayProfile)
-
-    @Query("SELECT * FROM dashpay_profile WHERE userId = :userId")
-    suspend fun load(userId: String): DashPayProfile?
+    fun insert(dashPayProfile: DashPayProfile)
 
     @Query("SELECT * FROM dashpay_profile")
-    suspend fun loadAll(): List<DashPayProfile>
+    fun loadByUserId(): LiveData<List<DashPayProfile?>>
+
+    @Query("SELECT * FROM dashpay_profile where userId = :userId")
+    fun loadByUserId(userId: String): LiveData<DashPayProfile?>
+
+    fun loadByUserIdDistinct(userId: String):
+            LiveData<DashPayProfile?> = loadByUserId(userId).getDistinct()
+
+    @Query("SELECT * FROM dashpay_profile where username = :username")
+    fun loadByUsername(username: String): LiveData<DashPayProfile?>
+
+    fun loadByUsernameDistinct(username: String):
+            LiveData<DashPayProfile?> = loadByUsername(username).getDistinct()
 
     @Query("DELETE FROM dashpay_profile")
-    suspend fun clear()
+    fun clear()
 }

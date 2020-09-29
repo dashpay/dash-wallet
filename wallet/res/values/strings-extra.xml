@@ -28,6 +28,7 @@
     <string name="dialog_confirm_secured_by">Secured by</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Total</string>
+    <string name="dialog_confirm_accept_contact_request">Accept contact request</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="quick_action_secure_now">Secure Wallet Now</string>
@@ -377,9 +378,12 @@
     <string name="add_new_contact">Add a New Contact</string>
     <string name="send_contact_request">Send Contact Request</string>
     <string name="sending_contact_request">Sending Contact Request</string>
+    <string name="sending_contact_request_short">Inviting</string>
+    <string name="accepting_contact_request">Accepting Contact Request</string>
+    <string name="accepting_contact_request_short">Accepting</string>
     <string name="search_user_no_results">There are no users that match</string>
     <string name="search_user_loading">Searching for username <b>"%"</b> on the Dash Network</string>
-    <string name="contact_request_sent">Contact Request Sent</string>
+    <string name="contact_request_pending">Contact Request Pending</string>
     <string name="pay">Pay</string>
     <string name="contact_request_received_title">%s has requested to be a friend</string>
     <string name="contact_request_accept">Accept</string>
@@ -417,5 +421,11 @@
     <string name="contact_history_disclaimer">Add % as your contact to &lt;b>Pay Directly to Username&lt;/b> and &lt;b>Retain Mutual Transaction History&lt;/b></string>
     <string name="contact_history_disclaimer_pending">Once % accepts your request you can &lt;b>Pay Directly to Username&lt;/b></string>
     <string name="stranger_activity_disclaimer_text">Payments made directly to addresses won’t be retained in activity.</string>
+
+    <string name="edit_profile">Edit Profile</string>
+    <string name="display_name">Display Name</string>
+    <string name="about_me">About me</string>
+    <string name="char_count">%1$d/%2$dCharacters</string>
+    <string name="save">Save</string>
 
 </resources>

@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="80002"
-    android:versionName="8.0.2-dashpay">
+    android:versionCode="80003"
+    android:versionName="8.0.3-dashpay">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -265,7 +265,7 @@
         <activity
             android:name="de.schildbach.wallet.ui.TransactionResultActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.Fullscreen" />
+            android:theme="@style/My.Theme.ChildActivity" />
 
         <activity android:name="de.schildbach.wallet.ui.ForgotPinActivity"
             android:screenOrientation="portrait"
@@ -303,6 +303,10 @@
 
         <activity
             android:name="de.schildbach.wallet.ui.DashPayUserActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"/>
+
+        <activity android:name="de.schildbach.wallet.ui.EditProfileActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"/>
 

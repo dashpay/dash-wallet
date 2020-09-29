@@ -1,9 +1,13 @@
 package de.schildbach.wallet.data
 
+import android.os.Parcelable
+import kotlinx.android.parcel.Parcelize
+
+@Parcelize
 data class UsernameSearchResult(val username: String,
                                 val dashPayProfile: DashPayProfile,
                                 var toContactRequest: DashPayContactRequest?,
-                                var fromContactRequest: DashPayContactRequest?) {
+                                var fromContactRequest: DashPayContactRequest?) : Parcelable {
     val requestSent: Boolean
         get() = toContactRequest != null
     val requestReceived: Boolean
@@ -23,18 +27,24 @@ data class UsernameSearchResult(val username: String,
                 Type.REQUEST_RECEIVED -> {
                     fromContactRequest!!.timestamp
                 }
-            }.toLong()
+                Type.NO_RELATIONSHIP -> {
+                    0L
+                }
+
+            }
         }
 
     val type: Type
         get() = when (requestSent to requestReceived) {
+            false to false -> Type.NO_RELATIONSHIP
             true to true -> Type.CONTACT_ESTABLISHED
             false to true -> Type.REQUEST_RECEIVED
             true to false -> Type.REQUEST_SENT
-            else -> throw IllegalStateException("toContactRequest and fromContactRequest can't both be null at the same time")
+            else -> throw IllegalStateException()
         }
 
     enum class Type {
+        NO_RELATIONSHIP,
         REQUEST_SENT,
         REQUEST_RECEIVED,
         CONTACT_ESTABLISHED
