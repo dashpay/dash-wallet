@@ -389,9 +389,7 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
         } else {
             platformRepo.recoverIdentityAsync(blockchainIdentity,
-                    walletApplication.wallet.currentAuthenticationKey(
-                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY
-                    ).pubKeyHash)
+                    walletApplication.wallet.blockchainIdentityKeyChain.watchingKey.pubKeyHash)
         }
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
