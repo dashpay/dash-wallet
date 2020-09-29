@@ -17,12 +17,12 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -105,14 +105,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
                         setBackgroundResource(R.drawable.selectable_round_corners)
                     } else {
                         setMarginsDp(0, 0, 0, 0)
-                        // background color alternates based on first letter
-                        val colorResId = if (item.usernameSearchResult.dashPayProfile.username[0].toLowerCase().toInt() % 2 != 0) {
-                            R.color.white
-                        } else {
-                            R.color.dash_lighter_gray
-                        }
-                        val color = ResourcesCompat.getColor(holder.itemView.resources, colorResId, null)
-                        setBackgroundColor(color)
+                        setBackgroundColor(Color.TRANSPARENT)
                         setForegroundResource(R.drawable.selectable_background_dark)
                     }
                 }
