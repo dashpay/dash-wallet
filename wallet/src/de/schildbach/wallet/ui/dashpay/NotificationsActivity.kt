@@ -151,6 +151,9 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 }
             }
         })
+        dashPayViewModel.sendContactRequestState.observe(this, Observer {
+            notificationsAdapter.sendContactRequestWorkStateMap = it
+        })
     }
 
     private fun processResults(data: List<NotificationItem>) {
@@ -215,9 +218,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         when (notificationItem) {
             is NotificationItemContact -> {
                 val usernameSearchResult = notificationItem.usernameSearchResult
-                startActivityForResult(DashPayUserActivity.createIntent(this,
-                        usernameSearchResult.username, usernameSearchResult.dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                        contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
+                startActivityForResult(DashPayUserActivity.createIntent(this, usernameSearchResult), DashPayUserActivity.REQUEST_CODE_DEFAULT)
             }
             is NotificationItemPayment -> {
                 val tx = notificationItem.tx!!

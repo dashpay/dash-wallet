@@ -19,6 +19,7 @@ package de.schildbach.wallet.data;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.text.TextUtils;
 
 import com.google.common.io.BaseEncoding;
 
@@ -167,7 +168,7 @@ public final class PaymentIntent implements Parcelable {
     public final String payeeUserId;
 
     @Nullable
-    public final String payeeDashPayUsername;
+    public final String payeeUsername;
 
     private static final Logger log = LoggerFactory.getLogger(PaymentIntent.class);
 
@@ -175,7 +176,7 @@ public final class PaymentIntent implements Parcelable {
                          @Nullable final String payeeVerifiedBy, @Nullable final Output[] outputs, @Nullable final String memo,
                          @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
                          @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash,
-                         @Nullable final String payeeUserId, @Nullable final String payeeDashPayUsername) {
+                         @Nullable final String payeeUserId, @Nullable final String payeeUsername) {
         this.standard = standard;
         this.payeeName = payeeName;
         this.payeeVerifiedBy = payeeVerifiedBy;
@@ -186,7 +187,7 @@ public final class PaymentIntent implements Parcelable {
         this.paymentRequestUrl = paymentRequestUrl;
         this.paymentRequestHash = paymentRequestHash;
         this.payeeUserId = payeeUserId;
-        this.payeeDashPayUsername = payeeDashPayUsername;
+        this.payeeUsername = payeeUsername;
     }
 
     private PaymentIntent(final Address address, @Nullable final String addressLabel) {
@@ -205,6 +206,11 @@ public final class PaymentIntent implements Parcelable {
 
     public static PaymentIntent fromAddressWithIdentity(final Address address, @Nullable final String payeeUserId) {
         return new PaymentIntent(null, null, null, buildSimplePayTo(Coin.ZERO, address), null, null,
+                null, null, null, payeeUserId, null);
+    }
+
+    public static PaymentIntent fromAddressWithIdentity(final Address address, @Nullable final String payeeUserId, Coin amount) {
+        return new PaymentIntent(null, null, null, buildSimplePayTo(amount, address), null, null,
                 null, null, null, payeeUserId, null);
     }
 
@@ -375,7 +381,7 @@ public final class PaymentIntent implements Parcelable {
     }
 
     public boolean isIdentityPaymentRequest() {
-        return payeeUserId != null && !payeeUserId.isEmpty();
+        return !TextUtils.isEmpty(payeeUserId) || !TextUtils.isEmpty(payeeUsername);
     }
 
     /**
@@ -487,7 +493,7 @@ public final class PaymentIntent implements Parcelable {
             dest.writeInt(0);
         }
         dest.writeString(payeeUserId);
-        dest.writeString(payeeDashPayUsername);
+        dest.writeString(payeeUsername);
     }
 
     public static final Parcelable.Creator<PaymentIntent> CREATOR = new Parcelable.Creator<PaymentIntent>() {
@@ -539,6 +545,6 @@ public final class PaymentIntent implements Parcelable {
         }
 
         payeeUserId = in.readString();
-        payeeDashPayUsername = in.readString();
+        payeeUsername = in.readString();
     }
 }

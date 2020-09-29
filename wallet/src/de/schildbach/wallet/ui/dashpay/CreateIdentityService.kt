@@ -13,6 +13,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
@@ -314,7 +315,9 @@ class CreateIdentityService : LifecycleService() {
 
         // Step 6: A profile will not be created, since the user has not yet specified
         //         a display name, public message (bio) or an avatarUrl
-
+        //         However, a default empty profile will be saved to the local database.
+        val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
+        platformRepo.updateDashPayProfile(emptyProfile)
         if (blockchainIdentityData.creationState < CreationState.DONE) {
             platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
         }
@@ -345,7 +348,7 @@ class CreateIdentityService : LifecycleService() {
         val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
                 //?: throw IllegalArgumentException("identity $identity does not match a credit funding transaction")
 
-        val existingBlockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().load()
+        val existingBlockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDao().load()
         if (existingBlockchainIdentityData != null) {
             log.info("Attempting restore of existing identity and username; save credit funding txid")
             val blockchainIdentity = platformRepo.getBlockchainIdentity()

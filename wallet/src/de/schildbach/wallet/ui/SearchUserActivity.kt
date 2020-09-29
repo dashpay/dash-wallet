@@ -29,7 +29,6 @@ import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
 import android.view.Window
-import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
@@ -42,9 +41,7 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.DashPayContactRequest
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
@@ -53,8 +50,8 @@ import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
 
-class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSearchResultsAdapter.OnItemClickListener,
-        UsernameSearchResultsAdapter.OnContactRequestButtonClickListener {
+class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewHolder.OnItemClickListener,
+        ContactViewHolder.OnContactRequestButtonClickListener {
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
@@ -62,7 +59,6 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     private lateinit var searchUserRunnable: Runnable
     private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter(this)
     private var query = ""
-    private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -138,9 +134,13 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchUsernamesLiveData.observe(this, Observer {
             if (Status.LOADING == it.status) {
-                startLoading()
+                if (clearList) {
+                    startLoading()
+                }
             } else {
-                stopLoading()
+                if (clearList) {
+                    stopLoading()
+                }
                 if (it.data != null) {
                     adapter.results = it.data
                     if (it.data.isEmpty()) {
@@ -153,32 +153,9 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
                 }
             }
         })
-
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
-            override fun onChanged(it: Resource<DashPayContactRequest>?) {
-                if (it != null && currentPosition != -1) {
-                    when (it.status) {
-                        Status.LOADING -> {
-
-                        }
-                        Status.ERROR -> {
-                            var msg = it.message
-                            if (msg == null) {
-                                msg = "!!Error!!  ${it.exception!!.message}"
-                            }
-                            Toast.makeText(this@SearchUserActivity, msg, Toast.LENGTH_LONG).show()
-                        }
-                        Status.SUCCESS -> {
-                            // update the data
-                            adapter.results[currentPosition].toContactRequest = it.data!!
-                            adapter.notifyItemChanged(currentPosition)
-                            currentPosition = -1
-                        }
-                    }
-                }
-            }
+        dashPayViewModel.sendContactRequestState.observe(this, Observer {
+            adapter.sendContactRequestWorkStateMap = it
         })
-
     }
 
     private fun startLoading() {
@@ -208,9 +185,14 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
         search_user_empty_result.visibility = View.GONE
     }
 
-    private fun searchUser() {
-        adapter.results = listOf()
-        hideEmptyResult()
+    var clearList: Boolean = true
+
+    private fun searchUser(clearList: Boolean = true) {
+        this.clearList = clearList
+        if (clearList) {
+            adapter.results = listOf()
+            hideEmptyResult()
+        }
         if (this::searchUserRunnable.isInitialized) {
             handler.removeCallbacks(searchUserRunnable)
         }
@@ -236,11 +218,8 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
-        val dashPayProfile = usernameSearchResult.dashPayProfile
-
-        startActivityForResult(DashPayUserActivity.createIntent(this@SearchUserActivity,
-                usernameSearchResult.username, dashPayProfile, contactRequestSent = usernameSearchResult.requestSent,
-                contactRequestReceived = usernameSearchResult.requestReceived), DashPayUserActivity.REQUEST_CODE_DEFAULT)
+        startActivityForResult(DashPayUserActivity.createIntent(this@SearchUserActivity, usernameSearchResult),
+                DashPayUserActivity.REQUEST_CODE_DEFAULT)
 
         overridePendingTransition(R.anim.slide_in_bottom, R.anim.activity_stay)
     }
@@ -256,10 +235,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
-        if (currentPosition == -1) {
-            currentPosition = position
-            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
-        }
+        dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
@@ -268,7 +244,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, UsernameSear
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
-            searchUser()
+            searchUser(false)
         }
     }
 }

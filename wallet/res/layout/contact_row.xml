@@ -16,7 +16,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/displayName"
+        android:id="@+id/display_name"
         style="@style/MontserratSemiBold"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -38,9 +38,9 @@
         android:layout_height="wrap_content"
         android:textColor="@color/gray"
         android:textSize="12sp"
-        app:layout_constraintStart_toStartOf="@id/displayName"
-        app:layout_constraintTop_toBottomOf="@id/displayName"
-        app:layout_constraintEnd_toEndOf="@id/displayName"
+        app:layout_constraintStart_toStartOf="@id/display_name"
+        app:layout_constraintTop_toBottomOf="@id/display_name"
+        app:layout_constraintEnd_toEndOf="@id/display_name"
         tools:text="johndoe_01" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

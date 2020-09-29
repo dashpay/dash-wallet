@@ -1,10 +1,13 @@
 package de.schildbach.wallet.data
 
+import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import org.bitcoinj.core.Base58
+import kotlinx.android.parcel.Parcelize
 import org.dashevo.dpp.document.Document
 
+@Parcelize
 @Entity(tableName = "dashpay_contact_request", primaryKeys = ["userId", "toUserId"])
 data class DashPayContactRequest(val userId: String,
                                  val toUserId: String, //The contract has this as a binary field
@@ -13,7 +16,7 @@ data class DashPayContactRequest(val userId: String,
                                  val recipientKeyIndex: Int,
                                  val timestamp: Long,
                                  val encryptedAccountLabel: ByteArray?
-) {
+) : Parcelable {
     companion object {
         fun fromDocument(document: Document): DashPayContactRequest {
             val timestamp: Long = if (document.createdAt != null) document.createdAt!! else 0L

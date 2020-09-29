@@ -37,8 +37,10 @@ import android.os.Build;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -102,7 +104,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler {
+public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler, androidx.work.Configuration.Provider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -800,5 +802,13 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             context.startActivity(lockScreenIntent);
         }
         deviceWasLocked = false;
+    }
+
+    @NonNull
+    @Override
+    public androidx.work.Configuration getWorkManagerConfiguration() {
+        return new androidx.work.Configuration.Builder()
+                .setMinimumLoggingLevel(Log.VERBOSE)
+                .build();
     }
 }
