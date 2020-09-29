@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
+    android:background="@color/bg_less_bright">
+
+    <include
+        android:id="@+id/appbar_general"
+        layout="@layout/app_bar_general"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/save"
+        style="@style/DashButton.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:layout_marginBottom="25dp"
+        android:text="@string/save"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:animateLayoutChanges="true"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@id/save"
+        app:layout_constraintTop_toBottomOf="@id/appbar_general"
+        app:layout_constraintVertical_bias="0">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/userInfoContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:padding="24dp">
+
+            <ImageView
+                android:id="@+id/dashpayUserAvatar"
+                android:layout_width="134dp"
+                android:layout_height="134dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0"
+                tools:src="@drawable/user5" />
+
+            <ImageButton
+                android:id="@+id/profile_qr_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/transparent_button_background"
+                app:layout_constraintBottom_toBottomOf="@id/dashpayUserAvatar"
+                app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
+                app:srcCompat="@drawable/ic_edit_profile_picture" />
+
+            <TextView
+                android:id="@+id/display_name_label"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:text="@string/display_name"
+                android:textColor="@color/medium_gray"
+                android:textSize="14sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/dashpayUserAvatar" />
+
+            <EditText
+                android:id="@+id/displayName"
+                style="@style/MontserratSemiBold"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/round_corners_white_bg"
+                android:elevation="2dp"
+                android:inputType="textPersonName"
+                android:lines="1"
+                android:paddingLeft="20dp"
+                android:paddingRight="20dp"
+                android:textColor="@android:color/black"
+                android:textSize="18sp"
+                app:layout_constraintTop_toBottomOf="@id/display_name_label"
+                tools:targetApi="lollipop"
+                tools:text="Katie Rennie" />
+
+            <TextView
+                android:id="@+id/displayNameCharCount"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/dash_gray"
+                android:textSize="12sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/displayName"
+                tools:text="0/23 Characters" />
+
+            <TextView
+                android:id="@+id/about_me_label"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/about_me"
+                android:textColor="@color/medium_gray"
+                android:textSize="14sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/displayNameCharCount" />
+
+            <EditText
+                android:id="@+id/aboutMe"
+                style="@style/MontserratMedium"
+                android:layout_width="match_parent"
+                android:layout_height="134dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/round_corners_white_bg"
+                android:elevation="2dp"
+                android:gravity="start"
+                android:inputType="textMultiLine"
+                android:padding="20dp"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                app:layout_constraintTop_toBottomOf="@id/about_me_label"
+                tools:targetApi="lollipop"
+                tools:text="Katie Rennie is a very cool girl that uses Dash on her daily purchases. She loves Dash because it's fast, secure and reliable." />
+
+            <TextView
+                android:id="@+id/aboutMeCharCount"
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/dash_gray"
+                android:textSize="12sp"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/aboutMe"
+                tools:text="0/256 Characters" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

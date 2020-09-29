@@ -21,9 +21,12 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
+import com.bumptech.glide.Glide
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
@@ -60,6 +63,39 @@ class MoreFragment : Fragment(R.layout.activity_more) {
         contact_support.setOnClickListener {
             ReportIssueDialogBuilder.createReportIssueDialog(requireContext(),
                     WalletApplication.getInstance()).show()
+        }
+
+        val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
+        if (blockchainIdentity != null) {
+            AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(blockchainIdentity!!.uniqueIdString)
+                    .observe(viewLifecycleOwner, Observer {
+                        if (it != null) {
+                            showProfileSection(it)
+                        }
+                    })
+        }
+    }
+
+    private fun showProfileSection(profile: DashPayProfile) {
+        userInfoContainer.visibility = View.VISIBLE
+        if (profile.displayName.isNotEmpty()) {
+            username1.text = profile.displayName
+            username2.text = profile.username
+        } else {
+            username1.text = profile.username
+            username2.visibility = View.GONE
+        }
+
+        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
+                profile.username.toCharArray()[0])
+        if (profile.avatarUrl.isNotEmpty()) {
+            Glide.with(dashpayUserAvatar).load(profile.avatarUrl).circleCrop()
+                    .placeholder(defaultAvatar).into(dashpayUserAvatar)
+        } else {
+            dashpayUserAvatar.setImageDrawable(defaultAvatar)
+        }
+        editProfile.setOnClickListener {
+            startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
     }
 

@@ -306,6 +306,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"/>
 
+        <activity android:name="de.schildbach.wallet.ui.EditProfileActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"/>
+
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
             android:authorities="${applicationId}.address_book"
