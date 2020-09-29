@@ -84,7 +84,22 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     }
 
     private lateinit var sharedViewModel: SingleActionSharedViewModel
-    private var pendingContactRequest = false
+
+    private val autoAcceptPrefsKey by lazy {
+        "auto_accept:$username"
+    }
+
+    private val prefs: SharedPreferences by lazy {
+        PreferenceManager.getDefaultSharedPreferences(activity)
+    }
+
+    private val username by lazy {
+        arguments!!.getString(ARG_PAYEE_USERNAME)
+    }
+
+    private val pendingContactRequest by lazy {
+        arguments!!.getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_confirm_transaction, container, false)
@@ -92,18 +107,17 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        maybeCleanUpPrefs()
         arguments!!.apply {
             input_value.text = getString(ARG_AMOUNT)
             fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
             fiat_value.text = getString(ARG_AMOUNT_FIAT)
             transaction_fee.text = getString(ARG_FEE)
             total_amount.text = getString(ARG_TOTAL)
-            val username = getString(ARG_PAYEE_USERNAME)
             val displayNameText = getString(ARG_PAYEE_DISPLAYNAME)
             val avatarUrl = getString(ARG_PAYEE_AVATAR_URL)
             val payeeName = getString(ARG_PAYEE_NAME)
             val payeeVerifiedBy = getString(ARG_PAYEE_VERIFIED_BY)
-            pendingContactRequest = getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
             if (payeeName != null && payeeVerifiedBy != null) {
                 sendtouser.visibility = View.GONE
                 confirm_auto_accept.visibility = View.GONE
@@ -128,7 +142,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
                 } else {
                     avatar.background = defaultAvatar
                 }
-                confirm_auto_accept.isChecked = autoAcceptContactRequestLastValue
+                confirm_auto_accept.isChecked = autoAcceptLastValue
                 if (pendingContactRequest) {
                     confirm_auto_accept.visibility = View.VISIBLE
                 } else {
@@ -149,7 +163,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         }
         confirm_payment.setOnClickListener {
             dismiss()
-            autoAcceptContactRequestLastValue = confirm_auto_accept.isChecked
+            autoAcceptLastValue = confirm_auto_accept.isChecked
             sharedViewModel.autoAcceptContactRequest = pendingContactRequest && confirm_auto_accept.isChecked
             sharedViewModel.clickConfirmButtonEvent.call(true)
         }
@@ -171,13 +185,19 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         } ?: throw IllegalStateException("Invalid Activity")
     }
 
-    private var autoAcceptContactRequestLastValue: Boolean
-        get() {
-            val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity)
-            return prefs.getBoolean("autoAcceptContactRequest", true)
+    private var autoAcceptLastValue: Boolean
+        get() = if (username != null) {
+            prefs.getBoolean(autoAcceptPrefsKey, true)
+        } else {
+            true
         }
         set(value) {
-            val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity)
-            prefs.edit().putBoolean("autoAcceptContactRequest", value).apply()
+            prefs.edit().putBoolean(autoAcceptPrefsKey, value).apply()
         }
+
+    private fun maybeCleanUpPrefs() {
+        if (username != null && !pendingContactRequest && prefs.contains(autoAcceptPrefsKey)) {
+            prefs.edit().remove(autoAcceptPrefsKey).apply()
+        }
+    }
 }
