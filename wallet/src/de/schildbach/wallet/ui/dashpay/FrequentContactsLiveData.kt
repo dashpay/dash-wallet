@@ -1,7 +1,6 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.text.format.DateUtils
-import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
@@ -13,36 +12,12 @@ import kotlinx.coroutines.launch
 import org.dashevo.dashpay.BlockchainIdentity
 import java.util.*
 
-class FrequentContactsLiveData(val walletApplication: WalletApplication, private val platformRepo: PlatformRepo, val scope: CoroutineScope) : LiveData<Resource<List<UsernameSearchResult>>>(), OnContactsUpdated {
+class FrequentContactsLiveData(walletApplication: WalletApplication, platformRepo: PlatformRepo, val scope: CoroutineScope)
+    : ContactsBasedLiveData<Resource<List<UsernameSearchResult>>>(walletApplication, platformRepo) {
 
     companion object {
         const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
         const val TOP_CONTACT_COUNT = 4
-    }
-
-    private var listening = false
-
-    override fun onActive() {
-        maybeAddEventListener()
-        onContactsUpdated()
-    }
-
-    override fun onInactive() {
-        maybeRemoveEventListener()
-    }
-
-    private fun maybeAddEventListener() {
-        if (!listening && hasActiveObservers()) {
-            platformRepo.addContactsUpdatedListener(this)
-            listening = true
-        }
-    }
-
-    private fun maybeRemoveEventListener() {
-        if (listening) {
-            platformRepo.removeContactsUpdatedListener(this)
-            listening = false
-        }
     }
 
     override fun onContactsUpdated() {
@@ -60,7 +35,7 @@ class FrequentContactsLiveData(val walletApplication: WalletApplication, private
                     val results = getTopContacts(contactRequests.data!!, listOf(), blockchainIdentity, threeMonthsAgo, true)
 
                     if (results.size < TOP_CONTACT_COUNT) {
-                        val moreResults = getTopContacts(contactRequests.data!!, results, blockchainIdentity, threeMonthsAgo, false)
+                        val moreResults = getTopContacts(contactRequests.data, results, blockchainIdentity, threeMonthsAgo, false)
                         results.addAll(moreResults)
                     }
 
@@ -72,11 +47,11 @@ class FrequentContactsLiveData(val walletApplication: WalletApplication, private
     }
 
     private fun getTopContacts(items: List<UsernameSearchResult>,
-                       ignore: List<UsernameSearchResult>,
-                       blockchainIdentity: BlockchainIdentity,
-                       threeMonthsAgo: Long,
-                       sent: Boolean
-    ) : ArrayList<UsernameSearchResult> {
+                               ignore: List<UsernameSearchResult>,
+                               blockchainIdentity: BlockchainIdentity,
+                               threeMonthsAgo: Long,
+                               sent: Boolean
+    ): ArrayList<UsernameSearchResult> {
         val results = arrayListOf<UsernameSearchResult>()
         val contactScores = hashMapOf<String, Int>()
         val contactIds = arrayListOf<String>()

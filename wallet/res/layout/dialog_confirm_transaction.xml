@@ -141,7 +141,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/sendtouser"
         android:layout_width="match_parent"
-        android:layout_height="51dp"
+        android:layout_height="48dp"
         android:layout_gravity="center_vertical"
         android:layout_marginLeft="16dp"
         android:layout_marginRight="16dp"
@@ -164,8 +164,8 @@
 
         <ImageView
             android:id="@+id/avatar"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
             app:layout_constraintTop_toTopOf="parent"
@@ -301,7 +301,20 @@
             android:textSize="16sp"
             tools:ignore="HardcodedText" />
 
+
+
     </LinearLayout>
+
+    <de.schildbach.wallet.ui.widget.MontserratCheckBox
+        android:id="@+id/confirm_auto_accept"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="10dp"
+        android:button="@drawable/round_checkbox"
+        android:padding="6dp"
+        android:text="@string/dialog_confirm_accept_contact_request"
+        android:textSize="16sp" />
 
     <Button
         android:id="@+id/confirm_payment"

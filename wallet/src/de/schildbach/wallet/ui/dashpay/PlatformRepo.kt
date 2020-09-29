@@ -93,17 +93,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     val platform = Platform(Constants.NETWORK_PARAMETERS)
     private val profiles = Profiles(platform)
 
-    private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
-    private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
-    private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
+    private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
+    private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
+    private val dashPayContactRequestDao = AppDatabase.getAppDatabase().dashPayContactRequestDao()
 
     private val securityGuard = SecurityGuard()
     private lateinit var blockchainIdentity: BlockchainIdentity
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
     private val backgroundHandler: Handler
-
-    var lastLoadedUser: UsernameSearchResult? = null
 
     init {
         backgroundThread.start()
@@ -112,7 +110,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     fun init() {
         GlobalScope.launch {
-            blockchainIdentityDataDaoAsync.load()?.let {
+            blockchainIdentityDataDao.load()?.let {
                 blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
                 while (isActive) {
                     log.info("Timer: Update contacts")
@@ -125,7 +123,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     fun getBlockchainIdentity(): BlockchainIdentity? {
         return if (this::blockchainIdentity.isInitialized) {
-            this.blockchainIdentity;
+            this.blockchainIdentity
         } else {
             null
         }
@@ -169,7 +167,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    suspend fun getUser(username: String): Resource<List<UsernameSearchResult>> {
+    @Throws(Exception::class)
+    suspend fun getUser(username: String): List<UsernameSearchResult> {
         return searchUsernames(username, true)
     }
 
@@ -179,83 +178,80 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * @param text The beginning of a username to search for
      * @return
      */
-    suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false): Resource<List<UsernameSearchResult>> {
-        return try {
-            val wallet = walletApplication.wallet
-            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()!!
-            //We don't check for nullity here because if it's null, it'll be thrown, captured below
-            //and sent as a Resource.error
-            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentityData!!.creditFundingTxId))
-            val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
-            // Names.search does support retrieving 100 names at a time if retrieveAll = false
-            //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
-            val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
+    @Throws(Exception::class)
+    suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false): List<UsernameSearchResult> {
+        val wallet = walletApplication.wallet
+        val blockchainIdentityData = blockchainIdentityDataDao.load()!!
+        //We don't check for nullity here because if it's null, it'll be thrown, captured below
+        //and sent as a Resource.error
+        val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentityData.creditFundingTxId))
+        val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
+        // Names.search does support retrieving 100 names at a time if retrieveAll = false
+        //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
+        val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
 
-            val userIds = if (onlyExactUsername) {
-                val result = mutableListOf<String>()
-                val exactNameDoc = try {
-                    nameDocuments.first { text == it.data["normalizedLabel"] }
-                } catch (e: NoSuchElementException) {
-                    null
-                }
-                if (exactNameDoc != null) {
-                    result.add(getIdentityForName(exactNameDoc))
-                }
-                result
-            } else {
-                nameDocuments.map { getIdentityForName(it) }
+        val userIds = if (onlyExactUsername) {
+            val result = mutableListOf<String>()
+            val exactNameDoc = try {
+                nameDocuments.first { text == it.data["normalizedLabel"] }
+            } catch (e: NoSuchElementException) {
+                null
             }
-
-            val profileDocuments = Profiles(platform).getList(userIds)
-            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
-
-            val toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
-                    ?: arrayListOf()
-
-            // Get all contact requests where toUserId == userId
-            val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)
-                    ?: arrayListOf()
-
-            val usernameSearchResults = ArrayList<UsernameSearchResult>()
-
-            for (nameDoc in nameDocuments) {
-                //Remove own user document from result
-                val nameDocIdentityId = getIdentityForName(nameDoc)
-                if (nameDocIdentityId == userId) {
-                    continue
-                }
-                var toContact: DashPayContactRequest? = null
-                var fromContact: DashPayContactRequest? = null
-
-                // Determine if any of our contacts match the current name's identity
-                if (toContactDocuments.isNotEmpty()) {
-                    toContact = toContactDocuments.find { contact ->
-                        contact.toUserId == nameDocIdentityId
-                    }
-                }
-
-                // Determine if our identity is someone else's contact
-                if (fromContactDocuments.isNotEmpty()) {
-                    fromContact = fromContactDocuments.find { contact ->
-                        contact.userId == nameDocIdentityId
-                    }
-                }
-
-                val username = nameDoc.data["normalizedLabel"] as String
-                val profileDoc = profileById[nameDocIdentityId]
-
-                val dashPayProfile = if (profileDoc != null)
-                    DashPayProfile.fromDocument(profileDoc, username)!!
-                else DashPayProfile(nameDocIdentityId, username)
-
-                usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
-                        dashPayProfile, toContact, fromContact))
+            if (exactNameDoc != null) {
+                result.add(getIdentityForName(exactNameDoc))
             }
-
-            Resource.success(usernameSearchResults)
-        } catch (e: Exception) {
-            Resource.error(formatExceptionMessage("search usernames", e), null)
+            result
+        } else {
+            nameDocuments.map { getIdentityForName(it) }
         }
+
+        val profileDocuments = Profiles(platform).getList(userIds)
+        val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+
+        val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
+                ?: arrayListOf()
+
+        // Get all contact requests where toUserId == userId
+        val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
+                ?: arrayListOf()
+
+        val usernameSearchResults = ArrayList<UsernameSearchResult>()
+
+        for (nameDoc in nameDocuments) {
+            //Remove own user document from result
+            val nameDocIdentityId = getIdentityForName(nameDoc)
+            if (nameDocIdentityId == userId) {
+                continue
+            }
+            var toContact: DashPayContactRequest? = null
+            var fromContact: DashPayContactRequest? = null
+
+            // Determine if any of our contacts match the current name's identity
+            if (toContactDocuments.isNotEmpty()) {
+                toContact = toContactDocuments.find { contact ->
+                    contact.toUserId == nameDocIdentityId
+                }
+            }
+
+            // Determine if our identity is someone else's contact
+            if (fromContactDocuments.isNotEmpty()) {
+                fromContact = fromContactDocuments.find { contact ->
+                    contact.userId == nameDocIdentityId
+                }
+            }
+
+            val username = nameDoc.data["normalizedLabel"] as String
+            val profileDoc = profileById[nameDocIdentityId]
+
+            val dashPayProfile = if (profileDoc != null)
+                DashPayProfile.fromDocument(profileDoc, username)!!
+            else DashPayProfile(nameDocIdentityId, username)
+
+            usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
+                    dashPayProfile, toContact, fromContact))
+        }
+
+        return usernameSearchResults
     }
 
     /**
@@ -271,19 +267,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val userIdList = HashSet<String>()
 
             val wallet = walletApplication.wallet
-            val blockchainIdentity = blockchainIdentityDataDaoAsync.load()
+            val blockchainIdentity = blockchainIdentityDataDao.load()
                     ?: return Resource.error("search contacts: no blockchain identity")
-            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity!!.creditFundingTxId))
+            val creditFundingTx = wallet.getCreditFundingTransaction(wallet.getTransaction(blockchainIdentity.creditFundingTxId))
             val userId = creditFundingTx.creditBurnIdentityIdentifier.toStringBase58()
 
-            var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
+            var toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
             val toContactMap = HashMap<String, DashPayContactRequest>()
             toContactDocuments!!.forEach {
                 userIdList.add(it.toUserId)
                 toContactMap[it.toUserId] = it
             }
             // Get all contact requests where toUserId == userId, the users who have added me
-            val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)
+            val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
             val fromContactMap = HashMap<String, DashPayContactRequest>()
             fromContactDocuments!!.forEach {
                 userIdList.add(it.userId)
@@ -292,7 +288,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             val profiles = HashMap<String, DashPayProfile?>(userIdList.size)
             for (user in userIdList) {
-                val profile = dashPayProfileDaoAsync.load(user)
+                val profile = dashPayProfileDao.loadByUserId(user)
                 profiles[user] = profile
             }
 
@@ -300,6 +296,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val searchText = text.toLowerCase()
 
             for (profile in profiles) {
+                if (profile.value == null) {
+                    // this happens occasionally when calling this method just after sending contact request
+                    // It occurs when calling NotificationsForUserLiveData.onContactsUpdated() after
+                    // sending contact request (even after adding long delay).
+                    continue
+                }
                 var toContact: DashPayContactRequest? = null
                 var fromContact: DashPayContactRequest? = null
 
@@ -395,48 +397,51 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): Resource<DashPayContactRequest> {
-        return try {
-            Context.propagate(walletApplication.wallet.context)
-            val potentialContactIdentity = platform.identities.get(toUserId)
-            log.info("potential contact identity: $potentialContactIdentity")
-
-            //Create Contact Request
-            val contactRequests = ContactRequests(platform)
-            contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
-            log.info("contact request sent")
-
-            //Verify that the Contact Request was seen on the network
-            val cr = contactRequests.watchContactRequest(this.blockchainIdentity.uniqueIdString,
-                    toUserId, 100, 500, RetryDelayType.LINEAR)
-
-            // add our receiving from this contact keychain if it doesn't exist
-            val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
-            var encryptionKey: KeyParameter? = null
-
-            if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
-                val contactIdentity = platform.identities.get(toUserId)
-                if (walletApplication.wallet.isEncrypted) {
-                    val password = securityGuard.retrievePassword()
-                    encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
-                }
-                blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey!!)
-
-                // update bloom filters now
-                val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
-                        BlockchainServiceImpl::class.java)
-                walletApplication.startService(intent)
-            }
-
-            log.info("contact request: $cr")
-            val dashPayContactRequest = DashPayContactRequest.fromDocument(cr!!)
-            updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
-            updateDashPayProfile(toUserId)
-            Resource.success(dashPayContactRequest)
-        } catch (e: Exception) {
-            log.error(e.localizedMessage)
-            Resource.error(formatExceptionMessage("send contact request", e))
+    @Throws(Exception::class)
+    suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
+        if (walletApplication.wallet.isEncrypted) {
+            val password = securityGuard.retrievePassword()
+            // Don't bother with DeriveKeyTask here, just call deriveKey
+            val encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+            return sendContactRequest(toUserId, encryptionKey)
         }
+        throw IllegalStateException("sendContactRequest doesn't support non-encrypted wallets")
+    }
+
+    @Throws(Exception::class)
+    suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest {
+        Context.propagate(walletApplication.wallet.context)
+        val potentialContactIdentity = platform.identities.get(toUserId)
+        log.info("potential contact identity: $potentialContactIdentity")
+
+        //Create Contact Request
+        val contactRequests = ContactRequests(platform)
+        contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
+        log.info("contact request sent")
+
+        //Verify that the Contact Request was seen on the network
+        val cr = contactRequests.watchContactRequest(this.blockchainIdentity.uniqueIdString,
+                toUserId, 100, 500, RetryDelayType.LINEAR)
+
+        // add our receiving from this contact keychain if it doesn't exist
+        val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
+
+        if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+            val contactIdentity = platform.identities.get(toUserId)
+            blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey)
+
+            // update bloom filters now
+            val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                    BlockchainServiceImpl::class.java)
+            walletApplication.startService(intent)
+        }
+
+        log.info("contact request: $cr")
+        val dashPayContactRequest = DashPayContactRequest.fromDocument(cr!!)
+        updateDashPayContactRequest(dashPayContactRequest) //update the database since the cr was accepted
+        updateDashPayProfile(toUserId) // update the profile
+        fireContactsUpdatedListeners() // trigger listeners
+        return dashPayContactRequest
     }
 
     //
@@ -560,11 +565,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun loadBlockchainIdentityBaseData(): BlockchainIdentityBaseData? {
-        return blockchainIdentityDataDaoAsync.loadBase()
+        return blockchainIdentityDataDao.loadBase()
     }
 
     suspend fun loadBlockchainIdentityData(): BlockchainIdentityData? {
-        return blockchainIdentityDataDaoAsync.load()
+        return blockchainIdentityDataDao.load()
     }
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
@@ -617,7 +622,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun resetCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
-        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
+        blockchainIdentityDataDao.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
         blockchainIdentityData.creationStateErrorMessage = null
     }
 
@@ -630,13 +635,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         } else {
             log.info("updating creation state {} ({})", state, errorMessage)
         }
-        blockchainIdentityDataDaoAsync.updateCreationState(blockchainIdentityData.id, state, errorMessage)
+        blockchainIdentityDataDao.updateCreationState(blockchainIdentityData.id, state, errorMessage)
         blockchainIdentityData.creationState = state
         blockchainIdentityData.creationStateErrorMessage = errorMessage
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
-        blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
+        blockchainIdentityDataDao.insert(blockchainIdentityData)
     }
 
     private suspend fun updateDashPayProfile(userId: String) {
@@ -649,23 +654,23 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val username = nameDocument.data["normalizedLabel"] as String
 
             val profile = DashPayProfile.fromDocument(profileDocument, username)
-            dashPayProfileDaoAsync.insert(profile!!)
+            dashPayProfileDao.insert(profile!!)
         }
     }
 
     suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
-        dashPayProfileDaoAsync.insert(dashPayProfile)
+        dashPayProfileDao.insert(dashPayProfile)
     }
 
     private suspend fun updateDashPayContactRequest(dashPayContactRequest: DashPayContactRequest) {
-        dashPayContactRequestDaoAsync.insert(dashPayContactRequest)
+        dashPayContactRequestDao.insert(dashPayContactRequest)
     }
 
     suspend fun doneAndDismiss() {
-        val blockchainIdentityData = blockchainIdentityDataDaoAsync.load()
+        val blockchainIdentityData = blockchainIdentityDataDao.load()
         if (blockchainIdentityData != null && blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
             blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
-            blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
+            blockchainIdentityDataDao.insert(blockchainIdentityData)
         }
     }
 
@@ -714,11 +719,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 return
             }
 
-            val blockchainIdentityData = blockchainIdentityDataDaoAsync.load() ?: return
+            val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
             if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
                 return
             }
-            val userId = blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+            val userId = blockchainIdentityData.getIdentity(walletApplication.wallet) ?: return
             if (blockchainIdentityData.username == null) {
                 return // this is here because the wallet is being reset without removing blockchainIdentityData
             }
@@ -729,8 +734,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             Context.propagate(walletApplication.wallet.context)
             var encryptionKey: KeyParameter? = null
 
-            var lastContactRequestTime = if (dashPayContactRequestDaoAsync.countAllRequests() > 0)
-                dashPayContactRequestDaoAsync.getLastTimestamp()
+            var lastContactRequestTime = if (dashPayContactRequestDao.countAllRequests() > 0)
+                dashPayContactRequestDao.getLastTimestamp()
             else 0L
 
             updatingContacts.set(true)
@@ -741,7 +746,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             toContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.toUserId)
-                dashPayContactRequestDaoAsync.insert(contactRequest)
+                dashPayContactRequestDao.insert(contactRequest)
 
                 // add our receiving from this contact keychain if it doesn't exist
                 val contact = EvolutionContact(userId, contactRequest.toUserId)
@@ -766,7 +771,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 userIdList.add(contactRequest.userId)
-                dashPayContactRequestDaoAsync.insert(contactRequest)
+                dashPayContactRequestDao.insert(contactRequest)
 
                 // add the sending to contact keychain if it doesn't exist
                 val contact = EvolutionContact(userId, contactRequest.userId)
@@ -803,7 +808,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                             "", platform.identities.get(identityId)!!)
 
                     val profile = DashPayProfile.fromDocument(profileDocument, username)
-                    dashPayProfileDaoAsync.insert(profile!!)
+                    dashPayProfileDao.insert(profile!!)
                 }
             }
 
@@ -834,20 +839,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     // This will check for missing profiles, download them and update the database
     private suspend fun checkDatabaseIntegrity() {
         val watch = Stopwatch.createStarted()
-        log.info("check database integrity: starting");
+        log.info("check database integrity: starting")
 
         val userIdList = HashSet<String>()
         val missingProfiles = HashSet<String>()
         val userId = blockchainIdentity.uniqueIdString
 
-        var toContactDocuments = dashPayContactRequestDaoAsync.loadToOthers(userId)
+        var toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
         val toContactMap = HashMap<String, DashPayContactRequest>()
         toContactDocuments!!.forEach {
             userIdList.add(it.toUserId)
             toContactMap[it.toUserId] = it
         }
         // Get all contact requests where toUserId == userId, the users who have added me
-        val fromContactDocuments = dashPayContactRequestDaoAsync.loadFromOthers(userId)
+        val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
         val fromContactMap = HashMap<String, DashPayContactRequest>()
         fromContactDocuments!!.forEach {
             userIdList.add(it.userId)
@@ -855,7 +860,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
 
         for (user in userIdList) {
-            val profile = dashPayProfileDaoAsync.load(user)
+            val profile = dashPayProfileDao.loadByUserId(user)
             if (profile == null) {
                 missingProfiles.add(user)
             }
@@ -877,7 +882,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                         "", platform.identities.get(identityId)!!)
 
                 val profile = DashPayProfile.fromDocument(profileDocument, username)
-                dashPayProfileDaoAsync.insert(profile!!)
+                dashPayProfileDao.insert(profile!!)
                 log.info("check database integrity: adding missing profile $username:$id")
             }
         }
@@ -894,9 +899,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     private fun fireContactsUpdatedListeners() {
-        backgroundHandler.post {
-            for (listener in onContactsUpdatedListeners)
-                listener.onContactsUpdated()
+        for (listener in onContactsUpdatedListeners) {
+            listener.onContactsUpdated()
         }
     }
 
@@ -905,12 +909,22 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return records["dashIdentity"] as String
     }
 
-    suspend fun getLocalUsernameSearchResult(userId: String): UsernameSearchResult {
-        val profile = dashPayProfileDaoAsync.load(userId)
-        val receivedContactRequest = dashPayContactRequestDaoAsync.loadToOthers(userId)?.let { it[0] }
-        val sentContactRequest = dashPayContactRequestDaoAsync.loadFromOthers(userId)?.let { it[0] }
+    suspend fun getLocalUserDataByUsername(username: String): UsernameSearchResult? {
+        val profile = dashPayProfileDao.loadByUsername(username)
+        return loadContactRequestsAndReturn(profile)
+    }
 
-        return UsernameSearchResult(profile!!.username, profile, sentContactRequest, receivedContactRequest)
+    suspend fun getLocalUserDataByUserId(userId: String): UsernameSearchResult? {
+        val profile = dashPayProfileDao.loadByUserId(userId)
+        return loadContactRequestsAndReturn(profile)
+    }
+
+    suspend fun loadContactRequestsAndReturn(profile: DashPayProfile?): UsernameSearchResult? {
+        return profile?.run {
+            val receivedContactRequest = dashPayContactRequestDao.loadToOthers(userId)?.firstOrNull()
+            val sentContactRequest = dashPayContactRequestDao.loadFromOthers(userId)?.firstOrNull()
+            UsernameSearchResult(this.username, this, sentContactRequest, receivedContactRequest)
+        }
     }
 
     /**

@@ -16,35 +16,37 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
-import android.os.HandlerThread
-import android.os.Process
 import androidx.lifecycle.*
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.security.SecurityGuard
-import de.schildbach.wallet.ui.send.DeriveKeyTask
-import kotlinx.coroutines.*
+import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
+import io.grpc.StatusRuntimeException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
-import java.lang.Exception
+import org.slf4j.LoggerFactory
 
-class DashPayViewModel(application: Application) : AndroidViewModel(application) {
+open class DashPayViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val platformRepo = PlatformRepo.getInstance()
-    private val walletApplication = application as WalletApplication
+    companion object {
+        val log = LoggerFactory.getLogger(DashPayViewModel::class.java)
+    }
+
+    protected val platformRepo = PlatformRepo.getInstance()
+    protected val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String>()
     private val userSearchLiveData = MutableLiveData<String>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String>()
-    private val getUserLiveData = MutableLiveData<String>()
 
     val notificationCountLiveData = NotificationCountLiveData(walletApplication, platformRepo, viewModelScope)
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, viewModelScope)
-    val notificationsForUserLiveData = NotificationsForUserLiveData(walletApplication, platformRepo, viewModelScope)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
     val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, viewModelScope)
     private val contactRequestLiveData = MutableLiveData<Pair<String, KeyParameter?>>()
@@ -88,22 +90,17 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         searchUsernamesJob = Job()
         liveData(context = searchUsernamesJob + Dispatchers.IO) {
             emit(Resource.loading(null))
-            emit(platformRepo.searchUsernames(text))
+            try {
+                val result = platformRepo.searchUsernames(text)
+                emit(Resource.success(result))
+            } catch (ex: Exception) {
+                emit(Resource.error(formatExceptionMessage("search usernames", ex)))
+            }
         }
     }
 
     fun searchUsernames(text: String) {
         userSearchLiveData.value = text
-    }
-
-    fun loadUser(username: String) {
-        getUserLiveData.value = username
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = platformRepo.searchUsernames(username, true)
-            if (result.exception == null && result.data != null && result.data.isNotEmpty()) {
-                platformRepo.lastLoadedUser = result.data.first()
-            }
-        }
     }
 
     //
@@ -128,15 +125,11 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun searchNotifications(text: String) {
-        notificationsLiveData.searchNotifications(text)
+        notificationsLiveData.query = text
     }
 
-    fun searchNotificationsForUser(userId: String) {
-        notificationsForUserLiveData.searchNotifications(userId)
-    }
-
-    fun getNotificationCount() {
-        notificationCountLiveData.getNotificationCount()
+    fun forceUpdateNotificationCount() {
+        notificationCountLiveData.onContactsUpdated()
     }
 
     fun usernameDoneAndDismiss() {
@@ -155,38 +148,26 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         return platformRepo.getNextContactAddress(userId)
     }
 
-    //TODO: this can probably be simplified using coroutines
-    private fun deriveEncryptionKey(onSuccess: (KeyParameter) -> Unit, onError: (Exception) -> Unit) {
-        val walletApplication = WalletApplication.getInstance()
-        val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
-        backgroundThread.start()
-        val backgroundHandler = android.os.Handler(backgroundThread.looper)
-        val securityGuard = SecurityGuard()
-        val password = securityGuard.retrievePassword()
-        object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
-            override fun onSuccess(encryptionKey: KeyParameter, wasChanged: Boolean) {
-                onSuccess(encryptionKey)
-            }
+    val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(application)
 
-            override fun onFailure(ex: KeyCrypterException) {
-                onError(ex)
-            }
-        }.deriveKey(walletApplication.wallet, password)
-    }
+    fun allUsersLiveData() = AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserId()
 
     fun sendContactRequest(toUserId: String) {
-        deriveEncryptionKey({ encryptionKey: KeyParameter ->
-            contactRequestLiveData.value = Pair(toUserId, encryptionKey)
-        }, {
-            contactRequestLiveData.value = Pair(toUserId, null)
-        })
+        SendContactRequestOperation(walletApplication)
+                .create(toUserId)
+                .enqueue()
     }
 
-    val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) { it ->
+    val getContactRequestLiveData = Transformations.switchMap(contactRequestLiveData) {
         liveData(context = contactRequestJob + Dispatchers.IO) {
             if (it.second != null) {
                 emit(Resource.loading(null))
-                emit(platformRepo.sendContactRequest(it.first, it.second!!))
+                try {
+                    val result = platformRepo.sendContactRequest(it.first, it.second!!)
+                    emit(Resource.success(result))
+                } catch (ex: Exception) {
+                    emit(Resource.error(formatExceptionMessage("send contact request", ex)))
+                }
             } else {
                 emit(Resource.error("Failed to decrypt keys"))
             }
@@ -199,19 +180,52 @@ class DashPayViewModel(application: Application) : AndroidViewModel(application)
         liveData(context = getContactJob + Dispatchers.IO) {
             if (userId != null) {
                 emit(Resource.loading(null))
-                emit(Resource.success(platformRepo.getLocalUsernameSearchResult(userId)))
+                emit(Resource.success(platformRepo.getLocalUserDataByUserId(userId)))
             } else {
                 emit(Resource.canceled())
             }
         }
     }
 
-    fun getContact(username: String?) {
-        contactUserIdLiveData.value = username
+    fun getContact(userId: String?) {
+        contactUserIdLiveData.value = userId
+    }
+
+    fun getLocalContactDataByUserId(userId: String) = liveData(Dispatchers.IO) {
+        try {
+            emit(Resource.success(platformRepo.getLocalUserDataByUserId(userId)))
+        } catch (ex: Exception) {
+            emit(Resource.error(ex))
+        }
+    }
+
+    fun getLocalContactDataByUsername(username: String) = liveData(Dispatchers.IO) {
+        try {
+            emit(Resource.success(platformRepo.getLocalUserDataByUsername(username)))
+        } catch (ex: Exception) {
+            emit(Resource.error(ex))
+        }
     }
 
     fun getFrequentContacts() {
         frequentContactsLiveData.getFrequentContacts()
     }
 
+    protected fun formatExceptionMessage(description: String, e: Exception): String {
+        var msg = if (e.localizedMessage != null) {
+            e.localizedMessage
+        } else {
+            e.message
+        }
+        if (msg == null) {
+            msg = "Unknown error - ${e.javaClass.simpleName}"
+        }
+        log.error("$description: $msg")
+        if (e is StatusRuntimeException) {
+            log.error("---> ${e.trailers}")
+        }
+        log.error(msg)
+        e.printStackTrace()
+        return msg
+    }
 }

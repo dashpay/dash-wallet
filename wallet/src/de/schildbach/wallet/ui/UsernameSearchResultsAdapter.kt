@@ -18,106 +18,38 @@
 package de.schildbach.wallet.ui
 
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
+import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dashpay_profile_row.view.*
+import de.schildbach.wallet.livedata.Resource
 
-class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListener: OnContactRequestButtonClickListener) : RecyclerView.Adapter<UsernameSearchResultsAdapter.ViewHolder>() {
+class UsernameSearchResultsAdapter(private val onContactRequestButtonClickListener: ContactViewHolder.OnContactRequestButtonClickListener) : RecyclerView.Adapter<ContactViewHolder>() {
 
-    interface OnItemClickListener {
-        fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
-    }
-
-    interface OnContactRequestButtonClickListener {
-        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
-        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
-    }
-
-    var itemClickListener: OnItemClickListener? = null
+    var itemClickListener: ContactViewHolder.OnItemClickListener? = null
     var results: List<UsernameSearchResult> = arrayListOf()
         set(value) {
             field = value
             notifyDataSetChanged()
         }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        return ViewHolder(LayoutInflater.from(parent.context), parent)
+    var sendContactRequestWorkStateMap: Map<String, Resource<WorkInfo>> = mapOf()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ContactViewHolder {
+        return ContactViewHolder(LayoutInflater.from(parent.context), parent)
     }
 
     override fun getItemCount(): Int {
         return results.size
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(results[position])
-    }
-
-    inner class ViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            RecyclerView.ViewHolder(inflater.inflate(R.layout.dashpay_profile_row, parent, false)) {
-
-        fun bind(usernameSearchResult: UsernameSearchResult) {
-            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
-                    usernameSearchResult.username[0])
-
-            val dashPayProfile = usernameSearchResult.dashPayProfile
-            if (dashPayProfile.displayName.isEmpty()) {
-                itemView.displayName.text = dashPayProfile.username
-                itemView.username.text = ""
-            } else {
-                itemView.displayName.text = dashPayProfile.displayName
-                itemView.username.text = usernameSearchResult.username
-            }
-
-            if (dashPayProfile.avatarUrl.isNotEmpty()) {
-                Glide.with(itemView.avatar).load(dashPayProfile.avatarUrl).circleCrop()
-                        .placeholder(defaultAvatar).into(itemView.avatar)
-            } else {
-                itemView.avatar.background = defaultAvatar
-            }
-
-            when (usernameSearchResult.requestSent to usernameSearchResult.requestReceived) {
-                //No Relationship
-                false to false -> {
-                    itemView.request_status.visibility = View.GONE
-                    itemView.buttons.visibility = View.GONE
-                    itemView.contact_added.visibility = View.GONE
-                }
-                //Contact Established
-                true to true -> {
-                    itemView.request_status.visibility = View.GONE
-                    itemView.buttons.visibility = View.GONE
-                    itemView.contact_added.visibility = View.VISIBLE
-                }
-                //Request Sent / Pending
-                true to false -> {
-                    itemView.request_status.visibility = View.VISIBLE
-                    itemView.buttons.visibility = View.GONE
-                    itemView.contact_added.visibility = View.GONE
-                }
-                //Request Received
-                false to true -> {
-                    itemView.request_status.visibility = View.GONE
-                    itemView.buttons.visibility = View.VISIBLE
-                    itemView.contact_added.visibility = View.GONE
-                    itemView.accept_contact_request.setOnClickListener {
-                        onContactRequestButtonClickListener.onAcceptRequest(usernameSearchResult, adapterPosition)
-                    }
-                    itemView.ignore_contact_request.setOnClickListener {
-                        onContactRequestButtonClickListener.onIgnoreRequest(usernameSearchResult, adapterPosition)
-                    }
-                }
-            }
-
-            itemClickListener?.let { l ->
-                this.itemView.setOnClickListener {
-                    l.onItemClicked(it, usernameSearchResult)
-                }
-            }
-
-        }
+    override fun onBindViewHolder(holder: ContactViewHolder, position: Int) {
+        val item = results[position]
+        val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.dashPayProfile.userId]
+        holder.bind(results[position], sendContactRequestWorkState, itemClickListener, onContactRequestButtonClickListener)
     }
 }

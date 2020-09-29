@@ -192,8 +192,8 @@
 
         <ImageView
             android:id="@+id/avatar"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
             app:layout_constraintTop_toTopOf="parent"

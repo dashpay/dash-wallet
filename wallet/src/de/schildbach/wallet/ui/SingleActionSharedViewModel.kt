@@ -22,4 +22,6 @@ import androidx.lifecycle.ViewModel
 class SingleActionSharedViewModel : ViewModel() {
 
     val clickConfirmButtonEvent = SingleLiveEvent<Boolean>()
+
+    var autoAcceptContactRequest: Boolean = false
 }
