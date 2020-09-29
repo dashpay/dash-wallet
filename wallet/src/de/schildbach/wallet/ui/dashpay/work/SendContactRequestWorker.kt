@@ -43,8 +43,6 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
         }
 
-        delay(15000)
-
         return try {
             val sendContactRequestResult = platformRepo.sendContactRequest(toUserId, encryptionKey)
             Result.success(workDataOf(
