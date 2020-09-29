@@ -28,10 +28,10 @@ data class UsernameSearchResult(val username: String,
                     fromContactRequest!!.timestamp
                 }
                 Type.NO_RELATIONSHIP -> {
-                    0.0
+                    0L
                 }
 
-            }.toLong()
+            }
         }
 
     val type: Type
