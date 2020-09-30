@@ -584,7 +584,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         val blockchainIdentity = if (creditFundingTransaction != null) {
-            return BlockchainIdentity(platform, creditFundingTransaction, wallet)
+            BlockchainIdentity(platform, creditFundingTransaction, wallet)
         } else {
             BlockchainIdentity(platform, 0, wallet).apply {
                 uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
@@ -612,29 +612,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 currentMainKeyType = blockchainIdentityData.currentMainKeyType
                         ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
         }
-        /*return BlockchainIdentity(platform, 0, wallet).apply {
-            uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
-            identity = platform.identities.get(uniqueIdString)
-            currentUsername = blockchainIdentityData.username
-            registrationStatus = blockchainIdentityData.registrationStatus!!
-            val usernameStatus = HashMap<String, Any>()
-            if (blockchainIdentityData.preorderSalt != null) {
-                usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
-            }
-            if (blockchainIdentityData.usernameStatus != null) {
-                usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
-            }
-            usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
-            usernameStatuses[currentUsername!!] = usernameStatus
-
-            creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
-            activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
-            totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
-            keysCreated = blockchainIdentityData.keysCreated ?: 0
-            currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
-            currentMainKeyType = blockchainIdentityData.currentMainKeyType
-                    ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
-        }*/
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
