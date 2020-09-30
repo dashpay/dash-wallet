@@ -586,9 +586,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val blockchainIdentity = if (creditFundingTransaction != null) {
             BlockchainIdentity(platform, creditFundingTransaction, wallet)
         } else {
-            BlockchainIdentity(platform, 0, wallet).apply {
-                uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
+            val blockchainIdentity = BlockchainIdentity(platform, 0, wallet)
+            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.DONE) {
+                blockchainIdentity.apply {
+                    uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
+                }
+            } else {
+                return blockchainIdentity
             }
+            blockchainIdentity
         }
         return blockchainIdentity.apply {
                 identity = platform.identities.get(uniqueIdString)
@@ -617,7 +623,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
         blockchainIdentityData.apply {
             creditFundingTxId = blockchainIdentity.creditFundingTransaction?.txId
-            userId = blockchainIdentity.uniqueIdString
+            userId = if (blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED)
+                blockchainIdentity.uniqueIdString
+            else null
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null) {
                 username = blockchainIdentity.currentUsername
