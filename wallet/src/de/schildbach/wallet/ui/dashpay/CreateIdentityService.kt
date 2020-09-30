@@ -346,7 +346,6 @@ class CreateIdentityService : LifecycleService() {
         val cftxs = walletApplication.wallet.creditFundingTransactions
 
         val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
-                //?: throw IllegalArgumentException("identity $identity does not match a credit funding transaction")
 
         val existingBlockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDao().load()
         if (existingBlockchainIdentityData != null) {
