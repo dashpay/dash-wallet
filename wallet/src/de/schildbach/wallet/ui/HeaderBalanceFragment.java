@@ -195,8 +195,8 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
         dashPayViewModel.getNotificationCountLiveData().observe(getViewLifecycleOwner(), new Observer<Integer>() {
             @Override
-            public void onChanged(Integer integer) {
-                notificationCount = integer;
+            public void onChanged(Integer count) {
+                notificationCount = count;
                 updateView();
             }
         });
@@ -259,7 +259,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         if (username == null) {
             notifications.setVisibility(View.GONE);
             notificationBell.setVisibility(View.GONE);
-        } else if(count > 0) {
+        } else if (count > 0) {
             notifications.setText(count.toString());
             notifications.setVisibility(View.VISIBLE);
             notificationBell.setVisibility(View.GONE);

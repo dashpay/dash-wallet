@@ -145,7 +145,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                             (notificationsAdapter.getItem(currentPosition).notificationItem as NotificationItemContact).usernameSearchResult.toContactRequest = it.data!!
                             notificationsAdapter.notifyItemChanged(currentPosition)
                             currentPosition = -1
-                            lastSeenNotificationTime = it.data.timestamp.toLong()
+                            lastSeenNotificationTime = it.data.timestamp / 1000
                         }
                     }
                 }
@@ -186,7 +186,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         earlierItems.forEach { r -> results.add(NotificationsAdapter.NotificationViewItem(r)) }
 
         notificationsAdapter.results = results
-        lastSeenNotificationTime = lastNotificationTime
+        lastSeenNotificationTime = lastNotificationTime / 1000
     }
 
     private fun searchContacts() {

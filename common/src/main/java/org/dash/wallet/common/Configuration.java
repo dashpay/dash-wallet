@@ -437,10 +437,17 @@ public class Configuration {
     }
 
     public long getLastSeenNotificationTime() {
-        return prefs.getLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, 0);
+        long savedTime = prefs.getLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, 0);
+        long distantFutureTime = 2524608000L; //2050-01-01
+        if (savedTime > distantFutureTime) {
+            // date incorrectly saved in microseconds, fix it
+            savedTime = savedTime / 1000;
+            setPrefsLastSeenNotificationTime(savedTime);
+        }
+        return savedTime;
     }
 
     public void setPrefsLastSeenNotificationTime(long lastSeenNotificationTime) {
-        prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).commit();
+        prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).apply();
     }
 }
