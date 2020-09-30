@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">De service van Uphold is niet beschikbaar. Probeer het later opnieuw.</string>
     <string name="uphold_error_report_issue">Meld dit probleem aan het Dash Wallet team met behulp van "Probleem melden" in het hoofdmenu.</string>
 
+    <string name="uphold_general_error_title">Fout</string>
+    <string name="uphold_api_error_title">Uphold fout</string>
+    <string name="uphold_api_error_identity">Uw Uphold account is nog niet geverifieerd. Geld kan niet worden opgenomen.</string>
+    <string name="uphold_api_error_403_description">Uw Uphold account is gemarkeerd voor beoordeling.\n\nUphold heeft uw account tijdelijk beperkt en u kunt geen geld opnemen.\n\nUphold neemt contact met u op om u te helpen dit snel op te lossen.</string>
+    <string name="uphold_api_error_400_description">Overboekingen worden 24 uur lang geblokkeerd.\n\nU heeft met %svoldoende saldo voor deze overboeking.</string>
 </resources>

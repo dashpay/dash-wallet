@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
+import java.text.SimpleDateFormat;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -24,6 +25,7 @@ import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import java.util.Locale;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -58,6 +60,18 @@ import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+
+import android.content.Context;
+import android.content.res.Resources;
+
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.RecyclerView;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 /**
  * @author Andreas Schildbach
@@ -293,6 +307,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final CurrencyTextView fiatView;
         private final TextView rateNotAvailableView;
 
+        private SimpleDateFormat dateFormat;
+
+        private String formatDate(long timeStamp) {
+            return dateFormat.format(timeStamp).replace("AM", "am").replace("PM","pm");
+        }
+
         private TransactionViewHolder(final View itemView) {
             super(itemView);
             primaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_primary_status);
@@ -306,6 +326,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
             fiatView.setApplyMarkup(false);
             rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
+            dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault());
         }
 
         private void bind(final Transaction tx) {
@@ -355,14 +376,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             }
 
             //
-            // Set the time. eg.  "On <date> at <time>"
+            // Set the time. eg.  "<date> <time>"
             //
             final Date time = tx.getUpdateTime();
-            String onTimeText = context.getString(R.string.transaction_row_time_text);
-
-            timeView.setText(String.format(onTimeText,
-                    DateUtils.formatDateTime(context, time.getTime(), DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR),
-                    DateUtils.formatDateTime(context, time.getTime(), DateUtils.FORMAT_SHOW_TIME)));
+            timeView.setText(formatDate(time.getTime()));
 
             //
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal

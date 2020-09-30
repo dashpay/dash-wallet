@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">O serviço de Uphold não está disponível. Tente novamente mais tarde por favor. </string>
     <string name="uphold_error_report_issue">Por favor reporte este problema usando a opção "Reportar Problema" no menu principal. </string>
 
+    <string name="uphold_general_error_title">Erro</string>
+    <string name="uphold_api_error_title">Erro Uphold</string>
+    <string name="uphold_api_error_identity">Sua conta Uphold ainda não foi verificada. Os valores não podem ser retirados.</string>
+    <string name="uphold_api_error_403_description">Sua conta Uphold foi sinalizada para análise.\n\nUphold restringiu temporariamente sua conta e você não poderá realizar transações.\n\nUphold entrará em contato para lhe ajudar a resolver isso rapidamente.</string>
+    <string name="uphold_api_error_400_description">Os valores na Uphold foram bloqueados por 24 horas.\n\nVocê terá o suficiente para essa transferência em %s.</string>
 </resources>

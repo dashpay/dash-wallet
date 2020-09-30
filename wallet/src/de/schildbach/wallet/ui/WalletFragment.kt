@@ -23,15 +23,12 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import de.schildbach.wallet.AppDatabase
@@ -42,12 +39,7 @@ import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.CheckPinDialog.Companion.show
 import de.schildbach.wallet.ui.InputParser.StringInputParser
-import de.schildbach.wallet.ui.MainActivity.Companion.REQUEST_CODE_SCAN
-import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_PAY
-import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
-import de.schildbach.wallet.ui.VerifySeedActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRetry
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.scan.ScanActivity
@@ -55,7 +47,6 @@ import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.home_content.*
-import kotlinx.android.synthetic.main.quick_actions_layout.*
 import kotlinx.android.synthetic.main.sync_status_pane.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -66,7 +57,11 @@ import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
-class WalletFragment : Fragment() {
+class WalletFragment : Fragment(R.layout.home_content) {
+
+    companion object {
+        private const val REQUEST_CODE_SCAN = 0
+    }
 
     private var clipboardManager: ClipboardManager? = null
     private var blockchainState: BlockchainState? = null
@@ -80,19 +75,9 @@ class WalletFragment : Fragment() {
     private val wallet by lazy { walletApplication.wallet }
     private val config by lazy { walletApplication.configuration }
     private val coinsSendReceivedListener = OnCoinsSentReceivedListener()
-    private var walletFragmentView: View? = null
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        if (walletFragmentView == null) {
-            walletFragmentView = inflater.inflate(R.layout.home_content, container, false)
-        }
-
-        return walletFragmentView
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        initView()
         initViewModel()
         clipboardManager = activity?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
 
@@ -110,12 +95,13 @@ class WalletFragment : Fragment() {
             }
         })
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer<BlockchainState?> { t ->
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer { t ->
             blockchainState = t
             updateSyncState()
             showHideJoinDashPayAction()
         })
         registerOnCoinsSentReceivedListener()
+        initShortcutActions()
     }
 
     override fun onDestroyView() {
@@ -125,8 +111,40 @@ class WalletFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        showHideSecureAction()
         showHideJoinDashPayAction()
+    }
+
+    private fun initShortcutActions() {
+        shortcuts_pane!!.setOnShortcutClickListener(View.OnClickListener { v ->
+            when (v) {
+                shortcuts_pane.secureNowButton -> {
+                    handleVerifySeed()
+                }
+                shortcuts_pane.scanToPayButton -> {
+                    handleScan(v)
+                }
+                shortcuts_pane.buySellButton -> {
+                    startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
+                }
+                shortcuts_pane.payToAddressButton -> {
+                    handlePaste()
+                }
+                shortcuts_pane.payToContactButton -> {
+                    handleSelectContact()
+                }
+                shortcuts_pane.receiveButton -> {
+                    (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(PaymentsFragment.ACTIVE_TAB_PAY)
+                }
+                shortcuts_pane.importPrivateKey -> {
+                    SweepWalletActivity.start(requireContext(), true)
+                }
+            }
+        })
+        showHideSecureAction()
+    }
+
+    private fun showHideSecureAction() {
+        shortcuts_pane.showSecureNow(config.remindBackupSeed)
     }
 
     private fun registerOnCoinsSentReceivedListener() {
@@ -182,19 +200,6 @@ class WalletFragment : Fragment() {
         }
     }
 
-    private fun initView() {
-        initQuickActions()
-        if (requireActivity() is OnSelectPaymentTabListener) {
-            pay_btn.setOnClickListener(View.OnClickListener {
-                (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(ACTIVE_TAB_PAY)
-            })
-            receive_btn.setOnClickListener {
-                (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(ACTIVE_TAB_RECEIVE)
-            }
-        }
-
-    }
-
     private fun initViewModel() {
         //
         // Currently this is only used to check the status of Platform before showing
@@ -235,34 +240,34 @@ class WalletFragment : Fragment() {
             val canAffordIt = (walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
                     || walletBalance == Constants.DASH_PAY_FEE)
             val visible = canAffordIt && config.showJoinDashPay
-            join_dashpay_action.visibility = if (visible) View.VISIBLE else View.GONE
-        } else {
-            join_dashpay_action.visibility = View.GONE
+//            join_dashpay_action.visibility = if (visible) View.VISIBLE else View.GONE
+//        } else {
+//            join_dashpay_action.visibility = View.GONE
         }
-        join_dashpay_action_space.visibility = join_dashpay_action.visibility
-    }
-
-    private fun showHideSecureAction() {
-        secure_action.visibility = if (config.remindBackupSeed) View.VISIBLE else View.GONE
-        secure_action_space.visibility = secure_action.visibility
     }
 
     private fun handleVerifySeed() {
-        val checkPinSharedModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
+        val checkPinSharedModel = ViewModelProvider(requireActivity())[CheckPinSharedModel::class.java]
         checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner, Observer<Pair<Int?, String?>?> { data ->
             if (data?.second != null) {
                 startVerifySeedActivity(data.second!!)
             }
         })
-        show(requireActivity(), 0)
+        CheckPinDialog.show(requireActivity(), 0)
     }
 
     private fun handleScan(clickView: View?) {
         ScanActivity.startForResult(requireActivity(), clickView, REQUEST_CODE_SCAN)
     }
 
+    private fun handleSelectContact() {
+        if (requireActivity() is PaymentsPayFragment.OnSelectContactToPayListener) {
+            (requireActivity() as PaymentsPayFragment.OnSelectContactToPayListener).selectContactToPay()
+        }
+    }
+
     private fun startVerifySeedActivity(pin: String) {
-        val intent: Intent = createIntent(requireContext(), pin)
+        val intent: Intent = VerifySeedActivity.createIntent(requireContext(), pin)
         startActivity(intent)
     }
 
@@ -315,23 +320,6 @@ class WalletFragment : Fragment() {
                 error(null, cannotClassifyCustomMessageResId, input)
             }
         }.parse()
-    }
-
-    private fun initQuickActions() {
-        showHideSecureAction()
-        secure_action.setOnClickListener { handleVerifySeed() }
-        join_dashpay_action.setOnClickListener {
-            startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
-        }
-        showHideJoinDashPayAction()
-        scan_to_pay_action.setOnClickListener(View.OnClickListener { v -> handleScan(v) })
-        buy_sell_action.setOnClickListener {
-            startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
-        }
-        pay_to_address_action.setOnClickListener(View.OnClickListener { handlePaste() })
-        import_key_action.setOnClickListener {
-            SweepWalletActivity.start(requireContext(), true)
-        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {

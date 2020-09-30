@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Vérification du code PIN</string>
     <string name="set_pin_message">Ce code PIN sera demandé pour déverrouiller votre app avant chaque utilisation.</string>
 
-    <string name="home_pay">Envoyer</string>
-    <string name="home_receive">Recevoir</string>
     <string name="home_available_balance">Solde disponible</string>
     <string name="home_balance_hidden">Solde caché</string>
     <string name="home_balance_show_hint">Touchez pour afficher le solde</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Confirmer</string>
     <string name="dialog_confirm_pay_to">Envoyer à</string>
+    <string name="dialog_confirm_secured_by">Sécurisé par</string>
     <string name="dialog_confirm_fee">Frais de réseau</string>
     <string name="dialog_confirm_total">Total</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Sécuriser le portefeuille maintenant</string>
+    <string name="shortcut_secure_now">Sécuriser le portefeuille maintenant</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Scanner pour envoyer</string>
+    <string name="shortcut_scan_to_pay">Scanner pour payer</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Envoyer à l\'adresse</string>
+    <string name="shortcut_pay_to_address">Envoyer à l\'adresse</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Acheter/vendre des dashs</string>
+    <string name="shortcut_buy_sell">Acheter/vendre des dashs</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Importer une clé privée</string>
+    <string name="shortcut_receive">Recevoir</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Ajouter un raccourci</string>
+    <string name="shortcut_import_key">Importer une clé privée</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Ajouter un raccourci</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Réception rapide</string>
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">Recevoir</string>
     <string name="payments_pay_by_qr_title">Envoyé par</string>
     <string name="payments_pay_by_qr_sub_title">Scan du QR-code</string>
-    <string name="payments_pay_by_qr_button">Scanner</string>
     <string name="payments_pay_to_clipboard_title">Envoyer à l\'adresse copiée</string>
     <string name="payments_pay_to_clipboard_sub_title">Aucune adresse copiée</string>
-    <string name="payments_pay_to_clipboard_button">Envoyer</string>
 
     <string name="forgot_pin_title">Code PIN oublié ?</string>
     <string name="forgot_pin_message">Vous pouvez choisir un nouveau code PIN au moyen de votre phrase de récupération.</string>
@@ -189,8 +188,8 @@
     <string name="touch_fingerprint_sensor">Touchez le capteur d\'empreinte digitale</string>
     <string name="touch_fingerprint_to_enable">Touchez le capteur d\'empreinte digitale pour activer le déverrouillage par empreinte.</string>
     <string name="fingerprint_changed_title">Données d\'empreinte digitale modifiées</string>
-	<string name="fingerprint_changed_message">Nous avons détecté un changement dans vos données d\'authentification par empreinte digitale. Vous devez utiliser votre code PIN cette fois-ci.</string>
-	<string name="exchange_rate_missing">Ce paiement est trop ancien pour obtenir sa valeur fiduciaire.</string>
+    <string name="fingerprint_changed_message">Nous avons détecté un changement dans vos données d\'authentification par empreinte digitale. Vous devez utiliser votre code PIN cette fois-ci.</string>
+    <string name="exchange_rate_missing">Ce paiement est trop ancien pour obtenir sa valeur fiduciaire.</string>
 
     <string name="preferences_enable_payment_request_summary">Utiliser le protocole de paiement pour les paiements QR-code</string>
     <string name="preferences_enable_payment_request_title">BIP70 pour scanner-pour-payer</string>
@@ -215,13 +214,13 @@
     <string name="verify_seed_success_message">Votre portefeuille est désormais sécurisé. Vous pouvez utiliser cette phrase de récupération à tout moment pour récupérer votre compte sur un autre appareil.</string>
     <string name="view_seed_done">Terminé</string>
     <string name="view_seed_title">Phrase de récupération</string>
-	<string name="transaction_result_view_on_explorer">Voir dans l\'explorateur</string>
-	<string name="transaction_result_paid_successfully">Envoyé avec succès</string>
-	<string name="transaction_result_sent_to">Envoyé à</string>
-	<string name="transaction_date_and_time">Date</string>
-	<string name="transaction_close">Fermer</string>
-	<string name="transaction_details_amount_received">Montant reçu</string>
-	<string name="transaction_details_amount_sent">Montant envoyé</string>
+    <string name="transaction_result_view_on_explorer">Voir dans l\'explorateur</string>
+    <string name="transaction_result_paid_successfully">Envoyé avec succès</string>
+    <string name="transaction_result_sent_to">Envoyé à</string>
+    <string name="transaction_date_and_time">Date</string>
+    <string name="transaction_close">Fermer</string>
+    <string name="transaction_details_amount_received">Montant reçu</string>
+    <string name="transaction_details_amount_sent">Montant envoyé</string>
     <string name="transaction_details_sent_from">Envoyé depuis</string>
     <string name="transaction_details_sent_to">Envoyé à</string>
     <string name="transaction_details_received_at">Reçu à</string>

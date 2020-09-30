@@ -16,6 +16,8 @@
 
 package org.dash.wallet.common;
 
+import android.view.WindowManager;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 public class InteractionAwareActivity extends AppCompatActivity {
@@ -24,6 +26,18 @@ public class InteractionAwareActivity extends AppCompatActivity {
     public void onUserInteraction() {
         super.onUserInteraction();
         ((ResetAutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
+    }
+
+    @Override
+    protected void onPause() {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        super.onResume();
     }
 
     public void imitateUserInteraction() {

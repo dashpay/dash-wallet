@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Il servizio Uphold non è disponibile. Per favore riprova più tardi.</string>
     <string name="uphold_error_report_issue">Segnala questo problema al team di supporto di Dash Wallet utilizzando "Segnala problema" dal menu principale.</string>
 
+    <string name="uphold_general_error_title">Errore</string>
+    <string name="uphold_api_error_title">Errore di uphold</string>
+    <string name="uphold_api_error_identity">Il tuo account Uphold non è ancora verificato. I fondi non possono essere ritirati.</string>
+    <string name="uphold_api_error_403_description">Il tuo account Uphold è stato contrassegnato per la revisione. \ n \ nUphold ha temporaneamente limitato il tuo account e non sarai in grado di prelevare fondi. \ n \ nUphold ti contatterà per aiutarti a risolvere rapidamente il problema.</string>
+    <string name="uphold_api_error_400_description">I fondi mantenuti sono bloccati per 24 ore. \ n \ nAvrai fondi sufficienti per questo trasferimento da %s.</string>
 </resources>

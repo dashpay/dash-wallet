@@ -25,4 +25,5 @@
     <string name="uphold_error_not_available">업홀드 서비스를 이용할 수 없습니다. 다시 시도해주세요.</string>
     <string name="uphold_error_report_issue">이 문제를 메인 메뉴의 \'이슈 보고\'를 이용하여 대시 지갑 지원 팀에 보고해주세요.</string>
 
-</resources>
+    <string name="uphold_general_error_title">오류</string>
+    </resources>

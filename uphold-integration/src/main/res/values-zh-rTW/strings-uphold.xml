@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Uphold服務不可用。 請稍後再試。</string>
     <string name="uphold_error_report_issue">請使用主菜單中的“報告問題”向達世幣支持團隊報告此問題。</string>
 
+    <string name="uphold_general_error_title">錯誤</string>
+    <string name="uphold_api_error_title">Uphold 錯誤</string>
+    <string name="uphold_api_error_identity">您的Uphold帳戶尚未驗證。 所以無法提取資金。</string>
+    <string name="uphold_api_error_403_description">您的 Uphold 帳戶已被標記為待審核。\n\nUphold 暫時限制了您的帳戶， 您將無法提取資金。\n\nUphold 會與您聯繫，以幫助您快速理順問題。</string>
+    <string name="uphold_api_error_400_description">Uphold 資金將鎖定24小時。\n\n在 %s 之後，您將有足夠的資金用於此交易</string>
 </resources>

@@ -5,4 +5,22 @@
     <string name="loading_error">حدث خطأ. الرجاء معاودة المحاولة في وقت لاحق.</string>
     <string name="dash_available">%1$s متاح</string>
 
+    <!-- Local Currency List: GGP -->
+    <string name="currency_GGP">جيرنزي جنيه</string>
+    <!-- Local Currency List: JEP -->
+    <string name="currency_JEP">جيرسي الجنيه</string>
+    <!-- Local Currency List: IMP -->
+    <string name="currency_IMP">جزيرة مان باوند</string>
+    <!-- Local Currency List: USDC is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_USDC">عملة الدولار</string>
+    <!-- Local Currency List: Litecoin cryptocurrency -->
+    <string name="currency_LTC">لايتكوين</string>
+    <!-- Local Currency List: Ethereum cryptocurrency -->
+    <string name="currency_ETH">ايثيريوم</string>
+    <!-- Local Currency List: Bitcoin cryptocurrency -->
+    <string name="currency_BTC">بيتكوين</string>
+    <!-- Local Currency List: PAX is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_PAX">معيار باكسوس</string>
+    <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_GUSD">دولار الجوزاء</string>
 </resources>

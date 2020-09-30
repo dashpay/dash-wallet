@@ -5,7 +5,7 @@
             <enum name="progress" value="0" />
             <enum name="error" value="1" />
         </attr>
-        <attr format="reference" name="iconSrc"/>
+        <attr name="iconSrc" format="reference" />
     </declare-styleable>
 
     <declare-styleable name="KeyboardResponsiveCoordinatorLayout">
@@ -28,5 +28,18 @@
     </declare-styleable>
     <declare-styleable name="CustomSeekBar">
         <attr name="tickMarkFixed" format="reference" />
+    </declare-styleable>
+
+    <attr name="shortcut_icon" format="integer" />
+    <attr name="shortcut_background" format="integer" />
+    <attr name="shortcut_text_color" format="reference" />
+    <attr name="shortcut_active" format="boolean" />
+
+    <declare-styleable name="ShortcutButton">
+        <attr name="shortcut_text_color" />
+        <attr name="shortcut_active" />
+        <attr name="background" format="reference" />
+        <attr name="src" format="reference" />
+        <attr name="text" format="reference" />
     </declare-styleable>
 </resources>
