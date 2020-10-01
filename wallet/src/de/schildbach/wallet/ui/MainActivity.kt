@@ -138,7 +138,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, Observer {
             blockchainState = it
             walletFragment.setBlockchainState(blockchainState)
-            //showContacts()
         })
         dashPayViewModel = ViewModelProvider(this)[DashPayViewModel::class.java]
         dashPayViewModel!!.isPlatformAvailableLiveData.observe(this, Observer<Resource<Boolean?>?> { status ->
@@ -150,7 +149,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 isPlatformAvailable = false
             }
             walletFragment.setPlatformAvailability(isPlatformAvailable)
-            //showContacts()
         })
         AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this,
                 Observer {
