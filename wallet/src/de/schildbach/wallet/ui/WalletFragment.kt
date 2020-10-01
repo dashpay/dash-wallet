@@ -30,18 +30,14 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
-import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.CheckPinDialog.Companion.show
 import de.schildbach.wallet.ui.InputParser.StringInputParser
 import de.schildbach.wallet.ui.MainActivity.Companion.REQUEST_CODE_SCAN
@@ -49,10 +45,10 @@ import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_PAY
 import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import de.schildbach.wallet.ui.VerifySeedActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRetry
-import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
+import de.schildbach.wallet.util.canAffordIdentityCreation
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.home_content.*
 import kotlinx.android.synthetic.main.quick_actions_layout.*
@@ -71,7 +67,6 @@ class WalletFragment : Fragment() {
     private var clipboardManager: ClipboardManager? = null
     private var blockchainState: BlockchainState? = null
     private var syncComplete = false
-    private var dashPayViewModel: DashPayViewModel? = null
     private var isPlatformAvailable = false
     private var noIdentityCreatedOrInProgress = true
     private var retryCreationIfInProgress = true
@@ -93,7 +88,6 @@ class WalletFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         initView()
-        initViewModel()
         clipboardManager = activity?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
 
         val appBar: View = app_bar
@@ -110,12 +104,8 @@ class WalletFragment : Fragment() {
             }
         })
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer<BlockchainState?> { t ->
-            blockchainState = t
-            updateSyncState()
-            showHideJoinDashPayAction()
-        })
         registerOnCoinsSentReceivedListener()
+        (requireActivity() as OnWalletFragmentViewCreatedListener).onWalletFragmentViewCreated()
     }
 
     override fun onDestroyView() {
@@ -127,6 +117,37 @@ class WalletFragment : Fragment() {
         super.onResume()
         showHideSecureAction()
         showHideJoinDashPayAction()
+    }
+
+    fun setBlockchainState(blockchainState: BlockchainState?) {
+        this.blockchainState = blockchainState
+        if (isDetached || !isVisible) {
+            return
+        }
+        updateSyncState()
+        showHideJoinDashPayAction()
+    }
+
+    fun setPlatformAvailability(available: Boolean) {
+        isPlatformAvailable = available
+        if (isDetached || !isVisible) {
+            return
+        }
+        showHideJoinDashPayAction()
+    }
+
+    fun setBlockchainIdentity(identityData: BlockchainIdentityBaseData?) {
+        if (isDetached || !isVisible) {
+            return
+        }
+        if (identityData != null) {
+            noIdentityCreatedOrInProgress = identityData.creationState == BlockchainIdentityData.CreationState.NONE
+            showHideJoinDashPayAction()
+            if (retryCreationIfInProgress && identityData.creationInProgress) {
+                retryCreationIfInProgress = false
+                activity?.startService(createIntentForRetry(requireActivity(), false))
+            }
+        }
     }
 
     private fun registerOnCoinsSentReceivedListener() {
@@ -192,49 +213,11 @@ class WalletFragment : Fragment() {
                 (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(ACTIVE_TAB_RECEIVE)
             }
         }
-
-    }
-
-    private fun initViewModel() {
-        //
-        // Currently this is only used to check the status of Platform before showing
-        // the Join DashPay (evolution) button on the shortcuts bar.
-        // If that is the only function that the platform required for, then we can
-        // conditionally execute this code when a username hasn't been registered.
-        dashPayViewModel = ViewModelProvider(requireActivity())[DashPayViewModel::class.java]
-        dashPayViewModel!!.isPlatformAvailableLiveData.observe(viewLifecycleOwner, object : Observer<Resource<Boolean?>?> {
-            override fun onChanged(status: Resource<Boolean?>?) {
-                if (status?.status === Status.SUCCESS) {
-                    if (status.data != null) {
-                        isPlatformAvailable = status.data
-                    }
-                } else {
-                    isPlatformAvailable = false
-                }
-                showHideJoinDashPayAction()
-            }
-        })
-        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(viewLifecycleOwner,
-                Observer {
-                    if (it != null) {
-                        noIdentityCreatedOrInProgress = it.creationState == BlockchainIdentityData.CreationState.NONE
-                        showHideJoinDashPayAction()
-                        if (retryCreationIfInProgress && it.creationInProgress) {
-                            retryCreationIfInProgress = false
-                            activity?.startService(createIntentForRetry(requireActivity(), false))
-                        }
-                    }
-
-                }
-        )
     }
 
     fun showHideJoinDashPayAction() {
         if (noIdentityCreatedOrInProgress && syncComplete && isPlatformAvailable) {
-            val walletBalance: Coin = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
-            val canAffordIt = (walletBalance.isGreaterThan(Constants.DASH_PAY_FEE)
-                    || walletBalance == Constants.DASH_PAY_FEE)
-            val visible = canAffordIt && config.showJoinDashPay
+            val visible = wallet.canAffordIdentityCreation() && config.showJoinDashPay
             join_dashpay_action.visibility = if (visible) View.VISIBLE else View.GONE
         } else {
             join_dashpay_action.visibility = View.GONE
@@ -362,5 +345,9 @@ class WalletFragment : Fragment() {
 
     interface OnSelectPaymentTabListener {
         fun onSelectPaymentTab(mode: Int)
+    }
+
+    interface OnWalletFragmentViewCreatedListener {
+        fun onWalletFragmentViewCreated()
     }
 }

@@ -22,10 +22,17 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.google.common.collect.ImmutableList
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECENT
 import de.schildbach.wallet.ui.RestoreFromFileHelper.OnRestoreWalletListener
@@ -34,10 +41,13 @@ import de.schildbach.wallet.ui.dashpay.ContactsFragment
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet.util.Nfc
+import de.schildbach.wallet.util.canAffordIdentityCreation
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_main.*
 import okhttp3.HttpUrl
@@ -53,6 +63,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         PaymentsPayFragment.OnSelectContactToPayListener, WalletFragment.OnSelectPaymentTabListener,
+        WalletFragment.OnWalletFragmentViewCreatedListener,
         ContactSearchResultsAdapter.OnViewAllRequestsListener {
 
     companion object {
@@ -79,6 +90,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private val config: Configuration by lazy { walletApplication.configuration }
     private var fingerprintHelper: FingerprintHelper? = null
 
+    private var blockchainState: BlockchainState? = null
+    private var dashPayViewModel: DashPayViewModel? = null
+    private var isPlatformAvailable: Boolean = false
+    private var hasIdentity: Boolean = false
+    private lateinit var walletFragment: WalletFragment
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -86,6 +103,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
         }
         setContentView(R.layout.activity_main)
+
+        walletFragment = supportFragmentManager.findFragmentByTag("wallet_fragment") as WalletFragment
 
         if (savedInstanceState == null) {
             checkAlerts()
@@ -113,6 +132,34 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         handleIntent(intent!!)
+    }
+
+    override fun onWalletFragmentViewCreated() {
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, Observer {
+            blockchainState = it
+            walletFragment.setBlockchainState(blockchainState)
+            //showContacts()
+        })
+        dashPayViewModel = ViewModelProvider(this)[DashPayViewModel::class.java]
+        dashPayViewModel!!.isPlatformAvailableLiveData.observe(this, Observer<Resource<Boolean?>?> { status ->
+            if (status?.status === Status.SUCCESS) {
+                if (status.data != null) {
+                    isPlatformAvailable = status.data
+                }
+            } else {
+                isPlatformAvailable = false
+            }
+            walletFragment.setPlatformAvailability(isPlatformAvailable)
+            //showContacts()
+        })
+        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this,
+                Observer {
+                    if (it != null) {
+                        hasIdentity = it.creationState == BlockchainIdentityData.CreationState.DONE
+                    }
+                    walletFragment.setBlockchainIdentity(it)
+                }
+        )
     }
 
     //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
@@ -157,7 +204,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun addFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                                exitAnim: Int = R.anim.fragment_out, replace: Boolean = true) {
+                            exitAnim: Int = R.anim.fragment_out, replace: Boolean = true) {
         val transaction = startFragmentTransaction(enterAnim, exitAnim)
         transaction.add(R.id.fragment_container, fragment)
         transaction.addToBackStack(null).commit()
@@ -185,11 +232,19 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
         bottom_navigation.menu.findItem(R.id.contacts)?.isChecked = true
-        val contactsFragment = ContactsFragment.newInstance(mode)
-        if (mode == MODE_VIEW_REQUESTS) {
-            addFragment(contactsFragment)
+
+        val isSynced = blockchainState?.isSynced() ?: false
+        if (hasIdentity) {
+            val contactsFragment = ContactsFragment.newInstance(mode)
+            if (mode == MODE_VIEW_REQUESTS) {
+                addFragment(contactsFragment)
+            } else {
+                replaceFragment(contactsFragment)
+            }
         } else {
-            replaceFragment(contactsFragment)
+            val readyToUpgrade = isPlatformAvailable && isSynced &&
+                    wallet.canAffordIdentityCreation()
+            replaceFragment(UpgradeToEvolutionFragment.newInstance(readyToUpgrade))
         }
     }
 

@@ -157,7 +157,7 @@
         <item quantity="other">시간</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">업그레이드</string>
+    <string name="upgrade">업그레이드</string>
     <string name="encrypt_new_key_chain_dialog_title">지갑 업그레이드 하기</string>
     <string name="encrypt_new_key_chain_dialog_message">지갑이 더 많은 어플 가져오기 및 내보내기 기능을 지원하기 위하여 업그레이드를 진행할 예정입니다.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">업그레이드 과정을 완료하시려면 PIN을 입력해야 합니다.</string>

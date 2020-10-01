@@ -160,7 +160,7 @@
         <item quantity="other">ώρες</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Αναβάθμιση</string>
+    <string name="upgrade">Αναβάθμιση</string>
     <string name="encrypt_new_key_chain_dialog_title">Αναβαθμίστε το πορτοφόλι σας</string>
     <string name="encrypt_new_key_chain_dialog_message">το πορτοφόλι σας θα αναβαθμιστεί για να υποστηρίζει την εισαγωγή από και την εξαγωγή σε περισσότερες εφαρμογές.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Θα πρέπει να εισάγετε το PIN σας για να ολοκληρωθεί η αναβάθμιση.</string>

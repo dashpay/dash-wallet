@@ -166,7 +166,7 @@
         <item quantity="other">часы</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Обновление</string>
+    <string name="upgrade">Обновление</string>
     <string name="encrypt_new_key_chain_dialog_title">Обновление Вашего кошелька</string>
     <string name="encrypt_new_key_chain_dialog_message">Ваш кошелёк получит обновление, чтобы поддерживать обмен данными с другими приложениями.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Вам необходимо ввести свой ПИН-код для завершения процедуры обновления.</string>

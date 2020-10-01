@@ -160,7 +160,7 @@
         <item quantity="other">uren</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Upgrade</string>
+    <string name="upgrade">Upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">Doe een upgrade van je portemonnee</string>
     <string name="encrypt_new_key_chain_dialog_message">Je portemonnee krijgt een upgrade om importeren van en exporteren naar meerdere apps mogelijk te maken.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Je moet je pin invoeren om het upgradeproces te voltooien.</string>

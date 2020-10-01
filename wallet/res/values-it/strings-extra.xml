@@ -160,7 +160,7 @@
         <item quantity="other">ore</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Aggiorna </string>
+    <string name="upgrade">Aggiorna </string>
     <string name="encrypt_new_key_chain_dialog_title">Aggiorna il tuo portafoglio</string>
     <string name="encrypt_new_key_chain_dialog_message">Il tuo portafoglio verrà aggiornato per supportare l\'importazione e l\'esportazione verso più app.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Devi immettere il tuo PIN per terminare il processo di  aggiornamento</string>

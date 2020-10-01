@@ -157,7 +157,7 @@
         <item quantity="other">小时</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">升级</string>
+    <string name="upgrade">升级</string>
     <string name="encrypt_new_key_chain_dialog_title">升级您的钱包</string>
     <string name="encrypt_new_key_chain_dialog_message">您的钱包将被升级, 以支持更多APP的导入导出功能.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">您必须输入PIN码才能完成升级过程.</string>

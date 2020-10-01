@@ -161,7 +161,7 @@
         <item quantity="other">horas</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Actualizar</string>
+    <string name="upgrade">Actualizar</string>
     <string name="encrypt_new_key_chain_dialog_title">Actualiza tu billetera</string>
     <string name="encrypt_new_key_chain_dialog_message">Tu billetera será actualizada para admitir la importación y exportación a otras aplicaciones.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Debes ingresar tu PIN para finalizar el proceso de actualización.</string>
