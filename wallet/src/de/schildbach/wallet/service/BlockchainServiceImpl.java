@@ -518,34 +518,36 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         }
 
                         if (!connectTrustedPeerOnly) {
+                            // First use the masternode list that is included
                             try {
-                                peers.addAll(
-                                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                SimplifiedMasternodeList mnlist = org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
+                                MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
+                                peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
                             } catch (PeerDiscoveryException x) {
-                                //swallow and continue with another method of connection.
-                                log.info("DNS peer discovery failed: "+ x.getMessage());
-                                if(x.getCause() != null)
-                                    log.info(  "cause:  " + x.getCause().getMessage());
+                                //swallow and continue with another method of connection
+                                log.info("DMN List peer discovery failed: "+ x.getMessage());
                             }
-                            if(peers.size() < 10) {
-                                log.info("DNS peer discovery returned less than 10 nodes.  Adding DMN peers to the list to increase connections");
-                                try {
-                                    SimplifiedMasternodeList mnlist = org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
-                                    MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
-                                    peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
-                                } catch (PeerDiscoveryException x) {
-                                    //swallow and continue with another method of connection
-                                    log.info("DMN List peer discovery failed: "+ x.getMessage());
 
+                            if(peers.size() < 16) {
+                                if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
+                                    log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
+                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } else {
+                                    log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
                                 }
+                            }
 
-                                if(peers.size() < 10) {
-                                    if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
-                                        log.info("DNS peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
-                                        peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
-                                    } else {
-                                        log.info("DNS peer discovery returned less than 10 nodes.  Unable to add seed peers (it is not specified for this network).");
-                                    }
+                            if(peers.size() < 16) {
+                                log.info("Masternode peer discovery returned less than 16 nodes.  Adding DMN peers to the list to increase connections");
+
+                                try {
+                                    peers.addAll(
+                                            Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } catch (PeerDiscoveryException x) {
+                                    //swallow and continue with another method of connection, if one exists.
+                                    log.info("DNS peer discovery failed: "+ x.getMessage());
+                                    if(x.getCause() != null)
+                                        log.info(  "cause:  " + x.getCause().getMessage());
                                 }
                             }
                         }
