@@ -17,57 +17,50 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
+import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
-import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
+import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.ContactViewHolder
 import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contact_header_row.view.*
 import kotlinx.android.synthetic.main.contact_request_header_row.view.*
-import kotlinx.android.synthetic.main.contact_request_row.view.*
 
 
 class ContactSearchResultsAdapter(private val listener: Listener,
                                   private val onViewAllRequestsListener: OnViewAllRequestsListener) :
-        RecyclerView.Adapter<ContactSearchResultsAdapter.ViewHolder>() {
+        RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
         const val CONTACT_REQUEST_HEADER = 0
-        const val CONTACT_REQUEST = 1
         const val CONTACT_HEADER = 2
         const val CONTACT = 3
     }
 
     class ViewItem(val usernameSearchResult: UsernameSearchResult?, val viewType: Int, val sortOrder: Int = 0, val requestCount: Int = 0)
 
-    interface OnItemClickListener {
-        fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
-    }
-
     init {
         setHasStableIds(true)
     }
 
-    var itemClickListener: OnItemClickListener? = null
+    var itemClickListener: ContactViewHolder.OnItemClickListener? = null
     var results: ArrayList<ViewItem> = arrayListOf()
         set(value) {
             field = value
             notifyDataSetChanged()
         }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
             CONTACT_REQUEST_HEADER -> ContactRequestHeaderViewHolder(LayoutInflater.from(parent.context), parent)
-            CONTACT_REQUEST -> ContactRequestViewHolder(LayoutInflater.from(parent.context), parent)
             CONTACT_HEADER -> ContactHeaderViewHolder(LayoutInflater.from(parent.context), parent)
             CONTACT -> ContactViewHolder(LayoutInflater.from(parent.context), parent)
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
@@ -78,26 +71,52 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         return results.size
     }
 
+    var sendContactRequestWorkStateMap: Map<String, Resource<WorkInfo>> = mapOf()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
     override fun getItemId(position: Int): Long {
-        return when (results[position].viewType) {
-            CONTACT -> PlatformUtils.longHashFromEncodedString(results[position].usernameSearchResult!!.toContactRequest!!.toUserId)
-            CONTACT_REQUEST -> PlatformUtils.longHashFromEncodedString(results[position].usernameSearchResult!!.fromContactRequest!!.userId)
+        val item = results[position]
+        return when (item.viewType) {
+            CONTACT -> {
+                if (item.usernameSearchResult!!.type == UsernameSearchResult.Type.CONTACT_ESTABLISHED) {
+                    PlatformUtils.longHashFromEncodedString(item.usernameSearchResult.toContactRequest!!.toUserId)
+                } else {
+                    PlatformUtils.longHashFromEncodedString(item.usernameSearchResult.fromContactRequest!!.userId)
+                }
+            }
             CONTACT_REQUEST_HEADER -> 1L
             CONTACT_HEADER -> 2L
-            else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")
+            else -> throw IllegalArgumentException("Invalid viewType ${item.viewType}")
         }
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        when (results[position].viewType) {
-            CONTACT, CONTACT_REQUEST -> holder.bind(results[position].usernameSearchResult!!)
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val item = results[position]
+        when (item.viewType) {
+            CONTACT -> {
+                val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.usernameSearchResult!!.dashPayProfile.userId]
+                (holder as ContactViewHolder).apply {
+                    bind(item.usernameSearchResult, sendContactRequestWorkState, itemClickListener, listener)
+                    if (item.usernameSearchResult.isPendingRequest) {
+                        setMarginsDp(20, 3, 20, 3)
+                        setBackgroundResource(R.drawable.selectable_round_corners)
+                    } else {
+                        setMarginsDp(0, 0, 0, 0)
+                        setBackgroundColor(Color.TRANSPARENT)
+                        setForegroundResource(R.drawable.selectable_background_dark)
+                    }
+                }
+            }
             CONTACT_REQUEST_HEADER -> (holder as ContactRequestHeaderViewHolder).bind(results[position].requestCount)
-            CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind(results[position].sortOrder)
-            else -> throw IllegalArgumentException("Invalid viewType ${results[position].viewType}")
+            CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind(item.sortOrder)
+            else -> throw IllegalArgumentException("Invalid viewType ${item.viewType}")
         }
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: List<Any?>) {
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: List<Any?>) {
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads)
         } else {
@@ -109,71 +128,8 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         return results[position].viewType
     }
 
-    open inner class ViewHolder(resId: Int, inflater: LayoutInflater, parent: ViewGroup) :
-            RecyclerView.ViewHolder(inflater.inflate(resId, parent, false)) {
-
-        private val avatar by lazy { itemView.findViewById<ImageView>(R.id.avatar) }
-        private val username by lazy { itemView.findViewById<TextView>(R.id.username) }
-        private val displayName by lazy { itemView.findViewById<TextView>(R.id.displayName) }
-
-        open fun bind(usernameSearchResult: UsernameSearchResult) {
-            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
-                    usernameSearchResult.username[0])
-
-            val dashPayProfile = usernameSearchResult.dashPayProfile
-            if (dashPayProfile.displayName.isEmpty()) {
-                displayName.text = dashPayProfile.username
-                username.text = ""
-            } else {
-                displayName.text = dashPayProfile.displayName
-                username.text = usernameSearchResult.username
-            }
-
-            if (dashPayProfile.avatarUrl.isNotEmpty()) {
-                Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
-                        .placeholder(defaultAvatar).into(avatar)
-            } else {
-                avatar.background = defaultAvatar
-            }
-
-            itemClickListener?.let { l ->
-                this.itemView.setOnClickListener {
-                    l.onItemClicked(it, usernameSearchResult)
-                }
-            }
-        }
-    }
-
-
-    inner class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            ViewHolder(R.layout.contact_row, inflater, parent) {
-
-        override fun bind(usernameSearchResult: UsernameSearchResult) {
-            super.bind(usernameSearchResult)
-        }
-    }
-
-    inner class ContactRequestViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            ViewHolder(R.layout.contact_request_row, inflater, parent) {
-
-        override fun bind(usernameSearchResult: UsernameSearchResult) {
-            super.bind(usernameSearchResult)
-            itemView.apply {
-                accept_contact_request.setOnClickListener {
-                    //TODO: this contact request should be accepted
-                    listener.onAcceptRequest(usernameSearchResult, adapterPosition)
-                }
-
-                ignore_contact_request.setOnClickListener {
-                    //TODO: this contact request should be hidden
-                    listener.onIgnoreRequest(usernameSearchResult, adapterPosition)
-                }
-            }
-        }
-    }
-
     inner class ContactHeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            ViewHolder(R.layout.contact_header_row, inflater, parent) {
+            RecyclerView.ViewHolder(inflater.inflate(R.layout.contact_header_row, parent, false)) {
 
         var direction = UsernameSortOrderBy.DISPLAY_NAME
         fun bind(sortOrder: Int) {
@@ -210,7 +166,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
     }
 
     inner class ContactRequestHeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
-            ViewHolder(R.layout.contact_request_header_row, inflater, parent) {
+            RecyclerView.ViewHolder(inflater.inflate(R.layout.contact_request_header_row, parent, false)) {
 
         fun bind(requestCount: Int) {
             itemView.apply {
@@ -223,10 +179,8 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         }
     }
 
-    interface Listener {
+    interface Listener : ContactViewHolder.OnContactRequestButtonClickListener {
         fun onSortOrderChanged(direction: UsernameSortOrderBy)
-        fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int)
-        fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 
     interface OnViewAllRequestsListener {

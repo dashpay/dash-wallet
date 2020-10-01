@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="70dp"
+    android:layout_marginTop="3dp"
+    android:layout_marginBottom="3dp"
+    android:background="@drawable/selectable_round_corners">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/avatar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="17dp"
+            android:transitionName="avatar"
+            app:layout_constraintBottom_toBottomOf="@id/center_guideline"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/center_guideline"
+            tools:ignore="ContentDescription" />
+
+        <TextView
+            android:id="@+id/display_name"
+            style="@style/MontserratSemiBold"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            app:layout_constraintStart_toEndOf="@id/avatar"
+            app:layout_constraintTop_toTopOf="@id/avatar"
+            tools:text="John Doe" />
+
+        <TextView
+            android:id="@+id/username"
+            style="@style/MontserratRegular"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/gray"
+            android:textSize="12sp"
+            app:layout_constraintStart_toStartOf="@id/display_name"
+            app:layout_constraintTop_toBottomOf="@id/display_name"
+            tools:text="Johndoe" />
+
+        <ViewFlipper
+            android:id="@+id/relation_state"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="12dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/display_name"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center_vertical|end"
+                app:layout_constraintBottom_toBottomOf="@id/center_guideline"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/center_guideline"
+                app:srcCompat="@drawable/ic_contact_added" />
+
+            <TextView
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|end"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/contact_request_pending"
+                android:textColor="@color/dash_golden"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|end"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/accept_contact_request"
+                    style="@style/DashButton.Blue"
+                    android:layout_width="67dp"
+                    android:layout_height="30dp"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/montserrat_medium"
+                    android:text="@string/contact_request_accept"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="12sp" />
+
+                <ImageButton
+                    android:id="@+id/ignore_contact_request"
+                    style="@style/DashButton.Gray"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    android:text="X"
+                    app:srcCompat="@drawable/ic_ignore_x" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|end"
+                android:gravity="center_vertical|end"
+                tools:ignore="UseCompoundDrawables">
+
+                <ImageView
+                    android:id="@+id/pending_work_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="8dp"
+                    app:srcCompat="@drawable/ic_hourglass"
+                    tools:ignore="ContentDescription" />
+
+                <TextView
+                    android:id="@+id/pending_work_text"
+                    style="@style/MontserratRegular"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/accepting_contact_request_short"
+                    android:textColor="@color/dash_golden"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:ignore="UselessLeaf" />
+
+        </ViewFlipper>
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/center_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.50" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</FrameLayout>

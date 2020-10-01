@@ -46,7 +46,7 @@ class EditProfileActivity : BaseMenuActivity() {
         val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
         if (blockchainIdentity?.currentUsername != null) {
             userInfoContainer.visibility = View.VISIBLE
-            AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(blockchainIdentity!!.uniqueIdString)
+            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(blockchainIdentity.uniqueIdString)
                     .observe(this, Observer {
                         if (it != null) {
                             showProfileInfo(it)

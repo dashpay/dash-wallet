@@ -8,6 +8,7 @@ class NotificationItemContact(val usernameSearchResult: UsernameSearchResult, va
             UsernameSearchResult.Type.REQUEST_RECEIVED -> usernameSearchResult.fromContactRequest!!.userId
             UsernameSearchResult.Type.REQUEST_SENT,
             UsernameSearchResult.Type.CONTACT_ESTABLISHED -> usernameSearchResult.toContactRequest!!.toUserId
+            UsernameSearchResult.Type.NO_RELATIONSHIP -> throw IllegalStateException()
         }
     }
 

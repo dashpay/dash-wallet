@@ -67,7 +67,7 @@ class MoreFragment : Fragment(R.layout.activity_more) {
 
         val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
         if (blockchainIdentity != null) {
-            AppDatabase.getAppDatabase().dashPayProfileDao().loadDistinct(blockchainIdentity!!.uniqueIdString)
+            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(blockchainIdentity.uniqueIdString)
                     .observe(viewLifecycleOwner, Observer {
                         if (it != null) {
                             showProfileSection(it)

@@ -212,7 +212,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             startService(CreateIdentityService.createIntentForNewUsername(this, username))
             finish()
         } else {
-            AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this, Observer {
+            AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(this, Observer {
                 if (it?.creationStateErrorMessage != null && !reuseTransaction) {
                     finish()
                 } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {

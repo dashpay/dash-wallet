@@ -21,10 +21,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import androidx.work.WorkInfo
 import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.NotificationItemStub
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.notification.*
 import de.schildbach.wallet.util.PlatformUtils
 import org.bitcoinj.core.Sha256Hash
@@ -55,6 +57,12 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     }
 
     var results: List<NotificationViewItem> = arrayListOf()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
+    var sendContactRequestWorkStateMap: Map<String, Resource<WorkInfo>> = mapOf()
         set(value) {
             field = value
             notifyDataSetChanged()
@@ -95,7 +103,9 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
                 holder.bind(notificationItem, (notificationViewItem as ImageViewItem).textResId, notificationViewItem.imageResId)
             }
             NOTIFICATION_CONTACT -> {
-                holder.bind(notificationItem, notificationViewItem.isNew, showAvatars, onContactActionClickListener)
+                val item = notificationItem as NotificationItemContact
+                val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.usernameSearchResult.dashPayProfile.userId]
+                (holder as ContactViewHolder).bind(item, sendContactRequestWorkState, notificationViewItem.isNew, showAvatars, onContactActionClickListener)
             }
             NOTIFICATION_PAYMENT -> {
                 holder.bind(notificationItem, transactionCache, wallet)

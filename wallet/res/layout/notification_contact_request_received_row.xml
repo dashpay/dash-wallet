@@ -32,7 +32,7 @@
         app:layout_constraintTop_toTopOf="@+id/center_guideline">
 
         <TextView
-            android:id="@+id/displayName"
+            android:id="@+id/display_name"
             style="@style/MontserratRegular"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -94,6 +94,15 @@
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="15dp"
             app:srcCompat="@drawable/ic_contact_added" />
+
+        <ImageView
+            android:id="@+id/pending_work_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center_vertical|end"
+            android:layout_marginEnd="15dp"
+            app:srcCompat="@drawable/ic_hourglass"
+            tools:ignore="ContentDescription" />
 
     </LinearLayout>
 

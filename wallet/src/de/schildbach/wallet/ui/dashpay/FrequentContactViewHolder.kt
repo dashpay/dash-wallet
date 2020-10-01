@@ -34,9 +34,9 @@ class FrequentContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, val
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.displayName.isEmpty()) {
-                displayName.text = dashPayProfile.username
+                display_name.text = dashPayProfile.username
             } else {
-                displayName.text = dashPayProfile.displayName
+                display_name.text = dashPayProfile.displayName
             }
 
             if (dashPayProfile.avatarUrl.isNotEmpty()) {

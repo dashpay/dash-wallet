@@ -83,7 +83,7 @@ class PaymentsPayFragment : Fragment(),
     }
 
     private fun initViewModel(view: View) {
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().load().observe(viewLifecycleOwner, Observer {
+        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().load().observe(viewLifecycleOwner, Observer {
             val visibility = if (it == null) View.GONE else View.VISIBLE
             pay_by_contact_select.visibility = visibility
         })

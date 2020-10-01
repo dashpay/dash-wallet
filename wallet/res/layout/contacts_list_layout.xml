@@ -50,13 +50,10 @@
             app:srcCompat="@drawable/ic_search"
             tools:visibility="visible" />
 
-
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/contacts_rv"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_marginLeft="0dp"
-            android:layout_marginRight="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
