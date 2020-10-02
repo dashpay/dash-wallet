@@ -150,7 +150,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
             walletFragment.setPlatformAvailability(isPlatformAvailable)
         })
-        AppDatabase.getAppDatabase().blockchainIdentityDataDao().loadBase().observe(this,
+        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(this,
                 Observer {
                     if (it != null) {
                         hasIdentity = it.creationState == BlockchainIdentityData.CreationState.DONE
