@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.view.View
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.ui.CreateUsernameActivity
@@ -46,9 +47,14 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
         super.onViewCreated(view, savedInstanceState)
         upgradeBtn.isEnabled = requireArguments().getBoolean(EXTRA_IS_READY_TO_UPGRADE)
         upgradeBtn.setOnClickListener {
-            requireActivity().supportFragmentManager.popBackStack()
-            startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
+            if (requireActivity() is OnUpgradeBtnClicked) {
+                (requireActivity() as OnUpgradeBtnClicked).onUpgradeBtnClicked()
+            }
         }
+    }
+
+    interface OnUpgradeBtnClicked {
+        fun onUpgradeBtnClicked()
     }
 
 }

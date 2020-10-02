@@ -11,6 +11,7 @@ import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
@@ -64,7 +65,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         PaymentsPayFragment.OnSelectContactToPayListener, WalletFragment.OnSelectPaymentTabListener,
         WalletFragment.OnWalletFragmentViewCreatedListener,
-        ContactSearchResultsAdapter.OnViewAllRequestsListener {
+        ContactSearchResultsAdapter.OnViewAllRequestsListener,
+        UpgradeToEvolutionFragment.OnUpgradeBtnClicked {
 
     companion object {
         const val REQUEST_CODE_SCAN = 0
@@ -730,6 +732,14 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         supportFragmentManager.fragments.forEach {
             it.onActivityResult(requestCode, resultCode, data)
         }
+    }
+
+    override fun onUpgradeBtnClicked() {
+        goBack(true)
+        //Delay added to prevent fragment being removed and activity being launched "at the same time"
+        Handler().postDelayed({
+            startActivity(Intent(this, CreateUsernameActivity::class.java))
+        }, 500)
     }
 
 }
