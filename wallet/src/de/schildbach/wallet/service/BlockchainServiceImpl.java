@@ -155,7 +155,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
     private final DnsDiscovery dnsDiscovery = new DnsDiscovery(Constants.DNS_SEED, Constants.NETWORK_PARAMETERS);
     ArrayList<PeerDiscovery> peerDiscoveryList = new ArrayList<>(2);
-
+    private final static int MINIMUM_PEER_COUNT = 16;
 
     private static final int MIN_COLLECT_HISTORY = 2;
     private static final int IDLE_BLOCK_TIMEOUT_MIN = 2;
@@ -528,7 +528,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 log.info("DMN List peer discovery failed: "+ x.getMessage());
                             }
 
-                            if(peers.size() < 16) {
+                            if(peers.size() < MINIMUM_PEER_COUNT) {
                                 if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
                                     log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
                                     peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
@@ -537,7 +537,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 }
                             }
 
-                            if(peers.size() < 16) {
+                            if(peers.size() < MINIMUM_PEER_COUNT) {
                                 log.info("Masternode peer discovery returned less than 16 nodes.  Adding DMN peers to the list to increase connections");
 
                                 try {
