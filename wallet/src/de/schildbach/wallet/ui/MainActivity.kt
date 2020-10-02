@@ -113,14 +113,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     fun initViewModel() {
         viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
-        viewModel.blockchainStateData.observe(this, Observer {
+        viewModel.isAbleToCreateIdentityData.observe(this, Observer {
             // just to trigger data loading
-        })
-        viewModel.isPlatformAvailableData.observe(this, Observer {
-            // just to trigger data loading
-        })
-        viewModel.blockchainIdentityData.observe(this, Observer {
-            //just to trigger data loading
         })
     }
 

@@ -104,9 +104,6 @@ class WalletFragment : Fragment() {
 
     fun initViewModel() {
         mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
-//        mainActivityViewModel.isPlatformAvailableData.observe(viewLifecycleOwner, Observer {
-//            showHideJoinDashPayAction()
-//        })
         mainActivityViewModel.blockchainStateData.observe(viewLifecycleOwner, Observer {
             if (it != null) {
                 updateSyncState(it)

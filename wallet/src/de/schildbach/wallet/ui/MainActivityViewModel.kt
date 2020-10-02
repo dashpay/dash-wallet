@@ -19,7 +19,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
     private val walletApplication = application as WalletApplication
     private val platformRepo = PlatformRepo.getInstance()
 
-    val isPlatformAvailableData = liveData(Dispatchers.IO) {
+    private val isPlatformAvailableData = liveData(Dispatchers.IO) {
         val status = platformRepo.isPlatformAvailable()
         if (status.status == Status.SUCCESS && status.data != null) {
             emit(status.data)
@@ -27,8 +27,6 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
             emit(false)
         }
     }
-    val isPlatformAvailable: Boolean
-        get() = isPlatformAvailableData.value ?: false
 
     val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()
     val blockchainState: BlockchainState?
@@ -65,7 +63,6 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
         val isSynced = blockchainStateData.value?.isSynced() ?: false
         val noIdentityCreatedOrInProgress = (blockchainIdentityData.value == null) || blockchainIdentityData.value!!.creationState == BlockchainIdentityData.CreationState.NONE
         val canAffordIdentityCreation = canAffordIdentityCreationLiveData.value ?: false
-        println("isPlatformAvailable: $isPlatformAvailable, isSynced: $isSynced, noIdentityCreatedOrInProgress: $noIdentityCreatedOrInProgress, canAffordIdentityCreation: ${canAffordIdentityCreation}\t${blockchainIdentityData.value?.creationState}")
         return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
     }
 
