@@ -30,13 +30,12 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.CheckPinDialog.Companion.show
 import de.schildbach.wallet.ui.InputParser.StringInputParser
@@ -64,10 +63,10 @@ import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class WalletFragment : Fragment() {
 
+    private lateinit var mainActivityViewModel: MainActivityViewModel
+
     private var clipboardManager: ClipboardManager? = null
-    private var blockchainState: BlockchainState? = null
     private var syncComplete = false
-    private var isPlatformAvailable = false
     private var noIdentityCreatedOrInProgress = true
     private var retryCreationIfInProgress = true
 
@@ -87,6 +86,7 @@ class WalletFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        initViewModel()
         initView()
         clipboardManager = activity?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
 
@@ -105,7 +105,20 @@ class WalletFragment : Fragment() {
         })
 
         registerOnCoinsSentReceivedListener()
-        (requireActivity() as OnWalletFragmentViewCreatedListener).onWalletFragmentViewCreated()
+    }
+
+    fun initViewModel() {
+        mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
+        mainActivityViewModel.isPlatformAvailableData.observe(viewLifecycleOwner, Observer {
+            showHideJoinDashPayAction()
+        })
+        mainActivityViewModel.blockchainStateData.observe(viewLifecycleOwner, Observer {
+            updateSyncState()
+            showHideJoinDashPayAction()
+        })
+        mainActivityViewModel.blockchainIdentityData.observe(viewLifecycleOwner, Observer {
+            setBlockchainIdentity(it)
+        })
     }
 
     override fun onDestroyView() {
@@ -119,27 +132,7 @@ class WalletFragment : Fragment() {
         showHideJoinDashPayAction()
     }
 
-    fun setBlockchainState(blockchainState: BlockchainState?) {
-        this.blockchainState = blockchainState
-        if (isDetached || !isVisible) {
-            return
-        }
-        updateSyncState()
-        showHideJoinDashPayAction()
-    }
-
-    fun setPlatformAvailability(available: Boolean) {
-        isPlatformAvailable = available
-        if (isDetached || !isVisible) {
-            return
-        }
-        showHideJoinDashPayAction()
-    }
-
-    fun setBlockchainIdentity(identityData: BlockchainIdentityBaseData?) {
-        if (isDetached || !isVisible) {
-            return
-        }
+    private fun setBlockchainIdentity(identityData: BlockchainIdentityBaseData?) {
         if (identityData != null) {
             noIdentityCreatedOrInProgress = identityData.creationState == BlockchainIdentityData.CreationState.NONE
             showHideJoinDashPayAction()
@@ -166,17 +159,19 @@ class WalletFragment : Fragment() {
     }
 
     private fun updateSyncState() {
-        if (blockchainState == null) {
+        if (mainActivityViewModel.blockchainState == null) {
             return
         }
+        val blockchainState = mainActivityViewModel.blockchainState
+
         var percentage: Int = blockchainState!!.percentageSync
-        if (blockchainState!!.replaying && blockchainState!!.percentageSync == 100) {
+        if (blockchainState.replaying && blockchainState.percentageSync == 100) {
             //This is to prevent showing 100% when using the Rescan blockchain function.
             //The first few broadcasted blockchainStates are with percentage sync at 100%
             percentage = 0
         }
         val syncProgressView = sync_status_progress
-        if (blockchainState != null && blockchainState!!.syncFailed()) {
+        if (blockchainState.syncFailed()) {
             updateSyncPaneVisibility(R.id.sync_status_pane, true)
             sync_progress_pane.visibility = View.GONE
             sync_error_pane.visibility = View.VISIBLE
@@ -189,7 +184,7 @@ class WalletFragment : Fragment() {
         syncProgressView.progress = percentage
         val syncPercentageView = sync_status_percentage
         syncPercentageView.text = "$percentage%"
-        syncComplete = blockchainState!!.isSynced()
+        syncComplete = blockchainState.isSynced()
         if (syncComplete) {
             syncPercentageView.setTextColor(resources.getColor(R.color.success_green))
             syncStatusTitle.setText(R.string.sync_status_sync_title)
@@ -216,7 +211,7 @@ class WalletFragment : Fragment() {
     }
 
     fun showHideJoinDashPayAction() {
-        if (noIdentityCreatedOrInProgress && syncComplete && isPlatformAvailable) {
+        if (noIdentityCreatedOrInProgress && syncComplete && mainActivityViewModel.isPlatformAvailable) {
             val visible = wallet.canAffordIdentityCreation() && config.showJoinDashPay
             join_dashpay_action.visibility = if (visible) View.VISIBLE else View.GONE
         } else {
@@ -231,7 +226,7 @@ class WalletFragment : Fragment() {
     }
 
     private fun handleVerifySeed() {
-        val checkPinSharedModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
+        val checkPinSharedModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
         checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner, Observer<Pair<Int?, String?>?> { data ->
             if (data?.second != null) {
                 startVerifySeedActivity(data.second!!)
@@ -345,9 +340,5 @@ class WalletFragment : Fragment() {
 
     interface OnSelectPaymentTabListener {
         fun onSelectPaymentTab(mode: Int)
-    }
-
-    interface OnWalletFragmentViewCreatedListener {
-        fun onWalletFragmentViewCreated()
     }
 }
