@@ -447,6 +447,45 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return dashPayContactRequest
     }
 
+    @Throws(Exception::class)
+    suspend fun broadcastUpdatedProfile(dashPayProfile: DashPayProfile, encryptionKey: KeyParameter): DashPayProfile {
+        log.info("broadcast profile")
+
+        val displayName = if (dashPayProfile.displayName.isNotEmpty()) dashPayProfile.displayName else null
+        val publicMessage = if (dashPayProfile.publicMessage.isNotEmpty()) dashPayProfile.publicMessage else null
+        val avatarUrl = if (dashPayProfile.avatarUrl.isNotEmpty()) dashPayProfile.avatarUrl else null
+
+        //Create Contact Request
+        if (dashPayProfile.createdAt == 0L) {
+            blockchainIdentity.registerProfile(displayName,
+                    publicMessage,
+                    avatarUrl,
+                    encryptionKey)
+        } else {
+            blockchainIdentity.updateProfile(displayName,
+                    publicMessage,
+                    avatarUrl,
+                    encryptionKey)
+        }
+        log.info("profile broadcast")
+
+        delay(5000) // need to remove this
+
+        //Verify that the Contact Request was seen on the network
+        val updatedProfile = blockchainIdentity.watchProfile(100, 5000, RetryDelayType.LINEAR)
+
+        delay(5000) // need to remove this
+
+        log.info("updated profile: $updatedProfile")
+        if (updatedProfile != null) {
+            val updatedDashPayProfile = DashPayProfile.fromDocument(updatedProfile, dashPayProfile.username)
+            updateDashPayProfile(updatedDashPayProfile!!) //update the database since the cr was accepted
+            return updatedDashPayProfile
+        } else {
+            throw TimeoutException("timeout when updating profile")
+        }
+    }
+
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
@@ -713,13 +752,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val username = blockchainIdentity.currentUsername!!
                 // recovery will only get the information and place it in the database
                 val profile = blockchainIdentity.getProfile()
-                        ?: profiles.createProfileDocument("", "",
-                                "", blockchainIdentity.identity!!)
 
 
                 // blockchainIdentity doesn't yet keep track of the profile, so we will load it
                 // into the database directly
-                val dashPayProfile = DashPayProfile.fromDocument(profile, username)
+                val dashPayProfile = if (profile != null)
+                    DashPayProfile.fromDocument(profile, username)
+                else
+                    DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
                 updateDashPayProfile(dashPayProfile!!)
             }
         }
@@ -872,8 +912,16 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             userIdList.add(it.userId)
         }
 
+        // Also add our ownerId to get our profile, in case it was updated on a different device
+        userIdList.add(blockchainIdentity.uniqueIdString)
+
         updateContactProfiles(userIdList, lastContactRequestTime)
         log.info("updating contacts and profiles took $watch")
+
+        //TODO: remove this
+        //get ours everytime for now
+        //TODO: only get when it is updated
+        //updateContactProfiles(listOf(blockchainIdentity.uniqueIdString), 0)
     }
 
     /**
@@ -901,10 +949,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val username = nameDocument!!.data["normalizedLabel"] as String
                 val identityId = getIdentityForName(nameDocument)
 
-                val profileDocument = profileById[id] ?: profiles.createProfileDocument("", "",
-                        "", platform.identities.get(identityId)!!)
+                val profileDocument = profileById[id]
 
-                val profile = DashPayProfile.fromDocument(profileDocument, username)
+                val profile = if (profileDocument != null)
+                    DashPayProfile.fromDocument(profileDocument, username)
+                else DashPayProfile(identityId, username)
+
                 dashPayProfileDao.insert(profile!!)
                 if (checkingIntegrity) {
                     log.info("check database integrity: adding missing profile $username:$id")

@@ -93,6 +93,34 @@
                     app:layout_constraintStart_toStartOf="@id/username2"
                     app:layout_constraintTop_toBottomOf="@id/username2" />
 
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/update_profile_status_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/editProfile"
+                    android:background="@drawable/selectable_round_corners">
+
+                    <TextView
+                        android:id="@+id/update_status_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="18dp"
+
+                        android:text="Updating profile on Dash Network" />
+
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <LinearLayout
