@@ -27,15 +27,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityBaseData
-import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.CheckPinDialog.Companion.show
 import de.schildbach.wallet.ui.InputParser.StringInputParser
@@ -52,13 +50,9 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.home_content.*
 import kotlinx.android.synthetic.main.quick_actions_layout.*
 import kotlinx.android.synthetic.main.sync_status_pane.*
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
-import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class WalletFragment : Fragment() {
@@ -67,13 +61,12 @@ class WalletFragment : Fragment() {
 
     private var clipboardManager: ClipboardManager? = null
     private var syncComplete = false
-    private var noIdentityCreatedOrInProgress = true
+
     private var retryCreationIfInProgress = true
 
     private val walletApplication by lazy { WalletApplication.getInstance() }
     private val wallet by lazy { walletApplication.wallet }
     private val config by lazy { walletApplication.configuration }
-    private val coinsSendReceivedListener = OnCoinsSentReceivedListener()
     private var walletFragmentView: View? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -86,8 +79,6 @@ class WalletFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        initViewModel()
-        initView()
         clipboardManager = activity?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager?
 
         val appBar: View = app_bar
@@ -103,68 +94,49 @@ class WalletFragment : Fragment() {
                 return !walletTransactionsFragment.isHistoryEmpty
             }
         })
+    }
 
-        registerOnCoinsSentReceivedListener()
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+        initViewModel()
+        initView()
     }
 
     fun initViewModel() {
         mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
-        mainActivityViewModel.isPlatformAvailableData.observe(viewLifecycleOwner, Observer {
-            showHideJoinDashPayAction()
-        })
+//        mainActivityViewModel.isPlatformAvailableData.observe(viewLifecycleOwner, Observer {
+//            showHideJoinDashPayAction()
+//        })
         mainActivityViewModel.blockchainStateData.observe(viewLifecycleOwner, Observer {
-            updateSyncState()
-            showHideJoinDashPayAction()
+            if (it != null) {
+                updateSyncState(it)
+            }
         })
         mainActivityViewModel.blockchainIdentityData.observe(viewLifecycleOwner, Observer {
-            setBlockchainIdentity(it)
+            if (it != null) {
+                if (retryCreationIfInProgress && it.creationInProgress) {
+                    retryCreationIfInProgress = false
+                    activity?.startService(createIntentForRetry(requireActivity(), false))
+                }
+            }
         })
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        unregisterWalletListener()
+        mainActivityViewModel.isAbleToCreateIdentityData.observe(viewLifecycleOwner, Observer {
+            showHideJoinDashPayAction(it)
+        })
     }
 
     override fun onResume() {
         super.onResume()
         showHideSecureAction()
-        showHideJoinDashPayAction()
-    }
-
-    private fun setBlockchainIdentity(identityData: BlockchainIdentityBaseData?) {
-        if (identityData != null) {
-            noIdentityCreatedOrInProgress = identityData.creationState == BlockchainIdentityData.CreationState.NONE
-            showHideJoinDashPayAction()
-            if (retryCreationIfInProgress && identityData.creationInProgress) {
-                retryCreationIfInProgress = false
-                activity?.startService(createIntentForRetry(requireActivity(), false))
-            }
-        }
-    }
-
-    private fun registerOnCoinsSentReceivedListener() {
-        val mainThreadExecutor = ContextCompat.getMainExecutor(requireContext())
-        wallet.addCoinsReceivedEventListener(mainThreadExecutor, coinsSendReceivedListener)
-        wallet.addCoinsSentEventListener(mainThreadExecutor, coinsSendReceivedListener)
-    }
-
-    private fun unregisterWalletListener() {
-        wallet.removeCoinsReceivedEventListener(coinsSendReceivedListener)
-        wallet.removeCoinsSentEventListener(coinsSendReceivedListener)
+        showHideJoinDashPayAction(mainActivityViewModel.isAbleToCreateIdentity)
     }
 
     private fun updateSyncPaneVisibility(id: Int, visible: Boolean) {
         view?.findViewById<View>(id)?.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
-    private fun updateSyncState() {
-        if (mainActivityViewModel.blockchainState == null) {
-            return
-        }
-        val blockchainState = mainActivityViewModel.blockchainState
-
-        var percentage: Int = blockchainState!!.percentageSync
+    private fun updateSyncState(blockchainState: BlockchainState) {
+        var percentage: Int = blockchainState.percentageSync
         if (blockchainState.replaying && blockchainState.percentageSync == 100) {
             //This is to prevent showing 100% when using the Rescan blockchain function.
             //The first few broadcasted blockchainStates are with percentage sync at 100%
@@ -210,8 +182,8 @@ class WalletFragment : Fragment() {
         }
     }
 
-    fun showHideJoinDashPayAction() {
-        if (noIdentityCreatedOrInProgress && syncComplete && mainActivityViewModel.isPlatformAvailable) {
+    fun showHideJoinDashPayAction(isAbleToCreateIdentity: Boolean) {
+        if (isAbleToCreateIdentity) {
             val visible = wallet.canAffordIdentityCreation() && config.showJoinDashPay
             join_dashpay_action.visibility = if (visible) View.VISIBLE else View.GONE
         } else {
@@ -301,7 +273,7 @@ class WalletFragment : Fragment() {
         join_dashpay_action.setOnClickListener {
             startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
         }
-        showHideJoinDashPayAction()
+        showHideJoinDashPayAction(mainActivityViewModel.isAbleToCreateIdentity)
         scan_to_pay_action.setOnClickListener(View.OnClickListener { v -> handleScan(v) })
         buy_sell_action.setOnClickListener {
             startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
@@ -321,20 +293,6 @@ class WalletFragment : Fragment() {
             }
         } else {
             super.onActivityResult(requestCode, resultCode, intent)
-        }
-    }
-
-    inner class OnCoinsSentReceivedListener : WalletCoinsReceivedEventListener, WalletCoinsSentEventListener {
-        override fun onCoinsReceived(wallet: Wallet, tx: Transaction, prevBalance: Coin, newBalance: Coin) {
-            onCoinsSentReceived()
-        }
-
-        override fun onCoinsSent(wallet: Wallet, tx: Transaction, prevBalance: Coin, newBalance: Coin) {
-            onCoinsSentReceived()
-        }
-
-        private fun onCoinsSentReceived() {
-            showHideJoinDashPayAction()
         }
     }
 

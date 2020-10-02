@@ -17,40 +17,50 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
 import android.view.View
 import androidx.fragment.app.Fragment
-import de.schildbach.wallet.ui.CreateUsernameActivity
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import de.schildbach.wallet.ui.MainActivityViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_upgrade_to_evolution.*
 
 class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evolution) {
 
     companion object {
-        private const val EXTRA_IS_READY_TO_UPGRADE = "is_ready_to_upgrade"
-
         @JvmStatic
-        fun newInstance(readyToUpgrade: Boolean = false): UpgradeToEvolutionFragment {
-            val args = Bundle()
-            args.putBoolean(EXTRA_IS_READY_TO_UPGRADE, readyToUpgrade)
-
-            val instance = UpgradeToEvolutionFragment()
-            instance.arguments = args
-
-            return instance
+        fun newInstance(): UpgradeToEvolutionFragment {
+            return UpgradeToEvolutionFragment()
         }
     }
 
+    private lateinit var mainActivityViewModel: MainActivityViewModel
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        upgradeBtn.isEnabled = requireArguments().getBoolean(EXTRA_IS_READY_TO_UPGRADE)
         upgradeBtn.setOnClickListener {
             if (requireActivity() is OnUpgradeBtnClicked) {
                 (requireActivity() as OnUpgradeBtnClicked).onUpgradeBtnClicked()
             }
         }
+    }
+
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+        initViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        upgradeBtn.isEnabled = mainActivityViewModel.isAbleToCreateIdentity
+    }
+
+    private fun initViewModel() {
+        mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
+        mainActivityViewModel.isAbleToCreateIdentityData.observe(viewLifecycleOwner, Observer {
+            upgradeBtn.isEnabled = it
+        })
     }
 
     interface OnUpgradeBtnClicked {
