@@ -12,7 +12,7 @@ import org.bouncycastle.crypto.params.KeyParameter
 import java.io.IOException
 import java.security.GeneralSecurityException
 
-class UpdateProfileRequestWorker(context: Context, parameters: WorkerParameters)
+class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
     : BaseWorker(context, parameters) {
 
     companion object {

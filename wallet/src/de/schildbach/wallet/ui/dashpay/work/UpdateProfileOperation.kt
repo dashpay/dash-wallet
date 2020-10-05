@@ -57,13 +57,13 @@ class UpdateProfileOperation(val application: Application) {
     fun create(dashPayProfile: DashPayProfile): WorkContinuation {
 
         val password = SecurityGuard().retrievePassword()
-        val updateProfileWorker = OneTimeWorkRequestBuilder<UpdateProfileRequestWorker>()
+        val updateProfileWorker = OneTimeWorkRequestBuilder<UpdateProfileWorker>()
                 .setInputData(workDataOf(
-                        UpdateProfileRequestWorker.KEY_PASSWORD to password,
-                        UpdateProfileRequestWorker.KEY_DISPLAY_NAME to dashPayProfile.displayName,
-                        UpdateProfileRequestWorker.KEY_PUBLIC_MESSAGE to dashPayProfile.publicMessage,
-                        UpdateProfileRequestWorker.KEY_AVATAR_URL to dashPayProfile.avatarUrl,
-                        UpdateProfileRequestWorker.KEY_CREATED_AT to dashPayProfile.createdAt))
+                        UpdateProfileWorker.KEY_PASSWORD to password,
+                        UpdateProfileWorker.KEY_DISPLAY_NAME to dashPayProfile.displayName,
+                        UpdateProfileWorker.KEY_PUBLIC_MESSAGE to dashPayProfile.publicMessage,
+                        UpdateProfileWorker.KEY_AVATAR_URL to dashPayProfile.avatarUrl,
+                        UpdateProfileWorker.KEY_CREATED_AT to dashPayProfile.createdAt))
                 .build()
 
         return WorkManager.getInstance(application)
