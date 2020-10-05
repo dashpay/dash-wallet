@@ -15,7 +15,7 @@ class UpdateProfileOperation(val application: Application) {
     companion object {
         const val WORK_NAME = "UpdateProfile.WORK"
 
-        fun operationStatus(application: Application): LiveData<Resource<String>> {
+        fun operationStatus(application: Application): LiveData<Resource<Nothing>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
             return workManager.getWorkInfosForUniqueWorkLiveData(WORK_NAME).switchMap {
                 return@switchMap liveData {
@@ -31,8 +31,7 @@ class UpdateProfileOperation(val application: Application) {
                     val workInfo = it[0]
                     when (workInfo.state) {
                         WorkInfo.State.SUCCEEDED -> {
-                            val userId = UpdateProfileRequestWorker.extractUserId(workInfo.outputData)!!
-                            emit(Resource.success(userId))
+                            emit(Resource.success(null))
                         }
                         WorkInfo.State.FAILED -> {
                             val errorMessage = BaseWorker.extractError(workInfo.outputData)
@@ -65,7 +64,6 @@ class UpdateProfileOperation(val application: Application) {
                         UpdateProfileRequestWorker.KEY_PUBLIC_MESSAGE to dashPayProfile.publicMessage,
                         UpdateProfileRequestWorker.KEY_AVATAR_URL to dashPayProfile.avatarUrl,
                         UpdateProfileRequestWorker.KEY_CREATED_AT to dashPayProfile.createdAt))
-                .addTag("dashPayProfileUpdate:${dashPayProfile.userId}")
                 .build()
 
         return WorkManager.getInstance(application)
