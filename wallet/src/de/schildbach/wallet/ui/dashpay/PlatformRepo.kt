@@ -597,26 +597,26 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             blockchainIdentity
         }
         return blockchainIdentity.apply {
-                identity = platform.identities.get(uniqueIdString)
-                currentUsername = blockchainIdentityData.username
-                registrationStatus = blockchainIdentityData.registrationStatus!!
-                val usernameStatus = HashMap<String, Any>()
-                if (blockchainIdentityData.preorderSalt != null) {
-                    usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
-                }
-                if (blockchainIdentityData.usernameStatus != null) {
-                    usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
-                }
-                usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
-                usernameStatuses[currentUsername!!] = usernameStatus
+            identity = platform.identities.get(uniqueIdString)
+            currentUsername = blockchainIdentityData.username
+            registrationStatus = blockchainIdentityData.registrationStatus!!
+            val usernameStatus = HashMap<String, Any>()
+            if (blockchainIdentityData.preorderSalt != null) {
+                usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
+            }
+            if (blockchainIdentityData.usernameStatus != null) {
+                usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
+            }
+            usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
+            usernameStatuses[currentUsername!!] = usernameStatus
 
-                creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
-                activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
-                totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
-                keysCreated = blockchainIdentityData.keysCreated ?: 0
-                currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
-                currentMainKeyType = blockchainIdentityData.currentMainKeyType
-                        ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
+            creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
+            activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
+            totalKeyCount = blockchainIdentityData.totalKeyCount ?: 0
+            keysCreated = blockchainIdentityData.keysCreated ?: 0
+            currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
+            currentMainKeyType = blockchainIdentityData.currentMainKeyType
+                    ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
         }
     }
 
@@ -753,7 +753,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 log.info("update contacts not completed: blockchainIdentity has not been initialized")
             }
 
-            val userId = blockchainIdentity.uniqueIdString!! //blockchainIdentityData!!.getIdentity(walletApplication.wallet) ?: return
+            val userId = blockchainIdentity.uniqueIdString!!
 
             if (blockchainIdentityData.username == null) {
                 return // this is here because the wallet is being reset without removing blockchainIdentityData
@@ -1000,9 +1000,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (blockchainIdentityDataDao.load() == null) {
                 log.info("PreDownloadBlocks: checking for existing associated identity")
 
-                //val fundingKey = walletApplication.wallet.watchingKey
                 val identity = getIdentityFromPublicKeyId()
-                //log.info("key hash: ${fundingKey.pubKeyHash.toHexString()}, identityBytes: ${identityBytes != null}")
                 if (identity != null) {
                     log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id}")
                     ContextCompat.startForegroundService(walletApplication, createIntentForRestore(walletApplication, identity.id))
@@ -1020,21 +1018,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     /**
-        This is used by java code, outside of coroutines
+    This is used by java code, outside of coroutines
+
+    This should not be a suspended method.
      */
     fun clearDatabases() {
         val database = AppDatabase.getAppDatabase()
         database.blockchainIdentityDataDaoAsync().clear()
         database.dashPayProfileDaoAsync().clear()
         database.dashPayContactRequestDaoAsync().clear()
-
-        // TODO: how do we make the blockchainIdentity == null
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val fundingKey = walletApplication.wallet.blockchainIdentityKeyChain.watchingKey//currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
+        val fundingKey = walletApplication.wallet.blockchainIdentityKeyChain.watchingKey
         val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
-        log.info("key hash: ${fundingKey.pubKeyHash.toHexString()}, identityBytes: ${identityBytes != null}")
         return if (identityBytes != null) {
             platform.dpp.identity.createFromSerialized(identityBytes.toByteArray())
         } else null
