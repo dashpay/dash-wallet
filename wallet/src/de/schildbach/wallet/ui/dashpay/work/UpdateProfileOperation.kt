@@ -13,13 +13,11 @@ import de.schildbach.wallet.ui.security.SecurityGuard
 class UpdateProfileOperation(val application: Application) {
 
     companion object {
-        const val WORK_NAME = "UpdateProfile.WORK#"
+        const val WORK_NAME = "UpdateProfile.WORK"
 
-        fun uniqueWorkName(userId: String) = WORK_NAME + userId
-
-        fun operationStatus(application: Application, userId: String): LiveData<Resource<String>> {
+        fun operationStatus(application: Application): LiveData<Resource<String>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
-            return workManager.getWorkInfosForUniqueWorkLiveData(uniqueWorkName(userId)).switchMap {
+            return workManager.getWorkInfosForUniqueWorkLiveData(WORK_NAME).switchMap {
                 return@switchMap liveData {
 
                     if (it.isNullOrEmpty()) {
@@ -27,13 +25,13 @@ class UpdateProfileOperation(val application: Application) {
                     }
 
                     if (it.size > 1) {
-                        throw RuntimeException("there should never be more than one unique work ${uniqueWorkName(userId)}")
+                        throw RuntimeException("there should never be more than one unique work $WORK_NAME")
                     }
 
                     val workInfo = it[0]
                     when (workInfo.state) {
                         WorkInfo.State.SUCCEEDED -> {
-                            val userId = SendContactRequestWorker.extractUserId(workInfo.outputData)!!
+                            val userId = UpdateProfileRequestWorker.extractUserId(workInfo.outputData)!!
                             emit(Resource.success(userId))
                         }
                         WorkInfo.State.FAILED -> {
@@ -54,61 +52,7 @@ class UpdateProfileOperation(val application: Application) {
                 }
             }
         }
-
-        fun allOperationsStatus(application: Application): LiveData<MutableMap<String, Resource<WorkInfo>>> {
-            val workManager: WorkManager = WorkManager.getInstance(application)
-            workManager.pruneWork()
-            return workManager.getWorkInfosByTagLiveData(UpdateProfileRequestWorker::class.qualifiedName!!).switchMap {
-                return@switchMap liveData {
-
-                    if (it.isNullOrEmpty()) {
-                        return@liveData
-                    }
-
-                    val result = mutableMapOf<String, Resource<WorkInfo>>()
-                    it.forEach {
-                        var userId = ""
-                        it.tags.forEach { tag ->
-                            if (tag.startsWith("dashPayProfile:")) {
-                                userId = tag.replace("dashPayProfile:", "")
-                            }
-                        }
-                        result[userId] = convertState(it)
-                    }
-                    emit(result)
-                }
-            }
-        }
-
-        private fun convertState(workInfo: WorkInfo): Resource<WorkInfo> {
-            return when (workInfo.state) {
-                WorkInfo.State.SUCCEEDED -> {
-                    Resource.success(workInfo)
-                }
-                WorkInfo.State.FAILED -> {
-                    val errorMessage = BaseWorker.extractError(workInfo.outputData)
-                    if (errorMessage != null) {
-                        Resource.error(errorMessage, workInfo)
-                    } else {
-                        Resource.error(Exception(), workInfo)
-                    }
-                }
-                WorkInfo.State.CANCELLED -> {
-                    Resource.canceled(workInfo)
-                }
-                else -> {
-                    Resource.loading(workInfo)
-                }
-            }
-        }
     }
-
-    private val workManager: WorkManager = WorkManager.getInstance(application)
-
-    /**
-     * Gets the list of all SendContactRequestWorker WorkInfo's
-     */
-    val allOperationsData = workManager.getWorkInfosByTagLiveData(SendContactRequestWorker::class.qualifiedName!!)
 
     @SuppressLint("EnqueueWork")
     fun create(dashPayProfile: DashPayProfile): WorkContinuation {
@@ -121,11 +65,11 @@ class UpdateProfileOperation(val application: Application) {
                         UpdateProfileRequestWorker.KEY_PUBLIC_MESSAGE to dashPayProfile.publicMessage,
                         UpdateProfileRequestWorker.KEY_AVATAR_URL to dashPayProfile.avatarUrl,
                         UpdateProfileRequestWorker.KEY_CREATED_AT to dashPayProfile.createdAt))
-                .addTag("dashPayProfile:${dashPayProfile.userId}")
+                .addTag("dashPayProfileUpdate:${dashPayProfile.userId}")
                 .build()
 
         return WorkManager.getInstance(application)
-                .beginUniqueWork(uniqueWorkName(dashPayProfile.userId),
+                .beginUniqueWork(WORK_NAME,
                         ExistingWorkPolicy.KEEP,
                         updateProfileWorker)
     }

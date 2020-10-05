@@ -93,18 +93,17 @@ class MoreFragment : Fragment(R.layout.activity_more) {
             //show updating profile animation if necessary
 
             editProfileViewModel.updateProfileRequestState.observe(context!!.lifecycleOwner()!!, Observer {
-                if (it != null && it.containsKey(dashPayProfile.userId)) {
-                    val state = it[dashPayProfile.userId]
-                    when(state!!.status) {
+                if (it != null) {
+                    when (it.status) {
                         Status.SUCCESS -> {
                             Toast.makeText(requireActivity(), "Update successful", Toast.LENGTH_LONG).show()
                             update_profile_status_container.visibility = View.GONE
                             editProfile.visibility = View.VISIBLE
                         }
                         Status.ERROR -> {
-                            var msg = state.message
+                            var msg = it.message
                             if (msg == null) {
-                                msg = "!!Error!!  ${state.exception!!.message}"
+                                msg = "!!Error!!  ${it.exception!!.message}"
                             }
                             Toast.makeText(requireActivity(), msg, Toast.LENGTH_LONG).show()
                             update_profile_status_container.visibility = View.VISIBLE

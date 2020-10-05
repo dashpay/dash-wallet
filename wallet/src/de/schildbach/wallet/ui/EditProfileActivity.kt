@@ -115,17 +115,16 @@ class EditProfileActivity : BaseMenuActivity() {
         })
 
         editProfileViewModel.updateProfileRequestState.observe(this, Observer {
-            if (it != null && it.containsKey(dashPayProfile.userId)) {
-                val state = it[dashPayProfile.userId]
-                when(state!!.status) {
+            if (it != null) {
+                when (it.status) {
                     Status.SUCCESS -> {
                         Toast.makeText(this@EditProfileActivity, "Update successful", Toast.LENGTH_LONG).show()
                         //setEditingState(false) // if this line is here, then the Profile changes to the previous value (crazy?)
                     }
                     Status.ERROR -> {
-                        var msg = state.message
+                        var msg = it.message
                         if (msg == null) {
-                            msg = "!!Error!!  ${state.exception!!.message}"
+                            msg = "!!Error!!  ${it.exception!!.message}"
                         }
                         Toast.makeText(this@EditProfileActivity, msg, Toast.LENGTH_LONG).show()
                         //setEditingState(false)

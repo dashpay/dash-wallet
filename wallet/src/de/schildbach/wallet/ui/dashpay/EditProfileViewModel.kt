@@ -25,15 +25,13 @@ import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 class EditProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val platformRepo = PlatformRepo.getInstance()
     private val walletApplication = application as WalletApplication
+    private val userId = platformRepo.getBlockchainIdentity()!!.uniqueIdString
 
     val dashPayProfileData = AppDatabase.getAppDatabase()
             .dashPayProfileDaoAsync()
-            .loadByUserIdDistinct(platformRepo.getBlockchainIdentity()!!.uniqueIdString)
+            .loadByUserIdDistinct(userId)
 
-    val dashPayProfile: DashPayProfile?
-            get() = dashPayProfileData.value
-
-    val updateProfileRequestState = UpdateProfileOperation.allOperationsStatus(application)
+    val updateProfileRequestState = UpdateProfileOperation.operationStatus(application)
 
     fun broadcastUpdateProfile(dashPayProfile: DashPayProfile) {
         UpdateProfileOperation(walletApplication)
