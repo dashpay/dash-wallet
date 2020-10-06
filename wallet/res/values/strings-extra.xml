@@ -33,11 +33,11 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_action_join_dashpay">Join DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scan to Pay</string>
+    <string name="shortcut_scan_to_pay">Scan to Send</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Send to Address</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_contact">Pay to Contact</string>
+    <string name="shortcut_pay_to_contact">Send to Contact</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Buy / Sell Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
