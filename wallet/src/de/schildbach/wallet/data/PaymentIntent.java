@@ -22,6 +22,10 @@ import android.os.Parcelable;
 import android.text.TextUtils;
 
 import com.google.common.io.BaseEncoding;
+import java.util.Arrays;
+import java.util.Date;
+
+import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
@@ -164,6 +168,8 @@ public final class PaymentIntent implements Parcelable {
     @Nullable
     public final byte[] paymentRequestHash;
 
+    public final Date expirationDate;
+
     @Nullable
     public final String payeeUserId;
 
@@ -177,6 +183,14 @@ public final class PaymentIntent implements Parcelable {
                          @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
                          @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash,
                          @Nullable final String payeeUserId, @Nullable final String payeeUsername) {
+        this(standard, payeeName, payeeVerifiedBy, outputs, memo, paymentUrl, payeeData, paymentRequestUrl, paymentRequestHash, null, payeeUserId, payeeUsername);
+    }
+
+    public PaymentIntent(@Nullable final Standard standard, @Nullable final String payeeName,
+            @Nullable final String payeeVerifiedBy, @Nullable final Output[] outputs, @Nullable final String memo,
+            @Nullable final String paymentUrl, @Nullable final byte[] payeeData,
+            @Nullable final String paymentRequestUrl, @Nullable final byte[] paymentRequestHash,
+            @Nullable final Date expirationDate, @Nullable final String payeeUserId, @Nullable final String payeeUsername) {
         this.standard = standard;
         this.payeeName = payeeName;
         this.payeeVerifiedBy = payeeVerifiedBy;
@@ -186,9 +200,11 @@ public final class PaymentIntent implements Parcelable {
         this.payeeData = payeeData;
         this.paymentRequestUrl = paymentRequestUrl;
         this.paymentRequestHash = paymentRequestHash;
+        this.expirationDate = expirationDate;
         this.payeeUserId = payeeUserId;
         this.payeeUsername = payeeUsername;
     }
+
 
     private PaymentIntent(final Address address, @Nullable final String addressLabel) {
         this(null, null, null, buildSimplePayTo(Coin.ZERO, address), addressLabel, null, null, null,
@@ -492,6 +508,11 @@ public final class PaymentIntent implements Parcelable {
         } else {
             dest.writeInt(0);
         }
+        if (expirationDate != null) {
+            dest.writeLong(expirationDate.getTime());
+        } else {
+            dest.writeLong(0);
+        }
         dest.writeString(payeeUserId);
         dest.writeString(payeeUsername);
     }
@@ -543,8 +564,18 @@ public final class PaymentIntent implements Parcelable {
         } else {
             paymentRequestHash = null;
         }
+        final long expirationDateLong = in.readLong();
+        expirationDate = (expirationDateLong > 0) ? new Date(expirationDateLong) : null;
 
         payeeUserId = in.readString();
         payeeUsername = in.readString();
+    }
+
+    public boolean getExpired() {
+        if (expirationDate != null) {
+            return new Date().after(expirationDate);
+        } else {
+            return false;
+        }
     }
 }

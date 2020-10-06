@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Layanan Uphold tidak tersedia. Silakan coba lagi nanti.</string>
     <string name="uphold_error_report_issue">Silakan laporkan masalah ini ke tim dukungan Dash Wallet menggunakan "Laporkan Masalah" dari menu utama.</string>
 
+    <string name="uphold_general_error_title">Kesalahan</string>
+    <string name="uphold_api_error_title">Kesalahan Uphold</string>
+    <string name="uphold_api_error_identity">Akun Uphold Anda belum diverifikasi. Dana tidak dapat ditarik.</string>
+    <string name="uphold_api_error_403_description">Akun Uphold Anda telah ditandai untuk ditinjau.\n\nUphold telah membatasi akun Anda untuk sementara dan Anda tidak akan dapat menarik dana.\n\nUphold akan menghubungi untuk membantu Anda menyelesaikannya dengan cepat.</string>
+    <string name="uphold_api_error_400_description">Dana Uphold dikunci selama 24 jam.\n\nAnda akan memiliki cukup dana untuk transfer ini pada %s</string>
 </resources>

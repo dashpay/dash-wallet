@@ -25,4 +25,5 @@
     <string name="uphold_error_not_available">Uphold услугите не са налични.  Моля  опитайте отново по-късно.</string>
     <string name="uphold_error_report_issue">Моля, докладвайте за този проблем на екипа за поддръжка на  Dash портфейла , използвайки „Report Issue“ от главното меню.</string>
 
-</resources>
+    <string name="uphold_general_error_title">Грешка</string>
+    </resources>

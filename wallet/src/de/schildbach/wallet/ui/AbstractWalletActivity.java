@@ -21,6 +21,7 @@ import android.app.ActivityManager.TaskDescription;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 
 import androidx.annotation.LayoutRes;
 import androidx.appcompat.app.ActionBar;
@@ -91,5 +92,17 @@ public abstract class AbstractWalletActivity extends InteractionAwareActivity im
     @Override
     public void onWalletUpgradeComplete(String password) {
 
+    }
+
+    @Override
+    protected void onPause() {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        super.onResume();
     }
 }

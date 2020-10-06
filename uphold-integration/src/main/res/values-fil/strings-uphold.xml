@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Ang serbisyo ng uphold ay hindi maaring gamitin. Subukan ulit mamaya.</string>
     <string name="uphold_error_report_issue">Paki-report ang isyu ng Dash Wallet support team gamit ang "Isumbong Isyu" mula sa pangunahing menu. </string>
 
+    <string name="uphold_general_error_title">Mali</string>
+    <string name="uphold_api_error_title">Uphold Error</string>
+    <string name="uphold_api_error_identity">Ang iyong Uphold account ay hinda pa napapatunayan. Ang mga pondo ay hindi maaaring bawiin</string>
+    <string name="uphold_api_error_403_description">Ang iyong Uphold account ay nai-flag para sa pagsusuri.\n\nPansamantalang pinaghigpitan ng Uphold ang iyong account at hindi mo magagawang mag withdraw ng mga pondo.\n\nMakikipag-ugnayan ang Uphold upang matulungan kang mabilis na maisaayos ito.</string>
+    <string name="uphold_api_error_400_description">Ang mga pondo sa Uphold ay naka-lock sa loob ng 24 na oras.\n\nMagkakaroon ka ng sapat na mga pondo para sa paglipat na ito ng %s.</string>
 </resources>

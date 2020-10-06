@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">سرویس آپهولد در دسترس نیست. لطفا بعدا دوباره امتحان کنید. </string>
     <string name="uphold_error_report_issue">لطفا با استفاده از گزینه «گزارش خطا» در انتهای همین منو، این مشکل را به تیم پشتیبانی دش والت گزارش کنید. </string>
 
+    <string name="uphold_general_error_title">خطا</string>
+    <string name="uphold_api_error_title">خطای آپهولد</string>
+    <string name="uphold_api_error_identity">حساب آپهولدتان هنوز تائید نشده است. امکان برداشت مبلغ مورد نظر وجود ندارد. </string>
+    <string name="uphold_api_error_403_description">حساب آپهولدتان قرار است مورد بازبینی قرار گیرد. \n\n آپهلود به صورت موقت اقدام به محدودسازی حساب‌تان کرده است و نمی‌توانید مبلغی از آن برداشت کنید. \n\n آپهولد با شما در تماس خواهد بود تا به شما برای حل سریع این مشکل کمک کند. </string>
+    <string name="uphold_api_error_400_description">موجودی در آپهولد به مدت ۲۴ ساعت بلوکه می‌شود. \n\n موجودی لازم برای انتقال مبلغ را تا %s در اختیار خواهید داشت. </string>
 </resources>

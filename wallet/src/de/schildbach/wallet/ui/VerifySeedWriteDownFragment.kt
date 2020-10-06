@@ -21,14 +21,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
-import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.verify_seed_write_down.*
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedWriteDownFragment private constructor() : Fragment() {
+class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment() {
 
     private val recoverySeedTextView by lazy { recovery_seed }
     private val confirmCheckBox by lazy { written_down_checkbox }

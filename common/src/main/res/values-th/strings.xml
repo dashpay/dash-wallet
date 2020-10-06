@@ -5,4 +5,22 @@
     <string name="loading_error">เกิดข้อผิดพลาด  กรุณาลองใหม่อีกครั้งในภายหลัง.</string>
     <string name="dash_available">%1$s  นำไปใช้ได้</string>
 
+    <!-- Local Currency List: GGP -->
+    <string name="currency_GGP">Guernsey Pound</string>
+    <!-- Local Currency List: JEP -->
+    <string name="currency_JEP">Jersey Pound</string>
+    <!-- Local Currency List: IMP -->
+    <string name="currency_IMP">Isle of Man Pound</string>
+    <!-- Local Currency List: USDC is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_USDC">USD Coin</string>
+    <!-- Local Currency List: Litecoin cryptocurrency -->
+    <string name="currency_LTC">Litecoin</string>
+    <!-- Local Currency List: Ethereum cryptocurrency -->
+    <string name="currency_ETH">Ethereum</string>
+    <!-- Local Currency List: Bitcoin cryptocurrency -->
+    <string name="currency_BTC">Bitcoin</string>
+    <!-- Local Currency List: PAX is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_PAX">Paxos Standard</string>
+    <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_GUSD">Gemini Dollar</string>
 </resources>

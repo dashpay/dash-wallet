@@ -19,10 +19,10 @@ package de.schildbach.wallet.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Dialog
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.text.TextUtils
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -143,5 +143,15 @@ open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragm
 
     override fun onWalletUpgradeComplete(password: String) {
         viewModel.restoreWalletFromFile(walletBuffer, password)
+    }
+
+    override fun onPause() {
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        super.onPause()
+    }
+
+    override fun onResume() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        super.onResume()
     }
 }
