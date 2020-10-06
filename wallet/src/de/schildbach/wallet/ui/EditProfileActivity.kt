@@ -37,8 +37,9 @@ import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 
 class EditProfileActivity : BaseMenuActivity() {
 
-    lateinit var editProfileViewModel: EditProfileViewModel
-    lateinit var dashPayProfile: DashPayProfile
+    private lateinit var editProfileViewModel: EditProfileViewModel
+    private lateinit var dashPayProfile: DashPayProfile
+    private var isEditing: Boolean = false
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -67,7 +68,7 @@ class EditProfileActivity : BaseMenuActivity() {
             override fun afterTextChanged(s: Editable?) {
                 setEditingState(true)
                 displayNameCharCount.visibility = View.VISIBLE
-                val charCount = s?.length ?: 0
+                val charCount = s?.trim()?.length ?: 0
                 displayNameCharCount.text = getString(R.string.char_count, charCount,
                         Constants.DISPLAY_NAME_MAX_LENGTH)
                 if (charCount > Constants.DISPLAY_NAME_MAX_LENGTH) {
@@ -92,7 +93,7 @@ class EditProfileActivity : BaseMenuActivity() {
             override fun afterTextChanged(s: Editable?) {
                 setEditingState(true)
                 aboutMeCharCount.visibility = View.VISIBLE
-                val charCount = s?.length ?: 0
+                val charCount = s?.trim()?.length ?: 0
                 aboutMeCharCount.text = getString(R.string.char_count, charCount,
                         Constants.ABOUT_ME_MAX_LENGTH)
                 if (charCount > Constants.ABOUT_ME_MAX_LENGTH) {
@@ -119,7 +120,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 when (it.status) {
                     Status.SUCCESS -> {
                         Toast.makeText(this@EditProfileActivity, "Update successful", Toast.LENGTH_LONG).show()
-                        //setEditingState(false) // if this line is here, then the Profile changes to the previous value (crazy?)
+                        setEditingState(true) // if this line is here, then the Profile changes to the previous value (crazy?)
                     }
                     Status.ERROR -> {
                         var msg = it.message
@@ -127,14 +128,14 @@ class EditProfileActivity : BaseMenuActivity() {
                             msg = "!!Error!!  ${it.exception!!.message}"
                         }
                         Toast.makeText(this@EditProfileActivity, msg, Toast.LENGTH_LONG).show()
-                        //setEditingState(false)
+                        setEditingState(false)
                         save.isEnabled = true
                     }
                     Status.LOADING -> {
                         Toast.makeText(this@EditProfileActivity, "Processing update", Toast.LENGTH_LONG).show()
                     }
                     Status.CANCELED -> {
-                        //setEditingState(true)
+                        setEditingState(true)
                         save.isEnabled = true
                     }
                 }
@@ -143,7 +144,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
         save.setOnClickListener {
             val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                    display_name.text.toString(), about_me.text.toString(), "",
+                    display_name.text.toString().trim(), about_me.text.toString().trim(), "",
                     dashPayProfile.createdAt, dashPayProfile.updatedAt)
             save.isEnabled = false
             editProfileViewModel.broadcastUpdateProfile(updatedProfile)
@@ -167,18 +168,14 @@ class EditProfileActivity : BaseMenuActivity() {
     // This method works well when it is called the first time,
     // but when it is called after updating the profile, `it` is the old profile
     private val dashPayProfileObserver = Observer<DashPayProfile?> {
-        if (it != null) {
+        if (it != null && !isEditing) {
             dashPayProfile = it
             showProfileInfo(it)
         }
     }
 
     private fun setEditingState(isEditing: Boolean) {
-        if (!isEditing) {
-            editProfileViewModel.dashPayProfileData.observe(this, dashPayProfileObserver)
-        } else {
-            editProfileViewModel.dashPayProfileData.removeObserver(dashPayProfileObserver)
-        }
+        this.isEditing = isEditing
     }
 
 }
