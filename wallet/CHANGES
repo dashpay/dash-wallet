@@ -1,4 +1,17 @@
 Dash Wallet
+v7.0.9
+* Fix crash on Address Book Screen on Android 4.4
+* Add back button to Verify Recovery Phrase Screens
+* Hide contents on recent app list
+* Fix RemoteServiceException crashes on Android 8.1
+* Update translations (sk, nl)
+* Update checkpoints
+
+v7.0.8
+* Support restoration from non-english recovery phrases
+* Fix app start crash on new installs
+* Support better Uphold error handling (show more detailed messages).  The most common failure on transferring Dash is due to a required 24 hour delay after purchasing using a bank transfer
+
 v7.0.7
 * Fix layout issues on More and Settings Screens for other languages with longer text
 * Fix Android 4.4 crashes on Transaction Details screens

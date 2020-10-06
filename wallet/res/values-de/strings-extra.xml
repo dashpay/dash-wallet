@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Verifiziere PIN</string>
     <string name="set_pin_message">Die PIN muss bei jedem Verwenden der App zum Entsperren eingegeben werden.</string>
 
-    <string name="home_pay">Senden</string>
-    <string name="home_receive">Empfangen</string>
     <string name="home_available_balance">Verfügbares Guthaben</string>
     <string name="home_balance_hidden">Guthaben nicht angezeigt</string>
     <string name="home_balance_show_hint">Zum Anzeigen des Guthabens tippen</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Bestätigen</string>
     <string name="dialog_confirm_pay_to">Senden an</string>
+    <string name="dialog_confirm_secured_by">Geschützt durch</string>
     <string name="dialog_confirm_fee">Netzwerk-Gebühr</string>
     <string name="dialog_confirm_total">Gesamt</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Wallet jetzt absichern</string>
+    <string name="shortcut_secure_now">Wallet jetzt absichern</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Zum Senden scannen</string>
+    <string name="shortcut_scan_to_pay">Zur Zahlung scannen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Zur Adresse senden</string>
+    <string name="shortcut_pay_to_address">Zur Adresse senden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Kaufe / Verkaufe Dash</string>
+    <string name="shortcut_buy_sell">Kaufe / Verkaufe Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Privaten Schlüssel importieren</string>
+    <string name="shortcut_receive">Empfangen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Shortcut hinzufügen</string>
+    <string name="shortcut_import_key">Privaten Schlüssel importieren</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Shortcut hinzufügen</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Schnell Empfangen</string>
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">Empfangen</string>
     <string name="payments_pay_by_qr_title">Gesendet von</string>
     <string name="payments_pay_by_qr_sub_title">QR-Code scannen</string>
-    <string name="payments_pay_by_qr_button">Scannen</string>
     <string name="payments_pay_to_clipboard_title">An kopierte Adresse senden</string>
     <string name="payments_pay_to_clipboard_sub_title">Keine Adresse kopiert</string>
-    <string name="payments_pay_to_clipboard_button">Senden</string>
 
     <string name="forgot_pin_title">PIN vergessen?</string>
     <string name="forgot_pin_message">Du kannst eine neue PIN mit Hilfe deiner Wiederherstellungsphrase erstellen.</string>
@@ -189,8 +188,8 @@
     <string name="touch_fingerprint_sensor">Fingerabdrucksensor berühren</string>
     <string name="touch_fingerprint_to_enable">Den Fingerabdrucksensor berühren, um das Entsperren per Fingerabdruck zu aktivieren.</string>
     <string name="fingerprint_changed_title">Fingerscan-Daten geändert</string>
-	<string name="fingerprint_changed_message">Wir haben festgestellt, dass die Authentifizierungsdaten des Fingerscans geändert wurden. Du musst dich diesmal mit der PIN anmelden.</string>
-	<string name="exchange_rate_missing">Diese Transaktion ist zu alt, um den Fiatwert zu ermitteln.</string>
+    <string name="fingerprint_changed_message">Wir haben festgestellt, dass die Authentifizierungsdaten des Fingerscans geändert wurden. Du musst dich diesmal mit der PIN anmelden.</string>
+    <string name="exchange_rate_missing">Diese Transaktion ist zu alt, um den Fiatwert zu ermitteln.</string>
 
     <string name="preferences_enable_payment_request_summary">Zahlungsprotokoll für QR-Code Zahlungen verwenden</string>
     <string name="preferences_enable_payment_request_title">BIP70 für Scan-to-Pay</string>
@@ -215,13 +214,13 @@
     <string name="verify_seed_success_message">Deine Wallet ist jetzt gesichert. Du kannst die Phrase jederzeit nutzen, um die Wallet auf einem anderen Gerät wiederherzustellen.</string>
     <string name="view_seed_done">Fertig</string>
     <string name="view_seed_title">Wiederherstellungs-Wortfolge</string>
-	<string name="transaction_result_view_on_explorer">Im Blockexplorer ansehen</string>
-	<string name="transaction_result_paid_successfully">Erfolgreich gesendet</string>
-	<string name="transaction_result_sent_to">Senden an</string>
-	<string name="transaction_date_and_time">Datum</string>
-	<string name="transaction_close">Schließen</string>
-	<string name="transaction_details_amount_received">Guthaben empfangen</string>
-	<string name="transaction_details_amount_sent">Guthaben gesendet</string>
+    <string name="transaction_result_view_on_explorer">Im Blockexplorer ansehen</string>
+    <string name="transaction_result_paid_successfully">Erfolgreich gesendet</string>
+    <string name="transaction_result_sent_to">Senden an</string>
+    <string name="transaction_date_and_time">Datum</string>
+    <string name="transaction_close">Schließen</string>
+    <string name="transaction_details_amount_received">Guthaben empfangen</string>
+    <string name="transaction_details_amount_sent">Guthaben gesendet</string>
     <string name="transaction_details_sent_from">Senden von</string>
     <string name="transaction_details_sent_to">Senden an</string>
     <string name="transaction_details_received_at">Empfangen bei</string>
@@ -245,7 +244,7 @@
     <string name="menu_local_currency">Lokale Währung</string>
     <string name="menu_rescan_blockchain">Blockchain erneut scannen</string>
     <string name="menu_contact_support_title">Support kontaktieren</string>
-    <string name="menu_contact_support_subtitle">Problem melden</string>
+    <string name="menu_contact_support_subtitle">Ein Problem melden</string>
 
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>

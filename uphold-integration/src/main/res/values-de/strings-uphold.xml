@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Der Uphold-Service ist nicht verfügbar. Versuche es später erneut.</string>
     <string name="uphold_error_report_issue">Bitte teile dem Dash Wallet Support-Team diesen Fehler über die Option "Fehler melden" im Hauptmenü mit.</string>
 
+    <string name="uphold_general_error_title">Fehler</string>
+    <string name="uphold_api_error_title">Uphold Fehler</string>
+    <string name="uphold_api_error_identity">Dein Uphold-Account wurde noch nicht verifiziert. Guthaben kann nicht abgebucht werden.</string>
+    <string name="uphold_api_error_403_description">Dein Uphold-Account wurde zur Überprüfung gekennzeichnet.\n\nUphold hat deinen Account temporär eingeschränkt und es können keine Abbuchungen vorgenommen werden.\n\nUphold wird sich in Kürze bei dir melden, um dieses Problem zu beheben.</string>
+    <string name="uphold_api_error_400_description">Uphold-Guthaben wurde für 24 Stunden gesperrt.\n\nDein Guthaben für diese Transaktion wird um %s bereitstehen.</string>
 </resources>

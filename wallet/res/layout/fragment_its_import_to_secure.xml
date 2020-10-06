@@ -4,114 +4,134 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <include layout="@layout/app_bar_general" />
+    <include
+        android:id="@+id/app_bar"
+        layout="@layout/app_bar_general" />
 
-    <ImageView
-        android:id="@+id/info_icon_1"
-        android:layout_width="20dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginLeft="24dp"
-        app:srcCompat="@drawable/ic_info_outline_black_24dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/info_text_1"
-        style="@style/MontserratRegular.MG.14"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="14dp"
-        android:layout_marginLeft="14dp"
-        android:layout_marginEnd="14dp"
-        android:layout_marginRight="14dp"
-        android:text="@string/verify_info_text_1"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/info_icon_1"
-        app:layout_constraintTop_toTopOf="@+id/info_icon_1" />
-
-    <ImageView
-        android:id="@+id/info_icon_2"
-        android:layout_width="20dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        app:srcCompat="@drawable/ic_info_outline_black_24dp"
-        app:layout_constraintStart_toStartOf="@+id/info_icon_1"
-        app:layout_constraintTop_toBottomOf="@id/info_text_1" />
-
-    <TextView
-        android:id="@+id/info_text_2"
-        style="@style/MontserratRegular.MG.14"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="14dp"
-        android:layout_marginLeft="14dp"
-        android:layout_marginEnd="14dp"
-        android:layout_marginRight="14dp"
-        android:text="@string/verify_info_text_2"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/info_icon_2"
-        app:layout_constraintTop_toTopOf="@+id/info_icon_2" />
-
-    <ImageView
-        android:id="@+id/info_icon_3"
-        android:layout_width="20dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        app:srcCompat="@drawable/ic_info_outline_black_24dp"
-        app:layout_constraintStart_toStartOf="@+id/info_icon_2"
-        app:layout_constraintTop_toBottomOf="@id/info_text_2" />
-
-    <TextView
-        android:id="@+id/info_text_3"
-        style="@style/MontserratRegular.MG.14"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="14dp"
-        android:layout_marginLeft="14dp"
-        android:layout_marginEnd="14dp"
-        android:layout_marginRight="14dp"
-        android:text="@string/verify_info_text_3"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/info_icon_3"
-        app:layout_constraintTop_toTopOf="@+id/info_icon_3" />
-
-    <TextView
-        android:id="@+id/title"
-        style="@style/MontserratMedium"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:text="@string/verify_it_is_important"
-        android:textColor="@android:color/black"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toTopOf="@+id/textView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <ImageView
-        android:id="@+id/imageView"
-        android:layout_width="wrap_content"
-        android:layout_height="60dp"
-        android:layout_marginBottom="14dp"
-        app:srcCompat="@drawable/security_red"
-        app:layout_constraintBottom_toTopOf="@+id/title"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/textView"
-        style="@style/MontserratRegular.MG.14"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="14dp"
-        android:layout_marginRight="14dp"
-        android:layout_marginBottom="54dp"
-        android:gravity="center"
-        android:text="@string/verify_it_is_important_subtitle"
-        app:layout_constraintBottom_toTopOf="@+id/info_text_1"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:layout_height="0dp"
+        android:clipChildren="false"
+        android:orientation="vertical"
+        android:paddingBottom="20dp"
+        android:clipToPadding="false"
+        app:layout_constraintBottom_toTopOf="@+id/verify_show_recovery_phrase_button"
+        app:layout_constraintTop_toBottomOf="@+id/app_bar">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <ImageView
+                android:id="@+id/info_icon_1"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_info_outline_black_24dp" />
+
+            <TextView
+                android:id="@+id/info_text_1"
+                style="@style/MontserratRegular.MG.14"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginEnd="14dp"
+                android:layout_marginRight="14dp"
+                android:text="@string/verify_info_text_1"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/info_icon_1"
+                app:layout_constraintTop_toTopOf="@+id/info_icon_1" />
+
+            <ImageView
+                android:id="@+id/info_icon_2"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                app:layout_constraintStart_toStartOf="@+id/info_icon_1"
+                app:layout_constraintTop_toBottomOf="@id/info_text_1"
+                app:srcCompat="@drawable/ic_info_outline_black_24dp" />
+
+            <TextView
+                android:id="@+id/info_text_2"
+                style="@style/MontserratRegular.MG.14"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginEnd="14dp"
+                android:layout_marginRight="14dp"
+                android:text="@string/verify_info_text_2"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/info_icon_2"
+                app:layout_constraintTop_toTopOf="@+id/info_icon_2" />
+
+            <ImageView
+                android:id="@+id/info_icon_3"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                app:layout_constraintStart_toStartOf="@+id/info_icon_2"
+                app:layout_constraintTop_toBottomOf="@id/info_text_2"
+                app:srcCompat="@drawable/ic_info_outline_black_24dp" />
+
+            <TextView
+                android:id="@+id/info_text_3"
+                style="@style/MontserratRegular.MG.14"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginEnd="14dp"
+                android:layout_marginRight="14dp"
+                android:text="@string/verify_info_text_3"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/info_icon_3"
+                app:layout_constraintTop_toTopOf="@+id/info_icon_3" />
+
+            <TextView
+                android:id="@+id/title"
+                style="@style/MontserratMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:text="@string/verify_it_is_important"
+                android:textColor="@android:color/black"
+                android:textSize="20sp"
+                app:layout_constraintBottom_toTopOf="@+id/textView"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <ImageView
+                android:id="@+id/imageView"
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:layout_marginBottom="14dp"
+                android:paddingTop="14dp"
+                app:layout_constraintBottom_toTopOf="@+id/title"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:srcCompat="@drawable/security_red" />
+
+            <TextView
+                android:id="@+id/textView"
+                style="@style/MontserratRegular.MG.14"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:layout_marginBottom="54dp"
+                android:gravity="center"
+                android:text="@string/verify_it_is_important_subtitle"
+                app:layout_constraintBottom_toTopOf="@+id/info_text_1"
+                app:layout_constraintStart_toStartOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </ScrollView>
 
     <Button
         android:id="@+id/verify_show_recovery_phrase_button"

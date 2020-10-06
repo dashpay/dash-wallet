@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Uphold ไม่สามารถใช้งานได้ กรุณาลองใหม่อีกครั้งในภายหลัง</string>
     <string name="uphold_error_report_issue">โปรดรายงานปัญหานี้ไปยังทีมสนับสนุน Dash Wallet โดยใช้ "รายงานปัญหา" จากเมนูหลัก</string>
 
+    <string name="uphold_general_error_title">ผิดพลาด</string>
+    <string name="uphold_api_error_title">ข้อผิดพลาดจาก Uphold </string>
+    <string name="uphold_api_error_identity">บัญชี Uphold ของคุณไม่ได้รับการตรวจสอบ เงินทุนจึงไม่สามารถถอนได้</string>
+    <string name="uphold_api_error_403_description">บัญชี Uphold ของคุณได้รับการตั้งค่าสถานะสำหรับการตรวจสอบ \n\nUphold ได้จำกัดบัญชีของคุณชั่วคราวและคุณจะไม่สามารถที่จะถอนเงิน \n\nUphold จะติดต่อเพื่อช่วยให้คุณจัดการสิ่งนี้ออกไปอย่างรวดเร็ว</string>
+    <string name="uphold_api_error_400_description">กองทุน Uphold จะถูกล็อค 24 ชั่วโมง\n\n คุณจะมีเงินทุนที่เพียงพอสำหรับการถ่ายโอนนี้โดย %s</string>
 </resources>

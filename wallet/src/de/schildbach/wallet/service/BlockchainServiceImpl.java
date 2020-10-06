@@ -682,7 +682,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     };
 
     public class LocalBinder extends Binder {
-        public BlockchainService getService() {
+        public BlockchainServiceImpl getService() {
             return BlockchainServiceImpl.this;
         }
     }
@@ -712,9 +712,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         super.onCreate();
 
         application = (WalletApplication) getApplication();
-        if (application.getWallet() == null) {
-            return;
-        }
 
         nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -848,11 +845,6 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     @Override
     public int onStartCommand(final Intent intent, final int flags, final int startId) {
         super.onStartCommand(intent, flags, startId);
-
-        if (application.getWallet() == null) {
-            log.warn("service started before wallet initialization");
-            return START_NOT_STICKY;
-        }
 
         if (intent != null) {
             //Restart service as a Foreground Service if it's synchronizing the blockchain
@@ -1143,6 +1135,15 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private void updateAppWidget() {
         WalletBalanceWidgetProvider.updateWidgets(BlockchainServiceImpl.this, application.getWallet());
+    }
+
+    public void forceForeground() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent intent = new Intent(this, BlockchainServiceImpl.class);
+            ContextCompat.startForegroundService(this, intent);
+            // call startForeground just after startForegroundService.
+            startForeground();
+        }
     }
 
     private PreBlocksDownloadListener preBlocksDownloadListener = new PreBlocksDownloadListener() {

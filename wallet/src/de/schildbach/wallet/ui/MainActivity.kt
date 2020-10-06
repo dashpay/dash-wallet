@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.dashpay.ContactsFragment
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
@@ -85,6 +86,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private var showBackupWalletDialog = false
     private val config: Configuration by lazy { walletApplication.configuration }
     private var fingerprintHelper: FingerprintHelper? = null
+    private var retryCreationIfInProgress = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,6 +117,14 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
         viewModel.isAbleToCreateIdentityData.observe(this, Observer {
             // just to trigger data loading
+        })
+        viewModel.blockchainIdentityData.observe(this, Observer {
+            if (it != null) {
+                if (retryCreationIfInProgress && it.creationInProgress) {
+                    retryCreationIfInProgress = false
+                    startService(CreateIdentityService.createIntentForRetry(this, false))
+                }
+            }
         })
     }
 

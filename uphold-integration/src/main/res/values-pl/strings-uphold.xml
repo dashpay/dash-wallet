@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Usługa Uphold niedostępna. Spróbuj ponownie później.</string>
     <string name="uphold_error_report_issue">Proszę wyślij raport o zaistniałym problemie do zespołu wsparcia poprzez wybór "Zgłoś problem" z głównego menu.</string>
 
+    <string name="uphold_general_error_title">Błąd</string>
+    <string name="uphold_api_error_title">Błąd po stronie Uphold</string>
+    <string name="uphold_api_error_identity">Fundusze nie mogą zostać wypłacone ponieważ twoje konto na Uphold nie jest jeszcze zweryfikowane. </string>
+    <string name="uphold_api_error_403_description">Twoje konto na Uphold zostało skierowane do rewizji.\n\Uphold tymczasowo   zawiesił wypłaty z twojego konta.\n\nUphold skontaktuje się z tobą w krótce aby rozwiązać ten problem.</string>
+    <string name="uphold_api_error_400_description">Fundusze na Uphold są zablokowane na 24 godziny.\n\nBędziesz miał wystarczające środki na ten transfer za %s.</string>
 </resources>

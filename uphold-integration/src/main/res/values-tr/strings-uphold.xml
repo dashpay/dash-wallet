@@ -25,4 +25,5 @@
     <string name="uphold_error_not_available">Uphold hizmeti şuan kullanım dışı. Lütfen daha sonra tekrar deneyin.</string>
     <string name="uphold_error_report_issue">Lütfen bu sorunu ana menüden "Sorun Bildir" i kullanarak Dash Wallet destek ekibine bildirin.</string>
 
-</resources>
+    <string name="uphold_general_error_title">Hata</string>
+    </resources>

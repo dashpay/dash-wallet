@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">PIN 인증 중</string>
     <string name="set_pin_message">당신이 어플을 잠금 해제하실 때마다 이 PIN이 필요합니다.</string>
 
-    <string name="home_pay">보내기</string>
-    <string name="home_receive">받기</string>
     <string name="home_available_balance">이용 가능한 잔고</string>
     <string name="home_balance_hidden">숨긴 잔고</string>
     <string name="home_balance_show_hint">잔고를 확인하시려면 탭하세요</string>
@@ -29,17 +27,19 @@
     <string name="dialog_confirm_total">총계</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">현재 지갑이 안전합니다</string>
+    <string name="shortcut_secure_now">현재 지갑이 안전합니다</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">전송을 위해 스캔합니다</string>
+    <string name="shortcut_scan_to_pay">지불을 위해 스캔합니다</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">주소로 전송합니다</string>
+    <string name="shortcut_pay_to_address">주소로 전송합니다</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">대시 매수 / 매도</string>
+    <string name="shortcut_buy_sell">대시 매수 / 매도</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">개인 키 불러오기</string>
+    <string name="shortcut_receive">받기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">단축키 추가</string>
+    <string name="shortcut_import_key">프라이빗 키 불러오기</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">단축키 추가</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">빠른 송금 수령</string>
@@ -80,10 +80,8 @@
     <string name="payments_tab_receive_label">받기</string>
     <string name="payments_pay_by_qr_title">다음에서 전송하였습니다</string>
     <string name="payments_pay_by_qr_sub_title">QR 코드를 스캔합니다</string>
-    <string name="payments_pay_by_qr_button">스캔</string>
     <string name="payments_pay_to_clipboard_title">복사된 주소로 전송합니다</string>
     <string name="payments_pay_to_clipboard_sub_title">복사된 주소가 없습니다</string>
-    <string name="payments_pay_to_clipboard_button">보내기</string>
 
     <string name="forgot_pin_title">PIN을 잊어버리셨나요?</string>
     <string name="forgot_pin_message">당신의 복원 문구를 통해 새 PIN을 설정할 수 있습니다.</string>
@@ -186,8 +184,8 @@
     <string name="touch_fingerprint_sensor">지문 센서를 터치하세요</string>
     <string name="touch_fingerprint_to_enable">지문으로 잠금 해제하기 위해서는 지문 센서를 터치하세요.</string>
     <string name="fingerprint_changed_title">지문 데이터가 변경됨</string>
-	<string name="fingerprint_changed_message">당신의 지문 인증 데이터에서 변경을 감지하였습니다. 이번에는 PIN을 사용하셔야 합니다.</string>
-	<string name="exchange_rate_missing">이 지불은 너무 오래되어 고정 가치를 확인할 수 없습니다.</string>
+    <string name="fingerprint_changed_message">당신의 지문 인증 데이터에서 변경을 감지하였습니다. 이번에는 PIN을 사용하셔야 합니다.</string>
+    <string name="exchange_rate_missing">이 지불은 너무 오래되어 고정 가치를 확인할 수 없습니다.</string>
 
     <string name="preferences_enable_payment_request_summary">QR 코드를 통한 지불을 위해서는 지불 프로토콜을 사용하십시오.</string>
     <string name="preferences_enable_payment_request_title">\'스캔하여 지불하기\'를 위한 BIP70</string>
@@ -212,13 +210,13 @@
     <string name="verify_seed_success_message">이제 당신의 지갑은 안전합니다. 언제든 당신의 복원 문구를 사용하셔서 당신의 계정을 다른 기기에서 복원하실 수 있습니다.</string>
     <string name="view_seed_done">완료</string>
     <string name="view_seed_title">복원 문구</string>
-	<string name="transaction_result_view_on_explorer">블록 탐색기에서 보기</string>
-	<string name="transaction_result_paid_successfully">성공적으로 전송되었습니다</string>
-	<string name="transaction_result_sent_to">다음에 전송하였습니다</string>
-	<string name="transaction_date_and_time">날짜</string>
-	<string name="transaction_close">닫기</string>
-	<string name="transaction_details_amount_received">받은 금액</string>
-	<string name="transaction_details_amount_sent">보낸 금액</string>
+    <string name="transaction_result_view_on_explorer">블록 탐색기에서 보기</string>
+    <string name="transaction_result_paid_successfully">성공적으로 전송되었습니다</string>
+    <string name="transaction_result_sent_to">다음에 전송하였습니다</string>
+    <string name="transaction_date_and_time">날짜</string>
+    <string name="transaction_close">닫기</string>
+    <string name="transaction_details_amount_received">받은 금액</string>
+    <string name="transaction_details_amount_sent">보낸 금액</string>
     <string name="transaction_details_sent_from">다음으로부터 전송되었습니다</string>
     <string name="transaction_details_sent_to">다음에 전송하였습니다</string>
     <string name="transaction_details_received_at">다음에서 수신하였습니다</string>
@@ -242,8 +240,6 @@
     <string name="menu_local_currency">현지 통화</string>
     <string name="menu_rescan_blockchain">블록체인 재스캔</string>
     <string name="menu_contact_support_title">고객 지원부에 문의하기</string>
-    <string name="menu_contact_support_subtitle">오류 보고하기</string>
-
     <string name="tools_address_book">주소록</string>
     <string name="tools_import_private_key">프라이빗 키 가져오기</string>
     <string name="tools_network_monitor">블럭체인 모니터링</string>

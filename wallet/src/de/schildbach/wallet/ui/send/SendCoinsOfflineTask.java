@@ -51,6 +51,10 @@ public abstract class SendCoinsOfflineTask {
     }
 
     public final void sendCoinsOffline(final SendRequest sendRequest) {
+        sendCoinsOffline(sendRequest, false);
+    }
+
+    public final void sendCoinsOffline(final SendRequest sendRequest, final boolean txAlreadyCompleted) {
         backgroundHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -58,7 +62,12 @@ public abstract class SendCoinsOfflineTask {
 
                 try {
                     log.info("sending: {}", sendRequest);
-                    final Transaction transaction = wallet.sendCoinsOffline(sendRequest); // can take long
+                    if (txAlreadyCompleted) {
+                        wallet.commitTx(sendRequest.tx);
+                    } else {
+                        wallet.sendCoinsOffline(sendRequest);
+                    }
+                    final Transaction transaction = sendRequest.tx;
                     log.info("send successful, transaction committed: {}", transaction.getHashAsString());
 
                     callbackHandler.post(new Runnable() {

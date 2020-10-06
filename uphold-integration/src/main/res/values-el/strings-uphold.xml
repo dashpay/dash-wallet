@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Η υπηρεσία Uphold δεν είναι διαθέσιμη. Παρακαλώ προσπαθήστε ξανά αργότερα.</string>
     <string name="uphold_error_report_issue">Παρακαλώ αναφέρετε αυτό το ζήτημα στην ομάδα υποστήριξης του Πορτοφολιού Dash χρησιμοποιώντας το "Αναφορά έκδοσης" από το κύριο μενού.</string>
 
+    <string name="uphold_general_error_title">Σφάλμα</string>
+    <string name="uphold_api_error_title">Σφάλμα Uphold</string>
+    <string name="uphold_api_error_identity">Ο λογαριασμός σας στην Uphold δεν έχει επαληθευτεί ακόμη. Δεν είναι δυνατή η ανάληψη χρημάτων.</string>
+    <string name="uphold_api_error_403_description">Ο Uphold λογαριασμός σας έχει επισημανθεί για έλεγχο. \n\nΗ Uphold έχει περιορίσει προσωρινά τον λογαριασμό σας και δεν θα μπορείτε να κάνετε ανάληψη χρημάτων.\n\nΗ Uphold θα επικοινωνήσει μαζί σας για να σας βοηθήσει να το επιλύσετε αυτό γρήγορα.</string>
+    <string name="uphold_api_error_400_description">Τα χρήματα σας στην Uphold είναι κλειδωμένα για 24 ώρες.\n\nΘα έχετε επαρκή χρήματα για αυτήν τη μεταφορά έως τις %s.</string>
 </resources>

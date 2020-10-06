@@ -31,7 +31,6 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
-import org.bitcoinj.core.Transaction
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
@@ -51,7 +50,7 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
     val sendRequestLiveData = MutableLiveData<Resource<SendRequest>>()
 
     val exchangeRateData: LiveData<ExchangeRate>
-    val directPaymentAckLiveData = MutableLiveData<Resource<Pair<Transaction, Boolean>>>()
+    val directPaymentAckLiveData = MutableLiveData<Resource<Pair<SendRequest, Boolean>>>()
 
     val exchangeRate: org.bitcoinj.utils.ExchangeRate?
         get() = exchangeRateData.value?.run {
@@ -127,14 +126,22 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
         signAndSendPayment(finalPaymentIntent!!, baseSendRequest!!.ensureMinRequiredFee)
     }
 
-    fun directPay(transaction: Transaction) {
+    override fun signAndSendPayment(sendRequest: SendRequest, txAlreadyCompleted: Boolean) {
+        if (finalPaymentIntent!!.hasPaymentUrl()) {
+            wallet.completeTx(sendRequest)
+            directPay(sendRequest)
+        } else {
+            super.signAndSendPayment(sendRequest, txAlreadyCompleted)
+        }
+    }
 
+    fun directPay(sendRequest: SendRequest) {
         val refundAddress = wallet.freshAddress(KeyPurpose.REFUND)
-        val payment = PaymentProtocol.createPaymentMessage(listOf(transaction), finalPaymentIntent!!.amount, refundAddress, null, finalPaymentIntent!!.payeeData)
+        val payment = PaymentProtocol.createPaymentMessage(listOf(sendRequest.tx), finalPaymentIntent!!.amount, refundAddress, null, finalPaymentIntent!!.payeeData)
 
         val callback: DirectPaymentTask.ResultCallback = object : DirectPaymentTask.ResultCallback {
             override fun onResult(ack: Boolean) {
-                directPaymentAckLiveData.value = Resource.success(Pair(transaction, ack))
+                directPaymentAckLiveData.value = Resource.success(Pair(sendRequest, ack))
             }
 
             override fun onFail(messageResId: Int, vararg messageArgs: Any) {
@@ -149,11 +156,15 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
                     appendln(walletApplication.getString(R.string.payment_request_problem_message))
                 }
 
-                directPaymentAckLiveData.value = Resource.error(message.toString(), Pair(transaction, false))
+                directPaymentAckLiveData.value = Resource.error(message.toString(), Pair(sendRequest, false))
             }
         }
 
         HttpPaymentTask(backgroundHandler, callback, finalPaymentIntent!!.paymentUrl, walletApplication.httpUserAgent())
                 .send(payment)
+    }
+
+    fun commitAndBroadcast(sendRequest: SendRequest) {
+        super.signAndSendPayment(sendRequest, true)
     }
 }

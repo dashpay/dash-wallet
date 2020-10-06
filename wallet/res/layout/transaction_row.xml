@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -13,12 +13,18 @@
     <TextView
         android:id="@+id/transaction_row_primary_status"
         style="@style/MontserratMedium"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:paddingLeft="10dp"
-        android:paddingRight="6dp"
+        android:layout_marginTop="16dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="6dp"
         android:textColor="@color/primary_status"
         android:textSize="15sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/transaction_row_secondary_status"
         tools:text="Receiving" />
 
     <TextView
@@ -26,39 +32,39 @@
         style="@style/MontserratMedium.B.12"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignBottom="@id/transaction_row_primary_status"
-        android:layout_toEndOf="@id/transaction_row_primary_status"
-        android:layout_toRightOf="@id/transaction_row_primary_status"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        app:layout_constraintBottom_toBottomOf="@id/transaction_row_primary_status"
+        app:layout_constraintEnd_toStartOf="@id/dash_amount_container"
+        app:layout_constraintStart_toEndOf="@id/transaction_row_primary_status"
         android:textColor="@color/secondary_status"
         tools:text="Processing" />
 
     <TextView
         android:id="@+id/transaction_row_time"
         style="@style/MontserratRegular.MG.12"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_below="@id/transaction_row_primary_status"
-        android:layout_alignParentLeft="true"
-        android:layout_marginRight="4dp"
+        android:layout_marginEnd="4dp"
         android:layout_marginBottom="5dp"
-        android:layout_toLeftOf="@id/rate_container"
+        app:layout_constraintEnd_toStartOf="@id/rate_container"
         android:ellipsize="end"
-        android:lines="1"
-        android:paddingLeft="10dp"
-        android:paddingRight="6dp"
+        android:maxLines="1"
+        android:paddingStart="10dp"
+        android:paddingEnd="6dp"
+        app:layout_constraintTop_toBottomOf="@id/transaction_row_primary_status"
+        app:layout_constraintStart_toStartOf="parent"
         android:textColor="@color/dash_gray"
-        tools:text="August 30, 11:28 AM" />
+        tools:text="August 30, 2020 11:28 AM" />
 
     <LinearLayout
         android:id="@+id/dash_amount_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignBottom="@id/transaction_row_primary_status"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
-        android:layout_marginRight="11dp"
-        android:gravity="center|right"
+        app:layout_constraintTop_toTopOf="@id/transaction_row_primary_status"
+        android:layout_marginEnd="11dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:gravity="center|end"
         android:orientation="horizontal">
 
         <TextView
@@ -67,7 +73,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="2dp"
-            android:layout_marginRight="2dp"
             android:textSize="17sp"
             tools:text="+"
             tools:visibility="visible" />
@@ -78,7 +83,6 @@
             android:layout_height="14.63dp"
             android:layout_marginTop="1dp"
             android:layout_marginEnd="4dp"
-            android:layout_marginRight="4dp"
             app:srcCompat="@drawable/ic_dash_symbol_gray" />
 
         <org.dash.wallet.common.ui.CurrencyTextView
@@ -96,13 +100,10 @@
         android:id="@+id/rate_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/dash_amount_container"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
+        app:layout_constraintTop_toBottomOf="@id/dash_amount_container"
+        app:layout_constraintEnd_toEndOf="parent"
         android:paddingStart="0dp"
-        android:paddingLeft="0dp"
-        android:paddingEnd="15dp"
-        android:paddingRight="15dp">
+        android:paddingEnd="15dp">
 
         <org.dash.wallet.common.ui.CurrencyTextView
             android:id="@+id/transaction_row_fiat"
@@ -124,4 +125,4 @@
 
     </FrameLayout>
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

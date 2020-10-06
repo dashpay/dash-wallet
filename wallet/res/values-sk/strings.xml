@@ -291,8 +291,8 @@
     <string name="report_issue_dialog_title_issue">Nahlásiť problém</string>
     <string name="report_issue_dialog_title_crash">Zistené predchádzajúce zlyhanie aplikácie</string>
     <string name="report_issue_dialog_title_transaction">Nahlásiť problém s vybranou platbou</string>
-    <string name="report_issue_dialog_message_issue">Popíšte čo najpodrobnejšie problém, aby sa dal zreprodukovať. Ak je to možné, použite Anglický jazyk. Očakávajte email od podporného tímu Dash do 24 hodín.</string>
-    <string name="report_issue_dialog_message_crash">Chcete odoslať správu o probléme a tým pomôcť opraviť tento problém?</string>
+    <string name="report_issue_dialog_message_issue">Popíšte čo najpodrobnejšie problém, aby sa dal zopakovať. Ak je to možné, použite anglický jazyk. Do 24 hodín očakávajte email od podporného tímu Dash.</string>
+    <string name="report_issue_dialog_message_crash">Chcete odoslať správu o probléme, a tým pomôcť tento problém opraviť?</string>
     <string name="report_issue_dialog_description">popis problému</string>
     <string name="report_issue_dialog_report">Odoslať</string>
     <string name="report_issue_dialog_collect_device_info">Pripojiť informácie o zariadení</string>
@@ -368,10 +368,12 @@
 
     <string name="activity_security_backup_wallet">Zálohovať peňaženku do súboru</string>
     <string name="activity_security_view_recovery_phrase">Zobraziť frázu pre obnovenie</string>
-    <string name="activity_security_advanced">Pokročilá bezpečnosť</string>
-    <string name="activity_security_biometric_auth">Overovanie odtlačkov prstov</string>
+    <string name="activity_security_advanced">Pokročilé zabezpečenie</string>
+    <string name="activity_security_biometric_auth">Overenie odtlačkom prsta</string>
     <string name="activity_security_hide_balance">Automaticky skryť zostatok</string>
     <string name="reset_to_default">Obnoviť pôvodné nastavenia</string>
 
+    <string name="payment_protocol_default_error_title">Chyba platby</string>
     <string name="payment_protocol_insufficient_funds_error_title">Nedostatok prostriedkov</string>
-    </resources>
+    <string name="payment_protocol_insufficient_funds_error_message">Na dokončenie tejto transakcie nemáte dostatok prostriedkov </string>
+</resources>

@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Pagpapatunay ng PIN</string>
     <string name="set_pin_message">Ang PIN na ito ay kailangan upang i-unlock ang iyong app kapag nais gamitin.</string>
 
-    <string name="home_pay">Ipadala</string>
-    <string name="home_receive">Tumanggap</string>
     <string name="home_available_balance">Magagamit na balanse</string>
     <string name="home_balance_hidden">Nakatagong balanse</string>
     <string name="home_balance_show_hint">Pindutin upang ipakita ang balanse</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Kumpirmahin</string>
     <string name="dialog_confirm_pay_to">Pinadala kay</string>
+    <string name="dialog_confirm_secured_by">Siniguro ni</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Kabuuan</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Protektahan ang iyong wallet ngayon</string>
+    <string name="shortcut_secure_now">Protektahan ang iyong wallet ngayon</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">I-scan para magpadala</string>
+    <string name="shortcut_scan_to_pay">I-scan upang magbayad</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Ipadala sa address</string>
+    <string name="shortcut_pay_to_address">Ipadala sa address</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Bumili/ Magbenta ng Dash</string>
+    <string name="shortcut_buy_sell">Bumili/ Magbenta ng Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">I-import ang private key</string>
+    <string name="shortcut_receive">Tumanggap</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Maglagay ng shortcut</string>
+    <string name="shortcut_import_key">I-import ang private key</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Maglagay ng shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Tanggapin ng mabilis</string>
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">Tumanggap</string>
     <string name="payments_pay_by_qr_title">Pinadala ni</string>
     <string name="payments_pay_by_qr_sub_title">Scanning QR code</string>
-    <string name="payments_pay_by_qr_button">Scan</string>
     <string name="payments_pay_to_clipboard_title">Ipadala sa kinopyang address</string>
     <string name="payments_pay_to_clipboard_sub_title">Walang address na nakopya</string>
-    <string name="payments_pay_to_clipboard_button">Ipadala</string>
 
     <string name="forgot_pin_title">Nakalimutan ang PIN?</string>
     <string name="forgot_pin_message">Maaari kang mag set ng bagong PIN sa tulong ng iyong recovery phrase</string>
@@ -189,8 +188,8 @@
     <string name="touch_fingerprint_sensor">Hawakan ang sensor ng fingerprint.</string>
     <string name="touch_fingerprint_to_enable">Hawakan ang fingerprint sensor upang mabuksan gamit ang fingerprint.</string>
     <string name="fingerprint_changed_title">Fingerprint data ay napalitan</string>
-	<string name="fingerprint_changed_message">Napansin namin ang pagbabago ng iyong fingerprint authentication data. Kailangan mong gamitin ang PIN sa oras na ito.</string>
-	<string name="exchange_rate_missing">Abg bayad na ito ay masyado ng matagal para magkaroon ng fiat value.</string>
+    <string name="fingerprint_changed_message">Napansin namin ang pagbabago ng iyong fingerprint authentication data. Kailangan mong gamitin ang PIN sa oras na ito.</string>
+    <string name="exchange_rate_missing">Abg bayad na ito ay masyado ng matagal para magkaroon ng fiat value.</string>
 
     <string name="preferences_enable_payment_request_summary">Gamitin ang protokol sa pagbabayad para sa pinasimulang pagbabayad ng QR code</string>
     <string name="preferences_enable_payment_request_title">BIP70 para sa scan-to-pay</string>
@@ -215,13 +214,13 @@
     <string name="verify_seed_success_message">Ang iyong pitaka ay ligtas na. Maari mong magamit ang recovery phrase kahit kailan upanh marekober ang account sa ibang device.</string>
     <string name="view_seed_done">Tapos</string>
     <string name="view_seed_title">Recovery phrase</string>
-	<string name="transaction_result_view_on_explorer">Tingnan sa block explorer</string>
-	<string name="transaction_result_paid_successfully">Matagumpay na naipadala</string>
-	<string name="transaction_result_sent_to">Pinadala kay</string>
-	<string name="transaction_date_and_time">Petsa</string>
-	<string name="transaction_close">Sarado</string>
-	<string name="transaction_details_amount_received">Halagang natanggap</string>
-	<string name="transaction_details_amount_sent">Halagang ipinadala</string>
+    <string name="transaction_result_view_on_explorer">Tingnan sa block explorer</string>
+    <string name="transaction_result_paid_successfully">Matagumpay na naipadala</string>
+    <string name="transaction_result_sent_to">Pinadala kay</string>
+    <string name="transaction_date_and_time">Petsa</string>
+    <string name="transaction_close">Sarado</string>
+    <string name="transaction_details_amount_received">Halagang natanggap</string>
+    <string name="transaction_details_amount_sent">Halagang ipinadala</string>
     <string name="transaction_details_sent_from">Pinadala mula</string>
     <string name="transaction_details_sent_to">Ipadala kay</string>
     <string name="transaction_details_received_at">Natanggap sa</string>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="100dp"
+    android:layout_height="100dp"
+    android:background="@drawable/white_button_background_no_shadow"
+    android:gravity="center"
+    android:orientation="vertical"
+    tools:ignore="UseCompoundDrawables"
+    tools:parentTag="android.widget.LinearLayout">
+
+    <ImageView
+        android:id="@+id/action_icon"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_weight="1"
+        app:srcCompat="@drawable/ic_shortcut_scan_to_pay"
+        tools:ignore="ContentDescription" />
+
+    <TextView
+        android:id="@+id/action_text"
+        style="@style/TextViewStyle.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:breakStrategy="simple"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:lineSpacingMultiplier="0.9"
+        android:maxLines="2"
+        android:minLines="2"
+        android:textSize="11sp"
+        tools:ignore="SmallSp"
+        tools:text="Secure\nWallet Now" />
+
+</merge>

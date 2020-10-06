@@ -367,7 +367,7 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
             holder.defaultCurrencyCheckbox.setChecked(isDefaultCurrency);
 
             holder.currencyCode.setText(exchangeRate.getCurrencyCode());
-            holder.currencyName.setText(exchangeRate.getCurrencyName());
+            holder.currencyName.setText(exchangeRate.getCurrencyName(getActivity()));
             holder.price.setFormat(!rateBase.isLessThan(Coin.COIN) ? Constants.LOCAL_FORMAT.minDecimals(2)
                     : Constants.LOCAL_FORMAT.minDecimals(4));
             holder.price.setAmount(rate.coinToFiat(rateBase));

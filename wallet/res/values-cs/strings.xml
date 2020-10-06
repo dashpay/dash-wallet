@@ -60,12 +60,14 @@
     <string name="send_coins_fragment_receiving_address_own">Chystáte se poslat Dash sami sobě!</string>
     <string name="send_coins_fragment_receiving_address_complex">komplex\nadresa</string>
     <string name="send_coins_fragment_pending">(%s čeká na konfirmaci)</string>
+    <string name="send_coins_fragment_amount_label">Částka k odeslání</string>
     <string name="send_coins_fragment_pin_label">Zadejte PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Bude uhrazen poplatek síti ve výši %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Bude uhrazen prioritní poplatek %s. Pokud vám záleží na nízkých poplatcích, použijte ‚prioritu‘, pouze pokud potřebujete konfirmaci co nejdříve.</string>
     <string name="send_coins_fragment_hint_dusty_send">Částka je příliš nízká pro odeslání</string>
     <string name="send_coins_fragment_hint_insufficient_money">Nedostatečný zůstatek</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Částka drobných plateb ve vaší peněžence nepřesahuje hodnotu, kterou lze odeslat.</string>
+    <string name="send_coins_fragment_hint_replaying">Platby momentálně nelze provádět, protože peněženka není synchronizována se sítí.</string>
     <string name="send_coins_fragment_direct_payment_enable">Poslat platbu přímo příjemci.</string>
     <string name="send_coins_fragment_direct_payment_ack">Vaše platba byla úspěšně zaslána přímo.</string>
     <string name="send_coins_fragment_direct_payment_nack">Vaše platba byla odmítnuta přímým spojením.</string>
@@ -75,6 +77,7 @@
     <string name="send_coins_fragment_button_back">Zpět</string>
     <string name="send_coins_fragment_insufficient_money_title">Nedostatečný zůstatek</string>
     <string name="send_coins_fragment_insufficient_money_msg1">Chybí vám %s.</string>
+    <string name="send_coins_fragment_insufficient_money_msg2">Přejete si odeslat vše co máte?</string>
     <string name="send_coins_fragment_empty_wallet_failed_title">Vyprázdnění peněženky selhalo</string>
     <string name="send_coins_fragment_state_decrypting">Dešifrování…</string>
     <string name="send_coins_preparation_msg">Podepisuji…</string>
@@ -159,11 +162,26 @@
     <string name="transaction_row_status_processing">Zpracovává se</string>
     <string name="transaction_row_status_confirming">Konfirmace</string>
     <string name="transaction_row_status_locked">Blokováno</string>
+    <string name="transaction_row_status_error_sending">Chyba odesílání</string>
     <string name="transaction_row_status_error_dead">Dvojí platba</string>
+    <string name="transaction_row_status_error_conflicting">Konflikt</string>
+    <string name="transaction_row_status_error_insufficient_fee">Nedostatečný poplatek</string>
+    <string name="transaction_row_status_error_dust">Dust</string>
+    <string name="transaction_row_status_error_non_standard">Nestandardní</string>
+    <string name="transaction_row_status_error_malformed">Poškozeno</string>
+    <string name="transaction_row_status_error_duplicate">Duplicitní</string>
+    <string name="transaction_row_status_error_obsolete">Zastaralý</string>
     <string name="transaction_row_status_error_invalid">Neplatná</string>
+    <string name="transaction_row_status_error_other">Neznámý</string>
+    <!-- The first %s is the date and the second %s is the time.  e.g. On 29 December 2019 at 15:59 -->
+    <string name="transaction_row_time_text">%s v %s</string>
+    <string name="transaction_row_rate_not_available">Není dostupný</string>
     <string name="transaction_row_status_masternode_registration">Registrace masternode</string>
     <string name="transaction_row_status_masternode_update_registrar">Aktualizace masternode</string>
     <string name="transaction_row_status_masternode_update_service">Aktualizace masternode</string>
+    <string name="transaction_row_status_masternode_revoke">Zrušení masternode</string>
+    <string name="transaction_row_status_masternode_reward">Odměna masternode</string>
+    <string name="transaction_row_status_mining_reward">Odměna za těžbu</string>
     <string name="network_monitor_activity_title">Monitor sítě</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Bloky</string>
@@ -348,10 +366,14 @@
     <string name="dash_slogan">Rychle - Soukromě - Bezpečně</string>
     <string name="dash_wallet">Peněženka</string>
 
+    <string name="activity_security_backup_wallet">Zálohovat peněženku do souboru</string>
     <string name="activity_security_view_recovery_phrase">Zobrazit Frázi Pro Obnovení</string>
     <string name="activity_security_advanced">Pokročilé zabzpečení</string>
+    <string name="activity_security_biometric_auth">Autentifikace otiskem prstu</string>
     <string name="activity_security_hide_balance">Automaticky skrýt zůstatek</string>
     <string name="reset_to_default">Obnovit výchozí nastavení</string>
 
+    <string name="payment_protocol_default_error_title">Chyba platby</string>
     <string name="payment_protocol_insufficient_funds_error_title">Nedostatečný zůstatek</string>
-    </resources>
+    <string name="payment_protocol_insufficient_funds_error_message">Nemáte dostatečné prostředky pro uskutečnění této transakce</string>
+</resources>
