@@ -127,9 +127,8 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             username_2.visibility = View.VISIBLE
             val username = blockchainIdentity!!.currentUsername!!
 
-            AppDatabase.getAppDatabase()
-                    .dashPayProfileDaoAsync()
-                    .loadByUserId(blockchainIdentity!!.uniqueIdString).observe(context.lifecycleOwner()!!, Observer {
+            PlatformRepo.getInstance().loadProfileByUserId(blockchainIdentity!!.uniqueIdString)
+                    .observe(context.lifecycleOwner()!!, Observer {
                         if (it !== null) {
                             val displayName = it.displayName
                             if (displayName.isNotEmpty()) {

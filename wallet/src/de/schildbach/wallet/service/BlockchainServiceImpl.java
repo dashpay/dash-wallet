@@ -988,7 +988,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 @Override
                 public void run() {
                     // This code is not executed during a wipe, only a blockchain reset
-                    PlatformRepo.getInstance().clearDatabases();
+                    PlatformRepo.getInstance().clearDatabase();
                 }
             });
         }

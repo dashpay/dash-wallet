@@ -21,6 +21,7 @@ import android.os.HandlerThread
 import android.os.Process
 import android.text.format.DateUtils
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LiveData
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import de.schildbach.wallet.AppDatabase
@@ -105,6 +106,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
     private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
     private val dashPayContactRequestDao = AppDatabase.getAppDatabase().dashPayContactRequestDao()
+
+    // Async
+    private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
+    private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
+    private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
+
 
     private val securityGuard = SecurityGuard()
     private lateinit var blockchainIdentity: BlockchainIdentity
@@ -1022,11 +1029,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     This should not be a suspended method.
      */
-    fun clearDatabases() {
-        val database = AppDatabase.getAppDatabase()
-        database.blockchainIdentityDataDaoAsync().clear()
-        database.dashPayProfileDaoAsync().clear()
-        database.dashPayContactRequestDaoAsync().clear()
+    fun clearDatabase() {
+        blockchainIdentityDataDaoAsync.clear()
+        dashPayProfileDaoAsync.clear()
+        dashPayContactRequestDaoAsync.clear()
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
@@ -1035,5 +1041,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return if (identityBytes != null) {
             platform.dpp.identity.createFromSerialized(identityBytes.toByteArray())
         } else null
+    }
+
+    fun loadProfileByUserId(userId: String) : LiveData<DashPayProfile?> {
+        return dashPayProfileDaoAsync.loadByUserIdDistinct(userId)
     }
 }
