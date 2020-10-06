@@ -100,7 +100,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
     override fun onResume() {
         super.onResume()
         showHideSecureAction()
-//        showHideJoinDashPayAction(mainActivityViewModel.isAbleToCreateIdentity)
     }
 
     private fun initShortcutActions() {
@@ -108,6 +107,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
             when (v) {
                 shortcuts_pane.secureNowButton -> {
                     handleVerifySeed()
+                }
+                shortcuts_pane.joinDashPayButton -> {
+                    startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
                 }
                 shortcuts_pane.scanToPayButton -> {
                     handleScan(v)

@@ -1,5 +1,6 @@
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MediatorLiveData
@@ -66,4 +67,5 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
         return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress && canAffordIdentityCreation
     }
 
+    val goBackAndStartActivityEvent = SingleLiveEvent<Class<*>>()
 }

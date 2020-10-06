@@ -58,8 +58,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
         PaymentsPayFragment.OnSelectContactToPayListener, WalletFragment.OnSelectPaymentTabListener,
-        ContactSearchResultsAdapter.OnViewAllRequestsListener,
-        UpgradeToEvolutionFragment.OnUpgradeBtnClicked {
+        ContactSearchResultsAdapter.OnViewAllRequestsListener {
 
     companion object {
         const val REQUEST_CODE_SCAN = 0
@@ -116,7 +115,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     fun initViewModel() {
         viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
         viewModel.isAbleToCreateIdentityData.observe(this, Observer {
-            // just to trigger data loading
+            // empty observer just to trigger data loading
+            // viewModel is shared with some fragments keeping the observer active
+            // inside the parent Activity will avoid recreation of relatively complex
+            // isAbleToCreateIdentityData LiveData
         })
         viewModel.blockchainIdentityData.observe(this, Observer {
             if (it != null) {
@@ -125,6 +127,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     startService(CreateIdentityService.createIntentForRetry(this, false))
                 }
             }
+        })
+        viewModel.goBackAndStartActivityEvent.observe(this, Observer {
+            goBack(true)
+            //Delay added to prevent fragment being removed and activity being launched "at the same time"
+            Handler().postDelayed({
+                startActivity(Intent(this, it))
+            }, 500)
         })
     }
 
@@ -196,7 +205,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         transaction.addToBackStack(null).commit()
     }
 
-    private fun goBack(goHome: Boolean = false): Boolean {
+    fun goBack(goHome: Boolean = false): Boolean {
         if (!goHome && supportFragmentManager.backStackEntryCount > 1) {
             supportFragmentManager.popBackStack()
             return true
@@ -709,13 +718,4 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             it.onActivityResult(requestCode, resultCode, data)
         }
     }
-
-    override fun onUpgradeBtnClicked() {
-        goBack(true)
-        //Delay added to prevent fragment being removed and activity being launched "at the same time"
-        Handler().postDelayed({
-            startActivity(Intent(this, CreateUsernameActivity::class.java))
-        }, 500)
-    }
-
 }
