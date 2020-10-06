@@ -30,4 +30,7 @@ data class BlockchainIdentityBaseData(val id: Int,
         get() = creationState > BlockchainIdentityData.CreationState.NONE &&
                 creationState < BlockchainIdentityData.CreationState.DONE &&
                 creationStateErrorMessage == null
+
+    val creationComplete: Boolean
+        get() = creationState >= BlockchainIdentityData.CreationState.DONE
 }
