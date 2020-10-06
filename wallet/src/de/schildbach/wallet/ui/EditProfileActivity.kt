@@ -55,7 +55,12 @@ class EditProfileActivity : BaseMenuActivity() {
         val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
         if (blockchainIdentity?.currentUsername != null) {
             userInfoContainer.visibility = View.VISIBLE
-            editProfileViewModel.dashPayProfileData.observe(this, dashPayProfileObserver)
+            editProfileViewModel.dashPayProfileData.observe(this, Observer {
+                if (it != null && !isEditing) {
+                    dashPayProfile = it
+                    showProfileInfo(it)
+                }
+            })
             dashpayUserAvatar.background = UserAvatarPlaceholderDrawable.getDrawable(this,
                     blockchainIdentity.currentUsername!!.toCharArray()[0])
         } else {
@@ -120,7 +125,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 when (it.status) {
                     Status.SUCCESS -> {
                         Toast.makeText(this@EditProfileActivity, "Update successful", Toast.LENGTH_LONG).show()
-                        setEditingState(true) // if this line is here, then the Profile changes to the previous value (crazy?)
+                        setEditingState(true)
                     }
                     Status.ERROR -> {
                         var msg = it.message
@@ -163,15 +168,6 @@ class EditProfileActivity : BaseMenuActivity() {
 
         about_me.setText(profile.publicMessage)
         display_name.setText(profile.displayName)
-    }
-
-    // This method works well when it is called the first time,
-    // but when it is called after updating the profile, `it` is the old profile
-    private val dashPayProfileObserver = Observer<DashPayProfile?> {
-        if (it != null && !isEditing) {
-            dashPayProfile = it
-            showProfileInfo(it)
-        }
     }
 
     private fun setEditingState(isEditing: Boolean) {
