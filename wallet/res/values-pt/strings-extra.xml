@@ -159,7 +159,7 @@
         <item quantity="other">horas</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Atualizar</string>
+    <string name="upgrade">Atualizar</string>
     <string name="encrypt_new_key_chain_dialog_title">Atualize sua carteira</string>
     <string name="encrypt_new_key_chain_dialog_message">Sua carteira será atualizada para suportar importação e exportação para mais aplicativos.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Você deve inserir seu PIN para finalizar o processo de atualização.</string>

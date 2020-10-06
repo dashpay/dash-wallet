@@ -29,6 +29,7 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:name="de.schildbach.wallet.ui.WalletFragment"
+            android:tag="wallet_fragment"
             app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"

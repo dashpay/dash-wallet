@@ -156,7 +156,7 @@
         <item quantity="other">時間</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">アップグレード</string>
+    <string name="upgrade">アップグレード</string>
     <string name="encrypt_new_key_chain_dialog_title">あなたのウォレットをアップグレードします。</string>
     <string name="encrypt_new_key_chain_dialog_message">あなたのウォレットはより多くのアプリにインポートとエクスポートをサポートするようにアップグレードされます。</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">アップグレードを完了するために、あなたのPINコードを入力してください。</string>

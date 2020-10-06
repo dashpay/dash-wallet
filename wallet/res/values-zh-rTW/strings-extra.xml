@@ -156,7 +156,7 @@
         <item quantity="other">小時</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">升級</string>
+    <string name="upgrade">升級</string>
     <string name="encrypt_new_key_chain_dialog_title">升級你的錢包</string>
     <string name="encrypt_new_key_chain_dialog_message">您的錢包將升級為支援從更多的應用程式導入和導出功能。</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">您必須輸入PIN碼才能完成升級過程。</string>

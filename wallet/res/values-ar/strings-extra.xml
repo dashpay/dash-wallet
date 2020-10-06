@@ -171,7 +171,7 @@
         <item quantity="other">ساعات</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">ترقية</string>
+    <string name="upgrade">ترقية</string>
     <string name="encrypt_new_key_chain_dialog_title">ترقية محفظتك</string>
     <string name="encrypt_new_key_chain_dialog_message">ستتم تحديث محفظتك لدعم الاستيراد والتصدير إلى المزيد من التطبيقات.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">يجب عليك إدخال الرمز السري الخاص بك لإنهاء عملية الترقية.</string>

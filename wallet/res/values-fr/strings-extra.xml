@@ -159,7 +159,7 @@
         <item quantity="other">heures</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Mise à jour</string>
+    <string name="upgrade">Mise à jour</string>
     <string name="encrypt_new_key_chain_dialog_title">Mettre à jour votre portefeuille</string>
     <string name="encrypt_new_key_chain_dialog_message">Votre portefeuille sera mis à jour pour permettre l\'import et l\'export avec davantage d\'applications.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Vous devez saisir votre code PIN pour terminer la mise à jour.</string>

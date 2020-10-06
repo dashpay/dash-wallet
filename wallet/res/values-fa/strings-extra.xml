@@ -161,7 +161,7 @@
         <item quantity="other">ساعت</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">به‌روزرسانی</string>
+    <string name="upgrade">به‌روزرسانی</string>
     <string name="encrypt_new_key_chain_dialog_title">کیف پول‌تان را به‌روزرسانی کنید</string>
     <string name="encrypt_new_key_chain_dialog_message">به‌روزرسانی کیف پول با هدف افزایش قابلیت دریافت و ارسال به اپلیکیشن‌های بیشتر صورت می‌گیرد.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">برای تکمیل فرآیند به‌روزرسانی باید رمزتان را وارد کنید.</string>

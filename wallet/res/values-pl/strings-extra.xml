@@ -165,7 +165,7 @@
         <item quantity="other">godzin</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
+    <string name="upgrade">Aktualizuj</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
     <string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby umożliwić importowanie z oraz eksportowanie do nowych aplikacji.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Musisz wpisać swój PIN aby dokończyć proces aktualizacji.</string>

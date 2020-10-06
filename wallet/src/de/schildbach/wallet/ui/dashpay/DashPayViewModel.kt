@@ -119,11 +119,6 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         contactsLiveData.value = UsernameSearch(text, orderBy)
     }
 
-    val isPlatformAvailableLiveData = liveData(Dispatchers.IO) {
-        emit(Resource.loading(null))
-        emit(platformRepo.isPlatformAvailable())
-    }
-
     fun searchNotifications(text: String) {
         notificationsLiveData.query = text
     }

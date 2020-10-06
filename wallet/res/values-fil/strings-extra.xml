@@ -159,7 +159,7 @@
         <item quantity="other">oras</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">I-upgrade</string>
+    <string name="upgrade">I-upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">I-upgrade ang iyong pitaka</string>
     <string name="encrypt_new_key_chain_dialog_message">Ang iyong pitaka ay ma-uupgrade upang masuportahan ang importing at exporting sa maraming apps.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Kailangan itala ang iyong PIN para matapos ang proseso ng pag-upgrade.</string>

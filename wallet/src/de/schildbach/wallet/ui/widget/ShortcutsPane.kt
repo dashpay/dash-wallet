@@ -36,6 +36,11 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
                 R.string.shortcut_secure_now,
                 this)
     }
+    val joinDashPayButton: ShortcutButton by lazy {
+        ShortcutButton(context, 0,
+                R.string.shortcut_action_join_dashpay, this,
+                R.drawable.blue_button_background, R.color.dash_white)
+    }
     val receiveButton: ShortcutButton by lazy {
         ShortcutButton(context,
                 R.drawable.ic_shortcut_receive,
@@ -106,13 +111,13 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
                 refresh()
                 return false
             }
-
         }
         viewTreeObserver.addOnPreDrawListener(onPreDrawListener)
     }
 
     fun setup() {
         addShortcut(secureNowButton)
+        addShortcut(joinDashPayButton)
         secondaryItems.add(scanToPayButton)
         if (isSmallScreen) {
             secondaryItems.add(receiveButton)
@@ -131,6 +136,10 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
         val displayed = mutableSetOf<ShortcutButton>()
         secureNowButton.visibility = if (showSecureNow) {
             displayed.add(secureNowButton)
+            View.VISIBLE
+        } else View.GONE
+        joinDashPayButton.visibility = if (showJoinDashPay) {
+            displayed.add(joinDashPayButton)
             View.VISIBLE
         } else View.GONE
         if (!isSmallScreen) {
