@@ -810,9 +810,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().clear();
-                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().clear();
-                AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync().clear();
+                PlatformRepo.getInstance().clearDatabase();
                 ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });

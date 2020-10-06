@@ -27,8 +27,11 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.lifecycleOwner
 import de.schildbach.wallet.ui.ReceiveActivity
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -123,23 +126,29 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             username_1.visibility = View.VISIBLE
             username_2.visibility = View.VISIBLE
             val username = blockchainIdentity!!.currentUsername!!
-            val profile = blockchainIdentity!!.getProfile()
-            val displayName = profile?.get("displayName") as String?
-            if (displayName != null && displayName.isNotEmpty()) {
-                username_1.text = displayName
-                username_2.text = username
-            } else {
-                username_1.text = username
-                username_2.visibility = View.GONE
-            }
 
-            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context, username[0])
-            if (profile != null) {
-                Glide.with(avatar).load(profile.get("avatarUrl")).circleCrop()
-                        .placeholder(defaultAvatar).into(avatar)
-            } else {
-                avatar.setImageDrawable(defaultAvatar)
-            }
+            PlatformRepo.getInstance().loadProfileByUserId(blockchainIdentity!!.uniqueIdString)
+                    .observe(context.lifecycleOwner()!!, Observer {
+                        if (it !== null) {
+                            val displayName = it.displayName
+                            if (displayName.isNotEmpty()) {
+                                username_1.text = displayName
+                                username_2.text = username
+                            } else {
+                                username_1.text = username
+                                username_2.visibility = View.GONE
+                            }
+
+                            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context, username[0])
+                            if (it.avatarUrl.isNotEmpty()) {
+                                Glide.with(avatar).load(it.avatarUrl).circleCrop()
+                                        .placeholder(defaultAvatar).into(avatar)
+                            } else {
+                                avatar.setImageDrawable(defaultAvatar)
+                            }
+                        }
+                    })
+
         } else {
             username_1.visibility = View.GONE
             username_2.visibility = View.GONE

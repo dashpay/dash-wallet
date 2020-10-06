@@ -896,7 +896,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             } else if(BlockchainService.ACTION_RESET_BLOOMFILTERS.equals(action)) {
                 if (peerGroup != null) {
                     log.info("recalculating bloom filters");
-                    peerGroup.recalculateFastCatchupAndFilter(PeerGroup.FilterRecalculateMode.SEND_IF_CHANGED);
+                    peerGroup.recalculateFastCatchupAndFilter(PeerGroup.FilterRecalculateMode.FORCE_SEND_FOR_REFRESH);
                 } else {
                     log.info("peergroup not available, not recalculating bloom filers");
                 }
@@ -980,9 +980,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 @Override
                 public void run() {
                     // This code is not executed during a wipe, only a blockchain reset
-                    AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().clear();
-                    AppDatabase.getAppDatabase().dashPayProfileDaoAsync().clear();
-                    AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync().clear();
+                    PlatformRepo.getInstance().clearDatabase();
                 }
             });
         }
@@ -1017,7 +1015,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         final String message = (blockchainState != null)
                 ? BlockchainStateUtils.getSyncStateString(blockchainState, this)
-                : getString(R.string.blockchain_state_progress_downloading);
+                : getString(R.string.blockchain_state_progress_downloading, 0);
 
         return new NotificationCompat.Builder(this,
                 Constants.NOTIFICATION_CHANNEL_ID_ONGOING)

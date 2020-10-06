@@ -31,6 +31,7 @@ import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+import org.dashevo.dashpay.BlockchainIdentity
 
 class MoreFragment : Fragment(R.layout.activity_more) {
 
@@ -66,7 +67,7 @@ class MoreFragment : Fragment(R.layout.activity_more) {
         }
 
         val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
-        if (blockchainIdentity != null) {
+        if (blockchainIdentity != null && blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
             AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(blockchainIdentity.uniqueIdString)
                     .observe(viewLifecycleOwner, Observer {
                         if (it != null) {

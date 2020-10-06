@@ -196,7 +196,7 @@ public final class WalletBalanceFragment extends Fragment {
             showProgress = !(blockchainUptodate || !blockchainState.getReplaying());
 
             final String downloading = getString(noImpediments ? R.string.blockchain_state_progress_downloading
-                    : R.string.blockchain_state_progress_stalled);
+                    : R.string.blockchain_state_progress_stalled, blockchainState.getPercentageSync());
 
             if (blockchainLag < 2 * DateUtils.DAY_IN_MILLIS) {
                 final long hours = blockchainLag / DateUtils.HOUR_IN_MILLIS;
