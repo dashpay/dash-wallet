@@ -40,7 +40,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
     val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
 
     val hasIdentity: Boolean
-        get() = blockchainIdentity?.creationComplete!!
+        get() = blockchainIdentity?.creationComplete ?: false
 
     val isAbleToCreateIdentityData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailableData) {
