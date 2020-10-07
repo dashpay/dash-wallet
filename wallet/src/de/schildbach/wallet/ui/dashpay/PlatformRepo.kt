@@ -476,12 +476,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
         log.info("profile broadcast")
 
-        delay(5000) // need to remove this
-
         //Verify that the Contact Request was seen on the network
         val updatedProfile = blockchainIdentity.watchProfile(100, 5000, RetryDelayType.LINEAR)
-
-        delay(5000) // need to remove this
 
         log.info("updated profile: $updatedProfile")
         if (updatedProfile != null) {
