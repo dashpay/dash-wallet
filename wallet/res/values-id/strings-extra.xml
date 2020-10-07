@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Memverifikasi PIN</string>
     <string name="set_pin_message">PIN ini akan diperlukan untuk membuka kunci aplikasi Anda setiap kali saat Anda menggunakannya.</string>
 
-    <string name="home_pay">Kirim</string>
-    <string name="home_receive">Terima</string>
     <string name="home_available_balance">Saldo tersedia</string>
     <string name="home_balance_hidden">Saldo disembunyikan</string>
     <string name="home_balance_show_hint">Ketuk untuk melihat saldo</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Memastikan</string>
     <string name="dialog_confirm_pay_to">Kirim ke</string>
+    <string name="dialog_confirm_secured_by">Diamankan oleh</string>
     <string name="dialog_confirm_fee">Biaya jaringan</string>
     <string name="dialog_confirm_total">Total</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Amankan Dompet Sekarang</string>
+    <string name="shortcut_secure_now">Amankan Dompet Sekarang</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Pindai untuk mengirim</string>
+    <string name="shortcut_scan_to_pay">Pindai untuk membayar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Kirim ke alamat</string>
+    <string name="shortcut_pay_to_address">Kirim ke alamat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Beli / Jual Dash</string>
+    <string name="shortcut_buy_sell">Beli / Jual Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Impor kunci pribadi</string>
+    <string name="shortcut_receive">Terima</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Tambah Pintasan</string>
+    <string name="shortcut_import_key">Impor kunci pribadi</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Tambah Pintasan</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Terima Cepat</string>
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">Terima</string>
     <string name="payments_pay_by_qr_title">Dikirim oleh</string>
     <string name="payments_pay_by_qr_sub_title">Memindai kode QR</string>
-    <string name="payments_pay_by_qr_button">Pindai</string>
     <string name="payments_pay_to_clipboard_title">Kirim ke alamat yang disalin</string>
     <string name="payments_pay_to_clipboard_sub_title">Tak ada alamat tersalin</string>
-    <string name="payments_pay_to_clipboard_button">Kirim</string>
 
     <string name="forgot_pin_title">Lupa PIN?</string>
     <string name="forgot_pin_message">Anda dapat mengatur PIN baru dengan bantuan frasa pemulihan Anda.</string>
@@ -157,7 +156,7 @@
         <item quantity="other">jam</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Tingkatkan</string>
+    <string name="upgrade">Tingkatkan</string>
     <string name="encrypt_new_key_chain_dialog_title">Tingkatkan dompet anda</string>
     <string name="encrypt_new_key_chain_dialog_message">Dompet Anda akan ditingkatkan untuk mendukung pengimporan dan mengekspor ke lebih banyak aplikasi.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Anda harus memasukkan PIN Anda untuk menyelesaikan proses peningkatan.</string>
@@ -186,8 +185,8 @@
     <string name="touch_fingerprint_sensor">Sentuh sensor sidik jari</string>
     <string name="touch_fingerprint_to_enable">Sentuh sensor sidik jari untuk mengaktifkan membuka kunci dengan sidik jari.</string>
     <string name="fingerprint_changed_title">Data sidik jari berubah</string>
-	<string name="fingerprint_changed_message">Kami mendeteksi perubahan dalam data otentikasi sidik jari Anda. Anda perlu menggunakan PIN saat ini.</string>
-	<string name="exchange_rate_missing">Pembayaran ini terlalu lama untuk mendapatkan nilai fiat.</string>
+    <string name="fingerprint_changed_message">Kami mendeteksi perubahan dalam data otentikasi sidik jari Anda. Anda perlu menggunakan PIN saat ini.</string>
+    <string name="exchange_rate_missing">Pembayaran ini terlalu lama untuk mendapatkan nilai fiat.</string>
 
     <string name="preferences_enable_payment_request_summary">Gunakan protokol pembayaran untuk pembayaran yang dimulai dengan kode-QR</string>
     <string name="preferences_enable_payment_request_title">BIP70 untuk pindai-untuk-bayar</string>
@@ -212,13 +211,13 @@
     <string name="verify_seed_success_message">Dompet Anda aman sekarang. Anda dapat menggunakan frasa pemulihan kapan saja untuk memulihkan akun di perangkat lain.</string>
     <string name="view_seed_done">Selesai</string>
     <string name="view_seed_title">Frasa pemulihan</string>
-	<string name="transaction_result_view_on_explorer">Lihat di Blok Explorer</string>
-	<string name="transaction_result_paid_successfully">Pengiriman berhasil</string>
-	<string name="transaction_result_sent_to">Terkirim ke</string>
-	<string name="transaction_date_and_time">Tanggal</string>
-	<string name="transaction_close">Tutup</string>
-	<string name="transaction_details_amount_received">Jumlah Diterima</string>
-	<string name="transaction_details_amount_sent">Jumlah Dikirim</string>
+    <string name="transaction_result_view_on_explorer">Lihat di Blok Explorer</string>
+    <string name="transaction_result_paid_successfully">Pengiriman berhasil</string>
+    <string name="transaction_result_sent_to">Terkirim ke</string>
+    <string name="transaction_date_and_time">Tanggal</string>
+    <string name="transaction_close">Tutup</string>
+    <string name="transaction_details_amount_received">Jumlah Diterima</string>
+    <string name="transaction_details_amount_sent">Jumlah Dikirim</string>
     <string name="transaction_details_sent_from">Terkirim dari</string>
     <string name="transaction_details_sent_to">Terkirim ke</string>
     <string name="transaction_details_received_at">Diterima di</string>

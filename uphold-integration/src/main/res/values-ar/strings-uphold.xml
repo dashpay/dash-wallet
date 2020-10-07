@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">خدمة Uphold غير متوفرة. الرجاء معاودة المحاولة في وقت لاحق.</string>
     <string name="uphold_error_report_issue">يرجى الإبلاغ عن هذه المشكلة إلى فريق دعم Dash Wallet باستخدام \"الابلاغ عن مشكلة\" من القائمة الرئيسية.</string>
 
+    <string name="uphold_general_error_title">خطأ</string>
+    <string name="uphold_api_error_title">خطأ Uphold</string>
+    <string name="uphold_api_error_identity">لم يتم التحقق من حساب Uphold الخاص بك حتى الآن. لا يمكن سحب الأموال.</string>
+    <string name="uphold_api_error_403_description">تم وضع علامة على حساب Uphold الخاص بك للمراجعة.\n\n لقد قام Upold بتقييد حسابك مؤقتًا ولن تتمكن من سحب الأموال.\n\n ستتواصل Uphold لمساعدتك في حل هذه المشكلة بسرعة.</string>
+    <string name="uphold_api_error_400_description">أموال Upholdمؤمنة لمدة 24 ساعة.\n\nسيكون لديك أموال كافية لهذا التحويل بحلول%s.</string>
 </resources>

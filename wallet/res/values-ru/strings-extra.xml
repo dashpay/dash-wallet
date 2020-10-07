@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Подтверждение PIN-кода</string>
     <string name="set_pin_message">Этот PIN нужно будет вводить для разблокировки приложения при каждом его использовании.</string>
 
-    <string name="home_pay">Отправить</string>
-    <string name="home_receive">Получить</string>
     <string name="home_available_balance">Доступный баланс</string>
     <string name="home_balance_hidden">Баланс скрыт</string>
     <string name="home_balance_show_hint">Нажмите, чтобы показать баланс</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Подтвердить</string>
     <string name="dialog_confirm_pay_to">Отправить</string>
+    <string name="dialog_confirm_secured_by">Защищено</string>
     <string name="dialog_confirm_fee">Комиссия сети</string>
     <string name="dialog_confirm_total">Итого</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Сохраните кошелёк</string>
+    <string name="shortcut_secure_now">Сохраните кошелёк</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Оплатить по QR-коду</string>
+    <string name="shortcut_scan_to_pay">Оплатить по QR-коду</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Отправить на адрес</string>
+    <string name="shortcut_pay_to_address">Отправить на адрес</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Купить / Продать</string>
+    <string name="shortcut_buy_sell">Купить / Продать</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Импорт ключа</string>
+    <string name="shortcut_receive">Получить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Добавить</string>
+    <string name="shortcut_import_key">Импорт ключа</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Добавить</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Получить быстро</string>
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">Получить</string>
     <string name="payments_pay_by_qr_title">Оплатить по</string>
     <string name="payments_pay_by_qr_sub_title">QR-коду</string>
-    <string name="payments_pay_by_qr_button">Сканировать</string>
     <string name="payments_pay_to_clipboard_title">Отправить на скопированный адрес</string>
     <string name="payments_pay_to_clipboard_sub_title">Нет адреса</string>
-    <string name="payments_pay_to_clipboard_button">Отправить</string>
 
     <string name="forgot_pin_title">Забыли PIN-код?</string>
     <string name="forgot_pin_message">Вы можете задать новый PIN-код с помощью фразы восстановления.</string>
@@ -166,7 +165,7 @@
         <item quantity="other">часы</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Обновление</string>
+    <string name="upgrade">Обновление</string>
     <string name="encrypt_new_key_chain_dialog_title">Обновление Вашего кошелька</string>
     <string name="encrypt_new_key_chain_dialog_message">Ваш кошелёк получит обновление, чтобы поддерживать обмен данными с другими приложениями.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Вам необходимо ввести свой ПИН-код для завершения процедуры обновления.</string>
@@ -195,8 +194,8 @@
     <string name="touch_fingerprint_sensor">Коснитесь датчика отпечатков пальцев.</string>
     <string name="touch_fingerprint_to_enable">Коснитесь датчика отпечатков пальцев, чтобы разблокировать с помощью отпечатка пальца.</string>
     <string name="fingerprint_changed_title">Данные об отпечатке изменены</string>
-	<string name="fingerprint_changed_message">Мы обнаружили изменение данных об отпечатке. В этот раз для входа нужно ввести PIN-код. </string>
-	<string name="exchange_rate_missing">Это давний платёж, фиатный эквивалент недоступен.</string>
+    <string name="fingerprint_changed_message">Мы обнаружили изменение данных об отпечатке. В этот раз для входа нужно ввести PIN-код. </string>
+    <string name="exchange_rate_missing">Это давний платёж, фиатный эквивалент недоступен.</string>
 
     <string name="preferences_enable_payment_request_summary">Используйте платёжный протокол для платежей через QR-код</string>
     <string name="preferences_enable_payment_request_title">BIP70 для функции "сканируй и плати"</string>
@@ -221,13 +220,13 @@
     <string name="verify_seed_success_message">Сейчас Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему аккаунту на другом устройстве.</string>
     <string name="view_seed_done">Готово</string>
     <string name="view_seed_title">Фраза восстановления</string>
-	<string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>
-	<string name="transaction_result_paid_successfully">Успешно отправлено</string>
-	<string name="transaction_result_sent_to">Отправить</string>
-	<string name="transaction_date_and_time">Дата</string>
-	<string name="transaction_close">Закрыть</string>
-	<string name="transaction_details_amount_received">Полученная сумма</string>
-	<string name="transaction_details_amount_sent">Отправленная сумма</string>
+    <string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>
+    <string name="transaction_result_paid_successfully">Успешно отправлено</string>
+    <string name="transaction_result_sent_to">Отправить</string>
+    <string name="transaction_date_and_time">Дата</string>
+    <string name="transaction_close">Закрыть</string>
+    <string name="transaction_details_amount_received">Полученная сумма</string>
+    <string name="transaction_details_amount_sent">Отправленная сумма</string>
     <string name="transaction_details_sent_from">Отправлено с</string>
     <string name="transaction_details_sent_to">Отправлено</string>
     <string name="transaction_details_received_at">Получено на</string>

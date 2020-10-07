@@ -13,15 +13,6 @@
         layout="@layout/app_bar_general"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/verify_seed_title"
-        style="@style/VerifySeedTitle"
-        android:layout_marginTop="16dp"
-        android:text="@string/verify"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/verify_appbar" />
-
     <com.google.android.flexbox.FlexboxLayout
         android:id="@+id/recovery_seed"
         style="@style/VerifySeedBox"
@@ -33,7 +24,7 @@
         app:justifyContent="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/verify_seed_title" />
+        app:layout_constraintTop_toBottomOf="@+id/verify_appbar" />
 
     <LinearLayout
         android:id="@+id/verify_seed_container"
@@ -53,7 +44,7 @@
             style="@style/MontserratRegular.MG.14"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="@dimen/verify_seed_buttons_tip_bottom_margin"
             android:gravity="center"
             android:text="@string/verify_seed_buttons_tip" />
 

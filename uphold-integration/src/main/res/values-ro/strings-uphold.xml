@@ -24,4 +24,5 @@
     <string name="uphold_error_not_available">Serviciul Uphold nu este disponibil. Te rog să încerci din nou mai târziu.</string>
     <string name="uphold_error_report_issue">Te rog să raportezi această problemă echipei de asistență Dash Wallet folosind „Raportează problema” din meniul principal.</string>
 
-</resources>
+    <string name="uphold_general_error_title">Eroare</string>
+    </resources>

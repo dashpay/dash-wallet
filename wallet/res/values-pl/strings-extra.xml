@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Zweryfikuj PIN</string>
     <string name="set_pin_message">Ten kod PIN będzie wymagany do odblokowania Twojej aplikacji za każdym razem, gdy z niej korzystasz.</string>
 
-    <string name="home_pay">Wyślij</string>
-    <string name="home_receive">Otrzymaj</string>
     <string name="home_available_balance">Dostępne saldo</string>
     <string name="home_balance_hidden">Saldo ukryte</string>
     <string name="home_balance_show_hint">Stuknij by odkryć saldo</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Potwierdź</string>
     <string name="dialog_confirm_pay_to">Wyślij do</string>
+    <string name="dialog_confirm_secured_by">Zabezpieczony przez</string>
     <string name="dialog_confirm_fee">Opłata sieci</string>
     <string name="dialog_confirm_total">Całkowite</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Zabezpiecz Portfel Teraz</string>
+    <string name="shortcut_secure_now">Zabezpiecz Portfel Teraz</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Skanuj by Wysłać</string>
+    <string name="shortcut_scan_to_pay">Zeskanuj by Zapłacić</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Zapłać na Adres</string>
+    <string name="shortcut_pay_to_address">Zapłać na Adres</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Kupuj / Sprzedawaj Dash</string>
+    <string name="shortcut_buy_sell">Kupuj / Sprzedawaj Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Zaimportuj Klucz Prywatny</string>
+    <string name="shortcut_receive">Odbierz</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Dodaj skrót</string>
+    <string name="shortcut_import_key">Zaimportuj Klucz Prywatny</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Dodaj skrót</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Szybki Odbierz</string>
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">Odbierz</string>
     <string name="payments_pay_by_qr_title">Wyślij przez</string>
     <string name="payments_pay_by_qr_sub_title">Zeskanuj QR Kod</string>
-    <string name="payments_pay_by_qr_button">Zeskanuj</string>
     <string name="payments_pay_to_clipboard_title">Wyślij do skopiowanego adresu</string>
     <string name="payments_pay_to_clipboard_sub_title">Brak skopiowanego adresu</string>
-    <string name="payments_pay_to_clipboard_button">Wyślij</string>
 
     <string name="forgot_pin_title">Zapomniałeś kodu PIN?</string>
     <string name="forgot_pin_message">Możesz ustawić nowy kod PIN za pomocą frazy odzyskiwania danych</string>
@@ -166,7 +165,7 @@
         <item quantity="other">godzin</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Aktualizuj</string>
+    <string name="upgrade">Aktualizuj</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizuj swój portfel</string>
     <string name="encrypt_new_key_chain_dialog_message">Twój portfel zostanie zaktualizowany aby umożliwić importowanie z oraz eksportowanie do nowych aplikacji.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Musisz wpisać swój PIN aby dokończyć proces aktualizacji.</string>
@@ -195,8 +194,8 @@
     <string name="touch_fingerprint_sensor">Dotykowy czujnik linii papilarnych</string>
     <string name="touch_fingerprint_to_enable">Dotknij czytnik odcisku palca aby aktywować odblokowywanie za jego pomocą.</string>
     <string name="fingerprint_changed_title">Dane linii papilarnych zostały zmienione</string>
-	<string name="fingerprint_changed_message">Wykryliśmy zmianę danych uwierzytelniających odcisk palca. Tym razem musisz użyć kodu PIN.</string>
-	<string name="exchange_rate_missing">Ta płatność jest zbyt stara aby otrzymać jej wartość w walucie fiducjarnej.</string>
+    <string name="fingerprint_changed_message">Wykryliśmy zmianę danych uwierzytelniających odcisk palca. Tym razem musisz użyć kodu PIN.</string>
+    <string name="exchange_rate_missing">Ta płatność jest zbyt stara aby otrzymać jej wartość w walucie fiducjarnej.</string>
 
     <string name="preferences_enable_payment_request_summary">Użyj protokołu płatności dla płatności inicjowanych kodem QR</string>
     <string name="preferences_enable_payment_request_title">BIP70 dla scan-by-zapłacić</string>
@@ -221,13 +220,13 @@
     <string name="verify_seed_success_message">Twój portfel jest teraz zabezpieczony. Możesz użyć swojej frazy odzyskiwania w dowolnym momencie, aby odzyskać konto na innym urządzeniu.</string>
     <string name="view_seed_done">Zrobione</string>
     <string name="view_seed_title">Fraza Odzyskiwania</string>
-	<string name="transaction_result_view_on_explorer">Zobacz na eksplorerze bloków</string>
-	<string name="transaction_result_paid_successfully">Wysłane pomyślnie</string>
-	<string name="transaction_result_sent_to">Wysłane do</string>
-	<string name="transaction_date_and_time">Data</string>
-	<string name="transaction_close">Zamknij</string>
-	<string name="transaction_details_amount_received">Ilość otrzymana</string>
-	<string name="transaction_details_amount_sent">Ilość wysłana</string>
+    <string name="transaction_result_view_on_explorer">Zobacz na eksplorerze bloków</string>
+    <string name="transaction_result_paid_successfully">Wysłane pomyślnie</string>
+    <string name="transaction_result_sent_to">Wysłane do</string>
+    <string name="transaction_date_and_time">Data</string>
+    <string name="transaction_close">Zamknij</string>
+    <string name="transaction_details_amount_received">Ilość otrzymana</string>
+    <string name="transaction_details_amount_sent">Ilość wysłana</string>
     <string name="transaction_details_sent_from">Wysłane z</string>
     <string name="transaction_details_sent_to">Wysłane do</string>
     <string name="transaction_details_received_at">Odebrane przez</string>

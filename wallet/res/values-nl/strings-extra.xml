@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Verifieer pin</string>
     <string name="set_pin_message">Deze PIN is vereist om uw app elke keer te ontgrendelen wanneer u deze gebruikt.</string>
 
-    <string name="home_pay">Verstuur</string>
-    <string name="home_receive">Ontvang</string>
     <string name="home_available_balance">Beschikbaar saldo</string>
     <string name="home_balance_hidden">Saldo verborgen</string>
     <string name="home_balance_show_hint">Tik om saldo te zien</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Bevestig</string>
     <string name="dialog_confirm_pay_to">Verstuur naar</string>
+    <string name="dialog_confirm_secured_by">Beveiligd door</string>
     <string name="dialog_confirm_fee">Netwerk transactiekosten</string>
     <string name="dialog_confirm_total">Totaal</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Beveilig portemonnee nu</string>
+    <string name="shortcut_secure_now">Beveilig portemonnee nu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Scan om te verzenden</string>
+    <string name="shortcut_scan_to_pay">Scan om te verzenden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Versturen naar adres</string>
+    <string name="shortcut_pay_to_address">Versturen naar adres</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Koop / verkoop Dash</string>
+    <string name="shortcut_buy_sell">Koop / verkoop Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Importeer persoonlijke sleutel</string>
+    <string name="shortcut_receive">Ontvang</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Voeg snelkoppeling toe</string>
+    <string name="shortcut_import_key">Importeer persoonlijke sleutel</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Voeg snelkoppeling toe</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Snel Ontvangen</string>
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">Ontvangen</string>
     <string name="payments_pay_by_qr_title">Verstuurd door</string>
     <string name="payments_pay_by_qr_sub_title">QR Code scannen</string>
-    <string name="payments_pay_by_qr_button">Scan</string>
     <string name="payments_pay_to_clipboard_title">Versturen naar gekopieerd adres</string>
     <string name="payments_pay_to_clipboard_sub_title">Geen adres gekopieerd</string>
-    <string name="payments_pay_to_clipboard_button">Verstuur</string>
 
     <string name="forgot_pin_title">PIN vergeten?</string>
     <string name="forgot_pin_message">Je kan een nieuwe pin instellen met behulp van je herstelzin</string>
@@ -160,7 +159,7 @@
         <item quantity="other">uren</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Upgrade</string>
+    <string name="upgrade">Upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">Doe een upgrade van je portemonnee</string>
     <string name="encrypt_new_key_chain_dialog_message">Je portemonnee krijgt een upgrade om importeren van en exporteren naar meerdere apps mogelijk te maken.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Je moet je pin invoeren om het upgradeproces te voltooien.</string>
@@ -189,8 +188,8 @@
     <string name="touch_fingerprint_sensor">Raak de vingerafdruk sensor aan.</string>
     <string name="touch_fingerprint_to_enable">Raak de vingerafdruk sensor aan om ontgrendelen met vingerafdruk te activeren.</string>
     <string name="fingerprint_changed_title">Vingerafdruk gegevens gewijzigd</string>
-	<string name="fingerprint_changed_message">We hebben een wijziging in uw vingerafdrukverificatie gedetecteerd. U moet deze keer uw PIN gebruiken.</string>
-	<string name="exchange_rate_missing">Deze betaling is te oud om de fiat-waarde te verkrijgen.</string>
+    <string name="fingerprint_changed_message">We hebben een wijziging in uw vingerafdrukverificatie gedetecteerd. U moet deze keer uw PIN gebruiken.</string>
+    <string name="exchange_rate_missing">Deze betaling is te oud om de fiat-waarde te verkrijgen.</string>
 
     <string name="preferences_enable_payment_request_summary">Gebruik betalingsprotocol voor QR-code geïnitieerde betalingen</string>
     <string name="preferences_enable_payment_request_title">BIP70 voor scan-to-pay</string>
@@ -215,13 +214,13 @@
     <string name="verify_seed_success_message">Uw portemonnee is nu beveiligd. U kunt uw herstelzin op elk gewenst moment gebruiken om uw account op een ander apparaat te herstellen.</string>
     <string name="view_seed_done">Klaar</string>
     <string name="view_seed_title">Herstelzin</string>
-	<string name="transaction_result_view_on_explorer">Bekijk in Block Explorer</string>
-	<string name="transaction_result_paid_successfully">Succesvol verzonden</string>
-	<string name="transaction_result_sent_to">Verzonden naar</string>
-	<string name="transaction_date_and_time">Datum</string>
-	<string name="transaction_close">Sluiten</string>
-	<string name="transaction_details_amount_received">Ontvangen bedrag</string>
-	<string name="transaction_details_amount_sent">Verzonden bedrag</string>
+    <string name="transaction_result_view_on_explorer">Bekijk in Block Explorer</string>
+    <string name="transaction_result_paid_successfully">Succesvol verzonden</string>
+    <string name="transaction_result_sent_to">Verzonden naar</string>
+    <string name="transaction_date_and_time">Datum</string>
+    <string name="transaction_close">Sluiten</string>
+    <string name="transaction_details_amount_received">Ontvangen bedrag</string>
+    <string name="transaction_details_amount_sent">Verzonden bedrag</string>
     <string name="transaction_details_sent_from">Verzonden vanaf</string>
     <string name="transaction_details_sent_to">Verzonden naar</string>
     <string name="transaction_details_received_at">Ontvangen met</string>

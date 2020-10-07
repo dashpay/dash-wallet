@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -25,7 +26,10 @@ import android.app.KeyguardManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -86,6 +90,7 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
+import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
@@ -125,6 +130,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     public static final long TIME_CREATE_APPLICATION = System.currentTimeMillis();
 
     private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
+
+    private static final int BLOCKCHAIN_SYNC_JOB_ID = 1;
 
     private boolean deviceWasLocked = false;
 
@@ -696,6 +703,15 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public static void scheduleStartBlockchainService(final Context context) {
+        scheduleStartBlockchainService(context, false);
+    }
+
+    public void cancelScheduledStartBlockchainService() {
+        scheduleStartBlockchainService(this, true);
+    }
+
+    @SuppressLint("NewApi")
+    public static void scheduleStartBlockchainService(final Context context, Boolean cancelOnly) {
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
                 context.getResources());
         final long lastUsedAgo = config.getLastUsedAgo();
@@ -708,6 +724,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             alarmInterval = AlarmManager.INTERVAL_HALF_DAY;
         else
             alarmInterval = AlarmManager.INTERVAL_DAY;
+
+        final long alarmIntervalMinutes = TimeUnit.MILLISECONDS.toMinutes(alarmInterval);
 
         log.info("last used {} minutes ago, rescheduling blockchain sync in roughly {} minutes",
                 lastUsedAgo / DateUtils.MINUTE_IN_MILLIS, alarmInterval / DateUtils.MINUTE_IN_MILLIS);
@@ -726,10 +744,31 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         }
         alarmManager.cancel(alarmIntent);
 
-        // workaround for no inexact set() before KitKat
-        final long now = System.currentTimeMillis();
-        alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
-                alarmIntent);
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.O || Build.VERSION.SDK_INT == Build.VERSION_CODES.O_MR1) {
+            log.info("custom sync scheduling with JobScheduler for Android 8 and 8.1");
+            JobScheduler jobScheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+            if (cancelOnly) {
+                jobScheduler.cancel(BLOCKCHAIN_SYNC_JOB_ID);
+                return;
+            }
+            JobInfo pendingJob = jobScheduler.getPendingJob(BLOCKCHAIN_SYNC_JOB_ID);
+            if (pendingJob == null || pendingJob.getIntervalMillis() != alarmInterval) {
+                ComponentName jobService = new ComponentName(context, BlockchainSyncJobService.class);
+                JobInfo jobInfo = new JobInfo.Builder(BLOCKCHAIN_SYNC_JOB_ID, jobService)
+                        .setPeriodic(alarmInterval)
+                        .setPersisted(true)
+                        .build();
+                int scheduleResult = jobScheduler.schedule(jobInfo);
+                log.info("scheduling blockchain sync job with interval of {} minutes, result: {}", alarmIntervalMinutes, scheduleResult);
+            } else {
+                log.info("blockchain sync job already scheduled with interval of {} minutes", alarmIntervalMinutes);
+            }
+        } else if (!cancelOnly) {
+            // workaround for no inexact set() before KitKat
+            final long now = System.currentTimeMillis();
+            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + alarmInterval, AlarmManager.INTERVAL_DAY,
+                    alarmIntent);
+        }
     }
 
     /**
@@ -750,6 +789,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public void finalizeWipe() {
+        cancelScheduledStartBlockchainService();
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
@@ -770,7 +810,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                PlatformRepo.getInstance().clearDatabases();
+                PlatformRepo.getInstance().clearDatabase();
                 ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });

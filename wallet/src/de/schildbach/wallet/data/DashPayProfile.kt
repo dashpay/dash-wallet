@@ -21,7 +21,7 @@ data class DashPayProfile(@PrimaryKey val userId: String,
             return if (document.data.containsKey(field)) {
                 document.data[field] as String
             } else {
-                ""
+                defaultValue
             }
         }
 

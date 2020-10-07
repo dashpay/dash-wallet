@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Потвърждаване на ПИН</string>
     <string name="set_pin_message">Този ПИН ще бъде необходим за отключване на приложението ви всеки път, когато го използвате.</string>
 
-    <string name="home_pay">Изпрати</string>
-    <string name="home_receive">Получени</string>
     <string name="home_available_balance">Наличен баланс</string>
     <string name="home_balance_hidden">Скрит баланс</string>
     <string name="home_balance_show_hint">Докоснете, за да покажете баланса</string>
@@ -29,17 +27,19 @@
     <string name="dialog_confirm_total">Общо</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Подсигури портфейл сега</string>
+    <string name="shortcut_secure_now">Подсигури портфейл сега</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Сканиране за изпращане</string>
+    <string name="shortcut_scan_to_pay">Сканирай на Pay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Изпрати до адрес</string>
+    <string name="shortcut_pay_to_address">Изпрати до адрес</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Купи/Продай Dash</string>
+    <string name="shortcut_buy_sell">Купи/Продай Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Импортиране на частен ключ.</string>
+    <string name="shortcut_receive">Получаване</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Добави пряк път</string>
+    <string name="shortcut_import_key">Импортиране на частен ключ.</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Добави пряк път</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Бързо получаване</string>
@@ -80,10 +80,8 @@
     <string name="payments_tab_receive_label">Получаване</string>
     <string name="payments_pay_by_qr_title">Изпращане от</string>
     <string name="payments_pay_by_qr_sub_title">Сканиране на QR код</string>
-    <string name="payments_pay_by_qr_button">Сканирай</string>
     <string name="payments_pay_to_clipboard_title">Изпрати до копираният адрес</string>
     <string name="payments_pay_to_clipboard_sub_title">Няма копиран адрес</string>
-    <string name="payments_pay_to_clipboard_button">Изпрати</string>
 
     <string name="forgot_pin_title">Забравен ПИН?</string>
     <string name="forgot_pin_message">Можете да зададете нов ПИН с помощта на вашата фраза за възстановяване.</string>
@@ -160,7 +158,7 @@
         <item quantity="other">часа</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Надграждане</string>
+    <string name="upgrade">Надграждане</string>
     <string name="encrypt_new_key_chain_dialog_title">Надгради своят портфейл</string>
     <string name="encrypt_new_key_chain_dialog_message">Вашият портфейл ще бъде надграден, за да поддържа импортирането и експортирането в още приложения.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Трябва да въведете вашият ПИН за да завършите процесът на надграждане.</string>
@@ -189,8 +187,8 @@
     <string name="touch_fingerprint_sensor">Докоснете сензора за пръстов отпечатък.</string>
     <string name="touch_fingerprint_to_enable">Докоснете сензора за да активиране отключване с пръстов отпечатък.</string>
     <string name="fingerprint_changed_title">Данни за пръстовият отпечатък са променени</string>
-	<string name="fingerprint_changed_message">Установихме промяна във вашите данни за удостоверяване с пръстов отпечатък. Този път трябва да използвате ПИН.</string>
-	<string name="exchange_rate_missing">Това плащане е прекалено старо, за да се получи стойността му във фиат.</string>
+    <string name="fingerprint_changed_message">Установихме промяна във вашите данни за удостоверяване с пръстов отпечатък. Този път трябва да използвате ПИН.</string>
+    <string name="exchange_rate_missing">Това плащане е прекалено старо, за да се получи стойността му във фиат.</string>
 
     <string name="preferences_enable_payment_request_summary">Използвайте платежен протокол за инициираните на плащане с  QR-код </string>
     <string name="preferences_enable_payment_request_title">BIP70 за сканиране и плащане</string>
@@ -215,13 +213,13 @@
     <string name="verify_seed_success_message">Вашият портфейл сега е защитен. Можете да използвате вашата фраза за възстановяване по всяко време, за да възстановите акаунта си на друго устройство.</string>
     <string name="view_seed_done">Завършено</string>
     <string name="view_seed_title">Фраза за възстановяване</string>
-	<string name="transaction_result_view_on_explorer">Преглед в Block Explorer</string>
-	<string name="transaction_result_paid_successfully">Изпратено успешно</string>
-	<string name="transaction_result_sent_to">Изпратени на</string>
-	<string name="transaction_date_and_time">Дата</string>
-	<string name="transaction_close">Затвори</string>
-	<string name="transaction_details_amount_received">Получена сума</string>
-	<string name="transaction_details_amount_sent">Изпратена сума</string>
+    <string name="transaction_result_view_on_explorer">Преглед в Block Explorer</string>
+    <string name="transaction_result_paid_successfully">Изпратено успешно</string>
+    <string name="transaction_result_sent_to">Изпратени на</string>
+    <string name="transaction_date_and_time">Дата</string>
+    <string name="transaction_close">Затвори</string>
+    <string name="transaction_details_amount_received">Получена сума</string>
+    <string name="transaction_details_amount_sent">Изпратена сума</string>
     <string name="transaction_details_sent_from">Изпрати от</string>
     <string name="transaction_details_sent_to">Изпратени на</string>
     <string name="transaction_details_received_at">Получени в</string>
@@ -245,8 +243,6 @@
     <string name="menu_local_currency">Местна валута</string>
     <string name="menu_rescan_blockchain">Повторно сканиране на блок-веригата</string>
     <string name="menu_contact_support_title">Връзка с поддръжката</string>
-    <string name="menu_contact_support_subtitle">Докладвай проблем</string>
-
     <string name="tools_address_book">Адресна книга</string>
     <string name="tools_import_private_key">Импортиране на частен ключ.</string>
     <string name="tools_network_monitor">Наблюдение на мрежата</string>

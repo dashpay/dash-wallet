@@ -1,5 +1,6 @@
 package de.schildbach.wallet.rates;
 
+import android.content.Context;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
@@ -64,11 +65,7 @@ public class ExchangeRate {
         return currency;
     }
 
-    public String getCurrencyName() {
-        //VES special case
-        if (currencyCode.equalsIgnoreCase("VES")) {
-            return "Venezuelan Bolívar";
-        }
+    public String getCurrencyName(Context context) {
 
         if (currencyName == null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
@@ -85,7 +82,7 @@ public class ExchangeRate {
                 } else currencyName = currencyCode;
 
                 if(currencyCode.toUpperCase().equals(currencyName.toUpperCase())) {
-                    currencyName = CurrencyInfo.getOtherCurrencyName(currencyCode);
+                    currencyName = CurrencyInfo.getOtherCurrencyName(currencyCode, context);
                 }
             } else {
                 // before kitkat, no names will be displayed

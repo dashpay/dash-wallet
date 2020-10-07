@@ -232,8 +232,8 @@ public class SendCoinsFragment extends Fragment {
                 switch (status) {
                     case SUCCESS: {
                         viewModel.state.setValue(SendCoinsViewModel.State.SENDING);
-                        Transaction transaction = (Transaction) sendCoinsData.getSecond();
-                        onSignAndSendPaymentSuccess(transaction);
+                        SendRequest sendRequest = (SendRequest) sendCoinsData.getSecond();
+                        onSignAndSendPaymentSuccess(sendRequest.tx);
                         break;
                     }
                     case INSUFFICIENT_MONEY: {

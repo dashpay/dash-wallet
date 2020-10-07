@@ -22,13 +22,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.appcompat.widget.Toolbar
-import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedItIsImportantFragment : Fragment() {
+class VerifySeedItIsImportantFragment : VerifySeedBaseFragment() {
 
     private val showRecoveryPhraseBtn: Button by lazy {
         view!!.findViewById<Button>(R.id.verify_show_recovery_phrase_button)

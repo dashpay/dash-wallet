@@ -21,13 +21,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import androidx.fragment.app.Fragment
 import de.schildbach.wallet_test.R
 
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedSecureNowFragment : Fragment() {
+class VerifySeedSecureNowFragment : VerifySeedBaseFragment() {
 
     private val secureNowBtn: Button by lazy { view!!.findViewById<Button>(R.id.verify_secure_now_button) }
     private val skipBtn: Button by lazy { view!!.findViewById<Button>(R.id.verify_skip_button) }
