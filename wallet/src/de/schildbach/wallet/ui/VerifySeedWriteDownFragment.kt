@@ -52,7 +52,7 @@ class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment
         view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
 
         if (arguments?.containsKey("seed")!!) {
-            val seed = arguments!!.getStringArray("seed")
+            val seed = arguments!!.getStringArray("seed")!!
             val sb = StringBuilder(12)
             seed.forEach {
                 sb.append("$it  ")
