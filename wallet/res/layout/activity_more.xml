@@ -269,7 +269,6 @@
                         app:layout_constraintTop_toBottomOf="@+id/contact_support_title" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
-
             </LinearLayout>
 
         </LinearLayout>

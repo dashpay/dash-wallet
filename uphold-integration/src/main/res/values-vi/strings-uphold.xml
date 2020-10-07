@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">Dịch vụ của Uphold chưa sẵn sàng. Hãy thử lại sau đó xem sao.</string>
     <string name="uphold_error_report_issue">Hãy báo vấn đề này với nhóm hỗ trợ của ví Dash Wallet bằng chức năng “Báo lỗi” trên menu chính.</string>
 
+    <string name="uphold_general_error_title">Lỗi</string>
+    <string name="uphold_api_error_title">Lỗi Uphold</string>
+    <string name="uphold_api_error_identity">Tài khoản Uphold của bạn chưa được xác thực. Tiền không thể rút ra được.</string>
+    <string name="uphold_api_error_403_description">Tài khoản Uphold của bạn đã bị đánh dấu để xem xét lại.\n\nUphold đã tạm thời giới hạn tài khoản của bạn và bạn không thể rút được tiền.\n\nUphold sẽ liên hệ với bạn để giải quyết vấn đề này một cách nhanh chóng.</string>
+    <string name="uphold_api_error_400_description">Tiền tại Uphold bị khoá trong vòng 24 giờ.\n\nBạn sẽ đủ tiền cho giao dịch này trước %s.</string>
 </resources>

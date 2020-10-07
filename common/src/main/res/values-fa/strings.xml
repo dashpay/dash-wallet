@@ -5,4 +5,22 @@
     <string name="loading_error">خطایی روی داده است. لطفا دوباره تلاش کنید.</string>
     <string name="dash_available">%1$sموجود است</string>
 
+    <!-- Local Currency List: GGP -->
+    <string name="currency_GGP">گرنزی پاوند</string>
+    <!-- Local Currency List: JEP -->
+    <string name="currency_JEP">جرسی پاوند</string>
+    <!-- Local Currency List: IMP -->
+    <string name="currency_IMP">‌ایسل او من پاوند</string>
+    <!-- Local Currency List: USDC is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_USDC">یو‌اس‌دی کوین</string>
+    <!-- Local Currency List: Litecoin cryptocurrency -->
+    <string name="currency_LTC">لایت‌کوین</string>
+    <!-- Local Currency List: Ethereum cryptocurrency -->
+    <string name="currency_ETH">اتریوم</string>
+    <!-- Local Currency List: Bitcoin cryptocurrency -->
+    <string name="currency_BTC">بیت‌کوین</string>
+    <!-- Local Currency List: PAX is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_PAX">پاکسوس استاندارد</string>
+    <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_GUSD">دلار جمینای</string>
 </resources>

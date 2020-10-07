@@ -11,6 +11,7 @@ import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
@@ -22,6 +23,8 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -34,6 +37,8 @@ import de.schildbach.wallet.ui.dashpay.ContactsFragment
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
@@ -74,10 +79,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
+    private lateinit var viewModel: MainActivityViewModel
+
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
     private val config: Configuration by lazy { walletApplication.configuration }
     private var fingerprintHelper: FingerprintHelper? = null
+    private var retryCreationIfInProgress = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,6 +94,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
         }
         setContentView(R.layout.activity_main)
+
+        initViewModel()
 
         if (savedInstanceState == null) {
             checkAlerts()
@@ -100,6 +110,31 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         initFingerprintHelper()
         setupBottomNavigation()
+    }
+
+    fun initViewModel() {
+        viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
+        viewModel.isAbleToCreateIdentityData.observe(this, Observer {
+            // empty observer just to trigger data loading
+            // viewModel is shared with some fragments keeping the observer active
+            // inside the parent Activity will avoid recreation of relatively complex
+            // isAbleToCreateIdentityData LiveData
+        })
+        viewModel.blockchainIdentityData.observe(this, Observer {
+            if (it != null) {
+                if (retryCreationIfInProgress && it.creationInProgress) {
+                    retryCreationIfInProgress = false
+                    startService(CreateIdentityService.createIntentForRetry(this, false))
+                }
+            }
+        })
+        viewModel.goBackAndStartActivityEvent.observe(this, Observer {
+            goBack(true)
+            //Delay added to prevent fragment being removed and activity being launched "at the same time"
+            Handler().postDelayed({
+                startActivity(Intent(this, it))
+            }, 500)
+        })
     }
 
     override fun onResume() {
@@ -157,7 +192,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun addFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                                exitAnim: Int = R.anim.fragment_out, replace: Boolean = true) {
+                            exitAnim: Int = R.anim.fragment_out, replace: Boolean = true) {
         val transaction = startFragmentTransaction(enterAnim, exitAnim)
         transaction.add(R.id.fragment_container, fragment)
         transaction.addToBackStack(null).commit()
@@ -170,7 +205,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         transaction.addToBackStack(null).commit()
     }
 
-    private fun goBack(goHome: Boolean = false): Boolean {
+    fun goBack(goHome: Boolean = false): Boolean {
         if (!goHome && supportFragmentManager.backStackEntryCount > 1) {
             supportFragmentManager.popBackStack()
             return true
@@ -185,11 +220,16 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
         bottom_navigation.menu.findItem(R.id.contacts)?.isChecked = true
-        val contactsFragment = ContactsFragment.newInstance(mode)
-        if (mode == MODE_VIEW_REQUESTS) {
-            addFragment(contactsFragment)
+
+        if (viewModel.hasIdentity) {
+            val contactsFragment = ContactsFragment.newInstance(mode)
+            if (mode == MODE_VIEW_REQUESTS) {
+                addFragment(contactsFragment)
+            } else {
+                replaceFragment(contactsFragment)
+            }
         } else {
-            replaceFragment(contactsFragment)
+            replaceFragment(UpgradeToEvolutionFragment.newInstance())
         }
     }
 
@@ -678,5 +718,4 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             it.onActivityResult(requestCode, resultCode, data)
         }
     }
-
 }

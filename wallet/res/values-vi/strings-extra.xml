@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Đang kiểm tra mã PIN</string>
     <string name="set_pin_message">Mã PIN này sẽ được hỏi để mở ứng dụng của bạn mỗi khi bạn sử dụng nó.</string>
 
-    <string name="home_pay">Gửi</string>
-    <string name="home_receive">Nhận</string>
     <string name="home_available_balance">Số dư hiện có</string>
     <string name="home_balance_hidden">Số dư ẩn</string>
     <string name="home_balance_show_hint">Bấm để hiện số dư</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Xác nhận</string>
     <string name="dialog_confirm_pay_to">Gửi đến</string>
+    <string name="dialog_confirm_secured_by">Bảo mật bởi</string>
     <string name="dialog_confirm_fee">Phí giao dịch</string>
     <string name="dialog_confirm_total">Tổng số</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Bảo mật ví ngay</string>
+    <string name="shortcut_secure_now">Bảo mật ví ngay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Quét để gửi</string>
+    <string name="shortcut_scan_to_pay">Quét để thanh toán</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Gửi đến địa chỉ</string>
+    <string name="shortcut_pay_to_address">Gửi đến địa chỉ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Mua &amp; Bán Dash</string>
+    <string name="shortcut_buy_sell">Mua &amp; Bán Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Nhập khoá riêng</string>
+    <string name="shortcut_receive">Nhận</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Thêm shortcut</string>
+    <string name="shortcut_import_key">Nhập khoá riêng</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Thêm shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Nhận nhanh</string>
@@ -80,10 +81,8 @@
     <string name="payments_tab_receive_label">Nhận</string>
     <string name="payments_pay_by_qr_title">Gửi bởi</string>
     <string name="payments_pay_by_qr_sub_title">Quét mã QR</string>
-    <string name="payments_pay_by_qr_button">Quét</string>
     <string name="payments_pay_to_clipboard_title">Gửi đến địa chỉ đã được copy</string>
     <string name="payments_pay_to_clipboard_sub_title">Không có địa chỉ nào được copy</string>
-    <string name="payments_pay_to_clipboard_button">Gửi</string>
 
     <string name="forgot_pin_title">Quên mã PIN</string>
     <string name="forgot_pin_message">Bạn có thể thiết lập mã PIN mới với sự giúp đỡ của câu phục hồi.</string>
@@ -157,7 +156,7 @@
         <item quantity="other">giờ</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Nâng cấp</string>
+    <string name="upgrade">Nâng cấp</string>
     <string name="encrypt_new_key_chain_dialog_title">Nâng cấp ví</string>
     <string name="encrypt_new_key_chain_dialog_message">Ví của bạn sẽ được nâng cấp để hỗ trợ việc đưa dữ liệu vào hoặc xuất dữ liệu ra cho các app khác.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Bạn phải nhập mã PIN của bạn để hoàn tất việc nâng cấp.</string>
@@ -186,8 +185,8 @@
     <string name="touch_fingerprint_sensor">Hãy chạm tay vào cảm biến vân tay</string>
     <string name="touch_fingerprint_to_enable">Hãy chạm vào cảm biến vân tay để bật tính năng mở khoá vằng vân tay.</string>
     <string name="fingerprint_changed_title">Dữ liệu vân tay đã bị thay đổi</string>
-	<string name="fingerprint_changed_message">Chúng tôi phát hiện thấy có một thay đổi trong dữ liệu xác thực vân tay của bạn. Bạn cần sử dụng mã PIN lần này.</string>
-	<string name="exchange_rate_missing">Giao dịch này đã quá lâu để có thể tìm được giá quy đổi ra tiền thông thường.</string>
+    <string name="fingerprint_changed_message">Chúng tôi phát hiện thấy có một thay đổi trong dữ liệu xác thực vân tay của bạn. Bạn cần sử dụng mã PIN lần này.</string>
+    <string name="exchange_rate_missing">Giao dịch này đã quá lâu để có thể tìm được giá quy đổi ra tiền thông thường.</string>
 
     <string name="preferences_enable_payment_request_summary">Sử dụng giao thức thanh toán cho việc khởi tạo giao dịch bằng mã QR.</string>
     <string name="preferences_enable_payment_request_title">BIP70 dùng cho việc quét-mã-để-thanh-toán</string>
@@ -212,13 +211,13 @@
     <string name="verify_seed_success_message">Ví của bạn bây giờ đã được bảo mật. Bạn có thể sử dụng câu phục hồi của mình bất cứ khi nào để khôi phục lại tiền của mình trên một thiết bị khác.</string>
     <string name="view_seed_done">Xong</string>
     <string name="view_seed_title">Cụm từ phục hồi</string>
-	<string name="transaction_result_view_on_explorer">Xem trên công cụ khám phá khối</string>
-	<string name="transaction_result_paid_successfully">Đã gửi thành công</string>
-	<string name="transaction_result_sent_to">Gửi đến</string>
-	<string name="transaction_date_and_time">Ngày</string>
-	<string name="transaction_close">Đóng</string>
-	<string name="transaction_details_amount_received">Số tiền nhận được</string>
-	<string name="transaction_details_amount_sent">Số tiền đã gửi</string>
+    <string name="transaction_result_view_on_explorer">Xem trên công cụ khám phá khối</string>
+    <string name="transaction_result_paid_successfully">Đã gửi thành công</string>
+    <string name="transaction_result_sent_to">Gửi đến</string>
+    <string name="transaction_date_and_time">Ngày</string>
+    <string name="transaction_close">Đóng</string>
+    <string name="transaction_details_amount_received">Số tiền nhận được</string>
+    <string name="transaction_details_amount_sent">Số tiền đã gửi</string>
     <string name="transaction_details_sent_from">Gửi đến từ</string>
     <string name="transaction_details_sent_to">Gửi đến</string>
     <string name="transaction_details_received_at">Nhận được tại</string>

@@ -12,5 +12,5 @@ class NotificationItemContact(val usernameSearchResult: UsernameSearchResult, va
         }
     }
 
-    override fun getDate() = usernameSearchResult.date * 1000
+    override fun getDate() = usernameSearchResult.date
 }

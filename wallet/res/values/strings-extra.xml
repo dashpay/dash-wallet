@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Verifying PIN</string>
     <string name="set_pin_message">This PIN will be required to unlock your app every time when you use it.</string>
 
-    <string name="home_pay">Send</string>
-    <string name="home_receive">Receive</string>
     <string name="home_available_balance">Available balance</string>
     <string name="home_balance_hidden">Balance hidden</string>
     <string name="home_balance_show_hint">Tap to unhide balance</string>
@@ -31,19 +29,23 @@
     <string name="dialog_confirm_accept_contact_request">Accept contact request</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Secure Wallet Now</string>
+    <string name="shortcut_secure_now">Secure Wallet Now</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_join_dashpay">Join DashPay</string>
+    <string name="shortcut_action_join_dashpay">Join DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Scan to Send</string>
+    <string name="shortcut_scan_to_pay">Scan to Send</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Send to Address</string>
+    <string name="shortcut_pay_to_address">Send to Address</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Buy / Sell Dash</string>
+    <string name="shortcut_pay_to_contact">Send to Contact</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Import Private Key</string>
+    <string name="shortcut_buy_sell">Buy / Sell Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Add Shortcut</string>
+    <string name="shortcut_receive">Receive</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_import_key">Import Private Key</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Add Shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Quick Receive</string>
@@ -165,7 +167,7 @@
         <item quantity="other">hours</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Upgrade</string>
+    <string name="upgrade">Upgrade</string>
     <string name="encrypt_new_key_chain_dialog_title">Upgrade your wallet</string>
     <string name="encrypt_new_key_chain_dialog_message">Your wallet will be upgraded to support importing from and exporting to more apps.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">You must enter your PIN to finish the upgrade process.</string>
@@ -198,8 +200,8 @@
     <string name="touch_fingerprint_sensor">Touch fingerprint sensor</string>
     <string name="touch_fingerprint_to_enable">Touch the fingerprint sensor to enable unlocking with fingerprint.</string>
     <string name="fingerprint_changed_title">Fingerprint data changed</string>
-	<string name="fingerprint_changed_message">We detected a change in your fingerprint authentication data. You need to use PIN this time.</string>
-	<string name="exchange_rate_missing">This payment is too old to get the fiat value.</string>
+    <string name="fingerprint_changed_message">We detected a change in your fingerprint authentication data. You need to use PIN this time.</string>
+    <string name="exchange_rate_missing">This payment is too old to get the fiat value.</string>
 
     <string name="preferences_enable_payment_request_summary">Use payment protocol for QR-code initiated payments</string>
     <string name="preferences_enable_payment_request_title">BIP70 for scan-to-pay</string>
@@ -224,13 +226,13 @@
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
     <string name="view_seed_done">Done</string>
     <string name="view_seed_title">Recovery Phrase</string>
-	<string name="transaction_result_view_on_explorer">View in Block Explorer</string>
-	<string name="transaction_result_paid_successfully">Sent successfully</string>
-	<string name="transaction_result_sent_to">Sent to</string>
-	<string name="transaction_date_and_time">Date</string>
-	<string name="transaction_close">Close</string>
-	<string name="transaction_details_amount_received">Amount Received</string>
-	<string name="transaction_details_amount_sent">Amount Sent</string>
+    <string name="transaction_result_view_on_explorer">View in Block Explorer</string>
+    <string name="transaction_result_paid_successfully">Sent successfully</string>
+    <string name="transaction_result_sent_to">Sent to</string>
+    <string name="transaction_date_and_time">Date</string>
+    <string name="transaction_close">Close</string>
+    <string name="transaction_details_amount_received">Amount Received</string>
+    <string name="transaction_details_amount_sent">Amount Sent</string>
     <string name="transaction_details_sent_from">Sent from</string>
     <string name="transaction_details_sent_to">Sent to</string>
     <string name="transaction_details_received_at">Received at</string>
@@ -336,7 +338,7 @@
     <string name="payment_request_please_try_again">Please try again</string>
     <string name="payment_request_try_again">Try Again</string>
     <string name="payment_request_problem_title">Payment was not acknowledged</string>
-    <string name="payment_request_problem_message">Your payment was processed but the server was not able to acknowledge it</string>
+    <string name="payment_request_problem_message">Your payment could not be processed by the server, please inquire with the merchant</string>
     <string name="payment_request_expired_title">Payment Request Expired</string>
     <string name="payment_request_close">Close</string>
     <string name="payment_request_skip">Skip</string>
@@ -427,5 +429,7 @@
     <string name="about_me">About me</string>
     <string name="char_count">%1$d/%2$d Characters</string>
     <string name="save">Save</string>
+    <string name="upgrade_to_evolution_title">Upgrade to Evolution</string>
+    <string name="upgrade_to_evolution_message">Create your Username, find friends &amp; family with their usernames and add them to your contacts</string>
 
 </resources>

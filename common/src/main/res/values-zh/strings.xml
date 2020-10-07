@@ -2,7 +2,25 @@
 <resources>
 
     <string name="loading">加载中...</string>
-    <string name="loading_error">发生错误，请稍后再试。</string>
+    <string name="loading_error">发生错误, 请稍后再试.</string>
     <string name="dash_available">%1$s 可用</string>
 
+    <!-- Local Currency List: GGP -->
+    <string name="currency_GGP">Guernsey镑</string>
+    <!-- Local Currency List: JEP -->
+    <string name="currency_JEP">Jersey镑</string>
+    <!-- Local Currency List: IMP -->
+    <string name="currency_IMP">Isle of Man镑</string>
+    <!-- Local Currency List: USDC is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_USDC">USDC稳定币</string>
+    <!-- Local Currency List: Litecoin cryptocurrency -->
+    <string name="currency_LTC">莱特币</string>
+    <!-- Local Currency List: Ethereum cryptocurrency -->
+    <string name="currency_ETH">以太坊</string>
+    <!-- Local Currency List: Bitcoin cryptocurrency -->
+    <string name="currency_BTC">比特币</string>
+    <!-- Local Currency List: PAX is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_PAX">Paxos Standard稳定币</string>
+    <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_GUSD">Gemini Dollar稳定币</string>
 </resources>

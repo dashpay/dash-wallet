@@ -16,8 +16,6 @@
     <string name="set_pin_verifying_pin">Ověřování PIN kódu</string>
     <string name="set_pin_message">Tento PIN bude požadován pro odemčení aplikace pokaždé, když ji budete chtít použít.</string>
 
-    <string name="home_pay">Poslat</string>
-    <string name="home_receive">Přijmout</string>
     <string name="home_available_balance">Dostupný zůstatek</string>
     <string name="home_balance_hidden">Skrytý zůstatek</string>
     <string name="home_balance_show_hint">Klepněte pro zobrazení zůstatku</string>
@@ -25,21 +23,24 @@
 
     <string name="dialog_confirm_confirm">Potvrdit</string>
     <string name="dialog_confirm_pay_to">Odeslat prostřednictvím</string>
+    <string name="dialog_confirm_secured_by">Zabezpečeno</string>
     <string name="dialog_confirm_fee">Poplatek síti</string>
     <string name="dialog_confirm_total">Celkem</string>
 
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_secure_now">Ihned zabezpečit peněženku</string>
+    <string name="shortcut_secure_now">Ihned peněženku zabezpečit</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_scan_to_pay">Poslat skenováním</string>
+    <string name="shortcut_scan_to_pay">Platit skenováním</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_pay_to_address">Odeslat na adresu</string>
+    <string name="shortcut_pay_to_address">Odeslat na adresu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_buy_sell">Koupit / Prodat Dash</string>
+    <string name="shortcut_buy_sell">Koupit / Prodat Dash</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_import_key">Importovat Privátní Klíč</string>
+    <string name="shortcut_receive">Přijmout</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="quick_action_add_shortcut">Přidat zkratku</string>
+    <string name="shortcut_import_key">Importovat Privátní Klíč</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_add_shortcut">Přidat zkratku</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Přijmout</string>
@@ -80,15 +81,16 @@
     <string name="payments_tab_receive_label">Přijmout</string>
     <string name="payments_pay_by_qr_title">Odeslat</string>
     <string name="payments_pay_by_qr_sub_title">Skenování QR kódu</string>
-    <string name="payments_pay_by_qr_button">Skenovat</string>
     <string name="payments_pay_to_clipboard_title">Odeslat na zkopírovanou adresu</string>
     <string name="payments_pay_to_clipboard_sub_title">Žádná zkopírovaná adresa</string>
-    <string name="payments_pay_to_clipboard_button">Poslat</string>
 
     <string name="forgot_pin_title">Zapomenutý PIN?</string>
     <string name="forgot_pin_message">Nový PIN můžete nastavit pomocí vaší fráze pro obnovení.</string>
     <string name="forgot_pin_instruction_1">Zadejte frázi pro obnovení vaší peněženky</string>
     <string name="forgot_pin_instruction_2">Nastavit nový PIN</string>
+    <string name="forgot_pin_instruction_3">Pro přístup k pěněžence se přihlaste novým kódem PIN</string>
+    <string name="forgot_pin_warning">Pokud jste zapoměli váš PIN a ztratili frázi pro obnovení, nelze už získat zpět přístup k pěněžence a vašim prostředkům.</string>
+
     <string name="send_coins_auto_lock_feasible">Tato transakce bude vyřízena okamžitě bez poplatku navíc.</string>
     <string name="send_coins_auto_lock_not_feasible">Vyřízení této transakce může trvat několik minut. Výřidit ji okamžitě za %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Výřízení této transakce může trvat několik minut.</string>
@@ -118,6 +120,8 @@
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" není slovo z fráze pro obnovení</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráze pro obnovení musí mít 12 slov</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Špátná fráze pro obnovení</string>
+    <string name="restore_wallet_from_invalid_seed_failure">Peněženka nemohla být obnovena:\n\%s\n\nŠpatná fráze pro obnovení?</string>
+
     <string name="send_coins_options_fee_category_zero">Bez poplatku</string>
     <string name="send_coins_fragment_hint_fee_zero">Poplatek nebude účtován. Použijte ‚bez poplatku‘ pouze pokud vám nezáleží na době trvání konfirmace.</string>
 
@@ -161,7 +165,7 @@
         <item quantity="other">hodin</item>
     </plurals>
 
-    <string name="encrypt_new_key_chain_upgrade_button">Aktualizace</string>
+    <string name="upgrade">Aktualizace</string>
     <string name="encrypt_new_key_chain_dialog_title">Aktualizovat peněženku</string>
     <string name="encrypt_new_key_chain_dialog_message">Peněženka bude aktualizována, aby mohla podporovat importování z a exportovaní do jiných aplikací.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Musíte zadat PIN pro dokončení procesu aktualizace.</string>
@@ -187,7 +191,10 @@
     <string name="unlock_with_fingerprint_error_max_attempts">Byl překročen maximální počet pokusů. Zkuste to později.</string>
     <string name="or_unlock_with_fingerprint">Nebo k odemčení použijte otisk prstu.</string>
     <string name="enable_fingerprint">Povolit otisk prstu</string>
+    <string name="touch_fingerprint_sensor">Dotkněte se snímače otisku prstu</string>
     <string name="touch_fingerprint_to_enable">Dotkněte se snímače otisku prstu pro umožnění odemčení otiskem prstu.</string>
+    <string name="fingerprint_changed_title">Údaje otisku prstu změněna</string>
+    <string name="fingerprint_changed_message">Detekována změna auotentizačních údaju otisku prstu. Tentokrát musíte použít PIN.</string>
     <string name="exchange_rate_missing">Tato platba je příliš stará na získání hodnoty fiat.</string>
 
     <string name="preferences_enable_payment_request_summary">Používat platební protokol pro platby iniciované QR kódem</string>
@@ -213,16 +220,25 @@
     <string name="verify_seed_success_message">Peněženka je teď zabezpečena. Frázi pro obnovení můžete kdykoliv použít pro obnovení na jiném zařízení.</string>
     <string name="view_seed_done">Hotovo</string>
     <string name="view_seed_title">Fráze Pro Obnovení</string>
-	<string name="transaction_result_paid_successfully">Úspešně odesláno</string>
-	<string name="transaction_result_sent_to">Odeslat na</string>
-	<string name="transaction_date_and_time">Datum</string>
-	<string name="transaction_close">Zavřít</string>
-	<string name="transaction_details_amount_received">Částka</string>
-	<string name="transaction_details_amount_sent">Odeslaná částka</string>
+    <string name="transaction_result_view_on_explorer">Zobrazit ve vyhledávači</string>
+    <string name="transaction_result_paid_successfully">Úspešně odesláno</string>
+    <string name="transaction_result_sent_to">Odeslat na</string>
+    <string name="transaction_date_and_time">Datum</string>
+    <string name="transaction_close">Zavřít</string>
+    <string name="transaction_details_amount_received">Částka</string>
+    <string name="transaction_details_amount_sent">Odeslaná částka</string>
     <string name="transaction_details_sent_from">Odesláno z</string>
     <string name="transaction_details_sent_to">Odeslat na</string>
     <string name="transaction_details_received_at">Přijato na</string>
     <string name="transaction_details_moved_from">Přesunuto z</string>
+    <string name="transaction_details_moved_internally_to">Interně přesunuto do</string>
+
+    <string name="authenticate_fingerprint_title">Ověřit</string>
+    <string name="authenticate_fingerprint_message">Pokračujte potvrzením otisku prstu</string>
+    <string name="authenticate_pin_message">Pokračujte zadáním kódu PIN</string>
+    <string name="authenticate_switch_to_fingerprint">Použít otisk prstu</string>
+    <string name="authenticate_switch_to_pin">Použít PIN</string>
+
     <string name="menu_buy_and_sell_title">Nákup a Prodej Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojte se s burzami třetích stran</string>
     <string name="menu_security_title">Zabezpečení</string>
@@ -243,10 +259,18 @@
     <string name="about_help_us_improve">Pomoztne nám aplikaci vylepšit</string>
     <string name="about_review_and_rate">Ohodnotit aplikaci</string>
     <string name="about_contact_support">Podpora</string>
+    <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>
     <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
 
+    <string name="block">Blok</string>
+    <string name="time">Čas</string>
+    <string name="hash">Hash</string>
+    <string name="block_info">Info bloku</string>
+
     <string name="scan_private_key">Skenovat privátní klíč</string>
+    <string name="scan_private_key_intro_1">Chystáte se přenést prostředky z papírové peněženky Dash.</string>
     <string name="scan_private_key_intro_2">Tímto přesenute všechny prostředky z původní peněženky na toto zařízení.</string>
     <string name="scan_private_key_intro_3">Po potvrzení transakce bude druhá peněženka bezcenná a z bezpečnostních důvodů by neměla být znovu používána.</string>
     <string name="confirm">Potvrdit</string>
@@ -260,7 +284,10 @@
     <string name="one_minute">1 minuta</string>
     <string name="five_minute">5 minutách</string>
     <string name="one_hour">1 hodina</string>
+    <string name="biometric_limit">Biometrický limit</string>
     <string name="spending_confirmation_hint_zero">Pro platby je vždy vyžadován PIN.</string>
+    <string name="spending_confirmation_hint_above_zero">Níže můžete provést ověření pomocí biometrického autentifikace pro platby</string>
+
     <string name="security_none">Žádná</string>
     <string name="security_low">Nízká</string>
     <string name="security_medium">Střední</string>
@@ -291,7 +318,21 @@
     <string name="sync_status_syncing_sub_title">s Dash blockchainem</string>
     <string name="sync_status_unable_to_connect">Nelze se připojit</string>
     <string name="sync_status_check_connection">Zkontrolujte vaše připojení</string>
+    <string name="sync_status_sync_title">Sync</string>
+    <string name="sync_status_sync_completed">Dokončeno</string>
+
+    <string name="appwidget_wallet_not_ready">Nastavte si peněženku</string>
+
+    <string name="payment_request_please_wait_title">Čekejte prosím</string>
+    <string name="payment_request_please_wait_message">Připojování k platebnímu serveru</string>
+    <string name="payment_request_unable_to_connect">Nelze se připojit</string>
+    <string name="payment_request_unable_to_send">Nelze odeslat</string>
     <string name="payment_request_please_try_again">Zkuste to ještě jednou</string>
+    <string name="payment_request_try_again">Zkusit znovu</string>
+    <string name="payment_request_problem_title">Platba nebyla potvrzena</string>
+    <string name="payment_request_problem_message">Vaše platba byla zpracována, ale server ji nemohl potvrdit</string>
+    <string name="payment_request_expired_title">Platební požadavek vypršel</string>
     <string name="payment_request_close">Zavřít</string>
     <string name="payment_request_skip">Přeskočit</string>
-    </resources>
+    <string name="payment_request_paid_to">Zaplaceno</string>
+</resources>

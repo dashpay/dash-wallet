@@ -77,7 +77,6 @@ public class Configuration {
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
-    private static final String PREFS_SHOW_JOIN_DASH_PAY = "show_join_dashpay";
     public static final String PREFS_LAST_SEEN_NOTIFICATION_TIME = "last_seen_notification_time";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
@@ -428,19 +427,11 @@ public class Configuration {
         prefs.edit().putInt(PREFS_PIN_LENGTH, pinLength).apply();
     }
 
-    public boolean getShowJoinDashPay() {
-        return prefs.getBoolean(PREFS_SHOW_JOIN_DASH_PAY, true);
-    }
-
-    public void setShowJoinDashPay(boolean showJoinDashPay) {
-        prefs.edit().putBoolean(PREFS_SHOW_JOIN_DASH_PAY, showJoinDashPay).apply();
-    }
-
     public long getLastSeenNotificationTime() {
         return prefs.getLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, 0);
     }
 
     public void setPrefsLastSeenNotificationTime(long lastSeenNotificationTime) {
-        prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).commit();
+        prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).apply();
     }
 }

@@ -16,7 +16,10 @@
 package org.dash.wallet.common.data;
 
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.os.Build;
+
+import org.dash.wallet.common.R;
 
 import java.util.Currency;
 import java.util.HashMap;
@@ -45,7 +48,7 @@ public class CurrencyInfo {
         ISO 4217 currency codes.  This will map those codes to the
         currency names.
      */
-    private static HashMap<String, String> otherCurrencyMap;
+    private static HashMap<String, Integer> otherCurrencyMap;
 
     /*
         These currencies are listed in the price data and have the
@@ -64,19 +67,19 @@ public class CurrencyInfo {
         obsoleteCurrencyMap.put("MRO", "MRU"); // Mauritania Ouguiya, changed in 2018
 
         otherCurrencyMap = new HashMap<>();
-        otherCurrencyMap.put("VES", "Venezuelan Bolívar");
-        otherCurrencyMap.put("GGP", "Guernsey Pound");
-        otherCurrencyMap.put("JEP", "Jersey Pound");
-        otherCurrencyMap.put("IMP", "Isle of Man Pound");
-        otherCurrencyMap.put("USDC", "USD Coin");
-        otherCurrencyMap.put("LTC", "Litecoin");
-        otherCurrencyMap.put("ETH", "Etherium");
-        otherCurrencyMap.put("BTC", "Bitcoin");
-        otherCurrencyMap.put("PAX", "Paxos Standard");
-        otherCurrencyMap.put("GUSD", "Gemini Dollar");
+        otherCurrencyMap.put("GGP", R.string.currency_GGP);
+        otherCurrencyMap.put("JEP", R.string.currency_JEP);
+        otherCurrencyMap.put("IMP", R.string.currency_IMP);
+        otherCurrencyMap.put("USDC", R.string.currency_USDC);
+        otherCurrencyMap.put("LTC", R.string.currency_LTC);
+        otherCurrencyMap.put("ETH", R.string.currency_ETH);
+        otherCurrencyMap.put("BTC", R.string.currency_BTC);
+        otherCurrencyMap.put("PAX", R.string.currency_PAX);
+        otherCurrencyMap.put("GUSD", R.string.currency_GUSD);
 
         useOtherNameMap = new HashMap<>();
         useOtherNameMap.put("CNH", "CNY");
+        useOtherNameMap.put("VES", "VEF");
     }
 
     public static boolean hasObsoleteCurrency(String code) {
@@ -98,7 +101,7 @@ public class CurrencyInfo {
     }
 
     // obtain a currency name for those codes for which the local has no information
-    public static String getOtherCurrencyName(String currencyCode) {
+    public static String getOtherCurrencyName(String currencyCode, Context context) {
         String currencyName = "";
         currencyCode = currencyCode.toUpperCase();
 
@@ -113,7 +116,9 @@ public class CurrencyInfo {
                 String useNameOfCode = useOtherNameMap.get(currencyCode);
                 currencyName = getCurrencyNameFromCode(useNameOfCode);
             } else if(otherCurrencyMap.containsKey(currencyCode)) {
-                currencyName = otherCurrencyMap.get(currencyCode);
+                Integer id = otherCurrencyMap.get(currencyCode);
+                if (id != null)
+                    currencyName = context.getString(id);
             }
         }
 

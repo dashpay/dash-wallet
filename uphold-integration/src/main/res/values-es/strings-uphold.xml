@@ -25,4 +25,9 @@
     <string name="uphold_error_not_available">El servicio de Uphold no está disponible. Intenta nuevamente más tarde por favor. </string>
     <string name="uphold_error_report_issue">Favor reporta este problema a través de la opción \"Reportar Problema\" del menú principal. </string>
 
+    <string name="uphold_general_error_title">Error</string>
+    <string name="uphold_api_error_title">Error de Uphold</string>
+    <string name="uphold_api_error_identity">Tu cuenta de Uphold aún no está verificada. No se pueden retirar fondos.</string>
+    <string name="uphold_api_error_403_description">Tu cuenta de Uphold ha sido marcada para revisión.\n\nUphold ha restringido temporalmente tu cuenta y no podrás retirar fondos.\n\nUphold se pondrá en contacto contigo para ayudarte a solucionar este problema rápidamente.</string>
+    <string name="uphold_api_error_400_description">Los fondos de Uphold están bloqueados durante 24 horas.\n\nTendrás fondos suficientes para esta transferencia el %s.</string>
 </resources>
