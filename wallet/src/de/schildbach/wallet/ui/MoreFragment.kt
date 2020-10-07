@@ -92,7 +92,7 @@ class MoreFragment : Fragment(R.layout.activity_more) {
 
             //show updating profile animation if necessary
 
-            editProfileViewModel.updateProfileRequestState.observe(context!!.lifecycleOwner()!!, Observer {
+            editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer {
                 if (it != null) {
                     when (it.status) {
                         Status.SUCCESS -> {
