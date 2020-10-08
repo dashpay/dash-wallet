@@ -15,15 +15,6 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription">
 
-        <androidx.fragment.app.FragmentContainerView
-            android:id="@+id/wallet_transactions_fragment"
-            android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:tag="wallet_transactions_fragment"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior"
-            tools:layout="@layout/wallet_transactions_fragment" />
-
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/app_bar"
             android:layout_width="match_parent"
@@ -61,8 +52,7 @@
                         android:orientation="vertical"
                         android:paddingStart="16dp"
                         android:paddingTop="58dp"
-                        android:paddingEnd="16dp"
-                        android:paddingBottom="12dp">
+                        android:paddingEnd="16dp">
 
                         <include
                             android:id="@+id/sync_status_pane"
@@ -107,6 +97,15 @@
             android:paddingBottom="4dp"
             app:layout_anchor="@id/buttons_anchor"
             app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior" />
+
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/wallet_transactions_fragment"
+            android:name="de.schildbach.wallet.ui.WalletTransactionsFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:tag="wallet_transactions_fragment"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior"
+            tools:layout="@layout/wallet_transactions_fragment" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

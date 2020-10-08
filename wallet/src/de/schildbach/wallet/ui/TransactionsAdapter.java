@@ -39,6 +39,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
+import org.jetbrains.annotations.NotNull;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -98,7 +99,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     //Temporary field while IdentityCreationTx (or whatever we call it) is not integrated yet.
     private BlockchainIdentityBaseData blockchainIdentityData;
 
-    private int filter = 0;
+    private TransactionsHeaderViewHolder.Filter filter = TransactionsHeaderViewHolder.Filter.ALL;
 
     private static class TransactionCacheEntry {
         private final Coin value;
@@ -293,7 +294,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 }
             });
         } else if (holder instanceof TransactionsHeaderViewHolder) {
-            ((TransactionsHeaderViewHolder)holder).showEmptyState(filteredTransactions.size() == 0);
+            ((TransactionsHeaderViewHolder) holder).showEmptyState(filteredTransactions.size() == 0);
         }
     }
 
@@ -483,8 +484,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     @Override
-    public void onFilter(int direction) {
-        filter = direction;
+    public void onFilter(@NotNull TransactionsHeaderViewHolder.Filter filter) {
+        this.filter = filter;
         filter();
     }
 
@@ -494,7 +495,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             boolean sent = tx.getValue(wallet).signum() < 0;
             boolean isInternal = tx.getPurpose() == Transaction.Purpose.KEY_ROTATION;
 
-            if ((filter == 1 && !sent && !isInternal) || filter == 0 || (filter == 2 && sent && !isInternal)) {
+            if ((filter == TransactionsHeaderViewHolder.Filter.INCOMING && !sent && !isInternal)
+                    || filter == TransactionsHeaderViewHolder.Filter.ALL
+                    || (filter == TransactionsHeaderViewHolder.Filter.OUTGOING && sent && !isInternal)) {
                 resultTransactions.add(tx);
             }
         }

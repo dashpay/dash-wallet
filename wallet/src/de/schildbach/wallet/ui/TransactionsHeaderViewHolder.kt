@@ -35,7 +35,7 @@ class TransactionsHeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup, 
         itemView.history_filter.adapter = adapter
         itemView.history_filter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View, position: Int, id: Long) {
-                onFilterListener.onFilter(position)
+                onFilterListener.onFilter(Filter.values()[position])
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -47,6 +47,12 @@ class TransactionsHeaderViewHolder(inflater: LayoutInflater, parent: ViewGroup, 
     }
 
     interface OnFilterListener {
-        fun onFilter(position: Int)
+        fun onFilter(filter: Filter)
+    }
+
+    enum class Filter {
+        ALL,
+        INCOMING,
+        OUTGOING
     }
 }
