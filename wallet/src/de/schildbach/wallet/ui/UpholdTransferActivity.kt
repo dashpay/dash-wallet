@@ -19,12 +19,12 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.style.ImageSpan
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.text.toSpannable
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.Constants
@@ -101,7 +101,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         builder.append("  ")
         builder.append(getText(R.string.enter_amount_available))
 
-        enterAmountSharedViewModel.messageTextStringData.value = builder.toSpannable()
+        enterAmountSharedViewModel.messageTextStringData.value = SpannableString.valueOf(builder)
         enterAmountSharedViewModel.buttonClickEvent.observe(this, Observer {
             val dashAmount = enterAmountSharedViewModel.dashAmount
             showPaymentConfirmation(dashAmount)
