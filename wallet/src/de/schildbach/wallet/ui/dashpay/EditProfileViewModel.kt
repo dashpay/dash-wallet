@@ -17,6 +17,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
@@ -35,10 +36,16 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
         get() = blockchainIdentityData.value
 
     // this must be observed after blockchainIdentityData is observed
-    val dashPayProfileData
-        get() = AppDatabase.getAppDatabase()
-                    .dashPayProfileDaoAsync()
-                    .loadByUserIdDistinct(blockchainIdentity!!.userId!!)
+    private lateinit var _dashPayProfileData: LiveData<DashPayProfile?>
+    val dashPayProfileData: LiveData<DashPayProfile?>
+        get() {
+            if (!this::_dashPayProfileData.isInitialized) {
+                _dashPayProfileData = AppDatabase.getAppDatabase()
+                        .dashPayProfileDaoAsync()
+                        .loadByUserIdDistinct(blockchainIdentity!!.userId!!)
+            }
+            return _dashPayProfileData
+        }
 
     val updateProfileRequestState = UpdateProfileOperation.operationStatus(application)
 

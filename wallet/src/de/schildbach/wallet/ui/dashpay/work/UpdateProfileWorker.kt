@@ -67,7 +67,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             ))
         } catch (ex: Exception) {
             Result.failure(workDataOf(
-                    KEY_ERROR_MESSAGE to formatExceptionMessage("send contact request", ex)))
+                    KEY_ERROR_MESSAGE to formatExceptionMessage("create/update profile", ex)))
         }
     }
 }
