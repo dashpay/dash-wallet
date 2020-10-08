@@ -125,7 +125,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 when (it.status) {
                     Status.SUCCESS -> {
                         Toast.makeText(this@EditProfileActivity, "Update successful", Toast.LENGTH_LONG).show()
-                        setEditingState(true)
+                        setEditingState(false)
                     }
                     Status.ERROR -> {
                         var msg = it.message
@@ -133,7 +133,7 @@ class EditProfileActivity : BaseMenuActivity() {
                             msg = "!!Error!!  ${it.exception!!.message}"
                         }
                         Toast.makeText(this@EditProfileActivity, msg, Toast.LENGTH_LONG).show()
-                        setEditingState(false)
+                        setEditingState(true)
                         save.isEnabled = true
                     }
                     Status.LOADING -> {
