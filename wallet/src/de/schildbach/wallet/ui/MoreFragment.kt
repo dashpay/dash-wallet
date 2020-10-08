@@ -26,6 +26,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.lifecycleOwner
@@ -51,7 +52,6 @@ class MoreFragment : Fragment(R.layout.activity_more) {
         super.onViewCreated(view, savedInstanceState)
 
         setupActionBarWithTitle(R.string.more_title)
-        editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
 
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer {
             blockchainState = it
@@ -80,52 +80,57 @@ class MoreFragment : Fragment(R.layout.activity_more) {
 
         update_profile_status_container.visibility = View.GONE
 
-        val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
-        if (blockchainIdentity != null && blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
-            editProfileViewModel.dashPayProfileData
-                    .observe(viewLifecycleOwner, Observer {
-                        if (it != null) {
-                            dashPayProfile = it
-                            showProfileSection(it)
-                        }
-                    })
 
-            //show updating profile animation if necessary
+        editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
 
-            editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer {
-                if (it != null) {
-                    when (it.status) {
-                        Status.SUCCESS -> {
-                            Toast.makeText(requireActivity(), "Update successful", Toast.LENGTH_LONG).show()
-                            update_profile_status_container.visibility = View.GONE
-                            editProfile.visibility = View.VISIBLE
-                        }
-                        Status.ERROR -> {
-                            var msg = it.message
-                            if (msg == null) {
-                                msg = "!!Error!!  ${it.exception!!.message}"
+        // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
+        // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
+        editProfileViewModel.blockchainIdentityData.observe(viewLifecycleOwner, Observer {
+            if (it != null && it.creationState >= BlockchainIdentityData.CreationState.DONE) {
+
+                // observe our profile
+                editProfileViewModel.dashPayProfileData
+                        .observe(viewLifecycleOwner, Observer { profile ->
+                            if (profile != null) {
+                                dashPayProfile = profile
+                                showProfileSection(profile)
                             }
-                            Toast.makeText(requireActivity(), msg, Toast.LENGTH_LONG).show()
-                            update_profile_status_container.visibility = View.VISIBLE
-                            update_status_text.text = msg
-                            editProfile.visibility = View.VISIBLE
-                        }
-                        Status.LOADING -> {
-                            Toast.makeText(requireActivity(), "Processing update", Toast.LENGTH_LONG).show()
-                            update_profile_status_container.visibility = View.VISIBLE
-                            editProfile.visibility = View.GONE
-                        }
-                        Status.CANCELED -> {
-                            update_profile_status_container.visibility = View.VISIBLE
-                            update_status_text.text = "Cancelled" //hard coded text
-                            editProfile.visibility = View.VISIBLE
+                        })
+
+                // track the status of broadcast changes to our profile
+                editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
+                    if (state != null) {
+                        when (state.status) {
+                            Status.SUCCESS -> {
+                                Toast.makeText(requireActivity(), "Update successful", Toast.LENGTH_LONG).show()
+                                update_profile_status_container.visibility = View.GONE
+                                editProfile.visibility = View.VISIBLE
+                            }
+                            Status.ERROR -> {
+                                var msg = state.message
+                                if (msg == null) {
+                                    msg = "!!Error!!  ${state.exception!!.message}"
+                                }
+                                Toast.makeText(requireActivity(), msg, Toast.LENGTH_LONG).show()
+                                update_profile_status_container.visibility = View.VISIBLE
+                                update_status_text.text = msg
+                                editProfile.visibility = View.VISIBLE
+                            }
+                            Status.LOADING -> {
+                                Toast.makeText(requireActivity(), "Processing update", Toast.LENGTH_LONG).show()
+                                update_profile_status_container.visibility = View.VISIBLE
+                                editProfile.visibility = View.GONE
+                            }
+                            Status.CANCELED -> {
+                                update_profile_status_container.visibility = View.VISIBLE
+                                update_status_text.text = "Cancelled" //hard coded text
+                                editProfile.visibility = View.VISIBLE
+                            }
                         }
                     }
-                    // operation complete
-                    //save.isEnabled = true
-                }
-            })
-        }
+                })
+            }
+        })
     }
 
     private fun showProfileSection(profile: DashPayProfile) {

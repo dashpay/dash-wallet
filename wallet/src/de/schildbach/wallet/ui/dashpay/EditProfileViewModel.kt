@@ -19,17 +19,26 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 
 class EditProfileViewModel(application: Application) : AndroidViewModel(application) {
-    private val platformRepo = PlatformRepo.getInstance()
     private val walletApplication = application as WalletApplication
-    private val userId = platformRepo.getBlockchainIdentity()!!.uniqueIdString
 
-    val dashPayProfileData = AppDatabase.getAppDatabase()
-            .dashPayProfileDaoAsync()
-            .loadByUserIdDistinct(userId)
+    // Use the database instead of PlatformRepo.getBlockchainIdentity, which
+    // won't be initialized if there is no username registered
+    val blockchainIdentityData = AppDatabase.getAppDatabase()
+            .blockchainIdentityDataDaoAsync().load()
+
+    val blockchainIdentity: BlockchainIdentityData?
+        get() = blockchainIdentityData.value
+
+    // this must be observed after blockchainIdentityData is observed
+    val dashPayProfileData
+        get() = AppDatabase.getAppDatabase()
+                    .dashPayProfileDaoAsync()
+                    .loadByUserIdDistinct(blockchainIdentity!!.userId!!)
 
     val updateProfileRequestState = UpdateProfileOperation.operationStatus(application)
 

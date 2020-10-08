@@ -26,12 +26,14 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
+import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
 import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 
@@ -52,20 +54,22 @@ class EditProfileActivity : BaseMenuActivity() {
 
         editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
 
-        val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
-        if (blockchainIdentity?.currentUsername != null) {
-            userInfoContainer.visibility = View.VISIBLE
-            editProfileViewModel.dashPayProfileData.observe(this, Observer {
-                if (it != null && !isEditing) {
-                    dashPayProfile = it
-                    showProfileInfo(it)
-                }
-            })
-            dashpayUserAvatar.background = UserAvatarPlaceholderDrawable.getDrawable(this,
-                    blockchainIdentity.currentUsername!!.toCharArray()[0])
-        } else {
-            finish()
-        }
+        // first ensure that we have a registered username
+        editProfileViewModel.blockchainIdentityData.observe(this, Observer {
+            if (it != null && it.creationState >= BlockchainIdentityData.CreationState.DONE) {
+                userInfoContainer.visibility = View.VISIBLE
+
+                // observe our profile
+                editProfileViewModel.dashPayProfileData.observe(this, Observer { profile ->
+                    if (profile != null && !isEditing) {
+                        dashPayProfile = profile
+                        showProfileInfo(profile)
+                    }
+                })
+            } else {
+                finish()
+            }
+        })
 
         val redTextColor = ContextCompat.getColor(this, R.color.dash_red)
         val mediumGrayTextColor = ContextCompat.getColor(this, R.color.medium_gray)
