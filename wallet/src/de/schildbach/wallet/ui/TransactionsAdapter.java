@@ -17,15 +17,12 @@
 
 package de.schildbach.wallet.ui;
 
-import java.text.SimpleDateFormat;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import java.util.Locale;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -43,11 +40,13 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -61,22 +60,10 @@ import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
-import android.content.Context;
-import android.content.res.Resources;
-
-import androidx.cardview.widget.CardView;
-import androidx.recyclerview.widget.RecyclerView;
-
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
-
 /**
  * @author Andreas Schildbach
  */
-public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements TransactionsHeaderViewHolder.OnFilterListener {
 
     private static final String PREFS_FILE_NAME = TransactionsAdapter.class.getSimpleName() + ".prefs";
     private static final String PREFS_KEY_HIDE_HELLO_CARD = "hide_hello_card";
@@ -90,7 +77,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     @Nullable
     private final OnClickListener onClickListener;
 
-    private final List<Transaction> transactions = new ArrayList<Transaction>();
+    private final List<Transaction> transactions = new ArrayList<>();
+    private final List<Transaction> filteredTransactions = new ArrayList<>();
+
     private MonetaryFormat format;
 
     private long selectedItemId = RecyclerView.NO_ID;
@@ -100,13 +89,16 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final int colorValuePositve, colorValueNegative;
     private final int colorError;
 
-    private static final int VIEW_TYPE_TRANSACTION = 0;
-    private static final int VIEW_TYPE_PROCESSING_IDENTITY = 1;
+    private static final int VIEW_TYPE_HEADER = 0;
+    private static final int VIEW_TYPE_TRANSACTION = 1;
+    private static final int VIEW_TYPE_PROCESSING_IDENTITY = 2;
 
     private Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<Sha256Hash, TransactionCacheEntry>();
 
     //Temporary field while IdentityCreationTx (or whatever we call it) is not integrated yet.
     private BlockchainIdentityBaseData blockchainIdentityData;
+
+    private int filter = 0;
 
     private static class TransactionCacheEntry {
         private final Coin value;
@@ -132,7 +124,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     public TransactionsAdapter(final Context context, final Wallet wallet,
-                               final int maxConnectedPeers, final @Nullable OnClickListener onClickListener) {
+                               final int maxConnectedPeers,
+                               final @Nullable OnClickListener onClickListener) {
         this.context = context;
         inflater = LayoutInflater.from(context);
 
@@ -162,6 +155,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     public void clear() {
         transactions.clear();
+        filteredTransactions.clear();
 
         notifyDataSetChanged();
     }
@@ -169,6 +163,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public void replace(final Transaction tx) {
         transactions.clear();
         transactions.add(tx);
+        filter();
 
         notifyDataSetChanged();
     }
@@ -176,6 +171,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public void replace(final Collection<Transaction> transactions) {
         this.transactions.clear();
         this.transactions.addAll(transactions);
+        filter();
 
         notifyDataSetChanged();
     }
@@ -188,7 +184,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     @Override
     public int getItemCount() {
-        int count = transactions.size();
+        int count = filteredTransactions.size() + 1;
 
         if (helloCardActiveAndNotHidden() && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
             count += 1;
@@ -202,20 +198,27 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         if (position == RecyclerView.NO_POSITION)
             return RecyclerView.NO_ID;
 
+        if (position == 0) {
+            return 0;
+        }
+
         if (helloCardActiveAndNotHidden()) {
-            if (position == 0) {
+            if (position == 1) {
                 return blockchainIdentityData.getId();
             } else {
-                return WalletUtils.longHash(transactions.get(position - 1).getHash());
+                return WalletUtils.longHash(filteredTransactions.get(position - 2).getHash());
             }
         } else {
-            return WalletUtils.longHash(transactions.get(position).getHash());
+            return WalletUtils.longHash(filteredTransactions.get(position - 1).getHash());
         }
     }
 
     @Override
     public int getItemViewType(final int position) {
-        if (helloCardActiveAndNotHidden() && position == 0 && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
+        if (position == 0) {
+            return VIEW_TYPE_HEADER;
+        }
+        if (helloCardActiveAndNotHidden() && position == 1 && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
             return VIEW_TYPE_PROCESSING_IDENTITY;
         }
         return VIEW_TYPE_TRANSACTION;
@@ -227,6 +230,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             return new ProcessingIdentityViewHolder(inflater.inflate(R.layout.identity_creation_state, parent, false));
         } else if (viewType == VIEW_TYPE_TRANSACTION) {
             return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row, parent, false));
+        } else if (viewType == VIEW_TYPE_HEADER) {
+            return new TransactionsHeaderViewHolder(inflater, parent, this);
         } else {
             throw new IllegalStateException("unknown type: " + viewType);
         }
@@ -242,9 +247,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
             Transaction tx;
             if (helloCardActiveAndNotHidden() && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
-                tx = transactions.get(position - 1);
+                tx = filteredTransactions.get(position - 2);
             } else {
-                tx = transactions.get(position);
+                tx = filteredTransactions.get(position - 1);
             }
             transactionHolder.bind(tx);
 
@@ -252,10 +257,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 @Override
                 public void onClick(final View v) {
                     Transaction tx;
-                    if (getItemViewType(0) == VIEW_TYPE_PROCESSING_IDENTITY) {
-                        tx = transactions.get(transactionHolder.getAdapterPosition() - 1);
+                    if (getItemViewType(1) == VIEW_TYPE_PROCESSING_IDENTITY) {
+                        tx = filteredTransactions.get(transactionHolder.getAdapterPosition() - 2);
                     } else {
-                        tx = transactions.get(transactionHolder.getAdapterPosition());
+                        tx = filteredTransactions.get(transactionHolder.getAdapterPosition() - 1);
                     }
 
                     if (onClickListener != null) {
@@ -287,6 +292,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     }
                 }
             });
+        } else if (holder instanceof TransactionsHeaderViewHolder) {
+            ((TransactionsHeaderViewHolder)holder).showEmptyState(filteredTransactions.size() == 0);
         }
     }
 
@@ -310,7 +317,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private SimpleDateFormat dateFormat;
 
         private String formatDate(long timeStamp) {
-            return dateFormat.format(timeStamp).replace("AM", "am").replace("PM","pm");
+            return dateFormat.format(timeStamp).replace("AM", "am").replace("PM", "pm");
         }
 
         private TransactionViewHolder(final View itemView) {
@@ -473,5 +480,26 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     public static SharedPreferences getPreferences(Context context) {
         return context.getSharedPreferences(PREFS_FILE_NAME, Context.MODE_PRIVATE);
+    }
+
+    @Override
+    public void onFilter(int direction) {
+        filter = direction;
+        filter();
+    }
+
+    private void filter() {
+        final List<Transaction> resultTransactions = new ArrayList<>();
+        for (Transaction tx : transactions) {
+            boolean sent = tx.getValue(wallet).signum() < 0;
+            boolean isInternal = tx.getPurpose() == Transaction.Purpose.KEY_ROTATION;
+
+            if ((filter == 1 && !sent && !isInternal) || filter == 0 || (filter == 2 && sent && !isInternal)) {
+                resultTransactions.add(tx);
+            }
+        }
+        filteredTransactions.clear();
+        filteredTransactions.addAll(resultTransactions);
+        notifyDataSetChanged();
     }
 }

@@ -33,10 +33,6 @@ import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -50,7 +46,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -65,8 +60,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
-
-import javax.annotation.Nullable;
 
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
@@ -84,11 +77,6 @@ import de.schildbach.wallet_test.R;
 public class WalletTransactionsFragment extends Fragment implements LoaderManager.LoaderCallbacks<List<Transaction>>,
         TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
 
-
-    public enum Direction {
-        RECEIVED, SENT
-    }
-
     private AbstractWalletActivity activity;
 
     private WalletApplication application;
@@ -97,20 +85,14 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private ContentResolver resolver;
     private LoaderManager loaderManager;
 
-    private TextView emptyView;
     private View loading;
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
-    private Spinner filterSpinner;
-
-    @Nullable
-    private Direction direction;
 
     private final Handler handler = new Handler();
 
     private static final int ID_TRANSACTION_LOADER = 0;
 
-    private static final String ARG_DIRECTION = "direction";
     private static final long THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
 
     private static final int SHOW_QR_THRESHOLD_BYTES = 2500;
@@ -142,8 +124,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         setRetainInstance(true);
 
         adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
-
-        this.direction = null;
     }
 
     @Override
@@ -156,9 +136,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     public void onViewCreated(@NonNull View view, @androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        emptyView = view.findViewById(R.id.wallet_transactions_empty);
         loading = view.findViewById(R.id.loading);
-        filterSpinner = view.findViewById(R.id.history_filter);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -181,32 +159,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
-        final ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        filterSpinner.setAdapter(adapter);
-        filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                switch (position) {
-                    case 0:
-                        direction = null;
-                        break;
-                    case 1:
-                        direction = Direction.RECEIVED;
-                        break;
-                    case 2:
-                        direction = Direction.SENT;
-                        break;
-                }
-                reloadTransactions();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
@@ -221,9 +173,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
         config.registerOnSharedPreferenceChangeListener(this);
 
-        final Bundle args = new Bundle();
-        args.putSerializable(ARG_DIRECTION, direction);
-        loaderManager.initLoader(ID_TRANSACTION_LOADER, args, this);
+        loaderManager.initLoader(ID_TRANSACTION_LOADER, null, this);
 
         wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, transactionChangeListener);
         wallet.addCoinsSentEventListener(Threading.SAME_THREAD, transactionChangeListener);
@@ -255,12 +205,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         return inflater.inflate(R.layout.wallet_transactions_fragment, container, false);
     }
 
-    private void reloadTransactions() {
-        final Bundle args = new Bundle();
-        args.putSerializable(ARG_DIRECTION, direction);
-        loaderManager.restartLoader(ID_TRANSACTION_LOADER, args, this);
-    }
-
     @Override
     public void onTransactionRowClicked(Transaction tx) {
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
@@ -289,32 +233,14 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     @Override
     public Loader<List<Transaction>> onCreateLoader(final int id, final Bundle args) {
-        return new TransactionsLoader(activity, wallet, (Direction) args.getSerializable(ARG_DIRECTION));
+        return new TransactionsLoader(activity, wallet);
     }
 
     @Override
     public void onLoadFinished(final Loader<List<Transaction>> loader, final List<Transaction> transactions) {
-        final Direction direction = ((TransactionsLoader) loader).getDirection();
-
         loading.setVisibility(View.GONE);
         adapter.replace(transactions);
         updateView();
-
-        if (transactions.isEmpty()) {
-            showEmptyView();
-        } else {
-            showTransactionList();
-        }
-    }
-
-    private void showTransactionList() {
-        emptyView.setVisibility(View.GONE);
-        recyclerView.setVisibility(View.VISIBLE);
-    }
-
-    private void showEmptyView() {
-        emptyView.setVisibility(View.VISIBLE);
-        recyclerView.setVisibility(View.INVISIBLE);
     }
 
     @Override
@@ -334,20 +260,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
         private LocalBroadcastManager broadcastManager;
         private final Wallet wallet;
-        @Nullable
-        private final Direction direction;
 
-        private TransactionsLoader(final Context context, final Wallet wallet, @Nullable final Direction direction) {
+        private TransactionsLoader(final Context context, final Wallet wallet) {
             super(context);
 
             this.broadcastManager = LocalBroadcastManager.getInstance(context.getApplicationContext());
             this.wallet = wallet;
-            this.direction = direction;
-        }
-
-        public @Nullable
-        Direction getDirection() {
-            return direction;
         }
 
         @Override
@@ -390,21 +308,13 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         public List<Transaction> loadInBackground() {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
-            final Set<Transaction> transactions = wallet.getTransactions(true);
-            final List<Transaction> filteredTransactions = new ArrayList<Transaction>(transactions.size());
+            final Set<Transaction> transactionsSet = wallet.getTransactions(true);
+            final List<Transaction> transactions = new ArrayList<Transaction>(transactionsSet.size());
 
-            for (final Transaction tx : transactions) {
-                final boolean sent = tx.getValue(wallet).signum() < 0;
-                final boolean isInternal = tx.getPurpose() == Purpose.KEY_ROTATION;
+            transactions.addAll(transactionsSet);
+            Collections.sort(transactions, TRANSACTION_COMPARATOR);
 
-                if ((direction == Direction.RECEIVED && !sent && !isInternal) || direction == null
-                        || (direction == Direction.SENT && sent && !isInternal))
-                    filteredTransactions.add(tx);
-            }
-
-            Collections.sort(filteredTransactions, TRANSACTION_COMPARATOR);
-
-            return filteredTransactions;
+            return transactions;
         }
 
         private final ThrottlingWalletChangeListener transactionAddRemoveListener = new ThrottlingWalletChangeListener(
