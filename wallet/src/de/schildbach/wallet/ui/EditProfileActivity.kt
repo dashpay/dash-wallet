@@ -30,17 +30,14 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
-import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
 import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 
 class EditProfileActivity : BaseMenuActivity() {
 
     private lateinit var editProfileViewModel: EditProfileViewModel
-    private lateinit var dashPayProfile: DashPayProfile
     private var isEditing: Boolean = false
 
     override fun getLayoutId(): Int {
@@ -62,8 +59,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 // observe our profile
                 editProfileViewModel.dashPayProfileData.observe(this, Observer { profile ->
                     if (profile != null && !isEditing) {
-                        dashPayProfile = profile
-                        showProfileInfo(profile)
+                        showProfileInfo()
                     }
                 })
             } else {
@@ -152,15 +148,18 @@ class EditProfileActivity : BaseMenuActivity() {
         })
 
         save.setOnClickListener {
-            val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                    display_name.text.toString().trim(), about_me.text.toString().trim(), "",
-                    dashPayProfile.createdAt, dashPayProfile.updatedAt)
-            save.isEnabled = false
-            editProfileViewModel.broadcastUpdateProfile(updatedProfile)
+            editProfileViewModel.dashPayProfileData.value?.let {
+                val updatedProfile = DashPayProfile(it.userId, it.username,
+                        display_name.text.toString().trim(), about_me.text.toString().trim(), "",
+                        it.createdAt, it.updatedAt)
+                save.isEnabled = false
+                editProfileViewModel.broadcastUpdateProfile(updatedProfile)
+            }
         }
     }
 
-    private fun showProfileInfo(profile: DashPayProfile) {
+    private fun showProfileInfo() {
+        val profile = editProfileViewModel.dashPayProfileData.value!!
         val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this,
                 profile.username.toCharArray()[0])
         if (profile.avatarUrl.isNotEmpty()) {
