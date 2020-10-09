@@ -46,7 +46,6 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.evolution.EvolutionContact
-import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
@@ -72,7 +71,6 @@ import kotlin.collections.HashSet
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import org.dashevo.dpp.toHexString
 
 class PlatformRepo private constructor(val walletApplication: WalletApplication) {
 
@@ -904,27 +902,22 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     private suspend fun updateContactProfiles(userId: String, lastContactRequestTime: Long) {
         val watch = Stopwatch.createStarted()
-        val userIdList = arrayListOf<String>()
+        val userIdSet = hashSetOf<String>()
 
         val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
         toContactDocuments!!.forEach {
-            userIdList.add(it.toUserId)
+            userIdSet.add(it.toUserId)
         }
         val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
         fromContactDocuments!!.forEach {
-            userIdList.add(it.userId)
+            userIdSet.add(it.userId)
         }
 
         // Also add our ownerId to get our profile, in case it was updated on a different device
-        userIdList.add(blockchainIdentity.uniqueIdString)
+        userIdSet.add(blockchainIdentity.uniqueIdString)
 
-        updateContactProfiles(userIdList, lastContactRequestTime)
+        updateContactProfiles(userIdSet.toList(), lastContactRequestTime)
         log.info("updating contacts and profiles took $watch")
-
-        //TODO: remove this
-        //get ours everytime for now
-        //TODO: only get when it is updated
-        //updateContactProfiles(listOf(blockchainIdentity.uniqueIdString), 0)
     }
 
     /**
@@ -935,14 +928,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private suspend fun updateContactProfiles(userIdList: List<String>, lastContactRequestTime: Long, checkingIntegrity: Boolean = false) {
         if (userIdList.isNotEmpty()) {
 
-            var profileDocuments: List<Document> = listOf<Document>()
-            var profileById: Map<String, Document> = hashMapOf<String, Document>()
-            try {
-                profileDocuments = Profiles(platform).getList(userIdList, lastContactRequestTime) //only handles 100 userIds
-                profileById = profileDocuments.associateBy({ it.ownerId }, { it })
-            } catch (e: Exception) {
-                //swallow for now, there may be a bug in the in the profile fetching code
-            }
+            val profileDocuments = Profiles(platform).getList(userIdList, lastContactRequestTime) //only handles 100 userIds
+            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
             val nameDocuments = platform.names.getList(userIdList)
             val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
