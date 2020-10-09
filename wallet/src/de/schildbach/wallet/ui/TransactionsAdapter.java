@@ -21,6 +21,8 @@ import java.text.SimpleDateFormat;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
+import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -73,6 +75,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.bumptech.glide.Glide;
 
 /**
  * @author Andreas Schildbach
@@ -311,6 +315,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final TextView signalView;
         private final CurrencyTextView fiatView;
         private final TextView rateNotAvailableView;
+        private final ImageView icon;
 
         private SimpleDateFormat dateFormat;
 
@@ -332,6 +337,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             fiatView.setApplyMarkup(false);
             rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
             dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault());
+
+            icon = itemView.findViewById(R.id.icon);
         }
 
         private void bind(final Transaction tx) {
@@ -395,10 +402,21 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
                 primaryStatusView.setText(idPrimaryStatus);
             } else {
+                String name = "";
                 if (contact.getDisplayName().isEmpty()) {
-                    primaryStatusView.setText(contact.getUsername());
+                    name = contact.getUsername();
                 } else {
-                    primaryStatusView.setText(contact.getDisplayName());
+                    name = contact.getDisplayName();
+                }
+                primaryStatusView.setText(name);
+
+                Drawable defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(icon.getContext(),
+                        name.charAt(0));
+                if (!contact.getAvatarUrl().isEmpty()) {
+                    Glide.with(icon).load(contact.getAvatarUrl()).circleCrop()
+                            .placeholder(defaultAvatar).into(icon);
+                } else {
+                    icon.setImageDrawable(defaultAvatar);
                 }
             }
             primaryStatusView.setTextColor(primaryStatusColor);
