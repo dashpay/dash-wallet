@@ -21,6 +21,8 @@ import java.text.SimpleDateFormat;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
+import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -56,6 +58,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
@@ -72,6 +75,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.bumptech.glide.Glide;
 
 /**
  * @author Andreas Schildbach
@@ -91,6 +96,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final OnClickListener onClickListener;
 
     private final List<Transaction> transactions = new ArrayList<Transaction>();
+    private Map<Sha256Hash, DashPayProfile> contactsByTransaction = new HashMap<>();
     private MonetaryFormat format;
 
     private long selectedItemId = RecyclerView.NO_ID;
@@ -173,9 +179,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         notifyDataSetChanged();
     }
 
-    public void replace(final Collection<Transaction> transactions) {
+    public void replace(final Collection<Transaction> transactions, Map<Sha256Hash,
+            DashPayProfile> contactsByTransaction) {
         this.transactions.clear();
         this.transactions.addAll(transactions);
+        this.contactsByTransaction.clear();
+        this.contactsByTransaction.putAll(contactsByTransaction);
 
         notifyDataSetChanged();
     }
@@ -306,6 +315,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final TextView signalView;
         private final CurrencyTextView fiatView;
         private final TextView rateNotAvailableView;
+        private final ImageView icon;
 
         private SimpleDateFormat dateFormat;
 
@@ -327,6 +337,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             fiatView.setApplyMarkup(false);
             rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
             dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault());
+
+            icon = itemView.findViewById(R.id.icon);
         }
 
         private void bind(final Transaction tx) {
@@ -385,8 +397,28 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
             //                  Received:  Received, Mining Rewards, Masternode Rewards
             //
-            int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
-            primaryStatusView.setText(idPrimaryStatus);
+            DashPayProfile contact = contactsByTransaction.get(tx.getTxId());
+            if (contact == null) {
+                int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
+                primaryStatusView.setText(idPrimaryStatus);
+            } else {
+                String name = "";
+                if (contact.getDisplayName().isEmpty()) {
+                    name = contact.getUsername();
+                } else {
+                    name = contact.getDisplayName();
+                }
+                primaryStatusView.setText(name);
+
+                Drawable defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(icon.getContext(),
+                        name.charAt(0));
+                if (!contact.getAvatarUrl().isEmpty()) {
+                    Glide.with(icon).load(contact.getAvatarUrl()).circleCrop()
+                            .placeholder(defaultAvatar).into(icon);
+                } else {
+                    icon.setImageDrawable(defaultAvatar);
+                }
+            }
             primaryStatusView.setTextColor(primaryStatusColor);
 
             //

@@ -5,12 +5,14 @@ import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.listeners.WalletChangeEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 
-abstract class WalletBalanceBasedLiveData<T>(val walletApplication: WalletApplication)
-    : LiveData<T>(), WalletCoinsReceivedEventListener, WalletCoinsSentEventListener {
+abstract class WalletBalanceBasedLiveData<T>(val walletApplication: WalletApplication = WalletApplication.getInstance())
+    : LiveData<T>(), WalletCoinsReceivedEventListener, WalletCoinsSentEventListener, WalletChangeEventListener, TransactionConfidenceEventListener {
 
     private var listening = false
 
@@ -31,6 +33,8 @@ abstract class WalletBalanceBasedLiveData<T>(val walletApplication: WalletApplic
             val mainThreadExecutor = ContextCompat.getMainExecutor(walletApplication)
             wallet.addCoinsReceivedEventListener(mainThreadExecutor, this)
             wallet.addCoinsSentEventListener(mainThreadExecutor, this)
+            wallet.addChangeEventListener(mainThreadExecutor, this)
+            wallet.addTransactionConfidenceEventListener(mainThreadExecutor, this)
             listening = true
         }
     }
@@ -39,6 +43,8 @@ abstract class WalletBalanceBasedLiveData<T>(val walletApplication: WalletApplic
         if (listening) {
             wallet.removeCoinsReceivedEventListener(this)
             wallet.removeCoinsSentEventListener(this)
+            wallet.removeChangeEventListener(this)
+            wallet.removeTransactionConfidenceEventListener(this)
             listening = false
         }
     }
@@ -51,5 +57,14 @@ abstract class WalletBalanceBasedLiveData<T>(val walletApplication: WalletApplic
         onUpdate(wallet)
     }
 
+    override fun onWalletChanged(wallet: Wallet) {
+        onUpdate(wallet)
+    }
+
+    override fun onTransactionConfidenceChanged(wallet: Wallet, tx: Transaction?) {
+        onUpdate(wallet)
+    }
+
     abstract fun onUpdate(wallet: Wallet)
+
 }
