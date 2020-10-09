@@ -7,12 +7,16 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.UsernameSortOrderBy
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.wallet.Wallet
 import java.util.*
+import kotlin.collections.HashMap
 
 class TransactionsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -20,10 +24,9 @@ class TransactionsViewModel(application: Application) : AndroidViewModel(applica
         RECEIVED, SENT
     }
 
-    private val wallet by lazy { WalletApplication.getInstance().wallet }
-
     val direction = MutableLiveData<Direction?>()
-    val transactionsLiveData = MediatorLiveData<List<Transaction>>()
+    val transactionsLiveData = MediatorLiveData<Pair<List<Transaction>,
+            Map<Sha256Hash, DashPayProfile>>>()
     private val balanceLiveData = WalletBalanceLiveData()
 
     init {
@@ -39,6 +42,18 @@ class TransactionsViewModel(application: Application) : AndroidViewModel(applica
     fun load(wallet: Wallet = WalletApplication.getInstance().wallet) {
         viewModelScope.launch {
             Context.propagate(Constants.CONTEXT)
+
+            val contactsTransactions: HashMap<Sha256Hash, DashPayProfile> = hashMapOf()
+            val contactsByIdentity: HashMap<String, DashPayProfile> = hashMapOf()
+            val platformRepo = PlatformRepo.getInstance()
+            val userIdentity = platformRepo.getBlockchainIdentity()
+            if (userIdentity != null) {
+                val contacts = PlatformRepo.getInstance().searchContacts("",
+                        UsernameSortOrderBy.LAST_ACTIVITY, false)
+                contacts.data?.forEach {
+                    contactsByIdentity[it.dashPayProfile.userId] = it.dashPayProfile
+                }
+            }
 
             val transactions = wallet.getTransactions(true)
             val filteredTransactions = arrayListOf<Transaction>()
@@ -61,10 +76,19 @@ class TransactionsViewModel(application: Application) : AndroidViewModel(applica
                     val time2 = updateTime2?.time ?: 0
                     return if (time1 != time2) if (time1 > time2) -1 else 1 else tx1.hash.compareTo(tx2.hash)
                 }
-
             })
 
-            transactionsLiveData.postValue(filteredTransactions)
+            filteredTransactions.forEach {
+                val contactId = userIdentity?.getContactForTransaction(it)
+                if (contactId != null) {
+                    val contactProfile = contactsByIdentity[contactId]
+                    if (contactProfile != null) {
+                        contactsTransactions[it.txId] = contactProfile
+                    }
+                }
+            }
+
+            transactionsLiveData.postValue(Pair(filteredTransactions, contactsTransactions))
         }
     }
 

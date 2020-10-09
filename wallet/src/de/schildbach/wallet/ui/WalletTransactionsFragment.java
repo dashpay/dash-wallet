@@ -43,6 +43,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
@@ -50,15 +51,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.dashpay.TransactionsViewModel;
 import de.schildbach.wallet_test.R;
+import kotlin.Pair;
 
 /**
  * @author Andreas Schildbach
@@ -132,11 +136,14 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
         super.onViewCreated(view, savedInstanceState);
 
         final TransactionsViewModel transactionsViewModel = new ViewModelProvider(requireActivity()).get(TransactionsViewModel.class);
-        transactionsViewModel.getTransactionsLiveData().observe(getViewLifecycleOwner(), new Observer<List<Transaction>>() {
+        transactionsViewModel.getTransactionsLiveData().observe(getViewLifecycleOwner(), new Observer<Pair<List<Transaction>,
+                        Map<Sha256Hash, DashPayProfile>>>() {
             @Override
-            public void onChanged(List<Transaction> transactions) {
+            public void onChanged(Pair<List<Transaction>, Map<Sha256Hash, DashPayProfile>> data) {
+                List<Transaction> transactions = data.component1();
+                Map<Sha256Hash, DashPayProfile> contactsByTransaction = data.component2();
                 loading.setVisibility(View.GONE);
-                WalletTransactionsFragment.this.adapter.replace(transactions);
+                WalletTransactionsFragment.this.adapter.replace(transactions, contactsByTransaction);
                 updateView();
                 if (transactions.isEmpty()) {
                     showEmptyView();
@@ -145,6 +152,7 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
                 }
             }
         });
+
 
         emptyView = view.findViewById(R.id.wallet_transactions_empty);
         loading = view.findViewById(R.id.loading);

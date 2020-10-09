@@ -56,6 +56,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
@@ -91,6 +92,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final OnClickListener onClickListener;
 
     private final List<Transaction> transactions = new ArrayList<Transaction>();
+    private Map<Sha256Hash, DashPayProfile> contactsByTransaction = new HashMap<>();
     private MonetaryFormat format;
 
     private long selectedItemId = RecyclerView.NO_ID;
@@ -173,9 +175,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         notifyDataSetChanged();
     }
 
-    public void replace(final Collection<Transaction> transactions) {
+    public void replace(final Collection<Transaction> transactions, Map<Sha256Hash,
+            DashPayProfile> contactsByTransaction) {
         this.transactions.clear();
         this.transactions.addAll(transactions);
+        this.contactsByTransaction.clear();
+        this.contactsByTransaction.putAll(contactsByTransaction);
 
         notifyDataSetChanged();
     }
@@ -385,8 +390,17 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
             //                  Received:  Received, Mining Rewards, Masternode Rewards
             //
-            int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
-            primaryStatusView.setText(idPrimaryStatus);
+            DashPayProfile contact = contactsByTransaction.get(tx.getTxId());
+            if (contact == null) {
+                int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
+                primaryStatusView.setText(idPrimaryStatus);
+            } else {
+                if (contact.getDisplayName().isEmpty()) {
+                    primaryStatusView.setText(contact.getUsername());
+                } else {
+                    primaryStatusView.setText(contact.getDisplayName());
+                }
+            }
             primaryStatusView.setTextColor(primaryStatusColor);
 
             //
