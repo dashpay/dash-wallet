@@ -272,26 +272,6 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
         recyclerView.setVisibility(View.INVISIBLE);
     }
 
-    //TODO: Do we need to handle this?
-        /*
-
-    private final ThrottlingWalletChangeListener transactionChangeListener = new ThrottlingWalletChangeListener(
-            THROTTLE_MS) {
-        @Override
-        public void onThrottledWalletChanged() {
-            adapter.notifyDataSetChanged();
-        }
-    };
-
-        private final ThrottlingWalletChangeListener transactionAddRemoveListener = new ThrottlingWalletChangeListener(
-                THROTTLE_MS, true, true, false) {
-            @Override
-            public void onThrottledWalletChanged() {
-                safeForceLoad();
-            }
-        };
-         */
-
     @Override
     public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key) {
         if (Configuration.PREFS_KEY_BTC_PRECISION.equals(key) || Configuration.PREFS_KEY_REMIND_BACKUP.equals(key) ||

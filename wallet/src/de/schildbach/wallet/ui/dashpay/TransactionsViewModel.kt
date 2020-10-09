@@ -14,9 +14,7 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
-import org.bitcoinj.wallet.Wallet
 import java.util.*
-import kotlin.collections.HashMap
 
 class TransactionsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,8 +37,9 @@ class TransactionsViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun load(wallet: Wallet = WalletApplication.getInstance().wallet) {
+    fun load() {
         viewModelScope.launch {
+            val wallet = WalletApplication.getInstance().wallet
             Context.propagate(Constants.CONTEXT)
 
             val contactsTransactions: HashMap<Sha256Hash, DashPayProfile> = hashMapOf()
