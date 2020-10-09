@@ -227,7 +227,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         } else {
             replaceFragment(contactsFragment)
         }
-        /*
         if (viewModel.hasIdentity) {
             val contactsFragment = ContactsFragment.newInstance(mode)
             if (mode == MODE_VIEW_REQUESTS) {
@@ -238,7 +237,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         } else {
             replaceFragment(UpgradeToEvolutionFragment.newInstance())
         }
-         */
     }
 
     private fun showPayments(activeTab: Int = ACTIVE_TAB_RECENT) {
