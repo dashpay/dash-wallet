@@ -52,12 +52,19 @@ class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment
         view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
 
         if (arguments?.containsKey("seed")!!) {
-            val seed = arguments!!.getStringArray("seed")!!
-            val sb = StringBuilder(12)
-            seed.forEach {
-                sb.append("$it  ")
+            //val seed = arguments!!.getStringArray("seed")!!
+            //val sb = StringBuilder(12)
+            //seed.forEach {
+            //    sb.append("$it ")
+            //}
+            arguments?.getStringArray("seed")?.let { seed ->
+                val sb = StringBuilder(12)
+                seed.forEach {
+                    sb.append("$it ")
+                }
+                recoverySeedTextView.text = sb.toString().trim()
             }
-            recoverySeedTextView.text = sb.toString().trim()
+            //recoverySeedTextView.text = sb.toString().trim()
         }
         confirmCheckBox.setOnCheckedChangeListener { _, isChecked ->
             confirmButton.isEnabled = isChecked
