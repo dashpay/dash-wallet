@@ -1,18 +1,17 @@
 /*
- * Copyright 2011-2015 the original author or authors.
+ * Copyright 2020 Dash Core Group
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package de.schildbach.wallet.ui;
@@ -26,14 +25,9 @@ import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -43,37 +37,25 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.bitcoinj.core.Sha256Hash;
-import org.bitcoinj.core.Transaction;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
-import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
-import de.schildbach.wallet.ui.dashpay.TransactionsViewModel;
 import de.schildbach.wallet_test.R;
-import kotlin.Pair;
 
 /**
  * @author Andreas Schildbach
  */
-public class WalletTransactionsFragment extends Fragment implements TransactionsAdapter.OnClickListener,
-        OnSharedPreferenceChangeListener {
-
-
-    public enum Direction {
-        RECEIVED, SENT
-    }
+public class WalletTransactionsFragment extends Fragment
+        implements TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
 
     private AbstractWalletActivity activity;
 
@@ -82,18 +64,11 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
     private Wallet wallet;
     private ContentResolver resolver;
 
-    private TextView emptyView;
     private View loading;
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
-    private Spinner filterSpinner;
 
     private final Handler handler = new Handler();
-
-    private static final int ID_TRANSACTION_LOADER = 0;
-
-    private static final String ARG_DIRECTION = "direction";
-    private static final long THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
 
     private static final int SHOW_QR_THRESHOLD_BYTES = 2500;
     private static final Logger log = LoggerFactory.getLogger(WalletTransactionsFragment.class);
@@ -104,6 +79,8 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
             adapter.clearCacheAndNotifyDataSetChanged();
         }
     };
+
+    private WalletTransactionsFragmentViewModel viewModel;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -135,28 +112,7 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
     public void onViewCreated(@NonNull View view, @androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        final TransactionsViewModel transactionsViewModel = new ViewModelProvider(requireActivity()).get(TransactionsViewModel.class);
-        transactionsViewModel.getTransactionsLiveData().observe(getViewLifecycleOwner(), new Observer<Pair<List<Transaction>,
-                        Map<Sha256Hash, DashPayProfile>>>() {
-            @Override
-            public void onChanged(Pair<List<Transaction>, Map<Sha256Hash, DashPayProfile>> data) {
-                List<Transaction> transactions = data.component1();
-                Map<Sha256Hash, DashPayProfile> contactsByTransaction = data.component2();
-                loading.setVisibility(View.GONE);
-                WalletTransactionsFragment.this.adapter.replace(transactions, contactsByTransaction);
-                updateView();
-                if (transactions.isEmpty()) {
-                    showEmptyView();
-                } else {
-                    showTransactionList();
-                }
-            }
-        });
-
-
-        emptyView = view.findViewById(R.id.wallet_transactions_empty);
         loading = view.findViewById(R.id.loading);
-        filterSpinner = view.findViewById(R.id.history_filter);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -179,47 +135,30 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
             }
         });
 
-        final ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        filterSpinner.setAdapter(adapter);
-        filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                switch (position) {
-                    case 0:
-                        transactionsViewModel.getDirection().setValue(null);
-                        break;
-                    case 1:
-                        transactionsViewModel.getDirection().setValue(TransactionsViewModel.Direction.RECEIVED);
-                        break;
-                    case 2:
-                        transactionsViewModel.getDirection().setValue(TransactionsViewModel.Direction.SENT);
-                        break;
-                }
-                //TODO: Add loading on TransactionsViewModel. (Resource.loading)
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
-            @Override
-            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
-                if (blockchainIdentityData != null) {
-                    WalletTransactionsFragment.this.adapter.setBlockchainIdentityData(blockchainIdentityData);
-                }
-            }
-        });
-
         resolver.registerContentObserver(AddressBookProvider.contentUri(activity.getPackageName()), true,
                 addressBookObserver);
 
         config.registerOnSharedPreferenceChangeListener(this);
+
         updateView();
 
+        viewModel = new ViewModelProvider(this).get(WalletTransactionsFragmentViewModel.class);
+        viewModel.getTransactionHistoryItemData().observe(getViewLifecycleOwner(), new Observer<List<TransactionsAdapter.TransactionHistoryItem>>() {
+            @Override
+            public void onChanged(List<TransactionsAdapter.TransactionHistoryItem> transactions) {
+                loading.setVisibility(View.GONE);
+                adapter.replace(transactions);
+                updateView();
+            }
+        });
+        viewModel.getBlockchainIdentityData().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
+            @Override
+            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
+                if (blockchainIdentityData != null) {
+                    adapter.setBlockchainIdentityData(blockchainIdentityData);
+                }
+            }
+        });
     }
 
     @Override
@@ -237,9 +176,9 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
     }
 
     @Override
-    public void onTransactionRowClicked(Transaction tx) {
+    public void onTransactionRowClicked(TransactionsAdapter.TransactionHistoryItem transactionHistoryItem) {
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                TransactionDetailsDialogFragment.newInstance(tx.getTxId());
+                TransactionDetailsDialogFragment.newInstance(transactionHistoryItem.getTransaction().getTxId());
         requireActivity().getSupportFragmentManager().beginTransaction()
                 .add(transactionDetailsDialogFragment, null).commitAllowingStateLoss();
     }
@@ -260,16 +199,6 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
                 startActivity(new Intent(activity, SearchUserActivity.class));
             }
         }
-    }
-
-    private void showTransactionList() {
-        emptyView.setVisibility(View.GONE);
-        recyclerView.setVisibility(View.VISIBLE);
-    }
-
-    private void showEmptyView() {
-        emptyView.setVisibility(View.VISIBLE);
-        recyclerView.setVisibility(View.INVISIBLE);
     }
 
     @Override
