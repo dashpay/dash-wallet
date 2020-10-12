@@ -19,28 +19,40 @@ package de.schildbach.wallet.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.lifecycleOwner
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.activity_edit_profile.*
 import kotlinx.android.synthetic.main.activity_more.*
+import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
+import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.dashevo.dashpay.BlockchainIdentity
 
 class MoreFragment : Fragment(R.layout.activity_more) {
 
     private var blockchainState: BlockchainState? = null
+    private lateinit var dashPayProfile: DashPayProfile
+    private lateinit var editProfileViewModel: EditProfileViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         setupActionBarWithTitle(R.string.more_title)
+
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer {
             blockchainState = it
         })
@@ -66,15 +78,59 @@ class MoreFragment : Fragment(R.layout.activity_more) {
                     WalletApplication.getInstance()).show()
         }
 
-        val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
-        if (blockchainIdentity != null && blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED) {
-            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(blockchainIdentity.uniqueIdString)
-                    .observe(viewLifecycleOwner, Observer {
-                        if (it != null) {
-                            showProfileSection(it)
+        update_profile_status_container.visibility = View.GONE
+
+
+        editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
+
+        // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
+        // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
+        editProfileViewModel.blockchainIdentityData.observe(viewLifecycleOwner, Observer {
+            if (it != null && it.creationState >= BlockchainIdentityData.CreationState.DONE) {
+
+                // observe our profile
+                editProfileViewModel.dashPayProfileData
+                        .observe(viewLifecycleOwner, Observer { profile ->
+                            if (profile != null) {
+                                dashPayProfile = profile
+                                showProfileSection(profile)
+                            }
+                        })
+
+                // track the status of broadcast changes to our profile
+                editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
+                    if (state != null) {
+                        when (state.status) {
+                            Status.SUCCESS -> {
+                                Toast.makeText(requireActivity(), "Update successful", Toast.LENGTH_LONG).show()
+                                update_profile_status_container.visibility = View.GONE
+                                editProfile.visibility = View.VISIBLE
+                            }
+                            Status.ERROR -> {
+                                var msg = state.message
+                                if (msg == null) {
+                                    msg = "!!Error!!  ${state.exception!!.message}"
+                                }
+                                Toast.makeText(requireActivity(), msg, Toast.LENGTH_LONG).show()
+                                update_profile_status_container.visibility = View.VISIBLE
+                                update_status_text.text = msg
+                                editProfile.visibility = View.VISIBLE
+                            }
+                            Status.LOADING -> {
+                                Toast.makeText(requireActivity(), "Processing update", Toast.LENGTH_LONG).show()
+                                update_profile_status_container.visibility = View.VISIBLE
+                                editProfile.visibility = View.GONE
+                            }
+                            Status.CANCELED -> {
+                                update_profile_status_container.visibility = View.VISIBLE
+                                update_status_text.text = "Cancelled" //hard coded text
+                                editProfile.visibility = View.VISIBLE
+                            }
                         }
-                    })
-        }
+                    }
+                })
+            }
+        })
     }
 
     private fun showProfileSection(profile: DashPayProfile) {

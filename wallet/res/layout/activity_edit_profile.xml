@@ -76,7 +76,7 @@
                 app:layout_constraintTop_toBottomOf="@id/dashpayUserAvatar" />
 
             <EditText
-                android:id="@+id/displayName"
+                android:id="@+id/display_name"
                 style="@style/MontserratSemiBold"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
@@ -102,7 +102,7 @@
                 android:textColor="@color/dash_gray"
                 android:textSize="12sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/displayName"
+                app:layout_constraintTop_toBottomOf="@id/display_name"
                 tools:text="0/23 Characters" />
 
             <TextView
@@ -118,7 +118,7 @@
                 app:layout_constraintTop_toBottomOf="@id/displayNameCharCount" />
 
             <EditText
-                android:id="@+id/aboutMe"
+                android:id="@+id/about_me"
                 style="@style/MontserratMedium"
                 android:layout_width="match_parent"
                 android:layout_height="134dp"
@@ -144,7 +144,7 @@
                 android:textSize="12sp"
                 android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/aboutMe"
+                app:layout_constraintTop_toBottomOf="@id/about_me"
                 tools:text="0/256 Characters" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>

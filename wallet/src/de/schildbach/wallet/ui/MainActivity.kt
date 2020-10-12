@@ -220,7 +220,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
         bottom_navigation.menu.findItem(R.id.contacts)?.isChecked = true
-
         if (viewModel.hasIdentity) {
             val contactsFragment = ContactsFragment.newInstance(mode)
             if (mode == MODE_VIEW_REQUESTS) {

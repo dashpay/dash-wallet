@@ -37,7 +37,6 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.bitcoinj.core.Transaction;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
@@ -45,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
@@ -137,15 +135,6 @@ public class WalletTransactionsFragment extends Fragment
             }
         });
 
-        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
-            @Override
-            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
-                if (blockchainIdentityData != null) {
-                    WalletTransactionsFragment.this.adapter.setBlockchainIdentityData(blockchainIdentityData);
-                }
-            }
-        });
-
         resolver.registerContentObserver(AddressBookProvider.contentUri(activity.getPackageName()), true,
                 addressBookObserver);
 
@@ -154,20 +143,26 @@ public class WalletTransactionsFragment extends Fragment
         updateView();
 
         viewModel = new ViewModelProvider(this).get(WalletTransactionsFragmentViewModel.class);
-        viewModel.getTransactionsData().observe(getViewLifecycleOwner(), new Observer<List<? extends Transaction>>() {
+        viewModel.getTransactionHistoryItemData().observe(getViewLifecycleOwner(), new Observer<List<TransactionsAdapter.TransactionHistoryItem>>() {
             @Override
-            public void onChanged(List<? extends Transaction> transactions) {
+            public void onChanged(List<TransactionsAdapter.TransactionHistoryItem> transactions) {
                 loading.setVisibility(View.GONE);
-                //noinspection unchecked
-                adapter.replace((List<Transaction>) transactions);
+                adapter.replace(transactions);
                 updateView();
+            }
+        });
+        viewModel.getBlockchainIdentityData().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
+            @Override
+            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
+                if (blockchainIdentityData != null) {
+                    adapter.setBlockchainIdentityData(blockchainIdentityData);
+                }
             }
         });
     }
 
     @Override
     public void onDestroy() {
-
         config.unregisterOnSharedPreferenceChangeListener(this);
 
         resolver.unregisterContentObserver(addressBookObserver);
@@ -181,9 +176,9 @@ public class WalletTransactionsFragment extends Fragment
     }
 
     @Override
-    public void onTransactionRowClicked(Transaction tx) {
+    public void onTransactionRowClicked(TransactionsAdapter.TransactionHistoryItem transactionHistoryItem) {
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
-                TransactionDetailsDialogFragment.newInstance(tx.getTxId());
+                TransactionDetailsDialogFragment.newInstance(transactionHistoryItem.getTransaction().getTxId());
         requireActivity().getSupportFragmentManager().beginTransaction()
                 .add(transactionDetailsDialogFragment, null).commitAllowingStateLoss();
     }
