@@ -30,7 +30,6 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
@@ -47,13 +46,15 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
 import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
 import kotlinx.android.synthetic.main.activity_more.userInfoContainer
+import java.io.FileOutputStream
+import java.io.IOException
 
 
 class EditProfileActivity : BaseMenuActivity() {
 
     companion object {
         const val REQUEST_CODE_URI = 0
-        const val REQUEST_CODE_TAKE_PICTURE = 1
+        const val REQUEST_CODE_IMAGE = 1
         const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
         const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
     }
@@ -239,16 +240,19 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun takePicture() {
         val takePicture = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        startActivityForResult(takePicture, REQUEST_CODE_URI)
+        startActivityForResult(takePicture, REQUEST_CODE_IMAGE)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode != RESULT_CANCELED) {
             when (requestCode) {
-                REQUEST_CODE_TAKE_PICTURE -> if (resultCode == RESULT_OK && data != null) {
+                REQUEST_CODE_IMAGE -> if (resultCode == RESULT_OK && data != null) {
                     val selectedImage: Bitmap = data.extras["data"] as Bitmap
+                    // TODO: this line is for debugging - show the selected image on the screen
                     dashpayUserAvatar.setImageBitmap(selectedImage)
+                    editProfileViewModel.saveBitmap(selectedImage)
+                    // TODO: crop the image?
                 }
                 REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
                     val selectedImage: Uri? = data.data
@@ -264,6 +268,7 @@ class EditProfileActivity : BaseMenuActivity() {
                             dashpayUserAvatar.setImageBitmap(BitmapFactory.decodeFile(picturePath))
                             editProfileViewModel.localProfileImageUri = picturePath
                             cursor.close()
+                            // TODO: crop the image?
                         }
                     }
                 }

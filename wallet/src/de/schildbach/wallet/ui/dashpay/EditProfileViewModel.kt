@@ -16,19 +16,23 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
-import android.content.SharedPreferences
-import android.net.Uri
+import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
+import kotlinx.coroutines.launch
+import java.io.FileOutputStream
+import java.io.IOException
 
 class EditProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val walletApplication = application as WalletApplication
+
+    private val profilePicturePath = application.cacheDir.absolutePath + "/profile/profileimage.jpg"
 
     // Use the database instead of PlatformRepo.getBlockchainIdentity, which
     // won't be initialized if there is no username registered
@@ -65,5 +69,17 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
             walletApplication.configuration.localProfilePictureUri = value
         }
 
+    fun saveBitmap(bitmap: Bitmap) {
+        viewModelScope.launch {
+            try {
+                FileOutputStream(profilePicturePath).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) // bmp is your Bitmap instance
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+            localProfileImageUri = profilePicturePath
+        }
+    }
 
 }

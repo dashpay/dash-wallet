@@ -54,9 +54,11 @@ class SelectProfilePictureDialog : BaseBottomSheetDialogFragment() {
         view.apply {
             take_picture.setOnClickListener {
                 sharedViewModel.onTakePictureCallback.call()
+                dismiss()
             }
             choose_picture.setOnClickListener {
                 sharedViewModel.onChoosePictureCallback.call()
+                dismiss()
             }
         }
 
