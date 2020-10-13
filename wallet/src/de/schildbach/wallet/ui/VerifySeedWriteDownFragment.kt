@@ -51,11 +51,10 @@ class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
 
-        if (arguments?.containsKey("seed")!!) {
-            val seed = arguments!!.getStringArray("seed")
+        arguments?.getStringArray("seed")?.let { seed ->
             val sb = StringBuilder(12)
             seed.forEach {
-                sb.append("$it  ")
+                sb.append("$it ")
             }
             recoverySeedTextView.text = sb.toString().trim()
         }

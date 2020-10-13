@@ -2,8 +2,8 @@ apply plugin: 'com.android.application'
 
 ext {
     archivesBaseName = 'dash-wallet'
-    androidSupportVersion = '28.0.0'
-    lifecycleVersion = "2.1.0"
+    androidSupportVersion = '29.0.0'
+    lifecycleVersion = "2.2.0"
 }
 repositories {
     mavenLocal()
@@ -18,33 +18,32 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.material:material:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'com.google.android.material:material:1.2.1'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
     implementation 'androidx.annotation:annotation:1.1.0'
-    implementation 'androidx.core:core:1.1.0'
+    implementation 'androidx.core:core:1.3.2'
     implementation('androidx.legacy:legacy-support-v13:1.0.0') {
         exclude(group: 'com.android.support', module: 'support-fragment')
         exclude(group: 'com.android.support', module: 'support-media-compat')
     }
     implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.1.0'
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android:flexbox:1.1.0'
-    implementation 'androidx.preference:preference:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.0-beta4'
+    implementation 'androidx.preference:preference:1.1.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.1'
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'com.google.protobuf:protobuf-java:3.4.0'
-    implementation 'com.google.guava:guava:27.0.1-android'
-    implementation 'com.google.zxing:core:3.3.3'
+    implementation 'com.google.guava:guava:29.0-android'
+    implementation 'com.google.zxing:core:3.4.1'
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
 
-    implementation 'com.squareup.moshi:moshi:1.9.2'
-    implementation 'org.slf4j:slf4j-api:1.7.25'
+    implementation 'com.squareup.moshi:moshi:1.11.0'
+    implementation 'org.slf4j:slf4j-api:1.7.30'
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
     }
@@ -54,7 +53,7 @@ dependencies {
 
     implementation project(path: ':common')
     implementation project(path: ':ui-redesign')
-    annotationProcessor 'androidx.room:room-compiler:2.1.0'
+    annotationProcessor 'androidx.room:room-compiler:2.2.5'
 
     //Uphold Integration
     implementation project(path: ':uphold-integration')
@@ -62,15 +61,15 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.core:core-ktx:1.1.0'
+    implementation 'androidx.core:core-ktx:1.3.2'
 
-    implementation 'com.google.firebase:firebase-analytics:17.2.0'
+    implementation 'com.google.firebase:firebase-analytics:17.5.0'
 
-    implementation ('com.google.firebase:firebase-inappmessaging:19.0.1') {
+    implementation ('com.google.firebase:firebase-inappmessaging:19.1.1') {
         exclude group: 'com.google.protobuf', module: 'protobuf-lite'
         exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
     }
-    implementation ('com.google.firebase:firebase-inappmessaging-display:19.0.1') {
+    implementation ('com.google.firebase:firebase-inappmessaging-display:19.1.1') {
         exclude group: 'com.google.protobuf', module: 'protobuf-lite'
         exclude group: 'com.google.firebase', module: 'protolite-well-known-types'
     }
@@ -79,16 +78,16 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation 'com.jakewharton:process-phoenix:2.0.0'
 
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13'
     //Espresso
-    androidTestImplementation ('androidx.test:runner:1.1.0') {
+    androidTestImplementation ('androidx.test:runner:1.3.0') {
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    androidTestImplementation ('androidx.test.espresso:espresso-core:3.1.0') {
+    androidTestImplementation ('androidx.test.espresso:espresso-core:3.3.0') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
-    androidTestImplementation ('androidx.test.espresso:espresso-intents:3.1.0') {
+    androidTestImplementation ('androidx.test.espresso:espresso-intents:3.3.0') {
         exclude group: 'com.google.code.findbugs', module: 'jsr305'
         exclude group: 'com.android.support', module: 'support-annotations'
     }
@@ -100,7 +99,7 @@ ext {
 }
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
 
     lintOptions {
         abortOnError false
@@ -108,7 +107,7 @@ android {
     }
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 28
+        targetSdkVersion 29
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -198,6 +197,10 @@ android {
     }
     dexOptions {
         preDexLibraries true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
