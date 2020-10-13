@@ -55,7 +55,7 @@
                 tools:src="@drawable/user5" />
 
             <ImageButton
-                android:id="@+id/profile_qr_icon"
+                android:id="@+id/profile_edit_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/transparent_button_background"

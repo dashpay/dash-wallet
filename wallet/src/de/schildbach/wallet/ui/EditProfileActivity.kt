@@ -16,11 +16,22 @@
 
 package de.schildbach.wallet.ui
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -30,14 +41,24 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
+import de.schildbach.wallet.ui.dashpay.SelectProfilePictureDialog
+import de.schildbach.wallet.ui.dashpay.SelectProfilePictureSharedViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
 import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
 import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 
+
 class EditProfileActivity : BaseMenuActivity() {
 
+    companion object {
+        const val REQUEST_CODE_URI = 0
+        const val REQUEST_CODE_TAKE_PICTURE = 1
+        const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
+        const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
+    }
     private lateinit var editProfileViewModel: EditProfileViewModel
+    private lateinit var selectProfilePictureSharedViewModel: SelectProfilePictureSharedViewModel
     private var isEditing: Boolean = false
 
     override fun getLayoutId(): Int {
@@ -50,6 +71,7 @@ class EditProfileActivity : BaseMenuActivity() {
         setTitle(R.string.edit_profile)
 
         editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
+        selectProfilePictureSharedViewModel = ViewModelProvider(this).get(SelectProfilePictureSharedViewModel::class.java)
 
         // first ensure that we have a registered username
         editProfileViewModel.blockchainIdentityData.observe(this, Observer {
@@ -156,6 +178,18 @@ class EditProfileActivity : BaseMenuActivity() {
                 editProfileViewModel.broadcastUpdateProfile(updatedProfile)
             }
         }
+
+        profile_edit_icon.setOnClickListener {
+            selectImage(this)
+        }
+
+        selectProfilePictureSharedViewModel.onTakePictureCallback.observe(this, Observer<Void> {
+            takePictureWithPermission()
+        })
+
+        selectProfilePictureSharedViewModel.onChoosePictureCallback.observe(this, Observer<Void> {
+            choosePictureWithPermission()
+        })
     }
 
     private fun showProfileInfo() {
@@ -177,4 +211,81 @@ class EditProfileActivity : BaseMenuActivity() {
         this.isEditing = isEditing
     }
 
+    private fun takePictureWithPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            takePicture()
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CODE_CHOOSE_PICTURE_PERMISSION)
+        }
+    }
+
+    private fun choosePictureWithPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            choosePicture()
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_CHOOSE_PICTURE_PERMISSION)
+        }
+    }
+
+    private fun selectImage(context: Context) {
+        SelectProfilePictureDialog.createDialog()
+                .show(supportFragmentManager, "selectPictureDialog");
+    }
+
+    private fun choosePicture() {
+        val pickPhoto = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        startActivityForResult(pickPhoto, REQUEST_CODE_URI)
+    }
+
+    private fun takePicture() {
+        val takePicture = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        startActivityForResult(takePicture, REQUEST_CODE_URI)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != RESULT_CANCELED) {
+            when (requestCode) {
+                REQUEST_CODE_TAKE_PICTURE -> if (resultCode == RESULT_OK && data != null) {
+                    val selectedImage: Bitmap = data.extras["data"] as Bitmap
+                    dashpayUserAvatar.setImageBitmap(selectedImage)
+                }
+                REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
+                    val selectedImage: Uri? = data.data
+                    val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
+                    if (selectedImage != null) {
+                        val cursor: Cursor? = contentResolver.query(selectedImage,
+                                filePathColumn, null, null, null)
+                        if (cursor != null) {
+                            cursor.moveToFirst()
+                            val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
+                            val picturePath: String = cursor.getString(columnIndex)
+                            // TODO: this line is for debugging - show the selected image on the screen
+                            dashpayUserAvatar.setImageBitmap(BitmapFactory.decodeFile(picturePath))
+                            editProfileViewModel.localProfileImageUri = picturePath
+                            cursor.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        when (requestCode) {
+            REQUEST_CODE_TAKE_PICTURE_PERMISSION -> {
+                when {
+                    grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED -> takePicture()
+                    else -> takePictureWithPermission()
+                }
+            }
+            REQUEST_CODE_CHOOSE_PICTURE_PERMISSION -> {
+                when {
+                    grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED -> choosePicture()
+                    else -> choosePictureWithPermission()
+                }
+            }
+            else -> super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        }
+    }
 }

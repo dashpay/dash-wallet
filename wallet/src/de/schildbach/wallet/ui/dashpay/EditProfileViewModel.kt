@@ -16,8 +16,11 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
+import android.content.SharedPreferences
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.liveData
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
@@ -54,4 +57,13 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
                 .create(dashPayProfile)
                 .enqueue()
     }
+
+    // TODO: Should this be a live data?
+    var localProfileImageUri: String
+        get() = walletApplication.configuration.localProfilePictureUri
+        set(value) {
+            walletApplication.configuration.localProfilePictureUri = value
+        }
+
+
 }

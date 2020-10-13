@@ -78,6 +78,7 @@ public class Configuration {
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
     public static final String PREFS_LAST_SEEN_NOTIFICATION_TIME = "last_seen_notification_time";
+    public static final String PREFS_KEY_LOCAL_PROFILE_PICTURE_URI = "local_profile_picture_uri";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
@@ -431,7 +432,15 @@ public class Configuration {
         return prefs.getLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, 0);
     }
 
-    public void setPrefsLastSeenNotificationTime(long lastSeenNotificationTime) {
+    public void setLastSeenNotificationTime(long lastSeenNotificationTime) {
         prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).apply();
+    }
+
+    public void setLocalProfilePictureUri(String picturePath) {
+        prefs.edit().putString(PREFS_KEY_LOCAL_PROFILE_PICTURE_URI, picturePath);
+    }
+
+    public String getLocalProfilePictureUri() {
+        return prefs.getString(PREFS_KEY_LOCAL_PROFILE_PICTURE_URI, "");
     }
 }
