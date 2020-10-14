@@ -437,7 +437,7 @@ public class Configuration {
     }
 
     public void setLocalProfilePictureUri(String picturePath) {
-        prefs.edit().putString(PREFS_KEY_LOCAL_PROFILE_PICTURE_URI, picturePath);
+        prefs.edit().putString(PREFS_KEY_LOCAL_PROFILE_PICTURE_URI, picturePath).apply();
     }
 
     public String getLocalProfilePictureUri() {
