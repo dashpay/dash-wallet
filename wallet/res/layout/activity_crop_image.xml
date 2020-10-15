@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.ortiz.touchview.TouchImageView
+    <de.schildbach.wallet.ui.dashpay.widget.CircleCropTouchImageView
         android:id="@+id/background"
         android:scaleType="centerCrop"
         android:layout_width="match_parent"

@@ -2,6 +2,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.os.Bundle
 import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestListener
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_crop_image.*
@@ -15,6 +16,7 @@ class CropImageActivity : InteractionAwareActivity() {
 
         val imagePath = WalletApplication.getInstance().configuration.localProfilePictureUri
         Glide.with(background).load(imagePath).into(background)
+        //background.setZoom(1.5f)
     }
 
 }
