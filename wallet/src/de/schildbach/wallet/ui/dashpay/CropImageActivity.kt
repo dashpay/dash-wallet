@@ -2,21 +2,16 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.os.Handler
-import android.util.TimeUtils
 import androidx.appcompat.widget.AppCompatImageView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
-import com.ortiz.touchview.TouchImageView
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.dashpay.widget.CircleCropTouchImageView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_crop_image.*
 import org.dash.wallet.common.InteractionAwareActivity
-import java.util.concurrent.TimeUnit
 
 class CropImageActivity : InteractionAwareActivity() {
 
