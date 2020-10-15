@@ -1,6 +1,5 @@
 package de.schildbach.wallet.ui.dashpay.widget
 
-import android.R
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
@@ -11,7 +10,6 @@ import android.renderscript.ScriptIntrinsicBlur
 import android.util.AttributeSet
 import android.view.View
 import com.ortiz.touchview.TouchImageView
-import kotlin.math.round
 
 
 class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) : TouchImageView(context, attrs, defStyle) {
@@ -21,6 +19,7 @@ class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
 
+        val imgScaleRatio = 0.7f
         val bitmap = (drawable as BitmapDrawable?)?.bitmap
         if (bitmap != null) {
             if (blurredBitmap == null) {
@@ -38,7 +37,8 @@ class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs
 
             // Load the bitmap as a shader to the paint.
             var path = Path()
-            path.addCircle(halfWidth, halfHeight, halfWidth*.8f, Path.Direction.CCW)
+            path.addCircle(halfWidth, halfHeight * imgScaleRatio, halfWidth * imgScaleRatio,
+                    Path.Direction.CCW)
             var paint = Paint(Paint.ANTI_ALIAS_FLAG)
             val colorMatrix = ColorMatrix()
             val colorScale = 0.9f
