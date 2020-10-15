@@ -6,7 +6,7 @@
 
     <de.schildbach.wallet.ui.dashpay.widget.CircleCropTouchImageView
         android:id="@+id/background"
-        android:scaleType="centerCrop"
+        android:scaleType="fitCenter"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
