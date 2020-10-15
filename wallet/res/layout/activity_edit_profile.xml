@@ -13,25 +13,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <Button
-        android:id="@+id/save"
-        style="@style/DashButton.Blue"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginLeft="15dp"
-        android:layout_marginRight="15dp"
-        android:layout_marginBottom="25dp"
-        android:text="@string/save"
-        android:textSize="18sp"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:animateLayoutChanges="true"
         android:clipToPadding="false"
         android:orientation="vertical"
-        app:layout_constraintBottom_toTopOf="@id/save"
         app:layout_constraintTop_toBottomOf="@id/appbar_general"
         app:layout_constraintVertical_bias="0">
 
@@ -42,6 +29,16 @@
             android:clipChildren="false"
             android:clipToPadding="false"
             android:padding="24dp">
+
+            <!-- Dummy item to prevent display_name from receiving focus -->
+            <FrameLayout
+                android:layout_width="0px"
+                android:layout_height="0px"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:ignore="UselessLeaf" />
 
             <ImageView
                 android:id="@+id/dashpayUserAvatar"
@@ -94,13 +91,14 @@
                 tools:text="Katie Rennie" />
 
             <TextView
-                android:id="@+id/displayNameCharCount"
+                android:id="@+id/display_name_char_count"
                 style="@style/MontserratRegular"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:textColor="@color/dash_gray"
                 android:textSize="12sp"
+                android:visibility="invisible"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/display_name"
                 tools:text="0/23 Characters" />
@@ -115,7 +113,7 @@
                 android:textColor="@color/medium_gray"
                 android:textSize="14sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/displayNameCharCount" />
+                app:layout_constraintTop_toBottomOf="@id/display_name_char_count" />
 
             <EditText
                 android:id="@+id/about_me"

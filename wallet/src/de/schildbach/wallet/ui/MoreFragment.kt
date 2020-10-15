@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.content.Intent
+import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -26,26 +27,18 @@ import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.lifecycleOwner
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_edit_profile.*
 import kotlinx.android.synthetic.main.activity_more.*
-import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
-import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
-import org.dashevo.dashpay.BlockchainIdentity
 
 class MoreFragment : Fragment(R.layout.activity_more) {
 
     private var blockchainState: BlockchainState? = null
-    private lateinit var dashPayProfile: DashPayProfile
     private lateinit var editProfileViewModel: EditProfileViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -77,58 +70,58 @@ class MoreFragment : Fragment(R.layout.activity_more) {
             ReportIssueDialogBuilder.createReportIssueDialog(requireContext(),
                     WalletApplication.getInstance()).show()
         }
+        initViewModel()
+    }
 
-        update_profile_status_container.visibility = View.GONE
-
-
+    private fun initViewModel() {
         editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
 
-        // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
-        // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
-        editProfileViewModel.blockchainIdentityData.observe(viewLifecycleOwner, Observer {
-            if (it != null && it.creationState >= BlockchainIdentityData.CreationState.DONE) {
-
-                // observe our profile
-                editProfileViewModel.dashPayProfileData
-                        .observe(viewLifecycleOwner, Observer { profile ->
-                            if (profile != null) {
-                                dashPayProfile = profile
-                                showProfileSection(profile)
-                            }
-                        })
-
-                // track the status of broadcast changes to our profile
-                editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
-                    if (state != null) {
-                        when (state.status) {
-                            Status.SUCCESS -> {
-                                Toast.makeText(requireActivity(), "Update successful", Toast.LENGTH_LONG).show()
-                                update_profile_status_container.visibility = View.GONE
-                                editProfile.visibility = View.VISIBLE
-                            }
-                            Status.ERROR -> {
-                                var msg = state.message
-                                if (msg == null) {
-                                    msg = "!!Error!!  ${state.exception!!.message}"
-                                }
-                                Toast.makeText(requireActivity(), msg, Toast.LENGTH_LONG).show()
-                                update_profile_status_container.visibility = View.VISIBLE
-                                update_status_text.text = msg
-                                editProfile.visibility = View.VISIBLE
-                            }
-                            Status.LOADING -> {
-                                Toast.makeText(requireActivity(), "Processing update", Toast.LENGTH_LONG).show()
-                                update_profile_status_container.visibility = View.VISIBLE
-                                editProfile.visibility = View.GONE
-                            }
-                            Status.CANCELED -> {
-                                update_profile_status_container.visibility = View.VISIBLE
-                                update_status_text.text = "Cancelled" //hard coded text
-                                editProfile.visibility = View.VISIBLE
+        // observe our profile
+        editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer { dashPayProfile ->
+            if (dashPayProfile != null) {
+                showProfileSection(dashPayProfile)
+            }
+        })
+        // track the status of broadcast changes to our profile
+        editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
+            if (state != null) {
+                when (state.status) {
+                    Status.SUCCESS -> {
+                        edit_update_switcher.apply {
+                            if (currentView.id == R.id.update_profile) {
+                                showPrevious()
                             }
                         }
                     }
-                })
+                    Status.ERROR -> {
+                        var msg = state.message
+                        if (msg == null) {
+                            msg = "!!Error!!  ${state.exception!!.message}"
+                        }
+                        Toast.makeText(requireActivity(), msg, Toast.LENGTH_LONG).show()
+                        edit_update_switcher.apply {
+                            if (currentView.id == R.id.update_profile) {
+                                showPrevious()
+                            }
+                        }
+                    }
+                    Status.LOADING -> {
+                        edit_update_switcher.apply {
+                            if (currentView.id == R.id.edit_profile) {
+                                showNext()
+                                update_profile_status_icon.setImageResource(R.drawable.identity_processing)
+                                (update_profile_status_icon.drawable as AnimationDrawable).start()
+                            }
+                        }
+                    }
+                    Status.CANCELED -> {
+                        edit_update_switcher.apply {
+                            if (currentView.id == R.id.update_profile) {
+                                showPrevious()
+                            }
+                        }
+                    }
+                }
             }
         })
     }
@@ -151,7 +144,7 @@ class MoreFragment : Fragment(R.layout.activity_more) {
         } else {
             dashpayUserAvatar.setImageDrawable(defaultAvatar)
         }
-        editProfile.setOnClickListener {
+        edit_profile.setOnClickListener {
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
     }
