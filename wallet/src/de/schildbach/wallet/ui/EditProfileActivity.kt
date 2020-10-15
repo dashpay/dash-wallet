@@ -306,9 +306,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun cropProfilePicture() {
         val tmpPictureFile = editProfileViewModel.tmpPictureFile
-//        TODO: this line is for debugging - show the selected image on the screen
-//        dashpayUserAvatar.setImageBitmap(BitmapFactory.decodeFile(tmpPictureFile.absolutePath))
-//        or
+        //TODO: this line is for debugging - show the selected image on the screen
         dashpayUserAvatar.setImageURI(gerFileUri(tmpPictureFile))
         editProfileViewModel.saveTmpAsProfilePicture()
     }
