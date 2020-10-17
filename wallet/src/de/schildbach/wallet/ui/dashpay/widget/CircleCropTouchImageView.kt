@@ -8,6 +8,7 @@ import android.renderscript.Element
 import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import com.ortiz.touchview.TouchImageView
 
@@ -15,21 +16,39 @@ import com.ortiz.touchview.TouchImageView
 class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) : TouchImageView(context, attrs, defStyle) {
 
     var blurredBitmap: Bitmap? = null
+    var calculatedMinZoom = false
 
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
 
+        val vW = measuredWidth
+        val vH = measuredHeight
+
         val imgScaleRatio = 0.7f
+        val imgVerticalDisplacement = 0.5f
         val bitmap = (drawable as BitmapDrawable?)?.bitmap
         if (bitmap != null) {
             //Create blurred bitmap for the background
             if (blurredBitmap == null) {
-               //TODO: Set blur times as argument of the blurring function
+                //TODO: Set blur times as argument of the blurring function
                 blurredBitmap = blur(this.context, bitmap)
                 blurredBitmap = blur(this.context, blurredBitmap!!)
                 //blurredBitmap = blur(this.context, blurredBitmap!!)
             }
 
+            val bW = blurredBitmap!!.width
+            val bH = blurredBitmap!!.height
+
+            //Set initial and min zoom
+            if (!calculatedMinZoom) {
+                minZoom = if (bW > bH) {
+                    (vW * imgScaleRatio) / drawable.intrinsicHeight
+                } else {
+                    (vH * imgScaleRatio) / drawable.intrinsicWidth
+                }
+                calculatedMinZoom = true
+                setZoom(minZoom)
+            }
             val halfWidth = width / 2f
             val halfHeight = height / 2f
 
@@ -39,7 +58,7 @@ class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs
             super.draw(newCanvas)
 
             val path = Path()
-            path.addCircle(halfWidth, halfHeight * imgScaleRatio, halfWidth * imgScaleRatio,
+            path.addCircle(halfWidth, vH * imgVerticalDisplacement, halfWidth * imgScaleRatio,
                     Path.Direction.CCW)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -50,10 +69,6 @@ class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs
 
             //Center Crop
             val blurredMatrix = Matrix()
-            val bW = blurredBitmap!!.width
-            val bH = blurredBitmap!!.height
-            val vW = measuredWidth
-            val vH = measuredHeight
 
             var xScale: Float
             var yScale: Float

@@ -30,7 +30,7 @@ class CropImageActivity : InteractionAwareActivity() {
             override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
                                          dataSource: DataSource?, isFirstResource: Boolean): Boolean {
                 background.setImageDrawable(resource)
-                background.minZoom = TouchImageView.AUTOMATIC_MIN_ZOOM
+                //background.minZoom = TouchImageView.AUTOMATIC_MIN_ZOOM
                 background.maxZoom = 5f
                 return true
             }
