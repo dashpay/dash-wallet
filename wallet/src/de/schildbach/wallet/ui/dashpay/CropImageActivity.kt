@@ -8,7 +8,6 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
-import com.ortiz.touchview.TouchImageView
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_crop_image.*
@@ -30,8 +29,8 @@ class CropImageActivity : InteractionAwareActivity() {
             override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
                                          dataSource: DataSource?, isFirstResource: Boolean): Boolean {
                 background.setImageDrawable(resource)
-                //background.minZoom = TouchImageView.AUTOMATIC_MIN_ZOOM
-                background.maxZoom = 5f
+                circle_crop.setImageDrawable(resource)
+                circle_crop.maxZoom = 5f
                 return true
             }
         }).into(background as AppCompatImageView)
