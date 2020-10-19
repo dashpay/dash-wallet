@@ -6,6 +6,7 @@
 
     <de.schildbach.wallet.ui.dashpay.widget.BlurredImageView
         android:id="@+id/background"
+        android:scaleType="centerCrop"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
     
