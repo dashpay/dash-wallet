@@ -433,5 +433,7 @@
     <string name="edit_profile_choose_picture">Select from Gallery</string>
     <string name="upgrade_to_evolution_title">Upgrade to Evolution</string>
     <string name="upgrade_to_evolution_message">Create your Username, find friends &amp; family with their usernames and add them to your contacts</string>
+    <string name="image_cropper_title">Move and Zoom your photo to find the perfect fit</string>
+    <string name="select">Select</string>
 
 </resources>
