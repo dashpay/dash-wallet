@@ -21,7 +21,6 @@ class CropImageActivity : InteractionAwareActivity() {
 
         val imagePath = WalletApplication.getInstance().configuration.localProfilePictureUri
 
-        Glide.with(this).load(imagePath).into(background)
         Glide.with(this).load(imagePath).listener(object : RequestListener<Drawable> {
             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                 //TODO: Handle error
@@ -30,6 +29,7 @@ class CropImageActivity : InteractionAwareActivity() {
 
             override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
                                          dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                background.setImageDrawable(resource)
                 circle_crop.setImageDrawable(resource)
                 circle_crop.maxZoom = 5f
                 return true
