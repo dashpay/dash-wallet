@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.schildbach.wallet.ui.dashpay.widget
 
 import android.content.Context
@@ -21,11 +37,8 @@ class BlurredImageView @JvmOverloads constructor(context: Context, attrs: Attrib
         val bitmap = (drawable as BitmapDrawable?)?.bitmap
 
         if (bitmap != null) {
-            //Create blurred bitmap for the background
             if (blurredBitmap == null) {
-                //TODO: Set blur times as argument of the blurring function
                 blurredBitmap = blur(this.context, bitmap)
-                blurredBitmap = blur(this.context, blurredBitmap!!)
             }
 
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
