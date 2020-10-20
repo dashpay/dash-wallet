@@ -114,7 +114,6 @@ class EditProfileActivity : BaseMenuActivity() {
         editProfileViewModel.dashPayProfileData.observe(this, Observer { dashPayProfile ->
             if (dashPayProfile != null) {
                 showProfileInfo(dashPayProfile)
-                saveButton.isEnabled = false
             } else {
                 finish()
             }
@@ -144,7 +143,9 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     fun activateDeactivateSave() {
-        saveButton.isEnabled = !(display_name.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || about_me.text.length > Constants.ABOUT_ME_MAX_LENGTH)
+        if (this::saveButton.isInitialized) {
+            saveButton.isEnabled = !(display_name.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || about_me.text.length > Constants.ABOUT_ME_MAX_LENGTH)
+        }
     }
 
     fun save() {
