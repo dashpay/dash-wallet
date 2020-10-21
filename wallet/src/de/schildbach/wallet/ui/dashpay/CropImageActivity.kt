@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.widget.AppCompatImageView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
@@ -42,7 +43,9 @@ class CropImageActivity : InteractionAwareActivity() {
         val destinationFile = intent.getSerializableExtra(DESTINATION_FILE) as File
         Glide.with(this).load(tempFile).listener(object : RequestListener<Drawable> {
             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
-                //TODO: Handle error
+                Toast.makeText(this@CropImageActivity,
+                        R.string.unable_to_load_image, Toast.LENGTH_SHORT).show()
+                finish()
                 return false
             }
 
