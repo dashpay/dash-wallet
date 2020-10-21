@@ -57,6 +57,7 @@ class EditProfileActivity : BaseMenuActivity() {
         const val REQUEST_CODE_IMAGE = 1
         const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
         const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
+        const val REQUEST_CODE_CROP_IMAGE = 4
     }
 
     private lateinit var editProfileViewModel: EditProfileViewModel
@@ -194,7 +195,7 @@ class EditProfileActivity : BaseMenuActivity() {
         })
 
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
-            cropProfilePicture()
+            cropProfilePicture(it)
         })
     }
 
@@ -300,15 +301,20 @@ class EditProfileActivity : BaseMenuActivity() {
                         }
                     }
                 }
+                REQUEST_CODE_CROP_IMAGE -> {
+                    dashpayUserAvatar.setImageURI(getFileUri(editProfileViewModel.profilePictureFile!!))
+                }
             }
         }
     }
 
-    private fun cropProfilePicture() {
-        val tmpPictureFile = editProfileViewModel.tmpPictureFile
-        //TODO: this line is for debugging - show the selected image on the screen
-        dashpayUserAvatar.setImageURI(getFileUri(tmpPictureFile))
+    private fun cropProfilePicture(tmpPictureFile: File) {
+        val imagePath = getFileUri(tmpPictureFile)
+        dashpayUserAvatar.setImageURI(imagePath)
         editProfileViewModel.saveTmpAsProfilePicture()
+        val intent = CropImageActivity.createIntent(this, editProfileViewModel.tmpPictureFile,
+            editProfileViewModel.profilePictureFile!!)
+        startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

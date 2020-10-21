@@ -19,8 +19,12 @@ package de.schildbach.wallet.ui.dashpay.widget
 import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
+import android.net.Uri
 import android.util.AttributeSet
+import androidx.core.net.toFile
 import com.ortiz.touchview.TouchImageView
+import java.io.File
+import java.io.FileOutputStream
 
 
 class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) : TouchImageView(context, attrs, defStyle) {
@@ -64,4 +68,18 @@ class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs
             canvas.drawPath(path, paint)
         }
     }
+
+    fun saveToFile(imageFile: File) {
+        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val newCanvas = Canvas(bmp)
+        super.draw(newCanvas)
+
+        val y = (zoomedRect.top * this.measuredHeight).toInt()
+        val x = (zoomedRect.left * this.measuredWidth).toInt()
+        val width = (zoomedRect.width() * this.measuredWidth).toInt()
+        //Using width twice to have a square picture.
+        val croppedBitmap = Bitmap.createBitmap(bmp, x, y, width, width)
+        croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(imageFile))
+    }
+
 }

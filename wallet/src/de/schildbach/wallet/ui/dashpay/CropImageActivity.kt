@@ -1,5 +1,6 @@
 package de.schildbach.wallet.ui.dashpay
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
@@ -10,19 +11,25 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_crop_image.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.InteractionAwareActivity
+import java.io.File
 
 class CropImageActivity : InteractionAwareActivity() {
 
     companion object {
-        private const val IMAGE_PATH = "image_path"
+        private const val TEMP_FILE = "temp_file"
+        private const val DESTINATION_FILE = "destination_file"
 
-        fun createIntent(context: Context, imagePath: String): Intent {
+        fun createIntent(context: Context, tempFile: File, destinationFile: File): Intent {
             val intent = Intent(context, CropImageActivity::class.java)
-            intent.putExtra(IMAGE_PATH, imagePath)
+            intent.putExtra(TEMP_FILE, tempFile)
+            intent.putExtra(DESTINATION_FILE, destinationFile)
             return intent
         }
     }
@@ -31,8 +38,9 @@ class CropImageActivity : InteractionAwareActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_crop_image)
 
-        val imagePath = intent.getStringExtra(IMAGE_PATH)
-        Glide.with(this).load(imagePath).listener(object : RequestListener<Drawable> {
+        val tempFile = intent.getSerializableExtra(TEMP_FILE) as File
+        val destinationFile = intent.getSerializableExtra(DESTINATION_FILE) as File
+        Glide.with(this).load(tempFile).listener(object : RequestListener<Drawable> {
             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                 //TODO: Handle error
                 return false
@@ -46,6 +54,19 @@ class CropImageActivity : InteractionAwareActivity() {
                 return true
             }
         }).into(circle_crop as AppCompatImageView)
+        select_btn.setOnClickListener {
+            CoroutineScope(Dispatchers.IO).launch {
+                circle_crop.saveToFile(destinationFile)
+                withContext(Dispatchers.Main) {
+                    finishWithSuccess()
+                }
+            }
+        }
+    }
+
+    private fun finishWithSuccess() {
+        setResult(Activity.RESULT_OK)
+        finish()
     }
 
 }
