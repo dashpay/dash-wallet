@@ -42,6 +42,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.CropImageActivity
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.SelectProfilePictureDialog
 import de.schildbach.wallet.ui.dashpay.SelectProfilePictureSharedViewModel
