@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.tabs.TabLayout
 import de.schildbach.wallet_test.R
@@ -57,8 +58,9 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        toolbar.setTitle(R.string.payments_title)
-        setupActionBarWithTitle(R.string.payments_title, false)
+        toolbar.title = ""
+        val appCompatActivity = requireActivity() as AppCompatActivity
+        appCompatActivity.setSupportActionBar(toolbar)
 
         //TODO: Implement FragmentViewPager
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
