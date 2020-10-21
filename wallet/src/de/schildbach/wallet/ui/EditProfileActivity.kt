@@ -207,7 +207,7 @@ class EditProfileActivity : BaseMenuActivity() {
                     .placeholder(defaultAvatar).into(dashpayUserAvatar)
         } else {
             if (editProfileViewModel.profilePictureFile != null && editProfileViewModel.profilePictureFile!!.exists()) {
-                dashpayUserAvatar.setImageURI(gerFileUri(editProfileViewModel.profilePictureFile!!))
+                dashpayUserAvatar.setImageURI(getFileUri(editProfileViewModel.profilePictureFile!!))
             } else {
                 dashpayUserAvatar.setImageDrawable(defaultAvatar)
             }
@@ -263,7 +263,7 @@ class EditProfileActivity : BaseMenuActivity() {
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
             // Ensure that there's a camera activity to handle the intent
             takePictureIntent.resolveActivity(packageManager)?.also {
-                val tmpFileUri = gerFileUri(editProfileViewModel.tmpPictureFile)
+                val tmpFileUri = getFileUri(editProfileViewModel.tmpPictureFile)
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, tmpFileUri)
                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
                     // to avoid 'SecurityException: Permission Denial' on KitKat
@@ -307,7 +307,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun cropProfilePicture() {
         val tmpPictureFile = editProfileViewModel.tmpPictureFile
         //TODO: this line is for debugging - show the selected image on the screen
-        dashpayUserAvatar.setImageURI(gerFileUri(tmpPictureFile))
+        dashpayUserAvatar.setImageURI(getFileUri(tmpPictureFile))
         editProfileViewModel.saveTmpAsProfilePicture()
     }
 
@@ -329,7 +329,7 @@ class EditProfileActivity : BaseMenuActivity() {
         }
     }
 
-    private fun gerFileUri(file: File): Uri {
+    private fun getFileUri(file: File): Uri {
         return FileProvider.getUriForFile(walletApplication, "${walletApplication.packageName}.file_attachment", file)
     }
 }
