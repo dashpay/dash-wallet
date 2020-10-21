@@ -434,12 +434,4 @@ public class Configuration {
     public void setLastSeenNotificationTime(long lastSeenNotificationTime) {
         prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).apply();
     }
-
-    public void setLocalProfilePictureUri(String picturePath) {
-        prefs.edit().putString(PREFS_KEY_LOCAL_PROFILE_PICTURE_URI, picturePath).apply();
-    }
-
-    public String getLocalProfilePictureUri() {
-        return prefs.getString(PREFS_KEY_LOCAL_PROFILE_PICTURE_URI, "");
-    }
 }

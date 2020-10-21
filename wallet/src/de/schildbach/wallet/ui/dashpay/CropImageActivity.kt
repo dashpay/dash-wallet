@@ -1,5 +1,7 @@
 package de.schildbach.wallet.ui.dashpay
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import androidx.appcompat.widget.AppCompatImageView
@@ -15,12 +17,21 @@ import org.dash.wallet.common.InteractionAwareActivity
 
 class CropImageActivity : InteractionAwareActivity() {
 
+    companion object {
+        private const val IMAGE_PATH = "image_path"
+
+        fun createIntent(context: Context, imagePath: String): Intent {
+            val intent = Intent(context, CropImageActivity::class.java)
+            intent.putExtra(IMAGE_PATH, imagePath)
+            return intent
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_crop_image)
 
-        val imagePath = WalletApplication.getInstance().configuration.localProfilePictureUri
-
+        val imagePath = intent.getStringExtra(IMAGE_PATH)
         Glide.with(this).load(imagePath).listener(object : RequestListener<Drawable> {
             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                 //TODO: Handle error

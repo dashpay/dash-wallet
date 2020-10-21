@@ -17,13 +17,13 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Editable
@@ -32,6 +32,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
@@ -46,6 +47,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
 import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
 import kotlinx.android.synthetic.main.activity_more.userInfoContainer
+import java.io.File
 
 
 class EditProfileActivity : BaseMenuActivity() {
@@ -56,6 +58,7 @@ class EditProfileActivity : BaseMenuActivity() {
         const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
         const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
     }
+
     private lateinit var editProfileViewModel: EditProfileViewModel
     private lateinit var selectProfilePictureSharedViewModel: SelectProfilePictureSharedViewModel
     private var isEditing: Boolean = false
@@ -189,6 +192,10 @@ class EditProfileActivity : BaseMenuActivity() {
         selectProfilePictureSharedViewModel.onChoosePictureCallback.observe(this, Observer<Void> {
             choosePictureWithPermission()
         })
+
+        editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
+            cropProfilePicture()
+        })
     }
 
     private fun showProfileInfo() {
@@ -218,7 +225,7 @@ class EditProfileActivity : BaseMenuActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             takePicture()
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CODE_CHOOSE_PICTURE_PERMISSION)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CODE_TAKE_PICTURE_PERMISSION)
         }
     }
 
@@ -236,13 +243,20 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun choosePicture() {
-        val pickPhoto = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        startActivityForResult(pickPhoto, REQUEST_CODE_URI)
+        if (editProfileViewModel.createTmpPictureFile()) {
+            val pickPhoto = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            startActivityForResult(pickPhoto, REQUEST_CODE_URI)
+        } else {
+            Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun takePicture() {
-        val takePicture = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        startActivityForResult(takePicture, REQUEST_CODE_IMAGE)
+        if (editProfileViewModel.createTmpPictureFile()) {
+            dispatchTakePictureIntent()
+        } else {
+            Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun dispatchTakePictureIntent() {
@@ -265,13 +279,11 @@ class EditProfileActivity : BaseMenuActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode != RESULT_CANCELED) {
             when (requestCode) {
-                REQUEST_CODE_IMAGE -> if (resultCode == RESULT_OK && data != null) {
-                    val selectedImage: Bitmap = data.extras["data"] as Bitmap
-                    // TODO: this line is for debugging - show the selected image on the screen
-                    dashpayUserAvatar.setImageBitmap(selectedImage)
-                    editProfileViewModel.saveBitmap(selectedImage)
-                    // TODO: crop the image?
-                    startCropActivity()
+                REQUEST_CODE_IMAGE -> {
+                    if (resultCode == RESULT_OK) {
+                        // picture saved in editProfileViewModel.profilePictureTmpFile
+                        editProfileViewModel.onTmpPictureReadyForEditEvent.call(editProfileViewModel.tmpPictureFile)
+                    }
                 }
                 REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
                     val selectedImage: Uri? = data.data
@@ -283,12 +295,8 @@ class EditProfileActivity : BaseMenuActivity() {
                             cursor.moveToFirst()
                             val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
                             val picturePath: String = cursor.getString(columnIndex)
-                            // TODO: this line is for debugging - show the selected image on the screen
-                            dashpayUserAvatar.setImageBitmap(BitmapFactory.decodeFile(picturePath))
-                            editProfileViewModel.localProfileImageUri = picturePath
+                            editProfileViewModel.saveAsProfilePictureTmp(picturePath)
                             cursor.close()
-                            // TODO: crop the image?
-                            startCropActivity()
                         }
                     }
                 }
