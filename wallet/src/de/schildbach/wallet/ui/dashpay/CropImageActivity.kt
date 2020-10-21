@@ -65,6 +65,9 @@ class CropImageActivity : InteractionAwareActivity() {
                 }
             }
         }
+        cancel_btn.setOnClickListener {
+            finish()
+        }
     }
 
     private fun finishWithSuccess() {

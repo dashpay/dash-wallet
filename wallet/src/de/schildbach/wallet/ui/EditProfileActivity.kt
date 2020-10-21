@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -199,7 +200,7 @@ class EditProfileActivity : BaseMenuActivity() {
         })
 
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
-            cropProfilePicture(it)
+            cropProfilePicture()
         })
     }
 
@@ -312,16 +313,15 @@ class EditProfileActivity : BaseMenuActivity() {
                     }
                 }
                 REQUEST_CODE_CROP_IMAGE -> {
-                    setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
+                    if (resultCode == Activity.RESULT_OK) {
+                        setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
+                    }
                 }
             }
         }
     }
 
-    private fun cropProfilePicture(tmpPictureFile: File) {
-        val imagePath = getFileUri(tmpPictureFile)
-        dashpayUserAvatar.setImageURI(imagePath)
-        editProfileViewModel.saveTmpAsProfilePicture()
+    private fun cropProfilePicture() {
         val intent = CropImageActivity.createIntent(this, editProfileViewModel.tmpPictureFile,
             editProfileViewModel.profilePictureFile!!)
         startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)

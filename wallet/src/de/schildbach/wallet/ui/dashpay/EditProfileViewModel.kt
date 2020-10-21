@@ -95,10 +95,6 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
                 .enqueue()
     }
 
-    fun saveTmpAsProfilePicture() {
-        copyFile(tmpPictureFile, profilePictureFile!!)
-    }
-
     fun saveAsProfilePictureTmp(picturePath: String) {
         viewModelScope.launch() {
             copyFile(File(picturePath), tmpPictureFile)
@@ -116,7 +112,6 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
                 inChannel.transferTo(0, inChannel.size(), outChannel)
                 inStream.close()
                 outStream.close()
-
             } catch (e: IOException) {
                 e.printStackTrace()
             }
