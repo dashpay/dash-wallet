@@ -61,6 +61,7 @@ import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
+import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -394,10 +395,11 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
             //                  Received:  Received, Mining Rewards, Masternode Rewards
             //
-            DashPayProfile contact = transactionHistoryItem.dashPayProfile;
+            final DashPayProfile contact = transactionHistoryItem.dashPayProfile;
             if (contact == null) {
                 int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
                 primaryStatusView.setText(idPrimaryStatus);
+                icon.setOnClickListener(null);
             } else {
                 String name = "";
                 if (contact.getDisplayName().isEmpty()) {
@@ -415,6 +417,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 } else {
                     icon.setImageDrawable(defaultAvatar);
                 }
+                icon.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        context.startActivity(DashPayUserActivity.createIntent(context, contact));
+                    }
+                });
             }
             primaryStatusView.setTextColor(primaryStatusColor);
 
