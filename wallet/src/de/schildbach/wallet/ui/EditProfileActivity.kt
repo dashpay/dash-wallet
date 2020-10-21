@@ -35,7 +35,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
+import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.DashPayProfile
@@ -63,6 +65,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private lateinit var editProfileViewModel: EditProfileViewModel
     private lateinit var selectProfilePictureSharedViewModel: SelectProfilePictureSharedViewModel
     private var isEditing: Boolean = false
+    private var defaultAvatar: TextDrawable? = null
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -201,14 +204,14 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun showProfileInfo() {
         val profile = editProfileViewModel.dashPayProfileData.value!!
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this,
+        defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this,
                 profile.username.toCharArray()[0])
         if (profile.avatarUrl.isNotEmpty()) {
             Glide.with(dashpayUserAvatar).load(profile.avatarUrl).circleCrop()
                     .placeholder(defaultAvatar).into(dashpayUserAvatar)
         } else {
             if (editProfileViewModel.profilePictureFile != null && editProfileViewModel.profilePictureFile!!.exists()) {
-                dashpayUserAvatar.setImageURI(getFileUri(editProfileViewModel.profilePictureFile!!))
+                setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
             } else {
                 dashpayUserAvatar.setImageDrawable(defaultAvatar)
             }
@@ -216,6 +219,12 @@ class EditProfileActivity : BaseMenuActivity() {
 
         about_me.setText(profile.publicMessage)
         display_name.setText(profile.displayName)
+    }
+
+    private fun setAvatarFromFile(file: File) {
+        val imgUri = getFileUri(file)
+        Glide.with(dashpayUserAvatar).load(imgUri).signature(ObjectKey(file.lastModified()))
+                .placeholder(defaultAvatar).circleCrop().into(dashpayUserAvatar)
     }
 
     private fun setEditingState(isEditing: Boolean) {
@@ -302,7 +311,7 @@ class EditProfileActivity : BaseMenuActivity() {
                     }
                 }
                 REQUEST_CODE_CROP_IMAGE -> {
-                    dashpayUserAvatar.setImageURI(getFileUri(editProfileViewModel.profilePictureFile!!))
+                    setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
                 }
             }
         }

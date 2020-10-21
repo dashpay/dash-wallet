@@ -73,13 +73,7 @@ class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs
         val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val newCanvas = Canvas(bmp)
         super.draw(newCanvas)
-
-        val y = (zoomedRect.top * this.measuredHeight).toInt()
-        val x = (zoomedRect.left * this.measuredWidth).toInt()
-        val width = (zoomedRect.width() * this.measuredWidth).toInt()
-        //Using width twice to have a square picture.
-        val croppedBitmap = Bitmap.createBitmap(bmp, x, y, width, width)
-        croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(imageFile))
+        bmp.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(imageFile))
     }
 
 }
