@@ -19,8 +19,6 @@ package de.schildbach.wallet.ui
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
@@ -39,7 +37,6 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private lateinit var editProfileViewModel: EditProfileViewModel
     private var isEditing: Boolean = false
-    private lateinit var saveButton: MenuItem
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -47,7 +44,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
 
         setTitle(R.string.edit_profile)
 
@@ -105,6 +102,9 @@ class EditProfileActivity : BaseMenuActivity() {
             }
 
         })
+        save.setOnClickListener {
+            save()
+        }
     }
 
     private fun initViewModel() {
@@ -143,33 +143,15 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     fun activateDeactivateSave() {
-        if (this::saveButton.isInitialized) {
-            saveButton.isEnabled = !(display_name.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || about_me.text.length > Constants.ABOUT_ME_MAX_LENGTH)
-        }
+        save.isEnabled = !(display_name.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || about_me.text.length > Constants.ABOUT_ME_MAX_LENGTH)
     }
 
     fun save() {
         val displayName = display_name.text.toString().trim()
         val publicMessage = about_me.text.toString().trim()
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage)
-        saveButton.isEnabled = false
+        save.isEnabled = false
         finish()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.edit_profile_menu, menu)
-        saveButton = menu!!.findItem(R.id.action_save)
-        return super.onCreateOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_save -> {
-                save()
-                return true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
