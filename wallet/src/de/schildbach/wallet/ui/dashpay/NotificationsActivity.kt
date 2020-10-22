@@ -84,7 +84,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet, true, this, this)
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
-            mode = intent.extras.getInt(EXTRA_MODE)
+            mode = intent!!.extras!!.getInt(EXTRA_MODE)
         }
 
         setContentView(R.layout.activity_notifications)

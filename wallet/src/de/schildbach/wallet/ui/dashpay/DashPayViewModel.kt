@@ -66,7 +66,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
                 emit(Resource.loading(null))
                 emit(platformRepo.getUsername(username))
             } else {
-                emit(Resource.canceled())
+                emit(Resource.canceled(null))
             }
         }
     }
@@ -94,7 +94,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
                 val result = platformRepo.searchUsernames(text)
                 emit(Resource.success(result))
             } catch (ex: Exception) {
-                emit(Resource.error(formatExceptionMessage("search usernames", ex)))
+                emit(Resource.error(formatExceptionMessage("search usernames", ex), null))
             }
         }
     }
@@ -161,10 +161,10 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
                     val result = platformRepo.sendContactRequest(it.first, it.second!!)
                     emit(Resource.success(result))
                 } catch (ex: Exception) {
-                    emit(Resource.error(formatExceptionMessage("send contact request", ex)))
+                    emit(Resource.error(formatExceptionMessage("send contact request", ex), null))
                 }
             } else {
-                emit(Resource.error("Failed to decrypt keys"))
+                emit(Resource.error("Failed to decrypt keys", null))
             }
         }
     }
@@ -177,7 +177,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
                 emit(Resource.loading(null))
                 emit(Resource.success(platformRepo.getLocalUserDataByUserId(userId)))
             } else {
-                emit(Resource.canceled())
+                emit(Resource.canceled(null))
             }
         }
     }
@@ -190,7 +190,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         try {
             emit(Resource.success(platformRepo.getLocalUserDataByUserId(userId)))
         } catch (ex: Exception) {
-            emit(Resource.error(ex))
+            emit(Resource.error(ex, null))
         }
     }
 
@@ -198,7 +198,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         try {
             emit(Resource.success(platformRepo.getLocalUserDataByUsername(username)))
         } catch (ex: Exception) {
-            emit(Resource.error(ex))
+            emit(Resource.error(ex, null))
         }
     }
 

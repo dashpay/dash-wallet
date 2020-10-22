@@ -133,10 +133,10 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             } else if (displayNameText != null) {
                 sendtoaddress.visibility = View.GONE
                 displayname.text = displayNameText
-                val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context!!,
-                        username[0])
+                val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
+                        username!![0])
 
-                if (avatarUrl.isNotEmpty()) {
+                if (avatarUrl!!.isNotEmpty()) {
                     Glide.with(avatar).load(avatarUrl).circleCrop()
                             .placeholder(defaultAvatar).into(avatar)
                 } else {
