@@ -29,7 +29,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.lifecycleOwner
 import de.schildbach.wallet.ui.ReceiveActivity
@@ -167,9 +166,9 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         try {
             val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             if (amount != null) {
-                clipboardManager.primaryClip = ClipData.newPlainText("Dash payment request", paymentRequestUri)
+                clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash payment request", paymentRequestUri))
             } else {
-                clipboardManager.primaryClip = ClipData.newPlainText("Dash address", address.toBase58())
+                clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", address.toBase58()))
             }
             Toast(context).toast(R.string.receive_copied)
             log.info("address copied to clipboard: {}", address)

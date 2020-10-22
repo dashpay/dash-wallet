@@ -25,7 +25,6 @@ import android.text.style.ImageSpan
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.text.toSpannable
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.Constants

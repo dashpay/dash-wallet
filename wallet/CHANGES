@@ -1,4 +1,19 @@
 Dash Wallet
+v7.1.0
+* Use DashJ 0.17.4 (full chainlock support, Dash Core 0.16 updates)
+* BIP70: don't send tx if rejected by payment server
+* Save backup file without PIN (resolves issues when restoring backups in v7+)
+* Update Advanced Security Screen to support smaller devices
+* Update Recovery Phrase Verification Screen to support smaller devices
+* Cancel schedulied blockchain sync with resetting wallet (fixes crash)
+* Shorten dates on transactions on Home Screen
+* Fix History Filter UI issue (clipping)
+* Fix numeric keypad placement on small devices and emulators
+* Add scrolling to More Screen (supports small devices)
+* Support translations for new or non-standard currency names
+* Redesign Home Screen
+* Try connecting to masternodes first
+
 v7.0.9
 * Fix crash on Address Book Screen on Android 4.4
 * Add back button to Verify Recovery Phrase Screens
