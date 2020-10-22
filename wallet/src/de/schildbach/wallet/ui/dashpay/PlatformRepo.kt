@@ -124,7 +124,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     fun init() {
         GlobalScope.launch {
-            delay(5000)
             blockchainIdentityDataDao.load()?.let {
                 blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
                 while (isActive) {
