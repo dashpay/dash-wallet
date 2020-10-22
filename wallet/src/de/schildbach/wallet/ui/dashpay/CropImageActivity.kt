@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.widget.AppCompatImageView
@@ -19,7 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.InteractionAwareActivity
-import java.io.File
 
 class CropImageActivity : InteractionAwareActivity() {
 
@@ -27,7 +27,7 @@ class CropImageActivity : InteractionAwareActivity() {
         private const val TEMP_FILE = "temp_file"
         private const val DESTINATION_FILE = "destination_file"
 
-        fun createIntent(context: Context, tempFile: File, destinationFile: File): Intent {
+        fun createIntent(context: Context, tempFile: Uri, destinationFile: Uri): Intent {
             val intent = Intent(context, CropImageActivity::class.java)
             intent.putExtra(TEMP_FILE, tempFile)
             intent.putExtra(DESTINATION_FILE, destinationFile)
@@ -39,8 +39,8 @@ class CropImageActivity : InteractionAwareActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_crop_image)
 
-        val tempFile = intent.getSerializableExtra(TEMP_FILE) as File
-        val destinationFile = intent.getSerializableExtra(DESTINATION_FILE) as File
+        val tempFile = intent.getParcelableExtra<Uri>(TEMP_FILE)
+        val destinationFile = intent.getParcelableExtra<Uri>(DESTINATION_FILE)
         Glide.with(this).load(tempFile).listener(object : RequestListener<Drawable> {
             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                 Toast.makeText(this@CropImageActivity,

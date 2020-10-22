@@ -23,7 +23,6 @@ import android.net.Uri
 import android.util.AttributeSet
 import androidx.core.net.toFile
 import com.ortiz.touchview.TouchImageView
-import java.io.File
 import java.io.FileOutputStream
 
 
@@ -69,11 +68,11 @@ class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs
         }
     }
 
-    fun saveToFile(imageFile: File) {
+    fun saveToFile(imageFile: Uri) {
         val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val newCanvas = Canvas(bmp)
         super.draw(newCanvas)
-        bmp.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(imageFile))
+        bmp.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(imageFile.toFile()))
     }
 
 }

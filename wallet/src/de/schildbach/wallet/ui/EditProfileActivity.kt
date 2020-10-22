@@ -34,6 +34,7 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.amulyakhare.textdrawable.TextDrawable
@@ -322,8 +323,9 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun cropProfilePicture() {
-        val intent = CropImageActivity.createIntent(this, editProfileViewModel.tmpPictureFile,
-            editProfileViewModel.profilePictureFile!!)
+        val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
+        val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
+        val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri)
         startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
     }
 
