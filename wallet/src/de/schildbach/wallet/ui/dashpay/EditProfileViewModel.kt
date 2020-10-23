@@ -115,7 +115,6 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
                 inChannel.transferTo(0, inChannel.size(), outChannel)
                 inStream.close()
                 outStream.close()
-
             } catch (e: IOException) {
                 e.printStackTrace()
             }

@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -34,19 +35,23 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
+import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.CropImageActivity
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.SelectProfilePictureDialog
 import de.schildbach.wallet.ui.dashpay.SelectProfilePictureSharedViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
-//import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
-//import kotlinx.android.synthetic.main.activity_more.userInfoContainer
+import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
+import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 import java.io.File
 
 class EditProfileActivity : BaseMenuActivity() {
@@ -56,11 +61,13 @@ class EditProfileActivity : BaseMenuActivity() {
         const val REQUEST_CODE_IMAGE = 1
         const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
         const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
+        const val REQUEST_CODE_CROP_IMAGE = 4
     }
 
     private lateinit var editProfileViewModel: EditProfileViewModel
     private lateinit var selectProfilePictureSharedViewModel: SelectProfilePictureSharedViewModel
     private var isEditing: Boolean = false
+    private var defaultAvatar: TextDrawable? = null
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -203,7 +210,7 @@ class EditProfileActivity : BaseMenuActivity() {
                     .placeholder(defaultAvatar).into(dashpayUserAvatar)
         } else {
             if (editProfileViewModel.profilePictureFile != null && editProfileViewModel.profilePictureFile!!.exists()) {
-                dashpayUserAvatar.setImageURI(getFileUri(editProfileViewModel.profilePictureFile!!))
+                setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
             } else {
                 dashpayUserAvatar.setImageDrawable(defaultAvatar)
             }
@@ -211,6 +218,12 @@ class EditProfileActivity : BaseMenuActivity() {
 
         about_me.setText(profile.publicMessage)
         display_name.setText(profile.displayName)
+    }
+
+    private fun setAvatarFromFile(file: File) {
+        val imgUri = getFileUri(file)
+        Glide.with(dashpayUserAvatar).load(imgUri).signature(ObjectKey(file.lastModified()))
+                .placeholder(defaultAvatar).circleCrop().into(dashpayUserAvatar)
     }
 
     private fun setEditingState(isEditing: Boolean) {
@@ -296,15 +309,20 @@ class EditProfileActivity : BaseMenuActivity() {
                         }
                     }
                 }
+                REQUEST_CODE_CROP_IMAGE -> {
+                    if (resultCode == Activity.RESULT_OK) {
+                        setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
+                    }
+                }
             }
         }
     }
 
     private fun cropProfilePicture() {
-        val tmpPictureFile = editProfileViewModel.tmpPictureFile
-        //TODO: this line is for debugging - show the selected image on the screen
-        dashpayUserAvatar.setImageURI(getFileUri(tmpPictureFile))
-        editProfileViewModel.saveTmpAsProfilePicture()
+        val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
+        val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
+        val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri)
+        startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
