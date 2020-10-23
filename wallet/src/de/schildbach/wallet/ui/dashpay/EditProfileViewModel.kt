@@ -35,7 +35,6 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.channels.FileChannel
-
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
 
 class EditProfileViewModel(application: Application) : AndroidViewModel(application) {
