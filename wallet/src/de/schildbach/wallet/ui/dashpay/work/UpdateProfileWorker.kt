@@ -7,6 +7,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.security.SecurityGuard
+import kotlinx.coroutines.delay
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import java.io.IOException
@@ -26,7 +27,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
 
     private val platformRepo = PlatformRepo.getInstance()
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWorkWithBaseProgress(): Result {
         val displayName = inputData.getString(KEY_DISPLAY_NAME)?:""
         val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE)?:""
         val avatarUrl = inputData.getString(KEY_AVATAR_URL)?:""
@@ -61,7 +62,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         }
 
         return try {
-            val profileRequestResult = platformRepo.broadcastUpdatedProfile(dashPayProfile!!, encryptionKey)
+            val profileRequestResult = platformRepo.broadcastUpdatedProfile(dashPayProfile, encryptionKey)
             Result.success(workDataOf(
                     KEY_USER_ID to profileRequestResult.userId
             ))

@@ -20,20 +20,18 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
-import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
-import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 
 class EditProfileActivity : BaseMenuActivity() {
 
@@ -46,43 +44,29 @@ class EditProfileActivity : BaseMenuActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
 
         setTitle(R.string.edit_profile)
 
-        editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
+        initViewModel()
 
-        // first ensure that we have a registered username
-        editProfileViewModel.blockchainIdentityData.observe(this, Observer {
-            if (it != null && it.creationState >= BlockchainIdentityData.CreationState.DONE) {
-                userInfoContainer.visibility = View.VISIBLE
-
-                // observe our profile
-                editProfileViewModel.dashPayProfileData.observe(this, Observer { profile ->
-                    if (profile != null && !isEditing) {
-                        showProfileInfo()
-                    }
-                })
-            } else {
-                finish()
-            }
-        })
-
+        display_name.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+            display_name_char_count.visibility = if (hasFocus) View.VISIBLE else View.INVISIBLE
+        }
         val redTextColor = ContextCompat.getColor(this, R.color.dash_red)
         val mediumGrayTextColor = ContextCompat.getColor(this, R.color.medium_gray)
         display_name.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 setEditingState(true)
-                displayNameCharCount.visibility = View.VISIBLE
                 val charCount = s?.trim()?.length ?: 0
-                displayNameCharCount.text = getString(R.string.char_count, charCount,
+                display_name_char_count.text = getString(R.string.char_count, charCount,
                         Constants.DISPLAY_NAME_MAX_LENGTH)
                 if (charCount > Constants.DISPLAY_NAME_MAX_LENGTH) {
-                    displayNameCharCount.setTextColor(redTextColor)
-                    save.isEnabled = false
+                    display_name_char_count.setTextColor(redTextColor)
                 } else {
-                    displayNameCharCount.setTextColor(mediumGrayTextColor)
-                    save.isEnabled = true
+                    display_name_char_count.setTextColor(mediumGrayTextColor)
                 }
+                activateDeactivateSave()
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -103,11 +87,10 @@ class EditProfileActivity : BaseMenuActivity() {
                         Constants.ABOUT_ME_MAX_LENGTH)
                 if (charCount > Constants.ABOUT_ME_MAX_LENGTH) {
                     aboutMeCharCount.setTextColor(redTextColor)
-                    save.isEnabled = false
                 } else {
                     aboutMeCharCount.setTextColor(mediumGrayTextColor)
-                    save.isEnabled = true
                 }
+                activateDeactivateSave()
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -119,47 +102,59 @@ class EditProfileActivity : BaseMenuActivity() {
             }
 
         })
-
-        editProfileViewModel.updateProfileRequestState.observe(this, Observer {
-            if (it != null) {
-                when (it.status) {
-                    Status.SUCCESS -> {
-                        Toast.makeText(this@EditProfileActivity, "Update successful", Toast.LENGTH_LONG).show()
-                        setEditingState(false)
-                    }
-                    Status.ERROR -> {
-                        var msg = it.message
-                        if (msg == null) {
-                            msg = "!!Error!!  ${it.exception!!.message}"
-                        }
-                        Toast.makeText(this@EditProfileActivity, msg, Toast.LENGTH_LONG).show()
-                        setEditingState(true)
-                        save.isEnabled = true
-                    }
-                    Status.LOADING -> {
-                        Toast.makeText(this@EditProfileActivity, "Processing update", Toast.LENGTH_LONG).show()
-                    }
-                    Status.CANCELED -> {
-                        setEditingState(true)
-                        save.isEnabled = true
-                    }
-                }
-            }
-        })
-
         save.setOnClickListener {
-            editProfileViewModel.dashPayProfileData.value?.let {
-                val updatedProfile = DashPayProfile(it.userId, it.username,
-                        display_name.text.toString().trim(), about_me.text.toString().trim(), "",
-                        it.createdAt, it.updatedAt)
-                save.isEnabled = false
-                editProfileViewModel.broadcastUpdateProfile(updatedProfile)
-            }
+            save()
         }
     }
 
-    private fun showProfileInfo() {
-        val profile = editProfileViewModel.dashPayProfileData.value!!
+    private fun initViewModel() {
+        editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
+
+        // first ensure that we have a registered username
+        editProfileViewModel.dashPayProfileData.observe(this, Observer { dashPayProfile ->
+            if (dashPayProfile != null) {
+                showProfileInfo(dashPayProfile)
+            } else {
+                finish()
+            }
+        })
+        editProfileViewModel.updateProfileRequestState.observe(this, Observer {
+            when (it.status) {
+                Status.LOADING -> {
+                    if (it.progress == 100) {
+                        Toast.makeText(this@EditProfileActivity, "Update successful", Toast.LENGTH_LONG).show()
+                    }
+                }
+                Status.ERROR -> {
+                    var msg = it.message
+                    if (msg == null) {
+                        msg = "!!Error!!  ${it.exception!!.message}"
+                    }
+                    Toast.makeText(this@EditProfileActivity, msg, Toast.LENGTH_LONG).show()
+                    setEditingState(true)
+                }
+                else -> {
+                    // ignore
+                }
+            }
+            setEditingState(it.status != Status.SUCCESS)
+            activateDeactivateSave()
+        })
+    }
+
+    fun activateDeactivateSave() {
+        save.isEnabled = !(display_name.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || about_me.text.length > Constants.ABOUT_ME_MAX_LENGTH)
+    }
+
+    fun save() {
+        val displayName = display_name.text.toString().trim()
+        val publicMessage = about_me.text.toString().trim()
+        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage)
+        save.isEnabled = false
+        finish()
+    }
+
+    private fun showProfileInfo(profile: DashPayProfile) {
         val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this,
                 profile.username.toCharArray()[0])
         if (profile.avatarUrl.isNotEmpty()) {

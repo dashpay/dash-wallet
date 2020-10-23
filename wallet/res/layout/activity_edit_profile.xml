@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/bg_less_bright">
+    android:background="@color/bg_less_bright"
+    android:orientation="vertical">
 
     <include
         android:id="@+id/appbar_general"
@@ -13,55 +14,57 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <Button
-        android:id="@+id/save"
-        style="@style/DashButton.Blue"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginLeft="15dp"
-        android:layout_marginRight="15dp"
-        android:layout_marginBottom="25dp"
-        android:text="@string/save"
-        android:textSize="18sp"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="match_parent"
         android:animateLayoutChanges="true"
         android:clipToPadding="false"
         android:orientation="vertical"
-        app:layout_constraintBottom_toTopOf="@id/save"
-        app:layout_constraintTop_toBottomOf="@id/appbar_general"
-        app:layout_constraintVertical_bias="0">
+        app:layout_constraintTop_toBottomOf="@id/appbar_general">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:id="@+id/userInfoContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clipChildren="false"
             android:clipToPadding="false"
+            android:orientation="vertical"
             android:padding="24dp">
 
-            <ImageView
-                android:id="@+id/dashpayUserAvatar"
-                android:layout_width="134dp"
-                android:layout_height="134dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0"
-                tools:src="@drawable/user5" />
+            <!-- Dummy item to prevent display_name from receiving focus -->
+            <FrameLayout
+                android:layout_width="0px"
+                android:layout_height="0px"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                tools:ignore="UselessLeaf" />
 
-            <ImageButton
-                android:id="@+id/profile_qr_icon"
-                android:layout_width="wrap_content"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/transparent_button_background"
-                app:layout_constraintBottom_toBottomOf="@id/dashpayUserAvatar"
-                app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
-                app:srcCompat="@drawable/ic_edit_profile_picture" />
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/dashpayUserAvatar"
+                    android:layout_width="134dp"
+                    android:layout_height="134dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0"
+                    tools:src="@drawable/user5" />
+
+                <ImageButton
+                    android:id="@+id/profile_qr_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/transparent_button_background"
+                    app:layout_constraintBottom_toBottomOf="@id/dashpayUserAvatar"
+                    app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
+                    app:srcCompat="@drawable/ic_edit_profile_picture" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <TextView
                 android:id="@+id/display_name_label"
@@ -94,13 +97,14 @@
                 tools:text="Katie Rennie" />
 
             <TextView
-                android:id="@+id/displayNameCharCount"
+                android:id="@+id/display_name_char_count"
                 style="@style/MontserratRegular"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:textColor="@color/dash_gray"
                 android:textSize="12sp"
+                android:visibility="invisible"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/display_name"
                 tools:text="0/23 Characters" />
@@ -115,7 +119,7 @@
                 android:textColor="@color/medium_gray"
                 android:textSize="14sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/displayNameCharCount" />
+                app:layout_constraintTop_toBottomOf="@id/display_name_char_count" />
 
             <EditText
                 android:id="@+id/about_me"
@@ -147,8 +151,18 @@
                 app:layout_constraintTop_toBottomOf="@id/about_me"
                 tools:text="0/256 Characters" />
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+            <Button
+                android:id="@+id/save"
+                style="@style/DashButton.Blue"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="32dp"
+                android:text="@string/save"
+                android:textSize="18sp"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+        </LinearLayout>
 
     </ScrollView>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>
