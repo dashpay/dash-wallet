@@ -18,8 +18,10 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
-import androidx.lifecycle.*
-import de.schildbach.wallet.AppDatabase
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.dashpay.NotificationsForUserLiveData
@@ -60,5 +62,12 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
     val notificationsForUser = NotificationsForUserLiveData(walletApplication, platformRepo, viewModelScope)
     fun initNotificationsForUser() {
         notificationsForUser.userId = userData.dashPayProfile.userId
+    }
+
+    fun initUserData(username: String): LiveData<UsernameSearchResult> = liveData(Dispatchers.IO) {
+        platformRepo.getLocalUserDataByUsername(username)?.let {
+            userData = it
+            emit(it)
+        }
     }
 }

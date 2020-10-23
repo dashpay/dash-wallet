@@ -45,8 +45,8 @@ data class Resource<out T>(val status: Status, val data: T?, val message: String
             return Resource(ERROR, null, msg, exception)
         }
 
-        fun <T> loading(data: T?): Resource<T> {
-            return Resource(LOADING, data, null, null)
+        fun <T> loading(data: T?, progress: Int? = null): Resource<T> {
+            return Resource(LOADING, data, progress?.toString(), null)
         }
 
         fun <T> canceled(): Resource<T> {
@@ -57,4 +57,12 @@ data class Resource<out T>(val status: Status, val data: T?, val message: String
             return Resource(CANCELED, null, null, null)
         }
     }
+
+    val progress: Int
+        get() {
+            if (status == LOADING) {
+                return message?.toInt() ?: -1
+            }
+            throw IllegalStateException("Progress can only be used in LOADING state")
+        }
 }

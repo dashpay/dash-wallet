@@ -28,7 +28,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
@@ -46,8 +45,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
         NotificationsAdapter.OnItemClickListener,
         ContactViewHolder.OnContactActionClickListener {
 
-    private var initialDataLoaded = false
-
     private lateinit var viewModel: DashPayUserActivityViewModel
     private lateinit var dashPayViewModel: DashPayViewModel
     private val showContactHistoryDisclaimer by lazy {
@@ -61,11 +58,20 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
     companion object {
         private const val EXTRA_INIT_USER_DATA = "extra_init_user_data"
+        private const val EXTRA_INIT_PROFILE_DATA = "extra_init_profile_data"
         private const val EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER = "extra_show_contact_history_disclaimer"
 
         const val REQUEST_CODE_DEFAULT = 0
         const val RESULT_CODE_OK = 1
         const val RESULT_CODE_CHANGED = 2
+
+        @JvmStatic
+        fun createIntent(context: Context, dashPayProfile: DashPayProfile): Intent {
+            val intent = Intent(context, DashPayUserActivity::class.java)
+            intent.putExtra(EXTRA_INIT_PROFILE_DATA, dashPayProfile)
+            intent.putExtra(EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER, false)
+            return intent
+        }
 
         @JvmStatic
         fun createIntent(context: Context, usernameSearchResult: UsernameSearchResult, showContactHistoryDisclaimer: Boolean = false): Intent {
@@ -85,8 +91,16 @@ class DashPayUserActivity : InteractionAwareActivity(),
         viewModel = ViewModelProvider(this).get(DashPayUserActivityViewModel::class.java)
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
-        viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)
-        updateContactRelationUi()
+        if (intent.hasExtra(EXTRA_INIT_USER_DATA)) {
+            viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)
+            updateContactRelationUi()
+        } else {
+            val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile
+            viewModel.userData = UsernameSearchResult(dashPayProfile.username, dashPayProfile, null, null)
+            viewModel.initUserData(dashPayProfile.username).observe(this, Observer {
+                updateContactRelationUi()
+            })
+        }
 
         viewModel.userLiveData.observe(this, Observer {
             updateContactRelationUi()

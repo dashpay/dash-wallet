@@ -78,48 +78,60 @@
                     app:layout_constraintTop_toBottomOf="@id/username1"
                     tools:text="katierennie09" />
 
-                <TextView
-                    android:id="@+id/editProfile"
-                    style="@style/MontserratRegular"
-                    android:layout_width="wrap_content"
+                <ViewSwitcher
+                    android:id="@+id/edit_update_switcher"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:layout_marginBottom="40dp"
-                    android:text="@string/edit_profile"
-                    android:textColor="@color/dash_blue"
-                    android:textSize="16sp"
+                    android:layout_marginTop="8dp"
+                    android:animateFirstView="false"
+                    android:inAnimation="@android:anim/fade_in"
+                    android:measureAllChildren="false"
+                    android:outAnimation="@android:anim/fade_out"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="@id/username2"
                     app:layout_constraintStart_toStartOf="@id/username2"
-                    app:layout_constraintTop_toBottomOf="@id/username2" />
-
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/update_profile_status_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginEnd="10dp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/editProfile"
-                    android:background="@drawable/selectable_round_corners">
+                    app:layout_constraintTop_toBottomOf="@id/username2">
 
                     <TextView
-                        android:id="@+id/update_status_text"
+                        android:id="@+id/edit_profile"
+                        style="@style/MontserratRegular"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginBottom="18dp"
+                        android:layout_gravity="top|center_horizontal"
+                        android:background="?attr/selectableItemBackground"
+                        android:padding="8dp"
+                        android:text="@string/edit_profile"
+                        android:textColor="@color/dash_blue"
+                        android:textSize="16sp" />
 
-                        android:text="Updating profile on Dash Network" />
+                    <LinearLayout
+                        android:id="@+id/update_profile"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="15dp"
+                        android:layout_marginEnd="15dp"
+                        android:background="@drawable/selectable_round_corners"
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
+                        <ImageView
+                            android:id="@+id/update_profile_status_icon"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_gravity="center_horizontal"
+                            app:srcCompat="@drawable/identity_processing"
+                            tools:ignore="ContentDescription" />
 
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        <TextView
+                            android:id="@+id/update_profile_status_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/updating_profile" />
+
+                    </LinearLayout>
+                </ViewSwitcher>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 

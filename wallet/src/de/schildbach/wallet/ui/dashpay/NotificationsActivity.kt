@@ -238,7 +238,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     }
 
     override fun onDestroy() {
-        walletApplication.configuration.setPrefsLastSeenNotificationTime(max(lastSeenNotificationTime,
+        walletApplication.configuration.setLastSeenNotificationTime(max(lastSeenNotificationTime,
                 walletApplication.configuration.lastSeenNotificationTime) + DateUtils.SECOND_IN_MILLIS)
         super.onDestroy()
     }

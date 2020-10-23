@@ -431,7 +431,7 @@ public class Configuration {
         return prefs.getLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, 0);
     }
 
-    public void setPrefsLastSeenNotificationTime(long lastSeenNotificationTime) {
+    public void setLastSeenNotificationTime(long lastSeenNotificationTime) {
         prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).apply();
     }
 }

@@ -215,6 +215,10 @@ class TransactionResultViewBinder(private val containerView: View, private val p
             } else {
                 userAvatar.background = defaultAvatar
             }
+
+            userAvatar.setOnClickListener {
+                ctx.startActivity(DashPayUserActivity.createIntent(ctx, profile))
+            }
         } else {
             sendToUserContainer.visibility = View.GONE
         }

@@ -189,6 +189,8 @@ public final class Constants {
 
         /** Filename of the file containing Electrum servers. */
         public static final String ELECTRUM_SERVERS_FILENAME = "electrum-servers.txt";
+
+        public static final String PROFILE_PICTURE_FILENAME = "profileimage.jpg";
     }
 
     /** Maximum size of backups. Files larger will be rejected. */
