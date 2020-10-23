@@ -23,6 +23,7 @@ data class BlockchainIdentityBaseData(val id: Int,
                                       val creationState: BlockchainIdentityData.CreationState,
                                       val creationStateErrorMessage: String?,
                                       val username: String?,
+                                      val userId: String?,
                                       val restoring: Boolean,
                                       val creditFundingTxId: Sha256Hash? = null) {
 

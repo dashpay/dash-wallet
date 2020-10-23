@@ -18,7 +18,7 @@ interface BlockchainIdentityDataDaoAsync {
     @Query("SELECT * FROM blockchain_identity LIMIT 1")
     fun load(): LiveData<BlockchainIdentityData?>
 
-    @Query("SELECT id, creationState, creationStateErrorMessage, username, restoring, creditFundingTxId FROM blockchain_identity LIMIT 1")
+    @Query("SELECT id, creationState, creationStateErrorMessage, username, userId, restoring, creditFundingTxId FROM blockchain_identity LIMIT 1")
     fun loadBase(): LiveData<BlockchainIdentityBaseData?>
 
     @Query("SELECT id, creationState, creationStateErrorMessage, username, restoring, creditFundingTxId FROM blockchain_identity LIMIT 1")

@@ -437,4 +437,6 @@
     <string name="select">Select</string>
     <string name="unable_to_load_image">Unable to load image.</string>
 
+    <string name="updating_profile">Updating Profile on Dash Network</string>
+
 </resources>
