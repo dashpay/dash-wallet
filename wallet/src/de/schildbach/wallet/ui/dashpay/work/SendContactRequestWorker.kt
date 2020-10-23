@@ -29,7 +29,7 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
 
     private val platformRepo = PlatformRepo.getInstance()
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
         val toUserId = inputData.getString(KEY_TO_USER_ID)
