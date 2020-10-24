@@ -21,7 +21,10 @@ import androidx.room.TypeConverter
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dpp.identity.Identity
+import org.dashevo.dpp.identity.IdentityFactory
 import org.dashevo.dpp.identity.IdentityPublicKey
+import org.dashevo.dpp.util.Cbor
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -131,5 +134,21 @@ class RoomConverters {
     @TypeConverter
     fun fromArrayList(data: ArrayList<String>?): String? {
         return data?.joinToString(",")
+    }
+
+    @TypeConverter
+    fun fromIdentity(identity: Identity?): ByteArray? {
+        return identity?.serialize()
+    }
+
+    @TypeConverter
+    fun toIdentity(data: ByteArray?): Identity? {
+        return data?.run {
+            return try {
+                IdentityFactory().createFromSerialized(data)
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
 }
