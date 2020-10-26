@@ -79,6 +79,7 @@ import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
+import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet_test.R;
 
 public class SendCoinsFragment extends Fragment {
@@ -272,7 +273,8 @@ public class SendCoinsFragment extends Fragment {
                 throw new IllegalArgumentException();
             }
 
-            if (paymentIntent.isIdentityPaymentRequest()) {
+            boolean isDashPayUser = PlatformRepo.getInstance().getBlockchainIdentity() != null;
+            if (isDashPayUser && paymentIntent.isIdentityPaymentRequest()) {
                 if (paymentIntent.payeeUsername != null) {
                     viewModel.loadUserDataByUsername(paymentIntent.payeeUsername).observe(getViewLifecycleOwner(), new Observer<Resource<UsernameSearchResult>>() {
                         @Override
@@ -280,8 +282,8 @@ public class SendCoinsFragment extends Fragment {
                             if (result.getStatus() == Status.SUCCESS && result.getData() != null) {
                                 handleDashIdentity(result.getData(), paymentIntent);
                             } else {
-                                log.error("error loading load identity for username {}", paymentIntent.payeeUsername);
-                                Toast.makeText(getContext(), "error loading load identity", Toast.LENGTH_LONG).show();
+                                log.error("error loading identity for username {}", paymentIntent.payeeUsername);
+                                Toast.makeText(getContext(), "error loading identity", Toast.LENGTH_LONG).show();
                             }
                         }
                     });
@@ -292,8 +294,8 @@ public class SendCoinsFragment extends Fragment {
                             if (result.getStatus() == Status.SUCCESS && result.getData() != null) {
                                 handleDashIdentity(result.getData(), paymentIntent);
                             } else {
-                                log.error("error loading load identity for userId {}", paymentIntent.payeeUserId);
-                                Toast.makeText(getContext(), "error loading load identity", Toast.LENGTH_LONG).show();
+                                log.error("error loading identity for userId {}", paymentIntent.payeeUserId);
+                                Toast.makeText(getContext(), "error loading identity", Toast.LENGTH_LONG).show();
                             }
                         }
                     });
