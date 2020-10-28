@@ -624,7 +624,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         val blockchainIdentity = if (creditFundingTransaction != null) {
-            BlockchainIdentity(platform, creditFundingTransaction, wallet)
+            BlockchainIdentity(platform, creditFundingTransaction, wallet, blockchainIdentityData.identity)
         } else {
             val blockchainIdentity = BlockchainIdentity(platform, 0, wallet)
             if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.DONE) {
@@ -637,7 +637,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             blockchainIdentity
         }
         return blockchainIdentity.apply {
-            identity = platform.identities.get(uniqueIdString)
+            identity = if (blockchainIdentityData.identity != null)
+                blockchainIdentityData.identity
+            else platform.identities.get(uniqueIdString)
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus!!
             val usernameStatus = HashMap<String, Any>()
@@ -666,6 +668,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             userId = if (blockchainIdentity.registrationStatus == BlockchainIdentity.RegistrationStatus.REGISTERED)
                 blockchainIdentity.uniqueIdString
             else null
+            identity = blockchainIdentity.identity
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null) {
                 username = blockchainIdentity.currentUsername
@@ -770,7 +773,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return blockchainIdentity.getContactNextPaymentAddress(userId)
     }
 
-    // contacts
+    /**
+     * updateContactRequests will fetch new Contact Requests from the network
+     * and verify that we have all requests and profiles in the local database
+     *
+     * This method should not use blockchainIdentity because in some cases
+     * when the app starts, it has not yet been initialized
+     */
     suspend fun updateContactRequests() {
         try {
             // only allow this method to execute once at a time
@@ -790,15 +799,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 return
             }
 
-            if (blockchainIdentity == null) {
-                log.info("update contacts not completed: blockchainIdentity has not been initialized")
-            }
-
-            val userId = blockchainIdentity.uniqueIdString!!
-
-            if (blockchainIdentityData.username == null) {
+            if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
                 return // this is here because the wallet is being reset without removing blockchainIdentityData
             }
+            val userId = blockchainIdentityData.userId!!
 
             val userIdList = HashSet<String>()
             val watch = Stopwatch.createStarted()
@@ -811,7 +815,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             else 0L
 
             updatingContacts.set(true)
-            checkDatabaseIntegrity()
+            checkDatabaseIntegrity(userId)
 
             // Get all out our contact requests
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
@@ -877,7 +881,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
 
             // fetch updated profiles from the network
-            updateContactProfiles(userId, lastContactRequestTime)
+            updateContactProfiles(userId!!, lastContactRequestTime)
 
             // fire listeners if there were new contacts
             if (fromContactDocuments.isNotEmpty() || toContactDocuments.isNotEmpty()) {
@@ -914,7 +918,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
 
         // Also add our ownerId to get our profile, in case it was updated on a different device
-        userIdSet.add(blockchainIdentity.uniqueIdString)
+        userIdSet.add(userId)
 
         updateContactProfiles(userIdSet.toList(), lastContactRequestTime)
         log.info("updating contacts and profiles took $watch")
@@ -954,13 +958,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     // This will check for missing profiles, download them and update the database
-    private suspend fun checkDatabaseIntegrity() {
+    private suspend fun checkDatabaseIntegrity(userId: String) {
         val watch = Stopwatch.createStarted()
         log.info("check database integrity: starting")
 
         val userIdList = HashSet<String>()
         val missingProfiles = HashSet<String>()
-        val userId = blockchainIdentity.uniqueIdString
 
         var toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
         val toContactMap = HashMap<String, DashPayContactRequest>()
