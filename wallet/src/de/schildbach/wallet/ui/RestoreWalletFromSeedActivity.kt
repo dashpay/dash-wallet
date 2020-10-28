@@ -96,7 +96,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             if (seed.isNotEmpty()) {
                 val words = ArrayList(mutableListOf(*seed.split(' ').toTypedArray()))
                 if (recoveryPinMode) {
-                    viewModel.verifySeed(words)
+                    viewModel.recoverPin(words)
                 } else {
                     viewModel.restoreWalletFromSeed(words)
                 }
@@ -119,7 +119,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             }
             showErrorDialog(errorMessage)
         })
-        viewModel.verifySeedLiveData.observe(this, Observer {
+        viewModel.recoverPinLiveData.observe(this, Observer {
             when (it.status) {
                 Status.SUCCESS -> {
                     startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, it.data))
@@ -128,7 +128,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                     // ignore
                 }
                 Status.ERROR -> {
-                    showErrorDialog("The recovery phrase is a valid passphrase but doesn't match")
+                    showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
                 }
             }
         })

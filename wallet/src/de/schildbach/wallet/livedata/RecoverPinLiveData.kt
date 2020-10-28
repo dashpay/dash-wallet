@@ -32,7 +32,7 @@ import org.bouncycastle.crypto.params.KeyParameter
  * @author:  Eric Britten
  */
 
-class VerifySeedLiveData(application: Application) : MutableLiveData<Resource<String>>() {
+class RecoverPinLiveData(application: Application) : MutableLiveData<Resource<String>>() {
 
     val backgroundHandler: Handler
 
@@ -49,7 +49,7 @@ class VerifySeedLiveData(application: Application) : MutableLiveData<Resource<St
 
     private val securityGuard = SecurityGuard()
 
-    fun verifySeed(words: MutableList<String>) {
+    fun recover(words: MutableList<String>) {
         if (deriveKeyTask == null) {
             deriveKeyTask = object : DeriveKeyTask(backgroundHandler, walletApplication.scryptIterationsTarget()) {
 

@@ -21,7 +21,7 @@ import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.livedata.VerifySeedLiveData
+import de.schildbach.wallet.livedata.RecoverPinLiveData
 import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -37,7 +37,7 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
-    val verifySeedLiveData = VerifySeedLiveData(application)
+    val recoverPinLiveData = RecoverPinLiveData(application)
 
     fun restoreWalletFromSeed(words: MutableList<String>) {
         if (isSeedValid(words)) {
@@ -51,9 +51,9 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
         }
     }
 
-    fun verifySeed(words: MutableList<String>) {
+    fun recoverPin(words: MutableList<String>) {
         if (isSeedValid(words)) {
-            verifySeedLiveData.verifySeed(words)
+            recoverPinLiveData.recover(words)
         }
     }
 
