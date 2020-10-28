@@ -101,7 +101,7 @@
         <item name="android:layout_marginTop">10dp</item>
         <item name="android:layout_marginRight">15dp</item>
         <item name="android:layout_marginBottom">10dp</item>
-        <item name="android:background">@drawable/selectable_round_corners</item>
+        <item name="android:background">@drawable/selectable_round_corners_white</item>
     </style>
 
     <style name="MontserratMedium.MenuRowTitle">
