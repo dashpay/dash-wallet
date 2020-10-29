@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">ตั้งเลขรหัสผ่านใหม่</string>
     <string name="forgot_pin_instruction_3">เข้าสู่ระบบด้วยเลขรหัสผ่านใหม่ของคุณเพื่อการเข้าถึงกระเป๋าสตางค์ของคุณ</string>
     <string name="forgot_pin_warning">หากคุณลืมเลขรหัสผ่านของคุณ และวลีรหัสผ่านการกู้คืนสูญหาย คุณจะไม่สามารถเข้าถึงกระเป๋าสตางค์และกองทุนเงินสะสมของคุณได้อีกต่อไป</string>
-
     <string name="send_coins_auto_lock_feasible">ธุรกรรมนี้ชำระทันทีโดยไม่มีค่าธรรมเนียมเพิ่มเติม</string>
     <string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
     <string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
@@ -321,7 +320,6 @@
     <string name="payment_request_please_try_again">โปรดลองใหม่อีกครั้ง</string>
     <string name="payment_request_try_again">ลองอีกครั้ง</string>
     <string name="payment_request_problem_title">การชำระเงินไม่ได้รับการยอมรับ</string>
-    <string name="payment_request_problem_message">การชำระเงินเงินของคุณถูกตรวจสอบ แต่เซิร์ฟเวอร์ไม่สามารถยอมรับมันได้</string>
     <string name="payment_request_expired_title">คำขอชำระเงินหมดอายุ</string>
     <string name="payment_request_close">ปิด</string>
     <string name="payment_request_skip">ข้าม</string>

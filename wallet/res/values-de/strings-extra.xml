@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Neue PIN einrichten</string>
     <string name="forgot_pin_instruction_3">Mit neuer PIN einloggen, um Zugang zur Wallet zu erhalten</string>
     <string name="forgot_pin_warning">Wenn Du deine PIN vergisst und deine Wiederherstellungsphrase verlierst, kannst du nicht mehr auf deine Wallet und dein Guthaben zugreifen.</string>
-
     <string name="send_coins_auto_lock_feasible">Diese Transaktion wird sofort und ohne zusätzliche Gebühren abgeschlossen</string>
     <string name="send_coins_auto_lock_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden. Soll sie für zusätzlich %1$s%2$s sofort bestätigt werden?</string>
     <string name="send_coins_instant_send_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden.</string>
@@ -324,7 +323,6 @@
     <string name="payment_request_please_try_again">Bitte erneut versuchen</string>
     <string name="payment_request_try_again">Erneut versuchen</string>
     <string name="payment_request_problem_title">Zahlung nicht anerkannt</string>
-    <string name="payment_request_problem_message">Deine Zahlung wurde verarbeitet, aber der Server konnte sie nicht anerkennen</string>
     <string name="payment_request_expired_title">Zahlungsanforderung abgelaufen</string>
     <string name="payment_request_close">Schließen</string>
     <string name="payment_request_skip">Überspringen</string>

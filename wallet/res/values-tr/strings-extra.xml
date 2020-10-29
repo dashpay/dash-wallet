@@ -23,6 +23,7 @@
 
     <string name="dialog_confirm_confirm">Onayla</string>
     <string name="dialog_confirm_pay_to">Gönder</string>
+    <string name="dialog_confirm_secured_by">ile güvence altına alınmış</string>
     <string name="dialog_confirm_fee">Ağ ücreti</string>
     <string name="dialog_confirm_total">Toplam</string>
 
@@ -89,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Yeni PİN oluşturun</string>
     <string name="forgot_pin_instruction_3">Yeni PİN\'inizle oturum açarak cüzdanınıza erişin</string>
     <string name="forgot_pin_warning">Eğer kurtarma sözcük grubunuzu ve PİN\'inizi unuttuysanız cüzdanınıza ve paranıza erişemezsiniz.</string>
-
     <string name="send_coins_auto_lock_feasible">Bu işlem hiç ek ücret ödenmeden anında tamamlanabilir</string>
     <string name="send_coins_auto_lock_not_feasible">Bu işlemin gerçekleşmesi birkaç dakika sürebilir. %1$s%2$s ile anında tamamlansın mı?</string>
     <string name="send_coins_instant_send_not_feasible">Bu işlemin gerçekleşmesi birkaç dakika sürebilir.</string>
@@ -243,6 +243,8 @@
     <string name="menu_local_currency">Yerel Para Birimi</string>
     <string name="menu_rescan_blockchain">Blok Zincirini Tekrar Tara</string>
     <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
+    <string name="menu_contact_support_subtitle">Sorun rapor et</string>
+
     <string name="tools_address_book">Adres Rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
@@ -321,7 +323,6 @@
     <string name="payment_request_please_try_again">Lütfen tekrar deneyin</string>
     <string name="payment_request_try_again">Tekrar Dene</string>
     <string name="payment_request_problem_title">Ödeme kabul edilmedi</string>
-    <string name="payment_request_problem_message">Ödemeniz işleme koyuldu, fakat sunucu kabul etmedi</string>
     <string name="payment_request_expired_title">Ödeme Talebinin Süresi Bitti</string>
     <string name="payment_request_close">Kapat</string>
     <string name="payment_request_skip">Atla</string>

@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Choisir un nouveau code PIN</string>
     <string name="forgot_pin_instruction_3">Connectez-vous avec votre nouveau code PIN pour accéder à votre portefeuille</string>
     <string name="forgot_pin_warning">Si vous avez perdu votre code PIN et votre phrase de récupération, vous ne pouvez plus accéder à votre portefeuille ni à vos fonds.</string>
-
     <string name="send_coins_auto_lock_feasible">Cette transaction devrait être exécutée instantanément, sans frais supplémentaires.</string>
     <string name="send_coins_auto_lock_not_feasible">Cette transaction peut prendre plusieurs minutes à régler. Terminez instantanément pour%1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">La confirmation de cette transaction peut prendre plusieurs minutes.</string>
@@ -324,7 +323,6 @@
     <string name="payment_request_please_try_again">Veuillez réessayer</string>
     <string name="payment_request_try_again">Réessayer</string>
     <string name="payment_request_problem_title">Le paiement n\'a pas été reconnu</string>
-    <string name="payment_request_problem_message">Votre paiement a été traité mais le serveur n\'a pas pu le reconnaître</string>
     <string name="payment_request_expired_title">Requête de paiement expirée</string>
     <string name="payment_request_close">Fermer</string>
     <string name="payment_request_skip">Ignorer</string>

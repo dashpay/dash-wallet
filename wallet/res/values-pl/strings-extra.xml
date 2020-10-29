@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Ustaw nowy PIN</string>
     <string name="forgot_pin_instruction_3">Zaloguj się z nowym PINem by mieć dostęp do portfela</string>
     <string name="forgot_pin_warning">Jeśli zapomniałeś kodu PIN i zgubiłeś frazy odzyskiwania, nie będziesz w stanie odzyskać dostępu do portfela i środków.</string>
-
     <string name="send_coins_auto_lock_feasible">Ta transakcja powinna się usadowić natychmiast bez braku dodatkowych opłat</string>
     <string name="send_coins_auto_lock_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę. Wykonać natychmiast za dodatkowe %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę.</string>
@@ -308,7 +307,7 @@
     <string name="welcome_screen_subtitle_3">Miej pełną kontrolę oraz dostosuj swój portfel w zależności od potrzeb</string>
 
     <string-array name="history_filter">
-        <item>Wszystko</item>
+        <item>Całość</item>
         <item>Otrzymane</item>
         <item>Wysłane</item>
     </string-array>
@@ -330,7 +329,6 @@
     <string name="payment_request_please_try_again">Spróbuj jeszcze raz</string>
     <string name="payment_request_try_again">Spróbuj ponownie</string>
     <string name="payment_request_problem_title">Płatność nie została uznana</string>
-    <string name="payment_request_problem_message">Twoja płatność została wysłąna ale sewer płatności nie mógł jej uznać. </string>
     <string name="payment_request_expired_title">Żądanie płatności przedawniło się</string>
     <string name="payment_request_close">Zamknij</string>
     <string name="payment_request_skip">Pomiń</string>

@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Ορίστε ένα νέο PIN</string>
     <string name="forgot_pin_instruction_3">Συνδεθείτε με το νέο σας PIN για να αποκτήσετε πρόσβαση στο πορτοφόλι σας</string>
     <string name="forgot_pin_warning">Αν έχετε ξεχάσει το PIN και χάσατε τη φράση ανάκτησης, δεν μπορείτε να πάρετε πίσω την πρόσβαση στο πορτοφόλι και στα χρήματα σας.</string>
-
     <string name="send_coins_auto_lock_feasible">Αυτή η συναλλαγή θα πρέπει να διευθετηθεί άμεσα χωρίς πρόσθετη χρέωση</string>
     <string name="send_coins_auto_lock_not_feasible">Αυτή η συναλλαγή μπορεί να διαρκέσει αρκετά λεπτά για να διευθετηθεί. Να ολοκληρωθεί άμεσα για %1$s%2$s;</string>
     <string name="send_coins_instant_send_not_feasible">Αυτή η συναλλαγή μπορεί να διαρκέσει αρκετά λεπτά για να διευθετηθεί.</string>
@@ -324,7 +323,6 @@
     <string name="payment_request_please_try_again">Παρακαλώ προσπαθήστε ξανά</string>
     <string name="payment_request_try_again">Προσπαθήστε ξανά</string>
     <string name="payment_request_problem_title">Η πληρωμή δεν αναγνωρίστηκε</string>
-    <string name="payment_request_problem_message">Η πληρωμή σας διεκπεραιώθηκε, αλλά ο διακομιστής δεν μπόρεσε να την αναγνωρίσει</string>
     <string name="payment_request_expired_title">Το αίτημα πληρωμής Έληξε</string>
     <string name="payment_request_close">κλείσιμο</string>
     <string name="payment_request_skip">Παράλειψη</string>

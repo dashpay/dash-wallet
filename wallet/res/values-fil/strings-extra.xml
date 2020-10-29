@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Mag set up ng bagong PIN</string>
     <string name="forgot_pin_instruction_3">Buksan gamit ang iyong bagong PIN para ma-access ang iyong pitaka</string>
     <string name="forgot_pin_warning">Kapag nakalimutan mo ang iyong PIN at nawala ang iyong recover phrase, hindi muna ulit ma-aaccess ang iyong pitaka at pondo.</string>
-
     <string name="send_coins_auto_lock_feasible">Ang transaksyon na ito ay dapat matapos agad ng walang ekstrang bayad</string>
     <string name="send_coins_auto_lock_not_feasible">Ang transaksyon na ito ay maaaring magtagal ng ilang minuto. Kumpletuhin agad sa halagang %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Ang transaksyon na ito ay maaring magtagal ng ilang minuto.</string>
@@ -324,7 +323,6 @@
     <string name="payment_request_please_try_again">Subukan muli</string>
     <string name="payment_request_try_again">Subukan muli</string>
     <string name="payment_request_problem_title">Ang pagbabayad ay hindi kinilala</string>
-    <string name="payment_request_problem_message">Ang iyong bayad ay naproseso ngunit ang server ay nabigo na kilalanin ito</string>
     <string name="payment_request_expired_title">Ang hiling sa pagbayad ay nag-expire na</string>
     <string name="payment_request_close">Sarado</string>
     <string name="payment_request_skip">Laktawan</string>

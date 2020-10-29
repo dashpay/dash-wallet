@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Siapkan PIN baru</string>
     <string name="forgot_pin_instruction_3">Masuk dengan PIN baru Anda untuk mengakses dompet Anda</string>
     <string name="forgot_pin_warning">Jika Anda lupa PIN dan kehilangan frasa pemulihan, Anda tidak bisa mendapatkan kembali akses ke dompet dan dana Anda.</string>
-
     <string name="send_coins_auto_lock_feasible">Transaksi ini harus diselesaikan secara instan tanpa biaya tambahan</string>
     <string name="send_coins_auto_lock_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan. Selesaikan instan untuk %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan.</string>
@@ -321,7 +320,6 @@
     <string name="payment_request_please_try_again">Silakan coba lagi</string>
     <string name="payment_request_try_again">Coba lagi</string>
     <string name="payment_request_problem_title">Pembayaran tidak diakui</string>
-    <string name="payment_request_problem_message">Pembayaran anda diproses tetapi server tidak mampu mengakuinya</string>
     <string name="payment_request_expired_title">Permintaan pembayaran kedaluwarsa</string>
     <string name="payment_request_close">Tutup</string>
     <string name="payment_request_skip">Lewati</string>

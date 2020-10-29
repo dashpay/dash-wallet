@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Задайте новый PIN-код</string>
     <string name="forgot_pin_instruction_3">Войдите в кошелёк, используя новый PIN-код</string>
     <string name="forgot_pin_warning">Если Вы забыли PIN-код и потеряли фразу восстановления, Вы не сможете получить доступ к кошельку и средствам. </string>
-
     <string name="send_coins_auto_lock_feasible">Эту транзакция будет подтверждена немедленно без дополнительной комиссии</string>
     <string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
@@ -330,7 +329,6 @@
     <string name="payment_request_please_try_again">Попробуйте еще раз</string>
     <string name="payment_request_try_again">Попробуйте ещё раз</string>
     <string name="payment_request_problem_title">Платёж не был подтверждён</string>
-    <string name="payment_request_problem_message">Ваш платёж был произведён, но сервер не смог его подтвердить</string>
     <string name="payment_request_expired_title">Запрос на оплату истёк</string>
     <string name="payment_request_close">Закрыть</string>
     <string name="payment_request_skip">Пропустить</string>
