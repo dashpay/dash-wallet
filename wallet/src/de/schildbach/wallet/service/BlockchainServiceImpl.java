@@ -164,7 +164,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final SeedPeers seedPeerDiscovery = new SeedPeers(Constants.NETWORK_PARAMETERS);
     private final DnsDiscovery dnsDiscovery = new DnsDiscovery(Constants.DNS_SEED, Constants.NETWORK_PARAMETERS);
     ArrayList<PeerDiscovery> peerDiscoveryList = new ArrayList<>(2);
-
+    private final static int MINIMUM_PEER_COUNT = 16;
 
     private static final int MIN_COLLECT_HISTORY = 2;
     private static final int IDLE_BLOCK_TIMEOUT_MIN = 2;
@@ -544,34 +544,36 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                         }
 
                         if (!connectTrustedPeerOnly) {
+                            // First use the masternode list that is included
                             try {
-                                peers.addAll(
-                                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                SimplifiedMasternodeList mnlist = org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
+                                MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
+                                peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
                             } catch (PeerDiscoveryException x) {
-                                //swallow and continue with another method of connection.
-                                log.info("DNS peer discovery failed: "+ x.getMessage());
-                                if(x.getCause() != null)
-                                    log.info(  "cause:  " + x.getCause().getMessage());
+                                //swallow and continue with another method of connection
+                                log.info("DMN List peer discovery failed: "+ x.getMessage());
                             }
-                            if(peers.size() < 10) {
-                                log.info("DNS peer discovery returned less than 10 nodes.  Adding DMN peers to the list to increase connections");
-                                try {
-                                    SimplifiedMasternodeList mnlist = org.bitcoinj.core.Context.get().masternodeListManager.getListAtChainTip();
-                                    MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(mnlist);
-                                    peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
-                                } catch (PeerDiscoveryException x) {
-                                    //swallow and continue with another method of connection
-                                    log.info("DMN List peer discovery failed: "+ x.getMessage());
 
+                            if(peers.size() < MINIMUM_PEER_COUNT) {
+                                if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
+                                    log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
+                                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } else {
+                                    log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
                                 }
+                            }
 
-                                if(peers.size() < 10) {
-                                    if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
-                                        log.info("DNS peer discovery returned less than 10 nodes.  Adding seed peers to the list to increase connections");
-                                        peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
-                                    } else {
-                                        log.info("DNS peer discovery returned less than 10 nodes.  Unable to add seed peers (it is not specified for this network).");
-                                    }
+                            if(peers.size() < MINIMUM_PEER_COUNT) {
+                                log.info("Masternode peer discovery returned less than 16 nodes.  Adding DMN peers to the list to increase connections");
+
+                                try {
+                                    peers.addAll(
+                                            Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } catch (PeerDiscoveryException x) {
+                                    //swallow and continue with another method of connection, if one exists.
+                                    log.info("DNS peer discovery failed: "+ x.getMessage());
+                                    if(x.getCause() != null)
+                                        log.info(  "cause:  " + x.getCause().getMessage());
                                 }
                             }
                         }

@@ -33,7 +33,6 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 
-
 /**
  * @author Andreas Schildbach
  */

@@ -1,11 +1,11 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 28
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
 
@@ -28,14 +28,14 @@ android {
 dependencies {
     def nav_version = "2.3.0"
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'androidx.appcompat:appcompat:1.0.2'
-    api 'androidx.browser:browser:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    api 'androidx.browser:browser:1.2.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
 
     //Retrofit + OkHttp
     api "com.squareup.okhttp3:okhttp:$ok_http_version"
     api "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
-    api 'com.squareup.moshi:moshi:1.9.2'
+    api 'com.squareup.moshi:moshi:1.11.0'
     api 'com.squareup.retrofit2:retrofit:2.6.4'
     api 'com.squareup.retrofit2:converter-moshi:2.6.4'
     api 'com.squareup.retrofit2:converter-scalars:2.6.4'
@@ -45,10 +45,10 @@ dependencies {
     api 'androidx.room:room-runtime:2.2.5'
     annotationProcessor 'androidx.room:room-compiler:2.2.5'
     //Material Components
-    api 'com.google.android.material:material:1.1.0'
+    api 'com.google.android.material:material:1.2.1'
 
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation('androidx.test.espresso:espresso-core:3.1.0', {
+    testImplementation 'junit:junit:4.13'
+    androidTestImplementation('androidx.test.espresso:espresso-core:3.3.0', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
 }

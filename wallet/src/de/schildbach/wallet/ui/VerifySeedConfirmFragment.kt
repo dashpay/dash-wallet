@@ -60,11 +60,13 @@ class VerifySeedConfirmFragment : VerifySeedBaseFragment() {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify)
 
+        val illegalState = IllegalStateException("This fragment needs to receive a String[] containing the recovery seed")
         if (arguments?.containsKey("seed")!!) {
-            words.addAll(arguments!!.getStringArray("seed"))
+            arguments?.getStringArray("seed")?.let {
+                words.addAll(it)
+            } ?: throw illegalState
         } else {
-            throw IllegalStateException("This fragment needs to receive a String[] containing " +
-                    "the recovery seed")
+            throw illegalState
         }
         for (word in words) {
             val button = inflater.inflate(R.layout.verify_seed_word_button, wordButtonsContainer, false)

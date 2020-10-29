@@ -75,13 +75,13 @@ class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(appl
             val userData = platformRepo.searchUsernames(username, true).firstOrNull()
             emit(Resource.success(userData))
         } catch (ex: Exception) {
-            emit(Resource.error(ex))
+            emit(Resource.error(ex, null))
         }
     }
 
     fun loadUserDataByUserId(userId: String) = liveData(Dispatchers.IO) {
         platformRepo.getLocalUserDataByUserId(userId)?.run {
             emit(Resource.success(this))
-        } ?: emit(Resource.error(Exception()))
+        } ?: emit(Resource.error(Exception(), null))
     }
 }
