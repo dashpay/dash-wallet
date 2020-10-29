@@ -90,6 +90,8 @@
     <string name="forgot_pin_instruction_2">Set up a new PIN</string>
     <string name="forgot_pin_instruction_3">Login with your new PIN to access your wallet</string>
     <string name="forgot_pin_warning">If you have forgot your PIN and lost your recover phrase, you cannot get back access to your wallet and funds.</string>
+    <string name="forgot_pin_recover">Enter recovery phrase</string>
+    <string name="forgot_pin_passphrase_doesnt_match">The recovery phrase does not match what this wallet was setup with.</string>
 
     <string name="send_coins_auto_lock_feasible">This transaction should settle instantly at no extra fee</string>
     <string name="send_coins_auto_lock_not_feasible">This transaction may take several minutes to settle. Complete instantly for %1$s%2$s?</string>

@@ -21,6 +21,7 @@ import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.livedata.RecoverPinLiveData
 import de.schildbach.wallet.util.MnemonicCodeExt
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -36,20 +37,34 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
+    val recoverPinLiveData = RecoverPinLiveData(application)
+
     fun restoreWalletFromSeed(words: MutableList<String>) {
-        try {
+        if (isSeedValid(words)) {
+            val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
+            walletApplication.wallet = wallet
+            log.info("successfully restored wallet from seed")
+            walletApplication.configuration.disarmBackupSeedReminder()
+            walletApplication.configuration.isRestoringBackup = true
+            walletApplication.resetBlockchainState()
+            startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
+        }
+    }
+
+    fun recoverPin(words: MutableList<String>) {
+        if (isSeedValid(words)) {
+            recoverPinLiveData.recover(words)
+        }
+    }
+
+    private fun isSeedValid(words: MutableList<String>): Boolean {
+        return try {
             MnemonicCodeExt.getInstance().check(walletApplication, words)
+            true
         } catch (x: MnemonicException) {
             log.info("problem restoring wallet from seed: ", x)
             showRestoreWalletFailureAction.call(x)
-            return
+            false
         }
-        val wallet = WalletUtils.restoreWalletFromSeed(words, Constants.NETWORK_PARAMETERS)
-        walletApplication.wallet = wallet
-        log.info("successfully restored wallet from seed")
-        walletApplication.configuration.disarmBackupSeedReminder()
-        walletApplication.configuration.isRestoringBackup = true
-        walletApplication.resetBlockchainState()
-        startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
     }
 }

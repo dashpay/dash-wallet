@@ -61,6 +61,17 @@ public class SecurityGuard {
         }
     }
 
+    public String retrievePin() {
+        String savedPinStr = securityPrefs.getString(UI_PIN_KEY_ALIAS, "");
+        byte[] savedPin = Base64.decode(savedPinStr, Base64.NO_WRAP);
+        try {
+            return encryptionProvider.decrypt(UI_PIN_KEY_ALIAS, savedPin);
+        } catch (GeneralSecurityException | IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public void savePin(String pin) throws GeneralSecurityException, IOException {
         String encryptedPin = encrypt(UI_PIN_KEY_ALIAS, pin);
         securityPrefs.edit().putString(UI_PIN_KEY_ALIAS, encryptedPin).apply();
