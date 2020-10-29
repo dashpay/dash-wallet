@@ -954,6 +954,17 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     log.info("check database integrity: adding missing profile $username:$id")
                 }
             }
+
+            // add a blank profile for any identity that is still missing a profile
+            if (lastContactRequestTime == 0L) {
+                val remainingMissingProfiles = userIdList.filter { !profileById.containsKey(it)}
+                for (identityId in remainingMissingProfiles) {
+                    val nameDocument = nameById[identityId] // what happens if there is no username for the identity? crash
+                    val username = nameDocument!!.data["normalizedLabel"] as String
+                    val identityId = getIdentityForName(nameDocument)
+                    dashPayProfileDao.insert(DashPayProfile(identityId, username))
+                }
+            }
         }
     }
 
