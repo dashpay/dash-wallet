@@ -17,16 +17,12 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
 import android.os.Environment
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.switchMap
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
+import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -35,12 +31,10 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.channels.FileChannel
-import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
 
-class EditProfileViewModel(application: Application) : AndroidViewModel(application) {
+class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
 
     private val log = LoggerFactory.getLogger(EditProfileViewModel::class.java)
-    private val walletApplication = application as WalletApplication
 
     val profilePictureFile by lazy {
         try {
@@ -67,27 +61,12 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
         false
     }
 
-    // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
-    // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
-    private val blockchainIdentityData = AppDatabase.getAppDatabase()
-            .blockchainIdentityDataDaoAsync().loadBase()
-
-    val dashPayProfileData = blockchainIdentityData.switchMap {
-        if (it != null) {
-            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(it.userId!!)
-        } else {
-            MutableLiveData()   //empty
-        }
-    }
-    val dashPayProfile
-        get() = dashPayProfileData.value!!
-
     val updateProfileRequestState = UpdateProfileStatusLiveData(application)
 
-    fun broadcastUpdateProfile(displayName: String, publicMessage: String) {
+    fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String) {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                displayName, publicMessage, dashPayProfile.avatarUrl,
+                displayName, publicMessage, avatarUrl,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
         UpdateProfileOperation(walletApplication)
                 .create(updatedProfile)
