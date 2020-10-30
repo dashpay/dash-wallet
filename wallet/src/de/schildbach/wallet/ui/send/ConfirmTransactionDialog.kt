@@ -28,12 +28,11 @@ import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
-import com.bumptech.glide.Glide
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
-import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
 
@@ -133,15 +132,8 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             } else if (displayNameText != null) {
                 sendtoaddress.visibility = View.GONE
                 displayname.text = displayNameText
-                val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
-                        username!![0])
 
-                if (avatarUrl!!.isNotEmpty()) {
-                    Glide.with(avatar).load(avatarUrl).circleCrop()
-                            .placeholder(defaultAvatar).into(avatar)
-                } else {
-                    avatar.background = defaultAvatar
-                }
+                ProfilePictureDisplay.display(avatar, avatarUrl!!, username!!)
                 confirm_auto_accept.isChecked = autoAcceptLastValue
                 if (pendingContactRequest) {
                     confirm_auto_accept.visibility = View.VISIBLE

@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,8 +28,6 @@ import android.widget.TextView;
 
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.bumptech.glide.Glide;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -61,7 +58,7 @@ import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
-import de.schildbach.wallet.util.Toast;
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -409,14 +406,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 }
                 primaryStatusView.setText(name);
 
-                Drawable defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(icon.getContext(),
-                        name.charAt(0));
-                if (!contact.getAvatarUrl().isEmpty()) {
-                    Glide.with(icon).load(contact.getAvatarUrl()).circleCrop()
-                            .placeholder(defaultAvatar).into(icon);
-                } else {
-                    icon.setImageDrawable(defaultAvatar);
-                }
+                ProfilePictureDisplay.display(icon, contact.getAvatarUrl(), name);
                 icon.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {

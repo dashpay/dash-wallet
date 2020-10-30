@@ -24,10 +24,10 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.*
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
@@ -207,14 +207,7 @@ class TransactionResultViewBinder(private val containerView: View, private val p
             else
                 profile.username
 
-            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(ctx!!, profile.username[0])
-
-            if (profile.avatarUrl.isNotEmpty()) {
-                Glide.with(userAvatar).load(profile.avatarUrl).circleCrop()
-                        .placeholder(defaultAvatar).into(userAvatar)
-            } else {
-                userAvatar.background = defaultAvatar
-            }
+            ProfilePictureDisplay.display(userAvatar, profile)
 
             userAvatar.setOnClickListener {
                 ctx.startActivity(DashPayUserActivity.createIntent(ctx, profile))

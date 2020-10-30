@@ -28,9 +28,9 @@ import androidx.annotation.DrawableRes
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dashpay_contact_row.view.*
 
@@ -47,8 +47,6 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
     }
 
     fun bind(usernameSearchResult: UsernameSearchResult, sendContactRequestWorkState: Resource<WorkInfo>?, listener: OnItemClickListener?, contactRequestButtonClickListener: OnContactRequestButtonClickListener?) {
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
-                usernameSearchResult.username[0])
 
         val dashPayProfile = usernameSearchResult.dashPayProfile
         if (dashPayProfile.displayName.isEmpty()) {
@@ -59,12 +57,7 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
             itemView.username.text = usernameSearchResult.username
         }
 
-        if (dashPayProfile.avatarUrl.isNotEmpty()) {
-            Glide.with(itemView.avatar).load(dashPayProfile.avatarUrl).circleCrop()
-                    .placeholder(defaultAvatar).into(itemView.avatar)
-        } else {
-            itemView.avatar.background = defaultAvatar
-        }
+        ProfilePictureDisplay.display(itemView.avatar, dashPayProfile)
 
         itemView.setOnClickListener {
             listener?.onItemClicked(itemView, usernameSearchResult)
