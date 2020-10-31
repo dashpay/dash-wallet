@@ -138,7 +138,7 @@ class RoomConverters {
 
     @TypeConverter
     fun fromIdentity(identity: Identity?): ByteArray? {
-        return identity?.serialize()
+        return identity?.toBuffer()
     }
 
     @TypeConverter
