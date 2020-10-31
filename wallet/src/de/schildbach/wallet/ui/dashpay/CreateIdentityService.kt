@@ -79,7 +79,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         @JvmStatic
-        fun createIntentForRestore(context: Context, identity: String): Intent {
+        fun createIntentForRestore(context: Context, identity: ByteArray): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RESTORE_IDENTITY
                 putExtra(EXTRA_IDENTITY, identity)
@@ -170,7 +170,7 @@ class CreateIdentityService : LifecycleService() {
                     handleCreateIdentityAction(null)
                 }
                 ACTION_RESTORE_IDENTITY -> {
-                    val identity = intent.getStringExtra(EXTRA_IDENTITY)
+                    val identity = intent.getByteArrayExtra(EXTRA_IDENTITY)
                     handleRestoreIdentityAction(identity)
                 }
             }
@@ -200,7 +200,7 @@ class CreateIdentityService : LifecycleService() {
                 val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
                         ?: throw IllegalStateException()
 
-                restoreIdentity(cftx.creditBurnIdentityIdentifier.toStringBase58())
+                restoreIdentity(cftx.creditBurnIdentityIdentifier.bytes)
                 return
             }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
@@ -328,7 +328,7 @@ class CreateIdentityService : LifecycleService() {
         log.info("username registration complete")
     }
 
-    private fun handleRestoreIdentityAction(identity: String) {
+    private fun handleRestoreIdentityAction(identity: ByteArray) {
         workInProgress = true
         serviceScope.launch(createIdentityexceptionHandler) {
             restoreIdentity(identity)
@@ -337,7 +337,7 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
-    private suspend fun restoreIdentity(identity: String) {
+    private suspend fun restoreIdentity(identity: ByteArray) {
         log.info("Restoring identity and username")
 
         // use an "empty" state for each
@@ -345,7 +345,7 @@ class CreateIdentityService : LifecycleService() {
 
         val cftxs = walletApplication.wallet.creditFundingTransactions
 
-        val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
+        val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }
 
         val existingBlockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDao().load()
         if (existingBlockchainIdentityData != null) {
