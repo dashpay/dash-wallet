@@ -36,17 +36,24 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
+import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
+import org.slf4j.LoggerFactory
 
 
 class ExternalUrlProfilePictureDialog : DialogFragment() {
 
     companion object {
+
+        private val log = LoggerFactory.getLogger(RestoreWalletFromFileViewModel::class.java)
 
         private const val ARG_INITIAL_URL = "arg_initial_url"
 
@@ -132,7 +139,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
         val googleDrivePreview = "https://drive.google.com/file/d/"
         val googleDrivePublic = "http://drive.google.com/uc?export=view&id="
         val pictureUrl = if (pictureUrlBase.startsWith(googleDrivePreview)) {
-            pictureUrlBase.replace(googleDrivePreview, googleDrivePublic).replace("/view", "")
+            pictureUrlBase.replace(googleDrivePreview, googleDrivePublic).replace("/view", "").replace("?usp=drivesdk", "")
         } else {
             pictureUrlBase
         }
@@ -152,6 +159,17 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 //                            }
 //                        })
 //                        .into(urlPreview)
+                .listener(object : RequestListener<Drawable> {
+                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+                        Toast.makeText(requireContext(), "Failed to Download Image!\n${e?.localizedMessage}", Toast.LENGTH_SHORT).show()
+                        log.info(e?.localizedMessage ?: "error", e)
+                        return false
+                    }
+
+                    override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                        return false
+                    }
+                })
                 .into(object : CustomTarget<Drawable?>() {
                     override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
                         urlPreviewPane.visibility = View.VISIBLE
@@ -173,7 +191,6 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                         positiveButton.isEnabled = false
                         sharedViewModel.bitmapCache = null
                         sharedViewModel.externalUrl = null
-                        Toast.makeText(requireContext(), "Failed to Download Image! Please try again later.", Toast.LENGTH_SHORT).show()
                     }
                 })
     }
