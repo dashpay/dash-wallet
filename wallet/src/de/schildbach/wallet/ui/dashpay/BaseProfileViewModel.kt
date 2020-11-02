@@ -39,8 +39,8 @@ open class BaseProfileViewModel(application: Application) : AndroidViewModel(app
         get() = blockchainIdentity?.creationComplete ?: false
 
     val dashPayProfileData = blockchainIdentityData.switchMap {
-        if (it != null) {
-            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(it.userId!!)
+        if (it?.userId != null) {
+            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(it.userId)
         } else {
             MutableLiveData()   //empty
         }
