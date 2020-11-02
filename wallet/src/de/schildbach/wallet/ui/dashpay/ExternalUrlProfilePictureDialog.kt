@@ -118,9 +118,27 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 if (pictureUrl.isEmpty()) {
                     return
                 }
-                Glide.with(requireContext())
-                        .load(pictureUrl)
-                        .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
+                loadUrl(pictureUrl)
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        return customView
+    }
+
+    private fun loadUrl(pictureUrlBase: String) {
+        val googleDrivePreview = "https://drive.google.com/file/d/"
+        val googleDrivePublic = "http://drive.google.com/uc?export=view&id="
+        val pictureUrl = if (pictureUrlBase.startsWith(googleDrivePreview)) {
+            pictureUrlBase.replace(googleDrivePreview, googleDrivePublic).replace("/view", "")
+        } else {
+            pictureUrlBase
+        }
+        Glide.with(requireContext())
+                .load(pictureUrl)
+                .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
 //                        .listener(object : RequestListener<Drawable> {
 //                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
 //                                urlPreviewPane.visibility = View.GONE
@@ -134,37 +152,30 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 //                            }
 //                        })
 //                        .into(urlPreview)
-                        .into(object : CustomTarget<Drawable?>() {
-                            override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
-                                urlPreviewPane.visibility = View.VISIBLE
-                                positiveButton.error = null
-                                positiveButton.isEnabled = true
-                                val bitmap: Bitmap = (resource as BitmapDrawable).bitmap
-                                urlPreview.setImageBitmap(bitmap)
-                                sharedViewModel.bitmapCache = bitmap
-                                sharedViewModel.externalUrl = Uri.parse(pictureUrl)
-                            }
+                .into(object : CustomTarget<Drawable?>() {
+                    override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
+                        urlPreviewPane.visibility = View.VISIBLE
+                        positiveButton.error = null
+                        positiveButton.isEnabled = true
+                        val bitmap: Bitmap = (resource as BitmapDrawable).bitmap
+                        urlPreview.setImageBitmap(bitmap)
+                        sharedViewModel.bitmapCache = bitmap
+                        sharedViewModel.externalUrl = Uri.parse(pictureUrl)
+                    }
 
-                            override fun onLoadCleared(@Nullable placeholder: Drawable?) {
+                    override fun onLoadCleared(@Nullable placeholder: Drawable?) {
 
-                            }
+                    }
 
-                            override fun onLoadFailed(@Nullable errorDrawable: Drawable?) {
-                                super.onLoadFailed(errorDrawable)
-                                urlPreviewPane.visibility = View.GONE
-                                positiveButton.isEnabled = false
-                                sharedViewModel.bitmapCache = null
-                                sharedViewModel.externalUrl = null
-                                Toast.makeText(requireContext(), "Failed to Download Image! Please try again later.", Toast.LENGTH_SHORT).show()
-                            }
-                        })
-            }
-
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
-        return customView
+                    override fun onLoadFailed(@Nullable errorDrawable: Drawable?) {
+                        super.onLoadFailed(errorDrawable)
+                        urlPreviewPane.visibility = View.GONE
+                        positiveButton.isEnabled = false
+                        sharedViewModel.bitmapCache = null
+                        sharedViewModel.externalUrl = null
+                        Toast.makeText(requireContext(), "Failed to Download Image! Please try again later.", Toast.LENGTH_SHORT).show()
+                    }
+                })
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
