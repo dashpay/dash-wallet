@@ -57,7 +57,6 @@ class SendContactRequestOperation(val application: Application) {
 
         fun allOperationsStatus(application: Application): LiveData<MutableMap<String, Resource<WorkInfo>>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
-            workManager.pruneWork()
             return workManager.getWorkInfosByTagLiveData(SendContactRequestWorker::class.qualifiedName!!).switchMap {
                 return@switchMap liveData {
 
