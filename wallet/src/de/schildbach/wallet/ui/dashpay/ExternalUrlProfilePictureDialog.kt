@@ -113,7 +113,11 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
         edit.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 urlPreviewPane.visibility = View.GONE
+                neutralButton.visibility = if (edit.length() > 0) View.VISIBLE else View.GONE
                 val pictureUrl = edit.text.trim().toString()
+                if (pictureUrl.isEmpty()) {
+                    return
+                }
                 Glide.with(requireContext())
                         .load(pictureUrl)
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
@@ -154,7 +158,6 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                                 Toast.makeText(requireContext(), "Failed to Download Image! Please try again later.", Toast.LENGTH_SHORT).show()
                             }
                         })
-                neutralButton.visibility = if (edit.length() > 0) View.VISIBLE else View.GONE
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
