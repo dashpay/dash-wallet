@@ -31,11 +31,9 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.loader.app.LoaderManager;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
-import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
@@ -57,8 +55,6 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     private WalletApplication application;
     private AbstractBindServiceActivity activity;
     private Configuration config;
-    private Wallet wallet;
-    private LoaderManager loaderManager;
 
     private Boolean hideBalance;
     private View showBalanceButton;
@@ -87,8 +83,6 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         this.activity = (AbstractBindServiceActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
-        this.wallet = application.getWallet();
-        this.loaderManager = LoaderManager.getInstance(this);
         hideBalance = config.getHideBalance();
 
         showLocalBalance = getResources().getBoolean(R.bool.show_local_balance);
@@ -98,6 +92,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         initViewModel();
+        setNotificationCount();
     }
 
     private void initViewModel() {
