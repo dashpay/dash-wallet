@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Dash Core Group
+ * Copyright 2019 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,23 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui.dashpay
+package de.schildbach.wallet.ui
 
+
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.ViewModel
-import de.schildbach.wallet.ui.SingleLiveEventExt
 
-class SelectProfilePictureSharedViewModel : ViewModel() {
+class ExternalUrlProfilePictureViewModel : ViewModel() {
 
-    val onFromUrlCallback = SingleLiveEventExt<Void>()
+    var bitmapCache: Bitmap? = null
+    var externalUrl: Uri? = null
 
-    val onTakePictureCallback = SingleLiveEventExt<Void>()
+    val validUrlChosenEvent = SingleLiveEvent<Bitmap>()
 
-    val onChoosePictureCallback = SingleLiveEventExt<Void>()
+    fun confirm() {
+        bitmapCache?.run {
+            validUrlChosenEvent.call(this)
+        }
+    }
 }

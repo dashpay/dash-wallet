@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            style="@style/MontserratRegular"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:text="Enter profile picture URL"
+            android:textColor="@color/medium_gray"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/input"
+            style="@style/MontserratMedium"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/round_corners_gray_bg"
+            android:elevation="2dp"
+            android:gravity="start"
+            android:inputType="textMultiLine"
+            android:maxLines="8"
+            android:padding="20dp"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            tools:targetApi="lollipop"
+            tools:text="https://images.theconversation.com/files/304864/original/file-20191203-67028-qfiw3k.jpeg?ixlib=rb-1.1.0" />
+
+        <LinearLayout
+            android:id="@+id/url_preview_pane"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:text="Preview"
+                android:textColor="@color/medium_gray"
+                android:textSize="14sp" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/dash_black"
+                android:padding="1px">
+
+                <ImageView
+                    android:id="@+id/url_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="96dp"
+                    android:layout_gravity="center_horizontal"
+                    android:background="@color/bg_less_bright"
+                    android:scaleType="fitCenter" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

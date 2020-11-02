@@ -60,6 +60,10 @@ class SelectProfilePictureDialog : BaseBottomSheetDialogFragment() {
                 sharedViewModel.onChoosePictureCallback.call()
                 dismiss()
             }
+            external_url.setOnClickListener {
+                sharedViewModel.onFromUrlCallback.call()
+                dismiss()
+            }
         }
 
         dialog?.setOnShowListener { dialog ->

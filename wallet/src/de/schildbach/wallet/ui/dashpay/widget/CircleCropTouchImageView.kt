@@ -73,6 +73,7 @@ class CircleCropTouchImageView @JvmOverloads constructor(context: Context, attrs
         val newCanvas = Canvas(bmp)
         super.draw(newCanvas)
         bmp.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(imageFile.toFile()))
+        bmp.recycle()
     }
 
 }

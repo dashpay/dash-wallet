@@ -27,6 +27,8 @@ class CropImageActivity : InteractionAwareActivity() {
         private const val TEMP_FILE = "temp_file"
         private const val DESTINATION_FILE = "destination_file"
 
+        const val ZOOMED_RECT = "zoomed_rect"
+
         fun createIntent(context: Context, tempFile: Uri, destinationFile: Uri): Intent {
             val intent = Intent(context, CropImageActivity::class.java)
             intent.putExtra(TEMP_FILE, tempFile)
@@ -59,7 +61,7 @@ class CropImageActivity : InteractionAwareActivity() {
         }).into(circle_crop as AppCompatImageView)
         select_btn.setOnClickListener {
             CoroutineScope(Dispatchers.IO).launch {
-                circle_crop.saveToFile(destinationFile)
+                circle_crop.saveToFile(destinationFile!!)
                 withContext(Dispatchers.Main) {
                     finishWithSuccess()
                 }
@@ -71,7 +73,10 @@ class CropImageActivity : InteractionAwareActivity() {
     }
 
     private fun finishWithSuccess() {
-        setResult(Activity.RESULT_OK)
+        val data = Intent().apply {
+            putExtra(ZOOMED_RECT, circle_crop.zoomedRect)
+        }
+        setResult(Activity.RESULT_OK, data)
         finish()
     }
 
