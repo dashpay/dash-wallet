@@ -197,7 +197,7 @@ class EditProfileActivity : BaseMenuActivity() {
     fun save() {
         val displayName = display_name.text.toString().trim()
         val publicMessage = about_me.text.toString().trim()
-        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage)
+        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, "")
         save.isEnabled = false
         finish()
     }
