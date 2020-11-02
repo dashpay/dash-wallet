@@ -336,9 +336,9 @@ class EditProfileActivity : BaseMenuActivity() {
                 REQUEST_CODE_CROP_IMAGE -> {
                     if (resultCode == Activity.RESULT_OK) {
                         if (externalUrlSharedViewModel.externalUrl != null) {
-                            setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
-                        } else {
                             saveUrl(data!!.getParcelableExtra(CropImageActivity.ZOOMED_RECT)!!)
+                        } else {
+                            setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
                         }
                     }
                 }
