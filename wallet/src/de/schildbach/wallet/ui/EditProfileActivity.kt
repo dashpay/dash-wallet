@@ -336,7 +336,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 REQUEST_CODE_CROP_IMAGE -> {
                     if (resultCode == Activity.RESULT_OK) {
                         if (externalUrlSharedViewModel.externalUrl != null) {
-                            saveUrl(data!!.getParcelableExtra(CropImageActivity.ZOOMED_RECT)!!)
+                            saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {
                             setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
                         }
@@ -378,7 +378,8 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun cropProfilePicture() {
         val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
         val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
-        val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri)
+        val initZoomedRect = ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
+        val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
         startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
     }
 

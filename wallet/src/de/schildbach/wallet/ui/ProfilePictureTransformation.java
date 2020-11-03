@@ -34,16 +34,23 @@ public class ProfilePictureTransformation extends BitmapTransformation {
 
     public static Transformation<Bitmap> create(String profilePicUrl) {
         Uri uri = Uri.parse(profilePicUrl);
-        String zoomedRectParam = uri.getQueryParameter("dashpay-profile-pic-zoom");
-        String[] zoomedRectStr;
-        if (zoomedRectParam != null && (zoomedRectStr = zoomedRectParam.split(",")).length == 4) {
-            RectF zoomedRect = new RectF(
-                    Float.parseFloat(zoomedRectStr[0]), Float.parseFloat(zoomedRectStr[1]),
-                    Float.parseFloat(zoomedRectStr[2]), Float.parseFloat(zoomedRectStr[3]));
+        RectF zoomedRect = extractZoomedRect(uri);
+        if (zoomedRect != null) {
             return create(zoomedRect);
         } else {
             return new CircleCrop();
         }
+    }
+
+    public static RectF extractZoomedRect(Uri profilePicUri) {
+        String zoomedRectParam = profilePicUri.getQueryParameter("dashpay-profile-pic-zoom");
+        String[] zoomedRectStr;
+        if (zoomedRectParam != null && (zoomedRectStr = zoomedRectParam.split(",")).length == 4) {
+            return new RectF(
+                    Float.parseFloat(zoomedRectStr[0]), Float.parseFloat(zoomedRectStr[1]),
+                    Float.parseFloat(zoomedRectStr[2]), Float.parseFloat(zoomedRectStr[3]));
+        }
+        return null;
     }
 
     public static MultiTransformation<Bitmap> create(RectF zoomedRect) {
@@ -55,7 +62,8 @@ public class ProfilePictureTransformation extends BitmapTransformation {
     }
 
     @Override
-    protected Bitmap transform(@NotNull BitmapPool pool, @NotNull Bitmap originalBitmap, int outWidth, int outHeight) {
+    protected Bitmap transform(@NotNull BitmapPool pool, @NotNull Bitmap originalBitmap,
+                               int outWidth, int outHeight) {
         int resultWidth = Math.round(originalBitmap.getWidth() * (zoomedRect.right - zoomedRect.left));
         int resultHeight = Math.round(originalBitmap.getHeight() * (zoomedRect.bottom - zoomedRect.top));
 
