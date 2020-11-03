@@ -4,6 +4,7 @@ import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
+import kotlinx.android.parcel.IgnoredOnParcel
 import kotlinx.android.parcel.Parcelize
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identifier.Identifier
@@ -43,10 +44,12 @@ data class DashPayProfile(@PrimaryKey val userId: String,
         }
     }
 
+    @IgnoredOnParcel
     @delegate:Ignore
     val userIdentifier by lazy {
         Identifier.from(userId)
     }
+    @IgnoredOnParcel
     @delegate:Ignore
     val rawUserId by lazy {
         userIdentifier.toBuffer()

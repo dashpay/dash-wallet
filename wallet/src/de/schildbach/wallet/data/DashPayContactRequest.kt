@@ -3,6 +3,7 @@ package de.schildbach.wallet.data
 import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.Ignore
+import kotlinx.android.parcel.IgnoredOnParcel
 import org.bitcoinj.core.Base58
 import kotlinx.android.parcel.Parcelize
 import org.dashevo.dpp.document.Document
@@ -46,11 +47,13 @@ data class DashPayContactRequest(val userId: String,
         userIdentifier.toBuffer()
     }
 
+    @IgnoredOnParcel
     @delegate:Ignore
     val toUserIdentifier by lazy {
         Identifier.from(toUserId)
     }
 
+    @IgnoredOnParcel
     @delegate:Ignore
     val rawToUserId by lazy {
         toUserIdentifier.toBuffer()
