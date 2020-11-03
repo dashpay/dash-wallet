@@ -26,7 +26,7 @@ import android.widget.TextView
 import android.widget.ViewSwitcher
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -54,7 +54,13 @@ class SetPinActivity : InteractionAwareActivity() {
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
 
-    private var changePin = false
+    private val initialPin by lazy {
+        intent.getStringExtra(EXTRA_PASSWORD)
+    }
+
+    private val changePin by lazy {
+        intent.getBooleanExtra(CHANGE_PIN, false)
+    }
 
     private enum class State {
         DECRYPT,
@@ -78,11 +84,11 @@ class SetPinActivity : InteractionAwareActivity() {
         @JvmOverloads
         @JvmStatic
         fun createIntent(context: Context, titleResId: Int,
-                         changePin: Boolean = false, password: String? = null): Intent {
+                         changePin: Boolean = false, pin: String? = null): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
             intent.putExtra(CHANGE_PIN, changePin)
-            intent.putExtra(EXTRA_PASSWORD, password)
+            intent.putExtra(EXTRA_PASSWORD, pin)
             return intent
         }
 
@@ -109,10 +115,13 @@ class SetPinActivity : InteractionAwareActivity() {
 
         walletApplication = application as WalletApplication
         if (walletApplication.wallet.isEncrypted) {
-            val password = intent.getStringExtra(EXTRA_PASSWORD)
-            changePin = intent.getBooleanExtra(CHANGE_PIN, false)
-            if (password != null) {
-                viewModel.decryptKeys(password)
+            if (initialPin != null) {
+                if (changePin) {
+                    viewModel.oldPinCache = initialPin
+                    setState(State.SET_PIN)
+                } else {
+                    viewModel.decryptKeys(initialPin)
+                }
             } else {
                 if (changePin) {
                     if (pinRetryController.isLocked) {
@@ -316,7 +325,7 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun initViewModel() {
-        viewModel = ViewModelProviders.of(this).get(SetPinViewModel::class.java)
+        viewModel = ViewModelProvider(this)[SetPinViewModel::class.java]
         viewModel.encryptWalletLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
@@ -328,7 +337,7 @@ class SetPinActivity : InteractionAwareActivity() {
                     } else {
                         if (state == State.DECRYPTING) {
                             setState(if (changePin) State.INVALID_PIN else State.DECRYPT)
-                            if(!changePin) {
+                            if (!changePin) {
                                 android.widget.Toast.makeText(this, "Incorrect PIN", android.widget.Toast.LENGTH_LONG).show()
                             }
                         } else {
@@ -351,7 +360,12 @@ class SetPinActivity : InteractionAwareActivity() {
                             if (EnableFingerprintDialog.shouldBeShown(this@SetPinActivity) && enableFingerprint) {
                                 EnableFingerprintDialog.show(viewModel.getPinAsString(), supportFragmentManager)
                             } else {
-                                finish()
+                                if (initialPin != null) {
+                                    pinRetryController.clearPinFailPrefs()
+                                    goHome()
+                                } else {
+                                    finish()
+                                }
                             }
                         } else {
                             viewModel.initWallet()
@@ -388,9 +402,13 @@ class SetPinActivity : InteractionAwareActivity() {
             }
             walletApplication.maybeStartAutoLogoutTimer()
         })
-        enableFingerprintViewModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
+        enableFingerprintViewModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
-            finish()
+            if (initialPin != null) {
+                goHome()
+            } else {
+                finish()
+            }
         })
     }
 

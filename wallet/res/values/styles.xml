@@ -198,4 +198,8 @@
 <!--        <item name="android:visibility">gone</item>-->
     </style>
 
+    <style name="SwitchCompat">
+        <item name="colorControlActivated">@color/dash_blue</item>
+    </style>
+
 </resources>

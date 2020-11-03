@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Thiết lập mã PIN mới</string>
     <string name="forgot_pin_instruction_3">Đăng nhập với mã PIN mới để truy cập ví của bạn</string>
     <string name="forgot_pin_warning">Nếu bạn quên mã PIN của mình và mất câu phục hồi, thì bạn không thể nào truy cập vào ví và tiền của bạn nữa.</string>
-
     <string name="send_coins_auto_lock_feasible">Giao dịch này sẽ được hoàn tất mà không mất thêm phí bổ sung</string>
     <string name="send_coins_auto_lock_not_feasible">Giao dịch này phải mất vài phút để thực hiện. Hoàn thành trọn vẹn cho %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Giao dịch này có thể mất vài phút để thực hiện.</string>
@@ -321,7 +320,6 @@
     <string name="payment_request_please_try_again">Hãy thử lại</string>
     <string name="payment_request_try_again">Hãy thử lại</string>
     <string name="payment_request_problem_title">Giao dịch không được thừa nhận</string>
-    <string name="payment_request_problem_message">Giao dịch của bạn đã được xử lý nhưng máy chủ không thể ghi nhận nó</string>
     <string name="payment_request_expired_title">Yêu cầu giao dịch đã hết hạn</string>
     <string name="payment_request_close">Đóng</string>
     <string name="payment_request_skip">Bỏ qua</string>

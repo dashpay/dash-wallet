@@ -92,7 +92,6 @@
     <string name="forgot_pin_instruction_2">تعریف پین کد جدید</string>
     <string name="forgot_pin_instruction_3">برای دسترسی به کیف پول‌تان، با پین کد جدید وارد شوید</string>
     <string name="forgot_pin_warning">اگر پین کدتان را فراموش کرده‌اید و یا عبارت بازیابی را گم‌ کرده‌اید، نمی‌توانید دوباره به کیف پول و موجودی آن دسترسی داشته باشید. </string>
-
     <string name="send_coins_auto_lock_feasible">این تراکنش به صورت آنی و بدون کارمزد اضافه، صورت می‌گیرد</string>
     <string name="send_coins_auto_lock_not_feasible">انجام نهایی این تراکنش ممکن است چند دقیقه وقت بگیرد. آیا مایلید با پرداخت %1$s %2$s آن را به شکلی آنی به انجام رسانید؟ </string>
     <string name="send_coins_instant_send_not_feasible">تکمیل این تراکنش ممکن است چند دقیقه طول بکشد.</string>
@@ -326,7 +325,6 @@
     <string name="payment_request_please_try_again">لطفا دوباره امتحان کنید</string>
     <string name="payment_request_try_again">دوباره امتحان کنید</string>
     <string name="payment_request_problem_title">پرداخت، پذیرفته نشد</string>
-    <string name="payment_request_problem_message">پرداخت‌تان مورد پردازش قرار گرفت، اما سرور نمی‌توانست آن را قبول کند</string>
     <string name="payment_request_expired_title">درخواست پرداخت منقضی شد</string>
     <string name="payment_request_close">بستن</string>
     <string name="payment_request_skip">رد کردن</string>

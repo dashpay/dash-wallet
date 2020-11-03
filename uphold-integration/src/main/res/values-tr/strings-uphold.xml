@@ -26,4 +26,8 @@
     <string name="uphold_error_report_issue">Lütfen bu sorunu ana menüden "Sorun Bildir" i kullanarak Dash Wallet destek ekibine bildirin.</string>
 
     <string name="uphold_general_error_title">Hata</string>
-    </resources>
+    <string name="uphold_api_error_title">Uphold hatası</string>
+    <string name="uphold_api_error_identity">Uphold hesabınız henüz onaylanmadı. Fonlarınız çekilemez.</string>
+    <string name="uphold_api_error_403_description">Uphold hesabınız incelenmek üzere işaretlendi. \n\nUphold hesabınızı kısıtladı ve geçici olarak fonlarınızı çekemeyeceksiniz. \n\nUphold bu sorunu hızla çözmenize yardımcı olmak için sizinle iletişime geçecektir.</string>
+    <string name="uphold_api_error_400_description">Uphold fonlarınız 24 saat süreyle kilitlendi. %s\'e kadar \n\nsizin transfer için yeterli fonunuz olacaktır .</string>
+</resources>
