@@ -173,4 +173,8 @@
         <item name="android:background">@color/bg_list_selected</item>
     </style>
 
+    <style name="SwitchCompat">
+        <item name="colorControlActivated">@color/dash_blue</item>
+    </style>
+
 </resources>
