@@ -41,7 +41,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
@@ -50,7 +49,6 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
-import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
 import java.io.File
 
 class EditProfileActivity : BaseMenuActivity() {
@@ -205,11 +203,11 @@ class EditProfileActivity : BaseMenuActivity() {
             activateDeactivateSave()
         })
         externalUrlSharedViewModel.validUrlChosenEvent.observe(this, {
-            if (externalUrlSharedViewModel.externalUrl == null) {
+            if (it != null) {
+                editProfileViewModel.saveExternalBitmap(it)
+            } else {
                 val username = editProfileViewModel.dashPayProfile!!.username
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
-            } else {
-                editProfileViewModel.saveExternalBitmap(it)
             }
         })
     }

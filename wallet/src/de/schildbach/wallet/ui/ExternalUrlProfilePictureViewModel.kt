@@ -26,11 +26,9 @@ class ExternalUrlProfilePictureViewModel : ViewModel() {
     var bitmapCache: Bitmap? = null
     var externalUrl: Uri? = null
 
-    val validUrlChosenEvent = SingleLiveEvent<Bitmap>()
+    val validUrlChosenEvent = SingleLiveEventExt<Bitmap?>()
 
     fun confirm() {
-        bitmapCache?.run {
-            validUrlChosenEvent.call(this)
-        }
+        validUrlChosenEvent.value = bitmapCache
     }
 }
