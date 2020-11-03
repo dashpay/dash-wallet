@@ -249,7 +249,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             // Determine if our identity is someone else's contact
             if (fromContactDocuments.isNotEmpty()) {
                 fromContact = fromContactDocuments.find { contact ->
-                    contact.toUserIdentifier == nameDocIdentityId
+                    contact.userIdentifier == nameDocIdentityId
                 }
             }
 
@@ -280,7 +280,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             val userId = blockchainIdentity.uniqueIdString
 
-            var toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
+            val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
             val toContactMap = HashMap<String, DashPayContactRequest>()
             toContactDocuments!!.forEach {
                 userIdList.add(it.toUserId)
