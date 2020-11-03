@@ -320,7 +320,7 @@
     <string name="notification_coins_received_msg">收到了 %s</string>
     <string name="notification_peers_connected_msg">%d 个已连接的网络节点</string>
     <string name="notification_inactivity_title">您的设备中依然存有Dash!</string>
-    <string name="notification_inactivity_message">您的设备上还存有Dash! 在卸载Dash钱包前, 请确保您已经记下了恢复词组, 否则您将丢失%s.</string>
+    <string name="notification_inactivity_message">您的设备上还存有Dash! 在卸载Dash钱包前, 请确保您已经记下了助记词, 否则您将丢失%s.</string>
     <string name="notification_inactivity_action_dismiss">以后提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不需要提醒</string>
     <string name="appwidget_wallet_balance_title">Dash余额</string>
@@ -367,7 +367,7 @@
     <string name="dash_wallet">钱包</string>
 
     <string name="activity_security_backup_wallet">备份钱包至文件</string>
-    <string name="activity_security_view_recovery_phrase">查看恢复密语</string>
+    <string name="activity_security_view_recovery_phrase">查看助记词</string>
     <string name="activity_security_advanced">高级安全</string>
     <string name="activity_security_biometric_auth">指纹验证</string>
     <string name="activity_security_hide_balance">自动隐藏余额</string>

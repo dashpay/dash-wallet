@@ -30,7 +30,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Zabezpečiť peňaženku teraz</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Skenovať pre platbu</string>
+    <string name="shortcut_scan_to_pay">Skenovať a platiť</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_address">Poslať na adresu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -49,7 +49,7 @@
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_login_with_fingerprint">Prihlásiť sa odtlačkom prsta</string>
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
-    <string name="lock_action_scan_to_pay">Skenovať pre poslanie</string>
+    <string name="lock_action_scan_to_pay">Skenovať a poslať</string>
     <!-- Lock Screen: Text above the PIN Entry area -->
     <string name="lock_enter_pin">Zadať PIN</string>
     <string name="lock_unlock_with_fingerprint">Pre odomknutie použite otlačok prsta</string>
@@ -58,7 +58,7 @@
     <string name="perm_lock_wipe_wallet">Vymazať Peňaženku</string>
     <string name="perm_lock_close_app">Ukončiť</string>
 
-    <string name="scan_to_pay_error_dialog_title">Skenovať pre poslanie</string>
+    <string name="scan_to_pay_error_dialog_title">Skenovať a poslať</string>
     <string name="scan_to_pay_error_dialog_message">V schránke nie je platná Dash adresa, alebo URL požiadavka:\n\n%s</string>
     <string name="scan_to_pay_error_dialog_message_no_data">V schránke nie je platná Dash adresa, alebo URL požiadavka.</string>
 
@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">Nastaviť nový PIN kód</string>
     <string name="forgot_pin_instruction_3">Pre prístup k vašej peňaženke sa prihláste pomocou nového PIN kódu</string>
     <string name="forgot_pin_warning">Ak ste zabudli svoj PIN kód a stratili ste frázu pre obnovenie, nemôžete získať späť prístup k svojej peňaženke a finančným prostriedkom.</string>
-
     <string name="send_coins_auto_lock_feasible">Táto transakcia by sa mala okamžite vyrovnať bez ďalších poplatkov</string>
     <string name="send_coins_auto_lock_not_feasible">Táto transakcia môže trvať niekoľko minút. Potvrdiť ihneď za %1$s%2$s? </string>
     <string name="send_coins_instant_send_not_feasible">Táto transakcia môže trvať niekoľko minút.</string>
@@ -250,6 +249,8 @@
     <string name="menu_local_currency">Miestna mena</string>
     <string name="menu_rescan_blockchain">Znova prehľadať blockchain</string>
     <string name="menu_contact_support_title">Kontaktovať Podporu</string>
+    <string name="menu_contact_support_subtitle">Nahlásiť problém</string>
+
     <string name="tools_address_book">Adresár</string>
     <string name="tools_import_private_key">Importovať privátny Kľúč</string>
     <string name="tools_network_monitor">Stav siete</string>
@@ -328,7 +329,6 @@
     <string name="payment_request_please_try_again">Prosím skúste znova</string>
     <string name="payment_request_try_again">Skúsiť znova</string>
     <string name="payment_request_problem_title">Platba nebola uznaná</string>
-    <string name="payment_request_problem_message">Vaša platba bola spracovaná, ale server ju nemohol uznať</string>
     <string name="payment_request_expired_title">Žiadosť o platbu vypršala</string>
     <string name="payment_request_close">Ukončiť</string>
     <string name="payment_request_skip">Preskočiť</string>
