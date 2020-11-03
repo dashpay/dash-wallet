@@ -161,8 +161,10 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 //                        .into(urlPreview)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
-                        Toast.makeText(requireContext(), "Failed to Download Image!\n${e?.localizedMessage}", Toast.LENGTH_SHORT).show()
-                        log.info(e?.localizedMessage ?: "error", e)
+                        if (isAdded) {
+                            Toast.makeText(requireContext(), "Failed to Download Image!\n${e?.localizedMessage}", Toast.LENGTH_SHORT).show()
+                            log.info(e?.localizedMessage ?: "error", e)
+                        }
                         return false
                     }
 
@@ -172,13 +174,15 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 })
                 .into(object : CustomTarget<Drawable?>() {
                     override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
-                        urlPreviewPane.visibility = View.VISIBLE
-                        positiveButton.error = null
-                        positiveButton.isEnabled = true
-                        val bitmap: Bitmap = (resource as BitmapDrawable).bitmap
-                        urlPreview.setImageBitmap(bitmap)
-                        sharedViewModel.bitmapCache = bitmap
-                        sharedViewModel.externalUrl = Uri.parse(pictureUrl)
+                        if (isAdded) {
+                            urlPreviewPane.visibility = View.VISIBLE
+                            positiveButton.error = null
+                            positiveButton.isEnabled = true
+                            val bitmap: Bitmap = (resource as BitmapDrawable).bitmap
+                            urlPreview.setImageBitmap(bitmap)
+                            sharedViewModel.bitmapCache = bitmap
+                            sharedViewModel.externalUrl = Uri.parse(pictureUrl)
+                        }
                     }
 
                     override fun onLoadCleared(@Nullable placeholder: Drawable?) {
@@ -187,10 +191,12 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 
                     override fun onLoadFailed(@Nullable errorDrawable: Drawable?) {
                         super.onLoadFailed(errorDrawable)
-                        urlPreviewPane.visibility = View.GONE
-                        positiveButton.isEnabled = false
-                        sharedViewModel.bitmapCache = null
-                        sharedViewModel.externalUrl = null
+                        if (isAdded) {
+                            urlPreviewPane.visibility = View.GONE
+                            positiveButton.isEnabled = false
+                            sharedViewModel.bitmapCache = null
+                            sharedViewModel.externalUrl = null
+                        }
                     }
                 })
     }
