@@ -23,6 +23,7 @@ import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.dashevo.dpp.identifier.Identifier
 
 class NotificationsForUserLiveData(walletApplication: WalletApplication,
                                    platformRepo: PlatformRepo,
@@ -61,7 +62,7 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication,
             }
 
             val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
-            val txs = blockchainIdentity.getContactTransactions(userId!!)
+            val txs = blockchainIdentity.getContactTransactions(Identifier.from(userId))
 
             txs.forEach {
                 results.add(NotificationItemPayment(it))

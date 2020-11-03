@@ -770,7 +770,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun getNextContactAddress(userId: String): Address {
-        return blockchainIdentity.getContactNextPaymentAddress(userId)
+        return blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId))
     }
 
     /**
@@ -1086,7 +1086,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val fundingKey = walletApplication.wallet.blockchainIdentityKeyChain.watchingKey
         val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
         return if (identityBytes != null) {
-            platform.dpp.identity.createFromSerialized(identityBytes.toByteArray())
+            platform.dpp.identity.createFromBuffer(identityBytes.toByteArray())
         } else null
     }
 
