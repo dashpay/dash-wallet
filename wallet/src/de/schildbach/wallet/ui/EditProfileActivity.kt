@@ -204,7 +204,11 @@ class EditProfileActivity : BaseMenuActivity() {
             activateDeactivateSave()
         })
         externalUrlSharedViewModel.validUrlChosenEvent.observe(this, {
-            editProfileViewModel.saveExternalBitmap(it)
+            if (externalUrlSharedViewModel.externalUrl == null) {
+                save()
+            } else {
+                editProfileViewModel.saveExternalBitmap(it)
+            }
         })
     }
 

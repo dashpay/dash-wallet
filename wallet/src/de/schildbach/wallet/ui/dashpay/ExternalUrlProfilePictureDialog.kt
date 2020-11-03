@@ -121,10 +121,14 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
             override fun afterTextChanged(s: Editable?) {
                 urlPreviewPane.visibility = View.GONE
                 neutralButton.visibility = if (edit.length() > 0) View.VISIBLE else View.GONE
-                val pictureUrl = edit.text.trim().toString()
-                if (pictureUrl.isEmpty()) {
+                sharedViewModel.bitmapCache?.recycle()
+                sharedViewModel.bitmapCache = null
+                sharedViewModel.externalUrl = null
+                if (edit.text.isEmpty()) {
+                    positiveButton.isEnabled = true
                     return
                 }
+                val pictureUrl = edit.text.trim().toString()
                 loadUrl(pictureUrl)
             }
 
@@ -163,8 +167,8 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                         if (isAdded) {
                             Toast.makeText(requireContext(), "Failed to Download Image!\n${e?.localizedMessage}", Toast.LENGTH_SHORT).show()
-                            log.info(e?.localizedMessage ?: "error", e)
                         }
+                        log.info(e?.localizedMessage ?: "error", e)
                         return false
                     }
 
