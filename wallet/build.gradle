@@ -35,7 +35,7 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android:flexbox:1.1.0'
     implementation 'androidx.preference:preference:1.1.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'com.google.guava:guava:29.0-android'
     implementation 'com.google.zxing:core:3.4.1'
