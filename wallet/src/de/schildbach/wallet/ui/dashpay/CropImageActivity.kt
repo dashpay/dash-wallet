@@ -109,5 +109,4 @@ class CropImageActivity : InteractionAwareActivity() {
         setResult(Activity.RESULT_OK, data)
         finish()
     }
-
 }
