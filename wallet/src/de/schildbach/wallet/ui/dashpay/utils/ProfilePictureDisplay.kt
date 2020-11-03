@@ -36,8 +36,13 @@ class ProfilePictureDisplay {
                         .transition(withCrossFade())
                         .into(avatarView)
             } else {
-                avatarView.background = defaultAvatar
+                displayDefault(avatarView, username)
             }
+        }
+
+        fun displayDefault(avatarView: ImageView, username: String) {
+            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+            avatarView.setImageDrawable(defaultAvatar)
         }
     }
 }

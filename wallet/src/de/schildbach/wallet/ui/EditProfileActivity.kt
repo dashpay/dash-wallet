@@ -47,6 +47,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
 import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
@@ -205,7 +206,8 @@ class EditProfileActivity : BaseMenuActivity() {
         })
         externalUrlSharedViewModel.validUrlChosenEvent.observe(this, {
             if (externalUrlSharedViewModel.externalUrl == null) {
-                save()
+                val username = editProfileViewModel.dashPayProfile!!.username
+                ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
             } else {
                 editProfileViewModel.saveExternalBitmap(it)
             }
@@ -228,22 +230,7 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this,
-                profile.username.toCharArray()[0])
-        if (profile.avatarUrl.isNotEmpty()) {
-            Glide.with(dashpayUserAvatar)
-                    .load(profile.avatarUrl)
-                    .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
-                    .transform(ProfilePictureTransformation.create(profile.avatarUrl))
-                    .placeholder(defaultAvatar).into(dashpayUserAvatar)
-        } else {
-            if (editProfileViewModel.profilePictureFile != null && editProfileViewModel.profilePictureFile!!.exists()) {
-                setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
-            } else {
-                dashpayUserAvatar.setImageDrawable(defaultAvatar)
-            }
-        }
-
+        ProfilePictureDisplay.display(dashpayUserAvatar, profile)
         about_me.setText(profile.publicMessage)
         display_name.setText(profile.displayName)
     }

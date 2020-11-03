@@ -121,9 +121,9 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
             override fun afterTextChanged(s: Editable?) {
                 urlPreviewPane.visibility = View.GONE
                 neutralButton.visibility = if (edit.length() > 0) View.VISIBLE else View.GONE
-                sharedViewModel.bitmapCache?.recycle()
-                sharedViewModel.bitmapCache = null
-                sharedViewModel.externalUrl = null
+
+                cleanup()
+
                 if (edit.text.isEmpty()) {
                     positiveButton.isEnabled = true
                     return
@@ -137,6 +137,13 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
         return customView
+    }
+
+    private fun cleanup() {
+        urlPreview.setImageBitmap(null)
+//        sharedViewModel.bitmapCache?.recycle()
+        sharedViewModel.bitmapCache = null
+        sharedViewModel.externalUrl = null
     }
 
     private fun loadUrl(pictureUrlBase: String) {
