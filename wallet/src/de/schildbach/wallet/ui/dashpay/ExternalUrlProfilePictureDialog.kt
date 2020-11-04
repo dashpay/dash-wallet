@@ -141,35 +141,15 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 
     private fun cleanup() {
         urlPreview.setImageBitmap(null)
-//        sharedViewModel.bitmapCache?.recycle()
         sharedViewModel.bitmapCache = null
         sharedViewModel.externalUrl = null
     }
 
     private fun loadUrl(pictureUrlBase: String) {
-        val googleDrivePreview = "https://drive.google.com/file/d/"
-        val googleDrivePublic = "http://drive.google.com/uc?export=view&id="
-        val pictureUrl = if (pictureUrlBase.startsWith(googleDrivePreview)) {
-            pictureUrlBase.replace(googleDrivePreview, googleDrivePublic).replace("/view", "").replace("?usp=drivesdk", "")
-        } else {
-            pictureUrlBase
-        }
+        val pictureUrl = convertUrlIfSuitable(pictureUrlBase)
         Glide.with(requireContext())
                 .load(pictureUrl)
                 .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
-//                        .listener(object : RequestListener<Drawable> {
-//                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
-//                                urlPreviewPane.visibility = View.GONE
-//                                positiveButton.isEnabled = false
-//                                return false
-//                            }
-//                            override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-//                                urlPreviewPane.visibility = View.VISIBLE
-//                                positiveButton.isEnabled = true
-//                                return false
-//                            }
-//                        })
-//                        .into(urlPreview)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                         if (isAdded) {
@@ -210,6 +190,28 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                         }
                     }
                 })
+    }
+
+    private fun convertUrlIfSuitable(pictureUrlBase: String): String {
+        // eg. https://drive.google.com/file/d/12rhWM7_wIXwDcFfsANkVGa0ArrbnhrMN/view?usp=sharing
+        val googleDrivePreviewPrefix = "https://drive.google.com/file/d/"
+        if (pictureUrlBase.startsWith(googleDrivePreviewPrefix)) {
+            val pictureUrlBaseUri = Uri.parse(pictureUrlBase)
+            if (pictureUrlBaseUri.pathSegments.size == 4) {
+                val fileId = pictureUrlBaseUri.pathSegments[2]
+                return "https://drive.google.com/uc?export=view&id=$fileId"
+            }
+        }
+        //https://www.dropbox.com/s/2ldd9fjk02yvyv1/IMG_20201103_220114.jpg?dl=0
+        val dropboxPreviewPrefix = "https://www.dropbox.com/s/"
+        if (pictureUrlBase.startsWith(dropboxPreviewPrefix)) {
+            val pictureUrlBaseUri = Uri.parse(pictureUrlBase)
+            if (pictureUrlBaseUri.pathSegments.size == 3) {
+                val fileId = "${pictureUrlBaseUri.pathSegments[1]}/${pictureUrlBaseUri.pathSegments[2]}"
+                return "https://dl.dropboxusercontent.com/s/$fileId"
+            }
+        }
+        return pictureUrlBase;
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {

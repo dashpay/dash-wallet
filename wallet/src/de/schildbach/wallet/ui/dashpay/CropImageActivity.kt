@@ -59,7 +59,6 @@ class CropImageActivity : InteractionAwareActivity() {
         val destinationFile = intent.getParcelableExtra<Uri>(DESTINATION_FILE)
         Glide.with(this)
                 .load(tempFile)
-//                .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                         Toast.makeText(this@CropImageActivity,

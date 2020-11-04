@@ -68,7 +68,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private var isEditing: Boolean = false
     private var defaultAvatar: TextDrawable? = null
 
-    private var prosilePictureChanged = false
+    private var profilePictureChanged = false
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -211,7 +211,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 val username = editProfileViewModel.dashPayProfile!!.username
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
             }
-            prosilePictureChanged = true
+            profilePictureChanged = true
         })
     }
 
@@ -222,7 +222,7 @@ class EditProfileActivity : BaseMenuActivity() {
     fun save() {
         val displayName = display_name.text.toString().trim()
         val publicMessage = about_me.text.toString().trim()
-        val avatarUrl = if (prosilePictureChanged) {
+        val avatarUrl = if (profilePictureChanged) {
             if (externalUrlSharedViewModel.externalUrl != null) {
                 externalUrlSharedViewModel.externalUrl.toString()
             } else {
