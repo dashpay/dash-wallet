@@ -42,14 +42,28 @@ import androidx.lifecycle.ViewModelProvider
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
+import com.google.android.gms.auth.UserRecoverableAuthException
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.api.services.drive.Drive
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.CropImageActivity
+import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
+import de.schildbach.wallet.ui.dashpay.ExternalUrlProfilePictureDialog
+import de.schildbach.wallet.ui.dashpay.SelectProfilePictureDialog
+import de.schildbach.wallet.ui.dashpay.SelectProfilePictureSharedViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.util.BackupHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
+import org.slf4j.LoggerFactory
 import java.io.File
+import java.util.*
+import java.util.concurrent.Executors
 
 class EditProfileActivity : BaseMenuActivity() {
 
@@ -59,6 +73,10 @@ class EditProfileActivity : BaseMenuActivity() {
         const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
         const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
         const val REQUEST_CODE_CROP_IMAGE = 4
+        const val GDRIVE_REQUEST_CODE_SIGN_IN = 5
+
+        protected val log = LoggerFactory.getLogger(EditProfileActivity::class.java)
+
     }
 
     private lateinit var editProfileViewModel: EditProfileViewModel
@@ -69,6 +87,8 @@ class EditProfileActivity : BaseMenuActivity() {
     private var defaultAvatar: TextDrawable? = null
 
     private var profilePictureChanged = false
+
+    protected var mDrive: Drive? = null
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -337,8 +357,12 @@ class EditProfileActivity : BaseMenuActivity() {
                             saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {
                             setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
+                            requestGDriveAccess()
                         }
                     }
+                }
+                GDRIVE_REQUEST_CODE_SIGN_IN -> {
+                    handleGdriveSigninResult(data!!)
                 }
             }
         }
@@ -376,7 +400,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun cropProfilePicture() {
         val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
         val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
-        val initZoomedRect = ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
+        val initZoomedRect = externalUrlSharedViewModel.externalUrl?.let { ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl) }
         val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
         startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
     }
@@ -401,5 +425,103 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun getFileUri(file: File): Uri {
         return FileProvider.getUriForFile(walletApplication, "${walletApplication.packageName}.file_attachment", file)
+    }
+
+    private fun checkGDriveAccess() {
+        object : Thread() {
+            override fun run() {
+                val signInAccount: GoogleSignInAccount = BackupHelper.GoogleDrive.getSigninAccount(applicationContext)
+                if (signInAccount != null) {
+                    runOnUiThread { applyGdriveAccessGranted(signInAccount) }
+                } else {
+                    runOnUiThread { applyGdriveAccessDenied() }
+                }
+            }
+        }.start()
+    }
+
+    protected fun requestGDriveAccess() {
+        val signInAccount = BackupHelper.GoogleDrive.getSigninAccount(applicationContext)
+        val googleSignInClient = GoogleSignIn.getClient(this, BackupHelper.GoogleDrive.getGoogleSigninOptions())
+        if (signInAccount == null) {
+            startActivityForResult(googleSignInClient.signInIntent, GDRIVE_REQUEST_CODE_SIGN_IN)
+        } else {
+            googleSignInClient.revokeAccess()
+                    .addOnSuccessListener { aVoid: Void? -> startActivityForResult(googleSignInClient.signInIntent, GDRIVE_REQUEST_CODE_SIGN_IN) }
+                    .addOnFailureListener { e: java.lang.Exception? ->
+                        log.error("could not revoke access to drive: ", e)
+                        applyGdriveAccessDenied()
+                    }
+        }
+    }
+
+    protected fun applyGdriveAccessDenied() {
+        //super.applyGdriveAccessDenied()
+        BackupHelper.GoogleDrive.disableGDriveBackup(applicationContext)
+    }
+
+    private fun handleGdriveSigninResult(data: Intent) {
+        try {
+            val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
+                    ?: throw RuntimeException("empty account")
+            applyGdriveAccessGranted(account)
+        } catch (e: Exception) {
+            log.error("Google Drive sign-in failed, could not get account: ", e)
+            Toast.makeText(this, "Sign-in failed.", Toast.LENGTH_SHORT).show()
+            applyGdriveAccessDenied()
+        }
+    }
+
+    protected fun applyGdriveAccessGrantedBase(signInAccount: GoogleSignInAccount?) {
+        mDrive = BackupHelper.GoogleDrive.getDriveServiceFromAccount(applicationContext, signInAccount)
+    }
+    fun getEclairBackupFileName(seedHash: String): String {
+        return "eclair_" + seedHash + ".bkup"
+    }
+
+    protected fun applyGdriveAccessGranted(signInAccount: GoogleSignInAccount) {
+        applyGdriveAccessGrantedBase(signInAccount)
+        object : Thread() {
+            override fun run() {
+                if (/*app != null &&*/ !BackupHelper.GoogleDrive.isGDriveEnabled(applicationContext)) {
+                    // access is explicitly granted from a revoked state
+                    //app.system.eventStream().publish(ChannelPersisted.apply(null, null, null, null))
+                }
+                BackupHelper.GoogleDrive.listBackups(Executors.newSingleThreadExecutor(), mDrive!!,
+                        getEclairBackupFileName(UUID.randomUUID().toString()))
+                        .addOnSuccessListener { filesList ->
+                            runOnUiThread {
+                                val backup = BackupHelper.GoogleDrive.filterBestBackup(filesList)
+                                if (backup == null) {
+                                    //mBinding.gdriveBackupStatus.setText(getString(R.string.backupsettings_drive_state_nobackup, signInAccount.email))
+                                } else {
+                                    //mBinding.gdriveBackupStatus.setText(getString(R.string.backupsettings_drive_state, signInAccount.email,
+                                    //        DateFormat.getDateTimeInstance().format(Date(backup.modifiedTime.value))))
+                                }
+                                BackupHelper.GoogleDrive.enableGDriveBackup(applicationContext)
+                                BackupHelper.GoogleDrive.createBackup(Executors.newSingleThreadExecutor(), mDrive!!,
+                                        UUID.randomUUID().toString() + ".jpg",
+                                                editProfileViewModel.profilePictureFile!!.readBytes(),
+                                        BackupHelper.BACKUP_META_DEVICE_ID).addOnSuccessListener {
+                                            log.info("picture: save complete")
+                                        externalUrlSharedViewModel.externalUrl = Uri.parse("https://drive.google.com/uc?export=view&id=$it")
+                                        profilePictureChanged = true
+                                    }
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            log.error("could not retrieve best backup from gdrive: ", e)
+                            if (e is ApiException) {
+                                if (e.statusCode == CommonStatusCodes.SIGN_IN_REQUIRED) {
+                                    GoogleSignIn.getClient(applicationContext, BackupHelper.GoogleDrive.getGoogleSigninOptions()).revokeAccess()
+                                }
+                            }
+                            if (e is UserRecoverableAuthException) {
+                                GoogleSignIn.getClient(applicationContext, BackupHelper.GoogleDrive.getGoogleSigninOptions()).revokeAccess()
+                            }
+                            applyGdriveAccessDenied()
+                        }
+            }
+        }.start()
     }
 }
