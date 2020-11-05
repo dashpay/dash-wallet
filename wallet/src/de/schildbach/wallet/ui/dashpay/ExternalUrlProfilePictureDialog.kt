@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.annotation.SuppressLint
 import android.app.Dialog
-import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -166,13 +165,16 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 .into(object : CustomTarget<Drawable?>() {
                     override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
                         if (isAdded) {
-                            urlPreviewPane.visibility = View.VISIBLE
-                            positiveButton.error = null
-                            positiveButton.isEnabled = true
-                            val bitmap: Bitmap = (resource as BitmapDrawable).bitmap
-                            urlPreview.setImageBitmap(bitmap)
-                            sharedViewModel.bitmapCache = bitmap
-                            sharedViewModel.externalUrl = Uri.parse(pictureUrl)
+                            if (resource is BitmapDrawable) {
+                                urlPreviewPane.visibility = View.VISIBLE
+                                positiveButton.error = null
+                                positiveButton.isEnabled = true
+                                urlPreview.setImageDrawable(resource)
+                                sharedViewModel.bitmapCache = resource.bitmap
+                                sharedViewModel.externalUrl = Uri.parse(pictureUrl)
+                            } else {
+                                onLoadFailed(null)
+                            }
                         }
                     }
 
@@ -181,7 +183,6 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                     }
 
                     override fun onLoadFailed(@Nullable errorDrawable: Drawable?) {
-                        super.onLoadFailed(errorDrawable)
                         if (isAdded) {
                             urlPreviewPane.visibility = View.GONE
                             positiveButton.isEnabled = false
