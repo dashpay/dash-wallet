@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="70200"
-    android:versionName="7.2">
+    android:versionCode="70201"
+    android:versionName="7.2.1">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
