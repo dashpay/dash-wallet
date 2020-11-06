@@ -28,7 +28,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.Toast
 import androidx.annotation.NonNull
 import androidx.annotation.Nullable
 import androidx.appcompat.app.AlertDialog
@@ -106,6 +105,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 edit.setText(initialUrl)
             }
         }
+        dialog.window!!.callback = UserInteractionAwareCallback(dialog.window!!.callback, requireActivity())
         return dialog
     }
 
@@ -128,6 +128,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 }
                 val pictureUrl = edit.text.trim().toString()
                 loadUrl(pictureUrl)
+                imitateUserInteraction()
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -216,5 +217,9 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
         sharedViewModel = activity?.run {
             ViewModelProvider(this)[ExternalUrlProfilePictureViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
+    }
+
+    private fun imitateUserInteraction() {
+        requireActivity().onUserInteraction()
     }
 }
