@@ -48,6 +48,7 @@ dependencies {
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
 
     implementation 'com.squareup.moshi:moshi:1.11.0'
+    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation 'org.slf4j:slf4j-api:1.7.30'
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
@@ -111,6 +112,9 @@ ext {
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
+def props = new Properties()
+file("../local.properties").withInputStream { props.load(it) }
+
 android {
     compileSdkVersion 29
 
@@ -142,6 +146,10 @@ android {
     }
 
     buildTypes {
+        all {
+            buildConfigField("String", "IMGUR_CLIENT_ID", props.getProperty("IMGUR_CLIENT_ID"))
+            buildConfigField("String", "IMGUR_CLIENT_SECRET", props.getProperty("IMGUR_CLIENT_SECRET"))
+        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
