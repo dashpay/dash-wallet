@@ -42,6 +42,7 @@ import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
 import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
@@ -126,6 +127,8 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                     positiveButton.isEnabled = true
                     return
                 }
+                positiveButton.isEnabled = false
+
                 val pictureUrl = edit.text.trim().toString()
                 loadUrl(pictureUrl)
                 imitateUserInteraction()
@@ -145,7 +148,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
     }
 
     private fun loadUrl(pictureUrlBase: String) {
-        val pictureUrl = convertUrlIfSuitable(pictureUrlBase)
+        val pictureUrl = ProfilePictureDisplay.removePicZoomParameter(convertUrlIfSuitable(pictureUrlBase))
         Glide.with(requireContext())
                 .load(pictureUrl)
                 .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
@@ -168,7 +171,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                                 positiveButton.isEnabled = true
                                 urlPreview.setImageDrawable(resource)
                                 sharedViewModel.bitmapCache = resource.bitmap
-                                sharedViewModel.externalUrl = Uri.parse(pictureUrl)
+                                sharedViewModel.externalUrl = pictureUrl
                             } else {
                                 onLoadFailed(null)
                             }
