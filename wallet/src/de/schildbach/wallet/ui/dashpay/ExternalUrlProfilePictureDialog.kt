@@ -151,9 +151,6 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
-                        if (isAdded) {
-                            Toast.makeText(requireContext(), "Failed to Download Image!\n${e?.localizedMessage}", Toast.LENGTH_SHORT).show()
-                        }
                         log.info(e?.localizedMessage ?: "error", e)
                         return false
                     }

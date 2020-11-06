@@ -173,6 +173,5 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         if (bitmap.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(tmpPictureFile))) {
             onTmpPictureReadyForEditEvent.postValue(tmpPictureFile)
         }
-        bitmap.recycle()
     }
 }
