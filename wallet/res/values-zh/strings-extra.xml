@@ -2,7 +2,7 @@
 <resources>
 
     <string name="onboarding_create_wallet">创建一个新钱包</string>
-    <string name="onboarding_recover_wallet">通过恢复密语还原钱包</string>
+    <string name="onboarding_recover_wallet">通过助记词还原钱包</string>
     <string name="onboarding_restore_wallet">通过文件还原钱包</string>
     <string name="onboarding_load_wallet_error">无法加载钱包!</string>
 
@@ -85,12 +85,11 @@
     <string name="payments_pay_to_clipboard_sub_title">未复制地址</string>
 
     <string name="forgot_pin_title">忘记PIN？</string>
-    <string name="forgot_pin_message">您可以借助恢复密语来设置新的PIN</string>
-    <string name="forgot_pin_instruction_1">输入恢复密语来找回您的钱包</string>
+    <string name="forgot_pin_message">您可以借助助记词来设置新的PIN</string>
+    <string name="forgot_pin_instruction_1">输入助记词来找回您的钱包</string>
     <string name="forgot_pin_instruction_2">设置一个新PIN</string>
     <string name="forgot_pin_instruction_3">通过您的新PIN来访问钱包</string>
     <string name="forgot_pin_warning">如果您遗忘了PIN并丢失了恢复密语, 就无法再访问您的钱包和资金.</string>
-
     <string name="send_coins_auto_lock_feasible">此交易应即时确认并且无附加手续费</string>
     <string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立刻完成需要 %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
@@ -105,22 +104,22 @@
     <string name="wallet_options_disconnect">未连接</string>
 
     <string name="network_monitor_masternodes_title">主节点</string>
-    <string name="export_keys_dialog_title_to_seed">查看恢复密语</string>
-    <string name="import_keys_dialog_title_from_seed">使用恢复密语复原</string>
-    <string name="backup_to_seed_wallet_dialog_message">这是您的恢复密语. 请记录下来.</string>
-    <string name="backup_wallet_to_seed_dialog_warning">请不要让任何人看到您的恢复密语, 否则他们将可以使用您的Dash.</string>
-    <string name="backup_to_seed_wallet_dialog_enter_pin_message">资金密码可以保护您的钱包. 输入密码并点击显示, 浏览您的恢复密语.</string>
-    <string name="import_keys_from_seed_dialog_message">在这里输入您的恢复密语.</string>
-    <string name="import_export_keys_dialog_password_phrase">这里是您的恢复密语.</string>
+    <string name="export_keys_dialog_title_to_seed">查看助记词</string>
+    <string name="import_keys_dialog_title_from_seed">使用助记词复原</string>
+    <string name="backup_to_seed_wallet_dialog_message">这是您的助记词. 请记录下来.</string>
+    <string name="backup_wallet_to_seed_dialog_warning">请不要让任何人看到您的助记词, 否则他们将可以使用您的Dash.</string>
+    <string name="backup_to_seed_wallet_dialog_enter_pin_message">资金密码可以保护您的钱包. 输入密码并点击显示, 浏览您的助记词.</string>
+    <string name="import_keys_from_seed_dialog_message">在这里输入您的助记词.</string>
+    <string name="import_export_keys_dialog_password_phrase">这里是您的助记词.</string>
     <string name="preferences_report_issue_summary">请描述您所遇到的问题并通过邮箱给开发者发送报告.</string>
     <string name="navigation_configuration">恭喜</string>
     <string name="button_copy_address">复制地址</string>
     <string name="request_coins_clipboard_address_msg">Dash地址已复制</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">显示</string>
-    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是一个恢复密语中的单词</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢复密语必须包括 12 个词</string>
-    <string name="restore_wallet_from_invalid_seed_bad_checksum">错误的恢復密语</string>
-    <string name="restore_wallet_from_invalid_seed_failure">无法恢复钱包:\n\n%s\n\n是否输入了错误的密码？</string>
+    <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是一个助记词</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">助记词必须包括 12 个词</string>
+    <string name="restore_wallet_from_invalid_seed_bad_checksum">错误的助记词</string>
+    <string name="restore_wallet_from_invalid_seed_failure">无法恢复钱包:\n\n%s\n\n是否输入了错误的助记词？</string>
 
     <string name="send_coins_options_fee_category_zero">无手续费</string>
     <string name="send_coins_fragment_hint_fee_zero">不支付任何交易手续费. 仅在您不在意确认时间长短的情况下使用此选项.</string>
@@ -137,7 +136,7 @@
     <string name="wallet_lock_unlock_dialog_title">解锁您的钱包</string>
     <string name="wallet_lock_unlock_dialog_message">您的钱包受到密码保护. 输入您的PIN码并按解锁以继续.</string>
     <string name="wallet_lock_reset_wallet_title">重置钱包</string>
-    <string name="wallet_lock_reset_wallet_message">您确定吗? 您的钱包将会被删除, 您所有的Dash将会丢失.\n\n找回您Dash的唯一途径是通过备份文件或恢复短语.</string>
+    <string name="wallet_lock_reset_wallet_message">您确定吗? 您的钱包将会被删除, 您所有的Dash将会丢失.\n\n找回您Dash的唯一途径是通过备份文件或助记词.</string>
 
     <string name="wallet_lock_wallet_disabled">钱包被禁用</string>
     <string name="wallet_lock_try_again">请在 %1$d %2$s 后再试</string>
@@ -161,7 +160,7 @@
     <string name="encrypt_new_key_chain_dialog_message">您的钱包将被升级, 以支持更多APP的导入导出功能.</string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">您必须输入PIN码才能完成升级过程.</string>
     <string name="pin_code_required_dialog_message">这个应用程序需要PIN码来发送交易和查看交易余额.</string>
-    <string name="backup_wallet_seed_private_key_written_down_box">我已经记下了恢复密语</string>
+    <string name="backup_wallet_seed_private_key_written_down_box">我已经记下了助记词</string>
 
     <string name="change_exchange_currency_code_message">您的本地货币是%1$s, 但是在这个应用程序中默认货币设置为%2$s. 请问您想要改为%1$s 或保持%2$s?</string>
     <string name="change_to">改为%s</string>
@@ -194,23 +193,23 @@
     <string name="verify_continue">继续</string>
     <string name="verify">验证</string>
     <string name="verify_backup_wallet">备份钱包</string>
-    <string name="verify_show_recovery_phrase">显示恢复密语</string>
+    <string name="verify_show_recovery_phrase">显示助记词</string>
     <string name="verify_secure_now">立刻保护钱包</string>
     <string name="verify_it_is_important">这很重要</string>
     <string name="verify_it_is_important_subtitle">我们即将向您显示您钱包的私钥.</string>
-    <string name="verify_info_text_1">此恢复密语是您获取本钱包中资金的方法.</string>
-    <string name="verify_info_text_2">我们不会存储此恢复密语.</string>
-    <string name="verify_info_text_3">如果此设备丢失, 损坏或意外从该设备卸载了Dash钱包, 则需要此恢复密语来找回您的资金.</string>
+    <string name="verify_info_text_1">此助记词是您获取本钱包中资金的方法.</string>
+    <string name="verify_info_text_2">我们不会存储此助记词.</string>
+    <string name="verify_info_text_3">如果此设备丢失, 损坏或意外从该设备卸载了Dash钱包, 则需要此助记词来找回您的资金.</string>
     <string name="verify_skip">跳过</string>
     <string name="verify_secure_now_btn">立刻保护</string>
-    <string name="verify_secure_now_message">如果您丢失此设备, 您将丢失您的资金. 获取您恢复密语以便在其他设备能够恢复您的钱包.</string>
+    <string name="verify_secure_now_message">如果您丢失此设备, 您将丢失您的资金. 获取您助记词以便在其他设备能够恢复您的钱包.</string>
     <string name="verify_seed_title">请将其写下来</string>
     <string name="verify_seed_write_down_confirmation">我已将它写下来</string>
-    <string name="verify_seed_buttons_tip">请以正确顺序键入您的恢復密语</string>
+    <string name="verify_seed_buttons_tip">请以正确顺序输入您的助记词</string>
     <string name="verify_seed_success_title">验证成功</string>
-    <string name="verify_seed_success_message">您的钱包现已安全. 您可以随时在其他设备通过您的恢复密语找回您的账户.</string>
+    <string name="verify_seed_success_message">您的钱包现已安全. 您可以随时在其他设备通过您的助记词找回您的账户.</string>
     <string name="view_seed_done">完成</string>
-    <string name="view_seed_title">恢复密语</string>
+    <string name="view_seed_title">助记词</string>
     <string name="transaction_result_view_on_explorer">在区块浏览器中查看</string>
     <string name="transaction_result_paid_successfully">发送成功</string>
     <string name="transaction_result_sent_to">发送至</string>
@@ -321,7 +320,6 @@
     <string name="payment_request_please_try_again">请重试</string>
     <string name="payment_request_try_again">再试一次</string>
     <string name="payment_request_problem_title">支付无法被确认</string>
-    <string name="payment_request_problem_message">您的支付已被处理, 但服务器无法对其确认</string>
     <string name="payment_request_expired_title">支付请求已过期</string>
     <string name="payment_request_close">关闭</string>
     <string name="payment_request_skip">跳过</string>

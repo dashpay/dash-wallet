@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -98,17 +97,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         when (item.viewType) {
             CONTACT -> {
                 val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.usernameSearchResult!!.dashPayProfile.userId]
-                (holder as ContactViewHolder).apply {
-                    bind(item.usernameSearchResult, sendContactRequestWorkState, itemClickListener, listener)
-                    if (item.usernameSearchResult.isPendingRequest) {
-                        setMarginsDp(20, 3, 20, 3)
-                        setBackgroundResource(R.drawable.selectable_round_corners)
-                    } else {
-                        setMarginsDp(0, 0, 0, 0)
-                        setBackgroundColor(Color.TRANSPARENT)
-                        setForegroundResource(R.drawable.selectable_background_dark)
-                    }
-                }
+                (holder as ContactViewHolder).bind(item.usernameSearchResult, sendContactRequestWorkState, itemClickListener, listener)
             }
             CONTACT_REQUEST_HEADER -> (holder as ContactRequestHeaderViewHolder).bind(results[position].requestCount)
             CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind(item.sortOrder)
