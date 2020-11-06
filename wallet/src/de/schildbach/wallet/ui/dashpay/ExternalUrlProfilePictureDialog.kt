@@ -47,7 +47,6 @@ import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
 
-
 class ExternalUrlProfilePictureDialog : DialogFragment() {
 
     companion object {
