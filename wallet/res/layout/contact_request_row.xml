@@ -8,7 +8,7 @@
     android:layout_marginRight="15dp"
     android:layout_marginTop="3dp"
     android:layout_marginBottom="3dp"
-    android:background="@drawable/selectable_round_corners">
+    android:background="@drawable/selectable_round_corners_white">
 
     <ImageView
         android:id="@+id/avatar"

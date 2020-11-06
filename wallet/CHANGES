@@ -1,4 +1,11 @@
 Dash Wallet
+v7.2.0
+* Enhance Forgot PIN feature from Lock Screen
+* Update translations
+* Built for SDK 29 (Android 10)
+* Update dependencies
+* Use DashJ 0.17.5 (uses protobuf-javalite)
+
 v7.1.0
 * Use DashJ 0.17.4 (full chainlock support, Dash Core 0.16 updates)
 * BIP70: don't send tx if rejected by payment server

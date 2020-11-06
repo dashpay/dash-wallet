@@ -24,7 +24,7 @@ import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.CompoundButton
-import android.widget.Switch
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
@@ -57,7 +57,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         super.onCreate(savedInstanceState)
 
         setTitle(R.string.security_title)
-        val hideBalanceOnLaunch = findViewById<Switch>(R.id.hide_balance_switch)
+        val hideBalanceOnLaunch = findViewById<SwitchCompat>(R.id.hide_balance_switch)
         hideBalanceOnLaunch.isChecked = configuration.hideBalance
         hideBalanceOnLaunch.setOnCheckedChangeListener { _, hideBalanceOnLaunch ->
             configuration.hideBalance = hideBalanceOnLaunch

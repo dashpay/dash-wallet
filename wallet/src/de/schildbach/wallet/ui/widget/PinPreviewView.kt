@@ -24,7 +24,7 @@ import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
-import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment
+import de.schildbach.wallet.ui.ForgotPinActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.pin_preview_view.view.*
 
@@ -93,7 +93,7 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
 
         forgot_pin.setOnClickListener {
             if (context is AppCompatActivity) {
-                RestoreWalletFromSeedDialogFragment.show(context.supportFragmentManager)
+                context.startActivity(ForgotPinActivity.createIntent(context))
             }
         }
     }

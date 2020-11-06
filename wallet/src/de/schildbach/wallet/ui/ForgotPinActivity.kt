@@ -46,6 +46,9 @@ class ForgotPinActivity : AppCompatActivity() {
         }
 
         setTitle(R.string.forgot_pin_title)
+        recovery_pin.setOnClickListener {
+            startActivity(RestoreWalletFromSeedActivity.createIntent(this, true))
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

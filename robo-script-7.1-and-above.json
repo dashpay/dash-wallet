@@ -1,0 +1,2903 @@
+[
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600873843555,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873914714,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/skip_button",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/buttons_container",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600873918038,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873922282,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/create_new_wallet",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 4,
+        "resourceId": "hashengineering.darkcoin.wallet:id/buttons",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.appcompat.widget.LinearLayoutCompat",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600873927062,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873930955,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873933865,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873936934,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873944952,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600873947489,
+    "actionCode": -1,
+    "delayTime": 200,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873951424,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873954964,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873958845,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873962759,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600873965571,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873976541,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 3,
+        "resourceId": "hashengineering.darkcoin.wallet:id/verify_skip_button",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/container",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600873979000,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600873992524,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 5,
+        "resourceId": "hashengineering.darkcoin.wallet:id/more_button_view",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.GlobalFooterView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/global_footer_view",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.drawerlayout.widget.DrawerLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/drawer_layout",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600873995007,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874003928,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/settings",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.ScrollView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874006170,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874010616,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 3,
+        "resourceId": "hashengineering.darkcoin.wallet:id/about",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.appcompat.widget.ContentFrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "android:id/content",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874014504,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874020490,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/app_bar_include",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874022996,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874026232,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/local_currency",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.appcompat.widget.ContentFrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "android:id/content",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874029036,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874033867,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874036309,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874039134,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874041804,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874047723,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/security",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.ScrollView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874050669,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874054181,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.ScrollView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874058219,
+    "actionCode": -1,
+    "delayTime": 2500,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874059706,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874062995,
+    "actionCode": -1,
+    "delayTime": 2500,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874063838,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874067218,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874068083,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874071232,
+    "actionCode": -1,
+    "delayTime": 2500,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874071921,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874072500,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874081447,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/confirm_btn",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/linearLayout2",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.appcompat.widget.ContentFrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "android:id/content",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874084499,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874100655,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 5,
+        "resourceId": "hashengineering.darkcoin.wallet:id/advanced_security",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.ScrollView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874104635,
+    "actionCode": -1,
+    "delayTime": 2500,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874105901,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874109173,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874109818,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874112962,
+    "actionCode": -1,
+    "delayTime": 2500,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874116061,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874112962,
+    "actionCode": -1,
+    "delayTime": 2500,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874116061,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874119144,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874125348,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "android.widget.Switch",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/auto_logout_switch",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 3,
+        "resourceId": "hashengineering.darkcoin.wallet:id/spending_confirmation",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874128174,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874131511,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874133911,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874136289,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874138758,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874143830,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 3,
+        "resourceId": "hashengineering.darkcoin.wallet:id/tools",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.ScrollView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874146146,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874151903,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 3,
+        "resourceId": "hashengineering.darkcoin.wallet:id/network_monitor",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.appcompat.widget.ContentFrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "android:id/content",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874154740,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874161875,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "de.schildbach.wallet.ui.widget.MontserratCheckBox",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/blocks_checkbox",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874164890,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874169900,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874172577,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874176054,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874178899,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874186600,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/buy_and_sell",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.ScrollView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874189013,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874196811,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874199415,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874202053,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874204570,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874208882,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "de.schildbach.wallet.ui.widget.ShortcutButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 4,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.ShortcutsPane",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/shortcuts_pane",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.coordinatorlayout.widget.CoordinatorLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/home_content",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874212454,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874220891,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/specify_amount_button",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 3,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.ReceiveInfoView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/receive_info",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874223745,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874229608,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874232592,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874234625,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 3,
+        "resourceId": "hashengineering.darkcoin.wallet:id/confirm_button",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/container",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874239402,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874243286,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "android.view.View",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/touch_outside",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.coordinatorlayout.widget.CoordinatorLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/coordinator",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/container",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874245847,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874249860,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874252577,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874257379,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "com.google.android.material.tabs.TabLayout$TabView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": "Send"
+
+      },
+      {
+        "className": "com.google.android.material.tabs.TabLayout$SlidingTabIndicator",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.tabs.TabLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/tabs",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874260508,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874275510,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "com.google.android.material.tabs.TabLayout$TabView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Receive"
+
+      },
+      {
+        "className": "com.google.android.material.tabs.TabLayout$SlidingTabIndicator",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.tabs.TabLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/tabs",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874278945,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874283067,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": true,
+    "elementDescriptors": [
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/address_preview_pane",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.ReceiveInfoView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/receive_info",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.ScrollView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874287433,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874288929,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "com.google.android.material.tabs.TabLayout$TabView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": "Send"
+
+      },
+      {
+        "className": "com.google.android.material.tabs.TabLayout$SlidingTabIndicator",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.tabs.TabLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/tabs",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874292479,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874294046,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "de.schildbach.wallet.ui.widget.PaymentsButtonView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/pay_to_address",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.LinearLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/fragment_container",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874296893,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874302376,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874305622,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "PRESSED_BACK",
+    "timestamp": 1600874309612,
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874309697,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874316417,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 4,
+        "resourceId": "hashengineering.darkcoin.wallet:id/home_button_view",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.GlobalFooterView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.appcompat.widget.ContentFrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "android:id/content",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874319076,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874324715,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "de.schildbach.wallet.ui.widget.ShortcutButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.ShortcutsPane",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/shortcuts_pane",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.coordinatorlayout.widget.CoordinatorLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/home_content",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874329648,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874331007,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874333913,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874334830,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874337868,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874339699,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874342655,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874333913,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874334830,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/btn_1",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.TableRow",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "de.schildbach.wallet.ui.widget.NumericKeyboardView",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "hashengineering.darkcoin.wallet:id/numeric_keyboard",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874347818,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 4,
+        "resourceId": "hashengineering.darkcoin.wallet:id/verify_secure_now_button",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/container",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874350531,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874352815,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 2,
+        "resourceId": "hashengineering.darkcoin.wallet:id/verify_show_recovery_phrase_button",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/container",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874355546,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874358825,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "de.schildbach.wallet.ui.widget.MontserratCheckBox",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 3,
+        "resourceId": "hashengineering.darkcoin.wallet:id/written_down_checkbox",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/linearLayout2",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/container",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874361762,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874366717,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 4,
+        "resourceId": "hashengineering.darkcoin.wallet:id/confirm_written_down_btn",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "androidx.constraintlayout.widget.ConstraintLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/linearLayout2",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "android.widget.FrameLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/container",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874369809,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874372836,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/verify_appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874375424,
+    "actionCode": -1,
+    "delayTime": 1000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "timestamp": 1600874376325,
+
+    "actionCode": -1,
+    "delayTime": 0,
+    "canScrollTo": false,
+    "elementDescriptors": [
+      {
+        "className": "androidx.appcompat.widget.AppCompatImageButton",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 1,
+        "resourceId": "",
+        "contentDescription": "Navigate up"
+
+      },
+      {
+        "className": "androidx.appcompat.widget.Toolbar",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/toolbar",
+        "contentDescription": ""
+
+      },
+      {
+        "className": "com.google.android.material.appbar.AppBarLayout",
+        "recyclerViewChildPosition": -1,
+        "adapterViewChildPosition": -1,
+        "groupViewChildPosition": 0,
+        "resourceId": "hashengineering.darkcoin.wallet:id/verify_appbar",
+        "contentDescription": ""
+
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "timestamp": 1600874378987,
+    "actionCode": -1,
+    "delayTime": 3000,
+    "canScrollTo": false,
+    "elementDescriptors": []
+  }
+]
