@@ -1,4 +1,8 @@
 Dash Wallet
+v7.2.1
+* Fix Scan QR Code crash on Android 6 or earlier
+* Fix missing Advanced Security Screen Auto Logout toggle
+
 v7.2.0
 * Enhance Forgot PIN feature from Lock Screen
 * Update translations
