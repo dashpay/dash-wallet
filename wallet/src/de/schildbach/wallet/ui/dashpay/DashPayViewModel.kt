@@ -45,7 +45,6 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String>()
 
-    val notificationCountLiveData = NotificationCountLiveData(walletApplication, platformRepo, viewModelScope)
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, viewModelScope)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
     val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, viewModelScope)
@@ -121,10 +120,6 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
 
     fun searchNotifications(text: String) {
         notificationsLiveData.query = text
-    }
-
-    fun forceUpdateNotificationCount() {
-        notificationCountLiveData.onContactsUpdated()
     }
 
     fun usernameDoneAndDismiss() {

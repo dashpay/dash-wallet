@@ -23,8 +23,8 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet_test.R
@@ -282,15 +282,7 @@ class EnterAmountFragment : Fragment() {
                 it.username
             }
 
-            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context!!,
-                    it.username[0])
-
-            if (it.avatarUrl.isNotEmpty()) {
-                Glide.with(avatar).load(it.avatarUrl).circleCrop()
-                        .placeholder(defaultAvatar).into(avatar)
-            } else {
-                avatar.background = defaultAvatar
-            }
+            ProfilePictureDisplay.display(avatar, it)
         })
     }
 
