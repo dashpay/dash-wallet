@@ -59,14 +59,14 @@ import de.schildbach.wallet_test.R;
 
 public interface BackupHelper {
 
-  class ExternalStorageUnavailableException extends Exception {
-  }
-  String ECLAIR_BACKUP_DIR = "backup";
-  String CHAIN = "main";
+  //class ExternalStorageUnavailableException extends Exception {
+  //}
+  //String ECLAIR_BACKUP_DIR = "backup";
+  //String CHAIN = "main";
   String BACKUP_META_DEVICE_ID = "backup_device_id";
   String SETTING_CHANNELS_BACKUP_GOOGLEDRIVE_ENABLED = "channels_backup_gdrive_enabled";
 
-  interface Local {
+  /*interface Local {
 
     static boolean isExternalStorageWritable() {
       return Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState());
@@ -100,7 +100,7 @@ public interface BackupHelper {
 
       return backup;
     }
-  }
+  }*/
 
   interface GoogleDrive {
 
@@ -180,7 +180,7 @@ public interface BackupHelper {
     }
 
     @NonNull
-    static Task<String> createBackup(@NonNull final Executor executor, @NonNull final Drive drive, final String fileName, final byte[] encryptedData, final String deviceId) {
+    static Task<String> createBackup(@NonNull final Executor executor, @NonNull final Drive drive, final String fileName, final byte[] imageBytes) {
       log.info("creating new backup file on gdrive with name={}", fileName);
       return Tasks.call(executor, () -> {
 
@@ -188,16 +188,13 @@ public interface BackupHelper {
         final com.google.api.services.drive.model.File folder = getOrCreateBackupFolder(drive);
 
         // 2 - metadata
-        final HashMap<String, String> props = new HashMap<>();
-        props.put(BACKUP_META_DEVICE_ID, deviceId);
         final com.google.api.services.drive.model.File metadata = new com.google.api.services.drive.model.File()
           .setParents(Collections.singletonList(folder.getId()))
-          .setAppProperties(props)
           .setMimeType("image/jpeg")
           .setName(fileName);
 
         // 3 - content
-        final ByteArrayContent content = new ByteArrayContent("image/jpeg", encryptedData);
+        final ByteArrayContent content = new ByteArrayContent("image/jpeg", imageBytes);
 
         // 4 - execute
         final com.google.api.services.drive.model.File file = drive.files()
@@ -209,16 +206,18 @@ public interface BackupHelper {
         }
         String id = file.getId();
 
+        // 5 - set permission to public
         Permission permission = new Permission();
         permission.setType("anyone").setRole("reader");
-        Permission result = drive.permissions().create(id, permission).execute();
-        //System.out.println(result.getFileId());
+
+        // 6 - permissions execute
+        drive.permissions().create(id, permission).execute();
 
         return id;
       });
     }
 
-    @NonNull
+    /*@NonNull
     static Task<String> updateBackup(@NonNull final Executor executor, @NonNull final Drive drive, final String fileId, final byte[] encryptedData, final String deviceId) {
       log.info("updating backup file in gdrive with id={}", fileId);
       return Tasks.call(executor, () -> {
@@ -237,7 +236,7 @@ public interface BackupHelper {
         final com.google.api.services.drive.model.File file = drive.files().update(fileId, metadata, content).execute();
         return file.getId();
       });
-    }
+    }*/
 
     static boolean isGDriveAvailable(final Context context) {
       final int connectionResult = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context);

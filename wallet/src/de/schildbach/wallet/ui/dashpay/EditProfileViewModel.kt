@@ -46,6 +46,13 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
 
     private val log = LoggerFactory.getLogger(EditProfileViewModel::class.java)
 
+    companion object {
+        const val GoogleDrive: String = "google-drive"
+        const val Imgur: String = "imgur"
+    }
+
+    var uploadService: String = ""
+
     val profilePictureFile by lazy {
         try {
             val storageDir: File = application.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
@@ -73,13 +80,13 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
 
     val updateProfileRequestState = UpdateProfileStatusLiveData(application)
 
-    fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String) {
+    fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String, uploadService: String = "", localAvatarUrl: String = "") {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
                 displayName, publicMessage, avatarUrl,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
         UpdateProfileOperation(walletApplication)
-                .create(updatedProfile)
+                .create(updatedProfile, uploadService, localAvatarUrl)
                 .enqueue()
     }
 

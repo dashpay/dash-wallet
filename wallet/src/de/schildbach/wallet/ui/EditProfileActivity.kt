@@ -42,15 +42,14 @@ import androidx.lifecycle.ViewModelProvider
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
-import com.google.android.gms.auth.UserRecoverableAuthException
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.api.services.drive.Drive
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.ChooseStorageServiceDialog
 import de.schildbach.wallet.ui.dashpay.CropImageActivity
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.ExternalUrlProfilePictureDialog
@@ -62,8 +61,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.util.*
-import java.util.concurrent.Executors
+import java.lang.IllegalStateException
 
 class EditProfileActivity : BaseMenuActivity() {
 
@@ -88,7 +86,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private var profilePictureChanged = false
 
-    protected var mDrive: Drive? = null
+    private var mDrive: Drive? = null
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -174,6 +172,10 @@ class EditProfileActivity : BaseMenuActivity() {
             choosePictureWithPermission()
         })
 
+        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
+            uploadAndSave(it)
+        })
+
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
             cropProfilePicture()
         })
@@ -232,6 +234,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
             }
             profilePictureChanged = true
+            editProfileViewModel.uploadService = "external"
         })
     }
 
@@ -251,9 +254,14 @@ class EditProfileActivity : BaseMenuActivity() {
         } else {
             editProfileViewModel.dashPayProfile!!.avatarUrl
         }
-        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl)
-        save.isEnabled = false
-        finish()
+
+        if (externalUrlSharedViewModel.externalUrl != null || !profilePictureChanged) {
+            editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl)
+            save.isEnabled = false
+            finish()
+        } else {
+            ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, "")
+        }
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
@@ -357,7 +365,7 @@ class EditProfileActivity : BaseMenuActivity() {
                             saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {
                             setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
-                            requestGDriveAccess()
+                            profilePictureChanged = true
                         }
                     }
                 }
@@ -427,6 +435,7 @@ class EditProfileActivity : BaseMenuActivity() {
         return FileProvider.getUriForFile(walletApplication, "${walletApplication.packageName}.file_attachment", file)
     }
 
+    //TODO: Not sure if we need this
     private fun checkGDriveAccess() {
         object : Thread() {
             override fun run() {
@@ -440,7 +449,7 @@ class EditProfileActivity : BaseMenuActivity() {
         }.start()
     }
 
-    protected fun requestGDriveAccess() {
+    private fun requestGDriveAccess() {
         val signInAccount = BackupHelper.GoogleDrive.getSigninAccount(applicationContext)
         val googleSignInClient = GoogleSignIn.getClient(this, BackupHelper.GoogleDrive.getGoogleSigninOptions())
         if (signInAccount == null) {
@@ -472,22 +481,20 @@ class EditProfileActivity : BaseMenuActivity() {
         }
     }
 
-    protected fun applyGdriveAccessGrantedBase(signInAccount: GoogleSignInAccount?) {
+    private fun applyGdriveAccessGrantedBase(signInAccount: GoogleSignInAccount?) {
         mDrive = BackupHelper.GoogleDrive.getDriveServiceFromAccount(applicationContext, signInAccount)
     }
-    fun getEclairBackupFileName(seedHash: String): String {
-        return "eclair_" + seedHash + ".bkup"
-    }
 
-    protected fun applyGdriveAccessGranted(signInAccount: GoogleSignInAccount) {
+    private fun applyGdriveAccessGranted(signInAccount: GoogleSignInAccount) {
         applyGdriveAccessGrantedBase(signInAccount)
+        uploadAndBroadcast()
         object : Thread() {
             override fun run() {
                 if (/*app != null &&*/ !BackupHelper.GoogleDrive.isGDriveEnabled(applicationContext)) {
                     // access is explicitly granted from a revoked state
                     //app.system.eventStream().publish(ChannelPersisted.apply(null, null, null, null))
                 }
-                BackupHelper.GoogleDrive.listBackups(Executors.newSingleThreadExecutor(), mDrive!!,
+                /*BackupHelper.GoogleDrive.listBackups(Executors.newSingleThreadExecutor(), mDrive!!,
                         getEclairBackupFileName(UUID.randomUUID().toString()))
                         .addOnSuccessListener { filesList ->
                             runOnUiThread {
@@ -520,8 +527,38 @@ class EditProfileActivity : BaseMenuActivity() {
                                 GoogleSignIn.getClient(applicationContext, BackupHelper.GoogleDrive.getGoogleSigninOptions()).revokeAccess()
                             }
                             applyGdriveAccessDenied()
-                        }
+                        }*/
             }
         }.start()
+    }
+
+    private fun uploadAndBroadcast() {
+        val displayName = display_name.text.toString().trim()
+        val publicMessage = about_me.text.toString().trim()
+        val avatarUrl = if (profilePictureChanged) {
+            if (externalUrlSharedViewModel.externalUrl != null) {
+                externalUrlSharedViewModel.externalUrl.toString()
+            } else {
+                ""
+            }
+        } else {
+            editProfileViewModel.dashPayProfile!!.avatarUrl
+        }
+        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl, editProfileViewModel.uploadService, editProfileViewModel.profilePictureFile!!.absolutePath)
+        save.isEnabled = false
+        finish()
+    }
+
+    private fun uploadAndSave(uploadService: String) {
+        editProfileViewModel.uploadService = uploadService
+        when (uploadService) {
+            EditProfileViewModel.GoogleDrive -> {
+                requestGDriveAccess()
+            }
+            EditProfileViewModel.Imgur -> {
+                uploadAndBroadcast()
+            }
+            else -> throw IllegalStateException()
+        }
     }
 }
