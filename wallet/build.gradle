@@ -113,7 +113,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 def props = new Properties()
-file("../local.properties").withInputStream { props.load(it) }
+
 
 android {
     compileSdkVersion 29
