@@ -147,8 +147,16 @@ android {
 
     buildTypes {
         all {
-            buildConfigField("String", "IMGUR_CLIENT_ID", props.getProperty("IMGUR_CLIENT_ID"))
-            buildConfigField("String", "IMGUR_CLIENT_SECRET", props.getProperty("IMGUR_CLIENT_SECRET"))
+            def imgurClientId = props.getProperty("IMGUR_CLIENT_ID")
+            def imgurClientSecret = props.getProperty("IMGUR_CLIENT_SECRET")
+            if (imgurClientId == null) {
+                imgurClientId = "\"IMGUR_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"IMGUR_CLIENT_SECRET\""
+            }
+            buildConfigField("String", "IMGUR_CLIENT_ID", imgurClientId)
+            buildConfigField("String", "IMGUR_CLIENT_SECRET", imgurClientSecret)
         }
         release {
             minifyEnabled true
