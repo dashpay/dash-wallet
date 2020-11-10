@@ -26,4 +26,6 @@ class SelectProfilePictureSharedViewModel : ViewModel() {
     val onTakePictureCallback = SingleLiveEventExt<Void>()
 
     val onChoosePictureCallback = SingleLiveEventExt<Void>()
+
+    val onChooseStorageService = SingleLiveEventExt<String>()
 }
