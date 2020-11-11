@@ -204,7 +204,7 @@ class EditProfileActivity : BaseMenuActivity() {
             setEditingState(it.status != Status.SUCCESS)
             activateDeactivateSave()
         })
-        externalUrlSharedViewModel.validUrlChosenEvent.observe(this, {
+        externalUrlSharedViewModel.validUrlChosenEvent.observe(this, Observer {
             if (it != null) {
                 editProfileViewModel.saveExternalBitmap(it)
             } else {
@@ -212,6 +212,19 @@ class EditProfileActivity : BaseMenuActivity() {
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
             }
             profilePictureChanged = true
+        })
+        editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
+            when (it.status) {
+                Status.LOADING -> {
+                    Toast.makeText(this@EditProfileActivity, "Uploading profile picture", Toast.LENGTH_LONG).show()
+                }
+                Status.ERROR -> {
+                    Toast.makeText(this@EditProfileActivity, "Failed to upload profile picture", Toast.LENGTH_LONG).show()
+                }
+                Status.SUCCESS -> {
+                    Toast.makeText(this@EditProfileActivity, "Profile picture uploaded successfully", Toast.LENGTH_LONG).show()
+                }
+            }
         })
     }
 
@@ -337,6 +350,7 @@ class EditProfileActivity : BaseMenuActivity() {
                             saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {
                             setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
+                            editProfileViewModel.uploadToImgUr()
                         }
                     }
                 }
