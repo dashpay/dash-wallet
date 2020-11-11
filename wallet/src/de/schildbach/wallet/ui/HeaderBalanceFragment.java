@@ -17,10 +17,8 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -33,29 +31,23 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.lifecycle.ViewModelProviders;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
-import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.BlockchainIdentityBaseData;
-import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
-import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet.ui.dashpay.NotificationsActivity;
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay;
 import de.schildbach.wallet_test.R;
 
 public final class HeaderBalanceFragment extends Fragment implements SharedPreferences.OnSharedPreferenceChangeListener {
@@ -63,8 +55,6 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     private WalletApplication application;
     private AbstractBindServiceActivity activity;
     private Configuration config;
-    private Wallet wallet;
-    private LoaderManager loaderManager;
 
     private Boolean hideBalance;
     private View showBalanceButton;
@@ -79,23 +69,12 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
 
     private boolean showLocalBalance;
 
+    private HeaderBalanceViewModel viewModel;
+    private MainActivityViewModel mainActivityViewModel;
     private ExchangeRatesViewModel exchangeRatesViewModel;
 
     @Nullable
-    private Coin balance = null;
-    @Nullable
     private ExchangeRate exchangeRate = null;
-
-    private static final int ID_BALANCE_LOADER = 0;
-    private static final int ID_BLOCKCHAIN_STATE_LOADER = 1;
-
-    private boolean initComplete = false;
-
-    private Handler autoLockHandler = new Handler();
-    private BlockchainState blockchainState;
-    private String username;
-    private int notificationCount;
-    private DashPayViewModel dashPayViewModel;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -104,8 +83,6 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         this.activity = (AbstractBindServiceActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
-        this.wallet = application.getWallet();
-        this.loaderManager = LoaderManager.getInstance(this);
         hideBalance = config.getHideBalance();
 
         showLocalBalance = getResources().getBoolean(R.bool.show_local_balance);
@@ -114,7 +91,30 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     @Override
     public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        exchangeRatesViewModel = ViewModelProviders.of(this).get(ExchangeRatesViewModel.class);
+        initViewModel();
+        setNotificationCount();
+    }
+
+    private void initViewModel() {
+        exchangeRatesViewModel = new ViewModelProvider(this).get(ExchangeRatesViewModel.class);
+
+        mainActivityViewModel = new ViewModelProvider(requireActivity()).get(MainActivityViewModel.class);
+        mainActivityViewModel.getBlockchainStateData().observe(getViewLifecycleOwner(), blockchainState -> {
+            viewModel.setBlockchainState(blockchainState);
+            updateView();
+        });
+        mainActivityViewModel.getDashPayProfileData().observe(getViewLifecycleOwner(), dashPayProfile -> {
+            updateView();
+            setNotificationCount();
+        });
+
+        viewModel = new ViewModelProvider(this).get(HeaderBalanceViewModel.class);
+        viewModel.getWalletBalanceData().observe(getViewLifecycleOwner(), balance -> {
+            updateView();
+        });
+        viewModel.getNotificationCountData().observe(getViewLifecycleOwner(), notificationCount -> {
+            setNotificationCount();
+        });
     }
 
     @Override
@@ -160,54 +160,22 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         notificationBell.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(NotificationsActivity.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+                startActivity(NotificationsActivity.createIntent(requireContext(), NotificationsActivity.MODE_NOTIFICATIONS));
             }
         });
 
         dashpayUserAvatar.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(NotificationsActivity.createIntent(getContext(), NotificationsActivity.MODE_NOTIFICATIONS));
+                startActivity(NotificationsActivity.createIntent(requireContext(), NotificationsActivity.MODE_NOTIFICATIONS));
             }
         });
-
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<de.schildbach.wallet.data.BlockchainState>() {
-            @Override
-            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
-                HeaderBalanceFragment.this.blockchainState = blockchainState;
-                updateView();
-            }
-        });
-
-        AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(getViewLifecycleOwner(), new Observer<BlockchainIdentityBaseData>() {
-            @Override
-            public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
-                if (blockchainIdentityData != null
-                        && blockchainIdentityData.getCreationState().ordinal() >= BlockchainIdentityData.CreationState.DONE.ordinal()) {
-                    username = blockchainIdentityData.getUsername();
-                } else {
-                    username = null;
-                }
-                updateView();
-            }
-        });
-
-        dashPayViewModel = new ViewModelProvider(this).get(DashPayViewModel.class);
-        dashPayViewModel.getNotificationCountLiveData().observe(getViewLifecycleOwner(), new Observer<Integer>() {
-            @Override
-            public void onChanged(Integer integer) {
-                notificationCount = integer;
-                updateView();
-            }
-        });
-        updateView();
     }
 
     @Override
     public void onResume() {
         super.onResume();
 
-        loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
         exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
                 new Observer<ExchangeRate>() {
                     @Override
@@ -219,10 +187,8 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
                     }
                 });
 
-        if (username != null) {
-            // Update notification count by requesting an update of the DashPayState
-            dashPayViewModel.forceUpdateNotificationCount();
-            dashPayViewModel.updateDashPayState();
+        if (mainActivityViewModel.getHasIdentity()) {
+            viewModel.forceUpdateNotificationCount();
         }
         if (config.getHideBalance()) {
             hideBalance = true;
@@ -234,36 +200,20 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
 
     @Override
     public void onPause() {
-        loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
-        loaderManager.destroyLoader(ID_BALANCE_LOADER);
-
-        autoLockHandler.removeCallbacksAndMessages(null);
         config.unregisterOnSharedPreferenceChangeListener(this);
-
         super.onPause();
     }
 
-    private void setDefaultUserAvatar(String letters) {
-
-        if (letters == null) {
-            // there is no username, so hide the image
-            dashpayUserAvatar.setVisibility(View.GONE);
-            return;
-        }
-        dashpayUserAvatar.setVisibility(View.VISIBLE);
-        dashpayUserAvatar.setBackground(UserAvatarPlaceholderDrawable.getDrawable(getContext(),
-                letters.charAt(0)));
-    }
-
-    private void setNotificationCount(Integer count) {
-        if (username == null) {
+    private void setNotificationCount() {
+        int notificationCount = viewModel.getNotificationCount();
+        if (!mainActivityViewModel.getHasIdentity()) {
             notifications.setVisibility(View.GONE);
             notificationBell.setVisibility(View.GONE);
-        } else if(count > 0) {
-            notifications.setText(count.toString());
+        } else if (notificationCount > 0) {
+            notifications.setText(String.valueOf(notificationCount));
             notifications.setVisibility(View.VISIBLE);
             notificationBell.setVisibility(View.GONE);
-        } else if (count == 0) {
+        } else if (notificationCount == 0) {
             notifications.setVisibility(View.GONE);
             notificationBell.setVisibility(View.VISIBLE);
         }
@@ -272,8 +222,8 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     private void updateView() {
         View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
-        setDefaultUserAvatar(username);
-        setNotificationCount(notificationCount);
+        DashPayProfile dashPayProfile = mainActivityViewModel.getDashPayProfile();
+        ProfilePictureDisplay.display(dashpayUserAvatar, dashPayProfile, true);
 
         if (hideBalance) {
             caption.setText(R.string.home_balance_hidden);
@@ -292,6 +242,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
             return;
         }
 
+        BlockchainState blockchainState = mainActivityViewModel.getBlockchainState();
         if (blockchainState != null && blockchainState.isSynced()) {
             balances.setVisibility(View.VISIBLE);
             walletBalanceSyncMessage.setVisibility(View.GONE);
@@ -304,6 +255,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         if (!showLocalBalance)
             viewBalanceLocal.setVisibility(View.GONE);
 
+        Coin balance = viewModel.getWalletBalance();
         if (balance != null) {
             viewBalanceDash.setVisibility(View.VISIBLE);
             viewBalanceDash.setFormat(config.getFormat().noCode());
@@ -329,33 +281,10 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         activity.invalidateOptionsMenu();
     }
 
-    private void showExchangeRatesActivity() {
-        Intent intent = new Intent(getActivity(), ExchangeRatesActivity.class);
-        getActivity().startActivity(intent);
-    }
-
-    private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
-        @Override
-        public Loader<Coin> onCreateLoader(final int id, final Bundle args) {
-            return new WalletBalanceLoader(activity, wallet);
-        }
-
-        @Override
-        public void onLoadFinished(@NonNull final Loader<Coin> loader, final Coin balance) {
-            HeaderBalanceFragment.this.balance = balance;
-
-            updateView();
-        }
-
-        @Override
-        public void onLoaderReset(@NonNull final Loader<Coin> loader) {
-        }
-    };
-
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME.equals(key)) {
-            dashPayViewModel.forceUpdateNotificationCount();
+            viewModel.forceUpdateNotificationCount();
         }
     }
 }

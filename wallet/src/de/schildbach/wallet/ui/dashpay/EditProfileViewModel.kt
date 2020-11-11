@@ -16,31 +16,36 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
+import android.graphics.Bitmap
 import android.os.Environment
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.switchMap
-import de.schildbach.wallet.AppDatabase
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.ImgurClient
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
+import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.*
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.channels.Channels
 import java.nio.channels.FileChannel
-import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
-class EditProfileViewModel(application: Application) : AndroidViewModel(application) {
+class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
 
     private val log = LoggerFactory.getLogger(EditProfileViewModel::class.java)
-    private val walletApplication = application as WalletApplication
+    val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
 
     val profilePictureFile by lazy {
         try {
@@ -67,35 +72,16 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
         false
     }
 
-    // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
-    // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
-    private val blockchainIdentityData = AppDatabase.getAppDatabase()
-            .blockchainIdentityDataDaoAsync().loadBase()
-
-    val dashPayProfileData = blockchainIdentityData.switchMap {
-        if (it != null) {
-            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(it.userId!!)
-        } else {
-            MutableLiveData()   //empty
-        }
-    }
-    val dashPayProfile
-        get() = dashPayProfileData.value!!
-
     val updateProfileRequestState = UpdateProfileStatusLiveData(application)
 
-    fun broadcastUpdateProfile(displayName: String, publicMessage: String) {
+    fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String) {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                displayName, publicMessage, dashPayProfile.avatarUrl,
+                displayName, publicMessage, avatarUrl,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
         UpdateProfileOperation(walletApplication)
                 .create(updatedProfile)
                 .enqueue()
-    }
-
-    fun saveTmpAsProfilePicture() {
-        copyFile(tmpPictureFile, profilePictureFile!!)
     }
 
     fun saveAsProfilePictureTmp(picturePath: String) {
@@ -117,6 +103,88 @@ class EditProfileViewModel(application: Application) : AndroidViewModel(applicat
                 outStream.close()
             } catch (e: IOException) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    fun downloadPictureAsync(pictureUrl: String): LiveData<Resource<Response>> {
+        val result = MutableLiveData<Resource<Response>>()
+        val client = OkHttpClient()
+        val request = Request.Builder()
+                .url(pictureUrl)
+                .build()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                result.value = Resource.error(e, null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val responseBody = response.body()
+                if (responseBody != null) {
+                    if (!tmpPictureFile.exists()) {
+                        tmpPictureFile.createNewFile()
+                    }
+                    try {
+                        val outStream = FileOutputStream(tmpPictureFile)
+                        val inChannel = Channels.newChannel(responseBody.byteStream())
+                        val outChannel: FileChannel = outStream.channel
+                        outChannel.transferFrom(inChannel, 0, Long.MAX_VALUE)
+                        inChannel.close()
+                        outStream.close()
+                        onTmpPictureReadyForEditEvent.postValue(tmpPictureFile)
+                        result.postValue(Resource.success(response))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        result.postValue(Resource.error(e, null))
+                    }
+                } else {
+                    result.postValue(Resource.error("error: ${response.code()}", null))
+                }
+            }
+        })
+        return result
+    }
+
+    suspend fun downloadPicture(pictureUrl: String): Response {
+        return suspendCoroutine { continuation ->
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                    .url(pictureUrl)
+                    .build()
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    continuation.resumeWithException(e)
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    continuation.resume(response)
+                }
+            })
+        }
+    }
+
+    fun saveExternalBitmap(bitmap: Bitmap) {
+        if (!tmpPictureFile.exists()) {
+            tmpPictureFile.createNewFile()
+        }
+        if (bitmap.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(tmpPictureFile))) {
+            onTmpPictureReadyForEditEvent.postValue(tmpPictureFile)
+        }
+    }
+
+    fun uploadToImgUr() {
+        viewModelScope.launch(Dispatchers.IO) {
+            profilePictureUploadLiveData.postValue(Resource.loading(""))
+            try {
+                val imgResponse = ImgurClient.instance.upload(profilePictureFile!!)
+                if (imgResponse != null && imgResponse.success) {
+                    dashPayProfile!!.avatarUrl = imgResponse.data.link
+                    profilePictureUploadLiveData.postValue(Resource.success(imgResponse.data.link))
+                } else {
+                    profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture"))
+                }
+            } catch (e: Exception) {
+                profilePictureUploadLiveData.postValue(Resource.error(e))
             }
         }
     }

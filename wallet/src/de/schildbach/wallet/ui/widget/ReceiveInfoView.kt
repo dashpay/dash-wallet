@@ -28,12 +28,11 @@ import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.lifecycleOwner
 import de.schildbach.wallet.ui.ReceiveActivity
-import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.Qr
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
@@ -138,13 +137,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
                                 username_2.visibility = View.GONE
                             }
 
-                            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(context, username[0])
-                            if (it.avatarUrl.isNotEmpty()) {
-                                Glide.with(avatar).load(it.avatarUrl).circleCrop()
-                                        .placeholder(defaultAvatar).into(avatar)
-                            } else {
-                                avatar.setImageDrawable(defaultAvatar)
-                            }
+                            ProfilePictureDisplay.display(avatar, it)
                         }
                     })
 

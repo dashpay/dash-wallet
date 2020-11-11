@@ -13,9 +13,9 @@ import org.dashevo.dpp.identifier.Identifier
 @Entity(tableName = "dashpay_profile")
 data class DashPayProfile(@PrimaryKey val userId: String,
                           val username: String,
-                          val displayName: String = "",
-                          val publicMessage: String = "",
-                          val avatarUrl: String = "",
+                          var displayName: String = "",
+                          var publicMessage: String = "",
+                          var avatarUrl: String = "",
                           val createdAt: Long = 0,
                           val updatedAt: Long = 0) : Parcelable {
     companion object {

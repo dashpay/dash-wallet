@@ -5,7 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:paddingTop="16dp"
     android:paddingBottom="15dp"
     tools:ignore="ContentDescription">
 
@@ -19,60 +18,103 @@
         app:srcCompat="@drawable/ic_expand_less" />
 
     <LinearLayout
+        android:id="@+id/external_url"
         android:layout_width="match_parent"
-        android:layout_height="54dp">
+        android:layout_height="64dp"
+        android:background="@drawable/selectable_background_dark"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
         <ImageView
             android:layout_width="30dp"
             android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
             android:layout_marginStart="31dp"
             android:layout_marginEnd="23dp"
-            android:layout_gravity="center_vertical"
-            app:srcCompat="@drawable/ic_take_picture" />
+            app:srcCompat="@drawable/ic_external_url" />
 
         <TextView
-            android:id="@+id/take_picture"
             style="@style/MontserratRegular"
-            android:textSize="16sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxLines="2"
-            android:ellipsize="end"
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="31dp"
-            android:text="@string/edit_profile_take_picture"/>
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="External URL"
+            android:textSize="16sp" />
 
     </LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_margin="10dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
         android:background="#c7c7c7" />
 
     <LinearLayout
+        android:id="@+id/take_picture"
         android:layout_width="match_parent"
-        android:layout_height="54dp">
+        android:layout_height="64dp"
+        android:background="@drawable/selectable_background_dark"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
 
         <ImageView
             android:layout_width="30dp"
             android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
             android:layout_marginStart="31dp"
             android:layout_marginEnd="23dp"
-            android:layout_gravity="center_vertical"
-            app:srcCompat="@drawable/ic_select_image" />
+            app:srcCompat="@drawable/ic_take_picture" />
 
         <TextView
-            android:id="@+id/choose_picture"
             style="@style/MontserratRegular"
-            android:textSize="16sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_marginEnd="31dp"
-            android:text="@string/edit_profile_choose_picture" />
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="@string/edit_profile_take_picture"
+            android:textSize="16sp" />
 
     </LinearLayout>
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:background="#c7c7c7" />
+
+    <LinearLayout
+        android:id="@+id/choose_picture"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@drawable/selectable_background_dark"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="31dp"
+            android:layout_marginEnd="23dp"
+            app:srcCompat="@drawable/ic_select_image" />
+
+        <TextView
+            style="@style/MontserratRegular"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="31dp"
+            android:text="@string/edit_profile_choose_picture"
+            android:textSize="16sp" />
+
+    </LinearLayout>
 
 
 </LinearLayout>

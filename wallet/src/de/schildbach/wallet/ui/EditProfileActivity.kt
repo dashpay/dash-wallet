@@ -23,6 +23,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -44,14 +45,10 @@ import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.CropImageActivity
-import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
-import de.schildbach.wallet.ui.dashpay.SelectProfilePictureDialog
-import de.schildbach.wallet.ui.dashpay.SelectProfilePictureSharedViewModel
+import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
-import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
-import kotlinx.android.synthetic.main.activity_more.userInfoContainer
 import java.io.File
 
 class EditProfileActivity : BaseMenuActivity() {
@@ -66,8 +63,12 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private lateinit var editProfileViewModel: EditProfileViewModel
     private lateinit var selectProfilePictureSharedViewModel: SelectProfilePictureSharedViewModel
+    private lateinit var externalUrlSharedViewModel: ExternalUrlProfilePictureViewModel
+
     private var isEditing: Boolean = false
     private var defaultAvatar: TextDrawable? = null
+
+    private var profilePictureChanged = false
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -141,6 +142,10 @@ class EditProfileActivity : BaseMenuActivity() {
             selectImage(this)
         }
 
+        selectProfilePictureSharedViewModel.onFromUrlCallback.observe(this, Observer<Void> {
+            pictureFromUrl()
+        })
+
         selectProfilePictureSharedViewModel.onTakePictureCallback.observe(this, Observer<Void> {
             takePictureWithPermission()
         })
@@ -154,9 +159,20 @@ class EditProfileActivity : BaseMenuActivity() {
         })
     }
 
+    private fun pictureFromUrl() {
+        if (editProfileViewModel.createTmpPictureFile()) {
+            val initialUrl = externalUrlSharedViewModel.externalUrl?.toString()
+                    ?: editProfileViewModel.dashPayProfile?.avatarUrl
+            ExternalUrlProfilePictureDialog.newInstance(initialUrl).show(supportFragmentManager, "")
+        } else {
+            Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun initViewModel() {
         editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
         selectProfilePictureSharedViewModel = ViewModelProvider(this).get(SelectProfilePictureSharedViewModel::class.java)
+        externalUrlSharedViewModel = ViewModelProvider(this).get(ExternalUrlProfilePictureViewModel::class.java)
 
         // first ensure that we have a registered username
         editProfileViewModel.dashPayProfileData.observe(this, Observer { dashPayProfile ->
@@ -188,6 +204,28 @@ class EditProfileActivity : BaseMenuActivity() {
             setEditingState(it.status != Status.SUCCESS)
             activateDeactivateSave()
         })
+        externalUrlSharedViewModel.validUrlChosenEvent.observe(this, Observer {
+            if (it != null) {
+                editProfileViewModel.saveExternalBitmap(it)
+            } else {
+                val username = editProfileViewModel.dashPayProfile!!.username
+                ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
+            }
+            profilePictureChanged = true
+        })
+        editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
+            when (it.status) {
+                Status.LOADING -> {
+                    Toast.makeText(this@EditProfileActivity, "Uploading profile picture", Toast.LENGTH_LONG).show()
+                }
+                Status.ERROR -> {
+                    Toast.makeText(this@EditProfileActivity, "Failed to upload profile picture", Toast.LENGTH_LONG).show()
+                }
+                Status.SUCCESS -> {
+                    Toast.makeText(this@EditProfileActivity, "Profile picture uploaded successfully", Toast.LENGTH_LONG).show()
+                }
+            }
+        })
     }
 
     fun activateDeactivateSave() {
@@ -197,25 +235,22 @@ class EditProfileActivity : BaseMenuActivity() {
     fun save() {
         val displayName = display_name.text.toString().trim()
         val publicMessage = about_me.text.toString().trim()
-        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage)
+        val avatarUrl = if (profilePictureChanged) {
+            if (externalUrlSharedViewModel.externalUrl != null) {
+                externalUrlSharedViewModel.externalUrl.toString()
+            } else {
+                ""
+            }
+        } else {
+            editProfileViewModel.dashPayProfile!!.avatarUrl
+        }
+        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl)
         save.isEnabled = false
         finish()
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this,
-                profile.username.toCharArray()[0])
-        if (profile.avatarUrl.isNotEmpty()) {
-            Glide.with(dashpayUserAvatar).load(profile.avatarUrl).circleCrop()
-                    .placeholder(defaultAvatar).into(dashpayUserAvatar)
-        } else {
-            if (editProfileViewModel.profilePictureFile != null && editProfileViewModel.profilePictureFile!!.exists()) {
-                setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
-            } else {
-                dashpayUserAvatar.setImageDrawable(defaultAvatar)
-            }
-        }
-
+        ProfilePictureDisplay.display(dashpayUserAvatar, profile)
         about_me.setText(profile.publicMessage)
         display_name.setText(profile.displayName)
     }
@@ -248,7 +283,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun selectImage(context: Context) {
         SelectProfilePictureDialog.createDialog()
-                .show(supportFragmentManager, "selectPictureDialog");
+                .show(supportFragmentManager, "selectPictureDialog")
     }
 
     private fun choosePicture() {
@@ -311,17 +346,52 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
                 REQUEST_CODE_CROP_IMAGE -> {
                     if (resultCode == Activity.RESULT_OK) {
-                        setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
+                        if (externalUrlSharedViewModel.externalUrl != null) {
+                            saveUrl(CropImageActivity.extractZoomedRect(data!!))
+                        } else {
+                            setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
+                            editProfileViewModel.uploadToImgUr()
+                        }
                     }
                 }
             }
         }
     }
 
+    private fun saveUrl(zoomedRect: RectF) {
+        if (externalUrlSharedViewModel.externalUrl != null) {
+            val zoomedRectStr = "${zoomedRect.left},${zoomedRect.top},${zoomedRect.right},${zoomedRect.bottom}"
+            externalUrlSharedViewModel.externalUrl = setUriParameter(externalUrlSharedViewModel.externalUrl!!, "dashpay-profile-pic-zoom", zoomedRectStr)
+
+            val file = editProfileViewModel.tmpPictureFile
+            val imgUri = getFileUri(file)
+            Glide.with(dashpayUserAvatar).load(imgUri)
+                    .signature(ObjectKey(file.lastModified()))
+                    .placeholder(defaultAvatar)
+                    .transform(ProfilePictureTransformation.create(zoomedRect))
+                    .into(dashpayUserAvatar)
+        }
+    }
+
+    private fun setUriParameter(uri: Uri, key: String, newValue: String): Uri {
+        val newUriBuilder = uri.buildUpon()
+        if (uri.getQueryParameter(key) == null) {
+            newUriBuilder.appendQueryParameter(key, newValue)
+        } else {
+            newUriBuilder.clearQuery()
+            for (param in uri.queryParameterNames) {
+                newUriBuilder.appendQueryParameter(param,
+                        if (param == key) newValue else uri.getQueryParameter(param))
+            }
+        }
+        return newUriBuilder.build()
+    }
+
     private fun cropProfilePicture() {
         val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
         val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
-        val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri)
+        val initZoomedRect = ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
+        val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
         startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
     }
 

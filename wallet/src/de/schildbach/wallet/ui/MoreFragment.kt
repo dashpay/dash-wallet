@@ -24,13 +24,13 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
@@ -136,14 +136,8 @@ class MoreFragment : Fragment(R.layout.activity_more) {
             username2.visibility = View.GONE
         }
 
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
-                profile.username.toCharArray()[0])
-        if (profile.avatarUrl.isNotEmpty()) {
-            Glide.with(dashpayUserAvatar).load(profile.avatarUrl).circleCrop()
-                    .placeholder(defaultAvatar).into(dashpayUserAvatar)
-        } else {
-            dashpayUserAvatar.setImageDrawable(defaultAvatar)
-        }
+        ProfilePictureDisplay.display(dashpayUserAvatar, profile)
+
         edit_profile.setOnClickListener {
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }

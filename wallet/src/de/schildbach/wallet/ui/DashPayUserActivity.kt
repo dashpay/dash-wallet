@@ -25,13 +25,13 @@ import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
@@ -120,13 +120,8 @@ class DashPayUserActivity : InteractionAwareActivity(),
         val profile = viewModel.userData.dashPayProfile
         val displayName = profile.displayName
 
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this, username[0])
-        if (profile.avatarUrl.isNotEmpty()) {
-            Glide.with(this).load(profile.avatarUrl).circleCrop()
-                    .placeholder(defaultAvatar).into(avatar)
-        } else {
-            avatar.background = defaultAvatar
-        }
+        ProfilePictureDisplay.display(avatar, profile)
+
         if (displayName.isNotEmpty()) {
             displayNameTxt.text = displayName
             usernameTxt.text = username
