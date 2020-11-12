@@ -20,7 +20,6 @@ import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -34,6 +33,8 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
+import kotlinx.android.synthetic.main.fragment_updating_profile.*
+import kotlinx.android.synthetic.main.fragment_update_profile_error.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreFragment : Fragment(R.layout.activity_more) {
@@ -70,6 +71,16 @@ class MoreFragment : Fragment(R.layout.activity_more) {
             ReportIssueDialogBuilder.createReportIssueDialog(requireContext(),
                     WalletApplication.getInstance()).show()
         }
+        error_try_again.setOnClickListener {
+            editProfileViewModel.retryBroadcastProfile()
+        }
+        cancel.setOnClickListener {
+            if (edit_update_switcher.displayedChild == 2) {
+                edit_update_switcher.displayedChild = 0 // reset to previous profile
+                editProfileViewModel.clearLastAttemptedProfile()
+            }
+
+        }
         initViewModel()
     }
 
@@ -88,27 +99,22 @@ class MoreFragment : Fragment(R.layout.activity_more) {
                 when (state.status) {
                     Status.SUCCESS -> {
                         edit_update_switcher.apply {
-                            if (currentView.id == R.id.update_profile) {
-                                showPrevious()
-                            }
+                            displayedChild = 0
                         }
                     }
                     Status.ERROR -> {
-                        var msg = state.message
-                        if (msg == null) {
-                            msg = "!!Error!!  ${state.exception!!.message}"
-                        }
-                        Toast.makeText(requireActivity(), msg, Toast.LENGTH_LONG).show()
                         edit_update_switcher.apply {
-                            if (currentView.id == R.id.update_profile) {
-                                showPrevious()
+                            if (displayedChild != 2) {
+                                displayedChild = 2
+                                error_code_text.text = getString(R.string.error_updating_profile_code, state.message)
                             }
                         }
                     }
                     Status.LOADING -> {
                         edit_update_switcher.apply {
-                            if (currentView.id == R.id.edit_profile) {
-                                showNext()
+                            if (displayedChild == 0 || displayedChild == 2) {
+                                //showNext()
+                                displayedChild = 1
                                 update_profile_status_icon.setImageResource(R.drawable.identity_processing)
                                 (update_profile_status_icon.drawable as AnimationDrawable).start()
                             }
@@ -116,8 +122,8 @@ class MoreFragment : Fragment(R.layout.activity_more) {
                     }
                     Status.CANCELED -> {
                         edit_update_switcher.apply {
-                            if (currentView.id == R.id.update_profile) {
-                                showPrevious()
+                            if (displayedChild != 0) {
+                                displayedChild = 0
                             }
                         }
                     }
@@ -127,7 +133,8 @@ class MoreFragment : Fragment(R.layout.activity_more) {
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
-        userInfoContainer.visibility = View.VISIBLE
+        edit_update_switcher.visibility = View.VISIBLE
+        edit_update_switcher.displayedChild = 0
         if (profile.displayName.isNotEmpty()) {
             username1.text = profile.displayName
             username2.text = profile.username

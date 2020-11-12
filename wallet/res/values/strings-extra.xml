@@ -440,5 +440,9 @@
     <string name="unable_to_load_image">Unable to load image.</string>
 
     <string name="updating_profile">Updating Profile on Dash Network</string>
+    <string name="error_updating_profile_try_again">Try Again</string>
+    <string name="error_updating_profile_cancel">Cancel</string>
+    <string name="error_updating_profile_msg">Error updating your profile</string>
+    <string name="error_updating_profile_code">Code: %s</string>
 
 </resources>
