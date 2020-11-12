@@ -444,5 +444,10 @@
     <string name="error_updating_profile_cancel">Cancel</string>
     <string name="error_updating_profile_msg">Error updating your profile</string>
     <string name="error_updating_profile_code">Code: %s</string>
+    <string name="edit_profile_public_url">Public URL</string>
+    <string name="public_url_enter_url">Paste your image URL</string>
+    <string name="public_url_error_message">Unable to fetch image. Please enter a valid image URL.</string>
+    <string name="public_url_message">You can specify any URL which is publicly available on the internet so users can see it on the Dash network.  ?More Info?</string>
+    <string name="public_url_fetching_image">Fetching Image</string>
 
 </resources>

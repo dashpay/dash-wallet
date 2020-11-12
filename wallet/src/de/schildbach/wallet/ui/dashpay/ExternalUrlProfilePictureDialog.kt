@@ -18,19 +18,21 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.graphics.drawable.AnimationDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
+import android.text.Layout
 import android.text.TextWatcher
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageView
+import android.widget.*
 import androidx.annotation.NonNull
 import androidx.annotation.Nullable
 import androidx.appcompat.app.AlertDialog
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
@@ -73,35 +75,21 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
     private lateinit var edit: EditText
     private lateinit var urlPreviewPane: View
     private lateinit var urlPreview: ImageView
-    private lateinit var positiveButton: Button
-    private lateinit var neutralButton: Button
+    private lateinit var publicUrlEnterUrl: TextView
+    private lateinit var button_ok: Button
+    private lateinit var button_cancel: Button
+    private lateinit var button_cancel_two: Button
+    private lateinit var pendingWorkIcon: ImageView
+    private lateinit var viewSwitcher: ViewSwitcher
 
     private lateinit var sharedViewModel: ExternalUrlProfilePictureViewModel
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialogBuilder = AlertDialog.Builder(requireContext())
-                .setTitle("External URL")
-                .setPositiveButton(R.string.button_ok) { _, _ ->
-                    sharedViewModel.confirm()
-                    KeyboardUtil.hideKeyboard(requireContext(), edit)
-                }
-                .setNegativeButton(android.R.string.cancel) { _, _ ->
-                    KeyboardUtil.hideKeyboard(requireContext(), edit)
-                }
-                .setNeutralButton("clear", null)
                 .setView(initCustomView())
 
         val dialog = dialogBuilder.create()
         dialog.setOnShowListener {
-            positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            positiveButton.isEnabled = false
-            neutralButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-            neutralButton.setOnClickListener {
-                edit.text = null
-            }
-            if (edit.length() == 0) {
-                neutralButton.visibility = View.GONE
-            }
             if (initialUrl != null) {
                 edit.setText(initialUrl)
             }
@@ -116,28 +104,54 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
         edit = customView.findViewById(R.id.input)
         urlPreviewPane = customView.findViewById(R.id.url_preview_pane)
         urlPreview = customView.findViewById(R.id.url_preview)
+        publicUrlEnterUrl = customView.findViewById(R.id.public_url_enter_url)
+        button_ok = customView.findViewById(R.id.ok)
+        button_cancel = customView.findViewById(R.id.cancel)
+        button_cancel_two = customView.findViewById(R.id.cancel_fetching)
+        pendingWorkIcon = customView.findViewById(R.id.pending_work_icon)
+        urlPreviewPane.visibility = View.GONE
+        viewSwitcher = customView.findViewById(R.id.view_switcher)
         edit.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                urlPreviewPane.visibility = View.GONE
-                neutralButton.visibility = if (edit.length() > 0) View.VISIBLE else View.GONE
 
                 cleanup()
 
                 if (edit.text.isEmpty()) {
-                    positiveButton.isEnabled = true
+
+                    button_ok.isEnabled = false
                     return
                 }
-                positiveButton.isEnabled = false
 
-                val pictureUrl = edit.text.trim().toString()
-                loadUrl(pictureUrl)
-                imitateUserInteraction()
+                button_ok.isEnabled = true
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
+        button_ok.setOnClickListener {
+            KeyboardUtil.hideKeyboard(requireContext(), edit)
+            cleanup()
+
+            button_ok.isEnabled = false
+
+                val pictureUrl = edit.text.trim().toString()
+            (pendingWorkIcon.drawable as AnimationDrawable).start()
+
+            viewSwitcher.showNext()
+
+            loadUrl(pictureUrl)
+            imitateUserInteraction()
+        }
+        button_cancel.setOnClickListener {
+            KeyboardUtil.hideKeyboard(requireContext(), edit)
+            dismiss()
+        }
+        button_cancel_two.setOnClickListener {
+            //TODO: how do we cancel an image load operation that is taking forever?
+            viewSwitcher.showPrevious()
+            button_ok.isEnabled = true
+        }
         return customView
     }
 
@@ -154,6 +168,8 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+                        publicUrlEnterUrl.setText(R.string.public_url_error_message)
+                        publicUrlEnterUrl.setTextColor(resources.getColor(R.color.dash_red))
                         log.info(e?.localizedMessage ?: "error", e)
                         return false
                     }
@@ -166,12 +182,12 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                     override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
                         if (isAdded) {
                             if (resource is BitmapDrawable) {
-                                urlPreviewPane.visibility = View.VISIBLE
-                                positiveButton.error = null
-                                positiveButton.isEnabled = true
-                                urlPreview.setImageDrawable(resource)
                                 sharedViewModel.bitmapCache = resource.bitmap
                                 sharedViewModel.externalUrl = pictureUrl
+                                publicUrlEnterUrl.text = getString(R.string.public_url_enter_url)
+                                publicUrlEnterUrl.setTextColor(resources.getColor(R.color.medium_gray))
+                                sharedViewModel.confirm()
+                                dismiss()
                             } else {
                                 onLoadFailed(null)
                             }
@@ -184,8 +200,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 
                     override fun onLoadFailed(@Nullable errorDrawable: Drawable?) {
                         if (isAdded) {
-                            urlPreviewPane.visibility = View.GONE
-                            positiveButton.isEnabled = false
+                            viewSwitcher.showPrevious()
                             sharedViewModel.bitmapCache = null
                             sharedViewModel.externalUrl = null
                         }
