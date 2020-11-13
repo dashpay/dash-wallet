@@ -23,6 +23,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
@@ -50,6 +52,9 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
 import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
 
 class EditProfileActivity : BaseMenuActivity() {
 
@@ -331,15 +336,19 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
                 REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
                     val selectedImage: Uri? = data.data
-                    val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
                     if (selectedImage != null) {
+                        val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
                         val cursor: Cursor? = contentResolver.query(selectedImage,
                                 filePathColumn, null, null, null)
                         if (cursor != null) {
                             cursor.moveToFirst()
                             val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
-                            val picturePath: String = cursor.getString(columnIndex)
-                            editProfileViewModel.saveAsProfilePictureTmp(picturePath)
+                            val picturePath: String? = cursor.getString(columnIndex)
+                            if (picturePath != null) {
+                                editProfileViewModel.saveAsProfilePictureTmp(picturePath)
+                            } else {
+                                saveImageWithAuthority(selectedImage)
+                            }
                             cursor.close()
                         }
                     }
@@ -353,6 +362,26 @@ class EditProfileActivity : BaseMenuActivity() {
                             editProfileViewModel.uploadToImgUr()
                         }
                     }
+                }
+            }
+        }
+    }
+
+    private fun saveImageWithAuthority(uri: Uri) {
+        var inputStream: InputStream? = null
+        if (uri.authority != null) {
+            try {
+                inputStream = contentResolver.openInputStream(uri)
+                val bmp: Bitmap = BitmapFactory.decodeStream(inputStream)
+                editProfileViewModel.saveExternalBitmap(bmp)
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+                Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+            } finally {
+                try {
+                    inputStream?.close()
+                } catch (e: IOException) {
+                    // ignore
                 }
             }
         }
