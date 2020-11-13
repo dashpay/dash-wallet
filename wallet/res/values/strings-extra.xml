@@ -447,7 +447,8 @@
     <string name="edit_profile_public_url">Public URL</string>
     <string name="public_url_enter_url">Paste your image URL</string>
     <string name="public_url_error_message">Unable to fetch image. Please enter a valid image URL.</string>
-    <string name="public_url_message">You can specify any URL which is publicly available on the internet so users can see it on the Dash network.  ?More Info?</string>
+    <string name="public_url_message">You can specify any URL which is publicly available on the internet so users can see it on the Dash network.</string>
+    <string name="public_url_more_info">More info</string>
     <string name="public_url_fetching_image">Fetching Image</string>
 
 </resources>

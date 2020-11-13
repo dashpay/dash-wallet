@@ -24,8 +24,11 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
+import android.text.Html
 import android.text.Layout
 import android.text.TextWatcher
+import android.text.method.LinkMovementMethod
+import android.text.util.Linkify
 import android.view.View
 import android.widget.*
 import androidx.annotation.NonNull
@@ -81,6 +84,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
     private lateinit var button_cancel_two: Button
     private lateinit var pendingWorkIcon: ImageView
     private lateinit var viewSwitcher: ViewSwitcher
+    private lateinit var disclaimer: TextView
 
     private lateinit var sharedViewModel: ExternalUrlProfilePictureViewModel
 
@@ -98,7 +102,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
         return dialog
     }
 
-    @SuppressLint("InflateParams")
+    @SuppressLint("SetTextI18n")
     private fun initCustomView(): View {
         customView = requireActivity().layoutInflater.inflate(R.layout.dialog_input_text, null)
         edit = customView.findViewById(R.id.input)
@@ -111,6 +115,13 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
         pendingWorkIcon = customView.findViewById(R.id.pending_work_icon)
         urlPreviewPane.visibility = View.GONE
         viewSwitcher = customView.findViewById(R.id.view_switcher)
+        disclaimer = customView.findViewById(R.id.public_url_message)
+        disclaimer.apply {
+            text = Html.fromHtml(getString(R.string.public_url_message) +
+                    " <html><a href=\"https://www.google.com/amp/s/www.mail-signatures.com/articles/direct-link-to-hosted-image/amp/\"><span style=\"color:blue;\">${ getString(R.string.public_url_more_info) }</span></a></html>",
+            )
+            movementMethod = LinkMovementMethod.getInstance()
+        }
         edit.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
 
