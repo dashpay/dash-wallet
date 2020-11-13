@@ -3,29 +3,26 @@ package de.schildbach.wallet.ui.dashpay.work
 import android.content.Context
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.google.android.gms.auth.GoogleAuthException
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.tasks.Tasks
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
-import com.google.api.services.drive.Drive
+import com.squareup.moshi.Moshi
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.ImgurUploadResponse
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.security.SecurityGuard
-import de.schildbach.wallet.util.BackupHelper
+import okhttp3.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
 import java.security.GeneralSecurityException
-import java.util.*
-import java.util.concurrent.Executors
 
 class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
     : BaseWorker(context, parameters) {
 
     companion object {
+        private val log = LoggerFactory.getLogger(UpdateProfileWorker::class.java)
         const val KEY_PASSWORD = "UpdateProfileRequestWorker.PASSWORD"
         const val KEY_DISPLAY_NAME = "UpdateProfileRequestWorker.DISPLAY_NAME"
         const val KEY_PUBLIC_MESSAGE = "UpdateProfileRequestWorker.PUBLIC_MESSAGE"
@@ -39,11 +36,11 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
     private val platformRepo = PlatformRepo.getInstance()
 
     override suspend fun doWorkWithBaseProgress(): Result {
-        val displayName = inputData.getString(KEY_DISPLAY_NAME)?:""
-        val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE)?:""
-        var avatarUrl = inputData.getString(KEY_AVATAR_URL)?:""
+        val displayName = inputData.getString(KEY_DISPLAY_NAME) ?: ""
+        val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE) ?: ""
+        var avatarUrl = inputData.getString(KEY_AVATAR_URL) ?: ""
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
-                return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_CREATED_AT parameter"))
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_CREATED_AT parameter"))
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
         val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
 
@@ -66,17 +63,31 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         }
 
         // Perform the image upload here
-        val avatarUrlToUpload = inputData.getString(KEY_LOCAL_AVATAR_URL_TO_UPLOAD)?:""
-        val uploadService = inputData.getString(KEY_UPLOAD_SERVICE)?:""
+        val avatarUrlToUpload = inputData.getString(KEY_LOCAL_AVATAR_URL_TO_UPLOAD) ?: ""
+        val avatarBytes = try {
+            File(avatarUrlToUpload).readBytes()
+        } catch (e: Exception) {
+            val msg = formatExceptionMessage("load profile picture file", e)
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
+        }
+
+        if (avatarBytes.isEmpty()) {
+            val msg = "The profile picture file is empty"
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
+        }
+
+
+        val uploadService = inputData.getString(KEY_UPLOAD_SERVICE) ?: ""
         if (avatarUrlToUpload.isNotEmpty()) {
             when (uploadService) {
                 EditProfileViewModel.GoogleDrive -> {
-                    val avatarFileBytes = File(avatarUrlToUpload).readBytes()
-                    val fileId = saveToGoogleDrive(applicationContext, avatarFileBytes)
-                    avatarUrl = "https://drive.google.com/uc?export=view&id=$fileId"
+                    //TODO
                 }
                 EditProfileViewModel.Imgur -> {
-                    //TODO:
+                    avatarUrl = uploadProfilePictureToImgur(avatarBytes) ?: ""
+                    if (avatarUrl.isEmpty()) {
+                        return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "Failed to upload picture to Imgur"))
+                    }
                 }
             }
         }
@@ -100,28 +111,31 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         }
     }
 
-    private fun saveToGoogleDrive(context: Context, encryptedBackup: ByteArray): String? {
-        return try {
-            val account: GoogleSignInAccount = BackupHelper.GoogleDrive.getSigninAccount(context)
-                    ?: throw GoogleAuthException()
+    private fun uploadProfilePictureToImgur(avatarBytes: ByteArray): String? {
+        val imgurUploadUrl = "https://api.imgur.com/3/upload"
+        val client = OkHttpClient()
 
-            // 1 - retrieve existing backup so we know whether we have to create a new one, or update existing file
-            val drive: Drive = Objects.requireNonNull(BackupHelper.GoogleDrive.getDriveServiceFromAccount(context, account), "drive service must not be null")
+        val imageBodyPart = RequestBody.create(MediaType.parse("image/*jpg"), avatarBytes)
+        val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
+                .addFormDataPart("image", "profile.jpg", imageBodyPart).build()
 
-            // 2 - upload the image
-            val uploadedAvatarFilename = UUID.randomUUID().toString()
-            return Tasks.await(BackupHelper.GoogleDrive.createBackup(Executors.newSingleThreadExecutor(), drive, uploadedAvatarFilename, encryptedBackup))
-        } catch (t: Throwable) {
-            //log.error("failed to save channels backup on google drive", t)
-            if (t is GoogleAuthIOException || t is GoogleAuthException) {
-                BackupHelper.GoogleDrive.disableGDriveBackup(context)
-            } else if (t.cause != null) {
-                val cause = t.cause
-                if (cause is GoogleAuthIOException || cause is GoogleAuthException) {
-                    BackupHelper.GoogleDrive.disableGDriveBackup(context)
+        val request = Request.Builder().url(imgurUploadUrl).post(requestBody).build()
+
+        try {
+            val response = client.newCall(request).execute()
+            val responseBody = response.body()
+            if (responseBody != null && response.isSuccessful) {
+                val moshi = Moshi.Builder().build()
+                val jsonAdapter = moshi.adapter(ImgurUploadResponse::class.java)
+                val imgurUploadResponse = jsonAdapter.fromJson(response.body().toString())
+                if (imgurUploadResponse?.success == true && imgurUploadResponse.data != null) {
+                    return imgurUploadResponse.data.link
                 }
             }
-            null
+        } catch (e: Exception) {
+            log.error(e.message)
         }
+        return null
     }
+
 }

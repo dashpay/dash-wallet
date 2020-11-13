@@ -18,35 +18,13 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.annotation.SuppressLint
 import android.app.Dialog
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
-import androidx.annotation.NonNull
-import androidx.annotation.Nullable
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.target.Target
-import com.bumptech.glide.request.transition.Transition
-import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
-import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
-import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
 

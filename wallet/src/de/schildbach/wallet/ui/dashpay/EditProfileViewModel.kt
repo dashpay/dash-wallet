@@ -23,7 +23,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.ImgurClient
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
@@ -45,6 +44,12 @@ import kotlin.coroutines.suspendCoroutine
 
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
 
+    companion object {
+        const val GoogleDrive: String = "google-drive"
+        const val Imgur: String = "imgur"
+    }
+
+    var uploadService: String = ""
     private val log = LoggerFactory.getLogger(EditProfileViewModel::class.java)
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
 
@@ -75,13 +80,14 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
 
     val updateProfileRequestState = UpdateProfileStatusLiveData(application)
 
-    fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String) {
+    fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String,
+                               uploadService: String = "", localAvatarUrl: String = "") {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
                 displayName, publicMessage, avatarUrl,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
         UpdateProfileOperation(walletApplication)
-                .create(updatedProfile)
+                .create(updatedProfile, uploadService, localAvatarUrl)
                 .enqueue()
     }
 
@@ -177,20 +183,4 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         }
     }
 
-    fun uploadToImgUr() {
-        viewModelScope.launch(Dispatchers.IO) {
-            profilePictureUploadLiveData.postValue(Resource.loading(""))
-            try {
-                val imgResponse = ImgurClient.instance.upload(profilePictureFile!!)
-                if (imgResponse != null && imgResponse.success) {
-                    dashPayProfile!!.avatarUrl = imgResponse.data.link
-                    profilePictureUploadLiveData.postValue(Resource.success(imgResponse.data.link))
-                } else {
-                    profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture"))
-                }
-            } catch (e: Exception) {
-                profilePictureUploadLiveData.postValue(Resource.error(e))
-            }
-        }
-    }
 }

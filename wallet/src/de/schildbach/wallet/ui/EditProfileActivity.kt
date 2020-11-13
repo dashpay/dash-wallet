@@ -249,9 +249,16 @@ class EditProfileActivity : BaseMenuActivity() {
         } else {
             editProfileViewModel.dashPayProfile!!.avatarUrl
         }
-        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl)
-        save.isEnabled = false
-        finish()
+
+        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
+            //TODO: Launch Agree Dialog
+            editProfileViewModel.uploadService = it
+            editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl,
+                    editProfileViewModel.uploadService)
+            save.isEnabled = false
+            finish()
+        })
+        ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
@@ -359,7 +366,6 @@ class EditProfileActivity : BaseMenuActivity() {
                             saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {
                             setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
-                            editProfileViewModel.uploadToImgUr()
                         }
                     }
                 }
