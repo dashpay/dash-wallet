@@ -42,7 +42,6 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
 
     private val log = LoggerFactory.getLogger(EditProfileViewModel::class.java)
@@ -83,14 +82,31 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
 
     val updateProfileRequestState = UpdateProfileStatusLiveData(application)
 
+    var lastAttemptedProfile: DashPayProfile? = null
+
     fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String, uploadService: String = "", localAvatarUrl: String = "") {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
                 displayName, publicMessage, avatarUrl,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
+
+        lastAttemptedProfile = updatedProfile
+
         UpdateProfileOperation(walletApplication)
                 .create(updatedProfile, uploadService, localAvatarUrl)
                 .enqueue()
+    }
+
+    fun retryBroadcastProfile() {
+        if (lastAttemptedProfile != null) {
+            UpdateProfileOperation(walletApplication)
+                    .create(lastAttemptedProfile!!, "", "")
+                    .enqueue()
+        }
+    }
+
+    fun clearLastAttemptedProfile() {
+        lastAttemptedProfile = null
     }
 
     fun saveAsProfilePictureTmp(picturePath: String) {

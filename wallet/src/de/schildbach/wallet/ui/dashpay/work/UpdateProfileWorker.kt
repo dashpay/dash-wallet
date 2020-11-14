@@ -43,7 +43,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE)?:""
         var avatarUrl = inputData.getString(KEY_AVATAR_URL)?:""
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
-                return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_CREATED_AT parameter"))
+                return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
         val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
 
@@ -53,13 +53,13 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
             val msg = formatExceptionMessage("derive encryption key", ex)
-            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DECRYPTION.name))
         } catch (ex: Exception) {
             when (ex) {
                 is GeneralSecurityException,
                 is IOException -> {
                     val msg = formatExceptionMessage("retrieve password", ex)
-                    return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
+                    return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.PASSWORD.name))
                 }
                 else -> throw ex
             }
@@ -94,9 +94,13 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             Result.success(workDataOf(
                     KEY_USER_ID to profileRequestResult.userId
             ))
+            //TODO: Use this to trigger a failure
+            //Result.failure(workDataOf(
+            //        KEY_ERROR_MESSAGE to UpdateProfileError.BROADCAST.name))
         } catch (ex: Exception) {
+            formatExceptionMessage("create/update profile", ex)
             Result.failure(workDataOf(
-                    KEY_ERROR_MESSAGE to formatExceptionMessage("create/update profile", ex)))
+                    KEY_ERROR_MESSAGE to UpdateProfileError.BROADCAST.name))
         }
     }
 
