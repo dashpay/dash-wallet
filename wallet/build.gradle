@@ -34,20 +34,21 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android:flexbox:1.1.0'
     implementation 'androidx.preference:preference:1.1.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.2'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'org.dashevo:dashpay:0.15-SNAPSHOT'
-    implementation 'org.dashevo:platform-core:0.15-SNAPSHOT'
-    implementation 'org.dashevo:dpp:0.15-SNAPSHOT'
-    implementation 'org.dashevo:dapi-client:0.15-SNAPSHOT'
+    implementation 'org.dashevo:dashpay:0.16-SNAPSHOT'
+    implementation 'org.dashevo:platform-core:0.16-SNAPSHOT'
+    implementation 'org.dashevo:dpp:0.16-SNAPSHOT'
+    implementation 'org.dashevo:dapi-client:0.16-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
-    implementation 'com.google.zxing:core:3.4.1'
+    implementation 'com.google.zxing:core:3.3.3'    // 3.3.3 is the maximum to support Android 4.4 to 6.x
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
 
     implementation 'com.squareup.moshi:moshi:1.11.0'
+    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation 'org.slf4j:slf4j-api:1.7.30'
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
@@ -132,6 +133,11 @@ ext {
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
+def props = new Properties()
+if (file("../local.properties").exists()) {
+    file("../local.properties").withInputStream { props.load(it) }
+}
+
 android {
     compileSdkVersion 29
 
@@ -163,6 +169,18 @@ android {
     }
 
     buildTypes {
+        all {
+            def imgurClientId = props.getProperty("IMGUR_CLIENT_ID")
+            def imgurClientSecret = props.getProperty("IMGUR_CLIENT_SECRET")
+            if (imgurClientId == null) {
+                imgurClientId = "\"IMGUR_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"IMGUR_CLIENT_SECRET\""
+            }
+            buildConfigField("String", "IMGUR_CLIENT_ID", imgurClientId)
+            buildConfigField("String", "IMGUR_CLIENT_SECRET", imgurClientSecret)
+        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'

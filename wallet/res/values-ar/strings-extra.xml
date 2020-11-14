@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">قم بإعداد رقم سري جديد</string>
     <string name="forgot_pin_instruction_3">تسجيل الدخول باستخدام الرقم السري الجديد الخاص بك للوصول إلى محفظتك</string>
     <string name="forgot_pin_warning">إذا نسيت رقم التعريف الشخصي الخاص بك وفقدت عبارة الاسترداد الخاصة بك ، فلا يمكنك العودة إلى محفظتك وأموالك.</string>
-
     <string name="send_coins_auto_lock_feasible">يجب تسوية هذه الصفقة على الفور بدون رسوم إضافية</string>
     <string name="send_coins_auto_lock_not_feasible">قد تستغرق هذه المعاملة عدة دقائق لتسويتها. أكمل على الفور مقابل%1$s%2$s؟</string>
     <string name="send_coins_instant_send_not_feasible">قد تستغرق هذه المعاملة عدة دقائق لتسويتها.</string>
@@ -336,7 +335,6 @@
     <string name="payment_request_please_try_again">حاول مرة اخرى</string>
     <string name="payment_request_try_again">حاول ثانية</string>
     <string name="payment_request_problem_title">لم يتم الإعتراف بالدفع</string>
-    <string name="payment_request_problem_message">تمت معالجة دفعتك ولكن الخادم لم يتمكن من الإعتراف بها</string>
     <string name="payment_request_expired_title">انتهت صلاحية طلب الدفع</string>
     <string name="payment_request_close">اغلاق</string>
     <string name="payment_request_skip">تخطي</string>

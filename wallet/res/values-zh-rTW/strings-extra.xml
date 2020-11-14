@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">設置一個新的密碼</string>
     <string name="forgot_pin_instruction_3">使用新的密碼來登錄並訪問您的錢包</string>
     <string name="forgot_pin_warning">如果您忘記了密碼並丟失了恢復詞組，則無法找回錢包和資金。</string>
-
     <string name="send_coins_auto_lock_feasible">此交易應立即被結算，無需支付額外費用</string>
     <string name="send_coins_auto_lock_not_feasible">此交易可能需要幾分鐘才能結算。 支付額外的 %1$s%2$s費用來立即完成該交易嗎?</string>
     <string name="send_coins_instant_send_not_feasible">此交易可能需要幾分鐘才能結算。</string>
@@ -321,7 +320,6 @@
     <string name="payment_request_please_try_again">請再試一遍</string>
     <string name="payment_request_try_again">再試一次</string>
     <string name="payment_request_problem_title">付款未得到確認</string>
-    <string name="payment_request_problem_message">您的付款已處理，但服務器無法確認</string>
     <string name="payment_request_expired_title">付款請求已過期</string>
     <string name="payment_request_close">關閉</string>
     <string name="payment_request_skip">略過</string>

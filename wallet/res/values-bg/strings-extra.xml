@@ -89,7 +89,6 @@
     <string name="forgot_pin_instruction_2">Задайте нов ПИН</string>
     <string name="forgot_pin_instruction_3">Влезте с новият си ПИН код, за да получите достъп до портфейла си</string>
     <string name="forgot_pin_warning">Ако сте забравили вашият ПИН и сте загубили фразата за възстановяване, няма да можете да получите обратно достъп до портфейла и средствата си.</string>
-
     <string name="send_coins_auto_lock_feasible">Тази транзакция ще бъде уредена мигновено без допълнителна такса</string>
     <string name="send_coins_auto_lock_not_feasible">Ще отнеме няколко минути тази транзакция да бъде наредена. Завършете я мигновено за %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Тази транзакция ще отнеме няколко минути.</string>
@@ -321,7 +320,6 @@
     <string name="payment_request_please_try_again">Моля опитай отново</string>
     <string name="payment_request_try_again">Опитай отново</string>
     <string name="payment_request_problem_title">Плащането не бе потвърдено</string>
-    <string name="payment_request_problem_message">Плащането Ви беше обработено, но сървърът не можа да го потвърди</string>
     <string name="payment_request_expired_title">Искането за плащане е изтекло</string>
     <string name="payment_request_close">Затвори</string>
     <string name="payment_request_skip">Пропусни</string>

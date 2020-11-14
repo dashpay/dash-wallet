@@ -6,7 +6,6 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import kotlinx.coroutines.delay
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 

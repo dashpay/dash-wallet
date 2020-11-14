@@ -2,10 +2,12 @@ package de.schildbach.wallet.data
 
 import android.os.Parcelable
 import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room.Ignore
+import kotlinx.android.parcel.IgnoredOnParcel
 import org.bitcoinj.core.Base58
 import kotlinx.android.parcel.Parcelize
 import org.dashevo.dpp.document.Document
+import org.dashevo.dpp.identifier.Identifier
 
 @Parcelize
 @Entity(tableName = "dashpay_contact_request", primaryKeys = ["userId", "toUserId"])
@@ -26,12 +28,34 @@ data class DashPayContactRequest(val userId: String,
                 document.data["encryptedAccountLabel"] as ByteArray
             else null
 
-            return DashPayContactRequest(document.ownerId, toUserId,
+            return DashPayContactRequest(document.ownerId.toString(), toUserId,
                     document.data["encryptedPublicKey"] as ByteArray,
                     document.data["senderKeyIndex"] as Int,
                     document.data["recipientKeyIndex"] as Int,
                     timestamp,
                     encryptedAccountLabel)
         }
+    }
+
+    @delegate:Ignore
+    val userIdentifier by lazy {
+        Identifier.from(userId)
+    }
+
+    @delegate:Ignore
+    val rawUserId by lazy {
+        userIdentifier.toBuffer()
+    }
+
+    @IgnoredOnParcel
+    @delegate:Ignore
+    val toUserIdentifier by lazy {
+        Identifier.from(toUserId)
+    }
+
+    @IgnoredOnParcel
+    @delegate:Ignore
+    val rawToUserId by lazy {
+        toUserIdentifier.toBuffer()
     }
 }

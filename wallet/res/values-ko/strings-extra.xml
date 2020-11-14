@@ -23,6 +23,7 @@
 
     <string name="dialog_confirm_confirm">승인</string>
     <string name="dialog_confirm_pay_to">다음으로 전송합니다</string>
+    <string name="dialog_confirm_secured_by">다음이 보증합니다</string>
     <string name="dialog_confirm_fee">네트워크 비용</string>
     <string name="dialog_confirm_total">총계</string>
 
@@ -89,7 +90,6 @@
     <string name="forgot_pin_instruction_2">새 PIN 설정하기</string>
     <string name="forgot_pin_instruction_3">새로운 PIN으로 로그인하셔서 당신의 지갑에 접근하세요</string>
     <string name="forgot_pin_warning">당신의 PIN과 복원 문구를 잊어버리시면 당신의 지갑과 자금에 접근할 수 없게 됩니다.</string>
-
     <string name="send_coins_auto_lock_feasible">이 거래는 추가 수수료 없이 곧바로 완료됩니다.</string>
     <string name="send_coins_auto_lock_not_feasible">이 거래가 처리되는 데에는 수 분이 걸릴 수 있습니다. 즉시 처리하는 데에는 %1$s%2$s가 필요합니다.</string>
     <string name="send_coins_instant_send_not_feasible">이 거래가 처리되는 데에는 수 분이 걸릴 수 있습니다. </string>
@@ -240,6 +240,8 @@
     <string name="menu_local_currency">현지 통화</string>
     <string name="menu_rescan_blockchain">블록체인 재스캔</string>
     <string name="menu_contact_support_title">고객 지원부에 문의하기</string>
+    <string name="menu_contact_support_subtitle">오류 보고하기</string>
+
     <string name="tools_address_book">주소록</string>
     <string name="tools_import_private_key">프라이빗 키 가져오기</string>
     <string name="tools_network_monitor">블럭체인 모니터링</string>
@@ -318,7 +320,6 @@
     <string name="payment_request_please_try_again">다시 시도하세요</string>
     <string name="payment_request_try_again">다시 시도하세요</string>
     <string name="payment_request_problem_title">지불이 인식되지 않았습니다</string>
-    <string name="payment_request_problem_message">당신의 지불이 처리되었으나 서버에서 인식하지 못하였습니다</string>
     <string name="payment_request_expired_title">지불 요청이 만료되었습니다</string>
     <string name="payment_request_close">닫기</string>
     <string name="payment_request_skip">건너뛰기</string>

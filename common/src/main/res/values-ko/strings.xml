@@ -5,4 +5,22 @@
     <string name="loading_error">오류가 발생했습니다. 나중에 다시 시도하십시오.</string>
     <string name="dash_available">%1$s 이용 가능</string>
 
+    <!-- Local Currency List: GGP -->
+    <string name="currency_GGP">건지섬 파운드</string>
+    <!-- Local Currency List: JEP -->
+    <string name="currency_JEP">저지 파운드</string>
+    <!-- Local Currency List: IMP -->
+    <string name="currency_IMP">맨섬 파운드</string>
+    <!-- Local Currency List: USDC is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_USDC">USD 코인</string>
+    <!-- Local Currency List: Litecoin cryptocurrency -->
+    <string name="currency_LTC">라이트코인</string>
+    <!-- Local Currency List: Ethereum cryptocurrency -->
+    <string name="currency_ETH">이더리움</string>
+    <!-- Local Currency List: Bitcoin cryptocurrency -->
+    <string name="currency_BTC">비트코인</string>
+    <!-- Local Currency List: PAX is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_PAX">팍소스 스탠다드</string>
+    <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_GUSD">제미니 파운드</string>
 </resources>

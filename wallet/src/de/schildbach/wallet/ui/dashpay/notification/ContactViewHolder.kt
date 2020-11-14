@@ -47,7 +47,7 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         val usernameSearchResult = notificationItem.usernameSearchResult
 
         itemView.apply {
-            setBackgroundResource(if (isNew) R.drawable.selectable_round_corners else R.drawable.selectable_round_corners_dark)
+            setBackgroundResource(if (isNew) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
             date.text = formatDate(usernameSearchResult.date)
 
             val dashPayProfile = usernameSearchResult.dashPayProfile

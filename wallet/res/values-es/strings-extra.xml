@@ -90,6 +90,8 @@
     <string name="forgot_pin_instruction_2">Configura un nuevo PIN</string>
     <string name="forgot_pin_instruction_3">Inicia sesión con tu nuevo PIN para acceder a tu billetera</string>
     <string name="forgot_pin_warning">Si olvidaste tu PIN y perdiste tu frase de recuperación, no podrás volver a acceder a tu billetera y fondos.</string>
+    <string name="forgot_pin_recover">Ingrese la frase de recuperacíon</string>
+    <string name="forgot_pin_passphrase_doesnt_match">La frase de recuperación no coincide con la que se configuró en esta billetera.</string>
 
     <string name="send_coins_auto_lock_feasible">Esta transacción debe liquidarse instantáneamente sin costo adicional</string>
     <string name="send_coins_auto_lock_not_feasible">Esta transacción podrá tomar varios minutos para concretarse. ¿Completar instantáneamente por %1$s%2$s?</string>
@@ -324,7 +326,7 @@
     <string name="payment_request_please_try_again">Por favor, intenta nuevamente</string>
     <string name="payment_request_try_again">Intentar de nuevo</string>
     <string name="payment_request_problem_title">El pago no fue reconocido</string>
-    <string name="payment_request_problem_message">Tu pago fué procesado pero el servidor no pudo confirmarlo</string>
+    <string name="payment_request_problem_message">El servidor no pudo procesar su pago, por favor consulte con el comerciante</string>
     <string name="payment_request_expired_title">Solicitud de pago vencida</string>
     <string name="payment_request_close">Cerrar</string>
     <string name="payment_request_skip">Salta</string>

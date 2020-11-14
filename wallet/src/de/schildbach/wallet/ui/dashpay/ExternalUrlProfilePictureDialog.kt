@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.annotation.SuppressLint
 import android.app.Dialog
-import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -29,7 +28,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.Toast
 import androidx.annotation.NonNull
 import androidx.annotation.Nullable
 import androidx.appcompat.app.AlertDialog
@@ -44,10 +42,10 @@ import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
 import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
-
 
 class ExternalUrlProfilePictureDialog : DialogFragment() {
 
@@ -108,6 +106,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 edit.setText(initialUrl)
             }
         }
+        dialog.window!!.callback = UserInteractionAwareCallback(dialog.window!!.callback, requireActivity())
         return dialog
     }
 
@@ -128,8 +127,11 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                     positiveButton.isEnabled = true
                     return
                 }
+                positiveButton.isEnabled = false
+
                 val pictureUrl = edit.text.trim().toString()
                 loadUrl(pictureUrl)
+                imitateUserInteraction()
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -146,15 +148,12 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
     }
 
     private fun loadUrl(pictureUrlBase: String) {
-        val pictureUrl = convertUrlIfSuitable(pictureUrlBase)
+        val pictureUrl = ProfilePictureDisplay.removePicZoomParameter(convertUrlIfSuitable(pictureUrlBase))
         Glide.with(requireContext())
                 .load(pictureUrl)
                 .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
-                        if (isAdded) {
-                            Toast.makeText(requireContext(), "Failed to Download Image!\n${e?.localizedMessage}", Toast.LENGTH_SHORT).show()
-                        }
                         log.info(e?.localizedMessage ?: "error", e)
                         return false
                     }
@@ -166,13 +165,16 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                 .into(object : CustomTarget<Drawable?>() {
                     override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
                         if (isAdded) {
-                            urlPreviewPane.visibility = View.VISIBLE
-                            positiveButton.error = null
-                            positiveButton.isEnabled = true
-                            val bitmap: Bitmap = (resource as BitmapDrawable).bitmap
-                            urlPreview.setImageBitmap(bitmap)
-                            sharedViewModel.bitmapCache = bitmap
-                            sharedViewModel.externalUrl = Uri.parse(pictureUrl)
+                            if (resource is BitmapDrawable) {
+                                urlPreviewPane.visibility = View.VISIBLE
+                                positiveButton.error = null
+                                positiveButton.isEnabled = true
+                                urlPreview.setImageDrawable(resource)
+                                sharedViewModel.bitmapCache = resource.bitmap
+                                sharedViewModel.externalUrl = pictureUrl
+                            } else {
+                                onLoadFailed(null)
+                            }
                         }
                     }
 
@@ -181,7 +183,6 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                     }
 
                     override fun onLoadFailed(@Nullable errorDrawable: Drawable?) {
-                        super.onLoadFailed(errorDrawable)
                         if (isAdded) {
                             urlPreviewPane.visibility = View.GONE
                             positiveButton.isEnabled = false
@@ -219,5 +220,9 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
         sharedViewModel = activity?.run {
             ViewModelProvider(this)[ExternalUrlProfilePictureViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
+    }
+
+    private fun imitateUserInteraction() {
+        requireActivity().onUserInteraction()
     }
 }

@@ -236,6 +236,19 @@ class EditProfileActivity : BaseMenuActivity() {
             profilePictureChanged = true
             editProfileViewModel.uploadService = "external"
         })
+        editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
+            when (it.status) {
+                Status.LOADING -> {
+                    Toast.makeText(this@EditProfileActivity, "Uploading profile picture", Toast.LENGTH_LONG).show()
+                }
+                Status.ERROR -> {
+                    Toast.makeText(this@EditProfileActivity, "Failed to upload profile picture", Toast.LENGTH_LONG).show()
+                }
+                Status.SUCCESS -> {
+                    Toast.makeText(this@EditProfileActivity, "Profile picture uploaded successfully", Toast.LENGTH_LONG).show()
+                }
+            }
+        })
     }
 
     fun activateDeactivateSave() {
@@ -366,6 +379,7 @@ class EditProfileActivity : BaseMenuActivity() {
                         } else {
                             setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
                             profilePictureChanged = true
+                            editProfileViewModel.uploadToImgUr()
                         }
                     }
                 }

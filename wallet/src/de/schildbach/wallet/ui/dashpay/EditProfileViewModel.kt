@@ -23,6 +23,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.ImgurClient
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
@@ -52,6 +53,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     }
 
     var uploadService: String = ""
+
+    val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
 
     val profilePictureFile by lazy {
         try {
@@ -88,10 +91,6 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         UpdateProfileOperation(walletApplication)
                 .create(updatedProfile, uploadService, localAvatarUrl)
                 .enqueue()
-    }
-
-    fun saveTmpAsProfilePicture() {
-        copyFile(tmpPictureFile, profilePictureFile!!)
     }
 
     fun saveAsProfilePictureTmp(picturePath: String) {
@@ -180,6 +179,22 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         if (bitmap.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(tmpPictureFile))) {
             onTmpPictureReadyForEditEvent.postValue(tmpPictureFile)
         }
-        bitmap.recycle()
+    }
+
+    fun uploadToImgUr() {
+        viewModelScope.launch(Dispatchers.IO) {
+            profilePictureUploadLiveData.postValue(Resource.loading(""))
+            try {
+                val imgResponse = ImgurClient.instance.upload(profilePictureFile!!)
+                if (imgResponse != null && imgResponse.success) {
+                    dashPayProfile!!.avatarUrl = imgResponse.data.link
+                    profilePictureUploadLiveData.postValue(Resource.success(imgResponse.data.link))
+                } else {
+                    profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture"))
+                }
+            } catch (e: Exception) {
+                profilePictureUploadLiveData.postValue(Resource.error(e))
+            }
+        }
     }
 }

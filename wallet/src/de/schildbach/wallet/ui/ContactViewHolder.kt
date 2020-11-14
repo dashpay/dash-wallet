@@ -22,10 +22,6 @@ import android.graphics.drawable.AnimationDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.annotation.ColorInt
-import androidx.annotation.DrawableRes
-import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -63,6 +59,9 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
             listener?.onItemClicked(itemView, usernameSearchResult)
         }
 
+        val isPendingRequest = usernameSearchResult.isPendingRequest
+        itemView.setBackgroundResource(if (isPendingRequest) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
+
         ContactRelation.process(usernameSearchResult.type, sendContactRequestWorkState, object : ContactRelation.RelationshipCallback {
 
             override fun none() {
@@ -99,30 +98,5 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
                 itemView.relation_state.displayedChild = 0
             }
         })
-    }
-
-    fun setBackgroundResource(@DrawableRes resId: Int) {
-        itemView.setBackgroundResource(resId)
-    }
-
-    fun setBackgroundColor(@ColorInt color: Int) {
-        itemView.setBackgroundColor(color)
-    }
-
-    fun setForegroundResource(resId: Int) {
-        (itemView as FrameLayout).foreground = ResourcesCompat.getDrawable(itemView.resources, resId, null)
-    }
-
-    fun setMarginsDp(start: Int, top: Int, end: Int, bottom: Int) {
-        (itemView.layoutParams as ViewGroup.MarginLayoutParams).apply {
-            marginStart = dpToPx(start)
-            topMargin = dpToPx(top)
-            marginEnd = dpToPx(end)
-            bottomMargin = dpToPx(bottom)
-        }
-    }
-
-    private fun dpToPx(dp: Int): Int {
-        return (dp * Resources.getSystem().displayMetrics.density).toInt()
     }
 }

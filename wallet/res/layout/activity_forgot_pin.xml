@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -9,149 +9,168 @@
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/colorPrimary"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
         app:popupTheme="@style/My.PopupOverlay"
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/v_center_guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.50" />
-
-    <ImageView
-        android:id="@+id/icon"
-        android:layout_width="0dp"
+    <ScrollView
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="48dp"
-        app:layout_constraintDimensionRatio="1:1"
-        app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
-        app:layout_constraintStart_toStartOf="@id/v_center_guideline"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintWidth_percent="0.25"
-        app:srcCompat="@drawable/ic_forgot_pin"
-        tools:ignore="ContentDescription" />
+        android:layout_weight="1">
 
-    <TextView
-        android:id="@+id/message"
-        style="@style/MontserratMedium.Heading"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="36dp"
-        android:gravity="center_horizontal"
-        android:padding="16dp"
-        android:text="@string/forgot_pin_message"
-        android:textColor="@color/dash_gray"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/icon" />
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-    <LinearLayout
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/v_center_guideline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="0.50" />
+
+            <ImageView
+                android:id="@+id/icon"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_marginTop="32dp"
+                app:layout_constraintDimensionRatio="1:1"
+                app:layout_constraintEnd_toEndOf="@id/v_center_guideline"
+                app:layout_constraintStart_toStartOf="@id/v_center_guideline"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_percent="0.25"
+                app:srcCompat="@drawable/ic_forgot_pin"
+                tools:ignore="ContentDescription" />
+
+            <TextView
+                android:id="@+id/message"
+                style="@style/MontserratMedium.Heading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:gravity="center_horizontal"
+                android:padding="16dp"
+                android:text="@string/forgot_pin_message"
+                android:textColor="@color/dash_gray"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/icon" />
+
+            <LinearLayout
+                android:id="@+id/steps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/message">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/MontserratMedium.BodyTitle"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:background="@drawable/blue_circle"
+                        android:gravity="center"
+                        android:text="1"
+                        android:textColor="@color/dash_white"
+                        tools:ignore="HardcodedText" />
+
+                    <TextView
+                        style="@style/MontserratMedium.BodyTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp"
+                        android:text="@string/forgot_pin_instruction_1"
+                        android:textColor="@color/dash_gray" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/MontserratMedium.BodyTitle"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:background="@drawable/blue_circle"
+                        android:gravity="center"
+                        android:text="2"
+                        android:textColor="@color/dash_white"
+                        tools:ignore="HardcodedText" />
+
+                    <TextView
+                        style="@style/MontserratMedium.BodyTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:lines="2"
+                        android:padding="8dp"
+                        android:text="@string/forgot_pin_instruction_2"
+                        android:textColor="@color/dash_gray" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/MontserratMedium.BodyTitle"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:background="@drawable/blue_circle"
+                        android:gravity="center"
+                        android:text="3"
+                        android:textColor="@color/dash_white"
+                        tools:ignore="HardcodedText" />
+
+                    <TextView
+                        style="@style/MontserratMedium.BodyTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:lines="2"
+                        android:padding="8dp"
+                        android:text="@string/forgot_pin_instruction_3"
+                        android:textColor="@color/dash_gray" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/message2"
+                style="@style/MontserratMedium.BodyText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:padding="16dp"
+                android:text="@string/forgot_pin_warning"
+                android:textColor="@color/dash_gray"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/steps" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </ScrollView>
+
+    <Button
+        android:id="@+id/recovery_pin"
+        style="@style/DashButton.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="vertical"
-        android:padding="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/message">
+        android:layout_margin="16dp"
+        android:text="@string/recover_wallet_title"
+        app:layout_constraintTop_toBottomOf="@id/message2" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                style="@style/MontserratMedium.BodyTitle"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:background="@drawable/blue_circle"
-                android:gravity="center"
-                android:text="1"
-                android:textColor="@color/dash_white"
-                tools:ignore="HardcodedText" />
-
-            <TextView
-                style="@style/MontserratMedium.BodyTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="12dp"
-                android:text="@string/forgot_pin_instruction_1"
-                android:textColor="@color/dash_gray" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                style="@style/MontserratMedium.BodyTitle"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:background="@drawable/blue_circle"
-                android:gravity="center"
-                android:text="2"
-                android:textColor="@color/dash_white"
-                tools:ignore="HardcodedText" />
-
-            <TextView
-                style="@style/MontserratMedium.BodyTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:lines="2"
-                android:padding="12dp"
-                android:text="@string/forgot_pin_instruction_2"
-                android:textColor="@color/dash_gray" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                style="@style/MontserratMedium.BodyTitle"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:background="@drawable/blue_circle"
-                android:gravity="center"
-                android:text="3"
-                android:textColor="@color/dash_white"
-                tools:ignore="HardcodedText" />
-
-            <TextView
-                style="@style/MontserratMedium.BodyTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:lines="2"
-                android:padding="12dp"
-                android:text="@string/forgot_pin_instruction_3"
-                android:textColor="@color/dash_gray" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <TextView
-        style="@style/MontserratMedium.BodyText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="36dp"
-        android:gravity="center_horizontal"
-        android:padding="16dp"
-        android:text="@string/forgot_pin_warning"
-        android:textColor="@color/dash_gray"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>
