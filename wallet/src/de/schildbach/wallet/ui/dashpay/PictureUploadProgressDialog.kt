@@ -26,11 +26,13 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
 import com.google.api.services.drive.Drive
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.EditProfileActivity
 
 class PictureUploadProgressDialog(val drive: Drive?) : DialogFragment() {
 
@@ -136,6 +138,10 @@ class PictureUploadProgressDialog(val drive: Drive?) : DialogFragment() {
                         title.text = getString(R.string.upload_image_upload_error)
                         cancelButton.isVisible = false
                         retryButton.isVisible = true
+                        if (it.exception is UserRecoverableAuthIOException) {
+                            requireActivity().startActivityForResult(it.exception.intent, EditProfileActivity.GDRIVE_REQUEST_CODE_SIGN_IN)
+                            dismiss()
+                        }
                     }
                     Status.SUCCESS -> {
                         dismiss()
