@@ -30,6 +30,7 @@ import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.*
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -167,8 +168,12 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         if (!tmpPictureFile.exists()) {
             tmpPictureFile.createNewFile()
         }
-        if (bitmap.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(tmpPictureFile))) {
-            onTmpPictureReadyForEditEvent.postValue(tmpPictureFile)
+        viewModelScope.launch(Dispatchers.IO) {
+            if (bitmap.compress(Bitmap.CompressFormat.JPEG, 100, FileOutputStream(tmpPictureFile))) {
+                withContext(Dispatchers.Main) {
+                    onTmpPictureReadyForEditEvent.postValue(tmpPictureFile)
+                }
+            }
         }
     }
 
