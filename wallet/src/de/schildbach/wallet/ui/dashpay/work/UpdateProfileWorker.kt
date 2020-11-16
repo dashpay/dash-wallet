@@ -12,8 +12,8 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.security.SecurityGuard
-import de.schildbach.wallet.util.BackupHelper
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import java.io.File
@@ -106,11 +106,11 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
 
     private fun saveToGoogleDrive(context: Context, encryptedBackup: ByteArray): String? {
         return try {
-            val account: GoogleSignInAccount = BackupHelper.GoogleDrive.getSigninAccount(context)
+            val account: GoogleSignInAccount = GoogleDriveService.getSigninAccount(context)
                     ?: throw GoogleAuthException()
 
             // 1 - retrieve existing backup so we know whether we have to create a new one, or update existing file
-            val drive: Drive = Objects.requireNonNull(BackupHelper.GoogleDrive.getDriveServiceFromAccount(context, account), "drive service must not be null")
+            val drive: Drive? = Objects.requireNonNull(GoogleDriveService.getDriveServiceFromAccount(context, account), "drive service must not be null")
 
             // 2 - upload the image
             val uploadedAvatarFilename = UUID.randomUUID().toString()

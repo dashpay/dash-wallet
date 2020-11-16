@@ -30,7 +30,6 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
-import de.schildbach.wallet.util.BackupHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.*
@@ -47,6 +46,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import com.google.api.services.drive.Drive
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 
 
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
@@ -230,8 +230,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         viewModelScope.launch(Dispatchers.IO) {
             profilePictureUploadLiveData.postValue(Resource.loading(""))
             try {
-                //BackupHelper.GoogleDrive.enableGDriveBackup(walletApplication)
-                BackupHelper.GoogleDrive.uploadImage(Executors.newSingleThreadExecutor(), drive,
+                GoogleDriveService.uploadImage(Executors.newSingleThreadExecutor(), drive,
                         UUID.randomUUID().toString() + ".jpg",
                         profilePictureFile!!.readBytes()).addOnCompleteListener {
                     if (it.result != null) {
@@ -241,6 +240,27 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                         profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture to Google Drive"))
                     }
                 }
+            } catch (e: Exception) {
+                profilePictureUploadLiveData.postValue(Resource.error(e))
+            }
+        }
+    }
+
+    fun uploadToGoogleDrive(drive: Drive) {
+
+        viewModelScope.launch(Dispatchers.IO) {
+            profilePictureUploadLiveData.postValue(Resource.loading(""))
+            try {
+                val fileId = GoogleDriveService.uploadImage(drive,
+                        UUID.randomUUID().toString() + ".jpg",
+                        profilePictureFile!!.readBytes())
+                if (fileId != null) {
+                    log.info("upload image: complete")
+                    profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${fileId}"))
+                } else {
+                    profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture to Google Drive"))
+                }
+
             } catch (e: Exception) {
                 profilePictureUploadLiveData.postValue(Resource.error(e))
             }

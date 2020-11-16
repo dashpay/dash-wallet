@@ -56,8 +56,8 @@ import de.schildbach.wallet.ui.dashpay.ExternalUrlProfilePictureDialog
 import de.schildbach.wallet.ui.dashpay.PictureUploadProgressDialog
 import de.schildbach.wallet.ui.dashpay.SelectProfilePictureDialog
 import de.schildbach.wallet.ui.dashpay.SelectProfilePictureSharedViewModel
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
-import de.schildbach.wallet.util.BackupHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
 import org.slf4j.LoggerFactory
@@ -453,7 +453,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun checkGDriveAccess() {
         object : Thread() {
             override fun run() {
-                val signInAccount: GoogleSignInAccount = BackupHelper.GoogleDrive.getSigninAccount(applicationContext)
+                val signInAccount: GoogleSignInAccount? = GoogleDriveService.getSigninAccount(applicationContext)
                 if (signInAccount != null) {
                     runOnUiThread { applyGdriveAccessGranted(signInAccount) }
                 } else {
@@ -464,8 +464,8 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun requestGDriveAccess() {
-        val signInAccount = BackupHelper.GoogleDrive.getSigninAccount(applicationContext)
-        val googleSignInClient = GoogleSignIn.getClient(this, BackupHelper.GoogleDrive.getGoogleSigninOptions())
+        val signInAccount = GoogleDriveService.getSigninAccount(applicationContext)
+        val googleSignInClient = GoogleSignIn.getClient(this, GoogleDriveService.getGoogleSigninOptions())
         if (signInAccount == null) {
             startActivityForResult(googleSignInClient.signInIntent, GDRIVE_REQUEST_CODE_SIGN_IN)
         } else {
