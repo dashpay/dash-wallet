@@ -53,6 +53,7 @@ import de.schildbach.wallet.ui.dashpay.ChooseStorageServiceDialog
 import de.schildbach.wallet.ui.dashpay.CropImageActivity
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.ExternalUrlProfilePictureDialog
+import de.schildbach.wallet.ui.dashpay.PictureUploadProgressDialog
 import de.schildbach.wallet.ui.dashpay.SelectProfilePictureDialog
 import de.schildbach.wallet.ui.dashpay.SelectProfilePictureSharedViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
@@ -62,6 +63,8 @@ import kotlinx.android.synthetic.main.activity_edit_profile.*
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.lang.IllegalStateException
+import java.util.*
+import java.util.concurrent.Executors
 
 class EditProfileActivity : BaseMenuActivity() {
 
@@ -173,7 +176,7 @@ class EditProfileActivity : BaseMenuActivity() {
         })
 
         selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
-            uploadAndSave(it)
+            uploadImage(it)
         })
 
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
@@ -262,19 +265,16 @@ class EditProfileActivity : BaseMenuActivity() {
             if (externalUrlSharedViewModel.externalUrl != null) {
                 externalUrlSharedViewModel.externalUrl.toString()
             } else {
-                ""
+                editProfileViewModel.profilePictureUploadLiveData.value!!.data
             }
         } else {
             editProfileViewModel.dashPayProfile!!.avatarUrl
         }
 
-        if (externalUrlSharedViewModel.externalUrl != null || !profilePictureChanged) {
-            editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl)
-            save.isEnabled = false
-            finish()
-        } else {
-            ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, "")
-        }
+        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl?:"")
+        save.isEnabled = false
+        finish()
+
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
@@ -379,7 +379,7 @@ class EditProfileActivity : BaseMenuActivity() {
                         } else {
                             setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
                             profilePictureChanged = true
-                            editProfileViewModel.uploadToImgUr()
+                            ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, "chooseService")
                         }
                     }
                 }
@@ -500,50 +500,62 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun applyGdriveAccessGranted(signInAccount: GoogleSignInAccount) {
+
         applyGdriveAccessGrantedBase(signInAccount)
-        uploadAndBroadcast()
-        object : Thread() {
-            override fun run() {
-                if (/*app != null &&*/ !BackupHelper.GoogleDrive.isGDriveEnabled(applicationContext)) {
-                    // access is explicitly granted from a revoked state
-                    //app.system.eventStream().publish(ChannelPersisted.apply(null, null, null, null))
-                }
-                /*BackupHelper.GoogleDrive.listBackups(Executors.newSingleThreadExecutor(), mDrive!!,
-                        getEclairBackupFileName(UUID.randomUUID().toString()))
-                        .addOnSuccessListener { filesList ->
-                            runOnUiThread {
-                                val backup = BackupHelper.GoogleDrive.filterBestBackup(filesList)
-                                if (backup == null) {
-                                    //mBinding.gdriveBackupStatus.setText(getString(R.string.backupsettings_drive_state_nobackup, signInAccount.email))
-                                } else {
-                                    //mBinding.gdriveBackupStatus.setText(getString(R.string.backupsettings_drive_state, signInAccount.email,
-                                    //        DateFormat.getDateTimeInstance().format(Date(backup.modifiedTime.value))))
-                                }
-                                BackupHelper.GoogleDrive.enableGDriveBackup(applicationContext)
-                                BackupHelper.GoogleDrive.createBackup(Executors.newSingleThreadExecutor(), mDrive!!,
-                                        UUID.randomUUID().toString() + ".jpg",
-                                                editProfileViewModel.profilePictureFile!!.readBytes(),
-                                        BackupHelper.BACKUP_META_DEVICE_ID).addOnSuccessListener {
-                                            log.info("picture: save complete")
-                                        externalUrlSharedViewModel.externalUrl = Uri.parse("https://drive.google.com/uc?export=view&id=$it")
-                                        profilePictureChanged = true
-                                    }
-                            }
-                        }
-                        .addOnFailureListener { e ->
-                            log.error("could not retrieve best backup from gdrive: ", e)
-                            if (e is ApiException) {
-                                if (e.statusCode == CommonStatusCodes.SIGN_IN_REQUIRED) {
-                                    GoogleSignIn.getClient(applicationContext, BackupHelper.GoogleDrive.getGoogleSigninOptions()).revokeAccess()
-                                }
-                            }
-                            if (e is UserRecoverableAuthException) {
-                                GoogleSignIn.getClient(applicationContext, BackupHelper.GoogleDrive.getGoogleSigninOptions()).revokeAccess()
-                            }
-                            applyGdriveAccessDenied()
-                        }*/
-            }
-        }.start()
+        PictureUploadProgressDialog.newInstance(mDrive).show(supportFragmentManager, "uploadImage")
+
+//        object : Thread() {
+//            override fun run() {
+//                runOnUiThread {
+//                    BackupHelper.GoogleDrive.enableGDriveBackup(applicationContext)
+//                    BackupHelper.GoogleDrive.createBackup(Executors.newSingleThreadExecutor(), mDrive!!,
+//                            UUID.randomUUID().toString() + ".jpg",
+//                            editProfileViewModel.profilePictureFile!!.readBytes()).addOnSuccessListener {
+//                        log.info("picture: save complete")
+//                        externalUrlSharedViewModel.externalUrl = Uri.parse("https://drive.google.com/uc?export=view&id=$it")
+//                        profilePictureChanged = true
+//                    }
+//                }
+//                if (/*app != null &&*/ !BackupHelper.GoogleDrive.isGDriveEnabled(applicationContext)) {
+//                    // access is explicitly granted from a revoked state
+//                    //app.system.eventStream().publish(ChannelPersisted.apply(null, null, null, null))
+//                }
+//                /*BackupHelper.GoogleDrive.listBackups(Executors.newSingleThreadExecutor(), mDrive!!,
+//                        getEclairBackupFileName(UUID.randomUUID().toString()))
+//                        .addOnSuccessListener { filesList ->
+//                            runOnUiThread {
+//                                val backup = BackupHelper.GoogleDrive.filterBestBackup(filesList)
+//                                if (backup == null) {
+//                                    //mBinding.gdriveBackupStatus.setText(getString(R.string.backupsettings_drive_state_nobackup, signInAccount.email))
+//                                } else {
+//                                    //mBinding.gdriveBackupStatus.setText(getString(R.string.backupsettings_drive_state, signInAccount.email,
+//                                    //        DateFormat.getDateTimeInstance().format(Date(backup.modifiedTime.value))))
+//                                }
+//                                BackupHelper.GoogleDrive.enableGDriveBackup(applicationContext)
+//                                BackupHelper.GoogleDrive.createBackup(Executors.newSingleThreadExecutor(), mDrive!!,
+//                                        UUID.randomUUID().toString() + ".jpg",
+//                                                editProfileViewModel.profilePictureFile!!.readBytes(),
+//                                        BackupHelper.BACKUP_META_DEVICE_ID).addOnSuccessListener {
+//                                            log.info("picture: save complete")
+//                                        externalUrlSharedViewModel.externalUrl = Uri.parse("https://drive.google.com/uc?export=view&id=$it")
+//                                        profilePictureChanged = true
+//                                    }
+//                            }
+//                        }
+//                        .addOnFailureListener { e ->
+//                            log.error("could not retrieve best backup from gdrive: ", e)
+//                            if (e is ApiException) {
+//                                if (e.statusCode == CommonStatusCodes.SIGN_IN_REQUIRED) {
+//                                    GoogleSignIn.getClient(applicationContext, BackupHelper.GoogleDrive.getGoogleSigninOptions()).revokeAccess()
+//                                }
+//                            }
+//                            if (e is UserRecoverableAuthException) {
+//                                GoogleSignIn.getClient(applicationContext, BackupHelper.GoogleDrive.getGoogleSigninOptions()).revokeAccess()
+//                            }
+//                            applyGdriveAccessDenied()
+//                        }*/
+//            }
+//        }.start()
     }
 
     private fun uploadAndBroadcast() {
@@ -558,19 +570,20 @@ class EditProfileActivity : BaseMenuActivity() {
         } else {
             editProfileViewModel.dashPayProfile!!.avatarUrl
         }
-        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl, editProfileViewModel.uploadService, editProfileViewModel.profilePictureFile!!.absolutePath)
+        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl)
         save.isEnabled = false
         finish()
     }
 
-    private fun uploadAndSave(uploadService: String) {
+    private fun uploadImage(uploadService: String) {
         editProfileViewModel.uploadService = uploadService
         when (uploadService) {
             EditProfileViewModel.GoogleDrive -> {
                 requestGDriveAccess()
             }
             EditProfileViewModel.Imgur -> {
-                uploadAndBroadcast()
+                PictureUploadProgressDialog.newInstance().show(supportFragmentManager, "uploadImage")
+                //editProfileViewModel.uploadToImgUr()
             }
             else -> throw IllegalStateException()
         }

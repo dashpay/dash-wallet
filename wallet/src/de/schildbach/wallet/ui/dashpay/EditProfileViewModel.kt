@@ -17,7 +17,9 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Environment
+import androidx.core.content.FileProvider
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -28,6 +30,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
+import de.schildbach.wallet.util.BackupHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.*
@@ -38,9 +41,13 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
+import java.util.*
+import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import com.google.api.services.drive.Drive
+
 
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
 
@@ -63,6 +70,10 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
             log.error(ex.message, ex)
             null
         }
+    }
+
+    val profilePictureUri: Uri by lazy {
+        FileProvider.getUriForFile(walletApplication, "${walletApplication.packageName}.file_attachment", profilePictureFile!!)
     }
 
     val onTmpPictureReadyForEditEvent = SingleLiveEvent<File>()
@@ -207,6 +218,28 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                     profilePictureUploadLiveData.postValue(Resource.success(imgResponse.data.link))
                 } else {
                     profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture"))
+                }
+            } catch (e: Exception) {
+                profilePictureUploadLiveData.postValue(Resource.error(e))
+            }
+        }
+    }
+
+    fun uploadToGoogleDrive(drive: Drive) {
+
+        viewModelScope.launch(Dispatchers.IO) {
+            profilePictureUploadLiveData.postValue(Resource.loading(""))
+            try {
+                BackupHelper.GoogleDrive.enableGDriveBackup(walletApplication)
+                BackupHelper.GoogleDrive.createBackup(Executors.newSingleThreadExecutor(), drive,
+                        UUID.randomUUID().toString() + ".jpg",
+                        profilePictureFile!!.readBytes()).addOnCompleteListener {
+                    if (it.result != null) {
+                        log.info("upload image: complete")
+                        profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${it.result}"))
+                    } else {
+                        profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture to Google Drive"))
+                    }
                 }
             } catch (e: Exception) {
                 profilePictureUploadLiveData.postValue(Resource.error(e))

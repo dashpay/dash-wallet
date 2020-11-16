@@ -4,12 +4,15 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.view.View
 import android.widget.ImageView
+import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
 import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.ProfilePictureTransformation
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable.Companion.getDrawable
+import java.io.File
 
 class ProfilePictureDisplay {
 
@@ -35,6 +38,23 @@ class ProfilePictureDisplay {
                         .transform(ProfilePictureTransformation.create(avatarUrl))
                         .placeholder(defaultAvatar)
                         .transition(withCrossFade())
+                        .into(avatarView)
+            } else {
+                displayDefault(avatarView, username)
+            }
+        }
+
+        @JvmStatic
+        fun display(avatarView: ImageView, avatarLocalUri: Uri, lastModified: Long, username: String) {
+            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+            if (avatarLocalUri.encodedPath!!.isNotEmpty()) {
+                Glide.with(avatarView.context)
+                        .load(avatarLocalUri)
+                        .signature(ObjectKey(lastModified))
+                        .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
+                        .placeholder(defaultAvatar)
+                        .transition(withCrossFade())
+                        .circleCrop()
                         .into(avatarView)
             } else {
                 displayDefault(avatarView, username)

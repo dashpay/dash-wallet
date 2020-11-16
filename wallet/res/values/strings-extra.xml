@@ -455,5 +455,10 @@
     <string name="public_url_message">You can specify any URL which is publicly available on the internet so users can see it on the Dash network.</string>
     <string name="public_url_more_info">More info</string>
     <string name="public_url_fetching_image">Fetching Image</string>
+    <string name="upload_image_message">Uploading your picture to the network</string>
+    <string name="upload_image_please_wait">Please Wait</string>
+    <string name="upload_image_error_message">Unable to upload your picture. Please try again.</string>
+    <string name="upload_image_upload_error">Upload Error</string>
+
 
 </resources>
