@@ -26,8 +26,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet_test.R
-import org.slf4j.LoggerFactory
-
 
 class ChooseStorageServiceDialog : DialogFragment() {
 
