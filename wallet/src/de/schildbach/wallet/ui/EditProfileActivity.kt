@@ -480,7 +480,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     protected fun applyGdriveAccessDenied() {
         //super.applyGdriveAccessDenied()
-        BackupHelper.GoogleDrive.disableGDriveBackup(applicationContext)
+        //BackupHelper.GoogleDrive.disableGDriveBackup(applicationContext)
     }
 
     private fun handleGdriveSigninResult(data: Intent) {

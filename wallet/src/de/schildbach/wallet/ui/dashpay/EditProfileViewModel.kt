@@ -230,8 +230,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         viewModelScope.launch(Dispatchers.IO) {
             profilePictureUploadLiveData.postValue(Resource.loading(""))
             try {
-                BackupHelper.GoogleDrive.enableGDriveBackup(walletApplication)
-                BackupHelper.GoogleDrive.createBackup(Executors.newSingleThreadExecutor(), drive,
+                //BackupHelper.GoogleDrive.enableGDriveBackup(walletApplication)
+                BackupHelper.GoogleDrive.uploadImage(Executors.newSingleThreadExecutor(), drive,
                         UUID.randomUUID().toString() + ".jpg",
                         profilePictureFile!!.readBytes()).addOnCompleteListener {
                     if (it.result != null) {

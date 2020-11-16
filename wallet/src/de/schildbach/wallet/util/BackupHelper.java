@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020 Dash Core Group
  * Copyright 2019 ACINQ SAS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,14 +17,9 @@
 
 package de.schildbach.wallet.util;
 
-import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
-import android.os.Environment;
-import android.preference.PreferenceManager;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -46,10 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -63,44 +57,8 @@ public interface BackupHelper {
   //}
   //String ECLAIR_BACKUP_DIR = "backup";
   //String CHAIN = "main";
-  String BACKUP_META_DEVICE_ID = "backup_device_id";
-  String SETTING_CHANNELS_BACKUP_GOOGLEDRIVE_ENABLED = "channels_backup_gdrive_enabled";
-
-  /*interface Local {
-
-    static boolean isExternalStorageWritable() {
-      return Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState());
-    }
-
-    static boolean hasLocalAccess(final Context context) {
-      return ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        && isExternalStorageWritable()
-        && Environment.getExternalStorageDirectory().canWrite();
-    }
-
-    static File getBackupFile(final String backupFileName) throws ExternalStorageUnavailableException {
-      if (!isExternalStorageWritable()) {
-        throw new ExternalStorageUnavailableException();
-      }
-
-      final File storage = Environment.getExternalStorageDirectory();
-      if (!storage.canWrite()) {
-        throw new ExternalStorageUnavailableException();
-      }
-
-      final File publicDir = new File(storage, ECLAIR_BACKUP_DIR);
-      final File chainDir = new File(publicDir, CHAIN);
-      final File backup = new File(chainDir, backupFileName);
-
-      if (!backup.exists()) {
-        if (!chainDir.exists() && !chainDir.mkdirs()) {
-          throw new ExternalStorageUnavailableException();
-        }
-      }
-
-      return backup;
-    }
-  }*/
+  //String BACKUP_META_DEVICE_ID = "backup_device_id";
+  //String SETTING_CHANNELS_BACKUP_GOOGLEDRIVE_ENABLED = "channels_backup_gdrive_enabled";
 
   interface GoogleDrive {
 
@@ -139,7 +97,7 @@ public interface BackupHelper {
     static Task<FileList> listBackups(@NonNull final Executor executor, @NonNull final Drive drive, @NonNull final String fileName) {
       log.debug("retrieving list of backups from gdrive for name={}", fileName);
       return Tasks.call(executor, () -> {
-        final com.google.api.services.drive.model.File folder = getOrCreateBackupFolder(drive);
+        final com.google.api.services.drive.model.File folder = getOrCreateImageFolder(drive);
         return drive.files().list()
           .setQ("name='" + fileName + "' and '" + folder.getId() + "' in parents")
           .setSpaces("drive")
@@ -160,7 +118,7 @@ public interface BackupHelper {
 
     String BACKUP_FOLDER_NAME = "dashpay-profile-picture";
 
-    static com.google.api.services.drive.model.File getOrCreateBackupFolder(@NonNull final Drive drive) throws IOException {
+    static com.google.api.services.drive.model.File getOrCreateImageFolder(@NonNull final Drive drive) throws IOException {
 
       // retrieve folder if it exists
       final FileList folders = drive.files().list()
@@ -180,12 +138,12 @@ public interface BackupHelper {
     }
 
     @NonNull
-    static Task<String> createBackup(@NonNull final Executor executor, @NonNull final Drive drive, final String fileName, final byte[] imageBytes) {
+    static Task<String> uploadImage(@NonNull final Executor executor, @NonNull final Drive drive, final String fileName, final byte[] imageBytes) {
       log.info("creating new backup file on gdrive with name={}", fileName);
       return Tasks.call(executor, () -> {
 
         // 1 - create folder
-        final com.google.api.services.drive.model.File folder = getOrCreateBackupFolder(drive);
+        final com.google.api.services.drive.model.File folder = getOrCreateImageFolder(drive);
 
         // 2 - metadata
         final com.google.api.services.drive.model.File metadata = new com.google.api.services.drive.model.File()
@@ -211,7 +169,10 @@ public interface BackupHelper {
         permission.setType("anyone").setRole("reader");
 
         // 6 - permissions execute
-        drive.permissions().create(id, permission).execute();
+        Permission result = drive.permissions().create(id, permission).execute();
+        if (result == null) {
+          throw new IOException("failed to set permissions on gdrive with null result");
+        }
 
         return id;
       });
@@ -280,7 +241,7 @@ public interface BackupHelper {
         .build();
     }
 
-    static void disableGDriveBackup(final Context context) {
+    /*static void disableGDriveBackup(final Context context) {
       PreferenceManager.getDefaultSharedPreferences(context).edit()
         .putBoolean(SETTING_CHANNELS_BACKUP_GOOGLEDRIVE_ENABLED, false)
         .apply();
@@ -294,6 +255,6 @@ public interface BackupHelper {
 
     static boolean isGDriveEnabled(final Context context) {
       return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(SETTING_CHANNELS_BACKUP_GOOGLEDRIVE_ENABLED, false);
-    }
+    }*/
   }
 }

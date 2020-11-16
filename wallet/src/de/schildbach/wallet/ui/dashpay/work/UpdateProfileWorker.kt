@@ -114,15 +114,15 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
 
             // 2 - upload the image
             val uploadedAvatarFilename = UUID.randomUUID().toString()
-            return Tasks.await(BackupHelper.GoogleDrive.createBackup(Executors.newSingleThreadExecutor(), drive, uploadedAvatarFilename, encryptedBackup))
+            return Tasks.await(BackupHelper.GoogleDrive.uploadImage(Executors.newSingleThreadExecutor(), drive, uploadedAvatarFilename, encryptedBackup))
         } catch (t: Throwable) {
             //log.error("failed to save channels backup on google drive", t)
             if (t is GoogleAuthIOException || t is GoogleAuthException) {
-                BackupHelper.GoogleDrive.disableGDriveBackup(context)
+                //BackupHelper.GoogleDrive.disableGDriveBackup(context)
             } else if (t.cause != null) {
                 val cause = t.cause
                 if (cause is GoogleAuthIOException || cause is GoogleAuthException) {
-                    BackupHelper.GoogleDrive.disableGDriveBackup(context)
+                    //BackupHelper.GoogleDrive.disableGDriveBackup(context)
                 }
             }
             null
