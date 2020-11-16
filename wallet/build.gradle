@@ -84,24 +84,20 @@ dependencies {
 
     implementation 'com.google.firebase:firebase-analytics:17.6.0'
     implementation 'com.google.firebase:firebase-inappmessaging-display:19.1.1'
-    implementation ('com.google.api-client:google-api-client:1.23.0') {
+
+    // Google Drive Dependencies
+    implementation ('com.google.api-client:google-api-client-android:1.26.0') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
-    implementation ('com.google.api-client:google-api-client-android:1.23.0') {
-        exclude group: 'com.google.guava', module: 'guava-jdk5'
-    }
-    implementation 'com.google.oauth-client:google-oauth-client-jetty:1.23.0'
-    implementation ('com.google.apis:google-api-services-drive:v3-rev110-1.23.0') {
+    implementation ('com.google.apis:google-api-services-drive:v3-rev173-1.25.0') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
 
     implementation ('com.google.apis:google-api-services-tasks:v1-rev48-1.23.0') { // do we need this
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
-    implementation ('com.google.http-client:google-http-client-gson:1.23.0') { // do we need this
-        exclude group: 'com.google.guava', module: 'guava-jdk5'
-    }
-    implementation ('com.google.android.gms:play-services-identity:17.0.0') { //do we need this
+
+    implementation ('com.google.http-client:google-http-client-gson:1.26.0') { // do we need this
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
 
@@ -261,6 +257,7 @@ android {
         exclude 'org.bitcoin.production.checkpoints.txt'
         exclude 'org.bitcoin.test.checkpoints.txt'
         exclude 'google/protobuf/*.proto'
+        exclude 'META-INF/DEPENDENCIES'
     }
     dexOptions {
         preDexLibraries true
