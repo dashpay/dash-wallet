@@ -138,6 +138,7 @@ class PictureUploadProgressDialog(val drive: Drive?) : DialogFragment() {
                         title.text = getString(R.string.upload_image_upload_error)
                         cancelButton.isVisible = false
                         retryButton.isVisible = true
+                        // TODO: This doesn't currently work (it shows an authorization page), but upload fails
                         if (it.exception is UserRecoverableAuthIOException) {
                             requireActivity().startActivityForResult(it.exception.intent, EditProfileActivity.GDRIVE_REQUEST_CODE_SIGN_IN)
                             dismiss()

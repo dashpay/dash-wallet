@@ -225,7 +225,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         }
     }
 
-    fun uploadToGoogleDrive(drive: Drive) {
+    fun uploadToGoogleDrive2(drive: Drive) {
 
         viewModelScope.launch(Dispatchers.IO) {
             profilePictureUploadLiveData.postValue(Resource.loading(""))
@@ -258,10 +258,11 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                     log.info("upload image: complete")
                     profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${fileId}"))
                 } else {
-                    profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture to Google Drive"))
+                    profilePictureUploadLiveData.postValue(Resource.error("gdrive: Failed to upload picture to Google Drive"))
                 }
 
             } catch (e: Exception) {
+                log.info("gdrive: upload failure: $e")
                 profilePictureUploadLiveData.postValue(Resource.error(e))
             }
         }

@@ -119,7 +119,7 @@ object GoogleDriveService {
         permission.setType("anyone").role = "reader"
 
         // 6 - permissions execute
-        val result = drive.permissions().create(id, permission).execute()
+        drive.permissions().create(id, permission).execute()
                 ?: throw IOException("failed to set permissions on gdrive with null result")
         return id
     }
@@ -127,7 +127,7 @@ object GoogleDriveService {
     fun isGDriveAvailable(context: Context?): Boolean {
         val connectionResult = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)
         return if (connectionResult != ConnectionResult.SUCCESS) {
-            BackupHelper.GoogleDrive.log.info("Google play services are not available (code {})", connectionResult)
+            log.info("gdrive: Google play services are not available (code {})", connectionResult)
             false
         } else {
             true
