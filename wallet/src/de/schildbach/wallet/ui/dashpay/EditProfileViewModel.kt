@@ -227,28 +227,6 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         }
     }
 
-    fun uploadToGoogleDrive2(drive: Drive) {
-
-        viewModelScope.launch(Dispatchers.IO) {
-            profilePictureUploadLiveData.postValue(Resource.loading(""))
-            try {
-                val secureId = Settings.Secure.getString(walletApplication.contentResolver, Settings.Secure.ANDROID_ID)
-                GoogleDriveService.uploadImage(Executors.newSingleThreadExecutor(), drive,
-                        UUID.randomUUID().toString() + ".jpg",
-                        profilePictureFile!!.readBytes(), secureId).addOnCompleteListener {
-                    if (it.result != null) {
-                        log.info("upload image: complete")
-                        profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${it.result}"))
-                    } else {
-                        profilePictureUploadLiveData.postValue(Resource.error("Failed to upload picture to Google Drive"))
-                    }
-                }
-            } catch (e: Exception) {
-                profilePictureUploadLiveData.postValue(Resource.error(e))
-            }
-        }
-    }
-
     @SuppressLint("HardwareIds")
     fun uploadToGoogleDrive(drive: Drive) {
 

@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'project-report'
 
 ext {
     archivesBaseName = 'dash-wallet'
@@ -90,10 +91,6 @@ dependencies {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
     implementation ('com.google.apis:google-api-services-drive:v3-rev173-1.25.0') {
-        exclude group: 'com.google.guava', module: 'guava-jdk5'
-    }
-
-    implementation ('com.google.apis:google-api-services-tasks:v1-rev48-1.23.0') { // do we need this
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
 

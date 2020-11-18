@@ -17,7 +17,6 @@ import com.google.api.services.drive.Drive
 import com.google.api.services.drive.DriveScopes
 import com.google.api.services.drive.model.File
 import com.google.api.services.drive.model.Permission
-import de.schildbach.wallet.util.BackupHelper
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
@@ -28,7 +27,7 @@ import java.util.concurrent.Executors
 
 object GoogleDriveService {
 
-    var log = LoggerFactory.getLogger(BackupHelper.GoogleDrive::class.java)
+    var log = LoggerFactory.getLogger(GoogleDriveService::class.java)
     var BACKUP_FOLDER_NAME = "dashpay-profile-picture-${BuildConfig.FLAVOR}"
 
     fun getDriveServiceFromAccount(context: Context, signInAccount: GoogleSignInAccount): Drive? {
@@ -66,7 +65,7 @@ object GoogleDriveService {
         }
     }
 
-    fun uploadImage(executor: Executor, drive: Drive, fileName: String?, imageBytes: ByteArray?, secureId: String): Task<String> {
+    /*fun uploadImage(executor: Executor, drive: Drive, fileName: String?, imageBytes: ByteArray?, secureId: String): Task<String> {
         log.info("creating new backup file on gdrive with name={}", fileName)
         return Tasks.call(executor, {
 
@@ -99,7 +98,7 @@ object GoogleDriveService {
                     ?: throw IOException("failed to set permissions on gdrive with null result")
             id
         })
-    }
+    }*/
 
     fun uploadImage(drive: Drive, fileName: String?, imageBytes: ByteArray?, secureId: String): String {
         log.info("creating new backup file on gdrive with name={}", fileName)
@@ -157,11 +156,14 @@ object GoogleDriveService {
         return if (GoogleSignIn.hasPermissions(account, *permissions)) {
             account
         } else {
-            BackupHelper.GoogleDrive.log.info("gdrive sign-in account={} does not have correct permissions, revoking access", account)
+            log.info("gdrive sign-in account={} does not have correct permissions, revoking access", account)
             try {
-                Tasks.await(Tasks.call(Executors.newSingleThreadExecutor(), { GoogleSignIn.getClient(context!!, opts).revokeAccess() }))
+                GoogleSignIn.getClient(context!!, opts)
+                        .revokeAccess()
+                        .addOnSuccessListener { log.warn("revoked gdrive access",) }
+                        .addOnFailureListener { log.warn("could not revoke gdrive access: ${it.localizedMessage}") }
             } catch (e: Exception) {
-                BackupHelper.GoogleDrive.log.warn("could not revoke gdrive access: {}", e.localizedMessage)
+                log.warn("could not revoke gdrive access: {}", e.localizedMessage)
             }
             null
         }
