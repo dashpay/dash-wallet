@@ -27,7 +27,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
-
+import de.schildbach.wallet.ui.dashpay.EditProfileViewModel.ProfilePictureStorageService
 
 class ChooseStorageServiceDialog : DialogFragment() {
 
@@ -62,11 +62,11 @@ class ChooseStorageServiceDialog : DialogFragment() {
         val dialog = dialogBuilder.create()
         dialog.setOnShowListener {
             imgurButton.setOnClickListener {
-                sharedViewModel.onChooseStorageService.value = EditProfileViewModel.Imgur
+                sharedViewModel.onChooseStorageService.value = ProfilePictureStorageService.IMGUR
                 dismiss()
             }
             driveButton.setOnClickListener {
-                sharedViewModel.onChooseStorageService.value = EditProfileViewModel.GoogleDrive
+                sharedViewModel.onChooseStorageService.value = ProfilePictureStorageService.GOOGLE_DRIVE
                 dismiss()
             }
             cancelButton.setOnClickListener {

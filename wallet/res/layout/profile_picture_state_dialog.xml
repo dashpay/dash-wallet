@@ -34,30 +34,30 @@
             app:layout_constraintTop_toBottomOf="@id/avatar">
 
             <ImageView
-                android:id="@+id/error_icon"
+                android:id="@+id/icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/ic_error" />
+                app:srcCompat="@drawable/ic_hourglass" />
 
             <TextView
-                android:id="@+id/error_title"
+                android:id="@+id/title"
                 style="@style/MontserratSemiBold"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
-                android:text="@string/upload_error"
+                android:text="@string/profile_picture_uploading_title"
                 android:textColor="@android:color/black"
                 android:textSize="18sp"
-                app:layout_constraintBottom_toBottomOf="@id/error_icon"
-                app:layout_constraintStart_toEndOf="@id/error_icon"
-                app:layout_constraintTop_toTopOf="@id/error_icon" />
+                app:layout_constraintBottom_toBottomOf="@id/icon"
+                app:layout_constraintStart_toEndOf="@id/icon"
+                app:layout_constraintTop_toTopOf="@id/icon" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <TextView
-            android:id="@+id/error_subtitle"
+            android:id="@+id/subtitle"
             style="@style/MontserratRegular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -65,7 +65,7 @@
             android:layout_marginTop="5dp"
             android:layout_marginEnd="24dp"
             android:gravity="center"
-            android:text="@string/unable_to_upload_picture"
+            android:text="@string/profile_picture_uploading_message"
             android:textColor="@color/dash_gray"
             android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
@@ -73,17 +73,31 @@
             app:layout_constraintTop_toBottomOf="@id/title_container" />
 
         <Button
-            android:id="@+id/transaction_close_btn"
+            android:id="@+id/try_again_btn"
             style="@style/DashButton.Blue"
             android:layout_width="110dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="30dp"
             android:layout_marginBottom="32dp"
-            android:text="@string/upload_picture_try_again"
+            android:text="@string/profile_picture_upload_try_again"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/error_subtitle" />
+            app:layout_constraintTop_toBottomOf="@id/subtitle"
+            app:layout_constraintVertical_bias="0" />
+
+        <Button
+            android:id="@+id/cancel_btn"
+            style="@style/DashButton.White.BlueText"
+            android:layout_width="110dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="32dp"
+            android:text="@string/button_cancel"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/try_again_btn" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

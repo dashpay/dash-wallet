@@ -27,5 +27,5 @@ class SelectProfilePictureSharedViewModel : ViewModel() {
 
     val onChoosePictureCallback = SingleLiveEventExt<Void>()
 
-    val onChooseStorageService = SingleLiveEventExt<String>()
+    val onChooseStorageService = SingleLiveEventExt<EditProfileViewModel.ProfilePictureStorageService>()
 }

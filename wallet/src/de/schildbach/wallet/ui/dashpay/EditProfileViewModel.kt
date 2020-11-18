@@ -21,8 +21,10 @@ import android.os.Environment
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.squareup.moshi.Moshi
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.ImgurUploadResponse
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
@@ -44,12 +46,10 @@ import kotlin.coroutines.suspendCoroutine
 
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
 
-    companion object {
-        const val GoogleDrive: String = "google-drive"
-        const val Imgur: String = "imgur"
+    enum class ProfilePictureStorageService {
+        GOOGLE_DRIVE, IMGUR
     }
 
-    var uploadService: String = ""
     private val log = LoggerFactory.getLogger(EditProfileViewModel::class.java)
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
 
@@ -86,9 +86,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
                 displayName, publicMessage, avatarUrl,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
-        UpdateProfileOperation(walletApplication)
-                .create(updatedProfile, uploadService, localAvatarUrl)
-                .enqueue()
+        UpdateProfileOperation(walletApplication).create(updatedProfile, uploadService,
+                localAvatarUrl).enqueue()
     }
 
     fun saveAsProfilePictureTmp(picturePath: String) {
@@ -179,6 +178,57 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                 withContext(Dispatchers.Main) {
                     onTmpPictureReadyForEditEvent.postValue(tmpPictureFile)
                 }
+            }
+        }
+    }
+
+    fun uploadProfilePicture(service: ProfilePictureStorageService) {
+        when (service) {
+            ProfilePictureStorageService.IMGUR -> uploadProfilePictureToImgur(profilePictureFile!!)
+            ProfilePictureStorageService.GOOGLE_DRIVE -> {
+                //TODO: Upload to Google Drive
+            }
+        }
+    }
+
+    private fun uploadProfilePictureToImgur(file: File) {
+        profilePictureUploadLiveData.postValue(Resource.loading())
+        viewModelScope.launch(Dispatchers.IO) {
+            val avatarBytes = try {
+                file.readBytes()
+            } catch (e: Exception) {
+                profilePictureUploadLiveData.postValue(Resource.error(e))
+                return@launch
+            }
+            val imgurUploadUrl = "https://api.imgur.com/3/upload"
+            val client = OkHttpClient()
+
+            val imageBodyPart = RequestBody.create(MediaType.parse("image/*jpg"), avatarBytes)
+            val requestBody = MultipartBody.Builder().setType(MultipartBody.FORM)
+                    .addFormDataPart("image", "profile.jpg", imageBodyPart).build()
+
+            val request = Request.Builder().url(imgurUploadUrl).post(requestBody).build()
+
+            try {
+                val response = client.newCall(request).execute()
+                val responseBody = response.body()
+                if (responseBody != null && response.isSuccessful) {
+                    val moshi = Moshi.Builder().build()
+                    val jsonAdapter = moshi.adapter(ImgurUploadResponse::class.java)
+                    val imgurUploadResponse = jsonAdapter.fromJson(response.body().toString())
+                    if (imgurUploadResponse?.success == true && imgurUploadResponse.data != null) {
+                        val avatarUrl = imgurUploadResponse.data.link
+                        dashPayProfile?.avatarUrl = avatarUrl
+                        profilePictureUploadLiveData.postValue(Resource.success(avatarUrl))
+                    } else {
+                        profilePictureUploadLiveData.postValue(Resource.error(response.message()))
+                    }
+                } else {
+                    profilePictureUploadLiveData.postValue(Resource.error(response.message()))
+                }
+            } catch (e: Exception) {
+                profilePictureUploadLiveData.postValue(Resource.error(e))
+                log.error(e.message)
             }
         }
     }
