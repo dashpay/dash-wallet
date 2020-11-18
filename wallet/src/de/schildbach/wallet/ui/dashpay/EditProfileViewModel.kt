@@ -22,6 +22,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.ImgurUploadResponse
@@ -217,9 +218,9 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                 val response = uploadProfilePictureCall!!.execute()
                 val responseBody = response.body()
                 if (responseBody != null && response.isSuccessful) {
-                    val moshi = Moshi.Builder().build()
+                    val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
                     val jsonAdapter = moshi.adapter(ImgurUploadResponse::class.java)
-                    val imgurUploadResponse = jsonAdapter.fromJson(response.body().toString())
+                    val imgurUploadResponse = jsonAdapter.fromJson(responseBody.string())
                     if (imgurUploadResponse?.success == true && imgurUploadResponse.data != null) {
                         val avatarUrl = imgurUploadResponse.data.link
                         dashPayProfile?.avatarUrl = avatarUrl

@@ -51,6 +51,8 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
+import kotlinx.android.synthetic.main.activity_edit_profile.display_name
+import kotlinx.android.synthetic.main.contact_row.*
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -235,22 +237,25 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun showUploadingDialog() {
-        if (uploadProfilePictureStateDialog !=  null) {
+        if (uploadProfilePictureStateDialog != null) {
             uploadProfilePictureStateDialog!!.dialog?.dismiss()
         }
         uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance()
         uploadProfilePictureStateDialog!!.show(supportFragmentManager, null)
     }
 
-    private fun showUploadedProfilePicture(data: String?) {
-
+    private fun showUploadedProfilePicture(url: String?) {
+        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
+            uploadProfilePictureStateDialog!!.dismiss()
+        }
+        Glide.with(this).load(url).circleCrop().into(dashpayUserAvatar)
     }
 
     private fun showUploadErrorDialog() {
         if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
             uploadProfilePictureStateDialog!!.showError()
             return
-        } else if (uploadProfilePictureStateDialog !=  null) {
+        } else if (uploadProfilePictureStateDialog != null) {
             uploadProfilePictureStateDialog!!.dialog?.dismiss()
         }
         uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance(true)
