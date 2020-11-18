@@ -49,6 +49,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 
 public interface BackupHelper {
@@ -116,7 +117,7 @@ public interface BackupHelper {
       });
     }
 
-    String BACKUP_FOLDER_NAME = "dashpay-profile-picture";
+    String BACKUP_FOLDER_NAME = "dashpay-profile-picture-" + BuildConfig.FLAVOR ;
 
     static com.google.api.services.drive.model.File getOrCreateImageFolder(@NonNull final Drive drive) throws IOException {
 

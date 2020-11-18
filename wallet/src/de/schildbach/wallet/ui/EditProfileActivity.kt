@@ -249,6 +249,8 @@ class EditProfileActivity : BaseMenuActivity() {
                     Toast.makeText(this@EditProfileActivity, "Failed to upload profile picture", Toast.LENGTH_LONG).show()
                 }
                 Status.SUCCESS -> {
+                    setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
+                    profilePictureChanged = true
                     Toast.makeText(this@EditProfileActivity, "Profile picture uploaded successfully", Toast.LENGTH_LONG).show()
                 }
             }
@@ -378,8 +380,6 @@ class EditProfileActivity : BaseMenuActivity() {
                         if (externalUrlSharedViewModel.externalUrl != null) {
                             saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {
-                            setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
-                            profilePictureChanged = true
                             ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, "chooseService")
                         }
                     }
@@ -492,6 +492,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun handleGdriveSigninResult(data: Intent) {
         try {
+            log.info("gdrive: attempting to sign in to a google account")
             val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
                     ?: throw RuntimeException("empty account")
             applyGdriveAccessGranted(account)
@@ -503,7 +504,9 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun applyGdriveAccessGranted(signInAccount: GoogleSignInAccount) {
+        log.info("gdrive: access granted to ${signInAccount.email} with: ${signInAccount.grantedScopes}")
         mDrive = GoogleDriveService.getDriveServiceFromAccount(applicationContext, signInAccount!!)
+        log.info("gdrive: drive $mDrive")
         PictureUploadProgressDialog.newInstance(mDrive).show(supportFragmentManager, "uploadImage")
     }
 

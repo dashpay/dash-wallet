@@ -15,10 +15,12 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -230,9 +232,10 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         viewModelScope.launch(Dispatchers.IO) {
             profilePictureUploadLiveData.postValue(Resource.loading(""))
             try {
+                val secureId = Settings.Secure.getString(walletApplication.contentResolver, Settings.Secure.ANDROID_ID)
                 GoogleDriveService.uploadImage(Executors.newSingleThreadExecutor(), drive,
                         UUID.randomUUID().toString() + ".jpg",
-                        profilePictureFile!!.readBytes()).addOnCompleteListener {
+                        profilePictureFile!!.readBytes(), secureId).addOnCompleteListener {
                     if (it.result != null) {
                         log.info("upload image: complete")
                         profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${it.result}"))
@@ -246,14 +249,16 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         }
     }
 
+    @SuppressLint("HardwareIds")
     fun uploadToGoogleDrive(drive: Drive) {
 
         viewModelScope.launch(Dispatchers.IO) {
             profilePictureUploadLiveData.postValue(Resource.loading(""))
             try {
+                val secureId = Settings.Secure.getString(walletApplication.contentResolver, Settings.Secure.ANDROID_ID)
                 val fileId = GoogleDriveService.uploadImage(drive,
                         UUID.randomUUID().toString() + ".jpg",
-                        profilePictureFile!!.readBytes())
+                        profilePictureFile!!.readBytes(), secureId)
                 if (fileId != null) {
                     log.info("upload image: complete")
                     profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${fileId}"))
@@ -263,6 +268,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
 
             } catch (e: Exception) {
                 log.info("gdrive: upload failure: $e")
+                e.printStackTrace()
                 profilePictureUploadLiveData.postValue(Resource.error(e))
             }
         }

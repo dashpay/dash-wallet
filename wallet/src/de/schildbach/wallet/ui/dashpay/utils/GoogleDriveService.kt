@@ -18,6 +18,7 @@ import com.google.api.services.drive.DriveScopes
 import com.google.api.services.drive.model.File
 import com.google.api.services.drive.model.Permission
 import de.schildbach.wallet.util.BackupHelper
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -28,6 +29,7 @@ import java.util.concurrent.Executors
 object GoogleDriveService {
 
     var log = LoggerFactory.getLogger(BackupHelper.GoogleDrive::class.java)
+    var BACKUP_FOLDER_NAME = "dashpay-profile-picture-${BuildConfig.FLAVOR}"
 
     fun getDriveServiceFromAccount(context: Context, signInAccount: GoogleSignInAccount): Drive? {
         val credential = GoogleAccountCredential
@@ -39,29 +41,37 @@ object GoogleDriveService {
     }
 
     @Throws(IOException::class)
-    fun getOrCreateImageFolder(drive: Drive): File {
-
+    fun getOrCreateImageFolder(drive: Drive, secureId: String): File {
+        log.info("gdrive: getOrCreateImageFolder($secureId)")
         // retrieve folder if it exists
         val folders = drive.files().list()
-                .setQ("name='" + BackupHelper.GoogleDrive.BACKUP_FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder'")
+                .setQ("name='$BACKUP_FOLDER_NAME' and mimeType='application/vnd.google-apps.folder'")
                 .setSpaces("drive")
                 .setFields("files(id)").execute()
+        log.info("gdrive: getOrCreateImageFolder folders results(${folders.files.size}):${folders.toPrettyString()}")
         return if (folders.isEmpty() || folders.files.isEmpty()) {
             val folderMeta = File()
             folderMeta.setParents(listOf("root"))
-                    .setMimeType("application/vnd.google-apps.folder").name = BackupHelper.GoogleDrive.BACKUP_FOLDER_NAME
+                    .setMimeType("application/vnd.google-apps.folder").name = BACKUP_FOLDER_NAME //+ "-" + secureId
             drive.files().create(folderMeta).setFields("id,parents,mimeType").execute()
         } else {
-            folders.files[0]
+            log.info("gdrive: getOrCreateImageFolder folders result:" + folders.files[0])
+            if(folders.files.size == 1) {
+                folders.files[0]
+            } else {
+                folders.files.find {
+                    it["mimeType"] == "application/vnd.google-apps.folder" && it["name"] == BACKUP_FOLDER_NAME
+                } ?: throw IllegalStateException("gdrive: cannot find the image folder")
+            }
         }
     }
 
-    fun uploadImage(executor: Executor, drive: Drive, fileName: String?, imageBytes: ByteArray?): Task<String> {
+    fun uploadImage(executor: Executor, drive: Drive, fileName: String?, imageBytes: ByteArray?, secureId: String): Task<String> {
         log.info("creating new backup file on gdrive with name={}", fileName)
         return Tasks.call(executor, {
 
             // 1 - create folder
-            val folder = getOrCreateImageFolder(drive)
+            val folder = getOrCreateImageFolder(drive, secureId)
 
             // 2 - metadata
             val metadata = File()
@@ -91,11 +101,11 @@ object GoogleDriveService {
         })
     }
 
-    fun uploadImage(drive: Drive, fileName: String?, imageBytes: ByteArray?): String {
+    fun uploadImage(drive: Drive, fileName: String?, imageBytes: ByteArray?, secureId: String): String {
         log.info("creating new backup file on gdrive with name={}", fileName)
 
         // 1 - create folder
-        val folder = getOrCreateImageFolder(drive)
+        val folder = getOrCreateImageFolder(drive, secureId)
 
         // 2 - metadata
         val metadata = File()
@@ -143,7 +153,7 @@ object GoogleDriveService {
     fun getSigninAccount(context: Context?): GoogleSignInAccount? {
         val opts = getGoogleSigninOptions()
         val account = GoogleSignIn.getLastSignedInAccount(context)
-        val permissions = arrayOf(Scope(DriveScopes.DRIVE_FILE), Scope(DriveScopes.DRIVE_APPDATA))
+        val permissions = arrayOf(Scope(DriveScopes.DRIVE_FILE))
         return if (GoogleSignIn.hasPermissions(account, *permissions)) {
             account
         } else {

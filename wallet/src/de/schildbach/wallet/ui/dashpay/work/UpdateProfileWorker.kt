@@ -1,6 +1,7 @@
 package de.schildbach.wallet.ui.dashpay.work
 
 import android.content.Context
+import android.provider.Settings
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.google.android.gms.auth.GoogleAuthException
@@ -114,7 +115,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
 
             // 2 - upload the image
             val uploadedAvatarFilename = UUID.randomUUID().toString()
-            return Tasks.await(GoogleDriveService.uploadImage(Executors.newSingleThreadExecutor(), drive!!, uploadedAvatarFilename, encryptedBackup))
+            val secureId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            return Tasks.await(GoogleDriveService.uploadImage(Executors.newSingleThreadExecutor(), drive!!, uploadedAvatarFilename, encryptedBackup, secureId))
         } catch (t: Throwable) {
             //log.error("failed to save channels backup on google drive", t)
             if (t is GoogleAuthIOException || t is GoogleAuthException) {
