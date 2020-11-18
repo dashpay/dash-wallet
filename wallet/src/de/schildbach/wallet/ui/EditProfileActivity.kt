@@ -409,7 +409,8 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun showProfilePictureServiceDialog() {
         selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
             //TODO: Launch Agree Dialog
-            editProfileViewModel.uploadProfilePicture(it)
+            editProfileViewModel.storageService = it
+            editProfileViewModel.uploadProfilePicture()
         })
         ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
     }

@@ -51,6 +51,9 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     }
 
     private val log = LoggerFactory.getLogger(EditProfileViewModel::class.java)
+    private var uploadProfilePictureCall: Call? = null
+    lateinit var storageService: ProfilePictureStorageService
+
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
 
     val profilePictureFile by lazy {
@@ -182,8 +185,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         }
     }
 
-    fun uploadProfilePicture(service: ProfilePictureStorageService) {
-        when (service) {
+    fun uploadProfilePicture() {
+        when (storageService) {
             ProfilePictureStorageService.IMGUR -> uploadProfilePictureToImgur(profilePictureFile!!)
             ProfilePictureStorageService.GOOGLE_DRIVE -> {
                 //TODO: Upload to Google Drive
@@ -210,7 +213,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
             val request = Request.Builder().url(imgurUploadUrl).post(requestBody).build()
 
             try {
-                val response = client.newCall(request).execute()
+                uploadProfilePictureCall = client.newCall(request)
+                val response = uploadProfilePictureCall!!.execute()
                 val responseBody = response.body()
                 if (responseBody != null && response.isSuccessful) {
                     val moshi = Moshi.Builder().build()
@@ -227,10 +231,20 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                     profilePictureUploadLiveData.postValue(Resource.error(response.message()))
                 }
             } catch (e: Exception) {
-                profilePictureUploadLiveData.postValue(Resource.error(e))
-                log.error(e.message)
+                var canceled = false
+                if (e is IOException) {
+                    canceled = "Canceled".equals(e.message, true)
+                }
+                if (!canceled) {
+                    profilePictureUploadLiveData.postValue(Resource.error(e))
+                    log.error(e.message)
+                }
             }
         }
+    }
+
+    fun cancelUploadRequest() {
+        uploadProfilePictureCall?.cancel()
     }
 
 }

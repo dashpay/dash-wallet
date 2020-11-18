@@ -14,12 +14,11 @@ import com.bumptech.glide.Glide
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.profile_picture_state_dialog.*
-import org.slf4j.LoggerFactory
 
 class UploadProfilePictureStateDialog : DialogFragment() {
 
-    private val log = LoggerFactory.getLogger(javaClass.simpleName)
     private val showError by lazy { requireArguments().getBoolean(ARG_SHOW_ERROR, false) }
+    private lateinit var editProfileViewModel: EditProfileViewModel
 
     companion object {
 
@@ -47,11 +46,26 @@ class UploadProfilePictureStateDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         updateUiState(showError)
-        val editProfileViewModel = ViewModelProvider(requireActivity())
+        editProfileViewModel = ViewModelProvider(requireActivity())
                 .get(EditProfileViewModel::class.java)
         Glide.with(requireActivity()).load(editProfileViewModel.profilePictureFile)
                 .circleCrop().into(avatar)
-        cancel_btn.setOnClickListener { dismiss() }
+        try_again_btn.setOnClickListener {
+            dismiss()
+            editProfileViewModel.uploadProfilePicture()
+        }
+        cancel_btn.setOnClickListener {
+            if (showError) {
+                dismiss()
+            } else {
+                cancelRequest()
+            }
+        }
+    }
+
+    private fun cancelRequest() {
+        editProfileViewModel.cancelUploadRequest()
+        dismiss()
     }
 
     override fun onStart() {
