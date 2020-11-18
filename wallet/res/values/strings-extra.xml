@@ -438,6 +438,9 @@
     <string name="image_cropper_title">Move and Zoom your photo to find the perfect fit</string>
     <string name="select">Select</string>
     <string name="unable_to_load_image">Unable to load image.</string>
+    <string name="upload_error">Upload Error</string>
+    <string name="unable_to_upload_picture">Unable to upload your picture.\nPlease try again.</string>
+    <string name="upload_picture_try_again">Try again</string>
 
     <string name="updating_profile">Updating Profile on Dash Network</string>
     <string name="where_to_store_your_picture">Where would you like to store your picture?</string>
