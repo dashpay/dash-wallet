@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
+import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.profile_picture_state_dialog.*
@@ -48,8 +49,14 @@ class UploadProfilePictureStateDialog : DialogFragment() {
         updateUiState(showError)
         editProfileViewModel = ViewModelProvider(requireActivity())
                 .get(EditProfileViewModel::class.java)
-        Glide.with(requireActivity()).load(editProfileViewModel.profilePictureFile)
-                .circleCrop().into(avatar)
+
+        val file = editProfileViewModel.profilePictureFile
+        if (file != null) {
+            Glide.with(requireActivity()).load(file)
+                    .circleCrop().signature(ObjectKey(file.lastModified())).into(avatar)
+
+        }
+
         try_again_btn.setOnClickListener {
             dismiss()
             editProfileViewModel.uploadProfilePicture()
