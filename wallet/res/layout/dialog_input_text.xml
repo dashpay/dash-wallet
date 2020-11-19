@@ -30,12 +30,14 @@
                 android:orientation="vertical">
 
                 <ImageView
+                    android:id="@+id/public_url_icon"
                     android:layout_width="30dp"
                     android:layout_height="30dp"
                     android:layout_marginTop="26dp"
                     app:srcCompat="@drawable/ic_external_url" />
 
                 <TextView
+                    android:id="@+id/public_url_title"
                     style="@style/MontserratRegular"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -65,12 +67,12 @@
                     android:layout_height="wrap_content"
                     android:background="@drawable/round_corners_white_bg_borders"
                     android:elevation="2dp"
-                    android:gravity="start"
                     android:inputType="textMultiLine"
                     android:maxLines="8"
                     android:padding="20dp"
                     android:textColor="@android:color/black"
                     android:textSize="14sp"
+                    android:textAlignment="center"
                     tools:targetApi="lollipop"
                     tools:text="https://images.theconversation.com/files/304864/original/file-20191203-67028-qfiw3k.jpeg?ixlib=rb-1.1.0" />
 
