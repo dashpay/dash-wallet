@@ -64,6 +64,10 @@ class SelectProfilePictureDialog : BaseBottomSheetDialogFragment() {
                 sharedViewModel.onFromUrlCallback.call()
                 dismiss()
             }
+            gravatar.setOnClickListener {
+                sharedViewModel.onFromGravatarCallback.call()
+                dismiss()
+            }
         }
 
         dialog?.setOnShowListener { dialog ->

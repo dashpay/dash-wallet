@@ -451,4 +451,14 @@
     <string name="public_url_more_info">More info</string>
     <string name="public_url_fetching_image">Fetching Image</string>
 
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">Enter your Gravatar Email ID</string>
+    <string name="gravatar_fetching">Fetching your Gravatar</string>
+    <string name="gravatar_email_sample">sample@email.com</string>
+    <string name="gravatar_disclaimer">Your Email is not stored in the DashPay wallet nor on any servers. It is used once to get your Gravatar account details and then discarded.</string>
+    <string name="gravatar_email_error">Unable to fetch your Gravatar. Please enter a valid Gravatar email ID.</string>
+
+
+
+
 </resources>
