@@ -454,6 +454,10 @@
     <string name="no">No</string>
 
     <string name="updating_profile">Updating Profile on Dash Network</string>
+    <string name="error_updating_profile_try_again">Try Again</string>
+    <string name="error_updating_profile_cancel">Cancel</string>
+    <string name="error_updating_profile_msg">Error updating your profile</string>
+    <string name="error_updating_profile_code">Code: %s</string>
     <string name="where_to_store_your_picture">Where would you like to store your picture?</string>
     <string name="external_storage_disclaimer">Your image will always be in your control. Dash does not store any of your data including your profile picture.</string>
     <string name="select_source_sign_in_required">Sign in required</string>
