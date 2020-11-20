@@ -446,8 +446,12 @@
     <string name="picture_upload_policy">Picture Upload Policy</string>
     <string name="imgur_policy_1">The image you select will be uploaded to Imgur anonymously.</string>
     <string name="imgur_policy_2">Image uploaded can be viewed publicly by anyone.</string>
-    <string name="imgur_policy_3">You can always delete the image uploaded, as long as you have access to this wallet.aaaaaaa</string>
+    <string name="imgur_policy_3">You can always delete the image uploaded, as long as you have access to this wallet.</string>
+    <string name="profile_picture_delete_title">Are you sure?</string>
+    <string name="profile_picture_delete_message">This image will no longer be used on the Dash network</string>
     <string name="agree">Agree</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
 
     <string name="updating_profile">Updating Profile on Dash Network</string>
     <string name="where_to_store_your_picture">Where would you like to store your picture?</string>

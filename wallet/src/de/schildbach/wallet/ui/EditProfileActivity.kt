@@ -51,8 +51,7 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
-import kotlinx.android.synthetic.main.activity_edit_profile.display_name
-import kotlinx.android.synthetic.main.contact_row.*
+import kotlinx.android.synthetic.main.contact_request_view.*
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -239,6 +238,11 @@ class EditProfileActivity : BaseMenuActivity() {
                 editProfileViewModel.uploadProfilePicture()
             }
         })
+        editProfileViewModel.deleteProfilePictureConfirmationLiveData.observe(this, Observer { accepted ->
+            if (accepted) {
+                showProfilePictureServiceDialog(false)
+            }
+        })
     }
 
     private fun showUploadingDialog() {
@@ -416,7 +420,11 @@ class EditProfileActivity : BaseMenuActivity() {
         }
     }
 
-    private fun showProfilePictureServiceDialog() {
+    private fun showProfilePictureServiceDialog(showDeleteDialog: Boolean = true) {
+        if (walletApplication.configuration.imgurDeleteHash.isNotEmpty() && showDeleteDialog) {
+            DeleteProfilePictureConfirmationDialog().show(supportFragmentManager, null)
+            return
+        }
         selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
             editProfileViewModel.storageService = it
             when (it) {

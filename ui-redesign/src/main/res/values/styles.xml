@@ -42,7 +42,7 @@
     </style>
 
     <style name="DashButton.White.Outline" parent="DashButton.Blue">
-        <item name="android:textColor">@drawable/white_button_text</item>
+        <item name="android:textColor">@drawable/white_button_blue_text</item>
         <item name="android:background">@drawable/white_button_background_outline</item>
     </style>
 
