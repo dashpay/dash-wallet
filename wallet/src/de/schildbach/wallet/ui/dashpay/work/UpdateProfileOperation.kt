@@ -13,7 +13,7 @@ class UpdateProfileOperation(val application: Application) {
     }
 
     @SuppressLint("EnqueueWork")
-    fun create(dashPayProfile: DashPayProfile): WorkContinuation {
+    fun create(dashPayProfile: DashPayProfile, uploadService: String, localAvatarUrl: String): WorkContinuation {
 
         val password = SecurityGuard().retrievePassword()
         val updateProfileWorker = OneTimeWorkRequestBuilder<UpdateProfileWorker>()
