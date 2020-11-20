@@ -51,6 +51,7 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
+import kotlinx.android.synthetic.main.contact_request_view.*
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -74,6 +75,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private var defaultAvatar: TextDrawable? = null
 
     private var profilePictureChanged = false
+    private var uploadProfilePictureStateDialog: UploadProfilePictureStateDialog? = null
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -221,16 +223,52 @@ class EditProfileActivity : BaseMenuActivity() {
         editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
             when (it.status) {
                 Status.LOADING -> {
-                    Toast.makeText(this@EditProfileActivity, "Uploading profile picture", Toast.LENGTH_LONG).show()
-                }
-                Status.ERROR -> {
-                    Toast.makeText(this@EditProfileActivity, "Failed to upload profile picture", Toast.LENGTH_LONG).show()
+                    showUploadingDialog()
                 }
                 Status.SUCCESS -> {
-                    Toast.makeText(this@EditProfileActivity, "Profile picture uploaded successfully", Toast.LENGTH_LONG).show()
+                    showUploadedProfilePicture(it.data)
+                }
+                Status.ERROR -> {
+                    showUploadErrorDialog()
                 }
             }
         })
+        editProfileViewModel.imgurDialogAcceptLiveData.observe(this, Observer { accepted ->
+            if (accepted) {
+                editProfileViewModel.uploadProfilePicture()
+            }
+        })
+        editProfileViewModel.deleteProfilePictureConfirmationLiveData.observe(this, Observer { accepted ->
+            if (accepted) {
+                showProfilePictureServiceDialog(false)
+            }
+        })
+    }
+
+    private fun showUploadingDialog() {
+        if (uploadProfilePictureStateDialog != null) {
+            uploadProfilePictureStateDialog!!.dialog?.dismiss()
+        }
+        uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance()
+        uploadProfilePictureStateDialog!!.show(supportFragmentManager, null)
+    }
+
+    private fun showUploadedProfilePicture(url: String?) {
+        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
+            uploadProfilePictureStateDialog!!.dismiss()
+        }
+        Glide.with(this).load(url).circleCrop().into(dashpayUserAvatar)
+    }
+
+    private fun showUploadErrorDialog() {
+        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
+            uploadProfilePictureStateDialog!!.showError()
+            return
+        } else if (uploadProfilePictureStateDialog != null) {
+            uploadProfilePictureStateDialog!!.dialog?.dismiss()
+        }
+        uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance(true)
+        uploadProfilePictureStateDialog!!.show(supportFragmentManager, null)
     }
 
     fun activateDeactivateSave() {
@@ -240,6 +278,7 @@ class EditProfileActivity : BaseMenuActivity() {
     fun save() {
         val displayName = display_name.text.toString().trim()
         val publicMessage = about_me.text.toString().trim()
+        //TODO: profilePictureChanged?
         val avatarUrl = if (profilePictureChanged) {
             if (externalUrlSharedViewModel.externalUrl != null) {
                 externalUrlSharedViewModel.externalUrl.toString()
@@ -249,6 +288,7 @@ class EditProfileActivity : BaseMenuActivity() {
         } else {
             editProfileViewModel.dashPayProfile!!.avatarUrl
         }
+
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl)
         save.isEnabled = false
         finish()
@@ -258,12 +298,6 @@ class EditProfileActivity : BaseMenuActivity() {
         ProfilePictureDisplay.display(dashpayUserAvatar, profile)
         about_me.setText(profile.publicMessage)
         display_name.setText(profile.displayName)
-    }
-
-    private fun setAvatarFromFile(file: File) {
-        val imgUri = getFileUri(file)
-        Glide.with(dashpayUserAvatar).load(imgUri).signature(ObjectKey(file.lastModified()))
-                .placeholder(defaultAvatar).circleCrop().into(dashpayUserAvatar)
     }
 
     private fun setEditingState(isEditing: Boolean) {
@@ -358,8 +392,7 @@ class EditProfileActivity : BaseMenuActivity() {
                         if (externalUrlSharedViewModel.externalUrl != null) {
                             saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {
-                            setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
-                            editProfileViewModel.uploadToImgUr()
+                            showProfilePictureServiceDialog()
                         }
                     }
                 }
@@ -385,6 +418,22 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
             }
         }
+    }
+
+    private fun showProfilePictureServiceDialog(showDeleteDialog: Boolean = true) {
+        if (walletApplication.configuration.imgurDeleteHash.isNotEmpty() && showDeleteDialog) {
+            DeleteProfilePictureConfirmationDialog().show(supportFragmentManager, null)
+            return
+        }
+        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
+            editProfileViewModel.storageService = it
+            when (it) {
+                EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
+                    ImgurPolicyDialog().show(supportFragmentManager, null)
+                }
+            }
+        })
+        ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
     }
 
     private fun saveUrl(zoomedRect: RectF) {
