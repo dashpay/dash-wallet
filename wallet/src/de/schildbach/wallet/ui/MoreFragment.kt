@@ -20,6 +20,7 @@ import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -81,6 +82,7 @@ class MoreFragment : Fragment(R.layout.activity_more) {
             }
 
         }
+        edit_update_switcher.isVisible = false
         initViewModel()
     }
 
