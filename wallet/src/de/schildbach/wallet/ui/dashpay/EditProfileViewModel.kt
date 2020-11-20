@@ -56,6 +56,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     lateinit var storageService: ProfilePictureStorageService
 
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
+    val imgurDialogAcceptLiveData = MutableLiveData<Boolean>()
 
     val profilePictureFile by lazy {
         try {

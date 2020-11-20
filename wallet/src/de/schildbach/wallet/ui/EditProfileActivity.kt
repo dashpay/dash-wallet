@@ -234,6 +234,11 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
             }
         })
+        editProfileViewModel.imgurDialogAcceptLiveData.observe(this, Observer { accepted ->
+            if (accepted) {
+                editProfileViewModel.uploadProfilePicture()
+            }
+        })
     }
 
     private fun showUploadingDialog() {
@@ -413,9 +418,12 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun showProfilePictureServiceDialog() {
         selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
-            //TODO: Launch Agree Dialog
             editProfileViewModel.storageService = it
-            editProfileViewModel.uploadProfilePicture()
+            when (it) {
+                EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
+                    ImgurPolicyDialog().show(supportFragmentManager, null)
+                }
+            }
         })
         ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
     }
