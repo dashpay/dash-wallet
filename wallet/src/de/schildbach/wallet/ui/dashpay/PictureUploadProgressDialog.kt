@@ -25,14 +25,15 @@ import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
 import com.google.api.services.drive.Drive
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.EditProfileActivity
 
 class PictureUploadProgressDialog(val drive: Drive?) : DialogFragment() {
 
@@ -72,12 +73,12 @@ class PictureUploadProgressDialog(val drive: Drive?) : DialogFragment() {
 
     private fun startUpload() {
         // start the upload process
-        when (sharedViewModel.uploadService) {
-            EditProfileViewModel.GoogleDrive -> {
+        when (sharedViewModel.storageService) {
+            EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> {
                 sharedViewModel.uploadToGoogleDrive(drive!!)
             }
-            EditProfileViewModel.Imgur -> {
-                sharedViewModel.uploadToImgUr()
+            EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
+                sharedViewModel.uploadProfilePicture()
             }
         }
 
@@ -124,14 +125,14 @@ class PictureUploadProgressDialog(val drive: Drive?) : DialogFragment() {
                 sharedViewModel.profilePictureFile!!.lastModified(),
                 sharedViewModel.dashPayProfile!!.username)
 
-        sharedViewModel.profilePictureUploadLiveData.observe(this, {
+        sharedViewModel.profilePictureUploadLiveData.observe(this, Observer<Resource<String>> {
             if (it != null) {
                 when(it.status) {
                     Status.LOADING -> {
                         log.info("gdrive: PictureUploadProgress: Loading")
                     }
                     Status.ERROR -> {
-                        log.error("picture upload failed: ${sharedViewModel.uploadService} ${it.exception} ${it.message}")
+                        log.error("picture upload failed: ${sharedViewModel.storageService} ${it.exception} ${it.message}")
                         errorIcon.isVisible = true
                         pendingWorkIcon.isVisible = false
                         message.text = getString(R.string.upload_image_error_message)
