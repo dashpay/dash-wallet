@@ -69,9 +69,6 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             Result.success(workDataOf(
                     KEY_USER_ID to profileRequestResult.userId
             ))
-            //TODO: Use this to trigger a failure
-            //Result.failure(workDataOf(
-            //        KEY_ERROR_MESSAGE to UpdateProfileError.BROADCAST.name))
         } catch (ex: Exception) {
             formatExceptionMessage("create/update profile", ex)
             Result.failure(workDataOf(

@@ -149,7 +149,13 @@ class EditProfileActivity : BaseMenuActivity() {
             selectImage(this)
         }
 
+        selectProfilePictureSharedViewModel.onFromGravatarCallback.observe(this, Observer<Void> {
+            externalUrlSharedViewModel.shouldCrop = false
+            pictureFromGravatar()
+        })
+
         selectProfilePictureSharedViewModel.onFromUrlCallback.observe(this, Observer<Void> {
+            externalUrlSharedViewModel.shouldCrop = true
             pictureFromUrl()
         })
 
@@ -164,6 +170,14 @@ class EditProfileActivity : BaseMenuActivity() {
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
             cropProfilePicture()
         })
+    }
+
+    private fun pictureFromGravatar() {
+        if (editProfileViewModel.createTmpPictureFile()) {
+            GravatarProfilePictureDialog.newInstance().show(supportFragmentManager, "")
+        } else {
+            Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun pictureFromUrl() {
@@ -439,7 +453,9 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun saveUrl(zoomedRect: RectF) {
         if (externalUrlSharedViewModel.externalUrl != null) {
             val zoomedRectStr = "${zoomedRect.left},${zoomedRect.top},${zoomedRect.right},${zoomedRect.bottom}"
-            externalUrlSharedViewModel.externalUrl = setUriParameter(externalUrlSharedViewModel.externalUrl!!, "dashpay-profile-pic-zoom", zoomedRectStr)
+            if (externalUrlSharedViewModel.shouldCrop) {
+                externalUrlSharedViewModel.externalUrl = setUriParameter(externalUrlSharedViewModel.externalUrl!!, "dashpay-profile-pic-zoom", zoomedRectStr)
+            }
 
             val file = editProfileViewModel.tmpPictureFile
             val imgUri = getFileUri(file)
@@ -466,11 +482,15 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun cropProfilePicture() {
-        val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
-        val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
-        val initZoomedRect = ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
-        val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
-        startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
+        if (externalUrlSharedViewModel.shouldCrop) {
+            val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
+            val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
+            val initZoomedRect = ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
+            val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
+            startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
+        } else {
+            saveUrl(RectF(0.0f,0.0f,1.0f,1.0f))
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
