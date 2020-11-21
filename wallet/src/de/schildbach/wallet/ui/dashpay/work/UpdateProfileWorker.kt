@@ -34,6 +34,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         var avatarUrl = inputData.getString(KEY_AVATAR_URL) ?: ""
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
+
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
         val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
 
@@ -68,6 +69,9 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             Result.success(workDataOf(
                     KEY_USER_ID to profileRequestResult.userId
             ))
+            //TODO: Use this to trigger a failure
+            //Result.failure(workDataOf(
+            //        KEY_ERROR_MESSAGE to UpdateProfileError.BROADCAST.name))
         } catch (ex: Exception) {
             formatExceptionMessage("create/update profile", ex)
             Result.failure(workDataOf(
