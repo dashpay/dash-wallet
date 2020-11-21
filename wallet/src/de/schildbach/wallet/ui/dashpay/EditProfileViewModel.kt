@@ -68,6 +68,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     private var uploadProfilePictureCall: Call? = null
     lateinit var storageService: ProfilePictureStorageService
     private val config by lazy { WalletApplication.getInstance().configuration }
+    var googleDrive: Drive? = null
 
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
     val imgurDialogAcceptLiveData = MutableLiveData<Boolean>()
@@ -229,6 +230,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
             ProfilePictureStorageService.IMGUR -> uploadProfilePictureToImgur(profilePictureFile!!)
             ProfilePictureStorageService.GOOGLE_DRIVE -> {
                 //TODO: Upload to Google Drive
+                uploadToGoogleDrive(googleDrive!!)
             }
         }
     }

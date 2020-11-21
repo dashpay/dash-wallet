@@ -465,7 +465,7 @@
 
     <string name="edit_profile_google_drive">Google Drive</string>
     <string name="edit_profile_imgur">Imgur</string>
-    <string name="edit_profile_google_drive_failed_authorization">Google Drive authorization failed.  Try another upload service?</string>
+    <string name="google_drive_failed_authorization">Google Drive authorization failed.</string>
 
 
     <string name="error_updating_profile_try_again">Try Again</string>

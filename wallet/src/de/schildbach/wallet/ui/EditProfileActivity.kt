@@ -35,7 +35,6 @@ import android.text.TextWatcher
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -55,9 +54,9 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
-import kotlinx.android.synthetic.main.contact_request_view.*
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileNotFoundException
@@ -72,7 +71,7 @@ class EditProfileActivity : BaseMenuActivity() {
         const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
         const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
         const val REQUEST_CODE_CROP_IMAGE = 4
-        const val GDRIVE_REQUEST_CODE_SIGN_IN = 5
+        const val REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN = 5
 
         protected val log = LoggerFactory.getLogger(EditProfileActivity::class.java)
 
@@ -180,9 +179,9 @@ class EditProfileActivity : BaseMenuActivity() {
             choosePictureWithPermission()
         })
 
-        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer<EditProfileViewModel.ProfilePictureStorageService> {
-            uploadImage(it)
-        })
+        //selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer<EditProfileViewModel.ProfilePictureStorageService> {
+        //    uploadImage(it)
+        //})
 
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
             cropProfilePicture()
@@ -242,7 +241,7 @@ class EditProfileActivity : BaseMenuActivity() {
             setEditingState(it.status != Status.SUCCESS)
             activateDeactivateSave()
         })
-        externalUrlSharedViewModel.validUrlChosenEvent.observe(this, {
+        externalUrlSharedViewModel.validUrlChosenEvent.observe(this, Observer {
             if (it != null) {
                 editProfileViewModel.saveExternalBitmap(it)
             } else {
@@ -261,7 +260,7 @@ class EditProfileActivity : BaseMenuActivity() {
                     showUploadedProfilePicture(it.data)
                 }
                 Status.ERROR -> {
-                    showUploadErrorDialog()
+                    showUploadErrorDialog(UpdateProfileError.UPLOAD)
                 }
             }
         })
@@ -292,14 +291,14 @@ class EditProfileActivity : BaseMenuActivity() {
         Glide.with(this).load(url).circleCrop().into(dashpayUserAvatar)
     }
 
-    private fun showUploadErrorDialog() {
+    private fun showUploadErrorDialog(error: UpdateProfileError) {
         if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
-            uploadProfilePictureStateDialog!!.showError()
+            uploadProfilePictureStateDialog!!.showError(error)
             return
         } else if (uploadProfilePictureStateDialog != null) {
             uploadProfilePictureStateDialog!!.dialog?.dismiss()
         }
-        uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance(true)
+        uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance(error)
         uploadProfilePictureStateDialog!!.show(supportFragmentManager, null)
     }
 
@@ -429,7 +428,7 @@ class EditProfileActivity : BaseMenuActivity() {
                         }
                     }
                 }
-                GDRIVE_REQUEST_CODE_SIGN_IN -> {
+                REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN -> {
                     handleGdriveSigninResult(data!!)
                 }
             }
@@ -461,11 +460,14 @@ class EditProfileActivity : BaseMenuActivity() {
             DeleteProfilePictureConfirmationDialog().show(supportFragmentManager, null)
             return
         }
-        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
+        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer <EditProfileViewModel.ProfilePictureStorageService> {
             editProfileViewModel.storageService = it
             when (it) {
                 EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
                     ImgurPolicyDialog().show(supportFragmentManager, null)
+                }
+                EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> {
+                    requestGDriveAccess()
                 }
             }
         })
@@ -555,10 +557,10 @@ class EditProfileActivity : BaseMenuActivity() {
         val signInAccount = GoogleDriveService.getSigninAccount(applicationContext)
         val googleSignInClient = GoogleSignIn.getClient(this, GoogleDriveService.getGoogleSigninOptions())
         if (signInAccount == null) {
-            startActivityForResult(googleSignInClient.signInIntent, GDRIVE_REQUEST_CODE_SIGN_IN)
+            startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN)
         } else {
             googleSignInClient.revokeAccess()
-                    .addOnSuccessListener { aVoid: Void? -> startActivityForResult(googleSignInClient.signInIntent, GDRIVE_REQUEST_CODE_SIGN_IN) }
+                    .addOnSuccessListener { aVoid: Void? -> startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN) }
                     .addOnFailureListener { e: java.lang.Exception? ->
                         log.error("could not revoke access to drive: ", e)
                         applyGdriveAccessDenied()
@@ -569,12 +571,13 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun applyGdriveAccessDenied() {
         //TODO: This is not part of the designs and thus far hasn't been tested
         //what we will do here is ask the user to use Imgur instead
-        val builder = AlertDialog.Builder(this)
+        showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)
+        /*val builder = AlertDialog.Builder(this)
                 .setTitle(R.string.edit_profile_google_drive)
                 .setMessage(R.string.edit_profile_google_drive_failed_authorization)
                 .setPositiveButton(R.string.edit_profile_imgur) { dialog, which -> uploadImage(EditProfileViewModel.ProfilePictureStorageService.IMGUR) }
                 .setNegativeButton(R.string.button_cancel) { dialog, which -> }
-        builder.create().show();
+        builder.create().show();*/
     }
 
     private fun handleGdriveSigninResult(data: Intent) {
@@ -594,10 +597,12 @@ class EditProfileActivity : BaseMenuActivity() {
         log.info("gdrive: access granted to ${signInAccount.email} with: ${signInAccount.grantedScopes}")
         mDrive = GoogleDriveService.getDriveServiceFromAccount(applicationContext, signInAccount!!)
         log.info("gdrive: drive $mDrive")
-        PictureUploadProgressDialog.newInstance(mDrive).show(supportFragmentManager, "uploadImage")
+        editProfileViewModel.googleDrive = mDrive
+        editProfileViewModel.uploadProfilePicture()
+        //PictureUploadProgressDialog.newInstance(mDrive).show(supportFragmentManager, "uploadImage")
     }
 
-    private fun uploadImage(uploadService: EditProfileViewModel.ProfilePictureStorageService) {
+    /*private fun uploadImage(uploadService: EditProfileViewModel.ProfilePictureStorageService) {
         editProfileViewModel.storageService = uploadService
         when (uploadService) {
             EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> {
@@ -608,5 +613,5 @@ class EditProfileActivity : BaseMenuActivity() {
             }
             else -> throw IllegalStateException()
         }
-    }
+    }*/
 }

@@ -31,10 +31,13 @@ import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.profile_picture_state_dialog.*
+import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 
 class UploadProfilePictureStateDialog : DialogFragment() {
 
-    private val showError by lazy { requireArguments().getBoolean(ARG_SHOW_ERROR, false) }
+    private val showError: UpdateProfileError by lazy {
+        UpdateProfileError.getByValue(requireArguments().getInt(ARG_SHOW_ERROR, UpdateProfileError.NO_ERROR.ordinal))!!
+    }
     private lateinit var editProfileViewModel: EditProfileViewModel
 
     companion object {
@@ -42,10 +45,10 @@ class UploadProfilePictureStateDialog : DialogFragment() {
         private const val ARG_SHOW_ERROR = "show_error"
 
         @JvmStatic
-        fun newInstance(showError: Boolean = false): UploadProfilePictureStateDialog {
+        fun newInstance(showError: UpdateProfileError = UpdateProfileError.NO_ERROR): UploadProfilePictureStateDialog {
             val fragment = UploadProfilePictureStateDialog()
             val args = Bundle()
-            args.putBoolean(ARG_SHOW_ERROR, showError)
+            args.putInt(ARG_SHOW_ERROR, showError.ordinal)
             fragment.arguments = args
             return fragment
         }
@@ -78,7 +81,7 @@ class UploadProfilePictureStateDialog : DialogFragment() {
             editProfileViewModel.uploadProfilePicture()
         }
         cancel_btn.setOnClickListener {
-            if (showError) {
+            if (showError != UpdateProfileError.NO_ERROR) {
                 dismiss()
             } else {
                 cancelRequest()
@@ -99,24 +102,34 @@ class UploadProfilePictureStateDialog : DialogFragment() {
         dialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
 
-    fun showError() {
-        updateUiState(true)
+    fun showError(error: UpdateProfileError) {
+        updateUiState(error)
     }
 
-    private fun updateUiState(showError: Boolean = false) {
-        if (showError) {
-            icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_error))
-            title.setText(R.string.profile_picture_upload_error_title)
-            subtitle.setText(R.string.profile_picture_upload_error_message)
-            try_again_btn.visibility = View.VISIBLE
-            cancel_btn.visibility = View.VISIBLE
-        } else {
-            icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_hourglass))
-            (icon.drawable as AnimationDrawable).start()
-            title.setText(R.string.profile_picture_uploading_title)
-            subtitle.setText(R.string.profile_picture_uploading_message)
-            try_again_btn.visibility = View.GONE
-            cancel_btn.visibility = View.VISIBLE
+    private fun updateUiState(error: UpdateProfileError = UpdateProfileError.NO_ERROR) {
+        when (error) {
+            UpdateProfileError.UPLOAD -> {
+                icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_error))
+                title.setText(R.string.profile_picture_upload_error_title)
+                subtitle.setText(R.string.profile_picture_upload_error_message)
+                try_again_btn.visibility = View.VISIBLE
+                cancel_btn.visibility = View.VISIBLE
+            }
+            UpdateProfileError.NO_ERROR -> {
+                icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_hourglass))
+                (icon.drawable as AnimationDrawable).start()
+                title.setText(R.string.profile_picture_uploading_title)
+                subtitle.setText(R.string.profile_picture_uploading_message)
+                try_again_btn.visibility = View.GONE
+                cancel_btn.visibility = View.VISIBLE
+            }
+            UpdateProfileError.AUTHENTICATION -> {
+                icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_error))
+                title.setText(R.string.select_source_google_drive)
+                subtitle.setText(R.string.google_drive_failed_authorization)
+                try_again_btn.visibility = View.VISIBLE
+                cancel_btn.visibility = View.VISIBLE
+            }
         }
     }
 
