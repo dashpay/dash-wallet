@@ -25,10 +25,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.Html
-import android.text.Layout
 import android.text.TextWatcher
 import android.text.method.LinkMovementMethod
-import android.text.util.Linkify
 import android.view.View
 import android.widget.*
 import androidx.annotation.NonNull
@@ -46,17 +44,16 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
-import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
 
-class ExternalUrlProfilePictureDialog : DialogFragment() {
+open class ExternalUrlProfilePictureDialog : DialogFragment() {
 
     companion object {
 
-        private val log = LoggerFactory.getLogger(RestoreWalletFromFileViewModel::class.java)
+        private val log = LoggerFactory.getLogger(ExternalUrlProfilePictureDialog::class.java)
 
         private const val ARG_INITIAL_URL = "arg_initial_url"
 
@@ -76,6 +73,9 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 
     private lateinit var customView: View
     private lateinit var edit: EditText
+    private lateinit var dialogTitle: TextView
+    private lateinit var dialogIcon: ImageView
+    private lateinit var dialogPrompt: TextView
     private lateinit var urlPreviewPane: View
     private lateinit var urlPreview: ImageView
     private lateinit var publicUrlEnterUrl: TextView
@@ -85,6 +85,14 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
     private lateinit var pendingWorkIcon: ImageView
     private lateinit var viewSwitcher: ViewSwitcher
     private lateinit var disclaimer: TextView
+    private lateinit var fetchingMessage: TextView
+
+    protected open val errorMessageId = R.string.public_url_error_message
+    protected open val fetchingMessageId = R.string.public_url_fetching_image
+    protected open val disclaimerMessageId = R.string.public_url_message
+    protected open val dialogTitleId = R.string.edit_profile_public_url
+    protected open val dialogIconId = R.drawable.ic_external_url
+    protected open val dialogPromptId = R.string.public_url_enter_url
 
     private lateinit var sharedViewModel: ExternalUrlProfilePictureViewModel
 
@@ -103,8 +111,11 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
     }
 
     @SuppressLint("SetTextI18n")
-    private fun initCustomView(): View {
+    protected open fun initCustomView(): View {
         customView = requireActivity().layoutInflater.inflate(R.layout.dialog_input_text, null)
+        dialogPrompt = customView.findViewById(R.id.public_url_enter_url)
+        dialogTitle = customView.findViewById(R.id.public_url_title)
+        dialogIcon = customView.findViewById(R.id.public_url_icon)
         edit = customView.findViewById(R.id.input)
         urlPreviewPane = customView.findViewById(R.id.url_preview_pane)
         urlPreview = customView.findViewById(R.id.url_preview)
@@ -116,6 +127,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
         urlPreviewPane.visibility = View.GONE
         viewSwitcher = customView.findViewById(R.id.view_switcher)
         disclaimer = customView.findViewById(R.id.public_url_message)
+        fetchingMessage = customView.findViewById(R.id.fetching_msg)
         disclaimer.apply {
             text = Html.fromHtml(getString(R.string.public_url_message) +
                     " <html><a href=\"https://www.google.com/amp/s/www.mail-signatures.com/articles/direct-link-to-hosted-image/amp/\"><span style=\"color:blue;\">${ getString(R.string.public_url_more_info) }</span></a></html>",
@@ -127,7 +139,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 
                 cleanup()
 
-                if (edit.text.isEmpty()) {
+                if (edit.text.isEmpty() || !isTextValid(edit.text.trim().toString())) {
 
                     button_ok.isEnabled = false
                     return
@@ -146,12 +158,12 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 
             button_ok.isEnabled = false
 
-                val pictureUrl = edit.text.trim().toString()
+            val pictureUrl = edit.text.trim().toString()
             (pendingWorkIcon.drawable as AnimationDrawable).start()
 
             viewSwitcher.showNext()
 
-            loadUrl(pictureUrl)
+            loadFromString(pictureUrl)
             imitateUserInteraction()
         }
         button_cancel.setOnClickListener {
@@ -163,23 +175,39 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
             viewSwitcher.showPrevious()
             button_ok.isEnabled = true
         }
+        fetchingMessage.text = getString(fetchingMessageId)
+        disclaimer.text = getString(disclaimerMessageId)
+        dialogIcon.setImageResource(dialogIconId)
+        dialogTitle.text = getString(dialogTitleId)
+        dialogPrompt.text = getString(dialogPromptId)
+
         return customView
     }
 
     private fun cleanup() {
         urlPreview.setImageBitmap(null)
-        sharedViewModel.bitmapCache = null
-        sharedViewModel.externalUrl = null
+        if (this::sharedViewModel.isInitialized) {
+            sharedViewModel.bitmapCache = null
+            sharedViewModel.externalUrl = null
+        }
     }
 
-    private fun loadUrl(pictureUrlBase: String) {
+    protected open fun isTextValid(text: String): Boolean {
+        return true
+    }
+
+    protected open fun loadFromString(text: String) {
+        loadUrl(text)
+    }
+
+    protected fun loadUrl(pictureUrlBase: String) {
         val pictureUrl = ProfilePictureDisplay.removePicZoomParameter(convertUrlIfSuitable(pictureUrlBase))
         Glide.with(requireContext())
                 .load(pictureUrl)
                 .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
-                        publicUrlEnterUrl.setText(R.string.public_url_error_message)
+                        publicUrlEnterUrl.setText(errorMessageId)
                         publicUrlEnterUrl.setTextColor(resources.getColor(R.color.dash_red))
                         log.info(e?.localizedMessage ?: "error", e)
                         return false
@@ -195,7 +223,7 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
                             if (resource is BitmapDrawable) {
                                 sharedViewModel.bitmapCache = resource.bitmap
                                 sharedViewModel.externalUrl = pictureUrl
-                                publicUrlEnterUrl.text = getString(R.string.public_url_enter_url)
+                                publicUrlEnterUrl.text = getString(dialogPromptId)
                                 publicUrlEnterUrl.setTextColor(resources.getColor(R.color.medium_gray))
                                 sharedViewModel.confirm()
                                 dismiss()
@@ -250,5 +278,13 @@ class ExternalUrlProfilePictureDialog : DialogFragment() {
 
     private fun imitateUserInteraction() {
         requireActivity().onUserInteraction()
+    }
+
+    protected fun setEditHint(stringId: Int) {
+        edit.hint = getString(stringId)
+    }
+
+    protected fun setEditSingleLine(isSingleLine: Boolean) {
+        edit.isSingleLine = isSingleLine
     }
 }

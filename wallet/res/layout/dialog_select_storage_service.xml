@@ -26,7 +26,6 @@
 
         <TextView
             style="@style/MontserratRegular"
-            android:id="@+id/external_storage_disclaimer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
@@ -34,92 +33,14 @@
             android:layout_marginStart="14dp"
             android:layout_marginEnd="14dp"
             android:textAlignment="center"
-            android:text="@string/external_storage_disclaimer_two"
+            android:text="@string/external_storage_disclaimer"
             android:textColor="@color/dash_gray"
             android:textSize="14sp" />
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/external_storage_full_disclaimer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <ImageView
-                android:id="@+id/info_icon_1"
-                android:layout_width="20dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:srcCompat="@drawable/ic_info_outline_black_24dp" />
-
-            <TextView
-                android:id="@+id/info_text_1"
-                style="@style/MontserratRegular.MG.14"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginLeft="14dp"
-                android:layout_marginEnd="14dp"
-                android:layout_marginRight="14dp"
-                android:text="@string/external_storage_disclaimer_one"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/info_icon_1"
-                app:layout_constraintTop_toTopOf="@+id/info_icon_1" />
-
-            <ImageView
-                android:id="@+id/info_icon_2"
-                android:layout_width="20dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                app:layout_constraintStart_toStartOf="@+id/info_icon_1"
-                app:layout_constraintTop_toBottomOf="@id/info_text_1"
-                app:srcCompat="@drawable/ic_info_outline_black_24dp" />
-
-            <TextView
-                android:id="@+id/info_text_2"
-                style="@style/MontserratRegular.MG.14"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginLeft="14dp"
-                android:layout_marginEnd="14dp"
-                android:layout_marginRight="14dp"
-                android:text="@string/external_storage_disclaimer_two"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/info_icon_2"
-                app:layout_constraintTop_toTopOf="@+id/info_icon_2" />
-
-            <ImageView
-                android:id="@+id/info_icon_3"
-                android:layout_width="20dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                app:layout_constraintStart_toStartOf="@+id/info_icon_2"
-                app:layout_constraintTop_toBottomOf="@id/info_text_2"
-                app:srcCompat="@drawable/ic_info_outline_black_24dp" />
-
-            <TextView
-                android:id="@+id/info_text_3"
-                style="@style/MontserratRegular.MG.14"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginLeft="14dp"
-                android:layout_marginEnd="14dp"
-                android:layout_marginRight="14dp"
-                android:text="@string/external_storage_disclaimer_three"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/info_icon_3"
-                app:layout_constraintTop_toTopOf="@+id/info_icon_3" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/imgur"
             style="@style/MenuRow.Sources"
             android:layout_height="86dp"
-            android:layout_marginTop="14dp"
             android:onClick="backupWallet">
 
             <ImageView

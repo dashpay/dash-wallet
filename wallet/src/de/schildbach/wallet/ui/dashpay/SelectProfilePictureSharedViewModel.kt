@@ -21,11 +21,13 @@ import de.schildbach.wallet.ui.SingleLiveEventExt
 
 class SelectProfilePictureSharedViewModel : ViewModel() {
 
+    val onFromGravatarCallback = SingleLiveEventExt<Void>()
+
     val onFromUrlCallback = SingleLiveEventExt<Void>()
 
     val onTakePictureCallback = SingleLiveEventExt<Void>()
 
     val onChoosePictureCallback = SingleLiveEventExt<Void>()
 
-    val onChooseStorageService = SingleLiveEventExt<String>()
+    val onChooseStorageService = SingleLiveEventExt<EditProfileViewModel.ProfilePictureStorageService>()
 }

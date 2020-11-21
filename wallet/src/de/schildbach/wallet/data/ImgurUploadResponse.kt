@@ -1,3 +1,7 @@
 package de.schildbach.wallet.data
 
-data class ImgurUploadResponse(val status: Int, val success: Boolean, val data: ImgurImg)
+import androidx.annotation.Keep
+
+@Keep
+data class ImgurUploadResponse(val status: Int, val success: Boolean, val data: ImgurImg?)
+

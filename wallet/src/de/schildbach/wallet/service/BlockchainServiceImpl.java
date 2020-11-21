@@ -828,6 +828,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         if (Constants.SUPPORTS_PLATFORM) {
             DapiClient client = PlatformRepo.getInstance().getPlatform().getClient();
             client.setSimplifiedMasternodeListManager(application.getWallet().getContext().masternodeListManager, masternodes);
+            client.getDapiAddressListProvider().addBannedAddress("211.30.243.82");
+            client.getDapiAddressListProvider().addBannedAddress("54.184.89.215");
         }
 
         updateAppWidget();

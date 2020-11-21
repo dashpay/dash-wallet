@@ -18,6 +18,7 @@ import de.schildbach.wallet.ui.security.SecurityGuard
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import java.io.File
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
@@ -27,6 +28,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
     : BaseWorker(context, parameters) {
 
     companion object {
+        private val log = LoggerFactory.getLogger(UpdateProfileWorker::class.java)
         const val KEY_PASSWORD = "UpdateProfileRequestWorker.PASSWORD"
         const val KEY_DISPLAY_NAME = "UpdateProfileRequestWorker.DISPLAY_NAME"
         const val KEY_PUBLIC_MESSAGE = "UpdateProfileRequestWorker.PUBLIC_MESSAGE"
@@ -40,11 +42,11 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
     private val platformRepo = PlatformRepo.getInstance()
 
     override suspend fun doWorkWithBaseProgress(): Result {
-        val displayName = inputData.getString(KEY_DISPLAY_NAME)?:""
-        val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE)?:""
-        var avatarUrl = inputData.getString(KEY_AVATAR_URL)?:""
+        val displayName = inputData.getString(KEY_DISPLAY_NAME) ?: ""
+        val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE) ?: ""
+        var avatarUrl = inputData.getString(KEY_AVATAR_URL) ?: ""
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
-                return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
         val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
 
@@ -71,12 +73,12 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         val uploadService = inputData.getString(KEY_UPLOAD_SERVICE)?:""
         if (avatarUrlToUpload.isNotEmpty()) {
             when (uploadService) {
-                EditProfileViewModel.GoogleDrive -> {
+                EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE.name -> {
                     val avatarFileBytes = File(avatarUrlToUpload).readBytes()
                     val fileId = saveToGoogleDrive(applicationContext, avatarFileBytes)
                     avatarUrl = "https://drive.google.com/uc?export=view&id=$fileId"
                 }
-                EditProfileViewModel.Imgur -> {
+                EditProfileViewModel.ProfilePictureStorageService.IMGUR.name -> {
                     //TODO:
                 }
             }

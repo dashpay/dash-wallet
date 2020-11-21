@@ -25,6 +25,7 @@ class ExternalUrlProfilePictureViewModel : ViewModel() {
 
     var bitmapCache: Bitmap? = null
     var externalUrl: Uri? = null
+    var shouldCrop: Boolean = true
 
     val validUrlChosenEvent = SingleLiveEventExt<Bitmap?>()
 

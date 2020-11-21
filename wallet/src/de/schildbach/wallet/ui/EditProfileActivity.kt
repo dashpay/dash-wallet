@@ -23,6 +23,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
@@ -50,22 +52,17 @@ import com.google.api.services.drive.Drive
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.ChooseStorageServiceDialog
-import de.schildbach.wallet.ui.dashpay.CropImageActivity
-import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
-import de.schildbach.wallet.ui.dashpay.ExternalUrlProfilePictureDialog
-import de.schildbach.wallet.ui.dashpay.PictureUploadProgressDialog
-import de.schildbach.wallet.ui.dashpay.SelectProfilePictureDialog
-import de.schildbach.wallet.ui.dashpay.SelectProfilePictureSharedViewModel
+import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
+import kotlinx.android.synthetic.main.contact_request_view.*
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.lang.IllegalStateException
-import java.util.*
-import java.util.concurrent.Executors
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
 
 class EditProfileActivity : BaseMenuActivity() {
 
@@ -89,6 +86,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private var defaultAvatar: TextDrawable? = null
 
     private var profilePictureChanged = false
+    private var uploadProfilePictureStateDialog: UploadProfilePictureStateDialog? = null
 
     private var mDrive: Drive? = null
 
@@ -164,7 +162,13 @@ class EditProfileActivity : BaseMenuActivity() {
             selectImage(this)
         }
 
+        selectProfilePictureSharedViewModel.onFromGravatarCallback.observe(this, Observer<Void> {
+            externalUrlSharedViewModel.shouldCrop = false
+            pictureFromGravatar()
+        })
+
         selectProfilePictureSharedViewModel.onFromUrlCallback.observe(this, Observer<Void> {
+            externalUrlSharedViewModel.shouldCrop = true
             pictureFromUrl()
         })
 
@@ -176,13 +180,21 @@ class EditProfileActivity : BaseMenuActivity() {
             choosePictureWithPermission()
         })
 
-        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
+        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer<EditProfileViewModel.ProfilePictureStorageService> {
             uploadImage(it)
         })
 
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
             cropProfilePicture()
         })
+    }
+
+    private fun pictureFromGravatar() {
+        if (editProfileViewModel.createTmpPictureFile()) {
+            GravatarProfilePictureDialog.newInstance().show(supportFragmentManager, "")
+        } else {
+            Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun pictureFromUrl() {
@@ -238,23 +250,57 @@ class EditProfileActivity : BaseMenuActivity() {
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
             }
             profilePictureChanged = true
-            editProfileViewModel.uploadService = "external"
         })
+
         editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
             when (it.status) {
                 Status.LOADING -> {
-                    Toast.makeText(this@EditProfileActivity, "Uploading profile picture", Toast.LENGTH_LONG).show()
-                }
-                Status.ERROR -> {
-                    Toast.makeText(this@EditProfileActivity, "Failed to upload profile picture", Toast.LENGTH_LONG).show()
+                    showUploadingDialog()
                 }
                 Status.SUCCESS -> {
-                    setAvatarFromFile(editProfileViewModel.profilePictureFile!!)
-                    profilePictureChanged = true
-                    Toast.makeText(this@EditProfileActivity, "Profile picture uploaded successfully", Toast.LENGTH_LONG).show()
+                    showUploadedProfilePicture(it.data)
+                }
+                Status.ERROR -> {
+                    showUploadErrorDialog()
                 }
             }
         })
+        editProfileViewModel.imgurDialogAcceptLiveData.observe(this, Observer { accepted ->
+            if (accepted) {
+                editProfileViewModel.uploadProfilePicture()
+            }
+        })
+        editProfileViewModel.deleteProfilePictureConfirmationLiveData.observe(this, Observer { accepted ->
+            if (accepted) {
+                showProfilePictureServiceDialog(false)
+            }
+        })
+    }
+
+    private fun showUploadingDialog() {
+        if (uploadProfilePictureStateDialog != null) {
+            uploadProfilePictureStateDialog!!.dialog?.dismiss()
+        }
+        uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance()
+        uploadProfilePictureStateDialog!!.show(supportFragmentManager, null)
+    }
+
+    private fun showUploadedProfilePicture(url: String?) {
+        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
+            uploadProfilePictureStateDialog!!.dismiss()
+        }
+        Glide.with(this).load(url).circleCrop().into(dashpayUserAvatar)
+    }
+
+    private fun showUploadErrorDialog() {
+        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
+            uploadProfilePictureStateDialog!!.showError()
+            return
+        } else if (uploadProfilePictureStateDialog != null) {
+            uploadProfilePictureStateDialog!!.dialog?.dismiss()
+        }
+        uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance(true)
+        uploadProfilePictureStateDialog!!.show(supportFragmentManager, null)
     }
 
     fun activateDeactivateSave() {
@@ -264,6 +310,7 @@ class EditProfileActivity : BaseMenuActivity() {
     fun save() {
         val displayName = display_name.text.toString().trim()
         val publicMessage = about_me.text.toString().trim()
+        //TODO: profilePictureChanged?
         val avatarUrl = if (profilePictureChanged) {
             if (externalUrlSharedViewModel.externalUrl != null) {
                 externalUrlSharedViewModel.externalUrl.toString()
@@ -284,12 +331,6 @@ class EditProfileActivity : BaseMenuActivity() {
         ProfilePictureDisplay.display(dashpayUserAvatar, profile)
         about_me.setText(profile.publicMessage)
         display_name.setText(profile.displayName)
-    }
-
-    private fun setAvatarFromFile(file: File) {
-        val imgUri = getFileUri(file)
-        Glide.with(dashpayUserAvatar).load(imgUri).signature(ObjectKey(file.lastModified()))
-                .placeholder(defaultAvatar).circleCrop().into(dashpayUserAvatar)
     }
 
     private fun setEditingState(isEditing: Boolean) {
@@ -362,15 +403,19 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
                 REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
                     val selectedImage: Uri? = data.data
-                    val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
                     if (selectedImage != null) {
+                        val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
                         val cursor: Cursor? = contentResolver.query(selectedImage,
                                 filePathColumn, null, null, null)
                         if (cursor != null) {
                             cursor.moveToFirst()
                             val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
-                            val picturePath: String = cursor.getString(columnIndex)
-                            editProfileViewModel.saveAsProfilePictureTmp(picturePath)
+                            val picturePath: String? = cursor.getString(columnIndex)
+                            if (picturePath != null) {
+                                editProfileViewModel.saveAsProfilePictureTmp(picturePath)
+                            } else {
+                                saveImageWithAuthority(selectedImage)
+                            }
                             cursor.close()
                         }
                     }
@@ -380,7 +425,7 @@ class EditProfileActivity : BaseMenuActivity() {
                         if (externalUrlSharedViewModel.externalUrl != null) {
                             saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {
-                            ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, "chooseService")
+                            showProfilePictureServiceDialog()
                         }
                     }
                 }
@@ -391,10 +436,48 @@ class EditProfileActivity : BaseMenuActivity() {
         }
     }
 
+    private fun saveImageWithAuthority(uri: Uri) {
+        var inputStream: InputStream? = null
+        if (uri.authority != null) {
+            try {
+                inputStream = contentResolver.openInputStream(uri)
+                val bmp: Bitmap = BitmapFactory.decodeStream(inputStream)
+                editProfileViewModel.saveExternalBitmap(bmp)
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+                Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+            } finally {
+                try {
+                    inputStream?.close()
+                } catch (e: IOException) {
+                    // ignore
+                }
+            }
+        }
+    }
+
+    private fun showProfilePictureServiceDialog(showDeleteDialog: Boolean = true) {
+        if (walletApplication.configuration.imgurDeleteHash.isNotEmpty() && showDeleteDialog) {
+            DeleteProfilePictureConfirmationDialog().show(supportFragmentManager, null)
+            return
+        }
+        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, {
+            editProfileViewModel.storageService = it
+            when (it) {
+                EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
+                    ImgurPolicyDialog().show(supportFragmentManager, null)
+                }
+            }
+        })
+        ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
+    }
+
     private fun saveUrl(zoomedRect: RectF) {
         if (externalUrlSharedViewModel.externalUrl != null) {
             val zoomedRectStr = "${zoomedRect.left},${zoomedRect.top},${zoomedRect.right},${zoomedRect.bottom}"
-            externalUrlSharedViewModel.externalUrl = setUriParameter(externalUrlSharedViewModel.externalUrl!!, "dashpay-profile-pic-zoom", zoomedRectStr)
+            if (externalUrlSharedViewModel.shouldCrop) {
+                externalUrlSharedViewModel.externalUrl = setUriParameter(externalUrlSharedViewModel.externalUrl!!, "dashpay-profile-pic-zoom", zoomedRectStr)
+            }
 
             val file = editProfileViewModel.tmpPictureFile
             val imgUri = getFileUri(file)
@@ -421,11 +504,15 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun cropProfilePicture() {
-        val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
-        val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
-        val initZoomedRect = externalUrlSharedViewModel.externalUrl?.let { ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl) }
-        val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
-        startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
+        if (externalUrlSharedViewModel.shouldCrop) {
+            val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
+            val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
+            val initZoomedRect = ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
+            val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
+            startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
+        } else {
+            saveUrl(RectF(0.0f,0.0f,1.0f,1.0f))
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -485,7 +572,7 @@ class EditProfileActivity : BaseMenuActivity() {
         val builder = AlertDialog.Builder(this)
                 .setTitle(R.string.edit_profile_google_drive)
                 .setMessage(R.string.edit_profile_google_drive_failed_authorization)
-                .setPositiveButton(R.string.edit_profile_imgur) { dialog, which -> uploadImage(EditProfileViewModel.Imgur) }
+                .setPositiveButton(R.string.edit_profile_imgur) { dialog, which -> uploadImage(EditProfileViewModel.ProfilePictureStorageService.IMGUR) }
                 .setNegativeButton(R.string.button_cancel) { dialog, which -> }
         builder.create().show();
     }
@@ -510,13 +597,13 @@ class EditProfileActivity : BaseMenuActivity() {
         PictureUploadProgressDialog.newInstance(mDrive).show(supportFragmentManager, "uploadImage")
     }
 
-    private fun uploadImage(uploadService: String) {
-        editProfileViewModel.uploadService = uploadService
+    private fun uploadImage(uploadService: EditProfileViewModel.ProfilePictureStorageService) {
+        editProfileViewModel.storageService = uploadService
         when (uploadService) {
-            EditProfileViewModel.GoogleDrive -> {
+            EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> {
                 requestGDriveAccess()
             }
-            EditProfileViewModel.Imgur -> {
+            EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
                 PictureUploadProgressDialog.newInstance().show(supportFragmentManager, "uploadImage")
             }
             else -> throw IllegalStateException()
