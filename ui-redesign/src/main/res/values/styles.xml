@@ -51,10 +51,6 @@
         <item name="android:background">@drawable/white_button_background</item>
     </style>
 
-    <style name="DashButton.White.BlueText.BlueBorder" parent="DashButton.White.BlueText">
-        <item name="android:background">@drawable/white_button_background_blue_border</item>
-    </style>
-
     <style name="DashButton.Gray" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/gray_button_text</item>
         <item name="android:background">@drawable/gray_button_background</item>

@@ -105,7 +105,7 @@
 
                     <Button
                         android:id="@+id/cancel"
-                        style="@style/DashButton.White.BlueText.BlueBorder"
+                        style="@style/DashButton.White.Outline"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="9dp"
@@ -158,7 +158,7 @@
 
             <Button
                 android:id="@+id/cancel_fetching"
-                style="@style/DashButton.White.BlueText.BlueBorder"
+                style="@style/DashButton.White.Outline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="40dp"
