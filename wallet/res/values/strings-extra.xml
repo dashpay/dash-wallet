@@ -438,6 +438,20 @@
     <string name="image_cropper_title">Move and Zoom your photo to find the perfect fit</string>
     <string name="select">Select</string>
     <string name="unable_to_load_image">Unable to load image.</string>
+    <string name="profile_picture_upload_error_title">Upload Error</string>
+    <string name="profile_picture_upload_error_message">Unable to upload your picture.\nPlease try again.</string>
+    <string name="profile_picture_upload_try_again">Try again</string>
+    <string name="profile_picture_uploading_title">Please Wait</string>
+    <string name="profile_picture_uploading_message">Uploading your picture to the network</string>
+    <string name="picture_upload_policy">Picture Upload Policy</string>
+    <string name="imgur_policy_1">The image you select will be uploaded to Imgur anonymously.</string>
+    <string name="imgur_policy_2">Image uploaded can be viewed publicly by anyone.</string>
+    <string name="imgur_policy_3">You can always delete the image uploaded, as long as you have access to this wallet.</string>
+    <string name="profile_picture_delete_title">Are you sure?</string>
+    <string name="profile_picture_delete_message">This image will no longer be used on the Dash network</string>
+    <string name="agree">Agree</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
 
     <string name="updating_profile">Updating Profile on Dash Network</string>
     <string name="error_updating_profile_try_again">Try Again</string>
@@ -458,7 +472,10 @@
     <string name="gravatar_disclaimer">Your Email is not stored in the DashPay wallet nor on any servers. It is used once to get your Gravatar account details and then discarded.</string>
     <string name="gravatar_email_error">Unable to fetch your Gravatar. Please enter a valid Gravatar email ID.</string>
 
-
-
+    <string name="where_to_store_your_picture">Where would you like to store your picture?</string>
+    <string name="external_storage_disclaimer">Your image will always be in your control. Dash does not store any of your data including your profile picture.</string>
+    <string name="select_source_sign_in_required">Sign in required</string>
+    <string name="select_source_google_drive">Google Drive</string>
+    <string name="select_source_no_sign_in_required">No account required</string>
 
 </resources>
