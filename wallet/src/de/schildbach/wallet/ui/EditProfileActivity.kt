@@ -285,6 +285,7 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun showUploadedProfilePicture(url: String?) {
+        profilePictureChanged = true
         if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
             uploadProfilePictureStateDialog!!.dismiss()
         }
