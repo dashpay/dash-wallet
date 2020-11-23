@@ -32,8 +32,6 @@ import android.widget.*
 import androidx.annotation.NonNull
 import androidx.annotation.Nullable
 import androidx.appcompat.app.AlertDialog
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
@@ -48,6 +46,8 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 open class ExternalUrlProfilePictureDialog : DialogFragment() {
 
@@ -139,7 +139,7 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
 
                 cleanup()
 
-                if (edit.text.isEmpty() || !isTextValid(edit.text.trim().toString())) {
+                if (edit.text.isEmpty()) {
 
                     button_ok.isEnabled = false
                     return
@@ -153,18 +153,23 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
         button_ok.setOnClickListener {
-            KeyboardUtil.hideKeyboard(requireContext(), edit)
-            cleanup()
-
-            button_ok.isEnabled = false
-
-            val pictureUrl = edit.text.trim().toString()
-            (pendingWorkIcon.drawable as AnimationDrawable).start()
-
-            viewSwitcher.showNext()
-
-            loadFromString(pictureUrl)
             imitateUserInteraction()
+            if (!isTextValid(edit.text.trim().toString())) {
+                showError()
+            } else {
+                KeyboardUtil.hideKeyboard(requireContext(), edit)
+                cleanup()
+
+                button_ok.isEnabled = false
+
+                val pictureUrl = edit.text.trim().toString()
+                (pendingWorkIcon.drawable as AnimationDrawable).start()
+
+                viewSwitcher.showNext()
+
+                loadFromString(pictureUrl)
+                imitateUserInteraction()
+            }
         }
         button_cancel.setOnClickListener {
             KeyboardUtil.hideKeyboard(requireContext(), edit)
@@ -193,7 +198,14 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
     }
 
     protected open fun isTextValid(text: String): Boolean {
-        return true
+        if (text.length > 256) {
+            return false
+        }
+
+        val VALID_URL_REGEX: Pattern = Pattern.compile("_^(?:(?:https?|ftp)://)(?:\\S+(?::\\S*)?@)?(?:(?!10(?:\\.\\d{1,3}){3})(?!127(?:\\.\\d{1,3}){3})(?!169\\.254(?:\\.\\d{1,3}){2})(?!192\\.168(?:\\.\\d{1,3}){2})(?!172\\.(?:1[6-9]|2\\d|3[0-1])(?:\\.\\d{1,3}){2})(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}(?:\\.(?:[1-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))|(?:(?:[a-z\\x{00a1}-\\x{ffff}0-9]+-?)*[a-z\\x{00a1}-\\x{ffff}0-9]+)(?:\\.(?:[a-z\\x{00a1}-\\x{ffff}0-9]+-?)*[a-z\\x{00a1}-\\x{ffff}0-9]+)*(?:\\.(?:[a-z\\x{00a1}-\\x{ffff}]{2,})))(?::\\d{2,5})?(?:/[^\\s]*)?\$_iuS")
+
+        val matcher: Matcher = VALID_URL_REGEX.matcher(text)
+        return matcher.find()
     }
 
     protected open fun loadFromString(text: String) {
@@ -245,6 +257,11 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
                         }
                     }
                 })
+    }
+
+    private fun showError() {
+        publicUrlEnterUrl.text = getString(errorMessageId)
+        publicUrlEnterUrl.setTextColor(resources.getColor(R.color.dash_red))
     }
 
     private fun convertUrlIfSuitable(pictureUrlBase: String): String {
