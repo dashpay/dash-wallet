@@ -486,14 +486,6 @@ class EditProfileActivity : BaseMenuActivity() {
             } else {
                 UploadPolicyDialog().show(supportFragmentManager, null)
             }
-            /*when (it) {
-                EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
-                    UploadPolicyDialog().show(supportFragmentManager, null)
-                }
-                EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> {
-                    requestGDriveAccess()
-                }
-            }*/
         })
         ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
     }
@@ -563,7 +555,7 @@ class EditProfileActivity : BaseMenuActivity() {
         return FileProvider.getUriForFile(walletApplication, "${walletApplication.packageName}.file_attachment", file)
     }
 
-    //TODO: Not sure if we need this
+    //TODO: leave this for now, we might need it later
     //if the signed in do we need to do it again?
     private fun checkGDriveAccess() {
         object : Thread() {
