@@ -454,9 +454,9 @@
     <string name="no">No</string>
 
     <string name="updating_profile">Updating Profile on Dash Network</string>
-    <string name="external_storage_disclaimer_one">No account information is stored on the Dash Network or by the DashPay wallet.</string>
-    <string name="external_storage_disclaimer_two">Image uploaded can be viewed publicly by anyone.</string>
-    <string name="external_storage_disclaimer_three">You can always delete or change the image as long as you have access to the wallet on this device.</string>
+    <string name="google_drive_policy_one">No account information is stored on the Dash Network or by the DashPay wallet.</string>
+    <string name="google_drive_policy_two">Image uploaded can be viewed publicly by anyone.</string>
+    <string name="google_drive_policy_three">You can always delete or change the image as long as you have access to the wallet on this device.</string>
 
     <string name="upload_image_message">Uploading your picture to the network</string>
     <string name="upload_image_please_wait">Please Wait</string>

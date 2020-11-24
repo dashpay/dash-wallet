@@ -71,9 +71,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     var googleDrive: Drive? = null
 
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
-    val imgurDialogAcceptLiveData = MutableLiveData<Boolean>()
+    val uploadDialogAcceptLiveData = MutableLiveData<Boolean>()
     val deleteProfilePictureConfirmationLiveData = MutableLiveData<Boolean>()
-
 
     val profilePictureFile by lazy {
         try {

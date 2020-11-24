@@ -265,9 +265,10 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
             }
         })
-        editProfileViewModel.imgurDialogAcceptLiveData.observe(this, Observer { accepted ->
+        editProfileViewModel.uploadDialogAcceptLiveData.observe(this, Observer { accepted ->
             if (accepted) {
-                editProfileViewModel.uploadProfilePicture()
+                walletApplication.configuration.setAcceptedUploadPolicy(editProfileViewModel.storageService.name, true)
+                startUploadProcess()
             }
         })
         editProfileViewModel.deleteProfilePictureConfirmationLiveData.observe(this, Observer { accepted ->
@@ -275,6 +276,13 @@ class EditProfileActivity : BaseMenuActivity() {
                 showProfilePictureServiceDialog(false)
             }
         })
+    }
+
+    private fun startUploadProcess() {
+        when (editProfileViewModel.storageService) {
+            EditProfileViewModel.ProfilePictureStorageService.IMGUR -> editProfileViewModel.uploadProfilePicture()
+            EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> requestGDriveAccess()
+        }
     }
 
     private fun showUploadingDialog() {
@@ -470,14 +478,19 @@ class EditProfileActivity : BaseMenuActivity() {
         }
         selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer {
             editProfileViewModel.storageService = it
-            when (it) {
+            if (walletApplication.configuration.getAcceptedUploadPolicy(editProfileViewModel.storageService.name)) {
+                startUploadProcess()
+            } else {
+                UploadPolicyDialog().show(supportFragmentManager, null)
+            }
+            /*when (it) {
                 EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
-                    ImgurPolicyDialog().show(supportFragmentManager, null)
+                    UploadPolicyDialog().show(supportFragmentManager, null)
                 }
                 EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> {
                     requestGDriveAccess()
                 }
-            }
+            }*/
         })
         ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
     }

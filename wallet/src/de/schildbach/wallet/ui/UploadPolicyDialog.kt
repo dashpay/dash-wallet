@@ -26,12 +26,9 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.imgur_policy_dialog.*
-import kotlinx.android.synthetic.main.profile_picture_state_dialog.cancel_btn
+import kotlinx.android.synthetic.main.upload_policy_dialog.*
 
-class ImgurPolicyDialog : DialogFragment() {
-
-    private lateinit var editProfileViewModel: EditProfileViewModel
+class UploadPolicyDialog : DialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,15 +36,20 @@ class ImgurPolicyDialog : DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.imgur_policy_dialog, container, false)
+        return inflater.inflate(R.layout.upload_policy_dialog, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val editProfileViewModel = ViewModelProvider(requireActivity()).get(EditProfileViewModel::class.java)
+        if (editProfileViewModel.storageService == EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE) {
+            policy_text_one.setText(R.string.google_drive_policy_one)
+            policy_text_three.setText(R.string.google_drive_policy_two)
+            policy_text_three.setText(R.string.google_drive_policy_three)
+        }
         agree_btn.setOnClickListener {
             dismiss()
-            editProfileViewModel.imgurDialogAcceptLiveData.postValue(true)
+            editProfileViewModel.uploadDialogAcceptLiveData.postValue(true)
         }
         cancel_btn.setOnClickListener {
             dismiss()
@@ -61,5 +63,4 @@ class ImgurPolicyDialog : DialogFragment() {
         dialog?.window?.setLayout(width, height)
         dialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
-
 }
