@@ -55,7 +55,7 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
     companion object {
 
         private val log = LoggerFactory.getLogger(ExternalUrlProfilePictureDialog::class.java)
-        private val VALID_URL_REGEX: Pattern = Pattern.compile("\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]")
+        private val VALID_URL_REGEX: Pattern = Pattern.compile("\\b(https?)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]")
 
         private const val ARG_INITIAL_URL = "arg_initial_url"
 
