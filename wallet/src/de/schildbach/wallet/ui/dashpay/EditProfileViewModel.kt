@@ -227,10 +227,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     fun uploadProfilePicture() {
         when (storageService) {
             ProfilePictureStorageService.IMGUR -> uploadProfilePictureToImgur(profilePictureFile!!)
-            ProfilePictureStorageService.GOOGLE_DRIVE -> {
-                //TODO: Upload to Google Drive
-                uploadToGoogleDrive(googleDrive!!)
-            }
+            ProfilePictureStorageService.GOOGLE_DRIVE -> uploadToGoogleDrive(googleDrive!!)
         }
     }
 
@@ -335,13 +332,9 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                 val fileId = GoogleDriveService.uploadImage(drive,
                         UUID.randomUUID().toString() + ".jpg",
                         profilePictureFile!!.readBytes(), secureId)
-                if (fileId != null) {
-                    log.info("upload image: complete")
-                    profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${fileId}"))
-                } else {
-                    profilePictureUploadLiveData.postValue(Resource.error("gdrive: Failed to upload picture to Google Drive"))
-                }
 
+                log.info("gdrive upload image: complete")
+                profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${fileId}"))
             } catch (e: Exception) {
                 log.info("gdrive: upload failure: $e")
                 e.printStackTrace()

@@ -125,7 +125,12 @@ class UploadProfilePictureStateDialog : DialogFragment() {
             }
             UpdateProfileError.AUTHENTICATION -> {
                 icon.setImageDrawable(ContextCompat.getDrawable(requireContext(), R.drawable.ic_error))
-                title.setText(R.string.select_source_google_drive)
+                title.setText(
+                        when (editProfileViewModel.storageService) {
+                            EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> R.string.select_source_google_drive
+                            EditProfileViewModel.ProfilePictureStorageService.IMGUR -> R.string.edit_profile_imgur
+                        }
+                )
                 subtitle.setText(R.string.google_drive_failed_authorization)
                 try_again_btn.visibility = View.VISIBLE
                 cancel_btn.visibility = View.VISIBLE
