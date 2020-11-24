@@ -65,41 +65,6 @@ object GoogleDriveService {
         }
     }
 
-    /*fun uploadImage(executor: Executor, drive: Drive, fileName: String?, imageBytes: ByteArray?, secureId: String): Task<String> {
-        log.info("creating new backup file on gdrive with name={}", fileName)
-        return Tasks.call(executor, {
-
-            // 1 - create folder
-            val folder = getOrCreateImageFolder(drive, secureId)
-
-            // 2 - metadata
-            val metadata = File()
-                    .setParents(listOf(folder.id))
-                    .setMimeType("image/jpeg")
-                    .setName(fileName)
-
-            // 3 - content
-            val content = ByteArrayContent("image/jpeg", imageBytes)
-
-            // 4 - execute
-            val file = drive.files()
-                    .create(metadata, content)
-                    .setFields("id,parents,appProperties")
-                    .execute()
-                    ?: throw IOException("failed to create file on gdrive with null result")
-            val id = file.id
-
-            // 5 - set permission to public
-            val permission = Permission()
-            permission.setType("anyone").role = "reader"
-
-            // 6 - permissions execute
-            val result = drive.permissions().create(id, permission).execute()
-                    ?: throw IOException("failed to set permissions on gdrive with null result")
-            id
-        })
-    }*/
-
     fun uploadImage(drive: Drive, fileName: String?, imageBytes: ByteArray?, secureId: String): String {
         log.info("creating new backup file on gdrive with name={}", fileName)
 
