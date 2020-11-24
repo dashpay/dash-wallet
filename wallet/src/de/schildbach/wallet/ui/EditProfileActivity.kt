@@ -254,6 +254,7 @@ class EditProfileActivity : BaseMenuActivity() {
         editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
             when (it.status) {
                 Status.LOADING -> {
+                    setEditingState(true)
                     showUploadingDialog()
                 }
                 Status.SUCCESS -> {
@@ -321,7 +322,7 @@ class EditProfileActivity : BaseMenuActivity() {
             editProfileViewModel.dashPayProfile!!.avatarUrl
         }
 
-        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl?:"")
+        editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl ?: "")
         save.isEnabled = false
         finish()
 
@@ -393,7 +394,6 @@ class EditProfileActivity : BaseMenuActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode != RESULT_CANCELED) {
             when (requestCode) {
                 REQUEST_CODE_IMAGE -> {
                     if (resultCode == RESULT_OK) {
@@ -427,13 +427,20 @@ class EditProfileActivity : BaseMenuActivity() {
                         } else {
                             showProfilePictureServiceDialog()
                         }
+                    } else if (resultCode == Activity.RESULT_CANCELED) {
+                        // if crop was canceled, then return the externalUrl to its original state
+                        if (externalUrlSharedViewModel.externalUrl != null)
+                            externalUrlSharedViewModel.externalUrl = if (editProfileViewModel.dashPayProfile!!.avatarUrl == "") {
+                                null
+                            } else {
+                                Uri.parse(editProfileViewModel.dashPayProfile!!.avatarUrl)
+                            }
                     }
                 }
                 REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN -> {
                     handleGdriveSigninResult(data!!)
                 }
             }
-        }
     }
 
     private fun saveImageWithAuthority(uri: Uri) {
@@ -461,7 +468,7 @@ class EditProfileActivity : BaseMenuActivity() {
             DeleteProfilePictureConfirmationDialog().show(supportFragmentManager, null)
             return
         }
-        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer <EditProfileViewModel.ProfilePictureStorageService> {
+        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer {
             editProfileViewModel.storageService = it
             when (it) {
                 EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {

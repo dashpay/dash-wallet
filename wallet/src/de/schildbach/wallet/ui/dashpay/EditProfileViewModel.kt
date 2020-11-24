@@ -259,16 +259,18 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                         profilePictureUploadLiveData.postValue(Resource.error(deleteResponse.message()))
                         return@launch
                     } else {
+                        log.info("imgur: delete successful ($imgurDeleteUrl)")
                         config.imgurDeleteHash = ""
                     }
                 } catch (e: Exception) {
                     var canceled = false
                     if (e is IOException) {
                         canceled = "Canceled".equals(e.message, true)
+                        log.info("imgur: delete canceled ($imgurDeleteUrl)")
                     }
                     if (!canceled) {
                         profilePictureUploadLiveData.postValue(Resource.error(e))
-                        log.error(e.message)
+                        log.error("imgur: delete failed ($imgurDeleteUrl): ${e.message}")
                     }
                 }
             }
@@ -294,26 +296,31 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                     val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
                     val jsonAdapter = moshi.adapter(ImgurUploadResponse::class.java)
                     val imgurUploadResponse = jsonAdapter.fromJson(responseBody.string())
+                    log.info("imgur: response: $imgurUploadResponse")
                     if (imgurUploadResponse?.success == true && imgurUploadResponse.data != null) {
                         config.imgurDeleteHash = imgurUploadResponse.data.deletehash
                         val avatarUrl = imgurUploadResponse.data.link
                         Log.d("AvatarUrl", avatarUrl)
                         dashPayProfile?.avatarUrl = avatarUrl
+                        log.info("imgur: upload successful (${response.code()})")
                         profilePictureUploadLiveData.postValue(Resource.success(avatarUrl))
                     } else {
+                        log.error("imgur: upload failed: response invalid")
                         profilePictureUploadLiveData.postValue(Resource.error(response.message()))
                     }
                 } else {
+                    log.error("imgur: upload failed (${response.code()}): ${response.message()}")
                     profilePictureUploadLiveData.postValue(Resource.error(response.message()))
                 }
             } catch (e: Exception) {
                 var canceled = false
                 if (e is IOException) {
                     canceled = "Canceled".equals(e.message, true)
+                    log.info("imgur: upload cancelled")
                 }
                 if (!canceled) {
                     profilePictureUploadLiveData.postValue(Resource.error(e))
-                    log.error(e.message)
+                    log.error("imgur: upload failed: ${e.message}", e)
                 }
             }
         }

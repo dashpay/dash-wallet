@@ -113,6 +113,7 @@ class CropImageActivity : InteractionAwareActivity() {
             }
         }
         cancel_btn.setOnClickListener {
+            setResult(Activity.RESULT_CANCELED)
             finish()
         }
     }
