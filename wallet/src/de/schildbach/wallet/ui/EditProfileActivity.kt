@@ -305,7 +305,8 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun showUploadErrorDialog(error: UpdateProfileError) {
-        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
+        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog != null &&
+                uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
             uploadProfilePictureStateDialog!!.showError(error)
             return
         } else if (uploadProfilePictureStateDialog != null) {
@@ -597,7 +598,6 @@ class EditProfileActivity : BaseMenuActivity() {
             applyGdriveAccessGranted(account)
         } catch (e: Exception) {
             log.error("Google Drive sign-in failed, could not get account: ", e)
-            Toast.makeText(this, "Sign-in failed.", Toast.LENGTH_SHORT).show()
             applyGdriveAccessDenied()
         }
     }

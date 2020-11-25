@@ -65,9 +65,9 @@ class UploadProfilePictureStateDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        updateUiState(showError)
         editProfileViewModel = ViewModelProvider(requireActivity())
                 .get(EditProfileViewModel::class.java)
+        updateUiState(showError)
 
         val file = editProfileViewModel.profilePictureFile
         if (file != null) {
@@ -78,7 +78,9 @@ class UploadProfilePictureStateDialog : DialogFragment() {
 
         try_again_btn.setOnClickListener {
             dismiss()
-            editProfileViewModel.uploadProfilePicture()
+            if (showError != UpdateProfileError.AUTHENTICATION) {
+                editProfileViewModel.uploadProfilePicture()
+            }
         }
         cancel_btn.setOnClickListener {
             if (showError != UpdateProfileError.NO_ERROR) {
@@ -132,7 +134,7 @@ class UploadProfilePictureStateDialog : DialogFragment() {
                         }
                 )
                 subtitle.setText(R.string.google_drive_failed_authorization)
-                try_again_btn.visibility = View.VISIBLE
+                try_again_btn.visibility = View.GONE
                 cancel_btn.visibility = View.VISIBLE
             }
         }
