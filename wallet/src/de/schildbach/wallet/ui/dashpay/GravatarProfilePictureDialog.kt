@@ -55,8 +55,8 @@ class GravatarProfilePictureDialog : ExternalUrlProfilePictureDialog() {
 
     override fun loadFromString(email: String) {
         val md5Hash = getMd5Hash(email)
-        // fetch size 200px (s=200) and fail if not found (d=404)
-        val url = "https://www.gravatar.com/avatar/$md5Hash?s=200&d=404"
+        // fetch size 200px (s=200) and fail if not found (d=404) and the G rated image (rated=g)
+        val url = "https://www.gravatar.com/avatar/$md5Hash?s=200&d=404&rating=g"
         loadUrl(url)
     }
 
