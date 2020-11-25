@@ -36,11 +36,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
                 R.string.shortcut_secure_now,
                 this)
     }
-    val joinDashPayButton: ShortcutButton by lazy {
-        ShortcutButton(context, 0,
-                R.string.shortcut_action_join_dashpay, this,
-                R.drawable.blue_button_background, R.color.dash_white)
-    }
     val receiveButton: ShortcutButton by lazy {
         ShortcutButton(context,
                 R.drawable.ic_shortcut_receive,
@@ -88,7 +83,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
     private val secondaryItems = mutableListOf<ShortcutButton>()
 
     private var showSecureNow: Boolean = true
-    private var showJoinDashPay: Boolean = true
     private var showPayToContact: Boolean = true
 
     private var onShortcutClickListener: OnClickListener? = null
@@ -117,7 +111,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
 
     fun setup() {
         addShortcut(secureNowButton)
-        addShortcut(joinDashPayButton)
         secondaryItems.add(scanToPayButton)
         if (isSmallScreen) {
             secondaryItems.add(receiveButton)
@@ -138,10 +131,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
             displayed.add(secureNowButton)
             View.VISIBLE
         } else View.GONE
-        joinDashPayButton.visibility = if (showJoinDashPay) {
-            displayed.add(joinDashPayButton)
-            View.VISIBLE
-        } else View.GONE
         if (!isSmallScreen) {
             displayed.add(receiveButton)
         }
@@ -156,11 +145,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
 
     fun showSecureNow(showSecureNow: Boolean) {
         this.showSecureNow = showSecureNow
-        refresh()
-    }
-
-    fun showJoinDashPay(showJoinDashPay: Boolean) {
-        this.showJoinDashPay = showJoinDashPay
         refresh()
     }
 

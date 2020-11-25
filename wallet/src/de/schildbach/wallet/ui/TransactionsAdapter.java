@@ -311,6 +311,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             ((JoinDashPayViewHolder) holder).bind(v -> {
                 if (onClickListener != null) {
                     onClickListener.onJoinDashPayClicked();
+                    preferences.edit().putBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, true).apply();
+                    notifyDataSetChanged();
                 }
             });
         }

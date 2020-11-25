@@ -92,9 +92,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 updateSyncState(it)
             }
         })
-        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, Observer {
-            shortcuts_pane.showJoinDashPay(it)
-        })
     }
 
     override fun onResume() {
@@ -107,8 +104,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
             when (v) {
                 shortcuts_pane.secureNowButton -> {
                     handleVerifySeed()
-                }
-                shortcuts_pane.joinDashPayButton -> {
                 }
                 shortcuts_pane.scanToPayButton -> {
                     handleScan(v)
