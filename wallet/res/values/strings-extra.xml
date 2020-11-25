@@ -478,4 +478,6 @@
     <string name="select_source_google_drive">Google Drive</string>
     <string name="select_source_no_sign_in_required">No account required</string>
 
+    <string name="join_dashpay_subtitle">Create Username, add your friends…</string>
+
 </resources>

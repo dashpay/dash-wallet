@@ -114,7 +114,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     fun initViewModel() {
         viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
-        viewModel.isAbleToCreateIdentityData.observe(this, Observer {
+        viewModel.isAbleToCreateIdentityLiveData.observe(this, Observer {
             // empty observer just to trigger data loading
             // viewModel is shared with some fragments keeping the observer active
             // inside the parent Activity will avoid recreation of relatively complex
@@ -134,6 +134,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             Handler().postDelayed({
                 startActivity(Intent(this, it))
             }, 500)
+        })
+        viewModel.showCreateUsernameEvent.observe(this, {
+            startActivity(Intent(this, CreateUsernameActivity::class.java))
         })
     }
 

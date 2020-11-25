@@ -17,15 +17,12 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.ui.CreateUsernameActivity
-import de.schildbach.wallet.ui.MainActivity
 import de.schildbach.wallet.ui.MainActivityViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_upgrade_to_evolution.*
@@ -60,7 +57,7 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
 
     private fun initViewModel() {
         mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
-        mainActivityViewModel.isAbleToCreateIdentityData.observe(viewLifecycleOwner, Observer {
+        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, Observer {
             upgradeBtn.isEnabled = it
         })
     }
