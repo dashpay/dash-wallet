@@ -42,6 +42,7 @@ class MoreFragment : Fragment(R.layout.activity_more) {
 
     private var blockchainState: BlockchainState? = null
     private lateinit var editProfileViewModel: EditProfileViewModel
+    private lateinit var mainActivityViewModel: MainActivityViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -83,10 +84,14 @@ class MoreFragment : Fragment(R.layout.activity_more) {
 
         }
         edit_update_switcher.isVisible = false
+        join_dashpay_btn.setOnClickListener {
+            mainActivityViewModel.goBackAndStartActivityEvent.postValue(CreateUsernameActivity::class.java)
+        }
         initViewModel()
     }
 
     private fun initViewModel() {
+        mainActivityViewModel = ViewModelProvider(requireActivity()).get(MainActivityViewModel::class.java)
         editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
 
         // observe our profile
@@ -130,6 +135,14 @@ class MoreFragment : Fragment(R.layout.activity_more) {
                         }
                     }
                 }
+            }
+        })
+
+        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, {
+            join_dashpay_container.visibility = if (it) {
+                View.VISIBLE
+            } else {
+                View.GONE
             }
         })
     }
