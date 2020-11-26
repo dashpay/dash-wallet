@@ -375,7 +375,7 @@
     <string name="processing_username_unavailable_title">Username Unavailable</string>
     <string name="processing_username_unavailable_subtitle">Please choose another</string>
 
-    <string name="dashpay_upgrade_fee">DashPay Upgrade Fee</string>
+    <string name="dashpay_upgrade_fee">Upgrade Fee</string>
     <string name="search_user_find_a_user">Find a user on the Dash Network</string>
     <string name="search_for_a_user">Search for a User on the Dash Network</string>
     <string name="search_user_input_placeholder">enter the username to search here</string>
