@@ -15,9 +15,13 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Environment
+import android.provider.Settings
+import androidx.core.content.FileProvider
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -44,10 +48,15 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
+import java.util.*
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import com.google.api.services.drive.Drive
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
+
 
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
 
@@ -59,11 +68,11 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     private var uploadProfilePictureCall: Call? = null
     lateinit var storageService: ProfilePictureStorageService
     private val config by lazy { WalletApplication.getInstance().configuration }
+    var googleDrive: Drive? = null
 
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
-    val imgurDialogAcceptLiveData = MutableLiveData<Boolean>()
+    val uploadDialogAcceptLiveData = MutableLiveData<Boolean>()
     val deleteProfilePictureConfirmationLiveData = MutableLiveData<Boolean>()
-
 
     val profilePictureFile by lazy {
         try {
@@ -73,6 +82,10 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
             log.error(ex.message, ex)
             null
         }
+    }
+
+    val profilePictureUri: Uri by lazy {
+        FileProvider.getUriForFile(walletApplication, "${walletApplication.packageName}.file_attachment", profilePictureFile!!)
     }
 
     val onTmpPictureReadyForEditEvent = SingleLiveEvent<File>()
@@ -214,9 +227,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     fun uploadProfilePicture() {
         when (storageService) {
             ProfilePictureStorageService.IMGUR -> uploadProfilePictureToImgur(profilePictureFile!!)
-            ProfilePictureStorageService.GOOGLE_DRIVE -> {
-                //TODO: Upload to Google Drive
-            }
+            ProfilePictureStorageService.GOOGLE_DRIVE -> uploadToGoogleDrive(googleDrive!!)
         }
     }
 
@@ -307,6 +318,27 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                     profilePictureUploadLiveData.postValue(Resource.error(e))
                     log.error("imgur: upload failed: ${e.message}", e)
                 }
+            }
+        }
+    }
+
+    @SuppressLint("HardwareIds")
+    fun uploadToGoogleDrive(drive: Drive) {
+
+        viewModelScope.launch(Dispatchers.IO) {
+            profilePictureUploadLiveData.postValue(Resource.loading(""))
+            try {
+                val secureId = Settings.Secure.getString(walletApplication.contentResolver, Settings.Secure.ANDROID_ID)
+                val fileId = GoogleDriveService.uploadImage(drive,
+                        UUID.randomUUID().toString() + ".jpg",
+                        profilePictureFile!!.readBytes(), secureId)
+
+                log.info("gdrive upload image: complete")
+                profilePictureUploadLiveData.postValue(Resource.success("https://drive.google.com/uc?export=view&id=${fileId}"))
+            } catch (e: Exception) {
+                log.info("gdrive: upload failure: $e")
+                e.printStackTrace()
+                profilePictureUploadLiveData.postValue(Resource.error(e))
             }
         }
     }

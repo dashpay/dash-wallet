@@ -44,14 +44,22 @@ import androidx.lifecycle.ViewModelProvider
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
+import com.google.android.gms.auth.GoogleAuthException
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.common.api.ApiException
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
+import com.google.api.services.drive.Drive
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
-import kotlinx.android.synthetic.main.contact_request_view.*
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -65,6 +73,10 @@ class EditProfileActivity : BaseMenuActivity() {
         const val REQUEST_CODE_CHOOSE_PICTURE_PERMISSION = 2
         const val REQUEST_CODE_TAKE_PICTURE_PERMISSION = 3
         const val REQUEST_CODE_CROP_IMAGE = 4
+        const val REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN = 5
+
+        protected val log = LoggerFactory.getLogger(EditProfileActivity::class.java)
+
     }
 
     private lateinit var editProfileViewModel: EditProfileViewModel
@@ -76,6 +88,8 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private var profilePictureChanged = false
     private var uploadProfilePictureStateDialog: UploadProfilePictureStateDialog? = null
+
+    private var mDrive: Drive? = null
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -234,6 +248,7 @@ class EditProfileActivity : BaseMenuActivity() {
             }
             profilePictureChanged = true
         })
+
         editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
             when (it.status) {
                 Status.LOADING -> {
@@ -244,13 +259,19 @@ class EditProfileActivity : BaseMenuActivity() {
                     showUploadedProfilePicture(it.data)
                 }
                 Status.ERROR -> {
-                    showUploadErrorDialog()
+                    val error = if (it.exception is GoogleAuthException || it.exception is GoogleAuthIOException) {
+                        UpdateProfileError.AUTHENTICATION
+                    } else {
+                        UpdateProfileError.UPLOAD
+                    }
+                    showUploadErrorDialog(error)
                 }
             }
         })
-        editProfileViewModel.imgurDialogAcceptLiveData.observe(this, Observer { accepted ->
+        editProfileViewModel.uploadDialogAcceptLiveData.observe(this, Observer { accepted ->
             if (accepted) {
-                editProfileViewModel.uploadProfilePicture()
+                walletApplication.configuration.setAcceptedUploadPolicy(editProfileViewModel.storageService.name, true)
+                startUploadProcess()
             }
         })
         editProfileViewModel.deleteProfilePictureConfirmationLiveData.observe(this, Observer { accepted ->
@@ -258,6 +279,13 @@ class EditProfileActivity : BaseMenuActivity() {
                 showProfilePictureServiceDialog(false)
             }
         })
+    }
+
+    private fun startUploadProcess() {
+        when (editProfileViewModel.storageService) {
+            EditProfileViewModel.ProfilePictureStorageService.IMGUR -> editProfileViewModel.uploadProfilePicture()
+            EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE -> requestGDriveAccess()
+        }
     }
 
     private fun showUploadingDialog() {
@@ -276,14 +304,15 @@ class EditProfileActivity : BaseMenuActivity() {
         Glide.with(this).load(url).circleCrop().into(dashpayUserAvatar)
     }
 
-    private fun showUploadErrorDialog() {
-        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
-            uploadProfilePictureStateDialog!!.showError()
+    private fun showUploadErrorDialog(error: UpdateProfileError) {
+        if (uploadProfilePictureStateDialog != null && uploadProfilePictureStateDialog!!.dialog != null &&
+                uploadProfilePictureStateDialog!!.dialog!!.isShowing) {
+            uploadProfilePictureStateDialog!!.showError(error)
             return
         } else if (uploadProfilePictureStateDialog != null) {
             uploadProfilePictureStateDialog!!.dialog?.dismiss()
         }
-        uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance(true)
+        uploadProfilePictureStateDialog = UploadProfilePictureStateDialog.newInstance(error)
         uploadProfilePictureStateDialog!!.show(supportFragmentManager, null)
     }
 
@@ -294,7 +323,7 @@ class EditProfileActivity : BaseMenuActivity() {
     fun save() {
         val displayName = display_name.text.toString().trim()
         val publicMessage = about_me.text.toString().trim()
-        //TODO: profilePictureChanged?
+
         val avatarUrl = if (profilePictureChanged) {
             if (externalUrlSharedViewModel.externalUrl != null) {
                 externalUrlSharedViewModel.externalUrl.toString()
@@ -308,6 +337,7 @@ class EditProfileActivity : BaseMenuActivity() {
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl ?: "")
         save.isEnabled = false
         finish()
+
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
@@ -419,6 +449,9 @@ class EditProfileActivity : BaseMenuActivity() {
                             }
                     }
                 }
+                REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN -> {
+                    handleGdriveSigninResult(data!!)
+                }
             }
     }
 
@@ -449,10 +482,10 @@ class EditProfileActivity : BaseMenuActivity() {
         }
         selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer {
             editProfileViewModel.storageService = it
-            when (it) {
-                EditProfileViewModel.ProfilePictureStorageService.IMGUR -> {
-                    ImgurPolicyDialog().show(supportFragmentManager, null)
-                }
+            if (walletApplication.configuration.getAcceptedUploadPolicy(editProfileViewModel.storageService.name)) {
+                startUploadProcess()
+            } else {
+                UploadPolicyDialog().show(supportFragmentManager, null)
             }
         })
         ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
@@ -521,5 +554,60 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun getFileUri(file: File): Uri {
         return FileProvider.getUriForFile(walletApplication, "${walletApplication.packageName}.file_attachment", file)
+    }
+
+    //TODO: leave this for now, we might need it later
+    //if the signed in do we need to do it again?
+    private fun checkGDriveAccess() {
+        object : Thread() {
+            override fun run() {
+                val signInAccount: GoogleSignInAccount? = GoogleDriveService.getSigninAccount(applicationContext)
+                if (signInAccount != null) {
+                    runOnUiThread { applyGdriveAccessGranted(signInAccount) }
+                } else {
+                    runOnUiThread { applyGdriveAccessDenied() }
+                }
+            }
+        }.start()
+    }
+
+    private fun requestGDriveAccess() {
+        val signInAccount = GoogleDriveService.getSigninAccount(applicationContext)
+        val googleSignInClient = GoogleSignIn.getClient(this, GoogleDriveService.getGoogleSigninOptions())
+        if (signInAccount == null) {
+            startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN)
+        } else {
+            googleSignInClient.revokeAccess()
+                    .addOnSuccessListener { aVoid: Void? -> startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN) }
+                    .addOnFailureListener { e: java.lang.Exception? ->
+                        log.error("could not revoke access to drive: ", e)
+                        applyGdriveAccessDenied()
+                    }
+        }
+    }
+
+    private fun applyGdriveAccessDenied() {
+        showUploadErrorDialog(UpdateProfileError.AUTHENTICATION)
+    }
+
+    private fun handleGdriveSigninResult(data: Intent) {
+        try {
+            log.info("gdrive: attempting to sign in to a google account")
+            val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
+                    ?: throw RuntimeException("empty account")
+            applyGdriveAccessGranted(account)
+        } catch (e: Exception) {
+            log.error("Google Drive sign-in failed, could not get account: ", e)
+            applyGdriveAccessDenied()
+        }
+    }
+
+    private fun applyGdriveAccessGranted(signInAccount: GoogleSignInAccount) {
+        log.info("gdrive: access granted to ${signInAccount.email} with: ${signInAccount.grantedScopes}")
+        mDrive = GoogleDriveService.getDriveServiceFromAccount(applicationContext, signInAccount!!)
+        log.info("gdrive: drive $mDrive")
+
+        editProfileViewModel.googleDrive = mDrive
+        editProfileViewModel.uploadProfilePicture()
     }
 }

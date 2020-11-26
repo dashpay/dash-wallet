@@ -26,26 +26,17 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet_test.R
-import org.slf4j.LoggerFactory
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel.ProfilePictureStorageService
 
 class ChooseStorageServiceDialog : DialogFragment() {
 
     companion object {
 
-        private val log = LoggerFactory.getLogger(ChooseStorageServiceDialog::class.java)
-
-        private const val ARG_INITIAL_URL = "arg_initial_url"
-
         @JvmStatic
         fun newInstance(): ChooseStorageServiceDialog {
             val dialog = ChooseStorageServiceDialog()
             return dialog
         }
-    }
-
-    private val initialUrl by lazy {
-        arguments?.getString(ARG_INITIAL_URL)
     }
 
     private lateinit var customView: View

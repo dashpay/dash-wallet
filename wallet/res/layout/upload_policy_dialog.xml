@@ -39,7 +39,7 @@
             app:srcCompat="@drawable/ic_activity_info" />
 
         <TextView
-            android:id="@+id/text_1"
+            android:id="@+id/policy_text_one"
             style="@style/MontserratRegular"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -59,11 +59,11 @@
             android:layout_marginStart="26dp"
             android:layout_marginTop="24dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/text_1"
+            app:layout_constraintTop_toBottomOf="@id/policy_text_one"
             app:srcCompat="@drawable/ic_activity_info" />
 
         <TextView
-            android:id="@+id/text_2"
+            android:id="@+id/policy_text_two"
             style="@style/MontserratRegular"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -83,17 +83,17 @@
             android:layout_marginStart="26dp"
             android:layout_marginTop="24dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/text_2"
+            app:layout_constraintTop_toBottomOf="@id/policy_text_two"
             app:srcCompat="@drawable/ic_activity_info" />
 
         <TextView
-            android:id="@+id/text_3"
+            android:id="@+id/policy_text_three"
             style="@style/MontserratRegular"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="26dp"
-            android:text="@string/imgur_policy_2"
+            android:text="@string/imgur_policy_3"
             android:textColor="@color/medium_gray"
             android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
@@ -109,7 +109,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/text_3">
+            app:layout_constraintTop_toBottomOf="@id/policy_text_three">
 
             <Button
                 android:id="@+id/agree_btn"
