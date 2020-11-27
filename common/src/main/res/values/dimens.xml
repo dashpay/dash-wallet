@@ -33,4 +33,6 @@
 
     <dimen name="space_medium">20dp</dimen>
 
+    <dimen name="identity_complete_text_size">18dp</dimen>
+
 </resources>
