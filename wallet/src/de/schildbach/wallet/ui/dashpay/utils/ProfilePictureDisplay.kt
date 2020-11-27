@@ -48,7 +48,7 @@ class ProfilePictureDisplay {
         fun display(avatarView: ImageView, avatarUrl: String, username: String) {
             val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
             if (avatarUrl.isNotEmpty()) {
-                Glide.with(avatarView.context)
+                Glide.with(avatarView.context.applicationContext)
                         .load(removePicZoomParameter(avatarUrl))
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                         .transform(ProfilePictureTransformation.create(avatarUrl))
@@ -64,7 +64,7 @@ class ProfilePictureDisplay {
         fun display(avatarView: ImageView, avatarLocalUri: Uri, lastModified: Long, username: String) {
             val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
             if (avatarLocalUri.encodedPath!!.isNotEmpty()) {
-                Glide.with(avatarView.context)
+                Glide.with(avatarView.context.applicationContext)
                         .load(avatarLocalUri)
                         .signature(ObjectKey(lastModified))
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
