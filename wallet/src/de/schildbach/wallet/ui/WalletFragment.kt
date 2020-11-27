@@ -92,9 +92,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 updateSyncState(it)
             }
         })
-        mainActivityViewModel.isAbleToCreateIdentityData.observe(viewLifecycleOwner, Observer {
-            shortcuts_pane.showJoinDashPay(it)
-        })
     }
 
     override fun onResume() {
@@ -107,9 +104,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
             when (v) {
                 shortcuts_pane.secureNowButton -> {
                     handleVerifySeed()
-                }
-                shortcuts_pane.joinDashPayButton -> {
-                    startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
                 }
                 shortcuts_pane.scanToPayButton -> {
                     handleScan(v)
@@ -131,6 +125,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
             }
         })
+    }
+
+    private fun joinDashPay() {
+        startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
     }
 
     private fun showHideSecureAction() {

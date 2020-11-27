@@ -24,10 +24,67 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <ViewFlipper
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/join_dashpay_container"
+                style="@style/MenuRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="0dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:id="@+id/join_dashpay_title"
+                    style="@style/MontserratSemiBold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/shortcut_action_join_dashpay"
+                    android:textColor="@android:color/black"
+                    android:textSize="14sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/join_dashpay_subtitle"
+                    style="@style/MontserratRegular"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="26dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="26dp"
+                    android:layout_marginBottom="22dp"
+                    android:gravity="center"
+                    android:text="@string/join_dashpay_more_subtitle"
+                    android:textColor="@color/dash_gray"
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/join_dashpay_title" />
+
+                <Button
+                    android:id="@+id/join_dashpay_btn"
+                    style="@style/DashButton.Blue"
+                    android:layout_width="110dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="30dp"
+                    android:layout_marginBottom="14dp"
+                    android:text="@string/join"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/join_dashpay_subtitle"
+                    app:layout_constraintVertical_bias="0" />
+
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <ViewFlipper
                 android:id="@+id/edit_update_switcher"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:animateFirstView="false"
                 android:inAnimation="@android:anim/fade_in"
                 android:measureAllChildren="false"
@@ -105,9 +162,13 @@
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <include layout="@layout/fragment_updating_profile" android:id="@+id/update_profile" />
+                <include
+                    android:id="@+id/update_profile"
+                    layout="@layout/fragment_updating_profile" />
 
-                <include layout="@layout/fragment_update_profile_error" android:id="@+id/error_updating_profile" />
+                <include
+                    android:id="@+id/error_updating_profile"
+                    layout="@layout/fragment_update_profile_error" />
 
             </ViewFlipper>
 
@@ -120,7 +181,7 @@
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/buy_and_sell"
                     style="@style/MenuRow"
-                    android:layout_marginTop="25dp">
+                    android:layout_marginTop="20dp">
 
                     <ImageView
                         android:id="@+id/buy_dash_icon"

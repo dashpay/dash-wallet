@@ -28,7 +28,7 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
 
     val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
 
-    val isAbleToCreateIdentityData = MediatorLiveData<Boolean>().apply {
+    val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailableData) {
             value = combineLatestData()
         }
@@ -43,7 +43,7 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
         }
     }
     val isAbleToCreateIdentity: Boolean
-        get() = isAbleToCreateIdentityData.value ?: false
+        get() = isAbleToCreateIdentityLiveData.value ?: false
 
     private fun combineLatestData(): Boolean {
         val isPlatformAvailable = isPlatformAvailableData.value ?: false
@@ -54,4 +54,5 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
     }
 
     val goBackAndStartActivityEvent = SingleLiveEvent<Class<*>>()
+    val showCreateUsernameEvent = SingleLiveEventExt<Unit>()
 }
