@@ -319,6 +319,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val text = getString(R.string.username_being_created, username)
 
         processing_identity.visibility = View.VISIBLE
+        registration_content.visibility = View.GONE
         choose_username_title.startAnimation(fadeOutAnimation)
         processing_identity.startAnimation(slideInAnimation)
         (processing_identity_loading_image.drawable as AnimationDrawable).start()
