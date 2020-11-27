@@ -27,9 +27,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/retry_icon"
+        app:layout_constraintEnd_toStartOf="@id/end_buttons"
         app:layout_constraintStart_toEndOf="@id/icon"
         app:layout_constraintTop_toTopOf="parent">
 
@@ -65,33 +66,37 @@
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <ImageView
-        android:id="@+id/forward_arrow"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_marginEnd="10dp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_circle_forward_arrow"
-        tools:visibility="visible" />
-
-    <TextView
-        android:id="@+id/retry_icon"
-        style="@style/DashButton.Blue"
+    <FrameLayout
+        android:id="@+id/end_buttons"
         android:layout_width="wrap_content"
-        android:layout_height="38dp"
-        android:layout_marginEnd="12dp"
-        android:drawablePadding="8dp"
-        android:gravity="center_vertical"
-        android:padding="5dp"
-        android:text="@string/processing_error_retry"
-        android:textColor="@color/dash_white"
-        android:textSize="12sp"
-        app:drawableStartCompat="@drawable/ic_retry"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/forward_arrow"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center_vertical"
+            android:visibility="gone"
+            app:srcCompat="@drawable/ic_circle_forward_arrow"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/retry_icon"
+            style="@style/DashButton.Blue"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:drawablePadding="8dp"
+            android:gravity="center_vertical"
+            android:padding="5dp"
+            android:text="@string/processing_error_retry"
+            android:textColor="@color/dash_white"
+            android:textSize="12sp"
+            app:drawableStartCompat="@drawable/ic_retry" />
+
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

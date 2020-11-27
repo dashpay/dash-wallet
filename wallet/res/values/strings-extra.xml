@@ -369,13 +369,13 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registering Username</string>
     <string name="processing_home_step_3_restoring">(3/3) Recovering Username</string>
     <string name="processing_done_title">Hello %s,</string>
-    <string name="processing_done_subtitle">Your Evolution account is ready to use</string>
+    <string name="processing_done_subtitle">Your account is ready to use</string>
     <string name="processing_error_title">Error Upgrading</string>
     <string name="processing_error_retry">Retry</string>
     <string name="processing_username_unavailable_title">Username Unavailable</string>
     <string name="processing_username_unavailable_subtitle">Please choose another</string>
 
-    <string name="dashpay_upgrade_fee">DashPay Upgrade Fee</string>
+    <string name="dashpay_upgrade_fee">Upgrade Fee</string>
     <string name="search_user_find_a_user">Find a user on the Dash Network</string>
     <string name="search_for_a_user">Search for a User on the Dash Network</string>
     <string name="search_user_input_placeholder">enter the username to search here</string>

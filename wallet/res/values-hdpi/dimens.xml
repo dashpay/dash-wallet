@@ -41,4 +41,6 @@
     <dimen name="verify_seed_word_button_padding">10dp</dimen>
 
     <dimen name="create_username_orbits_translation_x">100dp</dimen>
+
+    <dimen name="identity_complete_text_size">24dp</dimen>
 </resources>
