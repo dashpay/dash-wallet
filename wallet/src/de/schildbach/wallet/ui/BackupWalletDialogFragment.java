@@ -53,6 +53,7 @@ import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Iso8601Format;
 import de.schildbach.wallet_test.R;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
@@ -313,9 +314,10 @@ public class BackupWalletDialogFragment extends DialogFragment {
         }
     }
 
+    @SuppressLint("StringFormatInvalid")
     private void handleError(Exception x) {
         final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.import_export_keys_dialog_failure_title);
-        dialog.setMessage(getString(R.string.export_keys_dialog_failure, x.getMessage()));
+        dialog.setMessage(activity.getString(R.string.export_keys_dialog_failure, x.getMessage()));
         dialog.singleDismissButton(null);
         dialog.show();
 

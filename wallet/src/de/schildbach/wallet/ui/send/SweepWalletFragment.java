@@ -459,7 +459,7 @@ public class SweepWalletFragment extends Fragment {
 
 				final DialogBuilder dialog = DialogBuilder.warn(activity,
 						R.string.sweep_wallet_fragment_request_wallet_balance_failed_title);
-				dialog.setMessage(getString(messageResId, messageArgs));
+				dialog.setMessage(activity.getString(messageResId, messageArgs));
 				dialog.setPositiveButton(R.string.button_retry, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(final DialogInterface dialog, final int which) {
