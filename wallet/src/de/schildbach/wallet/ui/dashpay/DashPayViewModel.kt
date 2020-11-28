@@ -98,12 +98,12 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun searchUsernames(text: String) {
+    fun searchUsernames(text: String, limit: Int = 100) {
         userSearchLiveData.value = text
     }
 
     //
-    // Search Usernames and Display Names that contain "text".
+    // Search (established contacts) Usernames and Display Names that contain "text".
     //
     val searchContactsLiveData = Transformations.switchMap(contactsLiveData) { usernameSearch: UsernameSearch ->
         searchContactsJob.cancel()

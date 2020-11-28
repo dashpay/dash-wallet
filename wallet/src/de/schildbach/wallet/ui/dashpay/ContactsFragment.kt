@@ -129,6 +129,10 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
                         contacts_pane.visibility = View.VISIBLE
                     }
                     initialSearch = false
+                } else {
+                    if (it.data == null || it.data.isEmpty()) {
+                        dashPayViewModel.searchUsernames(query, 3)
+                    }
                 }
                 if (it.data != null) {
                     processResults(it.data)
@@ -142,6 +146,17 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner, Observer<Resource<Boolean>> {
             if (it?.data != null && it.data) {
                 searchContacts()
+            }
+        })
+        dashPayViewModel.searchUsernamesLiveData.observe(viewLifecycleOwner, Observer {
+            if (Status.LOADING == it.status) {
+                //TODO: Show loading
+            } else {
+                if (it.data != null) {
+                    //TODO: Show results as suggestions
+                } else {
+                    //TODO: Show empty view
+                }
             }
         })
     }
@@ -182,7 +197,6 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
 
         contactsAdapter.results = results
     }
-
 
     override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
         if (mode == MODE_SEARCH_CONTACTS) {

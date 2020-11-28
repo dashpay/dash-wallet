@@ -59,14 +59,16 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/search" />
 
-        <!--include layout="@layout/user_search_empty_result" />
-
-        <include layout="@layout/user_search_loading" /-->
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <include
         android:id="@+id/empty_state_pane"
+        layout="@layout/contacts_empty_state_layout"
+        android:visibility="invisible"
+        tools:visibility="visible" />
+
+    <include
+        android:id="@+id/no_results_pane"
         layout="@layout/contacts_empty_state_layout"
         android:visibility="invisible"
         tools:visibility="visible" />
