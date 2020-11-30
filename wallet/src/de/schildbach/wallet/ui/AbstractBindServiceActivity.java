@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractBindServiceActivity extends AbstractWalletActivity {
 
-    private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractBindServiceActivity.class);
 
     @Nullable
     private BlockchainService blockchainService;
