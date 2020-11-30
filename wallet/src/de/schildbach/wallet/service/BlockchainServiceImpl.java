@@ -68,6 +68,7 @@ import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.PreBlocksDownloadListener;
 import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.evolution.SimplifiedMasternodeList;
+import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.net.discovery.MasternodePeerDiscovery;
@@ -117,7 +118,9 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
+import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
+import de.schildbach.wallet.ui.dashpay.PreBlockStage;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
@@ -361,39 +364,30 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
     }
 
-    private final PeerDataEventListener blockchainDownloadListener = new DownloadProgressTracker() {
+    private abstract class MyDownloadProgressTracker extends DownloadProgressTracker implements OnPreBlockProgressListener {}
+
+    private final MyDownloadProgressTracker blockchainDownloadListener = new MyDownloadProgressTracker() {
         private final AtomicLong lastMessageTime = new AtomicLong(0);
 
         @Override
         public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
                 final int blocksLeft) {
             super.onBlocksDownloaded(peer, block, filteredBlock, blocksLeft);
-            delayHandler.removeCallbacksAndMessages(null);
-
-            final long now = System.currentTimeMillis();
-            if (now - lastMessageTime.get() > BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS)
-                delayHandler.post(runnable);
-            else
-                delayHandler.postDelayed(runnable, BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);
+            postOrPostDelayed();
         }
 
         @Override
         public void onHeadersDownloaded(final Peer peer, final Block block,
                                        final int blocksLeft) {
             super.onHeadersDownloaded(peer, block, blocksLeft);
-            delayHandler.removeCallbacksAndMessages(null);
-
-            final long now = System.currentTimeMillis();
-            if (now - lastMessageTime.get() > BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS)
-                delayHandler.post(runnable);
-            else
-                delayHandler.postDelayed(runnable, BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);
+            postOrPostDelayed();
         }
 
         private final Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 lastMessageTime.set(System.currentTimeMillis());
+                log.info("Runnable % = " +syncPercentage);
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
                 if(config.isRestoringBackup()) {
@@ -430,6 +424,46 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             super.doneDownload();
             updateBlockchainState();
             syncPercentage = 100;
+        }
+
+        @Override
+        public void onMasterNodeListDiffDownloaded(Stage stage, @Nullable SimplifiedMasternodeListDiff mnlistdiff) {
+            super.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
+            postOrPostDelayed();
+        }
+
+        private void postOrPostDelayed() {
+            delayHandler.removeCallbacksAndMessages(null);
+
+            final long now = System.currentTimeMillis();
+            if (now - lastMessageTime.get() > BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS) {
+                log.info("post: right away");
+                delayHandler.post(runnable);
+            } else {
+                log.info("post: delayed");
+                delayHandler.postDelayed(runnable, BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);
+            }
+        }
+
+        int totalPreblockStages = PreBlockStage.UpdateTotal.getValue();
+        int startPreBlockPercent = 0;
+
+        @Override
+        public void onPreBlockProgressUpdated(PreBlockStage stage) {
+            if (stage == PreBlockStage.Starting) {
+                startPreBlockPercent = syncPercentage;
+            }
+            if (stage == PreBlockStage.StartRecovery) {
+                if (preBlocksWeight <= 0.10)
+                    preBlocksWeight = 0.10;//PreBlockStage.RecoveryAndUpdateTotal.getValue();
+            }
+            double increment = Math.ceil(preBlocksWeight * stage.getValue() * 100.0 / PreBlockStage.Complete.getValue());
+            log.info("PreBlockDownload: " + increment + "%..." + preBlocksWeight + " " + peerGroup.getSyncStage().name());
+            if (peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.PREBLOCKS) {
+                syncPercentage = (int)(startPreBlockPercent + increment);
+                log.info("PreBlockDownload: " + syncPercentage + "%..." + peerGroup.getSyncStage().name());
+                postOrPostDelayed();
+            }
         }
     };
 
@@ -597,12 +631,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 // start peergroup
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
+                PlatformRepo.getInstance().addPreBlockProgressListener(blockchainDownloadListener);
             } else if (!impediments.isEmpty() && peerGroup != null) {
                 log.info("stopping peergroup");
                 peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
                 peerGroup.removePreBlocksDownloadedListener(preBlocksDownloadListener);
                 peerGroup.removeWallet(wallet);
+                PlatformRepo.getInstance().removePreBlockProgressListener(blockchainDownloadListener);
                 peerGroup.stopAsync();
                 peerGroup = null;
 
@@ -937,6 +973,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
+            PlatformRepo.getInstance().removePreBlockProgressListener(blockchainDownloadListener);
             peerGroup.stop();
 
             log.info("peergroup stopped");
