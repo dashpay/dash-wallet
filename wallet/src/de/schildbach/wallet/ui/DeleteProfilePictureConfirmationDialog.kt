@@ -27,13 +27,9 @@ import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.imgur_policy_dialog.*
-import kotlinx.android.synthetic.main.profile_picture_state_dialog.*
-import kotlinx.android.synthetic.main.profile_picture_state_dialog.cancel_btn
+import kotlinx.android.synthetic.main.delete_image_confirmation_dialog.*
 
 class DeleteProfilePictureConfirmationDialog : DialogFragment() {
-
-    private lateinit var editProfileViewModel: EditProfileViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,8 +46,8 @@ class DeleteProfilePictureConfirmationDialog : DialogFragment() {
         val avatarUrl = editProfileViewModel.dashPayProfile?.avatarUrl
         Glide.with(view).load(avatarUrl).circleCrop().into(avatar)
         agree_btn.setOnClickListener {
-            dismiss()
             editProfileViewModel.deleteProfilePictureConfirmationLiveData.postValue(true)
+            dismiss()
         }
         cancel_btn.setOnClickListener {
             dismiss()
@@ -65,5 +61,4 @@ class DeleteProfilePictureConfirmationDialog : DialogFragment() {
         dialog?.window?.setLayout(width, height)
         dialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
-
 }

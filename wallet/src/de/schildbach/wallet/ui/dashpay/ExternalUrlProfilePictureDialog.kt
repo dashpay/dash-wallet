@@ -32,8 +32,6 @@ import android.widget.*
 import androidx.annotation.NonNull
 import androidx.annotation.Nullable
 import androidx.appcompat.app.AlertDialog
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
@@ -43,17 +41,21 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
+import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.slf4j.LoggerFactory
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 open class ExternalUrlProfilePictureDialog : DialogFragment() {
 
     companion object {
 
         private val log = LoggerFactory.getLogger(ExternalUrlProfilePictureDialog::class.java)
+        private val VALID_URL_REGEX: Pattern = Pattern.compile("\\b(https?)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]")
 
         private const val ARG_INITIAL_URL = "arg_initial_url"
 
@@ -139,7 +141,7 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
 
                 cleanup()
 
-                if (edit.text.isEmpty() || !isTextValid(edit.text.trim().toString())) {
+                if (edit.text.isEmpty()) {
 
                     button_ok.isEnabled = false
                     return
@@ -153,18 +155,23 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
         button_ok.setOnClickListener {
-            KeyboardUtil.hideKeyboard(requireContext(), edit)
-            cleanup()
-
-            button_ok.isEnabled = false
-
-            val pictureUrl = edit.text.trim().toString()
-            (pendingWorkIcon.drawable as AnimationDrawable).start()
-
-            viewSwitcher.showNext()
-
-            loadFromString(pictureUrl)
             imitateUserInteraction()
+            if (!isTextValid(edit.text.trim().toString())) {
+                showError()
+            } else {
+                KeyboardUtil.hideKeyboard(requireContext(), edit)
+                cleanup()
+
+                button_ok.isEnabled = false
+
+                val pictureUrl = edit.text.trim().toString()
+                (pendingWorkIcon.drawable as AnimationDrawable).start()
+
+                viewSwitcher.showNext()
+
+                loadFromString(pictureUrl)
+                imitateUserInteraction()
+            }
         }
         button_cancel.setOnClickListener {
             KeyboardUtil.hideKeyboard(requireContext(), edit)
@@ -193,7 +200,12 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
     }
 
     protected open fun isTextValid(text: String): Boolean {
-        return true
+        if (text.length > 256) {
+            return false
+        }
+
+        val matcher: Matcher = VALID_URL_REGEX.matcher(text)
+        return matcher.find()
     }
 
     protected open fun loadFromString(text: String) {
@@ -204,6 +216,7 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
         val pictureUrl = ProfilePictureDisplay.removePicZoomParameter(convertUrlIfSuitable(pictureUrlBase))
         Glide.with(requireContext())
                 .load(pictureUrl)
+                .signature(ObjectKey(System.currentTimeMillis()))
                 .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
@@ -245,6 +258,11 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
                         }
                     }
                 })
+    }
+
+    private fun showError() {
+        publicUrlEnterUrl.text = getString(errorMessageId)
+        publicUrlEnterUrl.setTextColor(resources.getColor(R.color.dash_red))
     }
 
     private fun convertUrlIfSuitable(pictureUrlBase: String): String {
