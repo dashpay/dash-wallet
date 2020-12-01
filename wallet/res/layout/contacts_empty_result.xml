@@ -4,12 +4,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/dash_lighter_gray">
+    android:background="@android:color/white">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -41,21 +40,78 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="28dp"
                 android:gravity="center"
+                android:text="@string/no_matching_contacts"
                 android:textColor="@android:color/black"
-                android:textSize="18sp"
+                android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/no_results_icon"
-                tools:text="@string/search_user_no_results" />
+                app:layout_constraintTop_toBottomOf="@id/no_results_icon" />
+
+            <LinearLayout
+                android:id="@+id/search_for_user"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/selectable_round_corners"
+                android:padding="16dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/no_results_label">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center_horizontal"
+                    app:srcCompat="@drawable/ic_add_new_contact_dark" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/search_for_a_user"
+                    android:textColor="@color/dash_blue" />
+
+            </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <TextView
-            app:layout_constraintTop_toBottomOf="@id/no_results"
-            android:gravity="center"
+            android:id="@+id/suggestions_title"
+            style="@style/MontserratSemiBold"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
             android:layout_marginTop="34dp"
-            android:layout_width=""
-            android:layout_height=""/>
+            android:layout_marginEnd="20dp"
+            android:gravity="center"
+            android:text="@string/more_suggestions"
+            android:textColor="@color/black_text"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/no_results" />
+
+        <TextView
+            android:id="@+id/suggestions_subtitle"
+            style="@style/MontserratRegular"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="15dp"
+            android:gravity="center"
+            android:text="@string/more_suggestions"
+            android:textColor="@color/black_text"
+            android:textSize="14sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/suggestions_title"
+            tools:text="Users that matches “John Dz” who are currently not in your contacts" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/suggestions_subtitle" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

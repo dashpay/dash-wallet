@@ -153,12 +153,16 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
                 //TODO: Show loading
             } else {
                 if (it.data != null) {
-                    //TODO: Show results as suggestions
+                    showSuggestedUsers(it.data)
                 } else {
                     //TODO: Show empty view
                 }
             }
         })
+    }
+
+    private fun showSuggestedUsers(users: List<UsernameSearchResult>) {
+        no_results_pane.visibility = View.VISIBLE
     }
 
     override fun onResume() {
