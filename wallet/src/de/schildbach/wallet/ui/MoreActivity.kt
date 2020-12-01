@@ -27,6 +27,7 @@ import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
+import org.dash.wallet.common.UserInteractionAwareCallback
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreActivity : GlobalFooterActivity() {
@@ -69,8 +70,10 @@ class MoreActivity : GlobalFooterActivity() {
             startActivity(Intent(this, ToolsActivity::class.java))
         }
         contact_support.setOnClickListener {
-            ReportIssueDialogBuilder.createReportIssueDialog(this,
+            val dialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                     WalletApplication.getInstance()).show()
+            dialog.window!!.callback = UserInteractionAwareCallback(dialog.window!!.callback, this)
+
         }
     }
 
