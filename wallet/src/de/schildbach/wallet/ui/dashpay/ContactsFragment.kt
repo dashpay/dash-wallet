@@ -22,13 +22,16 @@ import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
@@ -37,8 +40,12 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.contacts_empty_result.*
 import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
+import kotlinx.android.synthetic.main.contacts_empty_state_layout.search_for_user
 import kotlinx.android.synthetic.main.contacts_list_layout.*
+import kotlinx.android.synthetic.main.dashpay_contact_row.*
+import kotlinx.android.synthetic.main.dashpay_contact_row.view.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -163,6 +170,14 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
 
     private fun showSuggestedUsers(users: List<UsernameSearchResult>) {
         no_results_pane.visibility = View.VISIBLE
+        val layoutInflater = LayoutInflater.from(requireContext())
+        for (user in users) {
+            val view = layoutInflater.inflate(R.layout.dashpay_contact_row, suggestions_container, true)
+            view.root.setBackgroundResource(R.drawable.round_corners_gray_bg)
+            view.display_name.text = user.dashPayProfile.displayName
+            view.username.text = user.username
+            Glide.with(this).load(user.dashPayProfile.avatarUrl).circleCrop().into(view.avatar)
+        }
     }
 
     override fun onResume() {
