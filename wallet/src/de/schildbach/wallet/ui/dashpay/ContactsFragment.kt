@@ -172,13 +172,15 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     }
 
     private fun showSuggestedUsers(users: List<UsernameSearchResult>) {
+        no_results_pane.visibility = View.VISIBLE
+        suggestions_container.removeAllViews()
+
         val suggestionsSubtitle = getString(R.string.users_that_matches) + " \"<b>$query</b>\" " + getString(R.string.not_in_your_contacts)
         suggestions_subtitle.text = HtmlCompat.fromHtml(suggestionsSubtitle, HtmlCompat.FROM_HTML_MODE_COMPACT)
-        no_results_pane.visibility = View.VISIBLE
-        val layoutInflater = LayoutInflater.from(requireContext())
-        for (user in users) {
-            suggestions_container.removeAllViews()
 
+        val layoutInflater = LayoutInflater.from(requireContext())
+
+        for (user in users) {
             val view = layoutInflater.inflate(R.layout.dashpay_contact_row, suggestions_container, false)
             view.findViewById<View>(R.id.root).setBackgroundResource(R.drawable.round_corners_gray_bg)
             view.findViewById<View>(R.id.relation_state).visibility = View.GONE
