@@ -100,7 +100,6 @@
             android:layout_marginTop="12dp"
             android:layout_marginEnd="15dp"
             android:gravity="center"
-            android:text="@string/more_suggestions"
             android:textColor="@color/black_text"
             android:textSize="14sp"
             app:layout_constraintEnd_toEndOf="parent"

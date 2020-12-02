@@ -26,7 +26,10 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.text.HtmlCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -169,14 +172,34 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     }
 
     private fun showSuggestedUsers(users: List<UsernameSearchResult>) {
+        val suggestionsSubtitle = getString(R.string.users_that_matches) + " \"<b>$query</b>\" " + getString(R.string.not_in_your_contacts)
+        suggestions_subtitle.text = HtmlCompat.fromHtml(suggestionsSubtitle, HtmlCompat.FROM_HTML_MODE_COMPACT)
         no_results_pane.visibility = View.VISIBLE
         val layoutInflater = LayoutInflater.from(requireContext())
         for (user in users) {
-            val view = layoutInflater.inflate(R.layout.dashpay_contact_row, suggestions_container, true)
-            view.root.setBackgroundResource(R.drawable.round_corners_gray_bg)
-            view.display_name.text = user.dashPayProfile.displayName
-            view.username.text = user.username
-            Glide.with(this).load(user.dashPayProfile.avatarUrl).circleCrop().into(view.avatar)
+            suggestions_container.removeAllViews()
+
+            val view = layoutInflater.inflate(R.layout.dashpay_contact_row, suggestions_container, false)
+            view.findViewById<View>(R.id.root).setBackgroundResource(R.drawable.round_corners_gray_bg)
+            view.findViewById<View>(R.id.relation_state).visibility = View.GONE
+
+            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
+                    user.username[0])
+            val avatar = view.findViewById<ImageView>(R.id.avatar)
+            Glide.with(this).load(user.dashPayProfile.avatarUrl)
+                    .placeholder(defaultAvatar).circleCrop().into(avatar)
+
+            //Username & Display Name
+            val dashPayProfile = user.dashPayProfile
+            if (dashPayProfile.displayName.isEmpty()) {
+                view.findViewById<TextView>(R.id.display_name).text = user.username
+                view.findViewById<TextView>(R.id.username).text = ""
+            } else {
+                view.findViewById<TextView>(R.id.display_name).text = dashPayProfile.displayName
+                view.findViewById<TextView>(R.id.username).text = user.username
+            }
+
+            suggestions_container.addView(view)
         }
     }
 
