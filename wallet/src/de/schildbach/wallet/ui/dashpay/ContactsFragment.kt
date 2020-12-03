@@ -18,17 +18,14 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.content.Intent
+import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.View
+import android.view.*
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -42,13 +39,15 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contacts_empty_result.*
-import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_empty_state_layout.search_for_user
 import kotlinx.android.synthetic.main.contacts_list_layout.*
-import kotlinx.android.synthetic.main.dashpay_contact_row.*
-import kotlinx.android.synthetic.main.dashpay_contact_row.view.*
+import kotlinx.android.synthetic.main.contacts_list_layout.icon
+import kotlinx.android.synthetic.main.contacts_list_layout.search
+import kotlinx.android.synthetic.main.fragment_contacts_root.*
+import kotlinx.android.synthetic.main.user_search_loading.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -81,6 +80,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
+    private var lastSearchedQuery = ""
     private var direction = UsernameSortOrderBy.USERNAME
     private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
     private var initialSearch = true
@@ -123,7 +123,10 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             startActivity(Intent(context, SearchUserActivity::class.java))
         }
 
-        searchContacts()
+        //Prevent searching again when coming back from User search screen
+        if (initialSearch) {
+            searchContacts()
+        }
     }
 
     private fun initViewModel() {
@@ -160,23 +163,50 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         })
         dashPayViewModel.searchUsernamesLiveData.observe(viewLifecycleOwner, Observer {
             if (Status.LOADING == it.status) {
-                //TODO: Show loading
+                startLoading()
             } else {
                 if (it.data != null) {
                     showSuggestedUsers(it.data)
                 } else {
-                    //TODO: Show empty view
+                    stopLoading()
+                    showEmptySuggestions()
                 }
             }
         })
     }
 
+    private fun stopLoading() {
+        (search_loading_icon.drawable as AnimationDrawable).stop()
+        search_loading.visibility = View.GONE
+    }
+
+    private fun startLoading() {
+        no_results_pane.visibility = View.GONE
+        suggestions_search_no_result.visibility = View.GONE
+        search_loading.visibility = View.VISIBLE
+        var loadingText = getString(R.string.search_user_loading)
+        loadingText = loadingText.replace("%", "\"<b>$query</b>\"")
+        search_loading_label.text = HtmlCompat.fromHtml(loadingText,
+                HtmlCompat.FROM_HTML_MODE_COMPACT)
+        (search_loading_icon.drawable as AnimationDrawable).start()
+    }
+
+    private fun showInitialState() {
+        stopLoading()
+        no_results_pane.visibility = View.GONE
+        suggestions_search_no_result.visibility = View.GONE
+    }
+
     private fun showSuggestedUsers(users: List<UsernameSearchResult>) {
+        KeyboardUtil.hideKeyboard(requireContext(), requireView())
+        stopLoading()
         no_results_pane.visibility = View.VISIBLE
         suggestions_container.removeAllViews()
 
         val suggestionsSubtitle = getString(R.string.users_that_matches) + " \"<b>$query</b>\" " + getString(R.string.not_in_your_contacts)
-        suggestions_subtitle.text = HtmlCompat.fromHtml(suggestionsSubtitle, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        val suggestionsSubtitleTv = no_results_pane.findViewById<TextView>(R.id.suggestions_subtitle)
+        suggestionsSubtitleTv.text = HtmlCompat.fromHtml(suggestionsSubtitle, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        val suggestionsContainer = no_results_pane.findViewById<ViewGroup>(R.id.suggestions_container)
 
         val layoutInflater = LayoutInflater.from(requireContext())
 
@@ -201,8 +231,24 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
                 view.findViewById<TextView>(R.id.username).text = user.username
             }
 
-            suggestions_container.addView(view)
+            view.setOnClickListener {
+                startActivity(DashPayUserActivity.createIntent(requireContext(), user))
+            }
+            suggestionsContainer.addView(view)
         }
+    }
+
+    private fun showEmptySuggestions() {
+        suggestions_search_no_result.visibility = View.VISIBLE
+        KeyboardUtil.hideKeyboard(requireContext(), requireView())
+        val searchUsersBtn = suggestions_search_no_result.findViewById<View>(R.id.search_for_user)
+        searchUsersBtn.setOnClickListener {
+            startActivity(Intent(context, SearchUserActivity::class.java))
+        }
+        val text = getString(R.string.suggestions_empty_result_part_1) +
+                " \"<b>$query</b>\" " + getString(R.string.suggestions_empty_result_part_2)
+        val noResultsLabel = suggestions_search_no_result.findViewById<TextView>(R.id.no_results_label)
+        noResultsLabel.text = HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 
     override fun onResume() {
@@ -268,7 +314,11 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
     override fun afterTextChanged(s: Editable?) {
         s?.let {
             query = it.toString()
-            searchContacts()
+            if (query.isEmpty()) {
+                showInitialState()
+            } else {
+                searchContacts()
+            }
         }
     }
 

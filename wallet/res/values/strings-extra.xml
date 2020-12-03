@@ -500,5 +500,7 @@
     <string name="users_that_matches">Users that matches</string>
     <string name="not_in_your_contacts">who are currently not in your contacts</string>
     <string name="no_matching_contacts">No matching users in your contacts</string>
+    <string name="suggestions_empty_result_part_1">There are no users that matches with the name</string>
+    <string name="suggestions_empty_result_part_2">in your contacts</string>
 
 </resources>

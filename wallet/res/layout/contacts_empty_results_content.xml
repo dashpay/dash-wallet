@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+
+    <ImageView
+        android:id="@+id/no_results_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintVertical_bias="0.4"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_user_search_no_results" />
+
+    <TextView
+        android:id="@+id/no_results_label"
+        style="@style/MontserratMedium"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="28dp"
+        android:gravity="center"
+        android:text="@string/no_matching_contacts"
+        android:textColor="@android:color/black"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/no_results_icon" />
+
+    <LinearLayout
+        android:id="@+id/search_for_user"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/selectable_round_corners"
+        android:padding="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/no_results_label">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center_horizontal"
+            app:srcCompat="@drawable/ic_add_new_contact_dark" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/search_for_a_user"
+            android:textColor="@color/dash_blue" />
+
+    </LinearLayout>
+</merge>

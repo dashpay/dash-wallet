@@ -65,12 +65,25 @@
             android:visibility="invisible"
             tools:visibility="visible" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        <include
+            android:id="@+id/empty_state_pane"
+            layout="@layout/contacts_empty_state_layout"
+            android:visibility="invisible"
+            tools:visibility="visible" />
 
-    <include
-        android:id="@+id/empty_state_pane"
-        layout="@layout/contacts_empty_state_layout"
-        android:visibility="invisible"
-        tools:visibility="visible" />
+        <include layout="@layout/user_search_loading" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/suggestions_search_no_result"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/dash_lighter_gray"
+            android:visibility="gone">
+
+            <include layout="@layout/contacts_empty_results_content" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </FrameLayout>
