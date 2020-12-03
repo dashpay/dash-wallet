@@ -171,7 +171,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         bottom_navigation.setOnNavigationItemSelectedListener { item ->
             when (item.itemId) {
-                bottom_navigation.selectedItemId -> true
+                bottom_navigation.selectedItemId -> {
+                    // ignore
+                }
                 R.id.bottom_home -> goBack(true)
                 R.id.contacts -> showContacts()
                 R.id.payments -> showPayments()
@@ -208,7 +210,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         transaction.addToBackStack(null).commit()
     }
 
-    fun goBack(goHome: Boolean = false): Boolean {
+    private fun goBack(goHome: Boolean = false): Boolean {
         if (!goHome && supportFragmentManager.backStackEntryCount > 1) {
             supportFragmentManager.popBackStack()
             return true
