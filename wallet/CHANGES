@@ -1,4 +1,9 @@
 Dash Wallet
+v7.2.2
+* Fix crashes on Import Private Key, Backup to File failures
+* Allow scanning inverted QR codes (black background, white foreground)
+* Prevent auto logout when typing text on Report Issue dialog
+
 v7.2.1
 * Fix Scan QR Code crash on Android 6 or earlier
 * Fix missing Advanced Security Screen Auto Logout toggle
