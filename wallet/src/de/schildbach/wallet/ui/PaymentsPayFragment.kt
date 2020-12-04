@@ -94,8 +94,10 @@ class PaymentsPayFragment : Fragment(),
             if (Status.SUCCESS == it.status) {
                 if (it.data == null || it.data.isEmpty()) {
                     frequent_contacts_rv.visibility = View.GONE
+                    pay_by_contact_select.showForwardArrow(false)
                 } else {
                     frequent_contacts_rv.visibility = View.VISIBLE
+                    pay_by_contact_select.showForwardArrow(true)
                 }
                 frequent_contacts_rv_top_line.visibility = frequent_contacts_rv.visibility
 

@@ -25,7 +25,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.AppBarLayout
@@ -34,6 +33,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.InputParser.StringInputParser
+import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.ui.send.SweepWalletActivity
@@ -45,11 +45,13 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
-class WalletFragment : Fragment(R.layout.home_content) {
+class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
     companion object {
         private const val REQUEST_CODE_SCAN = 0
     }
+
+    override val navigationItemId = R.id.bottom_home
 
     private lateinit var mainActivityViewModel: MainActivityViewModel
 

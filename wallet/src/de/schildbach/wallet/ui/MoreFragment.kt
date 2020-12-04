@@ -21,7 +21,6 @@ import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.AppDatabase
@@ -29,6 +28,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
@@ -38,7 +38,9 @@ import kotlinx.android.synthetic.main.fragment_updating_profile.*
 import kotlinx.android.synthetic.main.fragment_update_profile_error.*
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
-class MoreFragment : Fragment(R.layout.activity_more) {
+class MoreFragment : BottomNavFragment(R.layout.activity_more) {
+
+    override val navigationItemId = R.id.more
 
     private var blockchainState: BlockchainState? = null
     private lateinit var editProfileViewModel: EditProfileViewModel
@@ -174,5 +176,4 @@ class MoreFragment : Fragment(R.layout.activity_more) {
         val wallet = WalletApplication.getInstance().wallet
         startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
     }
-
 }

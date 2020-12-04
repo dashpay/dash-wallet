@@ -172,7 +172,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         bottom_navigation.setOnNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 bottom_navigation.selectedItemId -> {
-                    // ignore
+                    if (item.itemId == R.id.payments) {
+                        goBack()
+                    }
                 }
                 R.id.bottom_home -> goBack(true)
                 R.id.contacts -> showContacts()
@@ -217,14 +219,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         } else if (goHome || supportFragmentManager.backStackEntryCount == 1) {
             supportFragmentManager.popBackStack(null,
                     FragmentManager.POP_BACK_STACK_INCLUSIVE)
-            bottom_navigation.menu.findItem(R.id.bottom_home)?.isChecked = true
             return true
         }
         return false
     }
 
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
-        bottom_navigation.menu.findItem(R.id.contacts)?.isChecked = true
         if (viewModel.hasIdentity) {
             val contactsFragment = ContactsFragment.newInstance(mode)
             if (mode == MODE_VIEW_REQUESTS) {
@@ -238,14 +238,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun showPayments(activeTab: Int = ACTIVE_TAB_RECENT) {
-        bottom_navigation.menu.findItem(R.id.payments)?.isChecked = true
         val paymentsFragment = PaymentsFragment.newInstance(activeTab)
         replaceFragment(paymentsFragment, R.anim.fragment_slide_up,
                 R.anim.fragment_slide_down)
     }
 
     private fun showMore() {
-        bottom_navigation.menu.findItem(R.id.more)?.isChecked = true
         val moreFragment = MoreFragment()
         replaceFragment(moreFragment)
     }
