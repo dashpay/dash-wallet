@@ -73,7 +73,7 @@ public abstract class AbstractBindServiceActivity extends AbstractWalletActivity
 
     @Override
     protected void onPause() {
-        doBindService();
+        doUnbindService();
 
         super.onPause();
     }
