@@ -69,6 +69,7 @@ class TransactionResultViewBinder(private val containerView: View, private val p
     private val payeeSecuredByContainer by lazy { containerView.findViewById<View>(R.id.payee_verified_by_container) }
     private val payeeSecuredBy by lazy { containerView.findViewById<TextView>(R.id.payee_secured_by) }
     private val sendToUserContainer by lazy { containerView.findViewById<ConstraintLayout>(R.id.user_container) }
+    private val userContainer by lazy { containerView.findViewById<View>(R.id.user_container)}
     private val userLabel by lazy { containerView.findViewById<TextView>(R.id.user_label) }
     private val userAvatar by lazy { containerView.findViewById<ImageView>(R.id.avatar) }
     private val userDisplayName by lazy { containerView.findViewById<TextView>(R.id.displayname) }
@@ -209,7 +210,7 @@ class TransactionResultViewBinder(private val containerView: View, private val p
 
             ProfilePictureDisplay.display(userAvatar, profile)
 
-            userAvatar.setOnClickListener {
+            userContainer.setOnClickListener {
                 ctx.startActivity(DashPayUserActivity.createIntent(ctx, profile))
             }
         } else {
