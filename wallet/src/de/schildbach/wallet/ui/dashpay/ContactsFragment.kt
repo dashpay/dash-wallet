@@ -136,10 +136,12 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
                 if (initialSearch && (mode != MODE_VIEW_REQUESTS)) {
                     if (it.data == null || it.data.isEmpty() || it.data.find { u -> u.requestReceived } == null) {
                         empty_state_pane.visibility = View.VISIBLE
-                        contacts_pane.visibility = View.GONE
+                        search.visibility = View.GONE
+                        icon.visibility = View.GONE
                     } else {
+                        search.visibility = View.VISIBLE
+                        icon.visibility = View.VISIBLE
                         empty_state_pane.visibility = View.GONE
-                        contacts_pane.visibility = View.VISIBLE
                     }
                     initialSearch = false
                 } else {

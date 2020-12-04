@@ -11,9 +11,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contacts_pane"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="invisible"
-        tools:visibility="visible">
+        android:layout_height="match_parent">
 
         <EditText
             android:id="@+id/search"
@@ -60,15 +58,15 @@
             app:layout_constraintTop_toBottomOf="@id/search" />
 
         <include
-            android:id="@+id/no_results_pane"
-            layout="@layout/contacts_empty_result"
-            android:visibility="invisible"
+            android:id="@+id/empty_state_pane"
+            layout="@layout/contacts_empty_state_layout"
+            android:visibility="gone"
             tools:visibility="visible" />
 
         <include
-            android:id="@+id/empty_state_pane"
-            layout="@layout/contacts_empty_state_layout"
-            android:visibility="invisible"
+            android:id="@+id/no_results_pane"
+            layout="@layout/contacts_empty_result"
+            android:visibility="gone"
             tools:visibility="visible" />
 
         <include layout="@layout/user_search_loading" />
