@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.util.AnrSupervisor;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -43,6 +44,9 @@ public abstract class AbstractWalletActivity extends InteractionAwareActivity im
     private WalletApplication application;
 
     protected static final Logger log = LoggerFactory.getLogger(AbstractWalletActivity.class);
+
+    static final AnrSupervisor sSupervisor = new AnrSupervisor();
+
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -104,5 +108,15 @@ public abstract class AbstractWalletActivity extends InteractionAwareActivity im
     protected void onResume() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
         super.onResume();
+    }
+
+    public void onStart() {
+        super.onStart();
+        sSupervisor.start();
+
+    }
+    public void onStop() {
+        super.onStop();
+        sSupervisor.stop();
     }
 }
