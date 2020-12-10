@@ -25,9 +25,9 @@ before_install:
 #  - rm -rf /opt/android-ndk-tmp
   - cd ${TRAVIS_BUILD_DIR}
 
-install:
-  - echo y | sdkmanager 'cmake;3.6.4111459' | grep -v "=$"
-  - echo y | sdkmanager 'lldb;3.0' | grep -v "=$"
+#install:
+#  - echo y | sdkmanager 'cmake;3.6.4111459' | grep -v "=$"
+#  - echo y | sdkmanager 'lldb;3.0' | grep -v "=$"
 
 before_script:
 #  - export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
