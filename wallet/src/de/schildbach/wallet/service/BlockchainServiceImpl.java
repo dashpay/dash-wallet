@@ -364,10 +364,11 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
     }
 
-    private abstract class MyDownloadProgressTracker extends DownloadProgressTracker implements OnPreBlockProgressListener {}
+    private abstract class MyDownloadProgressTracker extends DownloadProgressTracker implements OnPreBlockProgressListener { }
 
     private final MyDownloadProgressTracker blockchainDownloadListener = new MyDownloadProgressTracker() {
         private final AtomicLong lastMessageTime = new AtomicLong(0);
+        private long throttleDelay = -1;
 
         @Override
         public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
@@ -429,41 +430,48 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         public void onMasterNodeListDiffDownloaded(Stage stage, @Nullable SimplifiedMasternodeListDiff mnlistdiff) {
             super.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
+            startPreBlockPercent = syncPercentage;
             postOrPostDelayed();
         }
 
         private void postOrPostDelayed() {
             delayHandler.removeCallbacksAndMessages(null);
-
+            if (throttleDelay == -1) {
+                throttleDelay = application.isLowRamDevice() ? BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS : BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS / 4;
+            }
             final long now = System.currentTimeMillis();
-            if (now - lastMessageTime.get() > BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS) {
-                log.info("post: right away");
+            if (now - lastMessageTime.get() > throttleDelay) {
                 delayHandler.post(runnable);
             } else {
-                log.info("post: delayed");
-                delayHandler.postDelayed(runnable, BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);
+                delayHandler.postDelayed(runnable, throttleDelay);
             }
         }
 
         int totalPreblockStages = PreBlockStage.UpdateTotal.getValue();
         int startPreBlockPercent = 0;
+        PreBlockStage lastPreBlockStage = PreBlockStage.None;
 
         @Override
         public void onPreBlockProgressUpdated(PreBlockStage stage) {
-            if (stage == PreBlockStage.Starting) {
+            if (stage == PreBlockStage.Starting && lastPreBlockStage == PreBlockStage.None) {
                 startPreBlockPercent = syncPercentage;
             }
-            if (stage == PreBlockStage.StartRecovery) {
+            if (stage == PreBlockStage.StartRecovery && lastPreBlockStage == PreBlockStage.None) {
+                startPreBlockPercent = syncPercentage;
                 if (preBlocksWeight <= 0.10)
-                    preBlocksWeight = 0.10;//PreBlockStage.RecoveryAndUpdateTotal.getValue();
+                    setPreBlocksWeight(0.20);//PreBlockStage.RecoveryAndUpdateTotal.getValue();
             }
-            double increment = Math.ceil(preBlocksWeight * stage.getValue() * 100.0 / PreBlockStage.Complete.getValue());
-            log.info("PreBlockDownload: " + increment + "%..." + preBlocksWeight + " " + peerGroup.getSyncStage().name());
+            double increment = preBlocksWeight * stage.getValue() * 100.0 / PreBlockStage.Complete.getValue();
+            if (increment > preBlocksWeight * 100)
+                increment = preBlocksWeight * 100;
+
+            log.info("PreBlockDownload: " + increment + "%..." + preBlocksWeight + " " + stage.name() + " " + peerGroup.getSyncStage().name());
             if (peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.PREBLOCKS) {
                 syncPercentage = (int)(startPreBlockPercent + increment);
                 log.info("PreBlockDownload: " + syncPercentage + "%..." + peerGroup.getSyncStage().name());
                 postOrPostDelayed();
             }
+            lastPreBlockStage = stage;
         }
     };
 

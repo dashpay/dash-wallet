@@ -98,7 +98,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
 
     private val updatingContacts = AtomicBoolean(false)
-    private val preDownloadBlocks = AtomicBoolean(true)
+    private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
 
     val platform = Platform(Constants.NETWORK_PARAMETERS)
@@ -777,13 +777,16 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId))
     }
 
-    private fun updateSyncStatus(stage: PreBlockStage) {
+    fun updateSyncStatus(stage: PreBlockStage) {
         if (stage == PreBlockStage.Starting && lastPreBlockStage != PreBlockStage.None) {
+            log.info("skipping ${stage.name} because an idnetity was restored")
             return
         }
         if (preDownloadBlocks.get()) {
             firePreBlockProgressListeners(stage)
             lastPreBlockStage = stage
+        } else {
+            log.info("skipping ${stage.name} because PREBLOCKS is OFF")
         }
     }
 
@@ -795,7 +798,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * when the app starts, it has not yet been initialized
      */
     suspend fun updateContactRequests() {
-        try {
+
             // only allow this method to execute once at a time
             if (updatingContacts.get()) {
                 log.info("updateContactRequests is already running")
@@ -816,6 +819,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
                 return // this is here because the wallet is being reset without removing blockchainIdentityData
             }
+
+        try {
             val userId = blockchainIdentityData.userId!!
 
             val userIdList = HashSet<String>()
