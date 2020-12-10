@@ -27,6 +27,26 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ] || [ "${T
   cp wallet/build/outputs/apk/evonet/debug/wallet-evonet-debug.apk "$DEPLOY_DIR"/dash-wallet-evonet-debug.apk
 #  cp wallet/build/outputs/apk/prod/debug/wallet-prod-release.apk "$DEPLOY_DIR"/dash-wallet-prod-release.apk
 
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/armeabi-v7a/libdashjbls.so "$DEPLOY_DIR"/libs/armeabi-v7a/libdashjbls.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/armeabi-v7a/libpthread.so "$DEPLOY_DIR"/libs/armeabi-v7a/libscrypt.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/armeabi-v7a/libdashjbls.so "$DEPLOY_DIR"/libs/armeabi-v7a/libpthread.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/armeabi-v7a/libdashjbls.so "$DEPLOY_DIR"/libs/armeabi-v7a/libx11.so
+
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/arm64-v8a/libdashjbls.so "$DEPLOY_DIR"/libs/arm64-v8a/libdashjbls.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/arm64-v8a/libpthread.so "$DEPLOY_DIR"/libs/arm64-v8a/libscrypt.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/arm64-v8a/libdashjbls.so "$DEPLOY_DIR"/libs/arm64-v8a/libpthread.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/arm64-v8a/libdashjbls.so "$DEPLOY_DIR"/libs/arm64-v8a/libx11.so
+
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/x86/libdashjbls.so "$DEPLOY_DIR"/libs/x86/libdashjbls.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/x86/libpthread.so "$DEPLOY_DIR"/libs/x86/libscrypt.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/x86/libdashjbls.so "$DEPLOY_DIR"/libs/x86/libpthread.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/x86/libdashjbls.so "$DEPLOY_DIR"/libs/x86/libx11.so
+
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/x86_64/libdashjbls.so "$DEPLOY_DIR"/libs/x86_64/libdashjbls.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/x86_64/libpthread.so "$DEPLOY_DIR"/libs/x86_64/libscrypt.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/x86_64/libdashjbls.so "$DEPLOY_DIR"/libs/x86_64/libpthread.so
+  cp /home/travis/build/dashevo/dash-wallet/wallet/build/intermediates/cmake/mobileDebug/obj/x86_64/libdashjbls.so "$DEPLOY_DIR"/libs/x86_64/libx11.so
+
   # generate README.md file
   README="$DEPLOY_DIR"/README.md
 #  if [ "${TRAVIS_TAG:0:4}" = "NMA-" ]; then
