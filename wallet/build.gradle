@@ -12,6 +12,9 @@ repositories {
         name 'OJO snapshots'
     }
     maven {
+        url 'http://dl.bintray.com/dash/Dashj'
+    }
+    maven {
         url 'https://maven.google.com/'
         name 'Google'
     }
