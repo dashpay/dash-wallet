@@ -42,11 +42,9 @@ import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contacts_empty_result.*
-import kotlinx.android.synthetic.main.contacts_empty_state_layout.search_for_user
+import kotlinx.android.synthetic.main.contacts_empty_results_content.*
+import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
-import kotlinx.android.synthetic.main.contacts_list_layout.icon
-import kotlinx.android.synthetic.main.contacts_list_layout.search
-import kotlinx.android.synthetic.main.fragment_contacts_root.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
@@ -119,6 +117,9 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             setupActionBarWithTitle(R.string.contacts_title)
         }
 
+        search_for_user_suggestions.setOnClickListener {
+            startActivity(Intent(context, SearchUserActivity::class.java))
+        }
         search_for_user.setOnClickListener {
             startActivity(Intent(context, SearchUserActivity::class.java))
         }
