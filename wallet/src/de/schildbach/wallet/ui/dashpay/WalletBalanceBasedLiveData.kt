@@ -1,23 +1,29 @@
 package de.schildbach.wallet.ui.dashpay
 
+import android.text.format.DateUtils
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.listeners.TransactionConfidenceEventListener
+import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.listeners.WalletChangeEventListener
-import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
-import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener
 
 abstract class WalletBalanceBasedLiveData<T>(val walletApplication: WalletApplication = WalletApplication.getInstance())
-    : LiveData<T>(), WalletCoinsReceivedEventListener, WalletCoinsSentEventListener, WalletChangeEventListener, TransactionConfidenceEventListener {
+    : LiveData<T>() {
+
+    companion object {
+        private const val THROTTLE_MS = DateUtils.SECOND_IN_MILLIS
+    }
 
     private var listening = false
 
     private val wallet: Wallet
         get() = walletApplication.wallet
+
+    private val walletChangeListener = object : ThrottlingWalletChangeListener(THROTTLE_MS) {
+        override fun onThrottledWalletChanged() {
+            onUpdate(wallet)
+        }
+    }
 
     override fun onActive() {
         maybeAddEventListener()
@@ -31,38 +37,22 @@ abstract class WalletBalanceBasedLiveData<T>(val walletApplication: WalletApplic
     private fun maybeAddEventListener() {
         if (!listening && hasActiveObservers()) {
             val mainThreadExecutor = ContextCompat.getMainExecutor(walletApplication)
-            wallet.addCoinsReceivedEventListener(mainThreadExecutor, this)
-            wallet.addCoinsSentEventListener(mainThreadExecutor, this)
-            wallet.addChangeEventListener(mainThreadExecutor, this)
-            wallet.addTransactionConfidenceEventListener(mainThreadExecutor, this)
+            wallet.addCoinsReceivedEventListener(mainThreadExecutor, walletChangeListener)
+            wallet.addCoinsSentEventListener(mainThreadExecutor, walletChangeListener)
+            wallet.addChangeEventListener(mainThreadExecutor, walletChangeListener)
+            wallet.addTransactionConfidenceEventListener(mainThreadExecutor, walletChangeListener)
             listening = true
         }
     }
 
     private fun maybeRemoveEventListener() {
         if (listening) {
-            wallet.removeCoinsReceivedEventListener(this)
-            wallet.removeCoinsSentEventListener(this)
-            wallet.removeChangeEventListener(this)
-            wallet.removeTransactionConfidenceEventListener(this)
+            wallet.removeCoinsReceivedEventListener(walletChangeListener)
+            wallet.removeCoinsSentEventListener(walletChangeListener)
+            wallet.removeChangeEventListener(walletChangeListener)
+            wallet.removeTransactionConfidenceEventListener(walletChangeListener)
             listening = false
         }
-    }
-
-    override fun onCoinsReceived(wallet: Wallet, tx: Transaction, prevBalance: Coin, newBalance: Coin) {
-        onUpdate(wallet)
-    }
-
-    override fun onCoinsSent(wallet: Wallet, tx: Transaction, prevBalance: Coin, newBalance: Coin) {
-        onUpdate(wallet)
-    }
-
-    override fun onWalletChanged(wallet: Wallet) {
-        onUpdate(wallet)
-    }
-
-    override fun onTransactionConfidenceChanged(wallet: Wallet, tx: Transaction?) {
-        onUpdate(wallet)
     }
 
     abstract fun onUpdate(wallet: Wallet)

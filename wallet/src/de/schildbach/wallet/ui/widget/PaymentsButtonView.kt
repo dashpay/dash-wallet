@@ -92,6 +92,10 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
         sub_title_view.text = text
     }
 
+    fun showForwardArrow(show: Boolean) {
+        forward_arrow.visibility = if (show) VISIBLE else GONE
+    }
+
     private fun convertPixelsToDp(px: Float): Float {
         return px / (context.resources.displayMetrics.densityDpi.toFloat() / DisplayMetrics.DENSITY_DEFAULT)
     }

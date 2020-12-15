@@ -99,7 +99,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         }
     }
 
-    public fun refresh() {
+    private fun refresh() {
         refreshData()
 
         qrCodeBitmap = BitmapDrawable(resources, Qr.bitmap(paymentRequestUri))

@@ -811,8 +811,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             Context.propagate(walletApplication.wallet.context)
             var encryptionKey: KeyParameter? = null
 
-            var lastContactRequestTime = if (dashPayContactRequestDao.countAllRequests() > 0)
-                dashPayContactRequestDao.getLastTimestamp() - DateUtils.MINUTE_IN_MILLIS * 12
+            var lastContactRequestTime = if (dashPayContactRequestDao.countAllRequests() > 0) {
+                val lastTimeStamp = dashPayContactRequestDao.getLastTimestamp()
+                // if the last contact request was received in the past 10 minutes, then query for
+                // contact requests that are 10 minutes before it.  If the last contact request was
+                // more than 10 minutes ago, then query all contact requests that came after it.
+                if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10)
+                    lastTimeStamp
+                else lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
+            }
             else 0L
 
             updatingContacts.set(true)
@@ -822,50 +829,56 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
             toContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
-                userIdList.add(contactRequest.toUserId)
-                dashPayContactRequestDao.insert(contactRequest)
+                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId)) {
 
-                // add our receiving from this contact keychain if it doesn't exist
-                val contact = EvolutionContact(userId, contactRequest.toUserId)
-                try {
-                    if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
-                        val contactIdentity = platform.identities.get(contactRequest.toUserId)
-                        if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
-                            val password = securityGuard.retrievePassword()
-                            // Don't bother with DeriveKeyTask here, just call deriveKey
-                            encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                    userIdList.add(contactRequest.toUserId)
+                    dashPayContactRequestDao.insert(contactRequest)
+
+                    // add our receiving from this contact keychain if it doesn't exist
+                    val contact = EvolutionContact(userId, contactRequest.toUserId)
+                    try {
+                        if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+                            val contactIdentity = platform.identities.get(contactRequest.toUserId)
+                            if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                                val password = securityGuard.retrievePassword()
+                                // Don't bother with DeriveKeyTask here, just call deriveKey
+                                encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                            }
+                            blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, it, encryptionKey!!)
+                            addedContact = true
                         }
-                        blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, it, encryptionKey!!)
-                        addedContact = true
+                    } catch (e: KeyCrypterException) {
+                        // we can't send payments to this contact due to an invalid encryptedPublicKey
+                        log.info("ContactRequest: error ${e.message}")
                     }
-                } catch (e: KeyCrypterException) {
-                    // we can't send payments to this contact due to an invalid encryptedPublicKey
-                    log.info("ContactRequest: error ${e.message}")
                 }
             }
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
-                userIdList.add(contactRequest.userId)
-                dashPayContactRequestDao.insert(contactRequest)
+                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId)) {
 
-                // add the sending to contact keychain if it doesn't exist
-                val contact = EvolutionContact(userId, contactRequest.userId)
-                try {
-                    if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
-                        val contactIdentity = platform.identities.get(contactRequest.userId)
-                        if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
-                            val password = securityGuard.retrievePassword()
-                            // Don't bother with DeriveKeyTask here, just call deriveKey
-                            encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                    userIdList.add(contactRequest.userId)
+                    dashPayContactRequestDao.insert(contactRequest)
+
+                    // add the sending to contact keychain if it doesn't exist
+                    val contact = EvolutionContact(userId, contactRequest.userId)
+                    try {
+                        if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
+                            val contactIdentity = platform.identities.get(contactRequest.userId)
+                            if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                                val password = securityGuard.retrievePassword()
+                                // Don't bother with DeriveKeyTask here, just call deriveKey
+                                encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                            }
+                            blockchainIdentity.addContactPaymentKeyChain(contactIdentity!!, it, encryptionKey!!)
+                            addedContact = true
                         }
-                        blockchainIdentity.addContactPaymentKeyChain(contactIdentity!!, it, encryptionKey!!)
-                        addedContact = true
+                    } catch (e: KeyCrypterException) {
+                        // we can't send payments to this contact due to an invalid encryptedPublicKey
+                        log.info("ContactRequest: error ${e.message}")
                     }
-                } catch (e: KeyCrypterException) {
-                    // we can't send payments to this contact due to an invalid encryptedPublicKey
-                    log.info("ContactRequest: error ${e.message}")
                 }
             }
 
@@ -885,7 +898,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             updateContactProfiles(userId!!, lastContactRequestTime)
 
             // fire listeners if there were new contacts
-            if (fromContactDocuments.isNotEmpty() || toContactDocuments.isNotEmpty()) {
+            if (addedContact) {
                 fireContactsUpdatedListeners()
             }
 

@@ -23,11 +23,14 @@ import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.*
+import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -50,7 +53,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 
-class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
+class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
         ContactViewHolder.OnItemClickListener {
 
@@ -72,6 +75,8 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             return instance
         }
     }
+
+    override val navigationItemId = R.id.contacts
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private var handler: Handler = Handler()

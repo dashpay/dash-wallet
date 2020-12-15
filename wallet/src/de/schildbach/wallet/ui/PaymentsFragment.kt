@@ -22,12 +22,12 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.Fragment
 import com.google.android.material.tabs.TabLayout
+import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.*
 
-class PaymentsFragment : Fragment(R.layout.activity_payments) {
+class PaymentsFragment : BottomNavFragment(R.layout.activity_payments) {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
@@ -47,6 +47,8 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
             return instance
         }
     }
+
+    override val navigationItemId = R.id.payments
 
     private var saveRecentTab = false
 
@@ -114,5 +116,4 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
         menuInflater.inflate(R.menu.payment_options, menu)
         super.onCreateOptionsMenu(menu, menuInflater)
     }
-
 }

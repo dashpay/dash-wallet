@@ -270,7 +270,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 @Override
                 public void onClick(final View v) {
                     TransactionHistoryItem transactionHistoryItem;
-                    if (getItemViewType(1) == VIEW_TYPE_PROCESSING_IDENTITY) {
+                    int viewType = getItemViewType(1);
+                    if (viewType == VIEW_TYPE_PROCESSING_IDENTITY || viewType == VIEW_TYPE_JOIN_DASHPAY) {
                         transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - 2);
                     } else {
                         transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - 1);
@@ -425,6 +426,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             if (contact == null) {
                 int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
                 primaryStatusView.setText(idPrimaryStatus);
+                icon.setImageResource(R.drawable.ic_dash_round);
                 icon.setOnClickListener(null);
             } else {
                 String name = "";

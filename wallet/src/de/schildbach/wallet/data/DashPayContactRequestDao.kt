@@ -19,6 +19,9 @@ interface DashPayContactRequestDao {
     @Query("SELECT * FROM dashpay_contact_request WHERE toUserId = :toUserId")
     suspend fun loadFromOthers(toUserId: String): List<DashPayContactRequest>?
 
+    @Query("SELECT EXISTS (SELECT * FROM dashpay_contact_request WHERE userId = :userId AND toUserId = :toUserId)")
+    suspend fun exists(userId: String, toUserId: String): Boolean
+
     @Query("SELECT MAX(timestamp) FROM dashpay_contact_request")
     suspend fun getLastTimestamp() : Long
 
