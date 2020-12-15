@@ -129,6 +129,11 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        initialSearch = true
+    }
+
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner, Observer {
