@@ -37,9 +37,9 @@
         android:background="@drawable/tab_background"
         app:tabBackground="@drawable/tab_item_background"
         app:tabIndicatorHeight="0dp"
-        app:tabSelectedTextColor="@color/white"
+        app:tabSelectedTextColor="@color/dash_black"
         app:tabTextAppearance="@android:style/TextAppearance.Widget.TabWidget"
-        app:tabTextColor="@color/dash_blue">
+        app:tabTextColor="@color/dash_gray">
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"

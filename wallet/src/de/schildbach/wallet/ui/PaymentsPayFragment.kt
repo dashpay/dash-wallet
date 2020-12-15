@@ -86,6 +86,7 @@ class PaymentsPayFragment : Fragment(),
         AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().load().observe(viewLifecycleOwner, Observer {
             val visibility = if (it == null) View.GONE else View.VISIBLE
             pay_by_contact_select.visibility = visibility
+            pay_by_contact_pane.visibility = visibility
         })
 
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
@@ -93,9 +94,12 @@ class PaymentsPayFragment : Fragment(),
             if (Status.SUCCESS == it.status) {
                 if (it.data == null || it.data.isEmpty()) {
                     frequent_contacts_rv.visibility = View.GONE
+                    pay_by_contact_select.showForwardArrow(false)
                 } else {
                     frequent_contacts_rv.visibility = View.VISIBLE
+                    pay_by_contact_select.showForwardArrow(true)
                 }
+                frequent_contacts_rv_top_line.visibility = frequent_contacts_rv.visibility
 
                 if (it.data != null) {
                     val results = arrayListOf<UsernameSearchResult>()
