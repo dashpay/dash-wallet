@@ -202,7 +202,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         // Names.search does support retrieving 100 names at a time if retrieveAll = false
         //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
         val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN,
-                false, limit)
+                false, 0, limit)
 
         val userIds = if (onlyExactUsername) {
             val result = mutableListOf<Identifier>()
