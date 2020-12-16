@@ -156,7 +156,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                     }
                     initialSearch = false
                 } else {
-                    if (it.data == null || it.data.isEmpty()) {
+                    if ((it.data == null || it.data.isEmpty()) && query.isNotEmpty()) {
                         dashPayViewModel.searchUsernames(query, 3)
                     }
                 }
