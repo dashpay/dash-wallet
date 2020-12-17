@@ -15,6 +15,7 @@ import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.security.SecurityGuard
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import java.io.File
@@ -47,7 +48,6 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         val displayName = inputData.getString(KEY_DISPLAY_NAME) ?: ""
         val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE) ?: ""
         var avatarUrl = inputData.getString(KEY_AVATAR_URL) ?: ""
-        val avatarHash = inputData.getByteArray(KEY_AVATAR_HASH)
         val avatarFingerprint = inputData.getByteArray(KEY_AVATAR_FINGERPRINT)
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
@@ -72,13 +72,18 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             }
         }
 
+        val avatarHash: ByteArray?
+
         // Perform the image upload here
         val avatarUrlToUpload = inputData.getString(KEY_LOCAL_AVATAR_URL_TO_UPLOAD)?:""
         val uploadService = inputData.getString(KEY_UPLOAD_SERVICE)?:""
         if (avatarUrlToUpload.isNotEmpty()) {
+            val avatarFile = File(avatarUrlToUpload)
+            @Suppress("BlockingMethodInNonBlockingContext")
+            avatarHash = Sha256Hash.of(avatarFile).bytes
             when (uploadService) {
                 EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE.name -> {
-                    val avatarFileBytes = File(avatarUrlToUpload).readBytes()
+                    val avatarFileBytes = avatarFile.readBytes()
                     val fileId = saveToGoogleDrive(applicationContext, avatarFileBytes)
                     avatarUrl = "https://drive.google.com/uc?export=view&id=$fileId"
                 }
@@ -86,6 +91,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
                     //TODO:
                 }
             }
+        } else {
+            avatarHash = inputData.getByteArray(KEY_AVATAR_HASH)
         }
 
         val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
