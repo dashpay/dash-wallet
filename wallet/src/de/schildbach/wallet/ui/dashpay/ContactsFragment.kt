@@ -83,7 +83,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
-    private var lastSearchedQuery = ""
     private var direction = UsernameSortOrderBy.USERNAME
     private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
     private var initialSearch = true
@@ -144,7 +143,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner, Observer {
             if (Status.SUCCESS == it.status) {
-                if (initialSearch && (mode != MODE_VIEW_REQUESTS)) {
+                if (initialSearch && query.isEmpty() && (mode != MODE_VIEW_REQUESTS)) {
                     if (it.data == null || it.data.isEmpty() || it.data.find { u -> u.requestReceived } == null) {
                         empty_state_pane.visibility = View.VISIBLE
                         search.visibility = View.GONE
@@ -254,7 +253,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     private fun showEmptySuggestions() {
         suggestions_search_no_result.visibility = View.VISIBLE
         KeyboardUtil.hideKeyboard(requireContext(), requireView())
-        val searchUsersBtn = suggestions_search_no_result.findViewById<View>(R.id.search_for_user)
+        val searchUsersBtn = suggestions_search_no_result.findViewById<View>(R.id.search_for_user_suggestions)
         searchUsersBtn.setOnClickListener {
             startActivity(Intent(context, SearchUserActivity::class.java))
         }
