@@ -96,7 +96,7 @@ dependencies {
 
     // Declare the dependency for the Performance Monitoring library
     // When using the BoM, you don't specify versions in Firebase library dependencies
-    implementation 'com.google.firebase:firebase-perf-ktx'
+    //implementation 'com.google.firebase:firebase-perf-ktx'
 
     // Google Drive Dependencies
     implementation ('com.google.api-client:google-api-client-android:1.26.0') {
@@ -295,4 +295,4 @@ clean {
 
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
-apply plugin: 'com.google.firebase.firebase-perf'
+//apply plugin: 'com.google.firebase.firebase-perf'
