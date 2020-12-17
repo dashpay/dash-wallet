@@ -61,12 +61,15 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.DashPayContactRequest;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.UsernameSearchResult;
@@ -81,6 +84,8 @@ import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet_test.R;
+
+import static java.lang.Math.max;
 
 public class SendCoinsFragment extends Fragment {
 
@@ -311,19 +316,37 @@ public class SendCoinsFragment extends Fragment {
     private void handleDashIdentity(UsernameSearchResult userData, PaymentIntent paymentIntent) {
         viewModel.setUserData(userData);
         if (userData.getRequestReceived()) {
-            DashPayProfile dashPayProfile = userData.getDashPayProfile();
-            Address address = dashPayViewModel.getNextContactAddress(dashPayProfile.getUserId());
-            PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
-                    Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
-                    dashPayProfile.getUserId(), paymentIntent.getAmount());
-            viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
-            enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
+            final DashPayProfile dashPayProfile = userData.getDashPayProfile();
+            AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
+                    .loadDistinctToOthers(dashPayProfile.getUserId())
+                    .observe(getViewLifecycleOwner(), new Observer<List<DashPayContactRequest>>() {
+                        @Override
+                        public void onChanged(List<DashPayContactRequest> dashPayContactRequests) {
+                            if (dashPayContactRequests != null && dashPayContactRequests.size() > 0) {
+                                HashMap<Integer, DashPayContactRequest> map = new HashMap<>(dashPayContactRequests.size());
 
-            if (paymentIntent.getAmount() != null && paymentIntent.getAmount().isGreaterThan(Coin.ZERO)) {
-                if (blockchainState != null && !blockchainState.getReplaying()) {
-                    authenticateOrConfirm();
-                }
-            }
+                                int maxVersion = 0;
+                                for (DashPayContactRequest contactRequest: dashPayContactRequests) {
+                                    map.put(contactRequest.getVersion(), contactRequest);
+                                    maxVersion = max(maxVersion, contactRequest.getVersion());
+                                }
+                                DashPayContactRequest mostRecentContactRequest = map.get(maxVersion);
+                                Address address = dashPayViewModel.getNextContactAddress(dashPayProfile.getUserId(), (int)mostRecentContactRequest.getAccountReference());
+                                PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
+                                        Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+                                        dashPayProfile.getUserId(), paymentIntent.getAmount());
+                                viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
+                                enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
+
+                                if (paymentIntent.getAmount() != null && paymentIntent.getAmount().isGreaterThan(Coin.ZERO)) {
+                                    if (blockchainState != null && !blockchainState.getReplaying()) {
+                                        authenticateOrConfirm();
+                                    }
+                                }
+                            }
+                        }
+                    });
+
         } else {
             viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
         }

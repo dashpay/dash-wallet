@@ -134,8 +134,8 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun getNextContactAddress(userId: String): Address {
-        return platformRepo.getNextContactAddress(userId)
+    fun getNextContactAddress(userId: String, accountReference: Int): Address {
+        return platformRepo.getNextContactAddress(userId, accountReference)
     }
 
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(application)
