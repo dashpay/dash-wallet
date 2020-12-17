@@ -21,13 +21,14 @@ import android.net.Uri
 import android.view.View
 import android.widget.ImageView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
+import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
-import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.ProfilePictureTransformation
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable.Companion.getDrawable
-import org.bitcoinj.core.Sha256Hash
 
 class ProfilePictureDisplay {
 
@@ -44,33 +45,31 @@ class ProfilePictureDisplay {
         }
 
         @JvmStatic
-        fun display(avatarView: ImageView, avatarUrl: String, avatarHash: ByteArray?, username: String) {
+        fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String) {
             val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
-            if (avatarUrl.isNotEmpty()) {
-                Glide.with(avatarView.context.applicationContext)
-                        .load(removePicZoomParameter(avatarUrl))
-                        .signature(ObjectKey(if (avatarHash != null) Sha256Hash.wrap(avatarHash).toStringBase58() else ""))
-                        .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
-                        .transform(ProfilePictureTransformation.create(avatarUrl))
-                        .placeholder(defaultAvatar)
-                        .transition(withCrossFade())
-                        .into(avatarView)
-            } else {
-                displayDefault(avatarView, username)
-            }
-        }
+            if (avatarUrlStr.isNotEmpty()) {
+                val avatarUrl = Uri.parse(avatarUrlStr)
+                val zoomRectF = ProfilePictureHelper.extractZoomedRect(avatarUrl)
+                val baseAvatarUrl = ProfilePictureHelper.removePicZoomParameter(avatarUrl)
+                val context = avatarView.context.applicationContext
+                Glide.with(context)
+                        .load(baseAvatarUrl)
+                        .listener(object : RequestListener<Drawable> {
+                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+                                return false
+                            }
 
-        @JvmStatic
-        fun display(avatarView: ImageView, avatarLocalUri: Uri, lastModified: Long, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
-            if (avatarLocalUri.encodedPath!!.isNotEmpty()) {
-                Glide.with(avatarView.context.applicationContext)
-                        .load(avatarLocalUri)
-                        .signature(ObjectKey(lastModified))
+                            override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
+                                                         dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                                ProfilePictureHelper.avatarHash(context, baseAvatarUrl, avatarHash)
+                                return false
+                            }
+                        })
+                        .signature(ProfilePictureHelper.HashAndZoomSignature(avatarHash, zoomRectF))
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
+                        .transform(ProfilePictureTransformation.create(avatarUrlStr))
                         .placeholder(defaultAvatar)
                         .transition(withCrossFade())
-                        .circleCrop()
                         .into(avatarView)
             } else {
                 displayDefault(avatarView, username)
@@ -80,24 +79,6 @@ class ProfilePictureDisplay {
         fun displayDefault(avatarView: ImageView, username: String) {
             val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
             avatarView.setImageDrawable(defaultAvatar)
-        }
-
-        fun removePicZoomParameter(url: String): Uri {
-            return removeParameter(Uri.parse(url), "dashpay-profile-pic-zoom")
-        }
-
-        @Suppress("SameParameterValue")
-        private fun removeParameter(uri: Uri, key: String): Uri {
-            val newUriBuilder = uri.buildUpon().clearQuery()
-            for (param in uri.queryParameterNames) {
-                newUriBuilder.appendQueryParameter(param,
-                        if (param == key) {
-                            continue
-                        } else {
-                            uri.getQueryParameter(param)
-                        })
-            }
-            return newUriBuilder.build()
         }
     }
 }

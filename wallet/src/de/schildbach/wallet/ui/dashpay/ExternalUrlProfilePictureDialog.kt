@@ -43,10 +43,13 @@ import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper.*
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
+import org.bitcoinj.core.Sha256Hash
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -131,8 +134,9 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
         disclaimer = customView.findViewById(R.id.public_url_message)
         fetchingMessage = customView.findViewById(R.id.fetching_msg)
         disclaimer.apply {
-            text = Html.fromHtml(getString(R.string.public_url_message) +
-                    " <html><a href=\"https://www.google.com/amp/s/www.mail-signatures.com/articles/direct-link-to-hosted-image/amp/\"><span style=\"color:blue;\">${ getString(R.string.public_url_more_info) }</span></a></html>",
+            text = Html.fromHtml(
+                    getString(R.string.public_url_message) +
+                            " <html><a href=\"https://www.google.com/amp/s/www.mail-signatures.com/articles/direct-link-to-hosted-image/amp/\"><span style=\"color:blue;\">${getString(R.string.public_url_more_info)}</span></a></html>",
             )
             movementMethod = LinkMovementMethod.getInstance()
         }
@@ -213,7 +217,7 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
     }
 
     protected fun loadUrl(pictureUrlBase: String) {
-        val pictureUrl = ProfilePictureDisplay.removePicZoomParameter(convertUrlIfSuitable(pictureUrlBase))
+        val pictureUrl = ProfilePictureHelper.removePicZoomParameter(convertUrlIfSuitable(pictureUrlBase))
         Glide.with(requireContext())
                 .load(pictureUrl)
                 .signature(ObjectKey(System.currentTimeMillis()))
@@ -234,12 +238,17 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
                     override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
                         if (isAdded) {
                             if (resource is BitmapDrawable) {
-                                sharedViewModel.bitmapCache = resource.bitmap
-                                sharedViewModel.externalUrl = pictureUrl
-                                publicUrlEnterUrl.text = getString(dialogPromptId)
-                                publicUrlEnterUrl.setTextColor(resources.getColor(R.color.medium_gray))
-                                sharedViewModel.confirm()
-                                dismiss()
+                                ProfilePictureHelper.avatarHash(requireContext(), pictureUrl, null, object : OnResourceReadyListener {
+                                    override fun onResourceReady(avatarHash: Sha256Hash?) {
+                                        sharedViewModel.avatarHash = avatarHash
+                                        sharedViewModel.bitmapCache = resource.bitmap
+                                        sharedViewModel.externalUrl = pictureUrl
+                                        publicUrlEnterUrl.text = getString(dialogPromptId)
+                                        publicUrlEnterUrl.setTextColor(resources.getColor(R.color.medium_gray))
+                                        sharedViewModel.confirm()
+                                        dismiss()
+                                    }
+                                })
                             } else {
                                 onLoadFailed(null)
                             }

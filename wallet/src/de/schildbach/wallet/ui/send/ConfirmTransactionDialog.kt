@@ -133,7 +133,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
                 sendtoaddress.visibility = View.GONE
                 displayname.text = displayNameText
 
-                ProfilePictureDisplay.display(avatar, avatarUrl!!, username!!)
+                ProfilePictureDisplay.display(avatar, avatarUrl!!, null, username!!)
                 confirm_auto_accept.isChecked = autoAcceptLastValue
                 if (pendingContactRequest) {
                     confirm_auto_accept.visibility = View.VISIBLE
