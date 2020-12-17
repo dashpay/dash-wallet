@@ -10,10 +10,10 @@ import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identifier.Identifier
 
 @Parcelize
-@Entity(tableName = "dashpay_contact_request", primaryKeys = ["userId", "toUserId"])
+@Entity(tableName = "dashpay_contact_request", primaryKeys = ["userId", "toUserId", "accountReference"])
 data class DashPayContactRequest(val userId: String,
                                  val toUserId: String, //The contract has this as a binary field
-                                 val accountReference: Long,
+                                 val accountReference: Int,
                                  val encryptedPublicKey: ByteArray,
                                  val senderKeyIndex: Int,
                                  val recipientKeyIndex: Int,
@@ -30,8 +30,8 @@ data class DashPayContactRequest(val userId: String,
                 document.data["encryptedAccountLabel"] as ByteArray
             else null
 
-            val accountReference: Long = if (document.data.containsKey("accountReference"))
-                (document.data["accountReference"] as Int).toLong()
+            val accountReference: Int = if (document.data.containsKey("accountReference"))
+                document.data["accountReference"] as Int
             else 0
 
             val autoAcceptProof: ByteArray? = if (document.data.containsKey("autoAcceptProof"))
