@@ -20,7 +20,6 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.view.View
 import android.widget.ImageView
-import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
 import com.bumptech.glide.request.target.Target
@@ -28,7 +27,7 @@ import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.ProfilePictureTransformation
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable.Companion.getDrawable
-import java.io.File
+import org.bitcoinj.core.Sha256Hash
 
 class ProfilePictureDisplay {
 
@@ -38,18 +37,19 @@ class ProfilePictureDisplay {
         fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false) {
             if (dashPayProfile != null) {
                 avatarView.visibility = View.VISIBLE
-                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.username)
+                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.avatarHash, dashPayProfile.username)
             } else if (hideIfProfileNull) {
                 avatarView.visibility = View.GONE
             }
         }
 
         @JvmStatic
-        fun display(avatarView: ImageView, avatarUrl: String, username: String) {
+        fun display(avatarView: ImageView, avatarUrl: String, avatarHash: ByteArray?, username: String) {
             val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
             if (avatarUrl.isNotEmpty()) {
                 Glide.with(avatarView.context.applicationContext)
                         .load(removePicZoomParameter(avatarUrl))
+                        .signature(ObjectKey(if (avatarHash != null) Sha256Hash.wrap(avatarHash).toStringBase58() else ""))
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                         .transform(ProfilePictureTransformation.create(avatarUrl))
                         .placeholder(defaultAvatar)
