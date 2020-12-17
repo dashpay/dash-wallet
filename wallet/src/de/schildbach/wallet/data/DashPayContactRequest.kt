@@ -13,11 +13,13 @@ import org.dashevo.dpp.identifier.Identifier
 @Entity(tableName = "dashpay_contact_request", primaryKeys = ["userId", "toUserId"])
 data class DashPayContactRequest(val userId: String,
                                  val toUserId: String, //The contract has this as a binary field
+                                 val accountReference: Long,
                                  val encryptedPublicKey: ByteArray,
                                  val senderKeyIndex: Int,
                                  val recipientKeyIndex: Int,
                                  val timestamp: Long,
-                                 val encryptedAccountLabel: ByteArray?
+                                 val encryptedAccountLabel: ByteArray?,
+                                 val autoAcceptProof: ByteArray?
 ) : Parcelable {
     companion object {
         fun fromDocument(document: Document): DashPayContactRequest {
@@ -28,12 +30,22 @@ data class DashPayContactRequest(val userId: String,
                 document.data["encryptedAccountLabel"] as ByteArray
             else null
 
+            val accountReference: Long = if (document.data.containsKey("accountReference"))
+                (document.data["accountReference"] as Int).toLong()
+            else 0
+
+            val autoAcceptProof: ByteArray? = if (document.data.containsKey("autoAcceptProof"))
+                document.data["autoAcceptProof"] as ByteArray
+            else null
+
             return DashPayContactRequest(document.ownerId.toString(), toUserId,
+                    accountReference,
                     document.data["encryptedPublicKey"] as ByteArray,
                     document.data["senderKeyIndex"] as Int,
                     document.data["recipientKeyIndex"] as Int,
                     timestamp,
-                    encryptedAccountLabel)
+                    encryptedAccountLabel,
+                    autoAcceptProof)
         }
     }
 
@@ -58,4 +70,28 @@ data class DashPayContactRequest(val userId: String,
     val rawToUserId by lazy {
         toUserIdentifier.toBuffer()
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as DashPayContactRequest
+
+        if (userId != other.userId) return false
+        if (toUserId != other.toUserId) return false
+        if (accountReference != other.accountReference) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = userId.hashCode()
+        result = 31 * result + toUserId.hashCode()
+        result = 31 * result + accountReference.hashCode()
+        return result
+    }
+
+    @IgnoredOnParcel
+    val version: Int
+        get() = (accountReference shl 28).toInt()
 }

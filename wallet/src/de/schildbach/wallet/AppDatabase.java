@@ -20,7 +20,7 @@ import de.schildbach.wallet.data.RoomConverters;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 
-@Database(entities = {ExchangeRate.class, BlockchainState.class, BlockchainIdentityData.class, DashPayProfile.class, DashPayContactRequest.class}, version = 11)
+@Database(entities = {ExchangeRate.class, BlockchainState.class, BlockchainIdentityData.class, DashPayProfile.class, DashPayContactRequest.class}, version = 12)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
