@@ -111,7 +111,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                                uploadService: String = "", localAvatarUrl: String = "") {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                displayName, publicMessage, avatarUrl,
+                displayName, publicMessage, avatarUrl,null, null,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
 
         lastAttemptedProfile = updatedProfile

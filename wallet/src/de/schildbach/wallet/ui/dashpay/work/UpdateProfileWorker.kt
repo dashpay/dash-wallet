@@ -33,6 +33,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         const val KEY_DISPLAY_NAME = "UpdateProfileRequestWorker.DISPLAY_NAME"
         const val KEY_PUBLIC_MESSAGE = "UpdateProfileRequestWorker.PUBLIC_MESSAGE"
         const val KEY_AVATAR_URL = "UpdateProfileRequestWorker.AVATAR_URL"
+        const val KEY_AVATAR_HASH = "UpdateProfileRequestWorker.AVATAR_HASH"
+        const val KEY_AVATAR_FINGERPRINT = "UpdateProfileRequestWorker.AVATAR_FINGERPRINT"
         const val KEY_USER_ID = "UpdateProfileRequestWorker.KEY_USER_ID"
         const val KEY_CREATED_AT = "UpdateProfileRequestWorker.CREATED_AT"
         const val KEY_LOCAL_AVATAR_URL_TO_UPLOAD = "UpdateProfileRequestWorker.AVATAR_URL_TO_UPLOAD"
@@ -45,6 +47,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         val displayName = inputData.getString(KEY_DISPLAY_NAME) ?: ""
         val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE) ?: ""
         var avatarUrl = inputData.getString(KEY_AVATAR_URL) ?: ""
+        val avatarHash = inputData.getByteArray(KEY_AVATAR_HASH)
+        val avatarFingerprint = inputData.getByteArray(KEY_AVATAR_FINGERPRINT)
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
@@ -89,6 +93,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
                 displayName,
                 publicMessage,
                 avatarUrl,
+                avatarHash,
+                avatarFingerprint,
                 createdAt
         )
 
