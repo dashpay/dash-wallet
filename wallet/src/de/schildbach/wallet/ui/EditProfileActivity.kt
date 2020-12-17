@@ -434,6 +434,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
                 REQUEST_CODE_CROP_IMAGE -> {
                     if (resultCode == Activity.RESULT_OK) {
+                        editProfileViewModel.recalculateAvatarHash()
                         if (externalUrlSharedViewModel.externalUrl != null) {
                             saveUrl(CropImageActivity.extractZoomedRect(data!!))
                         } else {

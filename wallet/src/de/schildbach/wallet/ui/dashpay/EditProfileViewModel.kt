@@ -49,13 +49,13 @@ import java.io.IOException
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.util.*
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import com.google.api.services.drive.Drive
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
+import org.bitcoinj.core.Sha256Hash
 
 
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
@@ -92,6 +92,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
 
     lateinit var tmpPictureFile: File
 
+    private var avatarHash: ByteArray? = null
+
     fun createTmpPictureFile(): Boolean = try {
         val storageDir: File = walletApplication.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
         tmpPictureFile = File.createTempFile("profileimagetmp", ".jpg", storageDir).apply {
@@ -111,7 +113,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                                uploadService: String = "", localAvatarUrl: String = "") {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                displayName, publicMessage, avatarUrl,null, null,
+                displayName, publicMessage, avatarUrl, avatarHash, null,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
 
         lastAttemptedProfile = updatedProfile
@@ -347,4 +349,11 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
         uploadProfilePictureCall?.cancel()
     }
 
+    fun recalculateAvatarHash() {
+        val hash = Sha256Hash.of(tmpPictureFile)
+        avatarHash = hash.bytes
+        println("avatarHash: ${hash.toStringBase58()}")
+//        val fingerprintHasher = PerceptiveHash(32)
+//        val fingerprint = fingerprintHasher.hash(tmpPictureFile)
+    }
 }
