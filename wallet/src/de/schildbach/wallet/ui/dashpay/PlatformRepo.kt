@@ -291,7 +291,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val fromContactMap = HashMap<String, DashPayContactRequest>()
             fromContactDocuments!!.forEach {
                 userIdList.add(it.userId)
-                fromContactMap[it.userId] = it
+
+                // It is possible for a contact to send multiple requests that differ by account
+                // or by version.  Currently we will ignore all but the first based on the timestamp
+                // TODO: choose the contactRequest based on the ContactInfo.accountRef value
+                // for this contact
+                if (!fromContactMap.containsKey(it.userId)) {
+                    fromContactMap[it.userId] = it
+                } else {
+                    val previous = fromContactMap[it.userId]!!
+                    if (previous.timestamp > it.timestamp) {
+                        fromContactMap[it.userId] = it
+                    }
+                }
             }
 
             val profiles = HashMap<String, DashPayProfile?>(userIdList.size)

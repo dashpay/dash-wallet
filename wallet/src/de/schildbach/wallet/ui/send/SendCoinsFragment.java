@@ -86,6 +86,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet_test.R;
 
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 public class SendCoinsFragment extends Fragment {
 
@@ -323,14 +324,17 @@ public class SendCoinsFragment extends Fragment {
                         @Override
                         public void onChanged(List<DashPayContactRequest> dashPayContactRequests) {
                             if (dashPayContactRequests != null && dashPayContactRequests.size() > 0) {
-                                HashMap<Integer, DashPayContactRequest> map = new HashMap<>(dashPayContactRequests.size());
+                                HashMap<Long, DashPayContactRequest> map = new HashMap<>(dashPayContactRequests.size());
 
-                                int maxVersion = 0;
+                                // This is currently using the first version, but it should use the version specified
+                                // in the ContactInfo.accountRef related to this contact.  Ideally the user should
+                                // approve of a change to the "accountReference" that is used.
+                                long firstTimestamp = System.currentTimeMillis();
                                 for (DashPayContactRequest contactRequest: dashPayContactRequests) {
-                                    map.put(contactRequest.getVersion(), contactRequest);
-                                    maxVersion = max(maxVersion, contactRequest.getVersion());
+                                    map.put(contactRequest.getTimestamp(), contactRequest);
+                                    firstTimestamp = min(firstTimestamp, contactRequest.getTimestamp());
                                 }
-                                DashPayContactRequest mostRecentContactRequest = map.get(maxVersion);
+                                DashPayContactRequest mostRecentContactRequest = map.get(firstTimestamp);
                                 Address address = dashPayViewModel.getNextContactAddress(dashPayProfile.getUserId(), (int)mostRecentContactRequest.getAccountReference());
                                 PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
                                         Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
