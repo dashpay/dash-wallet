@@ -477,11 +477,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             blockchainIdentity.registerProfile(displayName,
                     publicMessage,
                     avatarUrl,
+                    dashPayProfile.avatarHash,
+                    dashPayProfile.avatarFingerprint,
                     encryptionKey)
         } else {
             blockchainIdentity.updateProfile(displayName,
                     publicMessage,
                     avatarUrl,
+                    dashPayProfile.avatarHash,
+                    dashPayProfile.avatarFingerprint,
                     encryptionKey)
         }
         log.info("profile broadcast")
@@ -607,7 +611,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
-            blockchainIdentity.registerProfile(username, "", "", keyParameter)
+            blockchainIdentity.registerProfile(username, "", "", null, null, keyParameter)
         }
     }
 
@@ -724,7 +728,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private suspend fun updateDashPayProfile(userId: String) {
         var profileDocument = Profiles(platform).get(userId)
-                ?: profiles.createProfileDocument("", "", "", platform.identities.get(userId)!!)
+                ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
         val nameDocument = platform.names.get(userId)
 
@@ -840,7 +844,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
             toContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
-                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference)) {
+                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference.toLong())) {
 
                     userIdList.add(contactRequest.toUserId)
                     dashPayContactRequestDao.insert(contactRequest)
@@ -868,7 +872,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
-                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference)) {
+                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference.toLong())) {
 
                     userIdList.add(contactRequest.userId)
                     dashPayContactRequestDao.insert(contactRequest)
