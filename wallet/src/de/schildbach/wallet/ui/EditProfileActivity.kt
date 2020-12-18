@@ -242,7 +242,8 @@ class EditProfileActivity : BaseMenuActivity() {
         })
         externalUrlSharedViewModel.validUrlChosenEvent.observe(this, Observer {
             if (it != null) {
-                editProfileViewModel.avatarHash = externalUrlSharedViewModel.avatarHash!!
+                editProfileViewModel.avatarHash = externalUrlSharedViewModel.avatarHash
+                editProfileViewModel.avatarFingerprint = externalUrlSharedViewModel.avatarFingerprint
                 editProfileViewModel.saveExternalBitmap(it)
             } else {
                 val username = editProfileViewModel.dashPayProfile!!.username

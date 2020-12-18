@@ -44,12 +44,12 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper.*
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper.OnResourceReadyListener
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Sha256Hash
 import org.slf4j.LoggerFactory
-import java.io.File
+import java.math.BigInteger
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -238,9 +238,11 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
                     override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
                         if (isAdded) {
                             if (resource is BitmapDrawable) {
-                                ProfilePictureHelper.avatarHash(requireContext(), pictureUrl, null, object : OnResourceReadyListener {
-                                    override fun onResourceReady(avatarHash: Sha256Hash?) {
+                                ProfilePictureHelper.avatarHashAndFingerprint(requireContext(), pictureUrl, null, object : OnResourceReadyListener {
+                                    override fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?) {
                                         sharedViewModel.avatarHash = avatarHash
+                                        sharedViewModel.avatarFingerprint = avatarFingerprint
+
                                         sharedViewModel.bitmapCache = resource.bitmap
                                         sharedViewModel.externalUrl = pictureUrl
                                         publicUrlEnterUrl.text = getString(dialogPromptId)

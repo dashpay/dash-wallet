@@ -61,7 +61,7 @@ class ProfilePictureDisplay {
 
                             override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
                                                          dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-                                ProfilePictureHelper.avatarHash(context, baseAvatarUrl, avatarHash)
+                                ProfilePictureHelper.avatarHashAndFingerprint(context, baseAvatarUrl, avatarHash)
                                 return false
                             }
                         })

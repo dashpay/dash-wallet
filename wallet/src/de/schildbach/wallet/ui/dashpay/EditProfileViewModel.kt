@@ -49,6 +49,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.math.BigInteger
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.util.*
@@ -93,6 +94,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     lateinit var tmpPictureFile: File
 
     var avatarHash: Sha256Hash? = null
+    var avatarFingerprint: BigInteger? = null
 
     fun createTmpPictureFile(): Boolean = try {
         val storageDir: File = walletApplication.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
@@ -113,7 +115,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                                uploadService: String = "", localAvatarUrl: String = "") {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                displayName, publicMessage, avatarUrl, avatarHash?.bytes, null,
+                displayName, publicMessage, avatarUrl, avatarHash?.bytes, avatarFingerprint?.toByteArray(),
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
 
         lastAttemptedProfile = updatedProfile

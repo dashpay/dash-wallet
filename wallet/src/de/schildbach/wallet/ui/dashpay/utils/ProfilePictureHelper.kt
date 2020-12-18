@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.dashpay.utils
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -33,6 +34,7 @@ import com.google.common.base.Stopwatch
 import org.bitcoinj.core.Sha256Hash
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -46,7 +48,7 @@ class ProfilePictureHelper {
 
         private const val ZOOM_PARAM_KEY = "dashpay-profile-pic-zoom"
 
-        fun avatarHash(context: Context, pictureUrl: Uri, profileAvatarHash: ByteArray?, listener: OnResourceReadyListener? = null) {
+        fun avatarHashAndFingerprint(context: Context, pictureUrl: Uri, profileAvatarHash: ByteArray?, listener: OnResourceReadyListener? = null) {
             val watch = Stopwatch.createStarted()
             Glide.with(context)
                     .asFile()
@@ -61,14 +63,15 @@ class ProfilePictureHelper {
                                 val profileAvatarHashBase58 = Sha256Hash.wrap(profileAvatarHash).toStringBase58()
                                 log.info("server avatarHash ({}) doesn't match the profile avatarHash ({})", serverAvatarHash.toStringBase58(), profileAvatarHashBase58)
                             }
+                            val avatarFingerprint = DHash.of(BitmapFactory.decodeFile(resource.path))
                             listener?.apply {
-                                onResourceReady(serverAvatarHash)
+                                onResourceReady(serverAvatarHash, avatarFingerprint)
                             }
                         }
 
                         override fun onLoadCleared(placeholder: Drawable?) {
                             listener?.apply {
-                                onResourceReady(null)
+                                onResourceReady(null, null)
                             }
                         }
                     })
@@ -187,6 +190,6 @@ class ProfilePictureHelper {
     }
 
     interface OnResourceReadyListener {
-        fun onResourceReady(avatarHash: Sha256Hash?)
+        fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?)
     }
 }
