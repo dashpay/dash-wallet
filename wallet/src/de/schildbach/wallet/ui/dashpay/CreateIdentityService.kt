@@ -339,6 +339,7 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun restoreIdentity(identity: ByteArray) {
         log.info("Restoring identity and username")
+        platformRepo.updateSyncStatus(PreBlockStage.StartRecovery)
 
         // use an "empty" state for each
         blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
@@ -378,6 +379,7 @@ class CreateIdentityService : LifecycleService() {
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+        platformRepo.updateSyncStatus(PreBlockStage.InitWallet)
 
         //
         // Step 2: The credit funding registration exists, no need to create it
@@ -395,6 +397,8 @@ class CreateIdentityService : LifecycleService() {
         }
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
+        platformRepo.updateSyncStatus(PreBlockStage.GetIdentity)
+
 
         //
         // Step 4: We don't need to find the preorder documents
@@ -407,6 +411,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.recoverUsernamesAsync(blockchainIdentity)
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
+        platformRepo.updateSyncStatus(PreBlockStage.GetName)
 
         //
         // Step 6: Find the profile
@@ -415,7 +420,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.recoverDashPayProfile(blockchainIdentity)
         // blockchainIdentity hasn't changed
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
-
+        platformRepo.updateSyncStatus(PreBlockStage.GetProfile)
 
         // We are finished recovering
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
@@ -423,6 +428,7 @@ class CreateIdentityService : LifecycleService() {
         // Complete the entire process
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
 
+        platformRepo.updateSyncStatus(PreBlockStage.RecoveryComplete)
         PlatformRepo.getInstance().init()
     }
 

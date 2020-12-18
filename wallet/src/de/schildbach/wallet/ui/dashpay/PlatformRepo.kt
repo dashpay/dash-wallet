@@ -95,8 +95,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
+    private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
+
     private val updatingContacts = AtomicBoolean(false)
-    private val preDownloadBlocks = AtomicBoolean(true)
+    private val preDownloadBlocks = AtomicBoolean(false)
     private var preDownloadBlocksFuture: SettableFuture<Boolean>? = null
 
     val platform = Platform(Constants.NETWORK_PARAMETERS)
@@ -117,6 +119,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
     private val backgroundHandler: Handler
+
+    private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
 
     init {
         backgroundThread.start()
@@ -773,6 +777,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId))
     }
 
+    fun updateSyncStatus(stage: PreBlockStage) {
+        if (stage == PreBlockStage.Starting && lastPreBlockStage != PreBlockStage.None) {
+            log.info("skipping ${stage.name} because an idnetity was restored")
+            return
+        }
+        if (preDownloadBlocks.get()) {
+            firePreBlockProgressListeners(stage)
+            lastPreBlockStage = stage
+        } else {
+            log.info("skipping ${stage.name} because PREBLOCKS is OFF")
+        }
+    }
+
     /**
      * updateContactRequests will fetch new Contact Requests from the network
      * and verify that we have all requests and profiles in the local database
@@ -781,7 +798,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * when the app starts, it has not yet been initialized
      */
     suspend fun updateContactRequests() {
-        try {
+
             // only allow this method to execute once at a time
             if (updatingContacts.get()) {
                 log.info("updateContactRequests is already running")
@@ -802,6 +819,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
                 return // this is here because the wallet is being reset without removing blockchainIdentityData
             }
+
+        try {
             val userId = blockchainIdentityData.userId!!
 
             val userIdList = HashSet<String>()
@@ -822,7 +841,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             else 0L
 
             updatingContacts.set(true)
+            updateSyncStatus(PreBlockStage.Starting)
+            updateSyncStatus(PreBlockStage.Initialization)
             checkDatabaseIntegrity(userId)
+
+            updateSyncStatus(PreBlockStage.FixMissingProfiles)
 
             // Get all out our contact requests
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
@@ -852,6 +875,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     }
                 }
             }
+            updateSyncStatus(PreBlockStage.GetReceivedRequests)
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
@@ -880,6 +904,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     }
                 }
             }
+            updateSyncStatus(PreBlockStage.GetSentRequests)
 
             // If new keychains were added to the wallet, then update the bloom filters
             if (addedContact) {
@@ -892,15 +917,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (userIdList.isNotEmpty()) {
                 updateContactProfiles(userIdList.toList(), 0L)
             }
+            updateSyncStatus(PreBlockStage.GetNewProfiles)
 
             // fetch updated profiles from the network
-            updateContactProfiles(userId!!, lastContactRequestTime)
+            updateContactProfiles(userId, lastContactRequestTime)
+
+            updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
 
             // fire listeners if there were new contacts
             if (addedContact) {
                 fireContactsUpdatedListeners()
             }
 
+            updateSyncStatus(PreBlockStage.Complete)
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
             log.error(formatExceptionMessage("error updating contacts", e))
@@ -1031,6 +1060,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun addPreBlockProgressListener(listener: OnPreBlockProgressListener) {
+        onPreBlockContactListeners.add(listener)
+    }
+
+    fun removePreBlockProgressListener(listener: OnPreBlockProgressListener) {
+        onPreBlockContactListeners.remove(listener)
+    }
+
+    private fun firePreBlockProgressListeners(stage: PreBlockStage) {
+        for (listener in onPreBlockContactListeners) {
+            listener.onPreBlockProgressUpdated(stage)
+        }
+    }
+
     fun getIdentityForName(nameDocument: Document): Identifier {
         val records = nameDocument.data["records"] as Map<String, Any?>
         return Identifier.from(records["dashUniqueIdentityId"])
@@ -1060,6 +1103,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun preBlockDownload(future: SettableFuture<Boolean>) {
         GlobalScope.launch(Dispatchers.IO) {
             preDownloadBlocks.set(true)
+            lastPreBlockStage = PreBlockStage.None
             preDownloadBlocksFuture = future
             log.info("PreDownloadBlocks: starting")
 
@@ -1078,7 +1122,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
 
             // update contacts, profiles and other platform data
-            if (!updatingContacts.get()) {
+            else if (!updatingContacts.get()) {
                 updateContactRequests()
             }
         }
