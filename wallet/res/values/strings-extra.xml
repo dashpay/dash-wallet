@@ -416,7 +416,7 @@
     <string name="notifications_contact_has_accepted">%s has accepted your contact request.</string>
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
     <string name="notifications_you_sent">You sent a contact request to %s</string>
-    <string name="notifications_you_received">%s sent a contact request to you</string>
+    <string name="notifications_you_received">%s has sent you a contact request</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 
