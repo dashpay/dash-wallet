@@ -27,19 +27,12 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.notification_contact_request_received_row.view.*
-import java.text.SimpleDateFormat
-import java.util.*
 
 open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         NotificationViewHolder(R.layout.notification_contact_request_received_row, inflater, parent) {
-
-    private val dateFormat = SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault())
-
-    private fun formatDate(timeStamp: Long): String {
-        return dateFormat.format(timeStamp).replace("AM", "am").replace("PM", "pm")
-    }
 
     fun bind(notificationItem: NotificationItemContact, state: Resource<WorkInfo>?, isNew: Boolean,
              showAvatar: Boolean, onActionClickListener: OnContactActionClickListener? = null) {
@@ -48,7 +41,7 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
 
         itemView.apply {
             setBackgroundResource(if (isNew) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
-            date.text = formatDate(usernameSearchResult.date)
+            date.text = WalletUtils.formatDate(usernameSearchResult.date)
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             val name = if (dashPayProfile.displayName.isEmpty()) {
