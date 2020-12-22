@@ -429,7 +429,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 }
                 primaryStatusView.setText(name);
 
-                ProfilePictureDisplay.display(icon, contact.getAvatarUrl(), name);
+                ProfilePictureDisplay.display(icon, contact.getAvatarUrl(), contact.getUsername());
                 icon.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
