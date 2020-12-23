@@ -347,6 +347,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             timeView = (TextView) itemView.findViewById(R.id.transaction_row_time);
             dashSymbolView = (ImageView) itemView.findViewById(R.id.dash_amount_symbol);
             valueView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_value);
+            valueView.setApplyMarkup(false);
             signalView = (TextView) itemView.findViewById(R.id.transaction_amount_signal);
 
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);

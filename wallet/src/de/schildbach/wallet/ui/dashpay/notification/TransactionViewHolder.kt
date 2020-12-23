@@ -16,7 +16,6 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
-import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -192,6 +191,7 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
 
     init {
         fiatView.setApplyMarkup(false)
+        valueView.setApplyMarkup(false)
         rateNotAvailableView = itemView.findViewById(R.id.transaction_row_rate_not_available) as TextView
     }
 }

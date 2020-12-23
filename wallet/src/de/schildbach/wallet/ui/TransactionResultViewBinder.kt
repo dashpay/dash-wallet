@@ -192,6 +192,7 @@ class TransactionResultViewBinder(private val containerView: View, private val p
         }
 
         transactionFee.setFormat(noCodeFormat)
+        transactionFee.setApplyMarkup(false)
         transactionFee.setAmount(tx.fee)
 
         date.text = WalletUtils.formatDate(tx.updateTime.time)
