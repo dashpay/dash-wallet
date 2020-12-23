@@ -24,17 +24,14 @@
             android:textStyle="bold"
             tools:text="New or Earlier" />
 
-    <ImageView
-        android:id="@+id/activity_info"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/title"
-        app:layout_constraintStart_toEndOf="@id/title"
-        app:layout_constraintTop_toTopOf="@id/title"
-        app:srcCompat="@drawable/ic_activity_info"
-        tools:visibility="visible" />
+        <ImageView
+            android:id="@+id/activity_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:visibility="gone"
+            app:srcCompat="@drawable/ic_activity_info"
+            tools:visibility="visible" />
 
         <Spinner
             android:id="@+id/history_filter"

@@ -1,5 +1,6 @@
 package de.schildbach.wallet.ui
 
+import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -32,6 +33,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
     private var tx: Transaction? = null
     private val wallet by lazy { WalletApplication.getInstance().wallet }
+    private lateinit var transactionResultViewBinder: TransactionResultViewBinder
 
     companion object {
 
@@ -75,9 +77,10 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     }
 
     private fun finishInitialization(dashPayProfile: DashPayProfile?) {
-        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile)
+        transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile, false)
         if (tx != null) {
             transactionResultViewBinder.bind(tx!!)
+            tx!!.confidence.addEventListener(transactionResultViewBinder)
         } else {
             log.error("Transaction not found. TxId:", txId)
             dismissAllowingStateLoss()
@@ -137,4 +140,10 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         }
     }
 
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        if (tx != null) {
+            tx!!.confidence.removeEventListener(transactionResultViewBinder)
+        }
+    }
 }

@@ -86,6 +86,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
     }
 
+    private lateinit var transactionResultViewBinder: TransactionResultViewBinder
+    private lateinit var transaction: Transaction
+
     private val isUserAuthorised: Boolean by lazy {
         intent.extras!!.getBoolean(EXTRA_USER_AUTHORIZED)
     }
@@ -124,10 +127,12 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
-        val transactionResultViewBinder = TransactionResultViewBinder(container, dashPayProfile)
+        this.transaction = tx
+        transactionResultViewBinder = TransactionResultViewBinder(container, dashPayProfile, true)
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
         transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+        tx.confidence.addEventListener(transactionResultViewBinder)
         view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
         transaction_close_btn.setOnClickListener {
             when {
@@ -159,6 +164,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         } else {
             startActivity(LockScreenActivity.createIntentAsNewTask(this))
         }
+        transaction.confidence.removeEventListener(transactionResultViewBinder)
         super.finish()
     }
 
