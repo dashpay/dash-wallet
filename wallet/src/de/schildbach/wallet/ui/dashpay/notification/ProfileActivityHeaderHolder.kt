@@ -19,15 +19,32 @@ package de.schildbach.wallet.ui.dashpay.notification
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import androidx.appcompat.app.AlertDialog
 import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.notification_header_row.view.title
 import kotlinx.android.synthetic.main.profile_activity_header_row.view.*
+import kotlinx.android.synthetic.main.profile_activity_header_row.view.history_filter
 
 class ProfileActivityHeaderHolder(inflater: LayoutInflater, parent: ViewGroup,
+                                  val onFilterListener: OnFilterListener,
                                   private val fromStrangerQr: Boolean = false) :
         NotificationViewHolder(R.layout.profile_activity_header_row, inflater, parent) {
+
+    init {
+        val adapter = ArrayAdapter.createFromResource(itemView.context, R.array.history_filter, R.layout.custom_spinner_item)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        itemView.history_filter.adapter = adapter
+        itemView.history_filter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View, position: Int, id: Long) {
+                onFilterListener.onFilter(Filter.values()[position])
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
 
     override fun bind(notificationItem: NotificationItem, vararg args: Any) {
         bind(args[0] as Int)
@@ -46,5 +63,15 @@ class ProfileActivityHeaderHolder(inflater: LayoutInflater, parent: ViewGroup,
             dialogBuilder.setPositiveButton(android.R.string.ok, null)
             dialogBuilder.show()
         }
+    }
+
+    interface OnFilterListener {
+        fun onFilter(filter: Filter)
+    }
+
+    enum class Filter {
+        ALL,
+        INCOMING,
+        OUTGOING
     }
 }
