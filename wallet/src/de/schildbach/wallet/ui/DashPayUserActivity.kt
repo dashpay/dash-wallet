@@ -120,7 +120,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
         val profile = viewModel.userData.dashPayProfile
         val displayName = profile.displayName
 
-        ProfilePictureDisplay.display(avatar, profile, fontSize = 60)
+        ProfilePictureDisplay.display(avatar, profile)
 
         if (displayName.isNotEmpty()) {
             displayNameTxt.text = displayName

@@ -43,14 +43,9 @@ class UserAvatarPlaceholderDrawable {
             hsv[1] = 0.3f
             hsv[2] = 0.6f
             val bgColor = Color.HSVToColor(hsv)
-            val myFontSize = if (fontSize == -1) {
-                -1
-            } else {
-                convertDpToPixel(fontSize.toFloat(), context).toInt()
-            }
             return TextDrawable.builder().beginConfig().textColor(Color.WHITE)
                     .useFont(ResourcesCompat.getFont(context, R.font.montserrat_regular))
-                    .fontSize(myFontSize)
+                    .fontSize(fontSize)
                     .endConfig().buildRound(usernameFirstChar.toString().toUpperCase(), bgColor)
         }
     }

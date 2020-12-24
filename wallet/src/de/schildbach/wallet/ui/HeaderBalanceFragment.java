@@ -223,7 +223,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         View balances = view.findViewById(R.id.balances_layout);
         TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
         DashPayProfile dashPayProfile = mainActivityViewModel.getDashPayProfile();
-        ProfilePictureDisplay.display(dashpayUserAvatar, dashPayProfile, true, -1);
+        ProfilePictureDisplay.display(dashpayUserAvatar, dashPayProfile, true);
 
         if (hideBalance) {
             caption.setText(R.string.home_balance_hidden);
