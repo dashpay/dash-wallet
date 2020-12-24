@@ -133,6 +133,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchUsernamesLiveData.observe(this, Observer {
+            imitateUserInteraction()
             if (Status.LOADING == it.status) {
                 if (clearList) {
                     startLoading()
@@ -154,6 +155,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             }
         })
         dashPayViewModel.sendContactRequestState.observe(this, Observer {
+            imitateUserInteraction()
             adapter.sendContactRequestWorkStateMap = it
         })
     }
