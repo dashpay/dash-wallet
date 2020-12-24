@@ -19,7 +19,6 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.frequent_contact_item.view.*
@@ -29,8 +28,6 @@ class FrequentContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, val
 
     open fun bind(usernameSearchResult: UsernameSearchResult) {
         itemView.apply {
-            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
-                    usernameSearchResult.username[0])
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.displayName.isEmpty()) {
