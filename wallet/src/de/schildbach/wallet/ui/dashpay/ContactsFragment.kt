@@ -41,6 +41,7 @@ import kotlinx.android.synthetic.main.contacts_list_layout.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.InteractionAwareActivity
 
 class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
@@ -210,6 +211,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     override fun afterTextChanged(s: Editable?) {
         s?.let {
+            (requireActivity() as InteractionAwareActivity).imitateUserInteraction()
             query = it.toString()
             searchContacts()
         }

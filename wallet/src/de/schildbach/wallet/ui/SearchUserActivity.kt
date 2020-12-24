@@ -206,6 +206,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
 
     override fun afterTextChanged(s: Editable?) {
         s?.let {
+            imitateUserInteraction()
             query = it.toString()
             searchUser()
         }
