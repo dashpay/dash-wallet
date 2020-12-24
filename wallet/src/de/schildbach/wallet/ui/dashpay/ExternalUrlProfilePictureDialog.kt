@@ -140,6 +140,7 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
             override fun afterTextChanged(s: Editable?) {
 
                 cleanup()
+                imitateUserInteraction()
 
                 if (edit.text.isEmpty()) {
 
@@ -170,7 +171,6 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
                 viewSwitcher.showNext()
 
                 loadFromString(pictureUrl)
-                imitateUserInteraction()
             }
         }
         button_cancel.setOnClickListener {
