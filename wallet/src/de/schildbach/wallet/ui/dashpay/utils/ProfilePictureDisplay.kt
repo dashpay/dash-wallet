@@ -35,19 +35,19 @@ class ProfilePictureDisplay {
     companion object {
 
         @JvmStatic
-        fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false) {
+        fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false, fontSize: Int = -1) {
             if (dashPayProfile != null) {
                 avatarView.visibility = View.VISIBLE
-                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.username)
+                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.username, fontSize)
             } else if (hideIfProfileNull) {
                 avatarView.visibility = View.GONE
             }
         }
 
         @JvmStatic
-        fun display(avatarView: ImageView, avatarUrl: String, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+        fun display(avatarView: ImageView, avatarUrl: String, username: String, fontSize: Int = -1) {
             if (avatarUrl.isNotEmpty()) {
+                val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
                 Glide.with(avatarView.context.applicationContext)
                         .load(removePicZoomParameter(avatarUrl))
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
@@ -56,14 +56,14 @@ class ProfilePictureDisplay {
                         .transition(withCrossFade())
                         .into(avatarView)
             } else {
-                displayDefault(avatarView, username)
+                displayDefault(avatarView, username, fontSize)
             }
         }
 
         @JvmStatic
-        fun display(avatarView: ImageView, avatarLocalUri: Uri, lastModified: Long, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+        fun display(avatarView: ImageView, avatarLocalUri: Uri, lastModified: Long, username: String, fontSize: Int = -1) {
             if (avatarLocalUri.encodedPath!!.isNotEmpty()) {
+                val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
                 Glide.with(avatarView.context.applicationContext)
                         .load(avatarLocalUri)
                         .signature(ObjectKey(lastModified))
@@ -73,12 +73,12 @@ class ProfilePictureDisplay {
                         .circleCrop()
                         .into(avatarView)
             } else {
-                displayDefault(avatarView, username)
+                displayDefault(avatarView, username, fontSize)
             }
         }
 
-        fun displayDefault(avatarView: ImageView, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+        fun displayDefault(avatarView: ImageView, username: String, fontSize: Int = -1) {
+            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
             avatarView.setImageDrawable(defaultAvatar)
         }
 
