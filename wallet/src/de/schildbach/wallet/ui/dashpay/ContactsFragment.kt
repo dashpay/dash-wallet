@@ -79,7 +79,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     override val navigationItemId = R.id.contacts
 
     private lateinit var dashPayViewModel: DashPayViewModel
-    private var handler: Handler = Handler()
+    private var searchHandler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
@@ -204,9 +204,11 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     }
 
     private fun showInitialState() {
+        searchHandler.removeCallbacks(searchContactsRunnable)
         stopLoading()
         no_results_pane.visibility = View.GONE
         suggestions_search_no_result.visibility = View.GONE
+        dashPayViewModel.searchContacts(query, direction)
     }
 
     private fun showSuggestedUsers(users: List<UsernameSearchResult>) {
@@ -314,18 +316,20 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     private fun searchContacts() {
         if (this::searchContactsRunnable.isInitialized) {
-            handler.removeCallbacks(searchContactsRunnable)
+            searchHandler.removeCallbacks(searchContactsRunnable)
         }
 
         searchContactsRunnable = Runnable {
             dashPayViewModel.searchContacts(query, direction)
         }
-        handler.postDelayed(searchContactsRunnable, 500)
+        searchHandler.postDelayed(searchContactsRunnable, 500)
     }
 
     override fun afterTextChanged(s: Editable?) {
-        s?.let {
-            query = it.toString()
+        if (s == null) {
+            showInitialState()
+        } else {
+            query = s.toString()
             if (query.isEmpty()) {
                 showInitialState()
             } else {
