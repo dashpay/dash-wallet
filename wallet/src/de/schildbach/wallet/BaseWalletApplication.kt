@@ -17,7 +17,7 @@
 package de.schildbach.wallet
 
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.liveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.multidex.MultiDexApplication
 import de.schildbach.wallet.rates.ExchangeRatesRepository
@@ -38,8 +38,8 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
 
     override fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate> {
         return ExchangeRatesRepository.getInstance().getRate(currencyCode).switchMap {
-            return@switchMap liveData {
-                emit(ExchangeRate(it.currencyCode, it.rate, it.getCurrencyName(this@BaseWalletApplication), it.fiat))
+            return@switchMap MutableLiveData<ExchangeRate>().apply {
+                value = ExchangeRate(it.currencyCode, it.rate, it.getCurrencyName(this@BaseWalletApplication), it.fiat)
             }
         }
     }
