@@ -48,7 +48,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
 import com.google.common.base.Stopwatch;
@@ -110,7 +109,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler, androidx.work.Configuration.Provider {
+public class WalletApplication extends BaseWalletApplication implements ResetAutoLogoutTimerHandler, androidx.work.Configuration.Provider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -449,6 +448,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         return config;
     }
 
+    @Override
     public Wallet getWallet() {
         return wallet;
     }
