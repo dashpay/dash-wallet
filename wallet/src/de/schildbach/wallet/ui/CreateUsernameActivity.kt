@@ -141,6 +141,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         dashPayViewModel.getUsernameLiveData.observe(this, Observer {
+            imitateUserInteraction()
             when (it.status) {
                 Status.LOADING -> {
                     // this is delayed by the logic of checkUsernameNotExist(...) method,
