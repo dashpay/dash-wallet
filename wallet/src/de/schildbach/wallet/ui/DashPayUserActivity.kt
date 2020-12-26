@@ -106,6 +106,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             updateContactRelationUi()
         })
         viewModel.sendContactRequestState.observe(this, Observer {
+            imitateUserInteraction()
             updateContactRelationUi()
         })
         viewModel.notificationsForUser.observe(this, Observer {
