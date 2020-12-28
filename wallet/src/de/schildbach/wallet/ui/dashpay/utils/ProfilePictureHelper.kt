@@ -63,7 +63,7 @@ class ProfilePictureHelper {
                                 val profileAvatarHashBase58 = Sha256Hash.wrap(profileAvatarHash).toStringBase58()
                                 log.info("server avatarHash ({}) doesn't match the profile avatarHash ({})", serverAvatarHash.toStringBase58(), profileAvatarHashBase58)
                             }
-                            val avatarFingerprint = DHash.of(BitmapFactory.decodeFile(resource.path))
+                            val avatarFingerprint = CocoaImageDHash.of(BitmapFactory.decodeFile(resource.path))
                             listener?.apply {
                                 onResourceReady(serverAvatarHash, avatarFingerprint)
                             }
