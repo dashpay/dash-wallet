@@ -27,9 +27,9 @@ interface WalletDataProvider {
 
     fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate>
 
-    fun getExchangeRates(): LiveData<ExchangeRate>
+    fun getExchangeRates(): LiveData<List<ExchangeRate>>
 
-    fun currencyCodes(): LiveData<String>
+    fun currencyCodes(): LiveData<List<String>>
 
     fun defaultCurrencyCode(): String
 }
