@@ -26,4 +26,10 @@ interface WalletDataProvider {
     fun freshReceiveAddress(): Address
 
     fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate>
+
+    fun getExchangeRates(): LiveData<ExchangeRate>
+
+    fun currencyCodes(): LiveData<String>
+
+    fun defaultCurrencyCode(): String
 }

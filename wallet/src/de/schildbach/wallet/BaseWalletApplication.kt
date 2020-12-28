@@ -45,4 +45,29 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
             }
         }
     }
+
+    override fun getExchangeRates(): LiveData<ExchangeRate> {
+        return ExchangeRatesRepository.getInstance().rates.switchMap {
+            return@switchMap MutableLiveData<ExchangeRate>().apply {
+                it.map {
+                    ExchangeRate(it.currencyCode, it.rate, it.getCurrencyName(this@BaseWalletApplication), it.fiat)
+                }
+            }
+        }
+    }
+
+    override fun currencyCodes(): LiveData<String> {
+        return ExchangeRatesRepository.getInstance().rates.switchMap {
+            return@switchMap MutableLiveData<String>().apply {
+                it.map {
+                    it.currencyCode
+                }
+            }
+        }
+    }
+
+    override fun defaultCurrencyCode(): String {
+        // TODO remove this ugly casting
+        return (this as WalletApplication).configuration.exchangeCurrencyCode
+    }
 }
