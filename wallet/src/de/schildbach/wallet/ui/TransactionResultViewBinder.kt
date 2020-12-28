@@ -231,7 +231,6 @@ class TransactionResultViewBinder(private val containerView: View, private val p
     }
 
     override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
-        org.bitcoinj.core.Context.propagate(wallet.context)
         updateStatus()
         setTransactionDirection()
     }
@@ -239,7 +238,6 @@ class TransactionResultViewBinder(private val containerView: View, private val p
     private fun setTransactionDirection() {
         val dashAmountTextColor: Int
         if (transaction.isOutgoing()) {
-            checkIcon.setImageResource(R.drawable.ic_transaction_sent)
             if (!TransactionUtil.isSending(transaction, wallet) && txResult) {
                 transactionTitle.text = ctx.getText(R.string.transaction_details_amount_sent_successfully)
             } else {
@@ -248,10 +246,16 @@ class TransactionResultViewBinder(private val containerView: View, private val p
             transactionAmountSignal.text = "-"
             dashAmountTextColor = ContextCompat.getColor(ctx, android.R.color.black)
         } else {
-            checkIcon.setImageResource(R.drawable.ic_transaction_received)
             transactionTitle.text = ctx.getText(R.string.transaction_details_amount_received)
             transactionAmountSignal.text = "+"
             dashAmountTextColor = ContextCompat.getColor(ctx, R.color.colorPrimary)
+        }
+        if (!txResult) {
+            if (transaction.isOutgoing()) {
+                checkIcon.setImageResource(R.drawable.ic_transaction_sent)
+            } else {
+                checkIcon.setImageResource(R.drawable.ic_transaction_received)
+            }
         }
 
         feeRow.visibility = if (transaction.fee != null && transaction.fee.isPositive) View.VISIBLE else View.GONE

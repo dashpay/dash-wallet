@@ -132,7 +132,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
         transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
-        tx.confidence.addEventListener(transactionResultViewBinder)
+        val mainThreadExecutor = ContextCompat.getMainExecutor(walletApplication)
+        tx.confidence.addEventListener(mainThreadExecutor, transactionResultViewBinder)
         view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
         transaction_close_btn.setOnClickListener {
             when {
@@ -150,8 +151,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
             }
         }
 
-        check_icon.setImageDrawable(ContextCompat.getDrawable(this,
-                R.drawable.check_animated))
         check_icon.postDelayed({
             check_icon.visibility = View.VISIBLE
             (check_icon.drawable as Animatable).start()
