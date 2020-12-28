@@ -448,8 +448,12 @@ public class WalletApplication extends BaseWalletApplication implements ResetAut
         return config;
     }
 
-    @Override
     public Wallet getWallet() {
+        return wallet;
+    }
+
+    @Override
+    public Wallet getWalletData() {
         return wallet;
     }
 

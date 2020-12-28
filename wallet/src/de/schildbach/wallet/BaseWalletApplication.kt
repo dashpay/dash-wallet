@@ -27,10 +27,12 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 
 abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider {
-    protected abstract val wallet: Wallet?
+
+    protected abstract fun getWalletData(): Wallet?
+
     override fun freshReceiveAddress(): Address {
-        return if (wallet != null) {
-            wallet!!.freshReceiveAddress()
+        return if (getWalletData() != null) {
+            getWalletData()!!.freshReceiveAddress()
         } else {
             throw RuntimeException("this method cant't be used before creating the wallet")
         }
