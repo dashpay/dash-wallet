@@ -145,11 +145,12 @@ class TransactionResultActivity : AbstractWalletActivity() {
             }
         }
 
-        check_icon.setImageDrawable(ContextCompat.getDrawable(this,
-                R.drawable.check_animated))
         check_icon.postDelayed({
             check_icon.visibility = View.VISIBLE
-            (check_icon.drawable as Animatable).start()
+            val checkIconDrawable = check_icon.drawable
+            if (checkIconDrawable is Animatable) {
+                checkIconDrawable.start()
+            }
         }, 400)
     }
 
