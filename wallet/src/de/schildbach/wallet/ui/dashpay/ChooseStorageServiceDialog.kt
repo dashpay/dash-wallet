@@ -21,21 +21,19 @@ import android.app.Dialog
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel.ProfilePictureStorageService
+import org.dash.wallet.common.InteractionAwareDialogFragment
 
-class ChooseStorageServiceDialog : DialogFragment() {
+class ChooseStorageServiceDialog : InteractionAwareDialogFragment() {
 
     companion object {
 
         @JvmStatic
         fun newInstance(): ChooseStorageServiceDialog {
-            val dialog = ChooseStorageServiceDialog()
-            return dialog
+            return ChooseStorageServiceDialog()
         }
     }
 
@@ -47,10 +45,7 @@ class ChooseStorageServiceDialog : DialogFragment() {
     private lateinit var sharedViewModel: SelectProfilePictureSharedViewModel
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialogBuilder = AlertDialog.Builder(requireContext())
-                .setView(initCustomView())
-
-        val dialog = dialogBuilder.create()
+        val dialog = super.onCreateDialog(savedInstanceState)
         dialog.setOnShowListener {
             imgurButton.setOnClickListener {
                 sharedViewModel.onChooseStorageService.value = ProfilePictureStorageService.IMGUR
@@ -69,7 +64,7 @@ class ChooseStorageServiceDialog : DialogFragment() {
     }
 
     @SuppressLint("InflateParams")
-    private fun initCustomView(): View {
+    override fun initCustomView(): View {
         customView = requireActivity().layoutInflater.inflate(R.layout.dialog_select_storage_service, null)
         imgurButton = customView.findViewById(R.id.imgur)
         driveButton = customView.findViewById(R.id.google_drive)

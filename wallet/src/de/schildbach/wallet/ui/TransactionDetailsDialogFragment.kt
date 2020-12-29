@@ -14,7 +14,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.dashpay.UserInteractionAwareCallback
+import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.transaction_details_dialog.*

@@ -46,11 +46,12 @@ import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.InteractionAwareDialogFragment
 import org.slf4j.LoggerFactory
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-open class ExternalUrlProfilePictureDialog : DialogFragment() {
+open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
 
     companion object {
 
@@ -99,21 +100,17 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
     private lateinit var sharedViewModel: ExternalUrlProfilePictureViewModel
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialogBuilder = AlertDialog.Builder(requireContext())
-                .setView(initCustomView())
-
-        val dialog = dialogBuilder.create()
+        val dialog = super.onCreateDialog(savedInstanceState)
         dialog.setOnShowListener {
             if (initialUrl != null) {
                 edit.setText(initialUrl)
             }
         }
-        dialog.window!!.callback = UserInteractionAwareCallback(dialog.window!!.callback, requireActivity())
         return dialog
     }
 
     @SuppressLint("SetTextI18n")
-    protected open fun initCustomView(): View {
+    override fun initCustomView(): View {
         customView = requireActivity().layoutInflater.inflate(R.layout.dialog_input_text, null)
         dialogPrompt = customView.findViewById(R.id.public_url_enter_url)
         dialogTitle = customView.findViewById(R.id.public_url_title)
@@ -292,10 +289,6 @@ open class ExternalUrlProfilePictureDialog : DialogFragment() {
         sharedViewModel = activity?.run {
             ViewModelProvider(this)[ExternalUrlProfilePictureViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
-    }
-
-    private fun imitateUserInteraction() {
-        requireActivity().onUserInteraction()
     }
 
     protected fun setEditHint(stringId: Int) {

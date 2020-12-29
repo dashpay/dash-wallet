@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.dashpay;
+package org.dash.wallet.common;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
