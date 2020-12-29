@@ -49,6 +49,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
         val publicMessage = inputData.getString(KEY_PUBLIC_MESSAGE) ?: ""
         var avatarUrl = inputData.getString(KEY_AVATAR_URL) ?: ""
         val avatarFingerprint = inputData.getByteArray(KEY_AVATAR_FINGERPRINT)
+        val avatarHash = inputData.getByteArray(KEY_AVATAR_HASH)
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
@@ -72,15 +73,12 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             }
         }
 
-        val avatarHash: ByteArray?
-
         // Perform the image upload here
         val avatarUrlToUpload = inputData.getString(KEY_LOCAL_AVATAR_URL_TO_UPLOAD)?:""
         val uploadService = inputData.getString(KEY_UPLOAD_SERVICE)?:""
         if (avatarUrlToUpload.isNotEmpty()) {
             val avatarFile = File(avatarUrlToUpload)
             @Suppress("BlockingMethodInNonBlockingContext")
-            avatarHash = Sha256Hash.of(avatarFile).bytes
             when (uploadService) {
                 EditProfileViewModel.ProfilePictureStorageService.GOOGLE_DRIVE.name -> {
                     val avatarFileBytes = avatarFile.readBytes()
@@ -91,8 +89,6 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
                     //TODO:
                 }
             }
-        } else {
-            avatarHash = inputData.getByteArray(KEY_AVATAR_HASH)
         }
 
         val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
