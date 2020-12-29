@@ -37,7 +37,7 @@
             tools:text="Not a valid QR Code" />
 
         <TextView
-            android:id="@+id/subtitle"
+            android:id="@+id/message"
             style="@style/MontserratRegular.MenuRowSubTitle"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -54,7 +54,7 @@
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/subtitle">
+            app:layout_constraintTop_toBottomOf="@id/message">
 
             <Button
                 android:id="@+id/positive_button"
