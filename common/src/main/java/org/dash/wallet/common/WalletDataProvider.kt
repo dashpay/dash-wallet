@@ -19,7 +19,10 @@ package org.dash.wallet.common
 
 import androidx.lifecycle.LiveData
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.Resource
 
 interface WalletDataProvider {
 
@@ -32,4 +35,6 @@ interface WalletDataProvider {
     fun currencyCodes(): LiveData<List<String>>
 
     fun defaultCurrencyCode(): String
+
+    fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
 }

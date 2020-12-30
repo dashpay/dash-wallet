@@ -24,4 +24,8 @@ data class ExchangeRate(
         val rate: String,
         val currencyName: String,
         val fiat: Fiat
-)
+) {
+    fun convert(): org.bitcoinj.utils.ExchangeRate {
+        return org.bitcoinj.utils.ExchangeRate(fiat)
+    }
+}
