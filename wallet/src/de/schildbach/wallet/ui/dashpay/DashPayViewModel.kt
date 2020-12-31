@@ -17,6 +17,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
 import androidx.lifecycle.*
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
@@ -93,6 +94,8 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
                 val result = platformRepo.searchUsernames(text)
                 emit(Resource.success(result))
             } catch (ex: Exception) {
+                FirebaseCrashlytics.getInstance().log("Failed to search user")
+                FirebaseCrashlytics.getInstance().recordException(ex)
                 emit(Resource.error(formatExceptionMessage("search usernames", ex), null))
             }
         }
