@@ -41,7 +41,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     protected val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String>()
-    private val userSearchLiveData = MutableLiveData<String>()
+    private val userSearchLiveData = MutableLiveData<Pair<String, Int>>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String>()
 
@@ -84,13 +84,13 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     // Search Usernames that start with "text".  Results are a list of documents for names
     // starting with text.  If no results are found then an empty list is returned.
     //
-    val searchUsernamesLiveData = Transformations.switchMap(userSearchLiveData) { text: String ->
+    val searchUsernamesLiveData = Transformations.switchMap(userSearchLiveData) { search: Pair<String, Int> ->
         searchUsernamesJob.cancel()
         searchUsernamesJob = Job()
         liveData(context = searchUsernamesJob + Dispatchers.IO) {
             emit(Resource.loading(null))
             try {
-                val result = platformRepo.searchUsernames(text)
+                val result = platformRepo.searchUsernames(search.first, false, search.second)
                 emit(Resource.success(result))
             } catch (ex: Exception) {
                 emit(Resource.error(formatExceptionMessage("search usernames", ex), null))
@@ -98,12 +98,12 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun searchUsernames(text: String) {
-        userSearchLiveData.value = text
+    fun searchUsernames(text: String, limit: Int = 100) {
+        userSearchLiveData.value = Pair(text, limit)
     }
 
     //
-    // Search Usernames and Display Names that contain "text".
+    // Search (established contacts) Usernames and Display Names that contain "text".
     //
     val searchContactsLiveData = Transformations.switchMap(contactsLiveData) { usernameSearch: UsernameSearch ->
         searchContactsJob.cancel()
