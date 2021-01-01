@@ -52,6 +52,7 @@ import kotlinx.android.synthetic.main.user_search_loading.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.InteractionAwareActivity
 
 class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
@@ -142,6 +143,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner, Observer {
+            imitateUserInteraction()
             if (Status.SUCCESS == it.status) {
                 if (initialSearch && query.isEmpty() && (mode != MODE_VIEW_REQUESTS)) {
                     if (it.data == null || it.data.isEmpty() || it.data.find { u -> u.requestReceived } == null) {
@@ -166,6 +168,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         })
 
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner, Observer {
+            imitateUserInteraction()
             contactsAdapter.sendContactRequestWorkStateMap = it
         })
         dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner, Observer<Resource<Boolean>> {
@@ -336,6 +339,10 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                 searchContacts()
             }
         }
+    }
+
+    private fun imitateUserInteraction() {
+        (requireActivity() as InteractionAwareActivity).imitateUserInteraction()
     }
 
     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {

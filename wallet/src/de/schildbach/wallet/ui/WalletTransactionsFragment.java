@@ -39,6 +39,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.InteractionAwareActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,6 +159,7 @@ public class WalletTransactionsFragment extends Fragment
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null) {
+                    ((InteractionAwareActivity)requireActivity()).imitateUserInteraction();
                     adapter.setBlockchainIdentityData(blockchainIdentityData);
                 }
             }

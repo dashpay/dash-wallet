@@ -14,6 +14,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
@@ -72,6 +73,8 @@ class TransactionDetailsDialogFragment : DialogFragment() {
 
         view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
         transaction_close_btn.setOnClickListener { dismissAnimation() }
+
+        dialog?.window!!.callback = UserInteractionAwareCallback(dialog?.window!!.callback, requireActivity())
     }
 
     private fun finishInitialization(dashPayProfile: DashPayProfile?) {
@@ -132,9 +135,13 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     }
 
     private fun viewOnBlockExplorer() {
+        imitateUserInteraction()
         if (tx != null) {
             WalletUtils.viewOnBlockExplorer(activity, tx!!.purpose, tx!!.txId.toString())
         }
     }
 
+    private fun imitateUserInteraction() {
+        requireActivity().onUserInteraction()
+    }
 }
