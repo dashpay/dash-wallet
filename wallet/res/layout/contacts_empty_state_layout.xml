@@ -8,8 +8,7 @@
     android:gravity="center"
     android:orientation="vertical"
     tools:ignore="ContentDescription"
-    android:paddingTop="2dp"
-    tools:visibility="visible">
+    android:paddingTop="2dp">
 
     <ImageView
         android:id="@+id/add_contact_icon"
