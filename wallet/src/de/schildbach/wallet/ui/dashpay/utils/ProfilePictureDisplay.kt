@@ -20,7 +20,6 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.view.View
 import android.widget.ImageView
-import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
 import com.bumptech.glide.request.target.Target
@@ -28,7 +27,6 @@ import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.ProfilePictureTransformation
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable.Companion.getDrawable
-import java.io.File
 
 class ProfilePictureDisplay {
 
@@ -46,8 +44,9 @@ class ProfilePictureDisplay {
 
         @JvmStatic
         fun display(avatarView: ImageView, avatarUrl: String, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+            val fontSize = calcFontSize(avatarView)
             if (avatarUrl.isNotEmpty()) {
+                val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
                 Glide.with(avatarView.context.applicationContext)
                         .load(removePicZoomParameter(avatarUrl))
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
@@ -56,14 +55,15 @@ class ProfilePictureDisplay {
                         .transition(withCrossFade())
                         .into(avatarView)
             } else {
-                displayDefault(avatarView, username)
+                displayDefault(avatarView, username, fontSize)
             }
         }
 
         @JvmStatic
         fun display(avatarView: ImageView, avatarLocalUri: Uri, lastModified: Long, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+            val fontSize = calcFontSize(avatarView)
             if (avatarLocalUri.encodedPath!!.isNotEmpty()) {
+                val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
                 Glide.with(avatarView.context.applicationContext)
                         .load(avatarLocalUri)
                         .signature(ObjectKey(lastModified))
@@ -73,13 +73,24 @@ class ProfilePictureDisplay {
                         .circleCrop()
                         .into(avatarView)
             } else {
-                displayDefault(avatarView, username)
+                displayDefault(avatarView, username, fontSize)
             }
         }
 
+        @JvmStatic
         fun displayDefault(avatarView: ImageView, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+            displayDefault(avatarView, username, calcFontSize(avatarView))
+        }
+
+        private fun displayDefault(avatarView: ImageView, username: String, fontSize: Int) {
+            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
             avatarView.setImageDrawable(defaultAvatar)
+        }
+
+        private const val FONT_SIZE_RATIO: Float = 30f / 64f
+
+        private fun calcFontSize(avatarView: ImageView): Int {
+            return (avatarView.layoutParams.width * FONT_SIZE_RATIO).toInt();
         }
 
         fun removePicZoomParameter(url: String): Uri {

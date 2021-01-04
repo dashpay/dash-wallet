@@ -41,6 +41,7 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
@@ -232,11 +233,9 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             view.findViewById<View>(R.id.root).setBackgroundResource(R.drawable.round_corners_gray_bg)
             view.findViewById<View>(R.id.relation_state).visibility = View.GONE
 
-            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
-                    user.username[0])
             val avatar = view.findViewById<ImageView>(R.id.avatar)
-            Glide.with(this).load(user.dashPayProfile.avatarUrl)
-                    .placeholder(defaultAvatar).circleCrop().into(avatar)
+            ProfilePictureDisplay.displayDefault(avatar,
+                    user.username)
 
             //Username & Display Name
             val dashPayProfile = user.dashPayProfile

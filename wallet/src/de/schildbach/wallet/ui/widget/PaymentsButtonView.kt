@@ -23,6 +23,7 @@ import android.util.TypedValue
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
+import de.schildbach.wallet.util.GraphicUtils.convertPixelsToDp
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.payments_button_view.view.*
 
@@ -67,11 +68,11 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
         if (active) {
             val subTitleColor = ResourcesCompat.getColor(resources, R.color.dash_black, null)
             sub_title_view.setTextColor(subTitleColor)
-            sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize)
+            sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize, context)
         } else {
             val subTitleColor = ResourcesCompat.getColor(resources, R.color.dash_gray, null)
             sub_title_view.setTextColor(subTitleColor)
-            sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize) * 0.8f
+            sub_title_view.textSize = convertPixelsToDp(defaultSybTitleSize, context) * 0.8f
         }
         this.isEnabled = active
     }
@@ -94,9 +95,5 @@ class PaymentsButtonView(context: Context, attrs: AttributeSet?) : ConstraintLay
 
     fun showForwardArrow(show: Boolean) {
         forward_arrow.visibility = if (show) VISIBLE else GONE
-    }
-
-    private fun convertPixelsToDp(px: Float): Float {
-        return px / (context.resources.displayMetrics.densityDpi.toFloat() / DisplayMetrics.DENSITY_DEFAULT)
     }
 }

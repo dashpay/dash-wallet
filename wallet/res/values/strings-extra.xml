@@ -235,6 +235,7 @@
     <string name="transaction_close">Close</string>
     <string name="transaction_details_amount_received">Amount Received</string>
     <string name="transaction_details_amount_sent">Amount Sent</string>
+    <string name="transaction_details_amount_sent_successfully">Sent Successfully</string>
     <string name="transaction_details_sent_from">Sent from</string>
     <string name="transaction_details_sent_to">Sent to</string>
     <string name="transaction_details_received_at">Received at</string>
@@ -348,7 +349,7 @@
 
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
     <string name="min_3_chars">Between 3 and 23 characters</string>
-    <string name="alphanum_only">Alphabets and Numbers only</string>
+    <string name="alphanum_only">Letters and numbers only</string>
     <string name="identity_username_validating">Validating username…</string>
         <string name="identity__username_available">Username available</string>
     <string name="identity_username_taken">Username taken</string>
@@ -416,7 +417,7 @@
     <string name="notifications_contact_has_accepted">%s has accepted your contact request.</string>
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
     <string name="notifications_you_sent">You sent a contact request to %s</string>
-    <string name="notifications_you_received">%s sent a contact request to you</string>
+    <string name="notifications_you_received">%s has sent you a contact request</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 
