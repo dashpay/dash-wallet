@@ -8,6 +8,7 @@ import android.os.HandlerThread
 import android.os.PowerManager
 import android.os.Process
 import androidx.lifecycle.LifecycleService
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -115,6 +116,8 @@ class CreateIdentityService : LifecycleService() {
 
     private val createIdentityexceptionHandler = CoroutineExceptionHandler { _, exception ->
         log.error(exception.message, exception)
+        FirebaseCrashlytics.getInstance().log("Failed to create Identity")
+        FirebaseCrashlytics.getInstance().recordException(exception)
         GlobalScope.launch {
             if (this@CreateIdentityService::blockchainIdentityData.isInitialized) {
                 log.error("[${blockchainIdentityData.creationState}(error)]", exception)
