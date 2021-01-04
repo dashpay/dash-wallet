@@ -16,6 +16,9 @@
  */
 package de.schildbach.wallet
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
@@ -24,6 +27,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.switchMap
 import androidx.multidex.MultiDexApplication
 import de.schildbach.wallet.rates.ExchangeRatesRepository
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.send.SendCoinsBaseViewModel
 import de.schildbach.wallet.ui.send.SendCoinsTask
 import org.bitcoinj.core.Address
@@ -88,9 +92,17 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         return walletApplication.configuration.exchangeCurrencyCode
     }
 
+    override fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?) {
+        val finalAmount = amount ?: Coin.ZERO
+        val uriStr = "dash:${address.toBase58()}?amount=${finalAmount.toPlainString()}"
+        val sendCoinsIntent = Intent(Intent.ACTION_VIEW, Uri.parse(uriStr), activity, SendCoinsActivity::class.java)
+        activity.startActivityForResult(sendCoinsIntent, requestCode)
+    }
+
     override fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>> {
         checkWalletCreated()
         val wallet = walletApplication.wallet!!
+
         val sendRequest = createSendRequest(address, amount)
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
 
