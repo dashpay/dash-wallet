@@ -101,7 +101,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
                     KEY_USER_ID to profileRequestResult.userId
             ))
         } catch (ex: Exception) {
-            FirebaseCrashlytics.getInstance().log("Failed to create/update profile: retrieve password")
+            FirebaseCrashlytics.getInstance().log("Failed to create/update profile: broadcast state transition")
             FirebaseCrashlytics.getInstance().recordException(ex)
             formatExceptionMessage("create/update profile", ex)
             Result.failure(workDataOf(
