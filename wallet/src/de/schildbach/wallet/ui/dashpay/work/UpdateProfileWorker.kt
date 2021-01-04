@@ -122,6 +122,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             val secureId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             return GoogleDriveService.uploadImage(drive!!, uploadedAvatarFilename, encryptedBackup, secureId)
         } catch (t: Throwable) {
+            FirebaseCrashlytics.getInstance().log("Failed to upload to Google Drive")
+            FirebaseCrashlytics.getInstance().recordException(t)
             //log.error("failed to save channels backup on google drive", t)
             if (t is GoogleAuthIOException || t is GoogleAuthException) {
                 //BackupHelper.GoogleDrive.disableGDriveBackup(context)
