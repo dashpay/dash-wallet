@@ -124,6 +124,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
             }
         })
         dashPayViewModel.sendContactRequestState.observe(this, Observer {
+            imitateUserInteraction()
             notificationsAdapter.sendContactRequestWorkStateMap = it
         })
     }

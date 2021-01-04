@@ -111,6 +111,7 @@ class EditProfileActivity : BaseMenuActivity() {
         display_name.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 setEditingState(true)
+                imitateUserInteraction()
                 val charCount = s?.trim()?.length ?: 0
                 display_name_char_count.text = getString(R.string.char_count, charCount,
                         Constants.DISPLAY_NAME_MAX_LENGTH)
@@ -134,6 +135,7 @@ class EditProfileActivity : BaseMenuActivity() {
         about_me.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 setEditingState(true)
+                imitateUserInteraction()
                 aboutMeCharCount.visibility = View.VISIBLE
                 val charCount = s?.trim()?.length ?: 0
                 aboutMeCharCount.text = getString(R.string.char_count, charCount,
@@ -164,24 +166,29 @@ class EditProfileActivity : BaseMenuActivity() {
         }
 
         selectProfilePictureSharedViewModel.onFromGravatarCallback.observe(this, Observer<Void> {
+            imitateUserInteraction()
             externalUrlSharedViewModel.shouldCrop = false
             pictureFromGravatar()
         })
 
         selectProfilePictureSharedViewModel.onFromUrlCallback.observe(this, Observer<Void> {
+            imitateUserInteraction()
             externalUrlSharedViewModel.shouldCrop = true
             pictureFromUrl()
         })
 
         selectProfilePictureSharedViewModel.onTakePictureCallback.observe(this, Observer<Void> {
+            imitateUserInteraction()
             takePictureWithPermission()
         })
 
         selectProfilePictureSharedViewModel.onChoosePictureCallback.observe(this, Observer<Void> {
+            imitateUserInteraction()
             choosePictureWithPermission()
         })
 
         editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
+            imitateUserInteraction()
             cropProfilePicture()
         })
     }
@@ -218,6 +225,7 @@ class EditProfileActivity : BaseMenuActivity() {
             }
         })
         editProfileViewModel.updateProfileRequestState.observe(this, Observer {
+            imitateUserInteraction()
             when (it.status) {
                 Status.LOADING -> {
                     if (it.progress == 100) {
@@ -250,6 +258,7 @@ class EditProfileActivity : BaseMenuActivity() {
         })
 
         editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
+            imitateUserInteraction()
             when (it.status) {
                 Status.LOADING -> {
                     setEditingState(true)
@@ -269,12 +278,14 @@ class EditProfileActivity : BaseMenuActivity() {
             }
         })
         editProfileViewModel.uploadDialogAcceptLiveData.observe(this, Observer { accepted ->
+            imitateUserInteraction()
             if (accepted) {
                 walletApplication.configuration.setAcceptedUploadPolicy(editProfileViewModel.storageService.name, true)
                 startUploadProcess()
             }
         })
         editProfileViewModel.deleteProfilePictureConfirmationLiveData.observe(this, Observer { accepted ->
+            imitateUserInteraction()
             if (accepted) {
                 showProfilePictureServiceDialog(false)
             }

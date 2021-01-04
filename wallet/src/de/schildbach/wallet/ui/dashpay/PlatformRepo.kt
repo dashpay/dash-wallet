@@ -199,13 +199,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
 
     @Throws(Exception::class)
-    suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false): List<UsernameSearchResult> {
+    suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false, limit: Int = -1): List<UsernameSearchResult> {
         val userIdString = blockchainIdentity.uniqueIdString
         val userId = blockchainIdentity.uniqueIdentifier
 
         // Names.search does support retrieving 100 names at a time if retrieveAll = false
         //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
-        val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, false)
+        val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN,
+                retrieveAll = false, limit = limit)
 
         val userIds = if (onlyExactUsername) {
             val result = mutableListOf<Identifier>()
@@ -973,7 +974,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     private suspend fun updateContactProfiles(userIdList: List<String>, lastContactRequestTime: Long, checkingIntegrity: Boolean = false) {
         if (userIdList.isNotEmpty()) {
-            val identifierList = userIdList.map { Identifier.from(it)}
+            val identifierList = userIdList.map { Identifier.from(it) }
             val profileDocuments = Profiles(platform).getList(identifierList, lastContactRequestTime) //only handles 100 userIds
             val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
@@ -999,7 +1000,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             // add a blank profile for any identity that is still missing a profile
             if (lastContactRequestTime == 0L) {
-                val remainingMissingProfiles = userIdList.filter { !profileById.containsKey(Identifier.from(it))}
+                val remainingMissingProfiles = userIdList.filter { !profileById.containsKey(Identifier.from(it)) }
                 for (identityId in remainingMissingProfiles) {
                     val nameDocument = nameById[Identifier.from(identityId)] // what happens if there is no username for the identity? crash
                     val username = nameDocument!!.data["normalizedLabel"] as String
@@ -1147,7 +1148,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         } else null
     }
 
-    fun loadProfileByUserId(userId: String) : LiveData<DashPayProfile?> {
+    fun loadProfileByUserId(userId: String): LiveData<DashPayProfile?> {
         return dashPayProfileDaoAsync.loadByUserIdDistinct(userId)
     }
 }

@@ -11,9 +11,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contacts_pane"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="invisible"
-        tools:visibility="visible">
+        android:layout_height="match_parent">
 
         <EditText
             android:id="@+id/search"
@@ -59,16 +57,38 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/search" />
 
-        <!--include layout="@layout/user_search_empty_result" />
+        <include
+            android:id="@+id/empty_state_pane"
+            layout="@layout/contacts_empty_state_layout"
+            android:visibility="gone"
+            tools:visibility="visible" />
 
-        <include layout="@layout/user_search_loading" /-->
+        <FrameLayout
+            app:layout_constraintTop_toBottomOf="@id/search"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <include
+                android:id="@+id/no_results_pane"
+                layout="@layout/contacts_empty_result"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+        </FrameLayout>
+
+        <include layout="@layout/user_search_loading" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/suggestions_search_no_result"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/dash_lighter_gray"
+            android:visibility="gone">
+
+            <include layout="@layout/contacts_empty_results_content" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <include
-        android:id="@+id/empty_state_pane"
-        layout="@layout/contacts_empty_state_layout"
-        android:visibility="invisible"
-        tools:visibility="visible" />
 
 </FrameLayout>
