@@ -93,5 +93,5 @@ data class DashPayContactRequest(val userId: String,
 
     @IgnoredOnParcel
     val version: Int
-        get() = (accountReference shl 28).toInt()
+        get() = accountReference ushr 28
 }
