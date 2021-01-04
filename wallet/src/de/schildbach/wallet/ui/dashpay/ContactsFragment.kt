@@ -236,8 +236,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             val avatar = view.findViewById<ImageView>(R.id.avatar)
             ProfilePictureDisplay.displayDefault(avatar,
                     user.username)
-            //Glide.with(this).load(user.dashPayProfile.avatarUrl)
-            //        .placeholder(defaultAvatar).circleCrop().into(avatar)
 
             //Username & Display Name
             val dashPayProfile = user.dashPayProfile
