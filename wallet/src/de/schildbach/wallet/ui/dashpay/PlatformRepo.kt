@@ -482,11 +482,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             blockchainIdentity.registerProfile(displayName,
                     publicMessage,
                     avatarUrl,
+                    dashPayProfile.avatarHash,
+                    dashPayProfile.avatarFingerprint,
                     encryptionKey)
         } else {
             blockchainIdentity.updateProfile(displayName,
                     publicMessage,
                     avatarUrl,
+                    dashPayProfile.avatarHash,
+                    dashPayProfile.avatarFingerprint,
                     encryptionKey)
         }
         log.info("profile broadcast")
@@ -612,7 +616,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
-            blockchainIdentity.registerProfile(username, "", "", keyParameter)
+            blockchainIdentity.registerProfile(username, "", "", null, null, keyParameter)
         }
     }
 
@@ -729,7 +733,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private suspend fun updateDashPayProfile(userId: String) {
         var profileDocument = Profiles(platform).get(userId)
-                ?: profiles.createProfileDocument("", "", "", platform.identities.get(userId)!!)
+                ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
         val nameDocument = platform.names.get(userId)
 
@@ -899,7 +903,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayContactRequestDao.insert(contactRequest)
 
                     // add the sending to contact keychain if it doesn't exist
-                    val contact = EvolutionContact(userId, contactRequest.accountReference.toInt(), contactRequest.userId)
+                    val contact = EvolutionContact(userId, 0, contactRequest.userId, contactRequest.accountReference)
                     try {
                         if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
                             val contactIdentity = platform.identities.get(contactRequest.userId)

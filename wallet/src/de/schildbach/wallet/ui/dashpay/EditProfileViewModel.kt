@@ -21,11 +21,12 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
 import android.provider.Settings
-import androidx.core.content.FileProvider
 import android.util.Log
+import androidx.core.content.FileProvider
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.api.services.drive.Drive
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import de.schildbach.wallet.Constants
@@ -34,6 +35,7 @@ import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.ImgurUploadResponse
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
 import de.schildbach.wallet_test.BuildConfig
@@ -41,22 +43,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.*
+import org.bitcoinj.core.Sha256Hash
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.math.BigInteger
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.util.*
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import com.google.api.services.drive.Drive
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 
 
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
@@ -93,6 +94,9 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
 
     lateinit var tmpPictureFile: File
 
+    var avatarHash: Sha256Hash? = null
+    var avatarFingerprint: BigInteger? = null
+
     fun createTmpPictureFile(): Boolean = try {
         val storageDir: File = walletApplication.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
         tmpPictureFile = File.createTempFile("profileimagetmp", ".jpg", storageDir).apply {
@@ -112,7 +116,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                                uploadService: String = "", localAvatarUrl: String = "") {
         val dashPayProfile = dashPayProfileData.value!!
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                displayName, publicMessage, avatarUrl,null, null,
+                displayName, publicMessage, avatarUrl, avatarHash?.bytes, avatarFingerprint?.toByteArray(),
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
 
         lastAttemptedProfile = updatedProfile
@@ -355,5 +359,4 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     fun cancelUploadRequest() {
         uploadProfilePictureCall?.cancel()
     }
-
 }
