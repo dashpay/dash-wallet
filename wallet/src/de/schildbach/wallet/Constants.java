@@ -95,8 +95,9 @@ public final class Constants {
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                SUPPORTS_PLATFORM = false;
+                SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 break;
             }
             case "devNet": {
