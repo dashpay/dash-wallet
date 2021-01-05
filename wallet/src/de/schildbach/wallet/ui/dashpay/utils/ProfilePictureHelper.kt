@@ -38,6 +38,7 @@ import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.*
 
 
 class ProfilePictureHelper {
@@ -129,6 +130,16 @@ class ProfilePictureHelper {
                         })
             }
             return newUriBuilder.build()
+        }
+
+        /**
+         * Converts BigInteger to byte array removing the sign bit
+         * more info: https://github.com/icon-project/icon-sdk-java/issues/8
+         */
+        fun toByteArray(value: BigInteger): ByteArray {
+            val array = value.toByteArray()
+            val srcPos = if (array[0] == 0.toByte()) 1 else 0
+            return Arrays.copyOfRange(array, srcPos, array.size)
         }
     }
 

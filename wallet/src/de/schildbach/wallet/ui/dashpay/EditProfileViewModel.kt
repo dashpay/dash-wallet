@@ -36,6 +36,7 @@ import de.schildbach.wallet.data.ImgurUploadResponse
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.SingleLiveEvent
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileOperation
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileStatusLiveData
 import de.schildbach.wallet_test.BuildConfig
@@ -115,8 +116,9 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String,
                                uploadService: String = "", localAvatarUrl: String = "") {
         val dashPayProfile = dashPayProfileData.value!!
+        val avatarFingerprintBytes = avatarFingerprint?.run { ProfilePictureHelper.toByteArray(this) }
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
-                displayName, publicMessage, avatarUrl, avatarHash?.bytes, avatarFingerprint?.toByteArray(),
+                displayName, publicMessage, avatarUrl, avatarHash?.bytes, avatarFingerprintBytes,
                 dashPayProfile.createdAt, dashPayProfile.updatedAt)
 
         lastAttemptedProfile = updatedProfile

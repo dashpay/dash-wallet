@@ -116,14 +116,9 @@ class CocoaImageDHashTest {
     private fun asBitmap(pixels: Array<String>): Bitmap {
         val width = 9
         val height = 9
-        var pixelsByteArray = BigInteger(pixels.joinToString(""), 16).toByteArray()
+        var pixelsByteArray = ProfilePictureHelper.toByteArray(BigInteger(pixels.joinToString(""), 16))
         val tmp = ByteArray(width * height * 4)
-        if (pixelsByteArray.size == (tmp.size + 1)) {
-            // remove sign byte
-            // https://github.com/icon-project/icon-sdk-java/issues/8
-            System.arraycopy(pixelsByteArray, 1, tmp, 0, tmp.size)
-            pixelsByteArray = tmp
-        } else if (pixelsByteArray.size < tmp.size) {
+        if (pixelsByteArray.size < tmp.size) {
             // add leading zeros
             val destPos = tmp.size - pixelsByteArray.size
             System.arraycopy(pixelsByteArray, 0, tmp, destPos, pixelsByteArray.size)
