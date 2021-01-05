@@ -1,5 +1,6 @@
 package de.schildbach.wallet.ui
 
+import android.content.DialogInterface
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -14,6 +15,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import org.dash.wallet.common.UserInteractionAwareCallback
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.transaction_details_dialog.*
@@ -32,6 +34,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     private val txId by lazy { arguments?.get(TX_ID) as Sha256Hash }
     private var tx: Transaction? = null
     private val wallet by lazy { WalletApplication.getInstance().wallet }
+    private lateinit var transactionResultViewBinder: TransactionResultViewBinder
 
     companion object {
 
@@ -72,12 +75,15 @@ class TransactionDetailsDialogFragment : DialogFragment() {
 
         view_on_explorer.setOnClickListener { viewOnBlockExplorer() }
         transaction_close_btn.setOnClickListener { dismissAnimation() }
+
+        dialog?.window!!.callback = UserInteractionAwareCallback(dialog?.window!!.callback, requireActivity())
     }
 
     private fun finishInitialization(dashPayProfile: DashPayProfile?) {
-        val transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile)
+        transactionResultViewBinder = TransactionResultViewBinder(transaction_result_container, dashPayProfile, false)
         if (tx != null) {
             transactionResultViewBinder.bind(tx!!)
+            tx!!.confidence.addEventListener(transactionResultViewBinder)
         } else {
             log.error("Transaction not found. TxId:", txId)
             dismissAllowingStateLoss()
@@ -132,9 +138,21 @@ class TransactionDetailsDialogFragment : DialogFragment() {
     }
 
     private fun viewOnBlockExplorer() {
+        imitateUserInteraction()
         if (tx != null) {
             WalletUtils.viewOnBlockExplorer(activity, tx!!.purpose, tx!!.txId.toString())
         }
     }
 
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        if (tx != null) {
+            tx!!.confidence.removeEventListener(transactionResultViewBinder)
+        }
+    }
+
+    private fun imitateUserInteraction() {
+        requireActivity().onUserInteraction()
+    }
 }

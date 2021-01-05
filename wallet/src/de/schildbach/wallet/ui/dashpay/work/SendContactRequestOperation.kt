@@ -6,10 +6,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import androidx.work.*
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
 
 class SendContactRequestOperation(val application: Application) {
+
+    class SendContactRequestOperationException(message: String) : java.lang.Exception(message)
 
     companion object {
         const val WORK_NAME = "SendContactRequest.WORK#"
@@ -26,7 +29,9 @@ class SendContactRequestOperation(val application: Application) {
                     }
 
                     if (it.size > 1) {
-                        throw RuntimeException("there should never be more than one unique work ${uniqueWorkName(toUserId)}")
+                        val e = RuntimeException("there should never be more than one unique work ${uniqueWorkName(toUserId)}")
+                        FirebaseCrashlytics.getInstance().recordException(e)
+                        throw e
                     }
 
                     val workInfo = it[0]
@@ -39,9 +44,13 @@ class SendContactRequestOperation(val application: Application) {
                         WorkInfo.State.FAILED -> {
                             val errorMessage = BaseWorker.extractError(workInfo.outputData)
                             emit(if (errorMessage != null) {
+                                val exception = SendContactRequestOperationException(errorMessage)
+                                FirebaseCrashlytics.getInstance().recordException(exception)
                                 Resource.error(errorMessage, null)
                             } else {
-                                Resource.error(Exception())
+                                val exception = SendContactRequestOperationException("Unknown error")
+                                FirebaseCrashlytics.getInstance().recordException(exception)
+                                Resource.error(exception)
                             })
                         }
                         WorkInfo.State.CANCELLED -> {

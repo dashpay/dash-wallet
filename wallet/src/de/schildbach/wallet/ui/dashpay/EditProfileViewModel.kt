@@ -57,6 +57,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 
 class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
@@ -269,6 +270,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                         log.info("imgur: delete canceled ($imgurDeleteUrl)")
                     }
                     if (!canceled) {
+                        FirebaseCrashlytics.getInstance().log("Failed to delete profile picture: ImgUr")
+                        FirebaseCrashlytics.getInstance().recordException(e)
                         profilePictureUploadLiveData.postValue(Resource.error(e))
                         log.error("imgur: delete failed ($imgurDeleteUrl): ${e.message}")
                     }
@@ -307,9 +310,13 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                     } else {
                         log.error("imgur: upload failed: response invalid")
                         profilePictureUploadLiveData.postValue(Resource.error(response.message()))
+                        FirebaseCrashlytics.getInstance().log("Failed to upload profile picture: ImgUr")
+                        FirebaseCrashlytics.getInstance().recordException(Exception(response.message()))
                     }
                 } else {
                     log.error("imgur: upload failed (${response.code()}): ${response.message()}")
+                    FirebaseCrashlytics.getInstance().log("Failed to upload profile picture: ImgUr")
+                    FirebaseCrashlytics.getInstance().recordException(Exception(response.message()))
                     profilePictureUploadLiveData.postValue(Resource.error(response.message()))
                 }
             } catch (e: Exception) {
@@ -321,6 +328,8 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                 if (!canceled) {
                     profilePictureUploadLiveData.postValue(Resource.error(e))
                     log.error("imgur: upload failed: ${e.message}", e)
+                    FirebaseCrashlytics.getInstance().log("Failed to upload profile picture: ImgUr")
+                    FirebaseCrashlytics.getInstance().recordException(e)
                 }
             }
         }

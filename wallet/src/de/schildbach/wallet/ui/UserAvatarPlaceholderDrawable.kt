@@ -21,13 +21,14 @@ import android.content.Context
 import android.graphics.Color
 import androidx.core.content.res.ResourcesCompat
 import com.amulyakhare.textdrawable.TextDrawable
+import de.schildbach.wallet.util.GraphicUtils.convertDpToPixel
 import de.schildbach.wallet_test.R
 
 class UserAvatarPlaceholderDrawable {
 
     companion object {
         @JvmStatic
-        fun getDrawable(context: Context, usernameFirstChar: Char): TextDrawable? {
+        fun getDrawable(context: Context, usernameFirstChar: Char, fontSize: Int): TextDrawable? {
             val hsv = FloatArray(3)
             //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57
             //Ascii codes for A: 65 - Z: 90, 0: 48 - 9: 57
@@ -44,8 +45,8 @@ class UserAvatarPlaceholderDrawable {
             val bgColor = Color.HSVToColor(hsv)
             return TextDrawable.builder().beginConfig().textColor(Color.WHITE)
                     .useFont(ResourcesCompat.getFont(context, R.font.montserrat_regular))
+                    .fontSize(fontSize)
                     .endConfig().buildRound(usernameFirstChar.toString().toUpperCase(), bgColor)
         }
     }
-
 }

@@ -36,6 +36,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.fragment_updating_profile.*
 import kotlinx.android.synthetic.main.fragment_update_profile_error.*
+import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
@@ -105,6 +106,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         // track the status of broadcast changes to our profile
         editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
             if (state != null) {
+                (requireActivity() as InteractionAwareActivity).imitateUserInteraction()
                 when (state.status) {
                     Status.SUCCESS -> {
                         edit_update_switcher.apply {

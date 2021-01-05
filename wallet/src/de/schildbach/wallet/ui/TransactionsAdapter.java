@@ -41,7 +41,6 @@ import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -340,12 +339,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final TextView rateNotAvailableView;
         private final ImageView icon;
 
-        private SimpleDateFormat dateFormat;
-
-        private String formatDate(long timeStamp) {
-            return dateFormat.format(timeStamp).replace("AM", "am").replace("PM", "pm");
-        }
-
         private TransactionViewHolder(final View itemView) {
             super(itemView);
             primaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_primary_status);
@@ -354,12 +347,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             timeView = (TextView) itemView.findViewById(R.id.transaction_row_time);
             dashSymbolView = (ImageView) itemView.findViewById(R.id.dash_amount_symbol);
             valueView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_value);
+            valueView.setApplyMarkup(false);
             signalView = (TextView) itemView.findViewById(R.id.transaction_amount_signal);
 
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
             fiatView.setApplyMarkup(false);
             rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
-            dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault());
 
             icon = itemView.findViewById(R.id.icon);
         }
@@ -416,7 +409,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             // Set the time. eg.  "<date> <time>"
             //
             final Date time = tx.getUpdateTime();
-            timeView.setText(formatDate(time.getTime()));
+            timeView.setText(WalletUtils.formatDate(time.getTime()));
 
             //
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal

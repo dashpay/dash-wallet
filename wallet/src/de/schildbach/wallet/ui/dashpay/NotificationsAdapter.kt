@@ -27,9 +27,17 @@ import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.NotificationItemStub
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.dashpay.notification.*
+import de.schildbach.wallet.ui.TransactionsAdapter.TransactionHistoryItem
+import de.schildbach.wallet.ui.TransactionsHeaderViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.HeaderViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.ImageViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.NotificationViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.ProfileActivityHeaderHolder
+import de.schildbach.wallet.ui.dashpay.notification.TransactionViewHolder
 import de.schildbach.wallet.util.PlatformUtils
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import java.util.*
 
@@ -39,7 +47,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
                            private val fromProfile: Boolean = false,
                            private val fromStrangerQr: Boolean = false)
 
-    : RecyclerView.Adapter<NotificationViewHolder>() {
+    : RecyclerView.Adapter<NotificationViewHolder>(), ProfileActivityHeaderHolder.OnFilterListener {
 
     companion object {
         const val NOTIFICATION_HEADER = 1
@@ -52,6 +60,8 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     data class HeaderViewItem(private val idValue: Int, val textResId: Int) : NotificationViewItem(NotificationItemStub(idValue.toString()))
     data class ImageViewItem(private val idValue: Int, val textResId: Int, val imageResId: Int) : NotificationViewItem(NotificationItemStub(idValue.toString()))
 
+    private var filter = ProfileActivityHeaderHolder.Filter.ALL
+
     init {
         setHasStableIds(true)
     }
@@ -59,8 +69,11 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     var results: List<NotificationViewItem> = arrayListOf()
         set(value) {
             field = value
+            filteredResults.clear()
+            filteredResults.addAll(value)
             notifyDataSetChanged()
         }
+    var filteredResults: MutableList<NotificationViewItem> = arrayListOf()
 
     var sendContactRequestWorkStateMap: Map<String, Resource<WorkInfo>> = mapOf()
         set(value) {
@@ -73,7 +86,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NotificationViewHolder {
         return when (viewType) {
             NOTIFICATION_HEADER -> if (fromProfile) {
-                ProfileActivityHeaderHolder(LayoutInflater.from(parent.context), parent, fromStrangerQr)
+                ProfileActivityHeaderHolder(LayoutInflater.from(parent.context), parent, this, fromStrangerQr)
             } else {
                 HeaderViewHolder(LayoutInflater.from(parent.context), parent)
             }
@@ -85,7 +98,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     }
 
     override fun getItemCount(): Int {
-        return results.size
+        return filteredResults.size
     }
 
     override fun getItemId(position: Int): Long {
@@ -120,7 +133,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     }
 
     fun getItem(position: Int): NotificationViewItem {
-        return results[position]
+        return filteredResults[position]
     }
 
     override fun onBindViewHolder(holder: NotificationViewHolder, position: Int, payloads: List<Any?>) {
@@ -132,7 +145,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     }
 
     override fun getItemViewType(position: Int): Int {
-        val item = results[position]
+        val item = filteredResults[position]
         return when {
             (item is HeaderViewItem) -> NOTIFICATION_HEADER
             (item is ImageViewItem) -> NOTIFICATION_EMPTY
@@ -146,5 +159,39 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
 
     interface OnItemClickListener {
         fun onItemClicked(view: View, notificationItem: NotificationItem)
+    }
+
+    override fun onFilter(filter: ProfileActivityHeaderHolder.Filter) {
+        this.filter = filter
+        filter()
+    }
+
+    private fun filter() {
+        val resultTransactions: MutableList<NotificationViewItem> = ArrayList()
+        for (notificationViewItem in results) {
+            when (notificationViewItem) {
+                is HeaderViewItem, is ImageViewItem -> {
+                    resultTransactions.add(notificationViewItem)
+                }
+                else -> when (notificationViewItem.notificationItem) {
+                    is NotificationItemPayment -> {
+                        val tx = notificationViewItem.notificationItem.tx!!
+                        val sent = tx.getValue(wallet).signum() < 0
+                        val isInternal = tx.purpose == Transaction.Purpose.KEY_ROTATION
+                        if (filter === ProfileActivityHeaderHolder.Filter.INCOMING && !sent && !isInternal
+                                || filter === ProfileActivityHeaderHolder.Filter.ALL || filter === ProfileActivityHeaderHolder.Filter.OUTGOING && sent && !isInternal) {
+                            resultTransactions.add(notificationViewItem)
+                        }
+                    }
+                    is NotificationItemContact -> {
+                        val usrl = notificationViewItem.notificationItem.usernameSearchResult
+                        resultTransactions.add(notificationViewItem)
+                    }
+                }
+            }
+        }
+        filteredResults.clear()
+        filteredResults.addAll(resultTransactions)
+        notifyDataSetChanged()
     }
 }

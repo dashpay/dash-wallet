@@ -235,6 +235,7 @@
     <string name="transaction_close">Close</string>
     <string name="transaction_details_amount_received">Amount Received</string>
     <string name="transaction_details_amount_sent">Amount Sent</string>
+    <string name="transaction_details_amount_sent_successfully">Sent Successfully</string>
     <string name="transaction_details_sent_from">Sent from</string>
     <string name="transaction_details_sent_to">Sent to</string>
     <string name="transaction_details_received_at">Received at</string>
@@ -348,7 +349,7 @@
 
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
     <string name="min_3_chars">Between 3 and 23 characters</string>
-    <string name="alphanum_only">Alphabets and Numbers only</string>
+    <string name="alphanum_only">Letters and numbers only</string>
     <string name="identity_username_validating">Validating username…</string>
         <string name="identity__username_available">Username available</string>
     <string name="identity_username_taken">Username taken</string>
@@ -416,7 +417,7 @@
     <string name="notifications_contact_has_accepted">%s has accepted your contact request.</string>
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
     <string name="notifications_you_sent">You sent a contact request to %s</string>
-    <string name="notifications_you_received">%s sent a contact request to you</string>
+    <string name="notifications_you_received">%s has sent you a contact request</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 
@@ -495,5 +496,12 @@
     <string name="join_dashpay_subtitle">Create Username, add your friends…</string>
     <string name="join_dashpay_more_subtitle">Create your Username, find your friends and add them to your contacts</string>
     <string name="join">Join</string>
+
+    <string name="more_suggestions">More Suggestions</string>
+    <string name="users_that_matches">Users that matches</string>
+    <string name="not_in_your_contacts">who are currently not in your contacts</string>
+    <string name="no_matching_contacts">No matching users in your contacts</string>
+    <string name="suggestions_empty_result_part_1">There are no users that matches with the name</string>
+    <string name="suggestions_empty_result_part_2">in your contacts</string>
 
 </resources>

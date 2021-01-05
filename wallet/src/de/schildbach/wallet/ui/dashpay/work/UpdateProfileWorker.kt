@@ -9,6 +9,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.tasks.Tasks
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
 import com.google.api.services.drive.Drive
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
@@ -66,6 +67,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             when (ex) {
                 is GeneralSecurityException,
                 is IOException -> {
+                    FirebaseCrashlytics.getInstance().log("Failed to create/update profile: retrieve password")
+                    FirebaseCrashlytics.getInstance().recordException(ex)
                     val msg = formatExceptionMessage("retrieve password", ex)
                     return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.PASSWORD.name))
                 }
@@ -107,6 +110,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
                     KEY_USER_ID to profileRequestResult.userId
             ))
         } catch (ex: Exception) {
+            FirebaseCrashlytics.getInstance().log("Failed to create/update profile: broadcast state transition")
+            FirebaseCrashlytics.getInstance().recordException(ex)
             formatExceptionMessage("create/update profile", ex)
             Result.failure(workDataOf(
                     KEY_ERROR_MESSAGE to UpdateProfileError.BROADCAST.name))
@@ -126,6 +131,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             val secureId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             return GoogleDriveService.uploadImage(drive!!, uploadedAvatarFilename, encryptedBackup, secureId)
         } catch (t: Throwable) {
+            FirebaseCrashlytics.getInstance().log("Failed to upload to Google Drive")
+            FirebaseCrashlytics.getInstance().recordException(t)
             //log.error("failed to save channels backup on google drive", t)
             if (t is GoogleAuthIOException || t is GoogleAuthException) {
                 //BackupHelper.GoogleDrive.disableGDriveBackup(context)

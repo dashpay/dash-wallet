@@ -59,7 +59,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, platformRep
         val contacts = items.filter { it.requestSent && it.requestReceived }
 
         contacts.forEach {
-            val transactions = blockchainIdentity.getContactTransactions(it.fromContactRequest!!.userIdentifier)
+            val transactions = blockchainIdentity.getContactTransactions(it.fromContactRequest!!.userIdentifier, it.fromContactRequest!!.accountReference)
             var count = 0
 
             for (tx in transactions) {

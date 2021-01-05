@@ -46,8 +46,9 @@ class ProfilePictureDisplay {
 
         @JvmStatic
         fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+            val fontSize = calcFontSize(avatarView)
             if (avatarUrlStr.isNotEmpty()) {
+                val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
                 val avatarUrl = Uri.parse(avatarUrlStr)
                 val zoomRectF = ProfilePictureHelper.extractZoomedRect(avatarUrl)
                 val baseAvatarUrl = ProfilePictureHelper.removePicZoomParameter(avatarUrl)
@@ -72,13 +73,42 @@ class ProfilePictureDisplay {
                         .transition(withCrossFade())
                         .into(avatarView)
             } else {
-                displayDefault(avatarView, username)
+                displayDefault(avatarView, username, fontSize)
             }
         }
 
+        @JvmStatic
         fun displayDefault(avatarView: ImageView, username: String) {
-            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0])
+            displayDefault(avatarView, username, calcFontSize(avatarView))
+        }
+
+        private fun displayDefault(avatarView: ImageView, username: String, fontSize: Int) {
+            val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
             avatarView.setImageDrawable(defaultAvatar)
+        }
+
+        private const val FONT_SIZE_RATIO: Float = 30f / 64f
+
+        private fun calcFontSize(avatarView: ImageView): Int {
+            return (avatarView.layoutParams.width * FONT_SIZE_RATIO).toInt();
+        }
+
+        fun removePicZoomParameter(url: String): Uri {
+            return removeParameter(Uri.parse(url), "dashpay-profile-pic-zoom")
+        }
+
+        @Suppress("SameParameterValue")
+        private fun removeParameter(uri: Uri, key: String): Uri {
+            val newUriBuilder = uri.buildUpon().clearQuery()
+            for (param in uri.queryParameterNames) {
+                newUriBuilder.appendQueryParameter(param,
+                        if (param == key) {
+                            continue
+                        } else {
+                            uri.getQueryParameter(param)
+                        })
+            }
+            return newUriBuilder.build()
         }
     }
 }
