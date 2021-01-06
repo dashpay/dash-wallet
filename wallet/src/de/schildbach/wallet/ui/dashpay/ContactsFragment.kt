@@ -18,38 +18,29 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.content.Intent
-import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.contacts_empty_result.*
-import kotlinx.android.synthetic.main.contacts_empty_results_content.*
 import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
-import kotlinx.android.synthetic.main.user_search_loading.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -123,22 +114,14 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             setupActionBarWithTitle(R.string.contacts_title)
         }
 
-        search_for_user_suggestions.setOnClickListener {
-            startActivity(Intent(context, SearchUserActivity::class.java))
-        }
         search_for_user.setOnClickListener {
             startActivity(Intent(context, SearchUserActivity::class.java))
         }
-
-        //Prevent searching again when coming back from User search screen
-        if (initialSearch) {
-            searchContacts()
-        }
+        searchContacts()
     }
 
-    override fun onStop() {
-        super.onStop()
-        initialSearch = true
+    private fun showEmptyPane() {
+        suggestions_search_no_result.visibility = View.VISIBLE
     }
 
     private fun initViewModel() {
@@ -157,10 +140,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                         empty_state_pane.visibility = View.GONE
                     }
                     initialSearch = false
-                } else {
-                    if ((it.data == null || it.data.isEmpty()) && query.isNotEmpty()) {
-                        dashPayViewModel.searchUsernames(query, 3)
-                    }
                 }
                 if (it.data != null) {
                     processResults(it.data)
@@ -178,80 +157,35 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             }
         })
         dashPayViewModel.searchUsernamesLiveData.observe(viewLifecycleOwner, Observer {
-            if (Status.LOADING == it.status) {
-                startLoading()
+            if (it.data != null && it.data.isNotEmpty()) {
+                showSuggestedUsers(it.data)
             } else {
-                if (it.data != null) {
-                    showSuggestedUsers(it.data)
-                } else {
-                    stopLoading()
-                    showEmptySuggestions()
+                if (contactsAdapter.results.isEmpty()) {
+                    showEmptyPane()
                 }
             }
         })
     }
 
-    private fun stopLoading() {
-        (search_loading_icon.drawable as AnimationDrawable).stop()
-        search_loading.visibility = View.GONE
-    }
+    private fun showSuggestedUsers(users: List<UsernameSearchResult>?) {
+        val results = contactsAdapter.results
 
-    private fun startLoading() {
-        no_results_pane.visibility = View.GONE
-        suggestions_search_no_result.visibility = View.GONE
-        search_loading.visibility = View.VISIBLE
-        var loadingText = getString(R.string.search_user_loading)
-        loadingText = loadingText.replace("%", "\"<b>$query</b>\"")
-        search_loading_label.text = HtmlCompat.fromHtml(loadingText,
-                HtmlCompat.FROM_HTML_MODE_COMPACT)
-        (search_loading_icon.drawable as AnimationDrawable).start()
-    }
-
-    private fun showInitialState() {
-        searchHandler.removeCallbacks(searchContactsRunnable)
-        stopLoading()
-        no_results_pane.visibility = View.GONE
-        suggestions_search_no_result.visibility = View.GONE
-        dashPayViewModel.searchContacts(query, direction)
-    }
-
-    private fun showSuggestedUsers(users: List<UsernameSearchResult>) {
-        KeyboardUtil.hideKeyboard(requireContext(), requireView())
-        stopLoading()
-        no_results_pane.visibility = View.VISIBLE
-        suggestions_container.removeAllViews()
-
-        val suggestionsSubtitle = getString(R.string.users_that_matches) + " \"<b>$query</b>\" " + getString(R.string.not_in_your_contacts)
-        val suggestionsSubtitleTv = no_results_pane.findViewById<TextView>(R.id.suggestions_subtitle)
-        suggestionsSubtitleTv.text = HtmlCompat.fromHtml(suggestionsSubtitle, HtmlCompat.FROM_HTML_MODE_COMPACT)
-        val suggestionsContainer = no_results_pane.findViewById<ViewGroup>(R.id.suggestions_container)
-
-        val layoutInflater = LayoutInflater.from(requireContext())
-
-        for (user in users) {
-            val view = layoutInflater.inflate(R.layout.dashpay_contact_row, suggestions_container, false)
-            view.findViewById<View>(R.id.root).setBackgroundResource(R.drawable.round_corners_gray_bg)
-            view.findViewById<View>(R.id.relation_state).visibility = View.GONE
-
-            val avatar = view.findViewById<ImageView>(R.id.avatar)
-            ProfilePictureDisplay.displayDefault(avatar,
-                    user.username)
-
-            //Username & Display Name
-            val dashPayProfile = user.dashPayProfile
-            if (dashPayProfile.displayName.isEmpty()) {
-                view.findViewById<TextView>(R.id.display_name).text = user.username
-                view.findViewById<TextView>(R.id.username).text = ""
-            } else {
-                view.findViewById<TextView>(R.id.display_name).text = dashPayProfile.displayName
-                view.findViewById<TextView>(R.id.username).text = user.username
-            }
-
-            view.setOnClickListener {
-                startActivity(DashPayUserActivity.createIntent(requireContext(), user))
-            }
-            suggestionsContainer.addView(view)
+        if (results.isEmpty()) {
+            results.add(ContactSearchResultsAdapter.ViewItem(null,
+                    ContactSearchResultsAdapter.CONTACT_NO_RESULTS))
         }
+
+        if (users != null) {
+            results.add(ContactSearchResultsAdapter.ViewItem(null,
+                    ContactSearchResultsAdapter.CONTACTS_SUGGESTIONS_HEADER))
+            for (user in users) {
+                results.add(ContactSearchResultsAdapter.ViewItem(user,
+                        ContactSearchResultsAdapter.CONTACT_SUGGESTION_ROW))
+            }
+        }
+
+
+        contactsAdapter.results = results
     }
 
     private fun showEmptySuggestions() {
@@ -316,27 +250,30 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         searchContacts()
     }
 
+    override fun onSearchUser() {
+        startActivity(Intent(context, SearchUserActivity::class.java))
+    }
+
     private fun searchContacts() {
+        suggestions_search_no_result.visibility = View.GONE
         if (this::searchContactsRunnable.isInitialized) {
             searchHandler.removeCallbacks(searchContactsRunnable)
         }
 
         searchContactsRunnable = Runnable {
+            contactsAdapter.query = query
             dashPayViewModel.searchContacts(query, direction)
+            if (!initialSearch && query.isNotEmpty()) {
+                dashPayViewModel.searchUsernames(query, 3)
+            }
         }
         searchHandler.postDelayed(searchContactsRunnable, 500)
     }
 
     override fun afterTextChanged(s: Editable?) {
-        if (s == null) {
-            showInitialState()
-        } else {
-            query = s.toString()
-            if (query.isEmpty()) {
-                showInitialState()
-            } else {
-                searchContacts()
-            }
+        s?.let {
+            query = it.toString()
+            searchContacts()
         }
     }
 
