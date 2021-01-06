@@ -805,26 +805,26 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     suspend fun updateContactRequests() {
 
-            // only allow this method to execute once at a time
-            if (updatingContacts.get()) {
-                log.info("updateContactRequests is already running")
-                return
-            }
+        // only allow this method to execute once at a time
+        if (updatingContacts.get()) {
+            log.info("updateContactRequests is already running")
+            return
+        }
 
-            if (!platform.hasApp("dashpay")) {
-                log.info("update contacts not completed because there is no dashpay contract")
-                return
-            }
+        if (!platform.hasApp("dashpay")) {
+            log.info("update contacts not completed because there is no dashpay contract")
+            return
+        }
 
-            val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
-            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
-                log.info("update contacts not completed username registration/recovery is not complete")
-                return
-            }
+        val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
+        if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+            log.info("update contacts not completed username registration/recovery is not complete")
+            return
+        }
 
-            if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
-                return // this is here because the wallet is being reset without removing blockchainIdentityData
-            }
+        if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
+            return // this is here because the wallet is being reset without removing blockchainIdentityData
+        }
 
         try {
             val userId = blockchainIdentityData.userId!!
@@ -843,8 +843,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10)
                     lastTimeStamp
                 else lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
-            }
-            else 0L
+            } else 0L
 
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
