@@ -120,6 +120,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
     private val backgroundHandler: Handler
 
+    private var mainHandler: Handler = Handler(walletApplication.mainLooper)
+
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
 
     init {
@@ -455,10 +457,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val contactIdentity = platform.identities.get(toUserId)
             blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey)
 
-            // update bloom filters now
-            val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
-                    BlockchainServiceImpl::class.java)
-            walletApplication.startService(intent)
+            // update bloom filters now on main thread
+            mainHandler.post {
+                updateBloomFilters()
+            }
         }
 
         log.info("contact request: $cr")
@@ -925,9 +927,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             // If new keychains were added to the wallet, then update the bloom filters
             if (addedContact) {
-                val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
-                        BlockchainServiceImpl::class.java)
-                walletApplication.startService(intent)
+                mainHandler.post {
+                    updateBloomFilters()
+                }
             }
 
             //obtain profiles from new contacts
@@ -958,6 +960,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 preDownloadBlocks.set(false)
             }
         }
+    }
+
+    private fun updateBloomFilters() {
+        val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                BlockchainServiceImpl::class.java)
+        walletApplication.startService(intent)
     }
 
     /**
