@@ -535,7 +535,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            blockchainIdentity.watchIdentity(10, 5000, RetryDelayType.SLOW20)
+            blockchainIdentity.watchIdentity(100, 1000, RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
         }
     }
@@ -572,7 +572,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         withContext(Dispatchers.IO) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
             val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
-            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 100, 1000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
             }
@@ -594,7 +594,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
             }
@@ -655,6 +655,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val usernameStatus = HashMap<String, Any>()
             if (blockchainIdentityData.preorderSalt != null) {
                 usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
+                usernameSalts[currentUsername!!] = blockchainIdentityData.preorderSalt!!
             }
             if (blockchainIdentityData.usernameStatus != null) {
                 usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
@@ -1151,7 +1152,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val fundingKey = walletApplication.wallet.blockchainIdentityKeyChain.watchingKey
+        val blockchainIdentityKeyChain = walletApplication.wallet.blockchainIdentityKeyChain
+                ?: return null
+        val fundingKey = blockchainIdentityKeyChain.watchingKey
         val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
         return if (identityBytes != null) {
             platform.dpp.identity.createFromBuffer(identityBytes.toByteArray())
