@@ -151,28 +151,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun isPlatformAvailable(): Resource<Boolean> {
-        // this checks only one random node, but should check several.
+        // this checks only one random node, but will retry 10 times.
         // it is possible that some nodes are not available due to location,
         // firewalls or other reasons
         return try {
-            if (Constants.NETWORK_PARAMETERS.id.contains("mobile")) {
-                // Something is wrong with getStatus() or the nodes only return success about 10-20% of time
-                // on the mobile 0.11 devnet
-                platform.client.getBlockByHeight(100)
-                Resource.success(true)
-            } else {
-                val response = platform.client.getStatus()
-                Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
-                        Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
-            }
+            val response = platform.client.getStatus()
+            Resource.success(response!!.connections > 0 && /*response.errors.isBlank() &&*/
+                    Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
         } catch (e: Exception) {
-            try {
-                // use getBlockByHeight instead of getStatus in case of failure
-                platform.client.getBlockByHeight(100)
-                Resource.success(true)
-            } catch (e: Exception) {
-                Resource.error(e.localizedMessage, null)
-            }
+            Resource.error(e.localizedMessage, null)
         }
     }
 
