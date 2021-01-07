@@ -601,9 +601,22 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 log.info("DMN List peer discovery failed: "+ x.getMessage());
                             }
 
+                            // default masternode list
+                            if(peers.size() < MINIMUM_PEER_COUNT) {
+                                String [] defaultMNList = Constants.NETWORK_PARAMETERS.getDefaultMasternodeList();
+                                if (defaultMNList != null || defaultMNList.length != 0) {
+                                    log.info("DMN peer discovery returned less than 16 nodes.  Adding default DMN peers to the list to increase connections");
+                                    MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(defaultMNList, Constants.NETWORK_PARAMETERS.getPort());
+                                    peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } else {
+                                    log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
+                                }
+                            }
+
+                            // seed nodes
                             if(peers.size() < MINIMUM_PEER_COUNT) {
                                 if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
-                                    log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
+                                    log.info("Static DMN peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
                                     peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
                                 } else {
                                     log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
