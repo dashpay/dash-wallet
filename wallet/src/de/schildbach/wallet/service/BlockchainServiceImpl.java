@@ -413,6 +413,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
             syncPercentage = pct > 0.0 ? (int)pct : 0;
+            if (syncPercentage > 100) {
+                syncPercentage = 100;
+            }
         }
 
         /*
@@ -428,9 +431,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onMasterNodeListDiffDownloaded(Stage stage, @Nullable SimplifiedMasternodeListDiff mnlistdiff) {
-            super.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
-            startPreBlockPercent = syncPercentage;
-            postOrPostDelayed();
+            log.info("masternodeListDiffDownloaded:" + stage);
+            if(peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST) {
+                super.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
+                startPreBlockPercent = syncPercentage;
+                postOrPostDelayed();
+            }
         }
 
         private void postOrPostDelayed() {
@@ -458,7 +464,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if (stage == PreBlockStage.StartRecovery && lastPreBlockStage == PreBlockStage.None) {
                 startPreBlockPercent = syncPercentage;
                 if (preBlocksWeight <= 0.10)
-                    setPreBlocksWeight(0.20);//PreBlockStage.RecoveryAndUpdateTotal.getValue();
+                    setPreBlocksWeight(0.20);
             }
             double increment = preBlocksWeight * stage.getValue() * 100.0 / PreBlockStage.Complete.getValue();
             if (increment > preBlocksWeight * 100)
