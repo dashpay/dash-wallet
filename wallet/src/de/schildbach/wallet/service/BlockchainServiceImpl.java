@@ -76,7 +76,6 @@ import org.bitcoinj.net.discovery.MultiplexingDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.net.discovery.SeedPeers;
-import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
@@ -864,12 +863,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         peerDiscoveryList.add(dnsDiscovery);
 
-        List<String> masternodes = new ArrayList<>();
-        if (Constants.NETWORK_PARAMETERS instanceof DevNetParams) {
-            masternodes = new ArrayList(Arrays.asList(((DevNetParams) Constants.NETWORK_PARAMETERS).getDefaultMasternodeList()));
-        }
-
         if (Constants.SUPPORTS_PLATFORM) {
+            ArrayList masternodes = new ArrayList(Arrays.asList(Constants.NETWORK_PARAMETERS.getDefaultMasternodeList()));
+
             DapiClient client = PlatformRepo.getInstance().getPlatform().getClient();
             client.setSimplifiedMasternodeListManager(application.getWallet().getContext().masternodeListManager, masternodes);
             client.getDapiAddressListProvider().addBannedAddress("211.30.243.82");
