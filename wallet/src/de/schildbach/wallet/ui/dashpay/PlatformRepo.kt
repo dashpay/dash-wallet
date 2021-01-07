@@ -942,11 +942,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         } finally {
             updatingContacts.set(false)
             if (preDownloadBlocks.get()) {
-                log.info("PreDownloadBlocks: complete")
-                preDownloadBlocksFuture?.set(true)
-                preDownloadBlocks.set(false)
+                finishPreBlockDownload()
             }
         }
+    }
+
+    private fun finishPreBlockDownload() {
+        log.info("PreDownloadBlocks: complete")
+        preDownloadBlocksFuture?.set(true)
+        preDownloadBlocks.set(false)
     }
 
     private fun updateBloomFilters() {
@@ -1130,6 +1134,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     return@launch
                 } else {
                     log.info("PreDownloadBlocks: no existing identity found")
+                    // resume Sync process, since there is no Platform data to sync
+                    finishPreBlockDownload()
                 }
             }
 
