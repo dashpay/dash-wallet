@@ -42,7 +42,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     protected val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String>()
-    private val userSearchLiveData = MutableLiveData<Pair<String, Int>>()
+    private val userSearchLiveData = MutableLiveData<UserSearch>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String>()
 
@@ -85,13 +85,15 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     // Search Usernames that start with "text".  Results are a list of documents for names
     // starting with text.  If no results are found then an empty list is returned.
     //
-    val searchUsernamesLiveData = Transformations.switchMap(userSearchLiveData) { search: Pair<String, Int> ->
+    val searchUsernamesLiveData = Transformations.switchMap(userSearchLiveData) { search: UserSearch ->
         searchUsernamesJob.cancel()
         searchUsernamesJob = Job()
         liveData(context = searchUsernamesJob + Dispatchers.IO) {
             emit(Resource.loading(null))
             try {
-                val result = platformRepo.searchUsernames(search.first, false, search.second)
+                var result = platformRepo.searchUsernames(search.text, false, search.limit)
+                result = result.filter {  !search.excludeIds.contains(it.dashPayProfile.userId) }
+                result = result.subList(0, 3)
                 emit(Resource.success(result))
             } catch (ex: Exception) {
                 FirebaseCrashlytics.getInstance().log("Failed to search user")
@@ -101,8 +103,12 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun searchUsernames(text: String, limit: Int = 100) {
-        userSearchLiveData.value = Pair(text, limit)
+    fun searchUsernames(text: String, limit: Int = 100, removeContacts: Boolean = false) {
+        val excludeIds = arrayListOf<String>()
+        if (removeContacts) {
+            searchContactsLiveData.value?.data?.forEach { excludeIds.add(it.dashPayProfile.userId) }
+        }
+        userSearchLiveData.value = UserSearch(text, limit, excludeIds)
     }
 
     //
@@ -221,4 +227,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         e.printStackTrace()
         return msg
     }
+
+    private inner class UserSearch(val text: String, val limit: Int = 100,
+                                   val excludeIds: ArrayList<String> = arrayListOf())
 }
