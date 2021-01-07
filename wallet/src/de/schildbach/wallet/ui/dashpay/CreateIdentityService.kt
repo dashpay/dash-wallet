@@ -491,22 +491,21 @@ class CreateIdentityService : LifecycleService() {
                     when (reason) {
                         // If this transaction is in a block, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.DEPTH -> {
-                            confidence!!.removeEventListener(this)
-                            continuation.resumeWith(Result.success(true))
+                            // TODO: a chainlock is needed to accompany the block information
+                            // to provide sufficient proof
                         }
                         // If this transaction is InstantSend Locked, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
-                            if (confidence!!.isTransactionLocked) {
+                            // TODO: allow for received (IX_REQUEST) instantsend locks
+                            // until the bug related to instantsend lock verification is fixed.
+                            if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
                                 confidence.removeEventListener(this)
                                 continuation.resumeWith(Result.success(true))
                             }
                         }
                         // If this transaction has been seen by more than 1 peer, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.SEEN_PEERS -> {
-                            if (confidence!!.numBroadcastPeers() > 1) {
-                                confidence.removeEventListener(this)
-                                continuation.resumeWith(Result.success(true))
-                            }
+                            // being seen by other peers is no longer sufficient proof
                         }
                         // If this transaction was rejected, then it was not sent successfully
                         TransactionConfidence.Listener.ChangeReason.REJECT -> {
