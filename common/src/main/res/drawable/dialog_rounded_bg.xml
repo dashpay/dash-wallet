@@ -3,4 +3,7 @@
     android:shape="rectangle">
     <solid android:color="@android:color/white" />
     <corners android:radius="8dp" />
+    <stroke
+        android:width="1px"
+        android:color="@color/dash_black" />
 </shape>

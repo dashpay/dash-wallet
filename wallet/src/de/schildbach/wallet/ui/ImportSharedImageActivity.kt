@@ -15,7 +15,6 @@
  */
 package de.schildbach.wallet.ui
 
-import android.content.DialogInterface
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
@@ -118,7 +117,7 @@ class ImportSharedImageActivity : AppCompatActivity() {
     }
 
     private fun showErrorDialog(title: Int, msg: Int, image: Int) {
-        val errorDialog = FancyAlertDialog.newInstance(title, msg, image)
+        val errorDialog = FancyAlertDialog.newInstance(title, msg, image, R.string.import_image_okay, 0)
         errorDialog.show(supportFragmentManager, "error_dialog")
         val errorDialogViewModel = ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
         errorDialogViewModel.onPositiveButtonClick.observe(this, Observer {
@@ -176,10 +175,6 @@ class ImportSharedImageActivity : AppCompatActivity() {
             }
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
-                val dismissListener = DialogInterface.OnClickListener { _, _ ->
-                    finish()
-                }
-                dialog(this@ImportSharedImageActivity, dismissListener, 0, messageResId, *messageArgs)
                 showErrorDialog(
                         R.string.import_image_no_private_key_copied,
                         R.string.import_image_import_valid_private_key,

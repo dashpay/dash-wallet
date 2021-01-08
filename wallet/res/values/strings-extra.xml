@@ -339,4 +339,5 @@
     <string name="import_image_please_use_valid_qr_code">Please use a valid Dash QR Code</string>
     <string name="import_image_no_private_key_copied">No private key copied</string>
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
+    <string name="import_image_okay">Okay</string>
 </resources>
