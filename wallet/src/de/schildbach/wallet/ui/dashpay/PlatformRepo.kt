@@ -653,15 +653,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus!!
             val usernameStatus = HashMap<String, Any>()
-            if (blockchainIdentityData.preorderSalt != null) {
-                usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
-                usernameSalts[currentUsername!!] = blockchainIdentityData.preorderSalt!!
+            // usernameStatus, usernameSalts are not set if preorder hasn't started
+            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.PREORDER_REGISTERING) {
+                if (blockchainIdentityData.preorderSalt != null) {
+                    usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
+                    usernameSalts[currentUsername!!] = blockchainIdentityData.preorderSalt!!
+                }
+                if (blockchainIdentityData.usernameStatus != null) {
+                    usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
+                }
+                usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
+                usernameStatuses[currentUsername!!] = usernameStatus
             }
-            if (blockchainIdentityData.usernameStatus != null) {
-                usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
-            }
-            usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
-            usernameStatuses[currentUsername!!] = usernameStatus
 
             creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
             activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0

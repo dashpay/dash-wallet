@@ -279,7 +279,6 @@ class CreateIdentityService : LifecycleService() {
         }
 
         if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERING) {
-            platformRepo.updateCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
             //
             // Step 4: Preorder the username
             if (!blockchainIdentity.getUsernames().contains(blockchainIdentityData.username!!)) {
@@ -287,6 +286,7 @@ class CreateIdentityService : LifecycleService() {
             }
             platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
         }
 
         if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERED) {
