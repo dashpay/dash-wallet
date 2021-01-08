@@ -143,7 +143,7 @@ class FancyAlertDialog : DialogFragment() {
     }
 
     private fun setupProgress() {
-        progress.visibility = View.GONE
+        progress.visibility = View.VISIBLE
         image.visibility = View.GONE
         positive_button.visibility = View.GONE
         negative_button.visibility = View.GONE
