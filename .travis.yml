@@ -55,7 +55,7 @@ before_script:
   - cd ..
   - git clone https://github.com/dashevo/android-dashpay.git
   - cd android-dashpay
-  - git checkout dpp-0.17
+  - git checkout dpp-0.17-upgrade
   - ./gradlew assemble
   - cd ..
 
@@ -96,13 +96,13 @@ notifications:
 script:
 - ./gradlew test
 - ./gradlew assemble_testNet3Debug
-- ./gradlew assembleMobileDebug
-- ./gradlew assembleEvonetDebug
-- ./gradlew assembleDevNetDebug
-- rm -rf .gradle/4.4
-- openssl aes-256-cbc -K $encrypted_1615d4cf65a2_key -iv $encrypted_1615d4cf65a2_iv -in .deploy/UpholdConstants.enc -out uphold-integration/src/main/java/org/dash/wallet/integration/uphold/data/UpholdConstants.java -d
-- ./gradlew assembleProdDebug
-- ./gradlew assembleProdRelease
+#- ./gradlew assembleMobileDebug
+#- ./gradlew assembleEvonetDebug
+#- ./gradlew assembleDevNetDebug
+#- rm -rf .gradle/4.4
+#- openssl aes-256-cbc -K $encrypted_1615d4cf65a2_key -iv $encrypted_1615d4cf65a2_iv -in .deploy/UpholdConstants.enc -out uphold-integration/src/main/java/org/dash/wallet/integration/uphold/data/UpholdConstants.java -d
+#- ./gradlew assembleProdDebug
+#- ./gradlew assembleProdRelease
 
 before_deploy:
   - openssl aes-256-cbc -K $encrypted_945ec88d7d8f_key -iv $encrypted_945ec88d7d8f_iv -in .deploy/id_rsa.enc -out .deploy/id_rsa -d
