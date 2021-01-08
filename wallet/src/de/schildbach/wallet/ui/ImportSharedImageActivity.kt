@@ -176,8 +176,7 @@ class ImportSharedImageActivity : AppCompatActivity() {
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 showErrorDialog(
-                        R.string.import_image_no_private_key_copied,
-                        R.string.import_image_import_valid_private_key,
+                        R.string.import_image_invalid_private, 0,
                         R.drawable.ic_not_valid_qr_code)
             }
         }.parse()
