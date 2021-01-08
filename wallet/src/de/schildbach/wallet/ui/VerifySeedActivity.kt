@@ -22,7 +22,7 @@ import android.os.Bundle
 import android.view.MenuItem
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
@@ -84,7 +84,7 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     }
 
     private fun initViewModel() {
-        decryptSeedViewModel = ViewModelProviders.of(this).get(DecryptSeedViewModel::class.java)
+        decryptSeedViewModel = ViewModelProvider(this).get(DecryptSeedViewModel::class.java)
         decryptSeedViewModel.decryptSeedLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
@@ -93,6 +93,9 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
                 Status.SUCCESS -> {
                     val deterministicSeed = it.data!!.first
                     seed = deterministicSeed!!.mnemonicCode!!.toTypedArray()
+                }
+                else -> {
+                    // ignore
                 }
             }
         })

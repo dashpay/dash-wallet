@@ -162,7 +162,7 @@ class EditProfileActivity : BaseMenuActivity() {
         }
 
         profile_edit_icon.setOnClickListener {
-            selectImage(this)
+            selectImage()
         }
 
         selectProfilePictureSharedViewModel.onFromGravatarCallback.observe(this, Observer<Void> {
@@ -275,6 +275,9 @@ class EditProfileActivity : BaseMenuActivity() {
                     }
                     showUploadErrorDialog(error)
                 }
+                else -> {
+                    // ignore
+                }
             }
         })
         editProfileViewModel.uploadDialogAcceptLiveData.observe(this, Observer { accepted ->
@@ -377,7 +380,7 @@ class EditProfileActivity : BaseMenuActivity() {
         }
     }
 
-    private fun selectImage(context: Context) {
+    private fun selectImage() {
         SelectProfilePictureDialog.createDialog()
                 .show(supportFragmentManager, "selectPictureDialog")
     }
@@ -427,6 +430,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
                     val selectedImage: Uri? = data.data
                     if (selectedImage != null) {
+                        @Suppress("DEPRECATION")
                         val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
                         val cursor: Cursor? = contentResolver.query(selectedImage,
                                 filePathColumn, null, null, null)
@@ -589,7 +593,7 @@ class EditProfileActivity : BaseMenuActivity() {
             startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN)
         } else {
             googleSignInClient.revokeAccess()
-                    .addOnSuccessListener { aVoid: Void? -> startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN) }
+                    .addOnSuccessListener { startActivityForResult(googleSignInClient.signInIntent, REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN) }
                     .addOnFailureListener { e: java.lang.Exception? ->
                         log.error("could not revoke access to drive: ", e)
                         applyGdriveAccessDenied()
@@ -615,7 +619,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun applyGdriveAccessGranted(signInAccount: GoogleSignInAccount) {
         log.info("gdrive: access granted to ${signInAccount.email} with: ${signInAccount.grantedScopes}")
-        mDrive = GoogleDriveService.getDriveServiceFromAccount(applicationContext, signInAccount!!)
+        mDrive = GoogleDriveService.getDriveServiceFromAccount(applicationContext, signInAccount)
         log.info("gdrive: drive $mDrive")
 
         editProfileViewModel.googleDrive = mDrive

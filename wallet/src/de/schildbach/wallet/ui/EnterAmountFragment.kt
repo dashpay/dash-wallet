@@ -22,7 +22,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
@@ -182,7 +182,7 @@ class EnterAmountFragment : Fragment() {
         initViewModels()
 
         if (arguments != null) {
-            val initialAmount = arguments!!.getSerializable(ARGUMENT_INITIAL_AMOUNT) as Monetary
+            val initialAmount = requireArguments().getSerializable(ARGUMENT_INITIAL_AMOUNT) as Monetary
             viewModel.dashToFiatDirectionData.value = initialAmount is Coin
             if (viewModel.dashToFiatDirectionValue) {
                 viewModel.dashAmountData.value = initialAmount as Coin
@@ -196,7 +196,7 @@ class EnterAmountFragment : Fragment() {
     }
 
     private fun initViewModels() {
-        viewModel = ViewModelProviders.of(this)[EnterAmountViewModel::class.java]
+        viewModel = ViewModelProvider(this)[EnterAmountViewModel::class.java]
 
         viewModel.dashToFiatDirectionData.observe(viewLifecycleOwner, Observer {
             if (it) {
@@ -224,7 +224,7 @@ class EnterAmountFragment : Fragment() {
             applyCurrencySymbol(GenericUtils.currencySymbol(it.currencyCode))
         })
         sharedViewModel = activity?.run {
-            ViewModelProviders.of(this)[EnterAmountSharedViewModel::class.java]
+            ViewModelProvider(this)[EnterAmountSharedViewModel::class.java]
         } ?: throw Exception("Invalid Activity")
         sharedViewModel.directionChangeEnabledData.observe(viewLifecycleOwner, Observer {
             convert_direction.isEnabled = it

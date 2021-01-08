@@ -56,7 +56,6 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             val password = SecurityGuard().retrievePassword()
             encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
-            val msg = formatExceptionMessage("derive encryption key", ex)
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DECRYPTION.name))
         } catch (ex: Exception) {
             when (ex) {
@@ -64,7 +63,6 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
                 is IOException -> {
                     FirebaseCrashlytics.getInstance().log("Failed to create/update profile: retrieve password")
                     FirebaseCrashlytics.getInstance().recordException(ex)
-                    val msg = formatExceptionMessage("retrieve password", ex)
                     return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.PASSWORD.name))
                 }
                 else -> throw ex

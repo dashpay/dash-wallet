@@ -194,7 +194,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         })
     }
 
-    fun resetToDefault(view: View) {
+    fun resetToDefault() {
         configuration.autoLogoutEnabled = true
         configuration.autoLogoutMinutes = 1
         configuration.spendingConfirmationEnabled = true

@@ -26,7 +26,7 @@ import kotlinx.android.synthetic.main.frequent_contact_item.view.*
 class FrequentContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, val itemClickListener: OnContactItemClickListener?) :
         RecyclerView.ViewHolder(inflater.inflate(R.layout.frequent_contact_item, parent, false)) {
 
-    open fun bind(usernameSearchResult: UsernameSearchResult) {
+    fun bind(usernameSearchResult: UsernameSearchResult) {
         itemView.apply {
 
             val dashPayProfile = usernameSearchResult.dashPayProfile

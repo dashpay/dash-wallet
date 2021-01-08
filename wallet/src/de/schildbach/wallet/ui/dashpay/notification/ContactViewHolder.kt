@@ -17,10 +17,10 @@
 package de.schildbach.wallet.ui.dashpay.notification
 
 import android.graphics.drawable.AnimationDrawable
-import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.text.HtmlCompat
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -76,7 +76,7 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
 
             @Suppress("DEPRECATION")
             val displayNameText = context.getString(displayNameResId, "<b>$name</b>")
-            display_name.text = Html.fromHtml(displayNameText)
+            display_name.text = HtmlCompat.fromHtml(displayNameText, HtmlCompat.FROM_HTML_MODE_COMPACT)
 
             val scale: Float = itemView.resources.displayMetrics.density
             itemView.layoutParams.height = (79 * scale + 0.5f).toInt()

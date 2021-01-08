@@ -70,7 +70,7 @@ class PaymentsPayFragment : Fragment(),
 
         //Make the whole row clickable
         pay_by_contact_select.setOnClickListener { handleSelectContact() }
-        pay_by_qr_button.setOnClickListener { handleScan(it) }
+        pay_by_qr_button.setOnClickListener { handleScan() }
         pay_to_address.setOnClickListener { handlePaste(true) }
         handlePaste(false)
 
@@ -78,11 +78,11 @@ class PaymentsPayFragment : Fragment(),
         frequent_contacts_rv.adapter = this.frequentContactsAdapter
         this.frequentContactsAdapter.itemClickListener = this
 
-        initViewModel(view)
+        initViewModel()
         dashPayViewModel.getFrequentContacts()
     }
 
-    private fun initViewModel(view: View) {
+    private fun initViewModel() {
         AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().load().observe(viewLifecycleOwner, Observer {
             val visibility = if (it == null) View.GONE else View.VISIBLE
             pay_by_contact_select.visibility = visibility
@@ -144,13 +144,13 @@ class PaymentsPayFragment : Fragment(),
         }
     }
 
-    private fun handleScan(clickView: View) {
+    private fun handleScan() {
         ScanActivity.startForResult(this, activity, REQUEST_CODE_SCAN)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
-            val input = intent!!.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
+            val input = intent!!.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)!!
             handleString(input, true, R.string.button_scan)
         } else {
             super.onActivityResult(requestCode, resultCode, intent)

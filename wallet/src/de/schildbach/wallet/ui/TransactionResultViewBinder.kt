@@ -200,7 +200,7 @@ class TransactionResultViewBinder(private val containerView: View, private val p
         val exchangeRate = tx.exchangeRate
         if (exchangeRate != null) {
             fiatValue.setFiatAmount(tx.value, exchangeRate, Constants.LOCAL_FORMAT,
-                    exchangeRate?.fiat?.currencySymbol)
+                    exchangeRate.fiat?.currencySymbol)
         } else {
             fiatValue.setText(R.string.transaction_row_rate_not_available)
         }

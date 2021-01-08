@@ -28,7 +28,7 @@ fun Context.lifecycleOwner(): LifecycleOwner? {
         curContext = (curContext as ContextWrapper).baseContext
     }
     return if (curContext is LifecycleOwner) {
-        curContext as LifecycleOwner
+        curContext
     } else {
         null
     }

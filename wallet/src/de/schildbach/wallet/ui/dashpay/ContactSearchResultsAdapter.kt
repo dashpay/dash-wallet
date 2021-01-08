@@ -100,7 +100,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
                 (holder as ContactViewHolder).bind(item.usernameSearchResult, sendContactRequestWorkState, itemClickListener, listener)
             }
             CONTACT_REQUEST_HEADER -> (holder as ContactRequestHeaderViewHolder).bind(results[position].requestCount)
-            CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind(item.sortOrder)
+            CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind()
             else -> throw IllegalArgumentException("Invalid viewType ${item.viewType}")
         }
     }
@@ -121,7 +121,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
             RecyclerView.ViewHolder(inflater.inflate(R.layout.contact_header_row, parent, false)) {
 
         var direction = UsernameSortOrderBy.DISPLAY_NAME
-        fun bind(sortOrder: Int) {
+        fun bind() {
             var firstTime = true
             itemView.apply {
 

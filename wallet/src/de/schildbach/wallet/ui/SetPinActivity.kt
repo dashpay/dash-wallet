@@ -372,6 +372,9 @@ class SetPinActivity : InteractionAwareActivity() {
                         }
                     }
                 }
+                else -> {
+                    // ignore
+                }
             }
         })
         viewModel.checkPinLiveData.observe(this, Observer {
@@ -391,6 +394,9 @@ class SetPinActivity : InteractionAwareActivity() {
                     viewModel.oldPinCache = viewModel.getPinAsString()
                     pinRetryController.clearPinFailPrefs()
                     setState(State.SET_PIN)
+                }
+                else -> {
+                    // ignore
                 }
             }
         })

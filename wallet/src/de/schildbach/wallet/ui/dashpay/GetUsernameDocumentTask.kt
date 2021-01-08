@@ -23,7 +23,7 @@ import org.dashevo.dpp.document.Document
 
 abstract class GetUsernameDocumentTask(private val backgroundHandler: Handler) {
 
-    private val callbackHandler: Handler = Handler(Looper.myLooper())
+    private val callbackHandler: Handler = Handler(Looper.myLooper()!!)
 
     fun getUsername(platform: Platform, username: String) {
         backgroundHandler.post {

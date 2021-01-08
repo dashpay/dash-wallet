@@ -137,6 +137,9 @@ class UploadProfilePictureStateDialog : DialogFragment() {
                 try_again_btn.visibility = View.GONE
                 cancel_btn.visibility = View.VISIBLE
             }
+            else -> {
+                // ignore
+            }
         }
     }
 

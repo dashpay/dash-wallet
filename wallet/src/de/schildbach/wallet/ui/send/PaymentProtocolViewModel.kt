@@ -148,12 +148,12 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
                 val message = StringBuilder().apply {
                     if (BuildConfig.DEBUG && messageArgs[0] == 415) {
                         val host = Uri.parse(finalPaymentIntent!!.paymentUrl).host
-                        appendln(host)
-                        appendln(walletApplication.getString(messageResId, *messageArgs))
-                        appendln(PaymentProtocol.MIMETYPE_PAYMENT)
-                        appendln()
+                        appendLine(host)
+                        appendLine(walletApplication.getString(messageResId, *messageArgs))
+                        appendLine(PaymentProtocol.MIMETYPE_PAYMENT)
+                        appendLine()
                     }
-                    appendln(walletApplication.getString(R.string.payment_request_problem_message))
+                    appendLine(walletApplication.getString(R.string.payment_request_problem_message))
                 }
 
                 directPaymentAckLiveData.value = Resource.error(message.toString(), Pair(sendRequest, false))

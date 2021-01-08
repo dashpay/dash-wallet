@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.ui.receive.ReceiveDetailsDialog
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
@@ -35,7 +35,7 @@ class ReceiveActivity : InteractionAwareActivity() {
 
         setTitle(R.string.receive_title)
 
-        enterAmountSharedViewModel = ViewModelProviders.of(this).get(EnterAmountSharedViewModel::class.java)
+        enterAmountSharedViewModel = ViewModelProvider(this).get(EnterAmountSharedViewModel::class.java)
         enterAmountSharedViewModel.maxButtonVisibleData.value = false
         enterAmountSharedViewModel.buttonTextData.call(R.string.receive_title)
         enterAmountSharedViewModel.messageTextData.value = R.string.receive_enter_amount_message

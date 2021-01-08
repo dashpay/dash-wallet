@@ -184,7 +184,6 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
                         }
                     }
                     is NotificationItemContact -> {
-                        val usrl = notificationViewItem.notificationItem.usernameSearchResult
                         resultTransactions.add(notificationViewItem)
                     }
                 }

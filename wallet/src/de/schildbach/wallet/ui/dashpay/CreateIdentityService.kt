@@ -173,7 +173,7 @@ class CreateIdentityService : LifecycleService() {
                     handleCreateIdentityAction(null)
                 }
                 ACTION_RESTORE_IDENTITY -> {
-                    val identity = intent.getByteArrayExtra(EXTRA_IDENTITY)
+                    val identity = intent.getByteArrayExtra(EXTRA_IDENTITY)!!
                     handleRestoreIdentityAction(identity)
                 }
             }
@@ -362,7 +362,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         val loadingFromCreditFundingTransaction = creditFundingTransaction != null
-        var existingIdentity: Identity? = null
+        var existingIdentity: Identity?
 
         if (!loadingFromCreditFundingTransaction) {
             existingIdentity = platformRepo.getIdentityFromPublicKeyId()
@@ -529,6 +529,9 @@ class CreateIdentityService : LifecycleService() {
                                 log.info("Error sending ${cftx.txId}: ${rejectMessage.reasonString}")
                                 continuation.resumeWithException(RejectedTransactionException(cftx, rejectMessage))
                             }
+                        }
+                        else -> {
+                            // ignore
                         }
                     }
                 }

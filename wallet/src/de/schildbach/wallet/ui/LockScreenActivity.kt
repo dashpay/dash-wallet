@@ -33,7 +33,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -208,8 +208,8 @@ class LockScreenActivity : SendCoinsQrActivity() {
     }
 
     private fun initViewModel() {
-        viewModel = ViewModelProviders.of(this).get(LockScreenViewModel::class.java)
-        checkPinViewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
+        viewModel = ViewModelProvider(this).get(LockScreenViewModel::class.java)
+        checkPinViewModel = ViewModelProvider(this).get(CheckPinViewModel::class.java)
         checkPinViewModel.checkPinLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
@@ -230,9 +230,12 @@ class LockScreenActivity : SendCoinsQrActivity() {
                         onCorrectPin(it.data!!)
                     }
                 }
+                else -> {
+                    // ignore
+                }
             }
         })
-        enableFingerprintViewModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
+        enableFingerprintViewModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
             val pin = it.second
             onCorrectPin(pin)
