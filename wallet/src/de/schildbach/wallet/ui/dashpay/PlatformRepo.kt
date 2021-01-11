@@ -57,6 +57,7 @@ import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dpp.document.Document
+import org.dashevo.dpp.errors.InvalidIdentityAssetLockProofError
 import org.dashevo.dpp.identifier.Identifier
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
@@ -526,7 +527,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            blockchainIdentity.registerIdentity(keyParameter)
+            for (i in 0 until 3) {
+                try {
+                    blockchainIdentity.registerIdentity(keyParameter)
+                    return@withContext
+                } catch (e: InvalidIdentityAssetLockProofError) {
+                    log.info("instantSendLock error: retry registerIdentity again")
+                    delay(3000)
+                }
+            }
         }
     }
 
