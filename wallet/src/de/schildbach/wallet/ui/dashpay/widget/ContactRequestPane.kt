@@ -68,6 +68,16 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         main_button_text.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_white, null))
     }
 
+    fun applySendStateWithDisclaimer(username: String) {
+        applySendState()
+        contact_history_disclaimer.visibility = View.VISIBLE
+        disclaimer_button.visibility = View.GONE
+        var disclaimerText = resources.getString(R.string.contact_history_disclaimer)
+        disclaimerText = disclaimerText.replace("%", username)
+        contact_history_disclaimer_text.text = HtmlCompat.fromHtml(disclaimerText, HtmlCompat.FROM_HTML_MODE_COMPACT)
+
+    }
+
     fun applySendingState() {
         contact_history_disclaimer.visibility = View.GONE
         main_button.visibility = View.VISIBLE
@@ -81,16 +91,26 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
         main_button_text.setTextColor(ResourcesCompat.getColor(resources, R.color.medium_gray, null))
     }
 
+    fun applySendingStateWithDisclaimer(username: String?) {
+        applySendingState()
+        contact_history_disclaimer.visibility = View.VISIBLE
+        username?.also {
+            var disclaimerText = resources.getString(R.string.contact_history_disclaimer_pending)
+            disclaimerText = disclaimerText.replace("%", it)
+            contact_history_disclaimer_text.text = HtmlCompat.fromHtml(disclaimerText, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        }
+    }
+
     fun applySentState() {
         contact_history_disclaimer.visibility = View.GONE
         main_button.visibility = View.VISIBLE
         pay_button_pane.visibility = View.GONE
         contact_request_received_pane.visibility = View.GONE
         main_button.isClickable = false
-        main_button.background = null
+        main_button.setBackgroundResource(R.drawable.light_gray_button_background)
         main_button_icon.setImageResource(R.drawable.ic_pending_contact_request)
         main_button_text.setText(R.string.contact_request_pending)
-        main_button_text.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_golden, null))
+        main_button_text.setTextColor(ResourcesCompat.getColor(resources, R.color.dash_gray, null))
     }
 
     fun applySentStateWithDisclaimer(username: String) {
