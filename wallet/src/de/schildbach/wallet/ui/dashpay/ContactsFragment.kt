@@ -264,7 +264,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             contactsAdapter.query = query
             dashPayViewModel.searchContacts(query, direction)
             if (!initialSearch && query.isNotEmpty()) {
-                dashPayViewModel.searchUsernames(query, removeContacts = true)
+                dashPayViewModel.searchUsernames(query, limit = 3, removeContacts = true)
             }
         }
         searchHandler.postDelayed(searchContactsRunnable, 500)

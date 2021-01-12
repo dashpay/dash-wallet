@@ -107,7 +107,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
             CONTACT_HEADER -> 2L
             CONTACT_NO_RESULTS -> 3L
             CONTACTS_SUGGESTIONS_HEADER -> 4L
-            CONTACT_SUGGESTION_ROW -> PlatformUtils.longHashFromEncodedString(item.usernameSearchResult!!.username)
+            CONTACT_SUGGESTION_ROW -> PlatformUtils.longHashFromEncodedString(item.usernameSearchResult!!.dashPayProfile.userId)
             else -> throw IllegalArgumentException("Invalid viewType ${item.viewType}")
         }
     }

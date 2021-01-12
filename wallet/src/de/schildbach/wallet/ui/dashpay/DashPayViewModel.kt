@@ -93,7 +93,10 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
             try {
                 var result = platformRepo.searchUsernames(search.text, false, search.limit)
                 result = result.filter {  !search.excludeIds.contains(it.dashPayProfile.userId) }
-                result = result.subList(0, 3)
+                if (result.isNotEmpty()) {
+                    val limit = result.size.coerceAtMost(search.limit)
+                    result = result.subList(0, limit)
+                }
                 emit(Resource.success(result))
             } catch (ex: Exception) {
                 FirebaseCrashlytics.getInstance().log("Failed to search user")
