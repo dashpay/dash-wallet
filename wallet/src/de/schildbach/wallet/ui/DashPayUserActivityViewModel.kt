@@ -66,6 +66,7 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
 
     fun initUserData(username: String): LiveData<UsernameSearchResult> = liveData(Dispatchers.IO) {
         platformRepo.getLocalUserDataByUsername(username)?.let {
+            log.info("obtained local user data for $username")
             userData = it
             emit(it)
         }
