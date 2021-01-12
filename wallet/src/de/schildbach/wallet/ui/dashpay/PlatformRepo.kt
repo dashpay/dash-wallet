@@ -426,7 +426,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     @Throws(Exception::class)
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest {
-        Context.propagate(walletApplication.wallet.context)
         val potentialContactIdentity = platform.identities.get(toUserId)
         log.info("potential contact identity: $potentialContactIdentity")
 
@@ -444,6 +443,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
             val contactIdentity = platform.identities.get(toUserId)
+            Context.propagate(walletApplication.wallet.context)
             blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey)
 
             // update bloom filters now on main thread
@@ -1109,17 +1109,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun getLocalUserDataByUsername(username: String): UsernameSearchResult? {
+        log.info("requesting local user data for $username")
         val profile = dashPayProfileDao.loadByUsername(username)
         return loadContactRequestsAndReturn(profile)
     }
 
     suspend fun getLocalUserDataByUserId(userId: String): UsernameSearchResult? {
+        log.info("requesting local user data for $userId")
         val profile = dashPayProfileDao.loadByUserId(userId)
         return loadContactRequestsAndReturn(profile)
     }
 
     suspend fun loadContactRequestsAndReturn(profile: DashPayProfile?): UsernameSearchResult? {
         return profile?.run {
+            log.info("successfully obtained local user data for $profile")
             val receivedContactRequest = dashPayContactRequestDao.loadToOthers(userId)?.firstOrNull()
             val sentContactRequest = dashPayContactRequestDao.loadFromOthers(userId)?.firstOrNull()
             UsernameSearchResult(this.username, this, sentContactRequest, receivedContactRequest)
