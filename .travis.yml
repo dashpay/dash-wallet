@@ -39,23 +39,23 @@ before_script:
   - export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
   - git clone https://github.com/dashevo/dashj.git
   - cd dashj
-  - git checkout dpp-0.17
+  - git checkout master
   - git submodule update  --init --recursive
   - mvn clean install -Pno-build-bls -DskipTests
   - cd ..
   - git clone https://github.com/dashevo/android-dpp.git
   - cd android-dpp
-  - git checkout dpp-0.17
+  - git checkout master
   - ./gradlew assemble
   - cd ..
   - git clone https://github.com/dashevo/dapi-client-android.git
   - cd dapi-client-android
-  - git checkout dpp-0.17
+  - git checkout master
   - ./gradlew assemble
   - cd ..
   - git clone https://github.com/dashevo/android-dashpay.git
   - cd android-dashpay
-  - git checkout dpp-0.17-upgrade
+  - git checkout master
   - ./gradlew assemble
   - cd ..
 
