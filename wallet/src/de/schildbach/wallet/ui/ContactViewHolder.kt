@@ -22,6 +22,7 @@ import android.graphics.drawable.AnimationDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.LayoutRes
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -29,9 +30,10 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dashpay_contact_row.view.*
+import kotlinx.android.synthetic.main.dashpay_contact_row_content.view.*
 
-class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
-    : RecyclerView.ViewHolder(inflater.inflate(R.layout.dashpay_contact_row, parent, false)) {
+class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes layout: Int, val isSuggestion: Boolean = false)
+    : RecyclerView.ViewHolder(inflater.inflate(layout, parent, false)) {
 
     interface OnItemClickListener {
         fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
@@ -59,8 +61,10 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
             listener?.onItemClicked(itemView, usernameSearchResult)
         }
 
-        val isPendingRequest = usernameSearchResult.isPendingRequest
-        itemView.setBackgroundResource(if (isPendingRequest) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
+        if (!isSuggestion) {
+            val isPendingRequest = usernameSearchResult.isPendingRequest
+            itemView.setBackgroundResource(if (isPendingRequest) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
+        }
 
         ContactRelation.process(usernameSearchResult.type, sendContactRequestWorkState, object : ContactRelation.RelationshipCallback {
 
