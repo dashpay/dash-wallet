@@ -63,19 +63,6 @@
             android:visibility="gone"
             tools:visibility="visible" />
 
-        <FrameLayout
-            app:layout_constraintTop_toBottomOf="@id/search"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <include
-                android:id="@+id/no_results_pane"
-                layout="@layout/contacts_empty_result"
-                android:visibility="gone"
-                tools:visibility="visible" />
-
-        </FrameLayout>
-
         <include layout="@layout/user_search_loading" />
 
         <androidx.constraintlayout.widget.ConstraintLayout

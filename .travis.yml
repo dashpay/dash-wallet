@@ -45,17 +45,17 @@ before_script:
   - cd ..
   - git clone https://github.com/dashevo/android-dpp.git
   - cd android-dpp
-  - git checkout dpp-0.17
+  - git checkout master
   - ./gradlew assemble
   - cd ..
   - git clone https://github.com/dashevo/dapi-client-android.git
   - cd dapi-client-android
-  - git checkout dpp-0.17
+  - git checkout master
   - ./gradlew assemble
   - cd ..
   - git clone https://github.com/dashevo/android-dashpay.git
   - cd android-dashpay
-  - git checkout dpp-0.17-upgrade
+  - git checkout master
   - ./gradlew assemble
   - cd ..
 
