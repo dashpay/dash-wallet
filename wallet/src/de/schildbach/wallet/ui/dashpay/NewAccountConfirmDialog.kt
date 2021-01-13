@@ -93,8 +93,8 @@ class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
         val fiatSymbol = if (fiatUpgradeFee != null) GenericUtils.currencySymbol(fiatUpgradeFee.currencyCode) else ""
 
         input_value.text = upgradeFeeStr
-        fiat_symbol.text = upgradeFeeFiatStr
-        fiat_value.text = fiatSymbol
+        fiat_symbol.text = fiatSymbol
+        fiat_value.text = upgradeFeeFiatStr
 
         val username = "<b>“${arguments!!.getString(ARG_USERNAME)}”</b>"
         @Suppress("DEPRECATION")
