@@ -89,14 +89,15 @@ public final class Constants {
                 break;
             }
             case "_testNet3": {
-                DNS_SEED = new String[]{"testnet-seed.dashdot.io", "95.183.51.146", "35.161.101.35", "54.91.130.170"};
+                DNS_SEED = new String[]{"testnet-seed.dashdot.io"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = TestNet3Params.get();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                SUPPORTS_PLATFORM = false;
+                SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 break;
             }
             case "devNet": {

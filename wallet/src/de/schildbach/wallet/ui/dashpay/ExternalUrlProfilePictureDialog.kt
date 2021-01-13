@@ -237,15 +237,17 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
                             if (resource is BitmapDrawable) {
                                 ProfilePictureHelper.avatarHashAndFingerprint(requireContext(), pictureUrl, null, object : OnResourceReadyListener {
                                     override fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?) {
-                                        sharedViewModel.avatarHash = avatarHash
-                                        sharedViewModel.avatarFingerprint = avatarFingerprint
+                                        if (isAdded) {
+                                            sharedViewModel.avatarHash = avatarHash
+                                            sharedViewModel.avatarFingerprint = avatarFingerprint
 
-                                        sharedViewModel.bitmapCache = resource.bitmap
-                                        sharedViewModel.externalUrl = pictureUrl
-                                        publicUrlEnterUrl.text = getString(dialogPromptId)
-                                        publicUrlEnterUrl.setTextColor(resources.getColor(R.color.medium_gray))
-                                        sharedViewModel.confirm()
-                                        dismiss()
+                                            sharedViewModel.bitmapCache = resource.bitmap
+                                            sharedViewModel.externalUrl = pictureUrl
+                                            publicUrlEnterUrl.text = getString(dialogPromptId)
+                                            publicUrlEnterUrl.setTextColor(resources.getColor(R.color.medium_gray))
+                                            sharedViewModel.confirm()
+                                            dismiss()
+                                        }
                                     }
                                 })
                             } else {
