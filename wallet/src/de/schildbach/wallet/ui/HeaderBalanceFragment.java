@@ -136,7 +136,6 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
 
         viewBalanceLocal = view.findViewById(R.id.wallet_balance_local);
         viewBalanceLocal.setInsignificantRelativeSize(1);
-        viewBalanceLocal.setStrikeThru(Constants.IS_TESTNET_BUILD);
 
         view.setOnClickListener(new OnClickListener() {
             @Override

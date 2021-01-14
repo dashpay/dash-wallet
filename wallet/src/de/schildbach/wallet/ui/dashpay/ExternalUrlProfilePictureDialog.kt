@@ -30,10 +30,8 @@ import android.view.View
 import android.widget.*
 import androidx.annotation.NonNull
 import androidx.annotation.Nullable
-import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
-import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
@@ -44,11 +42,14 @@ import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.ui.ExternalUrlProfilePictureViewModel
-import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper.OnResourceReadyListener
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.InteractionAwareDialogFragment
 import org.slf4j.LoggerFactory
+import java.math.BigInteger
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -129,8 +130,9 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
         disclaimer = customView.findViewById(R.id.public_url_message)
         fetchingMessage = customView.findViewById(R.id.fetching_msg)
         disclaimer.apply {
-            text = HtmlCompat.fromHtml(getString(R.string.public_url_message) +
-                    " <html><a href=\"https://www.google.com/amp/s/www.mail-signatures.com/articles/direct-link-to-hosted-image/amp/\"><span style=\"color:blue;\">${ getString(R.string.public_url_more_info) }</span></a></html>",
+            text = HtmlCompat.fromHtml(
+                    getString(R.string.public_url_message) +
+                            " <html><a href=\"https://www.google.com/amp/s/www.mail-signatures.com/articles/direct-link-to-hosted-image/amp/\"><span style=\"color:blue;\">${getString(R.string.public_url_more_info)}</span></a></html>",
                     HtmlCompat.FROM_HTML_MODE_COMPACT
             )
             movementMethod = LinkMovementMethod.getInstance()
@@ -212,7 +214,7 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
     }
 
     protected fun loadUrl(pictureUrlBase: String) {
-        val pictureUrl = ProfilePictureDisplay.removePicZoomParameter(convertUrlIfSuitable(pictureUrlBase))
+        val pictureUrl = ProfilePictureHelper.removePicZoomParameter(convertUrlIfSuitable(pictureUrlBase))
         Glide.with(requireContext())
                 .load(pictureUrl)
                 .signature(ObjectKey(System.currentTimeMillis()))
@@ -233,13 +235,22 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
                     override fun onResourceReady(@NonNull resource: Drawable, @Nullable transition: Transition<in Drawable?>?) {
                         if (isAdded) {
                             if (resource is BitmapDrawable) {
-                                sharedViewModel.bitmapCache = resource.bitmap
-                                sharedViewModel.externalUrl = pictureUrl
-                                publicUrlEnterUrl.text = getString(dialogPromptId)
+                                ProfilePictureHelper.avatarHashAndFingerprint(requireContext(), pictureUrl, null, object : OnResourceReadyListener {
+                                    override fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?) {
+                                        if (isAdded) {
+                                            sharedViewModel.avatarHash = avatarHash
+                                            sharedViewModel.avatarFingerprint = avatarFingerprint
+
+                                            sharedViewModel.bitmapCache = resource.bitmap
+                                            sharedViewModel.externalUrl = pictureUrl
+                                            publicUrlEnterUrl.text = getString(dialogPromptId)
+                                            publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.medium_gray))
                                 publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.medium_gray))
-                                publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.medium_gray))
-                                sharedViewModel.confirm()
-                                dismiss()
+                                            sharedViewModel.confirm()
+                                            dismiss()
+                                        }
+                                    }
+                                })
                             } else {
                                 onLoadFailed(null)
                             }

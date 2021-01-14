@@ -26,6 +26,7 @@ import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
 import com.bumptech.glide.load.resource.bitmap.CircleCrop
 import com.bumptech.glide.util.Util
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -41,26 +42,12 @@ class ProfilePictureTransformation(private val zoomedRect: RectF) : BitmapTransf
         private const val TARGET_HEIGHT = 300f
         fun create(profilePicUrl: String?): Transformation<Bitmap> {
             val uri = Uri.parse(profilePicUrl)
-            val zoomedRect = extractZoomedRect(uri)
+            val zoomedRect = ProfilePictureHelper.extractZoomedRect(uri)
             return if (zoomedRect != null) {
                 create(zoomedRect)
             } else {
                 CircleCrop()
             }
-        }
-
-        fun extractZoomedRect(profilePicUri: Uri?): RectF? {
-            val zoomedRectParam = profilePicUri?.getQueryParameter("dashpay-profile-pic-zoom")
-            zoomedRectParam?.also {
-                val zoomedRectStr = it.split(",")
-                if (zoomedRectStr.size == 4) {
-                    return RectF(
-                            zoomedRectStr[0].toFloat(), zoomedRectStr[1].toFloat(),
-                            zoomedRectStr[2].toFloat(), zoomedRectStr[3].toFloat()
-                    )
-                }
-            }
-            return null
         }
 
         fun create(zoomedRect: RectF): MultiTransformation<Bitmap> {

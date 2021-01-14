@@ -56,6 +56,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
@@ -249,6 +250,8 @@ class EditProfileActivity : BaseMenuActivity() {
         })
         externalUrlSharedViewModel.validUrlChosenEvent.observe(this, Observer {
             if (it != null) {
+                editProfileViewModel.avatarHash = externalUrlSharedViewModel.avatarHash
+                editProfileViewModel.avatarFingerprint = externalUrlSharedViewModel.avatarFingerprint
                 editProfileViewModel.saveExternalBitmap(it)
             } else {
                 val username = editProfileViewModel.dashPayProfile!!.username
@@ -510,7 +513,7 @@ class EditProfileActivity : BaseMenuActivity() {
         if (externalUrlSharedViewModel.externalUrl != null) {
             val zoomedRectStr = "${zoomedRect.left},${zoomedRect.top},${zoomedRect.right},${zoomedRect.bottom}"
             if (externalUrlSharedViewModel.shouldCrop) {
-                externalUrlSharedViewModel.externalUrl = setUriParameter(externalUrlSharedViewModel.externalUrl!!, "dashpay-profile-pic-zoom", zoomedRectStr)
+                externalUrlSharedViewModel.externalUrl = ProfilePictureHelper.setPicZoomParameter(externalUrlSharedViewModel.externalUrl!!, zoomedRectStr)
             }
 
             val file = editProfileViewModel.tmpPictureFile
@@ -523,25 +526,11 @@ class EditProfileActivity : BaseMenuActivity() {
         }
     }
 
-    private fun setUriParameter(uri: Uri, key: String, newValue: String): Uri {
-        val newUriBuilder = uri.buildUpon()
-        if (uri.getQueryParameter(key) == null) {
-            newUriBuilder.appendQueryParameter(key, newValue)
-        } else {
-            newUriBuilder.clearQuery()
-            for (param in uri.queryParameterNames) {
-                newUriBuilder.appendQueryParameter(param,
-                        if (param == key) newValue else uri.getQueryParameter(param))
-            }
-        }
-        return newUriBuilder.build()
-    }
-
     private fun cropProfilePicture() {
         if (externalUrlSharedViewModel.shouldCrop) {
             val tmpPictureUri = editProfileViewModel.tmpPictureFile.toUri()
             val profilePictureUri = editProfileViewModel.profilePictureFile!!.toUri()
-            val initZoomedRect = ProfilePictureTransformation.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
+            val initZoomedRect = ProfilePictureHelper.extractZoomedRect(externalUrlSharedViewModel.externalUrl)
             val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
             startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
         } else {

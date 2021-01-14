@@ -57,6 +57,7 @@ import org.dashevo.dashpay.ContactRequests
 import org.dashevo.dashpay.Profiles
 import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dpp.document.Document
+import org.dashevo.dpp.errors.InvalidIdentityAssetLockProofError
 import org.dashevo.dpp.identifier.Identifier
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
@@ -120,6 +121,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
     private val backgroundHandler: Handler
 
+    private var mainHandler: Handler = Handler(walletApplication.mainLooper)
+
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
 
     init {
@@ -149,28 +152,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun isPlatformAvailable(): Resource<Boolean> {
-        // this checks only one random node, but should check several.
+        // this checks only one random node, but will retry 10 times.
         // it is possible that some nodes are not available due to location,
         // firewalls or other reasons
         return try {
-            if (Constants.NETWORK_PARAMETERS.id.contains("mobile")) {
-                // Something is wrong with getStatus() or the nodes only return success about 10-20% of time
-                // on the mobile 0.11 devnet
-                platform.client.getBlockByHeight(100)
-                Resource.success(true)
-            } else {
-                val response = platform.client.getStatus()
-                Resource.success(response!!.connections > 0 && response.errors.isBlank() &&
-                        Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
-            }
+            val response = platform.client.getStatus()
+            Resource.success(response!!.connections > 0 && /*response.errors.isBlank() &&*/
+                    Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
         } catch (e: Exception) {
-            try {
-                // use getBlockByHeight instead of getStatus in case of failure
-                platform.client.getBlockByHeight(100)
-                Resource.success(true)
-            } catch (e: Exception) {
-                Resource.error(e.localizedMessage!!, null)
-            }
+            Resource.error(e.localizedMessage!!, null)
         }
     }
 
@@ -296,7 +286,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val fromContactMap = HashMap<String, DashPayContactRequest>()
             fromContactDocuments!!.forEach {
                 userIdList.add(it.userId)
-                fromContactMap[it.userId] = it
+
+                // It is possible for a contact to send multiple requests that differ by account
+                // or by version.  Currently we will ignore all but the first based on the timestamp
+                // TODO: choose the contactRequest based on the ContactInfo.accountRef value
+                // for this contact
+                if (!fromContactMap.containsKey(it.userId)) {
+                    fromContactMap[it.userId] = it
+                } else {
+                    val previous = fromContactMap[it.userId]!!
+                    if (previous.timestamp > it.timestamp) {
+                        fromContactMap[it.userId] = it
+                    }
+                }
             }
 
             val profiles = HashMap<String, DashPayProfile?>(userIdList.size)
@@ -444,10 +446,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val contactIdentity = platform.identities.get(toUserId)
             blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey)
 
-            // update bloom filters now
-            val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
-                    BlockchainServiceImpl::class.java)
-            walletApplication.startService(intent)
+            // update bloom filters now on main thread
+            mainHandler.post {
+                updateBloomFilters()
+            }
         }
 
         log.info("contact request: $cr")
@@ -471,11 +473,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             blockchainIdentity.registerProfile(displayName,
                     publicMessage,
                     avatarUrl,
+                    dashPayProfile.avatarHash,
+                    dashPayProfile.avatarFingerprint,
                     encryptionKey)
         } else {
             blockchainIdentity.updateProfile(displayName,
                     publicMessage,
                     avatarUrl,
+                    dashPayProfile.avatarHash,
+                    dashPayProfile.avatarFingerprint,
                     encryptionKey)
         }
         log.info("profile broadcast")
@@ -522,7 +528,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
-            blockchainIdentity.registerIdentity(keyParameter)
+            for (i in 0 until 3) {
+                try {
+                    blockchainIdentity.registerIdentity(keyParameter)
+                    return@withContext
+                } catch (e: InvalidIdentityAssetLockProofError) {
+                    log.info("instantSendLock error: retry registerIdentity again")
+                    delay(3000)
+                }
+            }
         }
     }
 
@@ -531,7 +545,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            blockchainIdentity.watchIdentity(10, 5000, RetryDelayType.SLOW20)
+            blockchainIdentity.watchIdentity(100, 1000, RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
         }
     }
@@ -568,7 +582,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         withContext(Dispatchers.IO) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
             val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
-            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 10, 5000, RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 100, 1000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
             }
@@ -590,7 +604,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
-            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 10, 5000, RetryDelayType.SLOW20)
+            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
             if (!result) {
                 throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
             }
@@ -601,7 +615,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createDashPayProfile(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter) {
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
-            blockchainIdentity.registerProfile(username, "", "", keyParameter)
+            blockchainIdentity.registerProfile(username, "", "", null, null, keyParameter)
         }
     }
 
@@ -649,14 +663,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus!!
             val usernameStatus = HashMap<String, Any>()
-            if (blockchainIdentityData.preorderSalt != null) {
-                usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
+            // usernameStatus, usernameSalts are not set if preorder hasn't started
+            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.PREORDER_REGISTERING) {
+                if (blockchainIdentityData.preorderSalt != null) {
+                    usernameStatus[BLOCKCHAIN_USERNAME_SALT] = blockchainIdentityData.preorderSalt!!
+                    usernameSalts[currentUsername!!] = blockchainIdentityData.preorderSalt!!
+                }
+                if (blockchainIdentityData.usernameStatus != null) {
+                    usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
+                }
+                usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
+                usernameStatuses[currentUsername!!] = usernameStatus
             }
-            if (blockchainIdentityData.usernameStatus != null) {
-                usernameStatus[BLOCKCHAIN_USERNAME_STATUS] = blockchainIdentityData.usernameStatus!!
-            }
-            usernameStatus[BLOCKCHAIN_USERNAME_UNIQUE] = true
-            usernameStatuses[currentUsername!!] = usernameStatus
 
             creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
             activeKeyCount = blockchainIdentityData.activeKeyCount ?: 0
@@ -718,7 +736,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private suspend fun updateDashPayProfile(userId: String) {
         var profileDocument = Profiles(platform).get(userId)
-                ?: profiles.createProfileDocument("", "", "", platform.identities.get(userId)!!)
+                ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
         val nameDocument = platform.names.get(userId)
 
@@ -775,8 +793,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun getNextContactAddress(userId: String): Address {
-        return blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId))
+    fun getNextContactAddress(userId: String, accountReference: Int): Address {
+        return blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
     }
 
     fun updateSyncStatus(stage: PreBlockStage) {
@@ -801,26 +819,26 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     suspend fun updateContactRequests() {
 
-            // only allow this method to execute once at a time
-            if (updatingContacts.get()) {
-                log.info("updateContactRequests is already running")
-                return
-            }
+        // only allow this method to execute once at a time
+        if (updatingContacts.get()) {
+            log.info("updateContactRequests is already running")
+            return
+        }
 
-            if (!platform.hasApp("dashpay")) {
-                log.info("update contacts not completed because there is no dashpay contract")
-                return
-            }
+        if (!platform.hasApp("dashpay")) {
+            log.info("update contacts not completed because there is no dashpay contract")
+            return
+        }
 
-            val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
-            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
-                log.info("update contacts not completed username registration/recovery is not complete")
-                return
-            }
+        val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
+        if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+            log.info("update contacts not completed username registration/recovery is not complete")
+            return
+        }
 
-            if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
-                return // this is here because the wallet is being reset without removing blockchainIdentityData
-            }
+        if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
+            return // this is here because the wallet is being reset without removing blockchainIdentityData
+        }
 
         try {
             val userId = blockchainIdentityData.userId!!
@@ -839,8 +857,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10)
                     lastTimeStamp
                 else lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
-            }
-            else 0L
+            } else 0L
 
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
@@ -853,7 +870,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
             toContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
-                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId)) {
+                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference)) {
 
                     userIdList.add(contactRequest.toUserId)
                     dashPayContactRequestDao.insert(contactRequest)
@@ -882,13 +899,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
-                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId)) {
+                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference)) {
 
                     userIdList.add(contactRequest.userId)
                     dashPayContactRequestDao.insert(contactRequest)
 
                     // add the sending to contact keychain if it doesn't exist
-                    val contact = EvolutionContact(userId, contactRequest.userId)
+                    val contact = EvolutionContact(userId, 0, contactRequest.userId, contactRequest.accountReference)
                     try {
                         if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
                             val contactIdentity = platform.identities.get(contactRequest.userId)
@@ -910,9 +927,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             // If new keychains were added to the wallet, then update the bloom filters
             if (addedContact) {
-                val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
-                        BlockchainServiceImpl::class.java)
-                walletApplication.startService(intent)
+                mainHandler.post {
+                    updateBloomFilters()
+                }
             }
 
             //obtain profiles from new contacts
@@ -938,11 +955,21 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         } finally {
             updatingContacts.set(false)
             if (preDownloadBlocks.get()) {
-                log.info("PreDownloadBlocks: complete")
-                preDownloadBlocksFuture?.set(true)
-                preDownloadBlocks.set(false)
+                finishPreBlockDownload()
             }
         }
+    }
+
+    private fun finishPreBlockDownload() {
+        log.info("PreDownloadBlocks: complete")
+        preDownloadBlocksFuture?.set(true)
+        preDownloadBlocks.set(false)
+    }
+
+    private fun updateBloomFilters() {
+        val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                BlockchainServiceImpl::class.java)
+        walletApplication.startService(intent)
     }
 
     /**
@@ -1120,6 +1147,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     return@launch
                 } else {
                     log.info("PreDownloadBlocks: no existing identity found")
+                    // resume Sync process, since there is no Platform data to sync
+                    finishPreBlockDownload()
                 }
             }
 
@@ -1142,7 +1171,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val fundingKey = walletApplication.wallet.blockchainIdentityKeyChain.watchingKey
+        val blockchainIdentityKeyChain = walletApplication.wallet.blockchainIdentityKeyChain
+                ?: return null
+        val fundingKey = blockchainIdentityKeyChain.watchingKey
         val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
         return if (identityBytes != null) {
             platform.dpp.identity.createFromBuffer(identityBytes.toByteArray())
