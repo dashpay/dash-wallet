@@ -258,6 +258,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 editProfileViewModel.avatarHash = externalUrlSharedViewModel.avatarHash
                 editProfileViewModel.avatarFingerprint = externalUrlSharedViewModel.avatarFingerprint
                 editProfileViewModel.saveExternalBitmap(it)
+                setEditingState(true)
             } else {
                 val username = editProfileViewModel.dashPayProfile!!.username
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
