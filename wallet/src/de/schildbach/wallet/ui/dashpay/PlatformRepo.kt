@@ -1124,33 +1124,32 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     /**
      * Called before DashJ starts synchronizing the blockchain
      */
+    @Throws(MaxRetriesReachedException::class)
     suspend fun preBlockDownload(future: SettableFuture<Boolean>) {
-        try {
-            preDownloadBlocks.set(true)
-            lastPreBlockStage = PreBlockStage.None
-            preDownloadBlocksFuture = future
-            log.info("PreDownloadBlocks: starting")
+        preDownloadBlocks.set(true)
+        lastPreBlockStage = PreBlockStage.None
+        preDownloadBlocksFuture = future
+        log.info("PreDownloadBlocks: starting")
 
-            //first check to see if there is a blockchain identity
-            if (blockchainIdentityDataDao.load() == null) {
-                log.info("PreDownloadBlocks: checking for existing associated identity")
+        //first check to see if there is a blockchain identity
+        if (blockchainIdentityDataDao.load() == null) {
+            log.info("PreDownloadBlocks: checking for existing associated identity")
 
-                val identity = getIdentityFromPublicKeyId()
-                if (identity != null) {
-                    log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id.toString()}")
-                    ContextCompat.startForegroundService(walletApplication, createIntentForRestore(walletApplication, identity.id.toBuffer()))
-                    return
-                } else {
-                    log.info("PreDownloadBlocks: no existing identity found")
-                    // resume Sync process, since there is no Platform data to sync
-                    finishPreBlockDownload()
-                }
+            val identity = getIdentityFromPublicKeyId()
+            if (identity != null) {
+                log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id.toString()}")
+                ContextCompat.startForegroundService(walletApplication, createIntentForRestore(walletApplication, identity.id.toBuffer()))
+                return
+            } else {
+                log.info("PreDownloadBlocks: no existing identity found")
+                // resume Sync process, since there is no Platform data to sync
+                finishPreBlockDownload()
             }
-
-            // update contacts, profiles and other platform data
-            else if (!updatingContacts.get()) {
-                updateContactRequests()
-            }
+        }
+        // update contacts, profiles and other platform data
+        else if (!updatingContacts.get()) {
+            updateContactRequests()
+        }
     }
 
     /**

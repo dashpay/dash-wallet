@@ -1223,7 +1223,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                             SettableFuture<Boolean> preBlockDownloadFuture = peerGroup.getPreBlockDownloadFuture();
                             return PlatformRepo.getInstance().preBlockDownload(preBlockDownloadFuture, continuation);
                         } catch (MaxRetriesReachedException ex) {
-                            log.error("Platform is dead...", ex)
+                            log.error("Platform is dead...", ex);
+                            return null;
                         }
                     }
             );
