@@ -203,7 +203,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
         username_exists_req_label.typeface = mediumTypeFace
         username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
-        username_exists_req_label.setText(R.string.identity__username_available)
+        username_exists_req_label.setText(R.string.identity_username_available)
         register_btn.isEnabled = true
     }
 
@@ -266,11 +266,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun validateUsernameCharacters(uname: String): Boolean {
-        val isValid: Boolean
+        var isValid: Boolean
         val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
         val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
+        val containsHyphen = uname.contains("-")
 
-        alphanum_req_img.visibility = if (uname.isNotEmpty() && alphaNumHyphenValid && !startOrEndWithHyphen) {
+        alphanum_req_img.visibility = if (uname.isNotEmpty() && alphaNumHyphenValid) {
             isValid = true
             alphanum_req_label.typeface = mediumTypeFace
             View.VISIBLE
@@ -278,6 +279,23 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             isValid = false
             alphanum_req_label.typeface = regularTypeFace
             View.INVISIBLE
+        }
+
+        if (containsHyphen) {
+            hyphen_req_img.visibility = View.VISIBLE
+            hyphen_req_label.visibility = View.VISIBLE
+            if (!startOrEndWithHyphen) {
+                // leave isValid with the same value that is already has (same as isValid && true)
+                hyphen_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
+                hyphen_req_label.typeface = mediumTypeFace
+            } else {
+                isValid = false
+                hyphen_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+                hyphen_req_label.typeface = regularTypeFace
+            }
+        } else {
+            hyphen_req_img.visibility = View.GONE
+            hyphen_req_label.visibility = View.GONE
         }
 
         return isValid
