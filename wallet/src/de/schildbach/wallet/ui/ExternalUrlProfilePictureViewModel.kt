@@ -20,12 +20,16 @@ package de.schildbach.wallet.ui
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
+import org.bitcoinj.core.Sha256Hash
+import java.math.BigInteger
 
 class ExternalUrlProfilePictureViewModel : ViewModel() {
 
     var bitmapCache: Bitmap? = null
     var externalUrl: Uri? = null
     var shouldCrop: Boolean = true
+    var avatarHash: Sha256Hash? = null
+    var avatarFingerprint: BigInteger? = null
 
     val validUrlChosenEvent = SingleLiveEventExt<Bitmap?>()
 

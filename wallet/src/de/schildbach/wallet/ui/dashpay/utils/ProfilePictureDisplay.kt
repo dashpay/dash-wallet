@@ -21,9 +21,11 @@ import android.net.Uri
 import android.view.View
 import android.widget.ImageView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
+import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
-import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.ProfilePictureTransformation
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable.Companion.getDrawable
@@ -36,41 +38,39 @@ class ProfilePictureDisplay {
         fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false) {
             if (dashPayProfile != null) {
                 avatarView.visibility = View.VISIBLE
-                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.username)
+                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.avatarHash, dashPayProfile.username)
             } else if (hideIfProfileNull) {
                 avatarView.visibility = View.GONE
             }
         }
 
         @JvmStatic
-        fun display(avatarView: ImageView, avatarUrl: String, username: String) {
+        fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String) {
             val fontSize = calcFontSize(avatarView)
-            if (avatarUrl.isNotEmpty()) {
+            if (avatarUrlStr.isNotEmpty()) {
                 val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
-                Glide.with(avatarView.context.applicationContext)
-                        .load(removePicZoomParameter(avatarUrl))
-                        .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
-                        .transform(ProfilePictureTransformation.create(avatarUrl))
-                        .placeholder(defaultAvatar)
-                        .transition(withCrossFade())
-                        .into(avatarView)
-            } else {
-                displayDefault(avatarView, username, fontSize)
-            }
-        }
+                val avatarUrl = Uri.parse(avatarUrlStr)
+                val zoomRectF = ProfilePictureHelper.extractZoomedRect(avatarUrl)
+                val baseAvatarUrl = ProfilePictureHelper.removePicZoomParameter(avatarUrl)
+                val context = avatarView.context.applicationContext
+                Glide.with(context)
+                        .load(baseAvatarUrl)
+                        .listener(object : RequestListener<Drawable> {
+                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+                                return false
+                            }
 
-        @JvmStatic
-        fun display(avatarView: ImageView, avatarLocalUri: Uri, lastModified: Long, username: String) {
-            val fontSize = calcFontSize(avatarView)
-            if (avatarLocalUri.encodedPath!!.isNotEmpty()) {
-                val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
-                Glide.with(avatarView.context.applicationContext)
-                        .load(avatarLocalUri)
-                        .signature(ObjectKey(lastModified))
+                            override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
+                                                         dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                                ProfilePictureHelper.avatarHashAndFingerprint(context, baseAvatarUrl, avatarHash)
+                                return false
+                            }
+                        })
+                        .signature(ProfilePictureHelper.HashAndZoomSignature(avatarHash, zoomRectF))
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
+                        .transform(ProfilePictureTransformation.create(avatarUrlStr))
                         .placeholder(defaultAvatar)
                         .transition(withCrossFade())
-                        .circleCrop()
                         .into(avatarView)
             } else {
                 displayDefault(avatarView, username, fontSize)

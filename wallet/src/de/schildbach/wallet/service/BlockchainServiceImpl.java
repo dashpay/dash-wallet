@@ -76,7 +76,6 @@ import org.bitcoinj.net.discovery.MultiplexingDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscovery;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.net.discovery.SeedPeers;
-import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
@@ -419,6 +418,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
             syncPercentage = pct > 0.0 ? (int) pct : 0;
+            if (syncPercentage > 100) {
+                syncPercentage = 100;
+            }
         }
 
         /*
@@ -434,9 +436,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onMasterNodeListDiffDownloaded(Stage stage, @Nullable SimplifiedMasternodeListDiff mnlistdiff) {
-            super.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
-            startPreBlockPercent = syncPercentage;
-            postOrPostDelayed();
+            log.info("masternodeListDiffDownloaded:" + stage);
+            if(peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.MNLIST) {
+                super.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
+                startPreBlockPercent = syncPercentage;
+                postOrPostDelayed();
+            }
         }
 
         private void postOrPostDelayed() {
@@ -464,7 +469,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if (stage == PreBlockStage.StartRecovery && lastPreBlockStage == PreBlockStage.None) {
                 startPreBlockPercent = syncPercentage;
                 if (preBlocksWeight <= 0.10)
-                    setPreBlocksWeight(0.20);//PreBlockStage.RecoveryAndUpdateTotal.getValue();
+                    setPreBlocksWeight(0.20);
             }
             double increment = preBlocksWeight * stage.getValue() * 100.0 / PreBlockStage.Complete.getValue();
             if (increment > preBlocksWeight * 100)
@@ -601,9 +606,22 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 log.info("DMN List peer discovery failed: " + x.getMessage());
                             }
 
+                            // default masternode list
+                            if(peers.size() < MINIMUM_PEER_COUNT) {
+                                String [] defaultMNList = Constants.NETWORK_PARAMETERS.getDefaultMasternodeList();
+                                if (defaultMNList != null || defaultMNList.length != 0) {
+                                    log.info("DMN peer discovery returned less than 16 nodes.  Adding default DMN peers to the list to increase connections");
+                                    MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(defaultMNList, Constants.NETWORK_PARAMETERS.getPort());
+                                    peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+                                } else {
+                                    log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
+                                }
+                            }
+
+                            // seed nodes
                             if (peers.size() < MINIMUM_PEER_COUNT) {
                                 if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
-                                    log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
+                                    log.info("Static DMN peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
                                     peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
                                 } else {
                                     log.info("DNS peer discovery returned less than 16 nodes.  Unable to add seed peers (it is not specified for this network).");
@@ -869,12 +887,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         peerDiscoveryList.add(dnsDiscovery);
 
-        List<String> masternodes = new ArrayList<>();
-        if (Constants.NETWORK_PARAMETERS instanceof DevNetParams) {
-            masternodes = new ArrayList(Arrays.asList(((DevNetParams) Constants.NETWORK_PARAMETERS).getDefaultMasternodeList()));
-        }
-
         if (Constants.SUPPORTS_PLATFORM) {
+            ArrayList masternodes = new ArrayList(Arrays.asList(Constants.NETWORK_PARAMETERS.getDefaultMasternodeList()));
+
             DapiClient client = PlatformRepo.getInstance().getPlatform().getClient();
             client.setSimplifiedMasternodeListManager(application.getWallet().getContext().masternodeListManager, masternodes);
             client.getDapiAddressListProvider().addBannedAddress("211.30.243.82");
