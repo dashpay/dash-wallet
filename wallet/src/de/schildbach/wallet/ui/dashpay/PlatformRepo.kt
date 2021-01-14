@@ -1151,9 +1151,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             else if (!updatingContacts.get()) {
                 updateContactRequests()
             }
-        } catch (ex: MaxRetriesReachedException) {
-            log.error("Platform is dead...", ex)
-        }
     }
 
     /**
