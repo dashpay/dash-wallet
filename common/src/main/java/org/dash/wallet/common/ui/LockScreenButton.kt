@@ -1,4 +1,4 @@
-package org.dash.wallet.ui.widget
+package org.dash.wallet.common.ui
 
 import android.content.Context
 import android.util.AttributeSet
@@ -6,6 +6,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import kotlinx.android.synthetic.main.lock_screen_button.view.*
+import org.dash.wallet.common.R
 
 
 class LockScreenButton(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs, R.style.DashButton_White) {

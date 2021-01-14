@@ -35,5 +35,4 @@ dependencies {
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
 
     implementation project(path: ':common')
-    implementation project(path: ':ui-redesign')
 }

@@ -94,6 +94,7 @@ import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.ImportSharedImageActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
 import de.schildbach.wallet.ui.WalletUriHandlerActivity;
@@ -155,6 +156,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
                 || (activity instanceof SendCoinsActivity)
                 || (activity instanceof WalletUriHandlerActivity)
                 || (activity instanceof ScanActivity)
+                || (activity instanceof ImportSharedImageActivity)
                 || (activity instanceof ShortcutComponentActivity);
     }
 

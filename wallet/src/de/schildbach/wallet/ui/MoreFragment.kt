@@ -73,7 +73,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             startActivity(Intent(requireContext(), ToolsActivity::class.java))
         }
         contact_support.setOnClickListener {
-            ReportIssueDialogBuilder.createReportIssueDialog(requireContext(),
+            ReportIssueDialogBuilder.createReportIssueDialog(requireActivity(),
                     WalletApplication.getInstance()).show()
         }
         error_try_again.setOnClickListener {
