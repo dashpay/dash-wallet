@@ -47,6 +47,7 @@ import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.util.concurrent.SettableFuture;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
@@ -63,7 +64,6 @@ import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.listeners.PeerConnectedEventListener;
-import org.bitcoinj.core.listeners.PeerDataEventListener;
 import org.bitcoinj.core.listeners.PeerDisconnectedEventListener;
 import org.bitcoinj.core.listeners.PreBlocksDownloadListener;
 import org.bitcoinj.evolution.CreditFundingTransaction;
@@ -126,6 +126,10 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+import kotlinx.coroutines.BuildersKt;
+import kotlinx.coroutines.CoroutineStart;
+import kotlinx.coroutines.Dispatchers;
+import kotlinx.coroutines.GlobalScope;
 
 import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 
@@ -193,7 +197,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onCoinsReceived(final Wallet wallet, final Transaction tx, final Coin prevBalance,
-                final Coin newBalance) {
+                                    final Coin newBalance) {
 
             final int bestChainHeight = blockChain.getBestChainHeight();
             final boolean replaying = bestChainHeight < config.getBestChainHeightEver();
@@ -238,9 +242,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onCoinsSent(final Wallet wallet, final Transaction tx, final Coin prevBalance,
-                final Coin newBalance) {
+                                final Coin newBalance) {
             transactionsReceived.incrementAndGet();
-            if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
+            if (CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
                 CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
                 ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), cftx.getCreditBurnIdentityIdentifier().getBytes()));
             }
@@ -364,7 +368,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
     }
 
-    private abstract class MyDownloadProgressTracker extends DownloadProgressTracker implements OnPreBlockProgressListener { }
+    private abstract class MyDownloadProgressTracker extends DownloadProgressTracker implements OnPreBlockProgressListener {
+    }
 
     private final MyDownloadProgressTracker blockchainDownloadListener = new MyDownloadProgressTracker() {
         private final AtomicLong lastMessageTime = new AtomicLong(0);
@@ -372,14 +377,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
         @Override
         public void onBlocksDownloaded(final Peer peer, final Block block, final FilteredBlock filteredBlock,
-                final int blocksLeft) {
+                                       final int blocksLeft) {
             super.onBlocksDownloaded(peer, block, filteredBlock, blocksLeft);
             postOrPostDelayed();
         }
 
         @Override
         public void onHeadersDownloaded(final Peer peer, final Block block,
-                                       final int blocksLeft) {
+                                        final int blocksLeft) {
             super.onHeadersDownloaded(peer, block, blocksLeft);
             postOrPostDelayed();
         }
@@ -388,14 +393,14 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             @Override
             public void run() {
                 lastMessageTime.set(System.currentTimeMillis());
-                log.info("Runnable % = " +syncPercentage);
+                log.info("Runnable % = " + syncPercentage);
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
-                if(config.isRestoringBackup()) {
+                if (config.isRestoringBackup()) {
                     long timeAgo = System.currentTimeMillis() - blockChain.getChainHead().getHeader().getTimeSeconds() * 1000;
                     //if the app was restoring a backup from a file or seed and block chain is nearly synced
                     //then turn off the restoring indicator
-                    if(timeAgo < DateUtils.DAY_IN_MILLIS)
+                    if (timeAgo < DateUtils.DAY_IN_MILLIS)
                         config.setRestoringBackup(false);
                 }
                 // this method is always called after progress or doneDownload
@@ -413,7 +418,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         @Override
         protected void progress(double pct, int blocksLeft, Date date) {
             super.progress(pct, blocksLeft, date);
-            syncPercentage = pct > 0.0 ? (int)pct : 0;
+            syncPercentage = pct > 0.0 ? (int) pct : 0;
         }
 
         /*
@@ -467,7 +472,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             log.info("PreBlockDownload: " + increment + "%..." + preBlocksWeight + " " + stage.name() + " " + peerGroup.getSyncStage().name());
             if (peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.PREBLOCKS) {
-                syncPercentage = (int)(startPreBlockPercent + increment);
+                syncPercentage = (int) (startPreBlockPercent + increment);
                 log.info("PreBlockDownload: " + syncPercentage + "%..." + peerGroup.getSyncStage().name());
                 postOrPostDelayed();
             }
@@ -568,7 +573,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
                     @Override
                     public InetSocketAddress[] getPeers(final long services, final long timeoutValue,
-                            final TimeUnit timeoutUnit) throws PeerDiscoveryException {
+                                                        final TimeUnit timeoutUnit) throws PeerDiscoveryException {
                         final List<InetSocketAddress> peers = new LinkedList<InetSocketAddress>();
 
                         boolean needsTrimPeersWorkaround = false;
@@ -593,10 +598,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
                             } catch (PeerDiscoveryException x) {
                                 //swallow and continue with another method of connection
-                                log.info("DMN List peer discovery failed: "+ x.getMessage());
+                                log.info("DMN List peer discovery failed: " + x.getMessage());
                             }
 
-                            if(peers.size() < MINIMUM_PEER_COUNT) {
+                            if (peers.size() < MINIMUM_PEER_COUNT) {
                                 if (Constants.NETWORK_PARAMETERS.getAddrSeeds() != null) {
                                     log.info("DNM peer discovery returned less than 16 nodes.  Adding seed peers to the list to increase connections");
                                     peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
@@ -605,7 +610,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 }
                             }
 
-                            if(peers.size() < MINIMUM_PEER_COUNT) {
+                            if (peers.size() < MINIMUM_PEER_COUNT) {
                                 log.info("Masternode peer discovery returned less than 16 nodes.  Adding DMN peers to the list to increase connections");
 
                                 try {
@@ -613,9 +618,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                             Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
                                 } catch (PeerDiscoveryException x) {
                                     //swallow and continue with another method of connection, if one exists.
-                                    log.info("DNS peer discovery failed: "+ x.getMessage());
-                                    if(x.getCause() != null)
-                                        log.info(  "cause:  " + x.getCause().getMessage());
+                                    log.info("DNS peer discovery failed: " + x.getMessage());
+                                    if (x.getCause() != null)
+                                        log.info("cause:  " + x.getCause().getMessage());
                                 }
                             }
                         }
@@ -832,7 +837,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             blockChainFile.delete();
             headerChainFile.delete();
             SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
-            if(manager != null) {
+            if (manager != null) {
                 manager.resetMNList(true, false);
             }
 
@@ -933,7 +938,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     int minimum = peerGroup.getMinBroadcastConnections();
                     //if the number of peers is <= 3, then only require that number of peers to send
                     //if the number of peers is 0, then require 3 peers (default min connections)
-                    if(count > 0 && count <= 3)
+                    if (count > 0 && count <= 3)
                         minimum = count;
 
                     peerGroup.broadcastTransaction(tx, minimum);
@@ -941,7 +946,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     log.info("peergroup not available, not broadcasting transaction " + tx.getHashAsString());
                     tx.getConfidence().setPeerInfo(0, 1);
                 }
-            } else if(BlockchainService.ACTION_RESET_BLOOMFILTERS.equals(action)) {
+            } else if (BlockchainService.ACTION_RESET_BLOOMFILTERS.equals(action)) {
                 if (peerGroup != null) {
                     log.info("recalculating bloom filters");
                     peerGroup.recalculateFastCatchupAndFilter(PeerGroup.FilterRecalculateMode.FORCE_SEND_FOR_REFRESH);
@@ -1017,7 +1022,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             blockChainFile.delete();
             headerChainFile.delete();
             SimplifiedMasternodeListManager manager = application.getWallet().getContext().masternodeListManager;
-            if(manager != null) {
+            if (manager != null) {
                 manager.resetMNList(true, false);
             }
             if (deleteWalletFileOnShutdown) {
@@ -1034,7 +1039,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             });
         }
 
-        if(bootStrapStream != null) {
+        if (bootStrapStream != null) {
             try {
                 bootStrapStream.close();
             } catch (IOException x) {
@@ -1193,11 +1198,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         }
     }
 
-    private PreBlocksDownloadListener preBlocksDownloadListener = new PreBlocksDownloadListener() {
+    private final PreBlocksDownloadListener preBlocksDownloadListener = new PreBlocksDownloadListener() {
         @Override
         public void onPreBlocksDownload(Peer peer) {
             log.info("onPreBlocksDownload using peer {}", peer);
-            PlatformRepo.getInstance().preBlockDownload(peerGroup.getPreBlockDownloadFuture());
+            BuildersKt.launch(GlobalScope.INSTANCE, Dispatchers.getIO(), CoroutineStart.DEFAULT,
+                    (coroutineScope, continuation) -> {
+                        SettableFuture<Boolean> preBlockDownloadFuture = peerGroup.getPreBlockDownloadFuture();
+                        return PlatformRepo.getInstance().preBlockDownload(preBlockDownloadFuture, continuation);
+                    }
+            );
         }
     };
 }

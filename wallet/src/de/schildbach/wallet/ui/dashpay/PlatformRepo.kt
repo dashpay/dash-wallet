@@ -37,18 +37,14 @@ import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Base58
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.evolution.EvolutionContact
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dashevo.dapiclient.MaxRetriesReachedException
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
@@ -800,26 +796,26 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
     suspend fun updateContactRequests() {
 
-            // only allow this method to execute once at a time
-            if (updatingContacts.get()) {
-                log.info("updateContactRequests is already running")
-                return
-            }
+        // only allow this method to execute once at a time
+        if (updatingContacts.get()) {
+            log.info("updateContactRequests is already running")
+            return
+        }
 
-            if (!platform.hasApp("dashpay")) {
-                log.info("update contacts not completed because there is no dashpay contract")
-                return
-            }
+        if (!platform.hasApp("dashpay")) {
+            log.info("update contacts not completed because there is no dashpay contract")
+            return
+        }
 
-            val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
-            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
-                log.info("update contacts not completed username registration/recovery is not complete")
-                return
-            }
+        val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
+        if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+            log.info("update contacts not completed username registration/recovery is not complete")
+            return
+        }
 
-            if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
-                return // this is here because the wallet is being reset without removing blockchainIdentityData
-            }
+        if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
+            return // this is here because the wallet is being reset without removing blockchainIdentityData
+        }
 
         try {
             val userId = blockchainIdentityData.userId!!
@@ -838,8 +834,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10)
                     lastTimeStamp
                 else lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
-            }
-            else 0L
+            } else 0L
 
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
@@ -1101,8 +1096,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     /**
      * Called before DashJ starts synchronizing the blockchain
      */
-    fun preBlockDownload(future: SettableFuture<Boolean>) {
-        GlobalScope.launch(Dispatchers.IO) {
+    suspend fun preBlockDownload(future: SettableFuture<Boolean>) {
+        try {
             preDownloadBlocks.set(true)
             lastPreBlockStage = PreBlockStage.None
             preDownloadBlocksFuture = future
@@ -1116,7 +1111,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 if (identity != null) {
                     log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id.toString()}")
                     ContextCompat.startForegroundService(walletApplication, createIntentForRestore(walletApplication, identity.id.toBuffer()))
-                    return@launch
+                    return
                 } else {
                     log.info("PreDownloadBlocks: no existing identity found")
                 }
@@ -1126,6 +1121,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             else if (!updatingContacts.get()) {
                 updateContactRequests()
             }
+        } catch (ex: MaxRetriesReachedException) {
+            log.error("Platform is dead...", ex)
         }
     }
 
