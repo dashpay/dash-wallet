@@ -23,11 +23,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.dashpay.NotificationsForUserLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
 class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(application) {
@@ -69,6 +71,12 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
             log.info("obtained local user data for $username")
             userData = it
             emit(it)
+        }
+    }
+
+    fun updateProfileData(dashPayProfile: DashPayProfile) {
+        viewModelScope.launch {
+            platformRepo.addOrUpdateDashPayProfile(dashPayProfile)
         }
     }
 }
