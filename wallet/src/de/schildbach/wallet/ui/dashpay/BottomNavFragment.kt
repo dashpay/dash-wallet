@@ -36,9 +36,9 @@ abstract class BottomNavFragment(@LayoutRes contentLayoutId: Int) : Fragment(con
     }
 
     fun showNavigation(show: Boolean) {
-        val navParentView = mainActivity.bottom_navigation.parent
+        val navParentView = mainActivity.bottom_navigation.parent.parent
         if (navParentView is KeyboardResponsiveCoordinatorLayout) {
-            navParentView.forceHideViewToHide = show
+            navParentView.forceHideViewToHide = !show
         } else {
             mainActivity.bottom_navigation.visibility = if (show) View.GONE else View.VISIBLE
         }
