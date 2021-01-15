@@ -83,6 +83,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
+        showNavigation(false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

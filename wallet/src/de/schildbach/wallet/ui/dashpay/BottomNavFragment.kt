@@ -17,9 +17,11 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import android.view.View
 import androidx.annotation.LayoutRes
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.ui.MainActivity
+import de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout
 import kotlinx.android.synthetic.main.activity_main.*
 
 abstract class BottomNavFragment(@LayoutRes contentLayoutId: Int) : Fragment(contentLayoutId) {
@@ -31,6 +33,15 @@ abstract class BottomNavFragment(@LayoutRes contentLayoutId: Int) : Fragment(con
     abstract val navigationItemId: Int
     private val navigationItem by lazy {
         mainActivity.bottom_navigation.menu.findItem(navigationItemId)
+    }
+
+    fun showNavigation(show: Boolean) {
+        val navParentView = mainActivity.bottom_navigation.parent
+        if (navParentView is KeyboardResponsiveCoordinatorLayout) {
+            navParentView.forceHideViewToHide = show
+        } else {
+            mainActivity.bottom_navigation.visibility = if (show) View.GONE else View.VISIBLE
+        }
     }
 
     override fun onResume() {
