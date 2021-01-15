@@ -83,7 +83,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
-        showNavigation(false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -121,6 +120,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                 search.visibility = View.VISIBLE
                 icon.visibility = View.VISIBLE
                 setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
+                forceHideBottomNav = true
             }
         }
 
