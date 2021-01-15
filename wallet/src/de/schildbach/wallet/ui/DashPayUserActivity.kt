@@ -92,7 +92,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         if (intent.hasExtra(EXTRA_INIT_USER_DATA)) {
-            viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)
+            viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)!!
             updateContactRelationUi()
         } else {
             val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile

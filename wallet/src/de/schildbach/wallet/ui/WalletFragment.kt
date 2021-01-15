@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -25,6 +26,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.AppBarLayout
@@ -141,6 +143,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         view?.findViewById<View>(id)?.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateSyncState(blockchainState: BlockchainState) {
         var percentage: Int = blockchainState.percentageSync
         if (blockchainState.replaying && blockchainState.percentageSync == 100) {
@@ -164,12 +167,12 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         syncPercentageView.text = "$percentage%"
         syncComplete = blockchainState.isSynced()
         if (syncComplete) {
-            syncPercentageView.setTextColor(resources.getColor(R.color.success_green))
+            syncPercentageView.setTextColor(ContextCompat.getColor(requireContext(), R.color.success_green))
             syncStatusTitle.setText(R.string.sync_status_sync_title)
             syncStatusMessage.setText(R.string.sync_status_sync_completed)
             updateSyncPaneVisibility(R.id.sync_status_pane, false)
         } else {
-            syncPercentageView.setTextColor(resources.getColor(R.color.dash_gray))
+            syncPercentageView.setTextColor(ContextCompat.getColor(requireContext(), R.color.dash_gray))
             updateSyncPaneVisibility(R.id.sync_status_pane, true)
             syncStatusTitle.setText(R.string.sync_status_syncing_title)
             syncStatusMessage.setText(R.string.sync_status_syncing_sub_title)
@@ -256,7 +259,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         super.onActivityResult(requestCode, resultCode, intent)
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             if (intent != null) {
-                val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
+                val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)!!
                 handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify)
             }
         } else {

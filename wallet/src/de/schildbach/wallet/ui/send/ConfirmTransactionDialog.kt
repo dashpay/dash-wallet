@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.send
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -28,6 +27,7 @@ import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.preference.PreferenceManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
@@ -93,11 +93,11 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     }
 
     private val username by lazy {
-        arguments!!.getString(ARG_PAYEE_USERNAME)
+        requireArguments().getString(ARG_PAYEE_USERNAME)
     }
 
     private val pendingContactRequest by lazy {
-        arguments!!.getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
+        requireArguments().getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -107,7 +107,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         maybeCleanUpPrefs()
-        arguments!!.apply {
+        requireArguments().apply {
             input_value.text = getString(ARG_AMOUNT)
             fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
             fiat_value.text = getString(ARG_AMOUNT_FIAT)

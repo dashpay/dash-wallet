@@ -24,10 +24,9 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_app_update.*
@@ -79,7 +78,7 @@ class AppUpgradeActivity : AppCompatActivity() {
     private fun askForPin() {
         title_pane.visibility = View.INVISIBLE
         dash_logo.visibility = View.INVISIBLE
-        val checkPinSharedModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
+        val checkPinSharedModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
         checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (_, pin) ->
             onCorrectPin(pin!!)
         })

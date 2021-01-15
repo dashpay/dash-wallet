@@ -108,7 +108,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
 
-        var profile: DashPayProfile? = null
+        var profile: DashPayProfile?
         var userId: String? = null
         if (blockchainIdentity != null) {
             userId = blockchainIdentity.getContactForTransaction(tx!!)

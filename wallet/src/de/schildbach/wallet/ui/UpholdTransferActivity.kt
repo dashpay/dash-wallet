@@ -26,7 +26,7 @@ import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
@@ -83,7 +83,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
         title = intent.getStringExtra(EXTRA_TITLE)
 
-        enterAmountSharedViewModel = ViewModelProviders.of(this).get(EnterAmountSharedViewModel::class.java)
+        enterAmountSharedViewModel = ViewModelProvider(this).get(EnterAmountSharedViewModel::class.java)
         enterAmountSharedViewModel.buttonTextData.call(R.string.uphold_transfer)
 
         val balanceStr = intent.getStringExtra(EXTRA_MAX_AMOUNT)
@@ -93,7 +93,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         drawableDash!!.setBounds(0, 0, 38, 38)
         val dashSymbol = ImageSpan(drawableDash, ImageSpan.ALIGN_BASELINE)
         val builder = SpannableStringBuilder()
-        builder.appendln(intent.getStringExtra(EXTRA_MESSAGE))
+        builder.appendLine(intent.getStringExtra(EXTRA_MESSAGE))
         builder.append("  ")
         builder.setSpan(dashSymbol, builder.length - 2, builder.length - 1, 0)
         val dashFormat = MonetaryFormat().noCode().minDecimals(6).optionalDecimals()
@@ -113,7 +113,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         enterAmountSharedViewModel.dashAmountData.observe(this, Observer<Coin> {
             enterAmountSharedViewModel.buttonEnabledData.setValue(it.isPositive)
         })
-        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProviders.of(this).get(SingleActionSharedViewModel::class.java)
+        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProvider(this).get(SingleActionSharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
             withdrawalDialog.commitTransaction(this)
         })

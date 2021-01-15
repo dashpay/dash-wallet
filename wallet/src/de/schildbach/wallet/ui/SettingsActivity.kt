@@ -57,7 +57,7 @@ class SettingsActivity : BaseMenuActivity() {
         val dialog = DialogBuilder(this)
         dialog.setTitle(R.string.preferences_initiate_reset_title)
         dialog.setMessage(R.string.preferences_initiate_reset_dialog_message)
-        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { dialog, which ->
+        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { _, _ ->
             log.info("manually initiated blockchain reset")
 
             WalletApplication.getInstance().resetBlockchain()

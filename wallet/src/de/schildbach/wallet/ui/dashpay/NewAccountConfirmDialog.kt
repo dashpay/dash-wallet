@@ -22,8 +22,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
@@ -74,17 +73,17 @@ class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         sharedViewModel = activity?.run {
-            ViewModelProviders.of(this)[SingleActionSharedViewModel::class.java]
+            ViewModelProvider(this)[SingleActionSharedViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
-        viewModel = ViewModelProviders.of(this).get(NewAccountConfirmDialogViewModel::class.java)
-        viewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
+        viewModel = ViewModelProvider(this).get(NewAccountConfirmDialogViewModel::class.java)
+        viewModel.exchangeRateData.observe(viewLifecycleOwner, {
             updateView()
         })
         updateView()
     }
 
     private fun updateView() {
-        val upgradeFee = Coin.valueOf(arguments!!.getLong(ARG_UPGRADE_FEE))
+        val upgradeFee = Coin.valueOf(requireArguments().getLong(ARG_UPGRADE_FEE))
 
         val upgradeFeeStr = MonetaryFormat.BTC.noCode().format(upgradeFee).toString()
         val fiatUpgradeFee = viewModel.exchangeRate?.coinToFiat(upgradeFee)
@@ -96,7 +95,7 @@ class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
         fiat_symbol.text = fiatSymbol
         fiat_value.text = upgradeFeeFiatStr
 
-        val username = "<b>“${arguments!!.getString(ARG_USERNAME)}”</b>"
+        val username = "<b>“${requireArguments().getString(ARG_USERNAME)}”</b>"
         @Suppress("DEPRECATION")
         message.text = Html.fromHtml(getString(R.string.new_account_confirm_message, username))
     }

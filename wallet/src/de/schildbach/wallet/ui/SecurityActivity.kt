@@ -20,7 +20,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.CompoundButton
@@ -28,7 +27,7 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
@@ -57,13 +56,13 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         super.onCreate(savedInstanceState)
 
         setTitle(R.string.security_title)
-        val hideBalanceOnLaunch = findViewById<SwitchCompat>(R.id.hide_balance_switch)
-        hideBalanceOnLaunch.isChecked = configuration.hideBalance
-        hideBalanceOnLaunch.setOnCheckedChangeListener { _, hideBalanceOnLaunch ->
+        val hideBalanceOnLaunchView = findViewById<SwitchCompat>(R.id.hide_balance_switch)
+        hideBalanceOnLaunchView.isChecked = configuration.hideBalance
+        hideBalanceOnLaunchView.setOnCheckedChangeListener { _, hideBalanceOnLaunch ->
             configuration.hideBalance = hideBalanceOnLaunch
         }
 
-        val checkPinSharedModel: CheckPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
+        val checkPinSharedModel: CheckPinSharedModel = ViewModelProvider(this).get(CheckPinSharedModel::class.java)
         checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (requestCode, pin) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_BACKUP -> {
@@ -90,7 +89,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             }
         })
 
-        val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProviders.of(this).get(DecryptSeedSharedModel::class.java)
+        val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProvider(this).get(DecryptSeedSharedModel::class.java)
         decryptSeedSharedModel.onDecryptSeedCallback.observe(this, Observer<Pair<Int?, DeterministicSeed?>> { (requestCode, seed) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {
@@ -127,23 +126,23 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
     }
 
-    fun backupWallet(view: View) {
+    fun backupWallet() {
         CheckPinDialog.show(this, AUTH_REQUEST_CODE_BACKUP, true)
     }
 
-    fun viewRecoveryPhrase(view: View) {
+    fun viewRecoveryPhrase() {
         DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE, true)
     }
 
-    fun changePin(view: View) {
+    fun changePin() {
         startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true))
     }
 
-    fun openAdvancedSecurity(view: View) {
+    fun openAdvancedSecurity() {
         CheckPinDialog.show(this, AUTH_REQUEST_CODE_ADVANCED_SECURITY, true)
     }
 
-    fun resetWallet(view: View) {
+    fun resetWallet() {
         ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
     }
 
@@ -158,7 +157,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
 
     private fun startViewSeedActivity(seed : DeterministicSeed?) {
         val mnemonicCode = seed!!.mnemonicCode
-        var seedArray = mnemonicCode!!.toTypedArray()
+        val seedArray = mnemonicCode!!.toTypedArray()
         val intent = ViewSeedActivity.createIntent(this, seedArray)
         startActivity(intent)
     }

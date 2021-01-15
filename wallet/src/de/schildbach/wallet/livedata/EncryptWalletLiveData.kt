@@ -80,7 +80,6 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
         }
 
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
-            val initialize = args[0] as Boolean
             val wallet = walletApplication.wallet
 
             val password = securityGuard.generateRandomPassword()

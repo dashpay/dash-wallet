@@ -27,7 +27,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
@@ -36,6 +36,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.ui.DialogBuilder
 
 
+@Suppress("DEPRECATION")
 @SuppressLint("Registered")
 open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragment.WalletProvider {
 
@@ -54,7 +55,7 @@ open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragm
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel = ViewModelProviders.of(this).get(RestoreWalletFromFileViewModel::class.java)
+        viewModel = ViewModelProvider(this).get(RestoreWalletFromFileViewModel::class.java)
         walletApplication = (application as WalletApplication)
         initViewModel()
     }

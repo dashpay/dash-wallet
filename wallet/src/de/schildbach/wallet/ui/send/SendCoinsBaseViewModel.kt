@@ -74,7 +74,7 @@ open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(a
         val backgroundThread = HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND)
         backgroundThread.start()
         backgroundHandler = Handler(backgroundThread.looper)
-        callbackHandler = Handler(Looper.myLooper())
+        callbackHandler = Handler(Looper.myLooper()!!)
     }
 
     fun createSendRequest(wallet: Wallet, mayEditAmount: Boolean, paymentIntent: PaymentIntent, signInputs: Boolean, forceEnsureMinRequiredFee: Boolean): SendRequest {

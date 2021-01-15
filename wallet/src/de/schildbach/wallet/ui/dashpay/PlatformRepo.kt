@@ -160,7 +160,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             Resource.success(response!!.connections > 0 && /*response.errors.isBlank() &&*/
                     Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
         } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
+            Resource.error(e.localizedMessage!!, null)
         }
     }
 
@@ -172,7 +172,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
             Resource.success(nameDocument)
         } catch (e: Exception) {
-            Resource.error(e.localizedMessage, null)
+            Resource.error(e.localizedMessage!!, null)
         }
     }
 
@@ -317,8 +317,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     // sending contact request (even after adding long delay).
                     continue
                 }
-                var toContact: DashPayContactRequest? = null
-                var fromContact: DashPayContactRequest? = null
 
                 // find matches where the text matches part of the username or displayName
                 // if the text is blank, match everything
@@ -331,10 +329,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
 
                 // Determine if this identity is our contact
-                toContact = toContactMap[profile.value!!.userId]
+                val toContact: DashPayContactRequest? = toContactMap[profile.value!!.userId]
 
                 // Determine if I am this identity's contact
-                fromContact = fromContactMap[profile.value!!.userId]
+                val fromContact: DashPayContactRequest? = fromContactMap[profile.value!!.userId]
 
                 val usernameSearchResult = UsernameSearchResult(profile.value!!.username,
                         profile.value!!, toContact, fromContact)
@@ -353,6 +351,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
                 UsernameSortOrderBy.DATE_ADDED -> usernameSearchResults.sortByDescending {
                     it.date
+                }
+                else -> {
+                    // ignore
                 }
                 //TODO: sort by last activity or date added
             }
@@ -1031,8 +1032,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 for (identityId in remainingMissingProfiles) {
                     val nameDocument = nameById[Identifier.from(identityId)] // what happens if there is no username for the identity? crash
                     val username = nameDocument!!.data["normalizedLabel"] as String
-                    val identityId = getIdentityForName(nameDocument)
-                    dashPayProfileDao.insert(DashPayProfile(identityId.toString(), username))
+                    val identityIdForName = getIdentityForName(nameDocument)
+                    dashPayProfileDao.insert(DashPayProfile(identityIdForName.toString(), username))
                 }
             }
         }
@@ -1103,7 +1104,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun getIdentityForName(nameDocument: Document): Identifier {
-        val records = nameDocument.data["records"] as Map<String, Any?>
+        val records = nameDocument.data["records"] as Map<*, *>
         return Identifier.from(records["dashUniqueIdentityId"])
     }
 

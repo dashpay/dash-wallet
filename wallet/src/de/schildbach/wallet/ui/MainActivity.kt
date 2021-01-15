@@ -199,7 +199,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun addFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                            exitAnim: Int = R.anim.fragment_out, replace: Boolean = true) {
+                            exitAnim: Int = R.anim.fragment_out) {
         val transaction = startFragmentTransaction(enterAnim, exitAnim)
         transaction.add(R.id.fragment_container, fragment)
         transaction.addToBackStack(null).commit()

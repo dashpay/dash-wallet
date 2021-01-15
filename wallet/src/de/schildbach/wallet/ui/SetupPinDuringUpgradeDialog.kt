@@ -24,7 +24,7 @@ import android.view.WindowManager
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -45,8 +45,8 @@ open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
         }
     }
 
-    private val negativeButton: Button by lazy { view!!.findViewById<Button>(R.id.negative_button) }
-    private val positiveButton: Button by lazy { view!!.findViewById<Button>(R.id.positive_button) }
+    private val negativeButton: Button by lazy { requireView().findViewById(R.id.negative_button) }
+    private val positiveButton: Button by lazy { requireView().findViewById(R.id.positive_button) }
 
     private lateinit var setPinViewModel: SetPinViewModel
 
@@ -84,7 +84,7 @@ open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
                 }
             }
         }
-        setPinViewModel = ViewModelProviders.of(this).get(SetPinViewModel::class.java)
+        setPinViewModel = ViewModelProvider(this).get(SetPinViewModel::class.java)
         setPinViewModel.encryptWalletLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.SUCCESS -> {
@@ -95,6 +95,9 @@ open class SetupPinDuringUpgradeDialog : CheckPinDialog() {
                 }
                 Status.LOADING -> {
                     setState(State.DECRYPTING)
+                }
+                else -> {
+                    // ignore
                 }
             }
         })

@@ -54,7 +54,7 @@ data class Resource<out T>(val status: Status, val data: T?, val message: String
         }
 
         fun <T> canceled(data: T?): Resource<T> {
-            return Resource(CANCELED, null, null, null)
+            return Resource(CANCELED, data, null, null)
         }
     }
 

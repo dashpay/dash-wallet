@@ -24,15 +24,14 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
-import android.text.Html
 import android.text.TextWatcher
 import android.text.method.LinkMovementMethod
 import android.view.View
 import android.widget.*
 import androidx.annotation.NonNull
 import androidx.annotation.Nullable
-import androidx.appcompat.app.AlertDialog
-import androidx.fragment.app.DialogFragment
+import androidx.core.content.ContextCompat
+import androidx.core.text.HtmlCompat
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
@@ -131,9 +130,10 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
         disclaimer = customView.findViewById(R.id.public_url_message)
         fetchingMessage = customView.findViewById(R.id.fetching_msg)
         disclaimer.apply {
-            text = Html.fromHtml(
+            text = HtmlCompat.fromHtml(
                     getString(R.string.public_url_message) +
                             " <html><a href=\"https://www.google.com/amp/s/www.mail-signatures.com/articles/direct-link-to-hosted-image/amp/\"><span style=\"color:blue;\">${getString(R.string.public_url_more_info)}</span></a></html>",
+                    HtmlCompat.FROM_HTML_MODE_COMPACT
             )
             movementMethod = LinkMovementMethod.getInstance()
         }
@@ -222,7 +222,7 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
                 .listener(object : RequestListener<Drawable> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                         publicUrlEnterUrl.setText(errorMessageId)
-                        publicUrlEnterUrl.setTextColor(resources.getColor(R.color.dash_red))
+                        publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.dash_red))
                         log.info(e?.localizedMessage ?: "error", e)
                         return false
                     }
@@ -244,7 +244,8 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
                                             sharedViewModel.bitmapCache = resource.bitmap
                                             sharedViewModel.externalUrl = pictureUrl
                                             publicUrlEnterUrl.text = getString(dialogPromptId)
-                                            publicUrlEnterUrl.setTextColor(resources.getColor(R.color.medium_gray))
+                                            publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.medium_gray))
+                                publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.medium_gray))
                                             sharedViewModel.confirm()
                                             dismiss()
                                         }
@@ -272,7 +273,7 @@ open class ExternalUrlProfilePictureDialog : InteractionAwareDialogFragment() {
 
     private fun showError() {
         publicUrlEnterUrl.text = getString(errorMessageId)
-        publicUrlEnterUrl.setTextColor(resources.getColor(R.color.dash_red))
+        publicUrlEnterUrl.setTextColor(ContextCompat.getColor(requireContext(), R.color.dash_red))
     }
 
     private fun convertUrlIfSuitable(pictureUrlBase: String): String {

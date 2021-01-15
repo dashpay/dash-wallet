@@ -50,23 +50,25 @@ data class DashPayContactRequest(val userId: String,
     }
 
     @delegate:Ignore
+    @IgnoredOnParcel
     val userIdentifier by lazy {
         Identifier.from(userId)
     }
 
     @delegate:Ignore
+    @IgnoredOnParcel
     val rawUserId by lazy {
         userIdentifier.toBuffer()
     }
 
-    @IgnoredOnParcel
     @delegate:Ignore
+    @IgnoredOnParcel
     val toUserIdentifier by lazy {
         Identifier.from(toUserId)
     }
 
-    @IgnoredOnParcel
     @delegate:Ignore
+    @IgnoredOnParcel
     val rawToUserId by lazy {
         toUserIdentifier.toBuffer()
     }

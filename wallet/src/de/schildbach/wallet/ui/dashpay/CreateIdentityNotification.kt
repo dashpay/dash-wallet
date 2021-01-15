@@ -119,6 +119,9 @@ class CreateIdentityNotification(val service: LifecycleService) {
                     BlockchainIdentityData.CreationState.DONE -> {
                         displayDone()
                     }
+                    else -> {
+                        // ignore
+                    }
                 }
             })
 }

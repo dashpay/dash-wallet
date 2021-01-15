@@ -56,7 +56,7 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         tx = wallet.getTransaction(txId)
         val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
 
-        var profile: DashPayProfile? = null
+        var profile: DashPayProfile?
         var userId: String? = null
         if (blockchainIdentity != null) {
             userId = blockchainIdentity.getContactForTransaction(tx!!)

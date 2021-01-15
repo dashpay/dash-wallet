@@ -31,12 +31,10 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.ContactViewHolder
-import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contact_header_row.view.*
 import kotlinx.android.synthetic.main.contact_request_header_row.view.*
-import kotlinx.android.synthetic.main.contacts_list_layout.*
 import kotlinx.android.synthetic.main.contacts_suggestions_header.view.*
 import kotlinx.android.synthetic.main.no_contacts_results.view.*
 
@@ -120,7 +118,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
                 (holder as ContactViewHolder).bind(item.usernameSearchResult, sendContactRequestWorkState, itemClickListener, listener)
             }
             CONTACT_REQUEST_HEADER -> (holder as ContactRequestHeaderViewHolder).bind(results[position].requestCount)
-            CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind(item.sortOrder)
+            CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind()
             CONTACT_NO_RESULTS -> (holder as ContactsNoResultsViewHolder).bind()
             CONTACTS_SUGGESTIONS_HEADER -> (holder as ContactsSuggestionsHeaderViewHolder).bind(query)
             CONTACT_SUGGESTION_ROW -> (holder as ContactViewHolder).bind(item.usernameSearchResult!!, null, itemClickListener, listener)
@@ -144,7 +142,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
             RecyclerView.ViewHolder(inflater.inflate(R.layout.contact_header_row, parent, false)) {
 
         var direction = UsernameSortOrderBy.DISPLAY_NAME
-        fun bind(sortOrder: Int) {
+        fun bind() {
             var firstTime = true
             itemView.apply {
                 val adapter = ArrayAdapter.createFromResource(sort_filter.context, R.array.contacts_sort, R.layout.custom_spinner_item)

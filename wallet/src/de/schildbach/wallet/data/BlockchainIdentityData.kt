@@ -48,7 +48,7 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
 
     @PrimaryKey
     var id = 1
-        set(value) {
+        set(@Suppress("UNUSED_PARAMETER") value) {
             field = 1
         }
 
