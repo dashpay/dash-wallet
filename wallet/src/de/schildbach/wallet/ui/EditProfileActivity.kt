@@ -91,6 +91,9 @@ class EditProfileActivity : BaseMenuActivity() {
     private var uploadProfilePictureStateDialog: UploadProfilePictureStateDialog? = null
 
     private var mDrive: Drive? = null
+    private var showSaveReminderDialog = false
+    private var initialDisplayName = ""
+    private var initialAboutMe = ""
 
     override fun getLayoutId(): Int {
         return R.layout.activity_edit_profile
@@ -111,6 +114,7 @@ class EditProfileActivity : BaseMenuActivity() {
         val mediumGrayTextColor = ContextCompat.getColor(this, R.color.medium_gray)
         display_name.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
+                showSaveReminderDialog = initialDisplayName != s?.toString()
                 setEditingState(true)
                 imitateUserInteraction()
                 val charCount = s?.trim()?.length ?: 0
@@ -121,7 +125,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 } else {
                     display_name_char_count.setTextColor(mediumGrayTextColor)
                 }
-                activateDeactivateSave()
+                updateSaveBtnState()
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -135,6 +139,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
         about_me.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
+                showSaveReminderDialog = initialAboutMe != s?.toString()
                 setEditingState(true)
                 imitateUserInteraction()
                 aboutMeCharCount.visibility = View.VISIBLE
@@ -146,7 +151,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 } else {
                     aboutMeCharCount.setTextColor(mediumGrayTextColor)
                 }
-                activateDeactivateSave()
+                updateSaveBtnState()
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -246,7 +251,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 }
             }
             setEditingState(it.status != Status.SUCCESS)
-            activateDeactivateSave()
+            updateSaveBtnState()
         })
         externalUrlSharedViewModel.validUrlChosenEvent.observe(this, Observer {
             if (it != null) {
@@ -319,6 +324,7 @@ class EditProfileActivity : BaseMenuActivity() {
             uploadProfilePictureStateDialog!!.dismiss()
         }
         Glide.with(this).load(url).circleCrop().into(dashpayUserAvatar)
+        showSaveReminderDialog = true
     }
 
     private fun showUploadErrorDialog(error: UpdateProfileError) {
@@ -333,11 +339,12 @@ class EditProfileActivity : BaseMenuActivity() {
         uploadProfilePictureStateDialog!!.show(supportFragmentManager, null)
     }
 
-    fun activateDeactivateSave() {
+    fun updateSaveBtnState() {
         save.isEnabled = !(display_name.text.length > Constants.DISPLAY_NAME_MAX_LENGTH || about_me.text.length > Constants.ABOUT_ME_MAX_LENGTH)
     }
 
     fun save() {
+        showSaveReminderDialog = false
         val displayName = display_name.text.toString().trim()
         val publicMessage = about_me.text.toString().trim()
 
@@ -354,11 +361,12 @@ class EditProfileActivity : BaseMenuActivity() {
         editProfileViewModel.broadcastUpdateProfile(displayName, publicMessage, avatarUrl ?: "")
         save.isEnabled = false
         finish()
-
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
         ProfilePictureDisplay.display(dashpayUserAvatar, profile)
+        initialAboutMe = profile.publicMessage
+        initialDisplayName = profile.displayName
         about_me.setText(profile.publicMessage)
         display_name.setText(profile.displayName)
     }
@@ -423,54 +431,53 @@ class EditProfileActivity : BaseMenuActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-            when (requestCode) {
-                REQUEST_CODE_IMAGE -> {
-                    if (resultCode == RESULT_OK) {
-                        // picture saved in editProfileViewModel.profilePictureTmpFile
-                        editProfileViewModel.onTmpPictureReadyForEditEvent.call(editProfileViewModel.tmpPictureFile)
-                    }
-                }
-                REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
-                    val selectedImage: Uri? = data.data
-                    if (selectedImage != null) {
-                        @Suppress("DEPRECATION")
-                        val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
-                        val cursor: Cursor? = contentResolver.query(selectedImage,
-                                filePathColumn, null, null, null)
-                        if (cursor != null) {
-                            cursor.moveToFirst()
-                            val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
-                            val picturePath: String? = cursor.getString(columnIndex)
-                            if (picturePath != null) {
-                                editProfileViewModel.saveAsProfilePictureTmp(picturePath)
-                            } else {
-                                saveImageWithAuthority(selectedImage)
-                            }
-                            cursor.close()
-                        }
-                    }
-                }
-                REQUEST_CODE_CROP_IMAGE -> {
-                    if (resultCode == Activity.RESULT_OK) {
-                        if (externalUrlSharedViewModel.externalUrl != null) {
-                            saveUrl(CropImageActivity.extractZoomedRect(data!!))
-                        } else {
-                            showProfilePictureServiceDialog()
-                        }
-                    } else if (resultCode == Activity.RESULT_CANCELED) {
-                        // if crop was canceled, then return the externalUrl to its original state
-                        if (externalUrlSharedViewModel.externalUrl != null)
-                            externalUrlSharedViewModel.externalUrl = if (editProfileViewModel.dashPayProfile!!.avatarUrl == "") {
-                                null
-                            } else {
-                                Uri.parse(editProfileViewModel.dashPayProfile!!.avatarUrl)
-                            }
-                    }
-                }
-                REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN -> {
-                    handleGdriveSigninResult(data!!)
+        when (requestCode) {
+            REQUEST_CODE_IMAGE -> {
+                if (resultCode == RESULT_OK) {
+                    // picture saved in editProfileViewModel.profilePictureTmpFile
+                    editProfileViewModel.onTmpPictureReadyForEditEvent.call(editProfileViewModel.tmpPictureFile)
                 }
             }
+            REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
+                val selectedImage: Uri? = data.data
+                if (selectedImage != null) {
+                    @Suppress("DEPRECATION")
+                    val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
+                    val cursor: Cursor? = contentResolver.query(selectedImage,
+                            filePathColumn, null, null, null)
+                    if (cursor != null) {
+                        cursor.moveToFirst()
+                        val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
+                        val picturePath: String? = cursor.getString(columnIndex)
+                        if (picturePath != null) {
+                            editProfileViewModel.saveAsProfilePictureTmp(picturePath)
+                        } else {
+                            saveImageWithAuthority(selectedImage)
+                        }
+                    }
+                }
+            }
+            REQUEST_CODE_CROP_IMAGE -> {
+                if (resultCode == Activity.RESULT_OK) {
+                    if (externalUrlSharedViewModel.externalUrl != null) {
+                        saveUrl(CropImageActivity.extractZoomedRect(data!!))
+                    } else {
+                        showProfilePictureServiceDialog()
+                    }
+                } else if (resultCode == Activity.RESULT_CANCELED) {
+                    // if crop was canceled, then return the externalUrl to its original state
+                    if (externalUrlSharedViewModel.externalUrl != null)
+                        externalUrlSharedViewModel.externalUrl = if (editProfileViewModel.dashPayProfile!!.avatarUrl == "") {
+                            null
+                        } else {
+                            Uri.parse(editProfileViewModel.dashPayProfile!!.avatarUrl)
+                        }
+                }
+            }
+            REQUEST_CODE_GOOGLE_DRIVE_SIGN_IN -> {
+                handleGdriveSigninResult(data!!)
+            }
+        }
     }
 
     private fun saveImageWithAuthority(uri: Uri) {
@@ -523,6 +530,7 @@ class EditProfileActivity : BaseMenuActivity() {
                     .placeholder(defaultAvatar)
                     .transform(ProfilePictureTransformation.create(zoomedRect))
                     .into(dashpayUserAvatar)
+            showSaveReminderDialog = true
         }
     }
 
@@ -534,7 +542,7 @@ class EditProfileActivity : BaseMenuActivity() {
             val intent = CropImageActivity.createIntent(this, tmpPictureUri, profilePictureUri, initZoomedRect)
             startActivityForResult(intent, REQUEST_CODE_CROP_IMAGE)
         } else {
-            saveUrl(RectF(0.0f,0.0f,1.0f,1.0f))
+            saveUrl(RectF(0.0f, 0.0f, 1.0f, 1.0f))
         }
     }
 
@@ -561,7 +569,7 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     //TODO: leave this for now, we might need it later
-    //if the signed in do we need to do it again?
+//if the signed in do we need to do it again?
     private fun checkGDriveAccess() {
         object : Thread() {
             override fun run() {
@@ -613,5 +621,21 @@ class EditProfileActivity : BaseMenuActivity() {
 
         editProfileViewModel.googleDrive = mDrive
         editProfileViewModel.uploadProfilePicture()
+    }
+
+    override fun finish() {
+        if (showSaveReminderDialog) {
+            SaveProfileReminderDialog().show(supportFragmentManager, null)
+            editProfileViewModel.saveReminderConfirmationLiveData.observe(this, { saveChanges ->
+                if (saveChanges) {
+                    save()
+                } else {
+                    showSaveReminderDialog = false
+                    finish()
+                }
+            })
+            return
+        }
+        super.finish()
     }
 }

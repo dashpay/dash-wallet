@@ -76,6 +76,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
     val uploadDialogAcceptLiveData = MutableLiveData<Boolean>()
     val deleteProfilePictureConfirmationLiveData = MutableLiveData<Boolean>()
+    val saveReminderConfirmationLiveData = MutableLiveData<Boolean>()
 
     val profilePictureFile by lazy {
         try {
