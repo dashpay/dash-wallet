@@ -738,10 +738,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         var profileDocument = Profiles(platform).get(userId)
                 ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
-        val nameDocument = platform.names.get(userId)
+        val nameDocuments = platform.names.getByOwnerId(userId)
 
-        if (nameDocument != null) {
-            val username = nameDocument.data["normalizedLabel"] as String
+        if (nameDocuments.isNotEmpty()) {
+            val username = nameDocuments[0].data["normalizedLabel"] as String
 
             val profile = DashPayProfile.fromDocument(profileDocument, username)
             dashPayProfileDao.insert(profile!!)

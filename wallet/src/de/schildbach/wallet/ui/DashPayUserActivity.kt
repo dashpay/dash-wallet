@@ -93,6 +93,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         if (intent.hasExtra(EXTRA_INIT_USER_DATA)) {
             viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)!!
+            viewModel.updateProfileData(viewModel.userData.dashPayProfile) // save the profile to the database for non-contacts
             updateContactRelationUi()
         } else {
             val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile
