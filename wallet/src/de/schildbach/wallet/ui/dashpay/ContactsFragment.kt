@@ -235,6 +235,8 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
             requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        } else if (mode == MODE_VIEW_REQUESTS) {
+            requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
         }
         // process contacts
         val contacts = if (mode != MODE_VIEW_REQUESTS)
