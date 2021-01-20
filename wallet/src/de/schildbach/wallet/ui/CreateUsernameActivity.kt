@@ -250,35 +250,42 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun validateUsernameSize(uname: String): Boolean {
-        val isValid: Boolean
+        val lengthValid = uname.length in USERNAME_MIN_LENGTH..USERNAME_MAX_LENGTH
 
-        min_chars_req_img.visibility = if (uname.length in USERNAME_MIN_LENGTH..USERNAME_MAX_LENGTH) {
-            isValid = true
+        min_chars_req_img.visibility = if (uname.length >= USERNAME_MIN_LENGTH) {
             min_chars_req_label.typeface = mediumTypeFace
             View.VISIBLE
         } else {
-            isValid = false
             min_chars_req_label.typeface = regularTypeFace
             View.INVISIBLE
         }
 
-        return isValid
+        if (lengthValid) {
+            min_chars_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
+        } else {
+            min_chars_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+        }
+
+        return lengthValid
     }
 
     private fun validateUsernameCharacters(uname: String): Boolean {
-        var isValid: Boolean
         val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
         val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
         val containsHyphen = uname.contains("-")
 
-        alphanum_req_img.visibility = if (uname.isNotEmpty() && alphaNumHyphenValid) {
-            isValid = true
+        alphanum_req_img.visibility = if (uname.length >= USERNAME_MIN_LENGTH || !alphaNumHyphenValid) {
             alphanum_req_label.typeface = mediumTypeFace
             View.VISIBLE
         } else {
-            isValid = false
             alphanum_req_label.typeface = regularTypeFace
             View.INVISIBLE
+        }
+
+        if (alphaNumHyphenValid) {
+            alphanum_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
+        } else {
+            alphanum_req_img.setImageResource(R.drawable.ic_username_requirement_x)
         }
 
         if (containsHyphen) {
@@ -289,7 +296,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 hyphen_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
                 hyphen_req_label.typeface = mediumTypeFace
             } else {
-                isValid = false
                 hyphen_req_img.setImageResource(R.drawable.ic_username_requirement_x)
                 hyphen_req_label.typeface = regularTypeFace
             }
@@ -298,7 +304,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             hyphen_req_label.visibility = View.GONE
         }
 
-        return isValid
+        return alphaNumHyphenValid && !startOrEndWithHyphen
     }
 
     private fun checkUsernameNotExist(username: String) {
