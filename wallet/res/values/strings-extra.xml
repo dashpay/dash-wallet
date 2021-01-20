@@ -340,5 +340,4 @@
     <string name="import_image_no_private_key_copied">No private key copied</string>
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
-    <string name="import_image_okay">Okay</string>
 </resources>
