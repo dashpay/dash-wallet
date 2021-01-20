@@ -117,7 +117,7 @@ class ImportSharedImageActivity : AppCompatActivity() {
     }
 
     private fun showErrorDialog(title: Int, msg: Int, image: Int) {
-        val errorDialog = FancyAlertDialog.newInstance(title, msg, image, R.string.import_image_okay, 0)
+        val errorDialog = FancyAlertDialog.newInstance(title, msg, image, R.string.button_ok, 0)
         errorDialog.show(supportFragmentManager, "error_dialog")
         val errorDialogViewModel = ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
         errorDialogViewModel.onPositiveButtonClick.observe(this, Observer {
