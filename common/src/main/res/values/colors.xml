@@ -5,6 +5,8 @@
     <color name="colorPrimaryDark">#FF012060</color>
     <color name="colorAccent">#666666</color>
 
+    <color name="light_blue_38pct">#61A6D7F5</color>
+    <color name="light_blue">#A6D7F5</color>
     <color name="strong_blue">#1c75bc</color>
     <color name="strong_blue_bis">#295290</color>
     <color name="dark_blue">#1e487c</color>
