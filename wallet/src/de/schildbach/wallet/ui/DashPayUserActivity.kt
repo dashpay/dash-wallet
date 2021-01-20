@@ -182,7 +182,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             override fun inviteReceived() {
                 contact_request_pane.applyReceivedState(userData.username)
                 activity_rv.visibility = View.VISIBLE
-                activity_rv_top_line.visibility = View.VISIBLE
+                activity_rv_top_line.visibility = View.GONE
             }
 
             override fun acceptingInvite() {
@@ -192,7 +192,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             override fun friends() {
                 contact_request_pane.applyFriendsState()
                 activity_rv.visibility = View.VISIBLE
-                activity_rv_top_line.visibility = View.VISIBLE
+                activity_rv_top_line.visibility = View.GONE
             }
 
         })
