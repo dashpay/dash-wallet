@@ -503,5 +503,6 @@
     <string name="no_matching_contacts">No matching users in your contacts</string>
     <string name="suggestions_empty_result_part_1">There are no users that matches with the name</string>
     <string name="suggestions_empty_result_part_2">in your contacts</string>
+    <string name="invitation_notification_text">Invite your friends and family to the Dash Network</string>
 
 </resources>
