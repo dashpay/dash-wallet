@@ -93,9 +93,11 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         if (intent.hasExtra(EXTRA_INIT_USER_DATA)) {
             viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)!!
+            viewModel.updateProfileData(viewModel.userData.dashPayProfile) // save the profile to the database for non-contacts
             updateContactRelationUi()
         } else {
             val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile
+            viewModel.updateProfileData(dashPayProfile) // save the profile to the database for non-contacts
             viewModel.userData = UsernameSearchResult(dashPayProfile.username, dashPayProfile, null, null)
             viewModel.initUserData(dashPayProfile.username).observe(this, Observer {
                 updateContactRelationUi()
@@ -159,34 +161,28 @@ class DashPayUserActivity : InteractionAwareActivity(),
         val state = viewModel.sendContactRequestState.value
         ContactRelation.process(viewModel.userData.type, state, object : ContactRelation.RelationshipCallback {
             override fun none() {
-                if (showContactHistoryDisclaimer) {
-                    contact_request_pane.applyDisclaimerState(userData.username)
-                } else {
-                    contact_request_pane.applySendState()
-                }
+                contact_request_pane.applySendStateWithDisclaimer(userData.username)
                 activity_rv.visibility = View.GONE
+                activity_rv_top_line.visibility = View.GONE
             }
 
             override fun inviting() {
-                if (showContactHistoryDisclaimer) {
-                    contact_request_pane.applyDisclaimerSendingState()
-                } else {
-                    contact_request_pane.applySendingState()
-                }
+                contact_request_pane.applySendingStateWithDisclaimer(userData.username)
             }
 
             override fun invited() {
-                if (showContactHistoryDisclaimer) {
-                    contact_request_pane.applySentStateWithDisclaimer(userData.username)
-                } else {
-                    contact_request_pane.applySentState()
-                }
-                activity_rv.visibility = View.VISIBLE
+                contact_request_pane.applySentStateWithDisclaimer(userData.username)
+                viewModel.initUserData(userData.username).observe(this@DashPayUserActivity, {
+                    activity_rv.visibility = View.VISIBLE
+                    activity_rv_top_line.visibility = View.VISIBLE
+                    viewModel.initNotificationsForUser()
+                })
             }
 
             override fun inviteReceived() {
                 contact_request_pane.applyReceivedState(userData.username)
                 activity_rv.visibility = View.VISIBLE
+                activity_rv_top_line.visibility = View.GONE
             }
 
             override fun acceptingInvite() {
@@ -196,6 +192,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             override fun friends() {
                 contact_request_pane.applyFriendsState()
                 activity_rv.visibility = View.VISIBLE
+                activity_rv_top_line.visibility = View.GONE
             }
 
         })

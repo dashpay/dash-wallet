@@ -43,7 +43,7 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication,
         scope.launch(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
             val contactRequests = platformRepo.searchContacts("", UsernameSortOrderBy.DATE_ADDED, true)
-            var accountReference: Int = -1
+            var accountReference: Int = 0
             if (contactRequests.data != null) {
                 contactRequests.data.filter { cr ->
                     cr.dashPayProfile.userId == userId

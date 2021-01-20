@@ -426,7 +426,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     @Throws(Exception::class)
     suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest {
-        Context.propagate(walletApplication.wallet.context)
         val potentialContactIdentity = platform.identities.get(toUserId)
         log.info("potential contact identity: $potentialContactIdentity")
 
@@ -444,6 +443,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
             val contactIdentity = platform.identities.get(toUserId)
+            Context.propagate(walletApplication.wallet.context)
             blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey)
 
             // update bloom filters now on main thread
@@ -738,10 +738,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         var profileDocument = Profiles(platform).get(userId)
                 ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
-        val nameDocument = platform.names.get(userId)
+        val nameDocuments = platform.names.getByOwnerId(userId)
 
-        if (nameDocument != null) {
-            val username = nameDocument.data["normalizedLabel"] as String
+        if (nameDocuments.isNotEmpty()) {
+            val username = nameDocuments[0].data["normalizedLabel"] as String
 
             val profile = DashPayProfile.fromDocument(profileDocument, username)
             dashPayProfileDao.insert(profile!!)
@@ -1109,17 +1109,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun getLocalUserDataByUsername(username: String): UsernameSearchResult? {
+        log.info("requesting local user data for $username")
         val profile = dashPayProfileDao.loadByUsername(username)
         return loadContactRequestsAndReturn(profile)
     }
 
     suspend fun getLocalUserDataByUserId(userId: String): UsernameSearchResult? {
+        log.info("requesting local user data for $userId")
         val profile = dashPayProfileDao.loadByUserId(userId)
         return loadContactRequestsAndReturn(profile)
     }
 
     suspend fun loadContactRequestsAndReturn(profile: DashPayProfile?): UsernameSearchResult? {
         return profile?.run {
+            log.info("successfully obtained local user data for $profile")
             val receivedContactRequest = dashPayContactRequestDao.loadToOthers(userId)?.firstOrNull()
             val sentContactRequest = dashPayContactRequestDao.loadFromOthers(userId)?.firstOrNull()
             UsernameSearchResult(this.username, this, sentContactRequest, receivedContactRequest)
@@ -1182,5 +1185,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     fun loadProfileByUserId(userId: String): LiveData<DashPayProfile?> {
         return dashPayProfileDaoAsync.loadByUserIdDistinct(userId)
+    }
+
+    /**
+     * adds a dash pay profile to the database if it is not present
+     * or updates it the dashPayProfile is newer
+     *
+     * @param dashPayProfile
+     */
+    suspend fun addOrUpdateDashPayProfile(dashPayProfile: DashPayProfile) {
+        val currentProfile = dashPayProfileDao.loadByUserId(dashPayProfile.userId)
+        if (currentProfile == null || (currentProfile.updatedAt < dashPayProfile.updatedAt)) {
+            updateDashPayProfile(dashPayProfile)
+        }
     }
 }
