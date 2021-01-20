@@ -35,6 +35,7 @@ import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRestore
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
+import de.schildbach.wallet_test.R
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import org.bitcoinj.core.Address
@@ -113,6 +114,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
+    private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
 
 
     private val securityGuard = SecurityGuard()
@@ -711,14 +713,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         updateBlockchainIdentityData(blockchainIdentityData)
     }
 
-    suspend fun resetCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
+    suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
         blockchainIdentityDataDao.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
         blockchainIdentityData.creationStateErrorMessage = null
     }
 
-    suspend fun updateCreationState(blockchainIdentityData: BlockchainIdentityData,
-                                    state: BlockchainIdentityData.CreationState,
-                                    exception: Throwable? = null) {
+    suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
+                                            state: BlockchainIdentityData.CreationState,
+                                            exception: Throwable? = null) {
         val errorMessage = exception?.run { "${exception.javaClass.simpleName}: ${exception.message}" }
         if (errorMessage == null) {
             log.info("updating creation state {}", state)
@@ -728,6 +730,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDao.updateCreationState(blockchainIdentityData.id, state, errorMessage)
         blockchainIdentityData.creationState = state
         blockchainIdentityData.creationStateErrorMessage = errorMessage
+        if (state == BlockchainIdentityData.CreationState.DONE) {
+            delay(1000L) //1s delay as required on NMA-491
+            val userAlert = UserAlert(R.string.invitation_notification_text)
+            userAlertDaoAsync.insert(userAlert)
+        }
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
