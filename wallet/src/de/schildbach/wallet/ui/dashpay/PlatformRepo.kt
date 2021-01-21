@@ -734,7 +734,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityData.creationStateErrorMessage = errorMessage
         if (state == BlockchainIdentityData.CreationState.DONE) {
             delay(1000L) //1s delay as required on NMA-491
-            val userAlert = UserAlert(R.string.invitation_notification_text)
+            val userAlert = UserAlert(R.string.invitation_notification_text,
+                    R.drawable.ic_close_notification_alert)
             userAlertDao.insert(userAlert)
         }
     }

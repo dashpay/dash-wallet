@@ -24,14 +24,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.ui.TransactionsAdapter.TransactionHistoryItem
-import de.schildbach.wallet.ui.TransactionsHeaderViewHolder
-import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
-import de.schildbach.wallet.ui.dashpay.notification.HeaderViewHolder
-import de.schildbach.wallet.ui.dashpay.notification.ImageViewHolder
-import de.schildbach.wallet.ui.dashpay.notification.NotificationViewHolder
-import de.schildbach.wallet.ui.dashpay.notification.ProfileActivityHeaderHolder
-import de.schildbach.wallet.ui.dashpay.notification.TransactionViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.*
 import de.schildbach.wallet.util.PlatformUtils
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Sha256Hash
@@ -92,7 +85,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             NOTIFICATION_EMPTY -> ImageViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_CONTACT -> ContactViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_PAYMENT -> TransactionViewHolder(LayoutInflater.from(parent.context), parent)
-            NOTIFICATION_ALERT -> NotificationViewHolder(R.layout.notification_alert_item, LayoutInflater.from(parent.context), parent)
+            NOTIFICATION_ALERT -> UserAlertViewHolder(LayoutInflater.from(parent.context), parent)
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
         }
     }
@@ -155,7 +148,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             else -> when (getItem(position).notificationItem) {
                 is NotificationItemContact -> NOTIFICATION_CONTACT
                 is NotificationItemPayment -> NOTIFICATION_PAYMENT
-                is NotificationItemAlert -> NOTIFICATION_ALERT
+                is NotificationItemUserAlert -> NOTIFICATION_ALERT
                 else -> throw IllegalStateException("Unsupported item type $item")
             }
         }

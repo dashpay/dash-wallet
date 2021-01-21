@@ -13,7 +13,7 @@ interface UserAlertDaoAsync {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     fun insert(userAlert: UserAlert)
 
-    @Query("UPDATE user_alerts SET dismissed = 1 WHERE messageResourceId = :id")
+    @Query("UPDATE user_alerts SET dismissed = 1 WHERE stringResId = :id")
     fun dismiss(id: Int)
 
     @Query("SELECT * FROM user_alerts WHERE dismissed = 0 LIMIT 1")
