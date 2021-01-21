@@ -20,6 +20,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.CompoundButton
@@ -126,23 +127,23 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
     }
 
-    fun backupWallet() {
+    fun backupWallet(view: View) {
         CheckPinDialog.show(this, AUTH_REQUEST_CODE_BACKUP, true)
     }
 
-    fun viewRecoveryPhrase() {
+    fun viewRecoveryPhrase(view: View) {
         DecryptSeedWithPinDialog.show(this, AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE, true)
     }
 
-    fun changePin() {
+    fun changePin(view: View) {
         startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true))
     }
 
-    fun openAdvancedSecurity() {
+    fun openAdvancedSecurity(view: View) {
         CheckPinDialog.show(this, AUTH_REQUEST_CODE_ADVANCED_SECURITY, true)
     }
 
-    fun resetWallet() {
+    fun resetWallet(view: View) {
         ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
     }
 
