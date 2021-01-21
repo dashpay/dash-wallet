@@ -14,30 +14,31 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_invitation" />
+        tools:src="@drawable/ic_invitation" />
 
     <ImageView
         android:id="@+id/close_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="20dp"
-        android:src="@drawable/ic_close_notification_alert"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:src="@drawable/ic_close_notification_alert" />
 
     <TextView
+        android:id="@+id/text"
         style="@style/MontserratSemiBold"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="40dp"
-        android:text="@string/invitation_notification_text"
         android:textColor="@color/dark_text"
         android:textSize="14sp"
         app:layout_constraintBottom_toBottomOf="@id/icon"
         app:layout_constraintEnd_toStartOf="@id/close_btn"
         app:layout_constraintStart_toEndOf="@id/icon"
-        app:layout_constraintTop_toTopOf="@id/icon" />
+        app:layout_constraintTop_toTopOf="@id/icon"
+        tools:text="@string/invitation_notification_text" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

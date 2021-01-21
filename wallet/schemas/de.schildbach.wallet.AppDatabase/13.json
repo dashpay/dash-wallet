@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 13,
-    "identityHash": "480eb3248a4a62a3181792143d27fc08",
+    "identityHash": "371013fa768165313341a6c773cf8af2",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -348,11 +348,17 @@
       },
       {
         "tableName": "user_alerts",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`messageResourceId` INTEGER NOT NULL, `dismissed` INTEGER NOT NULL, PRIMARY KEY(`messageResourceId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stringResId` INTEGER NOT NULL, `iconResId` INTEGER NOT NULL, `dismissed` INTEGER NOT NULL, PRIMARY KEY(`stringResId`))",
         "fields": [
           {
-            "fieldPath": "messageResourceId",
-            "columnName": "messageResourceId",
+            "fieldPath": "stringResId",
+            "columnName": "stringResId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iconResId",
+            "columnName": "iconResId",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -365,7 +371,7 @@
         ],
         "primaryKey": {
           "columnNames": [
-            "messageResourceId"
+            "stringResId"
           ],
           "autoGenerate": false
         },
@@ -376,7 +382,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '480eb3248a4a62a3181792143d27fc08')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '371013fa768165313341a6c773cf8af2')"
     ]
   }
 }

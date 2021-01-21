@@ -16,10 +16,11 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "user_alerts")
-data class UserAlert(@PrimaryKey @StringRes val messageResourceId: Int,
-                     var dismissed: Boolean = false)
+data class UserAlert(@PrimaryKey @StringRes val stringResId: Int,
+                     @DrawableRes val iconResId: Int, var dismissed: Boolean = false)
