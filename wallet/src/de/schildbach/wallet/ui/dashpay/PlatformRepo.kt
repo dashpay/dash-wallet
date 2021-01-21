@@ -109,12 +109,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
     private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
     private val dashPayContactRequestDao = AppDatabase.getAppDatabase().dashPayContactRequestDao()
+    private val userAlertDao = AppDatabase.getAppDatabase().userAlertDao()
 
     // Async
     private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
-    private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
 
 
     private val securityGuard = SecurityGuard()
@@ -384,16 +384,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun getNotificationCount(date: Long): Int {
+        var count = 0
+        val alert = userAlertDao.load()
+        if (alert != null) {
+            count++
+        }
         val results = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
-        return if (results.status == Status.SUCCESS) {
+        if (results.status == Status.SUCCESS) {
             val list = results.data ?: return 0
-            var count = 0
             list.forEach { if (it.date >= date) ++count }
             log.info("New contacts at ${Date(date)} = $count - getNotificationCount")
-            count
-        } else {
-            -1
         }
+        return count
     }
 
     /**
@@ -733,7 +735,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         if (state == BlockchainIdentityData.CreationState.DONE) {
             delay(1000L) //1s delay as required on NMA-491
             val userAlert = UserAlert(R.string.invitation_notification_text)
-            userAlertDaoAsync.insert(userAlert)
+            userAlertDao.insert(userAlert)
         }
     }
 

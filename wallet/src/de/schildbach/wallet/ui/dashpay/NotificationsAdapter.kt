@@ -22,10 +22,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
-import de.schildbach.wallet.data.NotificationItem
-import de.schildbach.wallet.data.NotificationItemContact
-import de.schildbach.wallet.data.NotificationItemPayment
-import de.schildbach.wallet.data.NotificationItemStub
+import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.TransactionsAdapter.TransactionHistoryItem
 import de.schildbach.wallet.ui.TransactionsHeaderViewHolder
@@ -36,6 +33,7 @@ import de.schildbach.wallet.ui.dashpay.notification.NotificationViewHolder
 import de.schildbach.wallet.ui.dashpay.notification.ProfileActivityHeaderHolder
 import de.schildbach.wallet.ui.dashpay.notification.TransactionViewHolder
 import de.schildbach.wallet.util.PlatformUtils
+import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
@@ -54,6 +52,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
         const val NOTIFICATION_EMPTY = 2
         const val NOTIFICATION_CONTACT = 3
         const val NOTIFICATION_PAYMENT = 4
+        const val NOTIFICATION_ALERT = 5
     }
 
     open class NotificationViewItem(val notificationItem: NotificationItem, val isNew: Boolean = false)
@@ -93,6 +92,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             NOTIFICATION_EMPTY -> ImageViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_CONTACT -> ContactViewHolder(LayoutInflater.from(parent.context), parent)
             NOTIFICATION_PAYMENT -> TransactionViewHolder(LayoutInflater.from(parent.context), parent)
+            NOTIFICATION_ALERT -> NotificationViewHolder(R.layout.notification_alert_item, LayoutInflater.from(parent.context), parent)
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
         }
     }
@@ -123,6 +123,9 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             NOTIFICATION_PAYMENT -> {
                 holder.bind(notificationItem, transactionCache, wallet)
             }
+            NOTIFICATION_ALERT -> {
+                //TODO
+            }
             else -> throw IllegalArgumentException("Invalid viewType ${getItemViewType(position)}")
         }
         holder.itemView.setOnClickListener {
@@ -152,6 +155,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             else -> when (getItem(position).notificationItem) {
                 is NotificationItemContact -> NOTIFICATION_CONTACT
                 is NotificationItemPayment -> NOTIFICATION_PAYMENT
+                is NotificationItemAlert -> NOTIFICATION_ALERT
                 else -> throw IllegalStateException("Unsupported item type $item")
             }
         }
