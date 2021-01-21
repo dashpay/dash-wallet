@@ -17,6 +17,7 @@ import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.data.DashPayProfileDaoAsync;
 import de.schildbach.wallet.data.DashPayProfileDao;
 import de.schildbach.wallet.data.RoomConverters;
+import de.schildbach.wallet.data.UserAlertDao;
 import de.schildbach.wallet.data.UserAlertDaoAsync;
 import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
@@ -45,7 +46,10 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract DashPayContactRequestDao dashPayContactRequestDao();
 
+    public abstract UserAlertDao userAlertDao();
+
     public abstract UserAlertDaoAsync userAlertDaoAsync();
+
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {

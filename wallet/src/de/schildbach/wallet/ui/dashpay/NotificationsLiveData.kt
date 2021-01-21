@@ -1,7 +1,9 @@
 package de.schildbach.wallet.ui.dashpay
 
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.NotificationItem
+import de.schildbach.wallet.data.NotificationItemAlert
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
@@ -23,6 +25,12 @@ open class NotificationsLiveData(walletApplication: WalletApplication,
     override fun onContactsUpdated() {
         scope.launch(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
+
+            val userAlert = AppDatabase.getAppDatabase().userAlertDao().load()
+            if (userAlert != null) {
+                results.add(NotificationItemAlert(userAlert.messageResourceId))
+            }
+
             val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)
 
             //TODO: gather other notification types
