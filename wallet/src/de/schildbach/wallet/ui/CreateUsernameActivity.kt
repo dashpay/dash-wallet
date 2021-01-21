@@ -252,7 +252,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private fun validateUsernameSize(uname: String): Boolean {
         val lengthValid = uname.length in USERNAME_MIN_LENGTH..USERNAME_MAX_LENGTH
 
-        min_chars_req_img.visibility = if (uname.length >= USERNAME_MIN_LENGTH) {
+        min_chars_req_img.visibility = if (uname.isNotEmpty()) {
             min_chars_req_label.typeface = mediumTypeFace
             View.VISIBLE
         } else {
@@ -274,7 +274,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
         val containsHyphen = uname.contains("-")
 
-        alphanum_req_img.visibility = if (uname.length >= USERNAME_MIN_LENGTH || !alphaNumHyphenValid) {
+        alphanum_req_img.visibility = if (uname.isNotEmpty() || !alphaNumHyphenValid) {
             alphanum_req_label.typeface = mediumTypeFace
             View.VISIBLE
         } else {
@@ -321,7 +321,8 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val username = s?.toString()
 
         if (username != null) {
-            val usernameIsValid = validateUsernameCharacters(username) && validateUsernameSize(username)
+            var usernameIsValid = validateUsernameCharacters(username)
+            usernameIsValid = usernameIsValid && validateUsernameSize(username) //force validateUsernameSize to execute
 
             if (usernameIsValid) {//ensure username meets basic rules before making a Platform query
                 usernameAvailabilityValidationInProgressState()
