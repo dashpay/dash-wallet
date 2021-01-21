@@ -11,4 +11,5 @@ public class UpholdConstants {
     public static final String TRANSACTION_URL = "https://sandbox.uphold.com/reserve/transactions/%s";
     public static final String LOGOUT_URL = "https://sandbox.uphold.com/dashboard";
 
+    public static final String UPHOLD_CURRENCY_LIST = "https://api.uphold.com/v0/assets";
 }

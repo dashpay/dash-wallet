@@ -387,5 +387,24 @@ public class UpholdClient {
         void onSuccess(T data);
         void onError(Exception e, boolean otpRequired);
     }
+    public void getUpholdCurrency(final Callback<String> callback) {
 
+        service.getUpholdCurrency(UpholdConstants.UPHOLD_CURRENCY_LIST).enqueue(new retrofit2.Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                System.out.println("Response::" + response);
+                if (response.isSuccessful()) {
+                    callback.onSuccess(response.body());
+                } else {
+                    log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code());
+                    callback.onError(new UpholdException("Error obtaining Uphold access token", response.message(), response.code()), false);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                callback.onError(new Exception(t), false);
+            }
+        });
+    }
 }

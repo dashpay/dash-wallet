@@ -15,4 +15,5 @@ public class Constants {
 
     public static Coin MAX_MONEY = MainNetParams.get().getMaxMoney();
 
+    public static final int USER_BUY_SELL_DASH = 101;
 }

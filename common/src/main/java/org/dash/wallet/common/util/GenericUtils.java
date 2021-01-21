@@ -17,6 +17,10 @@
 
 package org.dash.wallet.common.util;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.widget.Toast;
+
 import java.util.Currency;
 
 /**
@@ -35,4 +39,15 @@ public class GenericUtils {
             return currencyCode;
         }
     }
+
+    public static boolean isInternetConnected(Context context) {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        return cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected();
+    }
+
+    public static void showToast(Context context, String messages) {
+        Toast.makeText(context, messages, Toast.LENGTH_LONG).show();
+    }
+
 }

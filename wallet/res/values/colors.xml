@@ -13,4 +13,7 @@
     <color name="scan_result_view">#b0000000</color>
     <color name="scan_result_dots">#c099cc00</color>
 
+    <color name="black">#000000</color>
+    <color name="black_liquid">#171717</color>
+    <color name="grey_liquid">#9B9B9B</color>
 </resources>

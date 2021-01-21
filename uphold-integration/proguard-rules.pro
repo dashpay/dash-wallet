@@ -4,6 +4,11 @@
 }
 -keep interface org.dash.wallet.integration.uphold.** {*;}
 
+-keep class com.e.liquid_integration.** {
+    public protected private *;
+}
+-keep interface com.e.liquid_integration.** {*;}
+
 #OkHttp
 -dontwarn com.squareup.okhttp.**
 -dontnote com.squareup.okhttp.internal.Platform

@@ -27,6 +27,7 @@ import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
+import retrofit2.http.Url;
 
 public interface UpholdService {
 
@@ -55,4 +56,6 @@ public interface UpholdService {
     @POST("v0/me/cards/{cardId}/transactions/{txId}/commit")
     Call<Object> commitTransaction(@Path("cardId") String cardId, @Path("txId") String txId);
 
+    @GET
+    Call<String> getUpholdCurrency(@Url String url);
 }

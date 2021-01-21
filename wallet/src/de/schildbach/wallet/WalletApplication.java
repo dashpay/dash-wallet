@@ -48,6 +48,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 
+import com.e.liquid_integration.data.LiquidClient;
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
@@ -106,7 +107,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler {
+public class WalletApplication extends BaseWalletApplication implements ResetAutoLogoutTimerHandler {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -298,6 +299,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
 
         UpholdClient.init(getApplicationContext(), authenticationHash);
+        LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
     }
 
     public void maybeStartAutoLogoutTimer() {
@@ -437,6 +439,11 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public Wallet getWallet() {
+        return wallet;
+    }
+
+    @Override
+    public Wallet getWalletData() {
         return wallet;
     }
 
