@@ -30,7 +30,6 @@
                 android:layout_marginTop="22dp"
                 android:layout_marginRight="20dp"
                 android:background="@drawable/round_corners_white_bg"
-                android:elevation="4dp"
                 android:inputType="textEmailAddress"
                 android:lines="1"
                 android:paddingLeft="28dp"
