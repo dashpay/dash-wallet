@@ -40,10 +40,12 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.dashpay.NewAccountConfirmDialog
+import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
+import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
+import kotlinx.android.synthetic.main.dialog_platform_payment_confirm.*
 import kotlinx.android.synthetic.main.users_orbit.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
@@ -133,7 +135,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun initViewModel() {
-        val confirmTransactionSharedViewModel = ViewModelProvider(this).get(SingleActionSharedViewModel::class.java)
+        val confirmTransactionSharedViewModel = ViewModelProvider(this).get(ConfirmTransactionDialog.SharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
             triggerIdentityCreation(false)
         })
@@ -334,11 +336,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun showConfirmationDialog() {
-        val username = username.text.toString()
         val upgradeFee = Coin.CENT
-        val dialog = NewAccountConfirmDialog.createDialog(upgradeFee.value, username)
+        val username = "<b>“${username.text}”</b>"
+        val dialogMessage = getString(R.string.new_account_confirm_message, username)
+        val dialogTitle = getString(R.string.dashpay_upgrade_fee)
+        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee.value)
         dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
-
     }
 
     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {

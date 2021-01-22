@@ -82,7 +82,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         }
     }
 
-    private lateinit var sharedViewModel: SingleActionSharedViewModel
+    private lateinit var sharedViewModel: SharedViewModel
 
     private val autoAcceptPrefsKey by lazy {
         "auto_accept:$username"
@@ -108,9 +108,9 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         maybeCleanUpPrefs()
         requireArguments().apply {
-            input_value.text = getString(ARG_AMOUNT)
-            fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
-            fiat_value.text = getString(ARG_AMOUNT_FIAT)
+            dash_amount_view.text = getString(ARG_AMOUNT)
+            fiat_symbol_view.text = getString(ARG_FIAT_SYMBOL)
+            fiat_amount_view.text = getString(ARG_AMOUNT_FIAT)
             transaction_fee.text = getString(ARG_FEE)
             total_amount.text = getString(ARG_TOTAL)
             val displayNameText = getString(ARG_PAYEE_DISPLAYNAME)
@@ -173,7 +173,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         sharedViewModel = activity?.run {
-            ViewModelProvider(this)[SingleActionSharedViewModel::class.java]
+            ViewModelProvider(this)[SharedViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
     }
 
@@ -191,5 +191,10 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
         if (username != null && !pendingContactRequest && prefs.contains(autoAcceptPrefsKey)) {
             prefs.edit().remove(autoAcceptPrefsKey).apply()
         }
+    }
+
+    class SharedViewModel : SingleActionSharedViewModel() {
+
+        var autoAcceptContactRequest: Boolean = false
     }
 }

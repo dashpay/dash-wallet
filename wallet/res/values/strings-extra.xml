@@ -360,6 +360,23 @@
     <string name="new_account_confirm_accept">I Accept</string>
     <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
     <string name="new_account_confirm_message">You have chose %s as your username. Username cannot be changed once it is registered.</string>
+    <string name="invitation_confirm_title">Invitation Fee</string>
+    <string name="invitation_confirm_message">Each invitation will be funded with this amount so that the receiver can quickly create their username on the Dash Network</string>
+    <string name="invitation_init_title">Invite</string>
+    <string name="invitation_init_header">Invite your friends &amp; family</string>
+    <string name="invitation_init_message">Let your friends and family to join the Dash Network. Invite them to the world of social banking.</string>
+    <string name="invitation_init_button_text">Create a new Invitation</string>
+    <string name="invitation_notifications_hint">Invite your friends and family to the Dash Network</string>
+    <string name="invitation_notifications_hint1">Invite Someone to join the Dash Network</string>
+    <string name="invitation_notifications_hint1_or">or</string>
+    <string name="invitation_created_title">Invitation</string>
+    <string name="invitation_created_successfully">Invitation Created Successfully</string>
+    <string name="invitation_created_tag_title">Tag for your reference</string>
+    <string name="invitation_created_tag">eg: Dad</string>
+    <string name="invitation_created_preview">Preview Invitation</string>
+    <string name="invitation_created_copy_link">Copy Invitation Link</string>
+    <string name="invitation_created_send_invitation">Send Invitation</string>
+    <string name="invitation_created_maybe_later">Maybe later</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>

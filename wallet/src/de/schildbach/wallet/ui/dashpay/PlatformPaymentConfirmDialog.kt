@@ -17,44 +17,58 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.os.Bundle
-import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.text.HtmlCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dialog_new_account_confirm.*
+import kotlinx.android.synthetic.main.dialog_platform_payment_confirm.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.util.GenericUtils
 
-class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
+class PlatformPaymentConfirmDialog : BaseBottomSheetDialogFragment() {
 
     companion object {
 
-        private const val ARG_USERNAME = "arg_username"
-        private const val ARG_UPGRADE_FEE = "arg_upgrade_fee"
+        private const val ARG_TITLE = "arg_title"
+        private const val ARG_MESSAGE = "arg_message"
+        private const val ARG_AMOUNT = "arg_amount"
 
         @JvmStatic
-        fun createDialog(upgradeFee: Long, username: String): DialogFragment {
-            val dialog = NewAccountConfirmDialog()
-            val bundle = Bundle()
-            bundle.putString(ARG_USERNAME, username)
-            bundle.putLong(ARG_UPGRADE_FEE, upgradeFee)
-            dialog.arguments = bundle
+        fun createDialog(title: String, messageHtml: String, amount: Long): DialogFragment {
+            val dialog = PlatformPaymentConfirmDialog()
+            dialog.arguments = Bundle().apply {
+                putString(ARG_TITLE, title)
+                putString(ARG_MESSAGE, messageHtml)
+                putLong(ARG_AMOUNT, amount)
+            }
             return dialog
         }
     }
 
+    private val title by lazy {
+        requireArguments().getString(ARG_TITLE)!!
+    }
+
+    private val message by lazy {
+        requireArguments().getString(ARG_MESSAGE)!!
+    }
+
+    private val amount by lazy {
+        requireArguments().getLong(ARG_AMOUNT)
+    }
+
     private lateinit var viewModel: NewAccountConfirmDialogViewModel
-    private lateinit var sharedViewModel: SingleActionSharedViewModel
+    private lateinit var sharedViewModel: SharedViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_new_account_confirm, container, false)
+        return inflater.inflate(R.layout.dialog_platform_payment_confirm, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -73,7 +87,7 @@ class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         sharedViewModel = activity?.run {
-            ViewModelProvider(this)[SingleActionSharedViewModel::class.java]
+            ViewModelProvider(this)[SharedViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
         viewModel = ViewModelProvider(this).get(NewAccountConfirmDialogViewModel::class.java)
         viewModel.exchangeRateData.observe(viewLifecycleOwner, {
@@ -83,20 +97,20 @@ class NewAccountConfirmDialog : BaseBottomSheetDialogFragment() {
     }
 
     private fun updateView() {
-        val upgradeFee = Coin.valueOf(requireArguments().getLong(ARG_UPGRADE_FEE))
+        title_view.text = title
+        message_view.text = HtmlCompat.fromHtml(message, HtmlCompat.FROM_HTML_MODE_COMPACT)
 
-        val upgradeFeeStr = MonetaryFormat.BTC.noCode().format(upgradeFee).toString()
-        val fiatUpgradeFee = viewModel.exchangeRate?.coinToFiat(upgradeFee)
+        val amount = Coin.valueOf(amount)
+        val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
+        val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
         // if the exchange rate is not available, then show "Not Available"
-        val upgradeFeeFiatStr = if (fiatUpgradeFee != null) Constants.LOCAL_FORMAT.format(fiatUpgradeFee).toString() else getString(R.string.transaction_row_rate_not_available)
-        val fiatSymbol = if (fiatUpgradeFee != null) GenericUtils.currencySymbol(fiatUpgradeFee.currencyCode) else ""
+        val fiatAmountStr = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else getString(R.string.transaction_row_rate_not_available)
+        val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
 
-        input_value.text = upgradeFeeStr
-        fiat_symbol.text = fiatSymbol
-        fiat_value.text = upgradeFeeFiatStr
-
-        val username = "<b>“${requireArguments().getString(ARG_USERNAME)}”</b>"
-        @Suppress("DEPRECATION")
-        message.text = Html.fromHtml(getString(R.string.new_account_confirm_message, username))
+        dash_amount_view.text = amountStr
+        fiat_symbol_view.text = fiatSymbol
+        fiat_amount_view.text = fiatAmountStr
     }
+
+    class SharedViewModel : SingleActionSharedViewModel()
 }

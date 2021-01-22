@@ -98,7 +98,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         initViewModel()
 
         if (savedInstanceState == null) {
-            checkAlerts()
+            checkAlerts() //FIXME allet_test E/WindowManager: android.view.WindowLeaked: Activity de.schildbach.wallet.ui.MainActivity has leaked window DecorView@be910c7[] that was originally added here
         }
         config.touchLastUsed()
         handleIntent(intent)

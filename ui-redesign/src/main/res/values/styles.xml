@@ -28,7 +28,7 @@
     </style>
 
     <style name="DashButton.Transparent.Dark">
-        <item name="android:textColor">@color/dash_black</item>
+        <item name="android:textColor">@color/dash_blue</item>
         <item name="android:background">@drawable/transparent_dark_button_background</item>
     </style>
 

@@ -35,6 +35,7 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_notifications.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -112,6 +113,13 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
         searchContacts()
         dashPayViewModel.updateDashPayState()
+
+        invite_friend_hint.setOnClickListener {
+            startActivity(InviteFriendActivity.createIntent(this))
+        }
+        invite_friend_hint_close.setOnClickListener {
+            invite_friend_hint.visibility = View.GONE
+        }
     }
 
     private fun initViewModel() {

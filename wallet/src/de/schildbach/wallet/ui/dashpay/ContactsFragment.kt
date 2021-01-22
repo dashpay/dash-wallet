@@ -36,11 +36,13 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
+import kotlinx.android.synthetic.main.invite_friend_hint_view.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -118,6 +120,10 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             startActivity(Intent(context, SearchUserActivity::class.java))
         }
         searchContacts()
+
+        invite_friend_hint.setOnClickListener {
+            startActivity(InviteFriendActivity.createIntent(requireContext()))
+        }
     }
 
     private fun showEmptyPane() {

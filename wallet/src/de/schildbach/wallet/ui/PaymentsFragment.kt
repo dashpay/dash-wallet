@@ -113,7 +113,7 @@ class PaymentsFragment : BottomNavFragment(R.layout.activity_payments) {
     }
 
     override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.payment_options, menu)
+        menuInflater.inflate(R.menu.close_button_options, menu)
         super.onCreateOptionsMenu(menu, menuInflater)
     }
 }

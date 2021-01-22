@@ -35,7 +35,7 @@
         android:layout_marginBottom="6dp"
         android:gravity="center"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@+id/fiat_value"
+        app:layout_constraintBottom_toTopOf="@+id/fiat_amount_view"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
@@ -72,7 +72,7 @@
     </LinearLayout>
 
     <org.dash.wallet.common.ui.CurrencyTextView
-        android:id="@+id/fiat_value"
+        android:id="@+id/fiat_amount_view"
         style="@style/MontserratRegular.MG"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

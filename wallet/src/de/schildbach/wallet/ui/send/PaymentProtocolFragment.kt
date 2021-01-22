@@ -321,9 +321,9 @@ class PaymentProtocolFragment : Fragment() {
         }
         val txFee = if (sendRequest != null) sendRequest.tx.fee else PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
 
-        input_value.text = amountStr
-        fiat_value.text = fiatAmountStr
-        fiat_symbol.text = fiatSymbol
+        dash_amount_view.text = amountStr
+        fiat_amount_view.text = fiatAmountStr
+        fiat_symbol_view.text = fiatSymbol
         transaction_fee.text = txFee.toPlainString()
         total_amount.text = amount.add(txFee).toPlainString()
 

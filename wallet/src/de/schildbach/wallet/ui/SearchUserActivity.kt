@@ -44,8 +44,10 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
+import kotlinx.android.synthetic.main.invite_friend_hint_view.*
 import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -106,6 +108,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
                         search.setPadding(searchPadding, 0, 0, 0)
                         search.typeface = ResourcesCompat.getFont(this@SearchUserActivity,
                                 R.font.montserrat_semibold)
+                        search_results_rv.visibility = View.VISIBLE
                     }
 
                     override fun onTransitionResume(transition: Transition) {
@@ -120,6 +123,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
                     override fun onTransitionStart(transition: Transition) {
                         layout_title.visibility = View.GONE
                         find_a_user_label.visibility = View.GONE
+                        invite_friend_hint_view_qwerty.visibility = View.GONE
                     }
 
                 })
@@ -127,6 +131,13 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
                 constraintSet2.applyTo(root)
                 setChanged = true
             }
+        }
+
+        invite_friend_hint_view_qwerty.setOnClickListener {
+            startActivity(InviteFriendActivity.createIntent(this))
+        }
+        invite_friend_hint_view_asdf.setOnClickListener {
+            startActivity(InviteFriendActivity.createIntent(this))
         }
     }
 
