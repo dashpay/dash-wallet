@@ -322,7 +322,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
         if (username != null) {
             var usernameIsValid = validateUsernameCharacters(username)
-            usernameIsValid = usernameIsValid && validateUsernameSize(username) //force validateUsernameSize to execute
+            usernameIsValid = validateUsernameSize(username) && usernameIsValid //force validateUsernameSize to execute
 
             if (usernameIsValid) {//ensure username meets basic rules before making a Platform query
                 usernameAvailabilityValidationInProgressState()
