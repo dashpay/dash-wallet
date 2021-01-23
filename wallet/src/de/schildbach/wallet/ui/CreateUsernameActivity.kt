@@ -321,8 +321,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val username = s?.toString()
 
         if (username != null) {
-            var usernameIsValid = validateUsernameCharacters(username)
-            usernameIsValid = validateUsernameSize(username) && usernameIsValid //force validateUsernameSize to execute
+            var usernameIsValid = validateUsernameCharacters(username) and validateUsernameSize(username) //force validateUsernameSize to execute
 
             if (usernameIsValid) {//ensure username meets basic rules before making a Platform query
                 usernameAvailabilityValidationInProgressState()
