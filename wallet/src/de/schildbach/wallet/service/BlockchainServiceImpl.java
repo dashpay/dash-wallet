@@ -461,6 +461,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if (stage == PreBlockStage.Starting && lastPreBlockStage == PreBlockStage.None) {
                 startPreBlockPercent = syncPercentage;
             }
+            if (preBlocksWeight > 0.99) {
+                startPreBlockPercent = 0;
+            }
             if (stage == PreBlockStage.StartRecovery && lastPreBlockStage == PreBlockStage.None) {
                 startPreBlockPercent = syncPercentage;
                 if (preBlocksWeight <= 0.10)
