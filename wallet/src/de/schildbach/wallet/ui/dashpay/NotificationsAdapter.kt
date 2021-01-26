@@ -26,7 +26,6 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.notification.*
 import de.schildbach.wallet.util.PlatformUtils
-import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
@@ -34,6 +33,7 @@ import java.util.*
 
 class NotificationsAdapter(val context: Context, val wallet: Wallet, private val showAvatars: Boolean = false,
                            private val onContactActionClickListener: ContactViewHolder.OnContactActionClickListener,
+                           private val onUserAlertDismissListener: UserAlertViewHolder.OnUserAlertDismissListener,
                            private val itemClickListener: OnItemClickListener,
                            private val fromProfile: Boolean = false,
                            private val fromStrangerQr: Boolean = false)
@@ -117,7 +117,8 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
                 holder.bind(notificationItem, transactionCache, wallet)
             }
             NOTIFICATION_ALERT -> {
-                //TODO
+                val userAlertItem = notificationItem as NotificationItemUserAlert
+                holder.bind(userAlertItem, onUserAlertDismissListener)
             }
             else -> throw IllegalArgumentException("Invalid viewType ${getItemViewType(position)}")
         }

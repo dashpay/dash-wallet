@@ -26,7 +26,7 @@ open class NotificationsLiveData(walletApplication: WalletApplication,
         scope.launch(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
 
-            val userAlert = AppDatabase.getAppDatabase().userAlertDao().load()
+            val userAlert = AppDatabase.getAppDatabase().userAlertDao().load(0L)
             if (userAlert != null) {
                 results.add(NotificationItemUserAlert(userAlert.stringResId, userAlert.iconResId))
             }

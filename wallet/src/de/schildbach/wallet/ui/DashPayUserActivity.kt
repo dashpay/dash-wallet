@@ -31,6 +31,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
+import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
@@ -43,7 +44,7 @@ import org.dash.wallet.common.InteractionAwareActivity
 
 class DashPayUserActivity : InteractionAwareActivity(),
         NotificationsAdapter.OnItemClickListener,
-        ContactViewHolder.OnContactActionClickListener {
+        ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
 
     private lateinit var viewModel: DashPayUserActivityViewModel
     private lateinit var dashPayViewModel: DashPayViewModel
@@ -53,7 +54,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
     private val notificationsAdapter: NotificationsAdapter by lazy {
         NotificationsAdapter(this,
                 WalletApplication.getInstance().wallet, false, this,
-                this, true, showContactHistoryDisclaimer)
+                this, this, true, showContactHistoryDisclaimer)
     }
 
     companion object {
@@ -265,5 +266,9 @@ class DashPayUserActivity : InteractionAwareActivity(),
         data.forEach { results.add(NotificationsAdapter.NotificationViewItem(it, false)) }
 
         notificationsAdapter.results = results
+    }
+
+    override fun onUserAlertDismiss(alertId: Int) {
+        Toast.makeText(this, "Dismiss", Toast.LENGTH_SHORT).show()
     }
 }

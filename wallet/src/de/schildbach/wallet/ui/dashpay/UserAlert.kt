@@ -20,7 +20,9 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.*
 
 @Entity(tableName = "user_alerts")
 data class UserAlert(@PrimaryKey @StringRes val stringResId: Int,
-                     @DrawableRes val iconResId: Int, var dismissed: Boolean = false)
+                     @DrawableRes val iconResId: Int, var dismissed: Boolean = false,
+                     val createdAt: Long = Date().time)

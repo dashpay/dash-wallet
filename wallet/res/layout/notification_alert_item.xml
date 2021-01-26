@@ -24,7 +24,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:src="@drawable/ic_close_notification_alert" />
+        app:srcCompat="@drawable/ic_close_notification_alert" />
 
     <TextView
         android:id="@+id/text"

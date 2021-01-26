@@ -16,8 +16,8 @@ interface UserAlertDaoAsync {
     @Query("UPDATE user_alerts SET dismissed = 1 WHERE stringResId = :id")
     fun dismiss(id: Int)
 
-    @Query("SELECT * FROM user_alerts WHERE dismissed = 0 LIMIT 1")
-    fun load(): LiveData<UserAlert?>
+    @Query("SELECT * FROM user_alerts WHERE dismissed = 0 AND createdAt > :date LIMIT 1")
+    fun load(date: Long): LiveData<UserAlert?>
 
     @Query("DELETE FROM user_alerts")
     fun clear()

@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.dashpay.notification
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import de.schildbach.wallet.data.NotificationItem
+import de.schildbach.wallet.data.NotificationItemUserAlert
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.notification_alert_item.view.*
 
@@ -26,14 +27,20 @@ class UserAlertViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         NotificationViewHolder(R.layout.notification_alert_item, inflater, parent) {
 
     override fun bind(notificationItem: NotificationItem, vararg args: Any) {
-        bind(args[0] as Int, args[1] as Int)
+        bind(notificationItem as NotificationItemUserAlert, args[0] as OnUserAlertDismissListener?)
     }
 
-    private fun bind(textResId: Int, imageResId: Int) {
+    private fun bind(notificationItem: NotificationItemUserAlert, onUserAlertDismissListener: OnUserAlertDismissListener?) {
         itemView.apply {
-            this.text.setText(textResId)
-            this.icon.setImageResource(imageResId)
+            this.text.setText(notificationItem.stringResId)
+            this.icon.setImageResource(notificationItem.iconResId)
+            this.close_btn.setOnClickListener {
+                onUserAlertDismissListener?.onUserAlertDismiss(notificationItem.stringResId)
+            }
         }
     }
 
+    interface OnUserAlertDismissListener {
+        fun onUserAlertDismiss(alertId: Int)
+    }
 }

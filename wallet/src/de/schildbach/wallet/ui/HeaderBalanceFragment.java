@@ -116,8 +116,9 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         viewModel.getNotificationCountData().observe(getViewLifecycleOwner(), notificationCount -> {
             setNotificationCount();
         });
-        //TODO: Should we avoid adding a direct DB call here?
-        AppDatabase.getAppDatabase().userAlertDaoAsync().load().observe(getViewLifecycleOwner(), userAlert -> {
+        long lastSeenNotification = config.getLastSeenNotificationTime();
+        AppDatabase.getAppDatabase().userAlertDaoAsync()
+                .load(lastSeenNotification).observe(getViewLifecycleOwner(), userAlert -> {
             if (userAlert != null) {
                 viewModel.forceUpdateNotificationCount();
             }

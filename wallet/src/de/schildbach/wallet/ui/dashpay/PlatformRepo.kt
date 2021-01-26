@@ -385,7 +385,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     suspend fun getNotificationCount(date: Long): Int {
         var count = 0
-        val alert = userAlertDao.load()
+        val alert = userAlertDao.load(date)
         if (alert != null) {
             count++
         }
@@ -735,7 +735,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         if (state == BlockchainIdentityData.CreationState.DONE) {
             delay(1000L) //1s delay as required on NMA-491
             val userAlert = UserAlert(R.string.invitation_notification_text,
-                    R.drawable.ic_close_notification_alert)
+                    R.drawable.ic_invitation)
             userAlertDao.insert(userAlert)
         }
     }
