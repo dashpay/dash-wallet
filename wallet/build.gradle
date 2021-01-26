@@ -110,6 +110,7 @@ ext {
 
 android {
     compileSdkVersion 29
+    android.ndkVersion '21.3.6528147'
 
     lintOptions {
         abortOnError false
@@ -200,10 +201,6 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-}
-
-clean {
-    file('src/main/jniLibs').deleteDir()
 }
 
 apply plugin: 'com.google.gms.google-services'
