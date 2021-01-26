@@ -37,15 +37,6 @@ abstract class BottomNavFragment(@LayoutRes contentLayoutId: Int) : Fragment(con
         mainActivity.bottom_navigation.menu.findItem(navigationItemId)
     }
 
-    /*fun showNavigation(show: Boolean) {
-        val navParentView = mainActivity.bottom_navigation.parent.parent
-        if (navParentView is KeyboardResponsiveCoordinatorLayout) {
-            navParentView.forceHideViewToHide = !show
-        } else {
-            mainActivity.bottom_navigation.visibility = if (show) View.GONE else View.VISIBLE
-        }
-    }*/
-
     override fun onResume() {
         super.onResume()
         // select the right button in bottom nav
