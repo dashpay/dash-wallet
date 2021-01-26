@@ -13,6 +13,9 @@ repositories {
         name 'OJO snapshots'
     }
     maven {
+        url 'http://dl.bintray.com/dash/Dashj'
+    }
+    maven {
         url 'https://maven.google.com/'
         name 'Google'
     }
@@ -41,10 +44,9 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    // implementation 'org.dashevo:dashpay:0.16-SNAPSHOT'
-    // implementation 'org.dashevo:platform-core:0.16-SNAPSHOT'
-    // implementation 'org.dashevo:dpp:0.16-SNAPSHOT'
-    //implementation 'org.dashevo:dapi-client:0.16-SNAPSHOT'
+    implementation "org.dashj-android:dashj-bls-android:0.17.5"
+    implementation "org.dashj-android:dashj-x11-android:0.17.5"
+    implementation "org.dashj-android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
     implementation 'com.google.zxing:core:3.3.3'
@@ -161,15 +163,7 @@ android {
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        ndk {
-            abiFilters 'armeabi-v7a', 'x86', 'arm64-v8a', 'x86_64'
-        }
-       /* externalNativeBuild {
-            cmake {
-                cFlags '-DHAVE_CONFIG_H -DWORD=32'
-                cppFlags ""
-            }
-        }*/
+
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
