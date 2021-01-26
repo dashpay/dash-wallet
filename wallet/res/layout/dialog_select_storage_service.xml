@@ -40,8 +40,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/imgur"
             style="@style/MenuRow.Sources"
-            android:layout_height="86dp"
-            android:onClick="backupWallet">
+            android:layout_height="86dp">
 
             <ImageView
                 android:id="@+id/imgur_arrow"
@@ -75,8 +74,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/google_drive"
             style="@style/MenuRow.Sources"
-            android:layout_height="86dp"
-            android:onClick="backupWallet">
+            android:layout_height="86dp">
 
             <ImageView
                 android:id="@+id/google_drive_arrow"
