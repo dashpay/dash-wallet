@@ -115,7 +115,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         }
 
         search_for_user.setOnClickListener {
-            startActivity(Intent(context, SearchUserActivity::class.java))
+            onSearchUser()
         }
         searchContacts()
     }
@@ -193,7 +193,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         KeyboardUtil.hideKeyboard(requireContext(), requireView())
         val searchUsersBtn = suggestions_search_no_result.findViewById<View>(R.id.search_for_user_suggestions)
         searchUsersBtn.setOnClickListener {
-            startActivity(Intent(context, SearchUserActivity::class.java))
+            onSearchUser()
         }
         val text = getString(R.string.suggestions_empty_result_part_1) +
                 " \"<b>$query</b>\" " + getString(R.string.suggestions_empty_result_part_2)
@@ -251,7 +251,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     }
 
     override fun onSearchUser() {
-        startActivity(Intent(context, SearchUserActivity::class.java))
+        startActivity(SearchUserActivity.createIntent(requireContext(), query))
     }
 
     private fun searchContacts() {
