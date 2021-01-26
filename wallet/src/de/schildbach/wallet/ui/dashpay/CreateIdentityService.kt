@@ -18,6 +18,7 @@ import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.*
 import org.bitcoinj.core.RejectMessage
 import org.bitcoinj.core.RejectedTransactionException
@@ -322,6 +323,12 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.updateDashPayProfile(emptyProfile)
         if (blockchainIdentityData.creationState < CreationState.DONE) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
+            if (wallet.balance.isGreaterThan(Constants.DASH_PAY_FEE)) {
+                delay(1000L) //1s delay as required on NMA-491
+                val userAlert = UserAlert(R.string.invitation_notification_text,
+                        R.drawable.ic_invitation)
+                AppDatabase.getAppDatabase().userAlertDao().insert(userAlert)
+            }
         }
 
         PlatformRepo.getInstance().init()
@@ -541,7 +548,7 @@ class CreateIdentityService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
-        if(backgroundThread.isAlive)
+        if (backgroundThread.isAlive)
             backgroundThread.looper.quit()
 
         if (wakeLock.isHeld) {

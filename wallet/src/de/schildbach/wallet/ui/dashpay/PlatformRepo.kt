@@ -732,12 +732,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDao.updateCreationState(blockchainIdentityData.id, state, errorMessage)
         blockchainIdentityData.creationState = state
         blockchainIdentityData.creationStateErrorMessage = errorMessage
-        if (state == BlockchainIdentityData.CreationState.DONE) {
-            delay(1000L) //1s delay as required on NMA-491
-            val userAlert = UserAlert(R.string.invitation_notification_text,
-                    R.drawable.ic_invitation)
-            userAlertDao.insert(userAlert)
-        }
     }
 
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData) {
