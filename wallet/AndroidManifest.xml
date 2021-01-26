@@ -342,18 +342,18 @@
             android:name="com.e.liquid_integration.ui.LiquidBuyAndSellDashActivity"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
+            android:launchMode="singleTop"
             android:name="com.e.liquid_integration.ui.LiquidSplashActivity"
             android:theme="@style/My.Theme.ChildActivity">
 
-            <intent-filter>
+            <intent-filter android:label="@string/send_coins_activity_title">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="www.dash.org"
-                    android:scheme="https"
-                    android:pathPrefix="/"/>
+                    android:scheme="liquid-oauth"
+                    android:host="callback" />
 
 
             </intent-filter>

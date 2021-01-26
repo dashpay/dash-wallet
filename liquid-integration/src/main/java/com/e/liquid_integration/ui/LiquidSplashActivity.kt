@@ -26,10 +26,14 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.Toolbar
+import androidx.browser.customtabs.CustomTabColorSchemeParams
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.content.ContextCompat
 import com.e.liquid_integration.R
 import com.e.liquid_integration.data.LiquidClient
 import com.e.liquid_integration.data.LiquidConstants
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.GenericUtils
 
 
@@ -62,24 +66,20 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        handleIntent(getIntent())
-
+        handleIntent(intent)
     }
 
     private fun handleIntent(intent: Intent?) {
         val action = intent!!.action
         val intentUri = intent.data
         val scheme = intentUri?.scheme
+        val host = intentUri?.host
 
-        if (Intent.ACTION_VIEW == action && intentUri.toString().contains(LiquidConstants.DEEP_LINK_URL)) {
+        if (Intent.ACTION_VIEW == action
+                && scheme == LiquidConstants.OAUTH_CALLBACK_SCHEMA
+                && host == LiquidConstants.OAUTH_CALLBACK_HOST) {
             getUserId()
         }
-    }
-
-
-    override fun onResume() {
-        super.onResume()
-
     }
 
     override fun finish() {
@@ -172,29 +172,25 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     private fun openLoginUrl(sessionId: String) {
 
-        val url: String = LiquidConstants.INITIAL_URL + sessionId + "/liquid_oauth?preferred_action=follow_href&theme=light&return_url=" + LiquidConstants.DEEP_LINK_URL
+        val url = "${LiquidConstants.INITIAL_URL}${sessionId}/liquid_oauth?preferred_action=follow_href&theme=light&return_url=${LiquidConstants.OAUTH_CALLBACK_URL}"
 
-       /* val builder = CustomTabsIntent.Builder()
+        val builder = CustomTabsIntent.Builder()
         val toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+        val colorSchemeParams = CustomTabColorSchemeParams.Builder()
+                .setToolbarColor(toolbarColor)
+                .build()
         val customTabsIntent = builder.setShowTitle(true)
-                .setToolbarColor(toolbarColor).build()
+                .setDefaultColorSchemeParams(colorSchemeParams)
+                .build()
 
-        CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url)
-        ) { activity, uri ->
+        val uri = Uri.parse(url)
+
+        CustomTabActivityHelper.openCustomTab(this, customTabsIntent, uri
+        ) { _, _ ->
             val intent = Intent(Intent.ACTION_VIEW)
-            intent.data = Uri.parse(url)
+            intent.data = uri
             startActivity(intent)
-            // startActivityForResult(intent, LOGIN_REQUEST_CODE)
         }
-*/
-        val i = Intent(Intent.ACTION_VIEW)
-        i.data = Uri.parse(url)
-        startActivity(i)
-
-        /*   val intent = Intent(this, LiquidLoginActivity::class.java)
-           intent.putExtra("url", url)
-           intent.putExtra("title", "Login")
-           startActivityForResult(intent, LOGIN_REQUEST_CODE)*/
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

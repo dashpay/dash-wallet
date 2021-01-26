@@ -15,6 +15,10 @@ object LiquidConstants {
 
     const val INITIAL_URL = "https://partners.liquid.com/api/v1/session/"
 
+    const val OAUTH_CALLBACK_SCHEMA = "liquid-oauth"
+    const val OAUTH_CALLBACK_HOST = "callback"
+    const val OAUTH_CALLBACK_URL = "$OAUTH_CALLBACK_SCHEMA://$OAUTH_CALLBACK_HOST"
+
     // const val INITIAL_URL = "https://partners.liquid.com/api/v1/kyc/liquid_oauth?session_id="
 
 
