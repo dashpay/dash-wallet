@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Stel een nieuwe pin in</string>
     <string name="forgot_pin_instruction_3">Log in met uw nieuwe PIN om toegang te krijgen tot uw portemonnee</string>
     <string name="forgot_pin_warning">Als u uw PIN bent vergeten en uw herstelzin bent kwijtgeraakt, kunt u geen toegang meer krijgen tot uw portemonnee en het saldo.</string>
+    <string name="forgot_pin_recover">Voer herstelzin in</string>
+    <string name="forgot_pin_passphrase_doesnt_match">De herstelzin komt niet overeen met waar deze portemonnee mee is ingesteld.</string>
+
     <string name="send_coins_auto_lock_feasible">Deze transactie wordt direct afgehandeld en zonder extra transactiekosten</string>
     <string name="send_coins_auto_lock_not_feasible">Het uitvoeren van deze transactie kan enkele minuten duren. Direct uitvoeren voor %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Het uitvoeren van deze transactie kan enkele minuten duren. </string>
@@ -323,6 +326,7 @@
     <string name="payment_request_please_try_again">Probeer opnieuw</string>
     <string name="payment_request_try_again">Probeer opnieuw</string>
     <string name="payment_request_problem_title">Betaling werd niet bevestigd</string>
+    <string name="payment_request_problem_message">Je betaling kon niet door de server worden verwerkt, doe a.u.b. navraag bij de winkelier</string>
     <string name="payment_request_expired_title">Betaalverzoek is verlopen</string>
     <string name="payment_request_close">Sluiten</string>
     <string name="payment_request_skip">Overslaan</string>

@@ -49,6 +49,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 
 import com.e.liquid_integration.data.LiquidClient;
+import com.e.liquid_integration.ui.LiquidSplashActivity;
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
@@ -153,6 +154,7 @@ public class WalletApplication extends BaseWalletApplication implements ResetAut
                 || (activity instanceof WalletUriHandlerActivity)
                 || (activity instanceof ScanActivity)
                 || (activity instanceof ImportSharedImageActivity)
+                || (activity instanceof LiquidSplashActivity)
                 || (activity instanceof ShortcutComponentActivity);
     }
 

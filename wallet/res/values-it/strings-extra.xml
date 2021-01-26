@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Imposta un nuovo PIN</string>
     <string name="forgot_pin_instruction_3">Accedi con il tuo nuovo PIN per accedere al tuo portafoglio</string>
     <string name="forgot_pin_warning">Se hai dimenticato il PIN e perso la frase di recupero, non puoi ottenere di nuovo l\'accesso al tuo portafoglio e ai tuoi fondi.</string>
+    <string name="forgot_pin_recover">Inserisci la frase di recupero</string>
+    <string name="forgot_pin_passphrase_doesnt_match">La frase di recupero non combacia con quella con cui questo portafoglio è stato impostato.</string>
+
     <string name="send_coins_auto_lock_feasible">Questa transazione potrebbe essere eseguita istantaneamente senza costi aggiuntivi</string>
     <string name="send_coins_auto_lock_not_feasible">Questa transazione potrebbe richiedere diversi minuti per essere eseguita. Vuoi eseguirla istantaneamente per un extra %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Questa transazione potrebbe richiedere diversi minuti per essere eseguita.</string>
@@ -323,6 +326,7 @@
     <string name="payment_request_please_try_again">Per favore riprova</string>
     <string name="payment_request_try_again">Prova Ancora</string>
     <string name="payment_request_problem_title">Il pagamento non è stato riconosciuto</string>
+    <string name="payment_request_problem_message">Non è stato possibile processare il tuo pagamento dal server, per favore informati col commerciante</string>
     <string name="payment_request_expired_title">Richiesta di pagamento scaduta</string>
     <string name="payment_request_close">Chiudi</string>
     <string name="payment_request_skip">Salta</string>
