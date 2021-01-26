@@ -97,7 +97,7 @@ password.
 
 We need wallet-tool from dashj. First, in a working directory, let's get dashj:
 
-	git clone -b release-0.13 https://github.com/HashEngineering/dashj.git
+	git clone -b release-0.17 https://github.com/HashEngineering/dashj.git
 
 Make sure everything is compiled and ready to go by using once:
 
@@ -144,9 +144,6 @@ Have a deeper look at the backup file (these files were produced by Darkcoin Wal
 You'll see each line contains a key in WIF (wallet import format), technically Base58. The
 datetime string after each key is the birthdate of that key which you can ignore for the purpose
 of this one-time recovery.
-
-The easiest way to recover this backup is probably installing MultiBit v0.5.x from
-https://multibit.org/ and restore from inside that application.
 
 Another option is importing each individual key into one of [Electrum Dash] (https://electrum.dash.org/#download)
 or [Dash Core] (https://www.dash.org/downloads/).
