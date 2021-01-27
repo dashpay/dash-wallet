@@ -115,6 +115,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
+    private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
 
 
     private val securityGuard = SecurityGuard()
@@ -1175,6 +1176,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDaoAsync.clear()
         dashPayProfileDaoAsync.clear()
         dashPayContactRequestDaoAsync.clear()
+        userAlertDaoAsync.clear()
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {

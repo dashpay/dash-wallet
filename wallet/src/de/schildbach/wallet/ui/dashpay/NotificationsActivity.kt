@@ -122,7 +122,9 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         dashPayViewModel.notificationsLiveData.observe(this, Observer {
             if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
-                    processResults(it.data)
+                    val results = arrayListOf<NotificationItem>()
+                    results.addAll(it.data)
+                    processResults(results)
                 }
             }
         })
@@ -132,19 +134,33 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         })
     }
 
-    private fun processResults(data: List<NotificationItem>) {
+    private fun processResults(data: ArrayList<NotificationItem>) {
 
         val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
         // get the last seen date from the configuration
         val newDate = walletApplication.configuration.lastSeenNotificationTime
 
+        var userAlertItem: NotificationItemUserAlert? = null
+
         // find the most recent notification timestamp
         var lastNotificationTime = 0L
-        data.forEach { lastNotificationTime = max(lastNotificationTime, it.getDate()) }
+        data.forEach {
+            lastNotificationTime = max(lastNotificationTime, it.getDate())
+            //Remove User Alert from list to add it before the "New" header
+            if (it is NotificationItemUserAlert) {
+                userAlertItem = it
+                data.remove(it)
+            }
+        }
 
         val newItems = data.filter { r -> r.getDate() >= newDate }.toMutableList()
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
+
+        //Add User Alert item
+        if (userAlertItem != null) {
+            results.add(NotificationsAdapter.NotificationViewItem(userAlertItem!!))
+        }
 
         results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
         if (newItems.isEmpty()) {
