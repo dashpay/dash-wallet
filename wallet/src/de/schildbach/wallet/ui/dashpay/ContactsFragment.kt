@@ -102,16 +102,26 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
         initViewModel()
 
-        if (mode == MODE_VIEW_REQUESTS) {
-            search.visibility = View.GONE
-            icon.visibility = View.GONE
-            setupActionBarWithTitle(R.string.contact_requests_title)
-        } else {
-            // search should be available for all other modes
-            search.addTextChangedListener(this)
-            search.visibility = View.VISIBLE
-            icon.visibility = View.VISIBLE
-            setupActionBarWithTitle(R.string.contacts_title)
+        when (mode) {
+            MODE_VIEW_REQUESTS -> {
+                search.visibility = View.GONE
+                icon.visibility = View.GONE
+                setupActionBarWithTitle(R.string.contact_requests_title)
+            }
+            MODE_SEARCH_CONTACTS -> {
+                // search should be available for all other modes
+                search.addTextChangedListener(this)
+                search.visibility = View.VISIBLE
+                icon.visibility = View.VISIBLE
+                setupActionBarWithTitle(R.string.contacts_title)
+            }
+            MODE_SELECT_CONTACT -> {
+                search.addTextChangedListener(this)
+                search.visibility = View.VISIBLE
+                icon.visibility = View.VISIBLE
+                setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
+                forceHideBottomNav = true
+            }
         }
 
         search_for_user.setOnClickListener {
@@ -222,19 +232,21 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             }
         }
 
-        if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS)
+        if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
-        requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
-
+            requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        } else if (mode == MODE_VIEW_REQUESTS) {
+            requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        }
         // process contacts
         val contacts = if (mode != MODE_VIEW_REQUESTS)
             data.filter { r -> r.requestSent && r.requestReceived }
         else ArrayList()
 
-        if (contacts.isNotEmpty() && mode != MODE_VIEW_REQUESTS)
+        if (contacts.isNotEmpty() && mode != MODE_VIEW_REQUESTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
-        contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
-
+            contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        }
         contactsAdapter.results = results
     }
 
@@ -263,8 +275,10 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         searchContactsRunnable = Runnable {
             contactsAdapter.query = query
             dashPayViewModel.searchContacts(query, direction)
-            if (!initialSearch && query.isNotEmpty()) {
-                dashPayViewModel.searchUsernames(query, limit = 3, removeContacts = true)
+            if (mode == MODE_SEARCH_CONTACTS) {
+                if (!initialSearch && query.isNotEmpty()) {
+                    dashPayViewModel.searchUsernames(query, limit = 3, removeContacts = true)
+                }
             }
         }
         searchHandler.postDelayed(searchContactsRunnable, 500)
