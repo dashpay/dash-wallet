@@ -40,6 +40,7 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
 import kotlinx.android.synthetic.main.no_contacts_results.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -123,6 +124,10 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                 setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
                 forceHideBottomNav = true
             }
+        }
+
+        search_for_user.setOnClickListener {
+            onSearchUser()
         }
 
         search_for_user_suggestions.setOnClickListener {
