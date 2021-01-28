@@ -445,9 +445,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
         if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
-            val contactIdentity = platform.identities.get(toUserId)
             Context.propagate(walletApplication.wallet.context)
-            blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey)
+            blockchainIdentity.addPaymentKeyChainFromContact(potentialContactIdentity!!, cr!!, encryptionKey)
 
             // update bloom filters now on main thread
             mainHandler.post {
