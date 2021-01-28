@@ -167,9 +167,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun getUsername(username: String): Resource<Document> {
         return try {
             var nameDocument = platform.names.get(username)
-            if (nameDocument == null) {
-                nameDocument = platform.names.get(username, "")
-            }
             Resource.success(nameDocument)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage!!, null)
