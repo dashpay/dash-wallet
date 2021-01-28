@@ -213,8 +213,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             nameDocuments.map { getIdentityForName(it) }
         }
 
-        val profileDocuments = Profiles(platform).getList(userIds)
-        val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+        var profileById: Map<Identifier, Document> = mapOf()
+
+        try {
+            val profileDocuments = Profiles(platform).getList(userIds)
+            profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+        } catch (e: StatusRuntimeException) {
+            // swallow; we don't want to stop this method if no usernames have profiles
+        }
 
         val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
                 ?: arrayListOf()
