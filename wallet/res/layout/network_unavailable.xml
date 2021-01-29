@@ -4,6 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     app:layout_constraintTop_toTopOf="parent"
     app:layout_constraintBottom_toBottomOf="parent"
+    android:id="@+id/network_error_root"
+    android:layout_marginTop="32dp"
+    android:layout_marginBottom="50dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -33,7 +36,7 @@
         app:layout_constraintTop_toBottomOf="@id/icon" />
 
     <TextView
-        android:id="@+id/subtitle"
+        android:id="@+id/network_error_subtitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
