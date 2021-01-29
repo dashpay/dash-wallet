@@ -65,6 +65,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="9dp"
             android:text="@string/error_updating_profile_cancel" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

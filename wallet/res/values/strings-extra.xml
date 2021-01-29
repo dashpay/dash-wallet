@@ -548,5 +548,6 @@
     <string name="network_error_contact_details">Unable to fetch contact details</string>
     <string name="network_error_user_search">Unable to search for a user</string>
     <string name="network_error_contact_suggestions">Unable to provide suggestions</string>
+    <string name="network_error_unable_to_update_profile">Unable to update your profile</string>
 
 </resources>
