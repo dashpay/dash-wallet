@@ -23,8 +23,12 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_payments.*
+import kotlinx.android.synthetic.main.activity_payments.toolbar
+import kotlinx.android.synthetic.main.fragment_invitation_created.*
 
 class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created) {
 
@@ -42,6 +46,14 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         appCompatActivity.setSupportActionBar(toolbar)
 
 //        profile_picture_envelope.avatarProfile = requireArguments().getParcelable()
+        diaplayOwnProfilePicture() // just for the testing purposes
+    }
+
+    private fun diaplayOwnProfilePicture() {
+        val viewModel = ViewModelProvider(this).get(BaseProfileViewModel::class.java)
+        viewModel.dashPayProfileData.observe(viewLifecycleOwner, {
+            profile_picture_envelope.avatarProfile = it
+        })
     }
 
     override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -52,7 +64,10 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.option_close -> {
-                requireActivity().finish()
+                requireActivity().run {
+                    KeyboardUtil.hideKeyboard(this, tag_edit)
+                    finish()
+                }
                 true
             }
             else -> {

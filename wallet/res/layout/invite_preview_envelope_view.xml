@@ -2,8 +2,8 @@
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_width="120dp"
+    android:layout_height="120dp"
     tools:context="de.schildbach.wallet.ui.widget.ReceiveInfoView"
     tools:ignore="ContentDescription"
     tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
@@ -18,11 +18,11 @@
     <ImageView
         android:id="@+id/avatar"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/avatar_bottom"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@+id/avatar_bottom"
         app:layout_constraintEnd_toEndOf="@id/avatar_end"
         app:layout_constraintStart_toStartOf="@id/avatar_start"
-        app:layout_constraintTop_toTopOf="@id/avatar_top"
+        app:layout_constraintTop_toTopOf="@+id/avatar_top"
         tools:src="@drawable/user1" />
 
     <ImageView
@@ -51,13 +51,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.425" />
+        app:layout_constraintGuide_percent="0.2" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/avatar_bottom"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.64" />
+        app:layout_constraintGuide_percent="0.9" />
 
 </merge>

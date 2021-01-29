@@ -51,8 +51,9 @@
 
                 <de.schildbach.wallet.ui.invite.InvitePreviewEnvelopeView
                     android:id="@+id/profile_picture_envelope"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_gravity="center_horizontal" />
 
                 <TextView
                     style="@style/MontserratMedium.Heading"
@@ -90,7 +91,7 @@
                 android:textSize="14sp" />
 
             <EditText
-                android:id="@+id/display_name"
+                android:id="@+id/tag_edit"
                 style="@style/MontserratSemiBold"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
@@ -127,7 +128,7 @@
                 tools:ignore="UselessLeaf" />
 
             <Button
-                android:id="@+id/confirm"
+                android:id="@+id/send"
                 style="@style/DashButton.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -138,7 +139,7 @@
                 android:text="@string/invitation_created_send_invitation" />
 
             <Button
-                android:id="@+id/verify_skip_button"
+                android:id="@+id/maybe_later"
                 style="@style/DashButton.Transparent.Dark"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
