@@ -26,4 +26,8 @@
     <string name="uphold_error_report_issue">이 문제를 메인 메뉴의 \'이슈 보고\'를 이용하여 대시 지갑 지원 팀에 보고해주세요.</string>
 
     <string name="uphold_general_error_title">오류</string>
-    </resources>
+    <string name="uphold_api_error_title">업홀드 오류</string>
+    <string name="uphold_api_error_identity">당신의 업홀드 계정이 아직 인증되지 않았습니다. 자금을 출금할 수 없습니다.</string>
+    <string name="uphold_api_error_403_description">당신의 업홀드 계정이 리뷰를 위해 마크되었습니다.\n\n업홀드는 당신의 계정을 임시로 제한함에 따라 출금할 수 없게 됩니다.\n\n이 상황을 해결하기 위하여 업홀드가 빠른 시일 내에 당신에게 연락을 드릴 예정입니다.</string>
+    <string name="uphold_api_error_400_description">업홀드 자금이 24시간 동안 잠겼습니다.\n\n이 송금을 위한 충분한 자금을 %s까지 보유하게 됩니다.</string>
+</resources>

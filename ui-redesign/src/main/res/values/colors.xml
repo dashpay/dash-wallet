@@ -16,7 +16,6 @@
     <color name="dash_aqua_green">#6FCF97</color>
     <color name="dash_green">#27C509</color>
     <color name="dash_green_dark">#27AE60</color>
-    <color name="ripple_light">#60ffffff</color>
     <color name="ripple_dark">#80979797</color>
     <color name="success_green">#92D048</color>
     <color name="error_red">#BF2827</color>

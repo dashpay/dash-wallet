@@ -101,7 +101,7 @@
         <item name="android:layout_marginTop">10dp</item>
         <item name="android:layout_marginRight">15dp</item>
         <item name="android:layout_marginBottom">10dp</item>
-        <item name="android:background">@drawable/selectable_round_corners</item>
+        <item name="android:background">@drawable/selectable_round_corners_white</item>
     </style>
 
     <style name="MontserratMedium.MenuRowTitle">
@@ -167,6 +167,11 @@
         <item name="android:layout_marginTop">0dp</item>
     </style>
 
+    <style name="MenuRow.Sources">
+        <item name="android:layout_marginTop">0dp</item>
+        <item name="android:background">@drawable/selectable_round_corners_border</item>
+    </style>
+
     <style name="HorizontalLine">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
@@ -183,7 +188,7 @@
         <item name="android:drawableStart">@drawable/ic_add_contact</item>
         <item name="android:paddingStart">26dp</item>
         <item name="android:paddingEnd">26dp</item>
-<!--        <item name="android:visibility">gone</item>-->
+        <!--        <item name="android:visibility">gone</item>-->
     </style>
 
     <style name="ContactRequestButton.Sent">
@@ -195,7 +200,11 @@
         <item name="android:drawableStart">@drawable/ic_add_contact</item>
         <item name="android:paddingStart">26dp</item>
         <item name="android:paddingEnd">26dp</item>
-<!--        <item name="android:visibility">gone</item>-->
+        <!--        <item name="android:visibility">gone</item>-->
+    </style>
+
+    <style name="SwitchCompat">
+        <item name="colorControlActivated">@color/dash_blue</item>
     </style>
 
 </resources>

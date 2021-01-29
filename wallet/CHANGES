@@ -1,4 +1,20 @@
 Dash Wallet
+v7.2.2
+* Fix crashes on Import Private Key, Backup to File failures
+* Allow scanning inverted QR codes (black background, white foreground)
+* Prevent auto logout when typing text on Report Issue dialog
+
+v7.2.1
+* Fix Scan QR Code crash on Android 6 or earlier
+* Fix missing Advanced Security Screen Auto Logout toggle
+
+v7.2.0
+* Enhance Forgot PIN feature from Lock Screen
+* Update translations
+* Built for SDK 29 (Android 10)
+* Update dependencies
+* Use DashJ 0.17.5 (uses protobuf-javalite)
+
 v7.1.0
 * Use DashJ 0.17.4 (full chainlock support, Dash Core 0.16 updates)
 * BIP70: don't send tx if rejected by payment server

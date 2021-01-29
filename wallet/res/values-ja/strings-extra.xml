@@ -90,7 +90,6 @@
     <string name="forgot_pin_instruction_2">新しいPINを設定する</string>
     <string name="forgot_pin_instruction_3">新しいPINでログインしてウォレットにアクセスする</string>
     <string name="forgot_pin_warning">自分のPINを忘れたり、復元フレーズを紛失した場合は、あなたのウォレットと資金にアクセスできなくなります。</string>
-
     <string name="send_coins_auto_lock_feasible">この取引は追加手数料なしで即座に完了するはずです</string>
     <string name="send_coins_auto_lock_not_feasible">このトランザクションは決済に数分かかるかもしれません。 %1$s%2$sの追加で即時に完了させますか ？</string>
     <string name="send_coins_instant_send_not_feasible">このトランザクションは決済に数分がかかります。</string>
@@ -326,7 +325,6 @@
     <string name="payment_request_please_try_again">もう一度お試しください</string>
     <string name="payment_request_try_again">再試行する</string>
     <string name="payment_request_problem_title">お支払いが確認されませんでした</string>
-    <string name="payment_request_problem_message">お支払いは処理されましたが、サーバーはそれを確認できませんでした</string>
     <string name="payment_request_expired_title">お支払いの請求は消滅しました</string>
     <string name="payment_request_close">閉じる</string>
     <string name="payment_request_skip">スキップする</string>

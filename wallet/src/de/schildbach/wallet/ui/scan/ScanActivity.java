@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.DecodeHintType;
+import com.google.zxing.LuminanceSource;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.ReaderException;
 import com.google.zxing.Result;
@@ -463,14 +464,20 @@ public final class ScanActivity extends AbstractWalletActivity
                         });
                     }
                 });
-                final Result scanResult = reader.decode(bitmap, hints);
+                try {
+                    final Result scanResult = reader.decode(bitmap, hints);
 
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        handleResult(scanResult);
-                    }
-                });
+                    runOnUiThread(() -> handleResult(scanResult));
+                } catch (ReaderException x) {
+                    // Invert and check for a code
+                    LuminanceSource invertedSource = source.invert();
+                    BinaryBitmap invertedBitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
+
+                    final Result invertedScanResult = reader.decode(invertedBitmap, hints);
+
+                    runOnUiThread(() -> handleResult(invertedScanResult));
+                }
+
             } catch (final ReaderException x) {
                 // retry
                 cameraHandler.post(fetchAndDecodeRunnable);
