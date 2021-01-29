@@ -43,12 +43,14 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
+import kotlinx.android.synthetic.main.activity_search_dashpay_profile_root.*
 import kotlinx.android.synthetic.main.invite_friend_hint_view.*
 import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
@@ -196,6 +198,16 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             imitateUserInteraction()
             adapter.sendContactRequestWorkStateMap = it
         })
+        dashPayViewModel.blockchainStateData.observe(this, {
+            it?.apply {
+                val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
+                updateNetworkErrorVisibility(networkError)
+            }
+        })
+    }
+
+    private fun updateNetworkErrorVisibility(networkError: Boolean) {
+        network_error_container.visibility = if (networkError) View.VISIBLE else View.GONE
     }
 
     private fun startLoading() {
