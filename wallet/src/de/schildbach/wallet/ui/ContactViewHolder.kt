@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.res.Resources
 import android.graphics.drawable.AnimationDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -29,10 +28,9 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dashpay_contact_row.view.*
 import kotlinx.android.synthetic.main.dashpay_contact_row_content.view.*
 
-class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes layout: Int, val isSuggestion: Boolean = false)
+class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes layout: Int, val isSuggestion: Boolean = false, val useFriendsIcon: Boolean = true)
     : RecyclerView.ViewHolder(inflater.inflate(layout, parent, false)) {
 
     interface OnItemClickListener {
@@ -99,7 +97,11 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
             }
 
             override fun friends() {
-                itemView.relation_state.displayedChild = 0
+                if (useFriendsIcon) {
+                    itemView.relation_state.displayedChild = 0
+                } else {
+                    none()
+                }
             }
         })
     }

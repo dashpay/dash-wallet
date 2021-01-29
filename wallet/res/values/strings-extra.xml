@@ -348,10 +348,11 @@
     <string name="payment_request_paid_to">Paid to</string>
 
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
-    <string name="min_3_chars">Between 3 and 23 characters</string>
-    <string name="alphanum_only">Letters and numbers only</string>
+    <string name="identity_min_3_chars">Between 3 and 23 characters</string>
+    <string name="identity_alphanum_only">Letters, numbers and hyphens only</string>
+    <string name="identity_hyphen_rule">Must start and end with a letter or number</string>
     <string name="identity_username_validating">Validating username…</string>
-        <string name="identity__username_available">Username available</string>
+    <string name="identity_username_available">Username available</string>
     <string name="identity_username_taken">Username taken</string>
     <string name="platform_communication_error">Communication error with Dash Platform</string>
     <string name="register">Register</string>
@@ -414,6 +415,8 @@
     <string name="contacts_no_results">There are no contacts that match</string>
 
     <string name="contacts_title">Contacts</string>
+    <string name="contacts_send_to_contact_title">Send to a Contact</string>
+    <string name="constacts_search_for">Search for a contact</string>
     <string name="contact_requests_title">Contact Requests</string>
     <string name="contacts_add_new_contact">Add new contact</string>
     <string name="contacts_contact_requests_count">Contact Requests (%d)</string>

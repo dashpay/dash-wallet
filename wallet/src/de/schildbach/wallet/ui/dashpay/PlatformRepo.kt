@@ -533,10 +533,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     blockchainIdentity.registerIdentity(keyParameter)
                     return@withContext
                 } catch (e: InvalidIdentityAssetLockProofError) {
-                    log.info("instantSendLock error: retry registerIdentity again")
+                    log.info("instantSendLock error: retry registerIdentity again ($i)")
                     delay(3000)
                 }
             }
+            throw InvalidIdentityAssetLockProofError("failed after 3 tries")
         }
     }
 

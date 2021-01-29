@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Build
@@ -54,6 +55,17 @@ import org.dash.wallet.common.InteractionAwareActivity
 
 class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewHolder.OnItemClickListener,
         ContactViewHolder.OnContactRequestButtonClickListener {
+
+    companion object {
+
+        private const val EXTRA_INIT_QUERY = "extra_init_query"
+
+        fun createIntent(context: Context, initQuery: String?): Intent {
+            return Intent(context, SearchUserActivity::class.java).apply {
+                putExtra(EXTRA_INIT_QUERY, initQuery)
+            }
+        }
+    }
 
     private lateinit var dashPayViewModel: DashPayViewModel
     private lateinit var walletApplication: WalletApplication
@@ -101,13 +113,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
                 val transition: Transition = ChangeBounds()
                 transition.addListener(object : Transition.TransitionListener {
                     override fun onTransitionEnd(transition: Transition) {
-                        search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                        search.gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                        val searchPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-                                60f, resources.displayMetrics).toInt()
-                        search.setPadding(searchPadding, 0, 0, 0)
-                        search.typeface = ResourcesCompat.getFont(this@SearchUserActivity,
-                                R.font.montserrat_semibold)
+                        finalizeViewsTransition()
                         search_results_rv.visibility = View.VISIBLE
                     }
 
@@ -133,11 +139,30 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             }
         }
 
+        intent.getStringExtra(EXTRA_INIT_QUERY)?.let { initQuery ->
+            constraintSet2.applyTo(root)
+            setChanged = true
+            layout_title.visibility = View.GONE
+            find_a_user_label.visibility = View.GONE
+            finalizeViewsTransition()
+            search.setText(initQuery)
+        }
+
         invite_friend_hint_view_qwerty.setOnClickListener {
             startActivity(InviteFriendActivity.createIntent(this))
         }
         invite_friend_hint_view_asdf.setOnClickListener {
             startActivity(InviteFriendActivity.createIntent(this))
+        }
+    }
+
+    private fun finalizeViewsTransition() {
+        search.apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            val searchPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 60f, resources.displayMetrics).toInt()
+            setPadding(searchPadding, 0, 0, 0)
+            typeface = ResourcesCompat.getFont(this@SearchUserActivity, R.font.montserrat_semibold)
         }
     }
 

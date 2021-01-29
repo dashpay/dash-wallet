@@ -39,6 +39,8 @@ public class KeyboardResponsiveCoordinatorLayout extends CoordinatorLayout {
     private final int idOfViewToHide;
     private @Nullable View viewToHide;
 
+    public boolean forceHideViewToHide;
+
     public KeyboardResponsiveCoordinatorLayout(Context context) {
         this(context, null);
     }
@@ -70,7 +72,7 @@ public class KeyboardResponsiveCoordinatorLayout extends CoordinatorLayout {
             if (viewToHide != null) {
                 // If difference > 0, keyboard is showing.
                 // If difference =< 0, keyboard is not showing or is in multiview mode.
-                if (difference > 0) {
+                if (difference > 0 || forceHideViewToHide) {
                     viewToHide.setVisibility(View.GONE);
                 } else {
                     viewToHide.setVisibility(View.VISIBLE);
