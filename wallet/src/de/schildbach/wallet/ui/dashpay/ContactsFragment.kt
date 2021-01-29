@@ -128,6 +128,10 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         search_for_user_suggestions.setOnClickListener {
             onSearchUser()
         }
+
+        search_for_user_suggestions.setOnClickListener {
+            onSearchUser()
+        }
         searchContacts()
     }
 
@@ -171,9 +175,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             if (it.data != null && it.data.isNotEmpty()) {
                 showSuggestedUsers(it.data)
             } else {
-                if (contactsAdapter.results.isEmpty()) {
-                    showEmptyPane()
-                }
+                showSuggestedUsers(null)
             }
         })
     }
