@@ -188,7 +188,7 @@
         <item name="android:drawableStart">@drawable/ic_add_contact</item>
         <item name="android:paddingStart">26dp</item>
         <item name="android:paddingEnd">26dp</item>
-        <!--        <item name="android:visibility">gone</item>-->
+<!--        <item name="android:visibility">gone</item>-->
     </style>
 
     <style name="ContactRequestButton.Sent">
@@ -200,7 +200,7 @@
         <item name="android:drawableStart">@drawable/ic_add_contact</item>
         <item name="android:paddingStart">26dp</item>
         <item name="android:paddingEnd">26dp</item>
-        <!--        <item name="android:visibility">gone</item>-->
+<!--        <item name="android:visibility">gone</item>-->
     </style>
 
     <style name="SwitchCompat">

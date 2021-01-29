@@ -94,7 +94,7 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
     private var onShortcutClickListener: OnClickListener? = null
 
     init {
-        setBackgroundResource(org.dash.wallet.ui.widget.R.drawable.white_background_rounded)
+        setBackgroundResource(R.drawable.white_background_rounded)
         minimumHeight = 180
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_HORIZONTAL
