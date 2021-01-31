@@ -5,18 +5,24 @@ import android.app.AlertDialog
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
+import androidx.browser.customtabs.CustomTabColorSchemeParams
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import com.e.liquid_integration.R
 import com.e.liquid_integration.`interface`.ValueSelectListner
 import com.e.liquid_integration.currency.CurrencyResponse
 import com.e.liquid_integration.currency.PayloadItem
 import com.e.liquid_integration.data.LiquidClient
+import com.e.liquid_integration.data.LiquidConstants
 import com.e.liquid_integration.dialog.BuyDashCryptoCurrencyDialog
 import com.e.liquid_integration.dialog.SelectBuyDashDialog
 import com.e.liquid_integration.dialog.SelectSellDashDialog
@@ -28,6 +34,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.util.GenericUtils
 import org.json.JSONObject
@@ -53,6 +60,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private val cryptoCurrencyArrayList = ArrayList<PayloadItem>()
     private val fiatCurrencyList = ArrayList<PayloadItem>()
     private var isSelectFiatCurrency = false
+    private var isClickLogoutButton = false
 
     // var currentExchangeRate: LiveData<ExchangeRate>? = null
     var currentExchangeRate: ExchangeRate? = null
@@ -302,7 +310,8 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         val dialogBuilder = AlertDialog.Builder(this)
         dialogBuilder.setMessage(R.string.liquid_logout_title)
         dialogBuilder.setPositiveButton(android.R.string.ok) { dialog, button ->
-            loadingDialog!!.show()
+            openLogoutUrl()
+            /*loadingDialog!!.show()
             LiquidClient.getInstance()?.revokeAccessToken(object : LiquidClient.Callback<String?> {
                 override fun onSuccess(data: String?) {
                     loadingDialog!!.hide()
@@ -313,12 +322,77 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 override fun onError(e: Exception?) {
                     loadingDialog!!.hide()
                 }
-            })
+            })*/
         }
         dialogBuilder.setNegativeButton(android.R.string.cancel) { dialog, which ->
 
         }
         dialogBuilder.show()
+    }
+
+    private fun appAvailable(package_name: String): Boolean {
+        val pm: PackageManager = packageManager
+        val installed: Boolean
+        installed = try {
+            pm.getPackageInfo(package_name, PackageManager.GET_ACTIVITIES)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        }
+        return installed
+    }
+
+    private fun openLogoutUrl() {
+
+
+        if (appAvailable("com.quoine.liquid")) { // check liquid app installed or not
+            callRevokeAccessTokenAPI()
+        } else {
+            isClickLogoutButton = true
+            val url = LiquidConstants.LOGOUT_URL
+
+            val builder = CustomTabsIntent.Builder()
+            val toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary)
+            val colorSchemeParams = CustomTabColorSchemeParams.Builder()
+                    .setToolbarColor(toolbarColor)
+                    .build()
+            val customTabsIntent = builder.setShowTitle(true)
+                    .setDefaultColorSchemeParams(colorSchemeParams)
+                    .build()
+
+            val uri = Uri.parse(url)
+
+            CustomTabActivityHelper.openCustomTab(this, customTabsIntent, uri
+            ) { _, _ ->
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.data = uri
+                startActivity(intent)
+            }
+        }
+
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isClickLogoutButton) {
+            isClickLogoutButton = false
+            callRevokeAccessTokenAPI()
+        }
+    }
+
+    private fun callRevokeAccessTokenAPI() {
+        loadingDialog!!.show()
+        LiquidClient.getInstance()?.revokeAccessToken(object : LiquidClient.Callback<String?> {
+            override fun onSuccess(data: String?) {
+                loadingDialog!!.hide()
+                LiquidClient.getInstance()?.clearStoredSessionData()
+                finish()
+            }
+
+            override fun onError(e: Exception?) {
+                loadingDialog!!.hide()
+            }
+        })
     }
 
 
@@ -370,7 +444,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         BuyDashCryptoCurrencyDialog(this, cryptoCurrencyArrayList, object : ValueSelectListner {
             override fun onItemSelected(value: Int) {
                 val intent = Intent(_context, BuyDashWithCryptoCurrencyActivity::class.java)
-                intent.putExtra("Amount", "5")
+                intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].symbol)
                 startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
 
             }

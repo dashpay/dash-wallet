@@ -75,6 +75,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         viewModel = ViewModelProviders.of(this).get(OnboardingViewModel::class.java)
 
         walletApplication = (application as WalletApplication)
+
+        walletApplication.configuration.autoLogoutEnabled = false// for testing purpose
+
         if (walletApplication.walletFileExists()) {
             regularFlow()
         } else {

@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -25,7 +26,7 @@ currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : Recycle
 
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CurrencyViewHolder {
-        val view = layoutInflater!!.inflate(R.layout.item_cryptocurrency, parent, false)
+        val view = layoutInflater!!.inflate(R.layout.item_buy_cryptocurrency, parent, false)
         return CurrencyViewHolder(view)
     }
 
@@ -36,15 +37,14 @@ currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : Recycle
     override fun onBindViewHolder(holder: CurrencyViewHolder, position: Int) {
 
         if (selectedPosition == position) {
-            holder.itemView.setBackgroundResource(R.drawable.drawable_currency_border)
+            holder.imgCheckBox.setImageResource(R.drawable.ic_radio_round_checked)
         } else {
-            holder.itemView.setBackgroundResource(0)
+            holder.imgCheckBox.setImageResource(R.drawable.ic_radio_round_unchecked)
         }
 
 
-        holder.txtAmount.text = currencyArrayList[position].symbol
-        holder.txtCurrencySName.text = currencyArrayList[position].label
-        holder.txtCurrencyFName.text = currencyArrayList[position].label
+        holder.txtCurrency.text = currencyArrayList[position].symbol
+        holder.txtCurrencyName.text = currencyArrayList[position].label
 
         holder.rlCurrency.setOnClickListener {
             val copyOfLastCheckedPosition: Int = selectedPosition
@@ -59,10 +59,11 @@ currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : Recycle
 
 
     class CurrencyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val txtAmount = itemView.findViewById<TextView>(R.id.txtAmount)
-        val txtCurrencySName = itemView.findViewById<TextView>(R.id.txtCurrencySName)
-        val txtCurrencyFName = itemView.findViewById<TextView>(R.id.txtCurrencyFName)
+
+        val txtCurrency = itemView.findViewById<TextView>(R.id.txtCurrency)
+        val txtCurrencyName = itemView.findViewById<TextView>(R.id.txtCurrencyName)
         val rlCurrency = itemView.findViewById<RelativeLayout>(R.id.rlCurrency)
+        val imgCheckBox = itemView.findViewById<ImageView>(R.id.imgCheckBox)
     }
 }
 

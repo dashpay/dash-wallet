@@ -7,6 +7,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
@@ -131,7 +132,17 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         val freshReceiveAddress = walletDataProvider.freshReceiveAddress()
         walletAddress = freshReceiveAddress.toBase58()
 
-        webview.clearCache(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            CookieManager.getInstance().removeAllCookies(null)
+        };
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            CookieManager.getInstance().flush()
+        };
+
+        webview.clearCache(true);
+        webview.clearFormData();
+        webview.clearHistory();
+        webview.clearSslPreferences();
 
 
         webview.webViewClient = MyBrowser()
@@ -192,7 +203,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                         input_parameters = SettlementParameters(
                                 account_key = SettlementParameter(
                                         type = "WALLET_ADDRESS",
-                                        value = "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()// "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"
+                                        value = walletAddress.toString()// "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()// "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"
                                 )
                         )
                 ),

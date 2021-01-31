@@ -9,6 +9,7 @@ import com.e.liquid_integration.`interface`.ValueSelectListner
 import com.e.liquid_integration.adapter.CryptoCurrencyAdapter
 import com.e.liquid_integration.currency.PayloadItem
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import java.util.*
 
 
 class BuyDashCryptoCurrencyDialog(val _context: Context, val currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : BottomSheetDialog(_context) {
@@ -34,8 +35,16 @@ class BuyDashCryptoCurrencyDialog(val _context: Context, val currencyArrayList: 
         rvCryptoCurrency?.layoutManager = LinearLayoutManager(_context)
         rvCryptoCurrency?.adapter = CryptoCurrencyAdapter(_context, payload, object : ValueSelectListner {
             override fun onItemSelected(value: Int) {
-                listner.onItemSelected(value)
-                dialog.dismiss()
+
+
+
+                Timer().schedule(object : TimerTask() {
+                    override fun run() {
+                        listner.onItemSelected(value)
+                        dialog.dismiss()
+                    }
+                }, 1000)
+
             }
         })
 
