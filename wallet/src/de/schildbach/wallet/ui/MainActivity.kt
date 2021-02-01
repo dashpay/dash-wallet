@@ -694,10 +694,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 goBack()
                 return true
             }
-            R.id.contacts_add_contact -> {
-                startActivity(Intent(this, SearchUserActivity::class.java))
-                return true
-            }
         }
         return super.onOptionsItemSelected(item)
     }

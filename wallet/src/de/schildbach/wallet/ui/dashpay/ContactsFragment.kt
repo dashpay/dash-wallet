@@ -24,6 +24,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
@@ -40,9 +41,9 @@ import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
 import kotlinx.android.synthetic.main.invite_friend_hint_view.*
+import kotlinx.android.synthetic.main.no_contacts_results.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -126,7 +127,11 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             }
         }
 
-        search_for_user.setOnClickListener {
+        search_for_user_suggestions.setOnClickListener {
+            onSearchUser()
+        }
+
+        search_for_user_suggestions.setOnClickListener {
             onSearchUser()
         }
         searchContacts()
@@ -176,9 +181,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             if (it.data != null && it.data.isNotEmpty()) {
                 showSuggestedUsers(it.data)
             } else {
-                if (contactsAdapter.results.isEmpty()) {
-                    showEmptyPane()
-                }
+                showSuggestedUsers(null)
             }
         })
     }
@@ -261,6 +264,16 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             menuInflater.inflate(R.menu.contacts_menu, menu)
         }
         return super.onCreateOptionsMenu(menu, menuInflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.contacts_add_contact -> {
+                onSearchUser()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onSortOrderChanged(direction: UsernameSortOrderBy) {
