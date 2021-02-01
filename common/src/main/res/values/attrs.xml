@@ -3,4 +3,18 @@
     <declare-styleable name="CurrencyTextView">
         <attr name="prefixColor" format="color" />
     </declare-styleable>
+
+    <attr name="action_icon" format="integer" />
+    <attr name="action_background" format="integer" />
+    <attr name="action_text_color" format="reference" />
+    <attr name="action_text" format="string" />
+    <attr name="action_active" format="boolean" />
+    <declare-styleable name="LockScreenButton">
+        <attr name="action_icon" />
+        <attr name="text" format="reference"/>
+        <attr name="action_icon_padding" format="dimension" />
+    </declare-styleable>
+    <declare-styleable name="FingerprintView">
+        <attr name="custom_layout" format="reference" />
+    </declare-styleable>
 </resources>
