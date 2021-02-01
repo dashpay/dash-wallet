@@ -24,8 +24,10 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
-import androidx.fragment.app.Fragment
+import android.widget.TextView
+import androidx.core.text.HtmlCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -36,14 +38,16 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
+import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
+import kotlinx.android.synthetic.main.no_contacts_results.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.InteractionAwareActivity
 
-class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
+class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
         ContactViewHolder.OnItemClickListener {
 
@@ -66,8 +70,10 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         }
     }
 
+    override val navigationItemId = R.id.contacts
+
     private lateinit var dashPayViewModel: DashPayViewModel
-    private var handler: Handler = Handler()
+    private var searchHandler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var contactsAdapter: ContactSearchResultsAdapter
     private var query = ""
@@ -97,36 +103,56 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
 
         initViewModel()
 
-        if (mode == MODE_VIEW_REQUESTS) {
-            search.visibility = View.GONE
-            icon.visibility = View.GONE
-            setupActionBarWithTitle(R.string.contact_requests_title)
-        } else {
-            // search should be available for all other modes
-            search.addTextChangedListener(this)
-            search.visibility = View.VISIBLE
-            icon.visibility = View.VISIBLE
-            setupActionBarWithTitle(R.string.contacts_title)
+        when (mode) {
+            MODE_VIEW_REQUESTS -> {
+                search.visibility = View.GONE
+                icon.visibility = View.GONE
+                setupActionBarWithTitle(R.string.contact_requests_title)
+            }
+            MODE_SEARCH_CONTACTS -> {
+                // search should be available for all other modes
+                search.addTextChangedListener(this)
+                search.visibility = View.VISIBLE
+                icon.visibility = View.VISIBLE
+                setupActionBarWithTitle(R.string.contacts_title)
+            }
+            MODE_SELECT_CONTACT -> {
+                search.addTextChangedListener(this)
+                search.visibility = View.VISIBLE
+                icon.visibility = View.VISIBLE
+                setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
+                forceHideBottomNav = true
+            }
         }
 
-        search_for_user.setOnClickListener {
-            startActivity(Intent(context, SearchUserActivity::class.java))
+        search_for_user_suggestions.setOnClickListener {
+            onSearchUser()
         }
 
+        search_for_user_suggestions.setOnClickListener {
+            onSearchUser()
+        }
         searchContacts()
+    }
+
+    private fun showEmptyPane() {
+        suggestions_search_no_result.visibility = View.VISIBLE
     }
 
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
         dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner, Observer {
+            imitateUserInteraction()
             if (Status.SUCCESS == it.status) {
-                if (initialSearch && (mode != MODE_VIEW_REQUESTS)) {
+                if (initialSearch && query.isEmpty() && (mode != MODE_VIEW_REQUESTS)) {
                     if (it.data == null || it.data.isEmpty() || it.data.find { u -> u.requestReceived } == null) {
                         empty_state_pane.visibility = View.VISIBLE
-                        contacts_pane.visibility = View.GONE
+                        search.visibility = View.GONE
+                        icon.visibility = View.GONE
                     } else {
+                        search.visibility = View.VISIBLE
+                        icon.visibility = View.VISIBLE
                         empty_state_pane.visibility = View.GONE
-                        contacts_pane.visibility = View.VISIBLE
                     }
                     initialSearch = false
                 }
@@ -137,6 +163,7 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         })
 
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner, Observer {
+            imitateUserInteraction()
             contactsAdapter.sendContactRequestWorkStateMap = it
         })
         dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner, Observer<Resource<Boolean>> {
@@ -144,6 +171,47 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
                 searchContacts()
             }
         })
+        dashPayViewModel.searchUsernamesLiveData.observe(viewLifecycleOwner, Observer {
+            if (it.data != null && it.data.isNotEmpty()) {
+                showSuggestedUsers(it.data)
+            } else {
+                showSuggestedUsers(null)
+            }
+        })
+    }
+
+    private fun showSuggestedUsers(users: List<UsernameSearchResult>?) {
+        val results = contactsAdapter.results
+
+        if (results.isEmpty()) {
+            results.add(ContactSearchResultsAdapter.ViewItem(null,
+                    ContactSearchResultsAdapter.CONTACT_NO_RESULTS))
+        }
+
+        if (users != null) {
+            results.add(ContactSearchResultsAdapter.ViewItem(null,
+                    ContactSearchResultsAdapter.CONTACTS_SUGGESTIONS_HEADER))
+            for (user in users) {
+                results.add(ContactSearchResultsAdapter.ViewItem(user,
+                        ContactSearchResultsAdapter.CONTACT_SUGGESTION_ROW))
+            }
+        }
+
+
+        contactsAdapter.results = results
+    }
+
+    private fun showEmptySuggestions() {
+        suggestions_search_no_result.visibility = View.VISIBLE
+        KeyboardUtil.hideKeyboard(requireContext(), requireView())
+        val searchUsersBtn = suggestions_search_no_result.findViewById<View>(R.id.search_for_user_suggestions)
+        searchUsersBtn.setOnClickListener {
+            onSearchUser()
+        }
+        val text = getString(R.string.suggestions_empty_result_part_1) +
+                " \"<b>$query</b>\" " + getString(R.string.suggestions_empty_result_part_2)
+        val noResultsLabel = suggestions_search_no_result.findViewById<TextView>(R.id.no_results_label)
+        noResultsLabel.text = HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 
     override fun onResume() {
@@ -167,22 +235,23 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             }
         }
 
-        if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS)
+        if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
-        requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
-
+            requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        } else if (mode == MODE_VIEW_REQUESTS) {
+            requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        }
         // process contacts
         val contacts = if (mode != MODE_VIEW_REQUESTS)
             data.filter { r -> r.requestSent && r.requestReceived }
         else ArrayList()
 
-        if (contacts.isNotEmpty() && mode != MODE_VIEW_REQUESTS)
+        if (contacts.isNotEmpty() && mode != MODE_VIEW_REQUESTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
-        contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
-
+            contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        }
         contactsAdapter.results = results
     }
-
 
     override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
         if (mode == MODE_SEARCH_CONTACTS) {
@@ -191,20 +260,41 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
         return super.onCreateOptionsMenu(menu, menuInflater)
     }
 
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.contacts_add_contact -> {
+                onSearchUser()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     override fun onSortOrderChanged(direction: UsernameSortOrderBy) {
         this.direction = direction
         searchContacts()
     }
 
+    override fun onSearchUser() {
+        startActivity(SearchUserActivity.createIntent(requireContext(), query))
+    }
+
     private fun searchContacts() {
+        suggestions_search_no_result.visibility = View.GONE
         if (this::searchContactsRunnable.isInitialized) {
-            handler.removeCallbacks(searchContactsRunnable)
+            searchHandler.removeCallbacks(searchContactsRunnable)
         }
 
         searchContactsRunnable = Runnable {
+            contactsAdapter.query = query
             dashPayViewModel.searchContacts(query, direction)
+            if (mode == MODE_SEARCH_CONTACTS) {
+                if (!initialSearch && query.isNotEmpty()) {
+                    dashPayViewModel.searchUsernames(query, limit = 3, removeContacts = true)
+                }
+            }
         }
-        handler.postDelayed(searchContactsRunnable, 500)
+        searchHandler.postDelayed(searchContactsRunnable, 500)
     }
 
     override fun afterTextChanged(s: Editable?) {
@@ -212,6 +302,10 @@ class ContactsFragment : Fragment(R.layout.fragment_contacts_root), TextWatcher,
             query = it.toString()
             searchContacts()
         }
+    }
+
+    private fun imitateUserInteraction() {
+        (requireActivity() as InteractionAwareActivity).imitateUserInteraction()
     }
 
     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {

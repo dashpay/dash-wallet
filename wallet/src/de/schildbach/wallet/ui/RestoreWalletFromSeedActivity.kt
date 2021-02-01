@@ -130,6 +130,9 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 Status.ERROR -> {
                     showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
                 }
+                else -> {
+                    // ignore
+                }
             }
         })
         viewModel.startActivityAction.observe(this, Observer {

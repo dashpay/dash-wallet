@@ -14,7 +14,7 @@ class DeriveKeyWorker(context: Context, parameters: WorkerParameters)
         const val KEY_ENCRYPTION_KEY = "DeriveKeyWorker.ENCRYPTION_KEY"
     }
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD) ?: return Result.failure()
         return try {
             val encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)

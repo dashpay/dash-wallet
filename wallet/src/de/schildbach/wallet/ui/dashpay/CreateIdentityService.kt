@@ -8,6 +8,7 @@ import android.os.HandlerThread
 import android.os.PowerManager
 import android.os.Process
 import androidx.lifecycle.LifecycleService
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -79,7 +80,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         @JvmStatic
-        fun createIntentForRestore(context: Context, identity: String): Intent {
+        fun createIntentForRestore(context: Context, identity: ByteArray): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RESTORE_IDENTITY
                 putExtra(EXTRA_IDENTITY, identity)
@@ -115,6 +116,8 @@ class CreateIdentityService : LifecycleService() {
 
     private val createIdentityexceptionHandler = CoroutineExceptionHandler { _, exception ->
         log.error(exception.message, exception)
+        FirebaseCrashlytics.getInstance().log("Failed to create Identity")
+        FirebaseCrashlytics.getInstance().recordException(exception)
         GlobalScope.launch {
             if (this@CreateIdentityService::blockchainIdentityData.isInitialized) {
                 log.error("[${blockchainIdentityData.creationState}(error)]", exception)
@@ -170,7 +173,7 @@ class CreateIdentityService : LifecycleService() {
                     handleCreateIdentityAction(null)
                 }
                 ACTION_RESTORE_IDENTITY -> {
-                    val identity = intent.getStringExtra(EXTRA_IDENTITY)
+                    val identity = intent.getByteArrayExtra(EXTRA_IDENTITY)!!
                     handleRestoreIdentityAction(identity)
                 }
             }
@@ -200,7 +203,7 @@ class CreateIdentityService : LifecycleService() {
                 val cftx = blockchainIdentityDataTmp.findCreditFundingTransaction(walletApplication.wallet)
                         ?: throw IllegalStateException()
 
-                restoreIdentity(cftx.creditBurnIdentityIdentifier.toStringBase58())
+                restoreIdentity(cftx.creditBurnIdentityIdentifier.bytes)
                 return
             }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
@@ -276,7 +279,6 @@ class CreateIdentityService : LifecycleService() {
         }
 
         if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERING) {
-            platformRepo.updateCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
             //
             // Step 4: Preorder the username
             if (!blockchainIdentity.getUsernames().contains(blockchainIdentityData.username!!)) {
@@ -284,6 +286,7 @@ class CreateIdentityService : LifecycleService() {
             }
             platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            platformRepo.updateCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
         }
 
         if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERED) {
@@ -328,7 +331,7 @@ class CreateIdentityService : LifecycleService() {
         log.info("username registration complete")
     }
 
-    private fun handleRestoreIdentityAction(identity: String) {
+    private fun handleRestoreIdentityAction(identity: ByteArray) {
         workInProgress = true
         serviceScope.launch(createIdentityexceptionHandler) {
             restoreIdentity(identity)
@@ -337,15 +340,16 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
-    private suspend fun restoreIdentity(identity: String) {
+    private suspend fun restoreIdentity(identity: ByteArray) {
         log.info("Restoring identity and username")
+        platformRepo.updateSyncStatus(PreBlockStage.StartRecovery)
 
         // use an "empty" state for each
         blockchainIdentityData = BlockchainIdentityData(CreationState.NONE, null, null, null, true)
 
         val cftxs = walletApplication.wallet.creditFundingTransactions
 
-        val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { cftx -> cftx.creditBurnIdentityIdentifier.toStringBase58() == identity }
+        val creditFundingTransaction: CreditFundingTransaction? = cftxs.find { it.creditBurnIdentityIdentifier.bytes!!.contentEquals(identity) }
 
         val existingBlockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDao().load()
         if (existingBlockchainIdentityData != null) {
@@ -358,7 +362,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         val loadingFromCreditFundingTransaction = creditFundingTransaction != null
-        var existingIdentity: Identity? = null
+        var existingIdentity: Identity?
 
         if (!loadingFromCreditFundingTransaction) {
             existingIdentity = platformRepo.getIdentityFromPublicKeyId()
@@ -378,6 +382,7 @@ class CreateIdentityService : LifecycleService() {
         // this process should have been done already, otherwise the credit funding transaction
         // will not have the credit burn keys associated with it
         platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+        platformRepo.updateSyncStatus(PreBlockStage.InitWallet)
 
         //
         // Step 2: The credit funding registration exists, no need to create it
@@ -395,6 +400,8 @@ class CreateIdentityService : LifecycleService() {
         }
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
+        platformRepo.updateSyncStatus(PreBlockStage.GetIdentity)
+
 
         //
         // Step 4: We don't need to find the preorder documents
@@ -407,6 +414,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.recoverUsernamesAsync(blockchainIdentity)
         platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
+        platformRepo.updateSyncStatus(PreBlockStage.GetName)
 
         //
         // Step 6: Find the profile
@@ -415,7 +423,7 @@ class CreateIdentityService : LifecycleService() {
         platformRepo.recoverDashPayProfile(blockchainIdentity)
         // blockchainIdentity hasn't changed
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
-
+        platformRepo.updateSyncStatus(PreBlockStage.GetProfile)
 
         // We are finished recovering
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE)
@@ -423,6 +431,7 @@ class CreateIdentityService : LifecycleService() {
         // Complete the entire process
         platformRepo.updateCreationState(blockchainIdentityData, CreationState.DONE_AND_DISMISS)
 
+        platformRepo.updateSyncStatus(PreBlockStage.RecoveryComplete)
         PlatformRepo.getInstance().init()
     }
 
@@ -482,22 +491,21 @@ class CreateIdentityService : LifecycleService() {
                     when (reason) {
                         // If this transaction is in a block, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.DEPTH -> {
-                            confidence!!.removeEventListener(this)
-                            continuation.resumeWith(Result.success(true))
+                            // TODO: a chainlock is needed to accompany the block information
+                            // to provide sufficient proof
                         }
                         // If this transaction is InstantSend Locked, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
-                            if (confidence!!.isTransactionLocked) {
+                            // TODO: allow for received (IX_REQUEST) instantsend locks
+                            // until the bug related to instantsend lock verification is fixed.
+                            if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
                                 confidence.removeEventListener(this)
                                 continuation.resumeWith(Result.success(true))
                             }
                         }
                         // If this transaction has been seen by more than 1 peer, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.SEEN_PEERS -> {
-                            if (confidence!!.numBroadcastPeers() > 1) {
-                                confidence.removeEventListener(this)
-                                continuation.resumeWith(Result.success(true))
-                            }
+                            // being seen by other peers is no longer sufficient proof
                         }
                         // If this transaction was rejected, then it was not sent successfully
                         TransactionConfidence.Listener.ChangeReason.REJECT -> {
@@ -520,6 +528,9 @@ class CreateIdentityService : LifecycleService() {
                                 log.info("Error sending ${cftx.txId}: ${rejectMessage.reasonString}")
                                 continuation.resumeWithException(RejectedTransactionException(cftx, rejectMessage))
                             }
+                        }
+                        else -> {
+                            // ignore
                         }
                     }
                 }

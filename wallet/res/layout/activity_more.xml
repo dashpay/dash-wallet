@@ -25,103 +25,152 @@
             android:orientation="vertical">
 
             <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/userInfoContainer"
+                android:id="@+id/join_dashpay_container"
+                style="@style/MenuRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="0dp"
                 android:visibility="gone"
                 tools:visibility="visible">
 
-                <ImageView
-                    android:id="@+id/dashpayUserAvatar"
-                    android:layout_width="134dp"
-                    android:layout_height="134dp"
-                    android:layout_marginTop="60dp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0"
-                    tools:src="@drawable/user5" />
-
-                <ImageButton
-                    android:id="@+id/profile_qr_icon"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/transparent_button_background"
-                    app:layout_constraintBottom_toBottomOf="@id/dashpayUserAvatar"
-                    app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
-                    app:srcCompat="@drawable/ic_profile_qr" />
-
                 <TextView
-                    android:id="@+id/username1"
+                    android:id="@+id/join_dashpay_title"
                     style="@style/MontserratSemiBold"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/shortcut_action_join_dashpay"
                     android:textColor="@android:color/black"
-                    android:textSize="24sp"
-                    app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
-                    app:layout_constraintStart_toStartOf="@id/dashpayUserAvatar"
-                    app:layout_constraintTop_toBottomOf="@id/dashpayUserAvatar"
-                    tools:text="Katie Rennie" />
+                    android:textSize="14sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
-                    android:id="@+id/username2"
+                    android:id="@+id/join_dashpay_subtitle"
                     style="@style/MontserratRegular"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginStart="26dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="26dp"
+                    android:layout_marginBottom="22dp"
+                    android:gravity="center"
+                    android:text="@string/join_dashpay_more_subtitle"
                     android:textColor="@color/dash_gray"
-                    android:textSize="16sp"
-                    app:layout_constraintEnd_toEndOf="@id/username1"
-                    app:layout_constraintStart_toStartOf="@id/username1"
-                    app:layout_constraintTop_toBottomOf="@id/username1"
-                    tools:text="katierennie09" />
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/join_dashpay_title" />
 
-                <TextView
-                    android:id="@+id/editProfile"
-                    style="@style/MontserratRegular"
-                    android:layout_width="wrap_content"
+                <Button
+                    android:id="@+id/join_dashpay_btn"
+                    style="@style/DashButton.Blue"
+                    android:layout_width="110dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:layout_marginBottom="40dp"
-                    android:text="@string/edit_profile"
-                    android:textColor="@color/dash_blue"
-                    android:textSize="16sp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="@id/username2"
-                    app:layout_constraintStart_toStartOf="@id/username2"
-                    app:layout_constraintTop_toBottomOf="@id/username2" />
-
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/update_profile_status_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginEnd="10dp"
+                    android:layout_marginTop="30dp"
+                    android:layout_marginBottom="14dp"
+                    android:text="@string/join"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/editProfile"
-                    android:background="@drawable/selectable_round_corners">
+                    app:layout_constraintTop_toBottomOf="@id/join_dashpay_subtitle"
+                    app:layout_constraintVertical_bias="0" />
 
-                    <TextView
-                        android:id="@+id/update_status_text"
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <ViewFlipper
+                android:id="@+id/edit_update_switcher"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:animateFirstView="false"
+                android:inAnimation="@android:anim/fade_in"
+                android:measureAllChildren="false"
+                android:outAnimation="@android:anim/fade_out">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/userInfoContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:id="@+id/dashpayUserAvatar"
+                        android:layout_width="134dp"
+                        android:layout_height="134dp"
+                        android:layout_marginTop="35dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintVertical_bias="0"
+                        tools:src="@drawable/user5" />
+
+                    <ImageButton
+                        android:id="@+id/profile_qr_icon"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
+                        android:background="@drawable/transparent_button_background"
+                        app:layout_constraintBottom_toBottomOf="@id/dashpayUserAvatar"
+                        app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
+                        app:srcCompat="@drawable/ic_profile_qr" />
+
+                    <TextView
+                        android:id="@+id/username1"
+                        style="@style/MontserratSemiBold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:textColor="@android:color/black"
+                        android:textSize="24sp"
+                        app:layout_constraintEnd_toEndOf="@id/dashpayUserAvatar"
+                        app:layout_constraintStart_toStartOf="@id/dashpayUserAvatar"
+                        app:layout_constraintTop_toBottomOf="@id/dashpayUserAvatar"
+                        tools:text="Katie Rennie" />
+
+                    <TextView
+                        android:id="@+id/username2"
+                        style="@style/MontserratRegular"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/dash_gray"
+                        android:textSize="16sp"
+                        app:layout_constraintEnd_toEndOf="@id/username1"
+                        app:layout_constraintStart_toStartOf="@id/username1"
+                        app:layout_constraintTop_toBottomOf="@id/username1"
+                        tools:text="katierennie09" />
+
+                    <TextView
+                        android:id="@+id/edit_profile"
+                        style="@style/MontserratRegular"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|center_horizontal"
+                        android:background="?attr/selectableItemBackground"
+                        android:padding="8dp"
+                        android:text="@string/edit_profile"
+                        android:textColor="@color/dash_blue"
+                        android:textSize="16sp"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginBottom="18dp"
-
-                        android:text="Updating profile on Dash Network" />
-
+                        app:layout_constraintEnd_toEndOf="@id/username2"
+                        app:layout_constraintStart_toStartOf="@id/username2"
+                        app:layout_constraintTop_toBottomOf="@id/username2" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                <include
+                    android:id="@+id/update_profile"
+                    layout="@layout/fragment_updating_profile" />
+
+                <include
+                    android:id="@+id/error_updating_profile"
+                    layout="@layout/fragment_update_profile_error" />
+
+            </ViewFlipper>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -132,7 +181,7 @@
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/buy_and_sell"
                     style="@style/MenuRow"
-                    android:layout_marginTop="25dp">
+                    android:layout_marginTop="20dp">
 
                     <ImageView
                         android:id="@+id/buy_dash_icon"

@@ -78,6 +78,8 @@ public class Configuration {
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
     public static final String PREFS_LAST_SEEN_NOTIFICATION_TIME = "last_seen_notification_time";
+    private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
+    private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
@@ -431,7 +433,22 @@ public class Configuration {
         return prefs.getLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, 0);
     }
 
-    public void setPrefsLastSeenNotificationTime(long lastSeenNotificationTime) {
+    public void setLastSeenNotificationTime(long lastSeenNotificationTime) {
         prefs.edit().putLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, lastSeenNotificationTime).apply();
+    }
+
+    public String getImgurDeleteHash() {
+        return prefs.getString(PREFS_IMGUR_DELETE_HASH, "");
+    }
+
+    public void setImgurDeleteHash(String deleteHash) {
+        prefs.edit().putString(PREFS_IMGUR_DELETE_HASH, deleteHash).apply();
+    }
+
+    public Boolean getAcceptedUploadPolicy(String service) {
+        return prefs.getBoolean(PREFS_UPLOAD_POLICY + service, false);
+    }
+    public void setAcceptedUploadPolicy(String service, Boolean accepted) {
+        prefs.edit().putBoolean(PREFS_UPLOAD_POLICY + service, accepted).apply();
     }
 }

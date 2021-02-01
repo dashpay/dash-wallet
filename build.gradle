@@ -12,12 +12,13 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.0.2'
+        classpath 'com.android.tools.build:gradle:4.1.1'
         classpath('fr.avianey.androidsvgdrawable:gradle-plugin:3.0.0') {
             exclude group: 'xerces'
         }
         classpath 'com.google.gms:google-services:4.3.4'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.4.1' // Crashlytics
     }
 }
 
@@ -27,5 +28,6 @@ allprojects {
         mavenLocal()
         jcenter()
         maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
+        maven { url 'https://jitpack.io' }
     }
 }

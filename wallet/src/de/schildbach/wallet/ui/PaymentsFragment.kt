@@ -21,12 +21,13 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
-import androidx.fragment.app.Fragment
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.tabs.TabLayout
+import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.*
 
-class PaymentsFragment : Fragment(R.layout.activity_payments) {
+class PaymentsFragment : BottomNavFragment(R.layout.activity_payments) {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
@@ -47,6 +48,8 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
         }
     }
 
+    override val navigationItemId = R.id.payments
+
     private var saveRecentTab = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,8 +60,9 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        toolbar.setTitle(R.string.payments_title)
-        setupActionBarWithTitle(R.string.payments_title, false)
+        toolbar.title = ""
+        val appCompatActivity = requireActivity() as AppCompatActivity
+        appCompatActivity.setSupportActionBar(toolbar)
 
         //TODO: Implement FragmentViewPager
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -112,5 +116,4 @@ class PaymentsFragment : Fragment(R.layout.activity_payments) {
         menuInflater.inflate(R.menu.payment_options, menu)
         super.onCreateOptionsMenu(menu, menuInflater)
     }
-
 }

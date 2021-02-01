@@ -25,14 +25,13 @@ import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationsAdapter
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
@@ -45,8 +44,6 @@ import org.dash.wallet.common.InteractionAwareActivity
 class DashPayUserActivity : InteractionAwareActivity(),
         NotificationsAdapter.OnItemClickListener,
         ContactViewHolder.OnContactActionClickListener {
-
-    private var initialDataLoaded = false
 
     private lateinit var viewModel: DashPayUserActivityViewModel
     private lateinit var dashPayViewModel: DashPayViewModel
@@ -61,11 +58,20 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
     companion object {
         private const val EXTRA_INIT_USER_DATA = "extra_init_user_data"
+        private const val EXTRA_INIT_PROFILE_DATA = "extra_init_profile_data"
         private const val EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER = "extra_show_contact_history_disclaimer"
 
         const val REQUEST_CODE_DEFAULT = 0
         const val RESULT_CODE_OK = 1
         const val RESULT_CODE_CHANGED = 2
+
+        @JvmStatic
+        fun createIntent(context: Context, dashPayProfile: DashPayProfile): Intent {
+            val intent = Intent(context, DashPayUserActivity::class.java)
+            intent.putExtra(EXTRA_INIT_PROFILE_DATA, dashPayProfile)
+            intent.putExtra(EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER, false)
+            return intent
+        }
 
         @JvmStatic
         fun createIntent(context: Context, usernameSearchResult: UsernameSearchResult, showContactHistoryDisclaimer: Boolean = false): Intent {
@@ -85,13 +91,24 @@ class DashPayUserActivity : InteractionAwareActivity(),
         viewModel = ViewModelProvider(this).get(DashPayUserActivityViewModel::class.java)
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
-        viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)
-        updateContactRelationUi()
+        if (intent.hasExtra(EXTRA_INIT_USER_DATA)) {
+            viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)!!
+            viewModel.updateProfileData(viewModel.userData.dashPayProfile) // save the profile to the database for non-contacts
+            updateContactRelationUi()
+        } else {
+            val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile
+            viewModel.updateProfileData(dashPayProfile) // save the profile to the database for non-contacts
+            viewModel.userData = UsernameSearchResult(dashPayProfile.username, dashPayProfile, null, null)
+            viewModel.initUserData(dashPayProfile.username).observe(this, Observer {
+                updateContactRelationUi()
+            })
+        }
 
         viewModel.userLiveData.observe(this, Observer {
             updateContactRelationUi()
         })
         viewModel.sendContactRequestState.observe(this, Observer {
+            imitateUserInteraction()
             updateContactRelationUi()
         })
         viewModel.notificationsForUser.observe(this, Observer {
@@ -106,13 +123,8 @@ class DashPayUserActivity : InteractionAwareActivity(),
         val profile = viewModel.userData.dashPayProfile
         val displayName = profile.displayName
 
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(this, username[0])
-        if (profile.avatarUrl.isNotEmpty()) {
-            Glide.with(this).load(profile.avatarUrl).circleCrop()
-                    .placeholder(defaultAvatar).into(avatar)
-        } else {
-            avatar.background = defaultAvatar
-        }
+        ProfilePictureDisplay.display(avatar, profile)
+
         if (displayName.isNotEmpty()) {
             displayNameTxt.text = displayName
             usernameTxt.text = username
@@ -149,34 +161,28 @@ class DashPayUserActivity : InteractionAwareActivity(),
         val state = viewModel.sendContactRequestState.value
         ContactRelation.process(viewModel.userData.type, state, object : ContactRelation.RelationshipCallback {
             override fun none() {
-                if (showContactHistoryDisclaimer) {
-                    contact_request_pane.applyDisclaimerState(userData.username)
-                } else {
-                    contact_request_pane.applySendState()
-                }
+                contact_request_pane.applySendStateWithDisclaimer(userData.username)
                 activity_rv.visibility = View.GONE
+                activity_rv_top_line.visibility = View.GONE
             }
 
             override fun inviting() {
-                if (showContactHistoryDisclaimer) {
-                    contact_request_pane.applyDisclaimerSendingState()
-                } else {
-                    contact_request_pane.applySendingState()
-                }
+                contact_request_pane.applySendingStateWithDisclaimer(userData.username)
             }
 
             override fun invited() {
-                if (showContactHistoryDisclaimer) {
-                    contact_request_pane.applySentStateWithDisclaimer(userData.username)
-                } else {
-                    contact_request_pane.applySentState()
-                }
-                activity_rv.visibility = View.VISIBLE
+                contact_request_pane.applySentStateWithDisclaimer(userData.username)
+                viewModel.initUserData(userData.username).observe(this@DashPayUserActivity, {
+                    activity_rv.visibility = View.VISIBLE
+                    activity_rv_top_line.visibility = View.VISIBLE
+                    viewModel.initNotificationsForUser()
+                })
             }
 
             override fun inviteReceived() {
                 contact_request_pane.applyReceivedState(userData.username)
                 activity_rv.visibility = View.VISIBLE
+                activity_rv_top_line.visibility = View.GONE
             }
 
             override fun acceptingInvite() {
@@ -186,6 +192,7 @@ class DashPayUserActivity : InteractionAwareActivity(),
             override fun friends() {
                 contact_request_pane.applyFriendsState()
                 activity_rv.visibility = View.VISIBLE
+                activity_rv_top_line.visibility = View.GONE
             }
 
         })

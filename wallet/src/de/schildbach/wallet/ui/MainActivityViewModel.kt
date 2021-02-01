@@ -1,23 +1,17 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.liveData
 import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
 
-class MainActivityViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val walletApplication = application as WalletApplication
-    private val platformRepo = PlatformRepo.getInstance()
+class MainActivityViewModel(application: Application) : BaseProfileViewModel(application) {
 
     private val isPlatformAvailableData = liveData(Dispatchers.IO) {
         val status = platformRepo.isPlatformAvailable()
@@ -32,16 +26,9 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
     val blockchainState: BlockchainState?
         get() = blockchainStateData.value
 
-    val blockchainIdentityData = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase()
-    val blockchainIdentity: BlockchainIdentityBaseData?
-        get() = blockchainIdentityData.value
-
     val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
 
-    val hasIdentity: Boolean
-        get() = blockchainIdentity?.creationComplete ?: false
-
-    val isAbleToCreateIdentityData = MediatorLiveData<Boolean>().apply {
+    val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailableData) {
             value = combineLatestData()
         }
@@ -56,7 +43,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
         }
     }
     val isAbleToCreateIdentity: Boolean
-        get() = isAbleToCreateIdentityData.value ?: false
+        get() = isAbleToCreateIdentityLiveData.value ?: false
 
     private fun combineLatestData(): Boolean {
         val isPlatformAvailable = isPlatformAvailableData.value ?: false
@@ -67,4 +54,5 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
     }
 
     val goBackAndStartActivityEvent = SingleLiveEvent<Class<*>>()
+    val showCreateUsernameEvent = SingleLiveEventExt<Unit>()
 }

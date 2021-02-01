@@ -16,7 +16,6 @@
  */
 package de.schildbach.wallet.ui.dashpay.notification
 
-import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,6 +38,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.CurrencyTextView
 import org.dash.wallet.common.util.GenericUtils
+import java.util.*
 
 class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         NotificationViewHolder(R.layout.notification_transaction_row, inflater, parent) {
@@ -123,10 +123,7 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         // Set the time. eg.  "On <date> at <time>"
         //
         val time = tx.updateTime
-        val onTimeText: String = itemView.context.getString(R.string.transaction_row_time_text)
-        timeView.text = String.format(onTimeText,
-                DateUtils.formatDateTime(itemView.context, time.time, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_YEAR),
-                DateUtils.formatDateTime(itemView.context, time.time, DateUtils.FORMAT_SHOW_TIME))
+        timeView.setText(WalletUtils.formatDate(time.time))
 
         //
         // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
@@ -194,6 +191,7 @@ class TransactionViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
 
     init {
         fiatView.setApplyMarkup(false)
+        valueView.setApplyMarkup(false)
         rateNotAvailableView = itemView.findViewById(R.id.transaction_row_rate_not_available) as TextView
     }
 }

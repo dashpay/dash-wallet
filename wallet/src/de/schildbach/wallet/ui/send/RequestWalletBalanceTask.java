@@ -32,6 +32,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.Stack;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.SocketFactory;
@@ -70,6 +71,9 @@ import de.schildbach.wallet_test.R;
 import android.content.res.AssetManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Pair;
+
+import de.schildbach.wallet_test.BuildConfig;
 
 import okhttp3.Call;
 import okhttp3.Request;
@@ -327,22 +331,23 @@ public final class RequestWalletBalanceTask {
 	}
 
 	boolean requestWalletBalanceFromBlockExplorers(Address address) {
-		Set<UTXO> utxos = requestWalletBalanceFromBlockExplorer("https://insight.dash.org/api/addr/", UnspentAPI.Insight, address);
+		Stack<Pair<String, UnspentAPI>> blockExplorers = new Stack<>();
 
-		if(utxos != null) {
-			onResult(utxos);
-			return true;
-		} else {
-			utxos = requestWalletBalanceFromBlockExplorer("https://explorer.dash.org/chain/Dash/unspent/", UnspentAPI.ABE, address);
-			if(utxos != null) {
+		if (BuildConfig.FLAVOR.equals("prod")) {
+			blockExplorers.push(new Pair<>("https://chainz.cryptoid.info/dash/api.dws?q=unspent", UnspentAPI.CryptoId));
+			blockExplorers.push(new Pair<>("https://insight.dash.org/insight-api/addr/", UnspentAPI.Insight));
+		} else if (BuildConfig.FLAVOR.equals("_testNet3")) {
+			blockExplorers.push(new Pair<>("https://testnet-insight.dashevo.org/insight-api/addr/", UnspentAPI.Insight));
+		} else if (BuildConfig.FLAVOR.equals("evonet")) {
+			blockExplorers.push(new Pair<>("http://insight.evonet.networks.dash.org:3001/insight-api/addr/", UnspentAPI.Insight));
+		}
+
+		while (!blockExplorers.empty()) {
+			Pair<String, UnspentAPI> explorer = blockExplorers.pop();
+			final Set<UTXO> utxos = requestWalletBalanceFromBlockExplorer(explorer.first, explorer.second, address);
+			if (utxos != null) {
 				onResult(utxos);
 				return true;
-			} else {
-				utxos = requestWalletBalanceFromBlockExplorer("https://chainz.cryptoid.info/dash/api.dws?q=unspent", UnspentAPI.CryptoId, address);
-				if(utxos != null) {
-					onResult(utxos);
-					return true;
-				}
 			}
 		}
 		onFail(R.string.error_io, "cannot connect to any block explorer for unspent outputs");

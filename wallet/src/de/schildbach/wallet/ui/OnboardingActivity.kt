@@ -28,7 +28,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
@@ -72,7 +72,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         setContentView(R.layout.activity_onboarding)
         slogan.setPadding(slogan.paddingLeft, slogan.paddingTop, slogan.paddingRight, getStatusBarHeightPx())
 
-        viewModel = ViewModelProviders.of(this).get(OnboardingViewModel::class.java)
+        viewModel = ViewModelProvider(this).get(OnboardingViewModel::class.java)
 
         walletApplication = (application as WalletApplication)
         if (walletApplication.walletFileExists()) {

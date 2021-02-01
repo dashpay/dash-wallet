@@ -25,6 +25,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.Wallet
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
 
 @Entity(tableName = "blockchain_identity")
@@ -33,6 +34,7 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
                                   var username: String?,
                                   var userId: String?,
                                   var restoring: Boolean,
+                                  var identity: Identity? = null,
                                   var creditFundingTxId: Sha256Hash? = null,
                                   var preorderSalt: ByteArray? = null,
                                   var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
@@ -46,7 +48,7 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
 
     @PrimaryKey
     var id = 1
-        set(value) {
+        set(@Suppress("UNUSED_PARAMETER") value) {
             field = 1
         }
 

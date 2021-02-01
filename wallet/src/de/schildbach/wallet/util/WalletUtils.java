@@ -29,10 +29,13 @@ import java.io.InputStreamReader;
 import java.io.Writer;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 
 import javax.annotation.Nullable;
 
@@ -113,6 +116,23 @@ public class WalletUtils {
         }
 
         return builder;
+    }
+
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a",Locale.getDefault());
+    private static SimpleDateFormat dateFormatNoYear = new SimpleDateFormat("MMM dd, KK:mm a", Locale.getDefault());
+
+    public static String formatDate(long timeStamp) {
+        Calendar calendar = Calendar.getInstance();
+        Date currentDate = new Date(System.currentTimeMillis());
+        calendar.setTime(currentDate);
+        int currentYear = calendar.get(Calendar.YEAR);
+
+        Date txDate = new Date(timeStamp);
+        calendar.setTime(txDate);
+        int txYear = calendar.get(Calendar.YEAR);
+        SimpleDateFormat format = currentYear == txYear ? dateFormatNoYear : dateFormat;
+
+        return format.format(timeStamp).replace("AM", "am").replace("PM", "pm");
     }
 
     @Nullable

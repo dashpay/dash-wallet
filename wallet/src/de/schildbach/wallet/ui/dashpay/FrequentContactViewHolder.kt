@@ -18,19 +18,16 @@ package de.schildbach.wallet.ui.dashpay
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
-import kotlinx.android.synthetic.main.frequent_contact_item.view.*
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.frequent_contact_item.view.*
 
 class FrequentContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, val itemClickListener: OnContactItemClickListener?) :
         RecyclerView.ViewHolder(inflater.inflate(R.layout.frequent_contact_item, parent, false)) {
 
-    open fun bind(usernameSearchResult: UsernameSearchResult) {
+    fun bind(usernameSearchResult: UsernameSearchResult) {
         itemView.apply {
-            val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
-                    usernameSearchResult.username[0])
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             if (dashPayProfile.displayName.isEmpty()) {
@@ -39,12 +36,7 @@ class FrequentContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, val
                 display_name.text = dashPayProfile.displayName
             }
 
-            if (dashPayProfile.avatarUrl.isNotEmpty()) {
-                Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
-                        .placeholder(defaultAvatar).into(avatar)
-            } else {
-                avatar.background = defaultAvatar
-            }
+            ProfilePictureDisplay.display(avatar, dashPayProfile)
 
             itemClickListener?.let { l ->
                 setOnClickListener {

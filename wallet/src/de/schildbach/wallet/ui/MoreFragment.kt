@@ -17,36 +17,35 @@
 package de.schildbach.wallet.ui
 
 import android.content.Intent
+import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
-import androidx.fragment.app.Fragment
+import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.lifecycleOwner
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_edit_profile.*
 import kotlinx.android.synthetic.main.activity_more.*
-import kotlinx.android.synthetic.main.activity_more.dashpayUserAvatar
-import kotlinx.android.synthetic.main.activity_more.userInfoContainer
+import kotlinx.android.synthetic.main.fragment_updating_profile.*
+import kotlinx.android.synthetic.main.fragment_update_profile_error.*
+import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
-import org.dashevo.dashpay.BlockchainIdentity
 
-class MoreFragment : Fragment(R.layout.activity_more) {
+class MoreFragment : BottomNavFragment(R.layout.activity_more) {
+
+    override val navigationItemId = R.id.more
 
     private var blockchainState: BlockchainState? = null
-    private lateinit var dashPayProfile: DashPayProfile
     private lateinit var editProfileViewModel: EditProfileViewModel
+    private lateinit var mainActivityViewModel: MainActivityViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -77,64 +76,84 @@ class MoreFragment : Fragment(R.layout.activity_more) {
             ReportIssueDialogBuilder.createReportIssueDialog(requireActivity(),
                     WalletApplication.getInstance()).show()
         }
+        error_try_again.setOnClickListener {
+            editProfileViewModel.retryBroadcastProfile()
+        }
+        cancel.setOnClickListener {
+            if (edit_update_switcher.displayedChild == 2) {
+                edit_update_switcher.displayedChild = 0 // reset to previous profile
+                editProfileViewModel.clearLastAttemptedProfile()
+            }
 
-        update_profile_status_container.visibility = View.GONE
+        }
+        edit_update_switcher.isVisible = false
+        join_dashpay_btn.setOnClickListener {
+            mainActivityViewModel.goBackAndStartActivityEvent.postValue(CreateUsernameActivity::class.java)
+        }
+        initViewModel()
+    }
 
-
+    private fun initViewModel() {
+        mainActivityViewModel = ViewModelProvider(requireActivity()).get(MainActivityViewModel::class.java)
         editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
 
-        // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
-        // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
-        editProfileViewModel.blockchainIdentityData.observe(viewLifecycleOwner, Observer {
-            if (it != null && it.creationState >= BlockchainIdentityData.CreationState.DONE) {
-
-                // observe our profile
-                editProfileViewModel.dashPayProfileData
-                        .observe(viewLifecycleOwner, Observer { profile ->
-                            if (profile != null) {
-                                dashPayProfile = profile
-                                showProfileSection(profile)
-                            }
-                        })
-
-                // track the status of broadcast changes to our profile
-                editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
-                    if (state != null) {
-                        when (state.status) {
-                            Status.SUCCESS -> {
-                                Toast.makeText(requireActivity(), "Update successful", Toast.LENGTH_LONG).show()
-                                update_profile_status_container.visibility = View.GONE
-                                editProfile.visibility = View.VISIBLE
-                            }
-                            Status.ERROR -> {
-                                var msg = state.message
-                                if (msg == null) {
-                                    msg = "!!Error!!  ${state.exception!!.message}"
-                                }
-                                Toast.makeText(requireActivity(), msg, Toast.LENGTH_LONG).show()
-                                update_profile_status_container.visibility = View.VISIBLE
-                                update_status_text.text = msg
-                                editProfile.visibility = View.VISIBLE
-                            }
-                            Status.LOADING -> {
-                                Toast.makeText(requireActivity(), "Processing update", Toast.LENGTH_LONG).show()
-                                update_profile_status_container.visibility = View.VISIBLE
-                                editProfile.visibility = View.GONE
-                            }
-                            Status.CANCELED -> {
-                                update_profile_status_container.visibility = View.VISIBLE
-                                update_status_text.text = "Cancelled" //hard coded text
-                                editProfile.visibility = View.VISIBLE
+        // observe our profile
+        editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer { dashPayProfile ->
+            if (dashPayProfile != null) {
+                showProfileSection(dashPayProfile)
+            }
+        })
+        // track the status of broadcast changes to our profile
+        editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
+            if (state != null) {
+                (requireActivity() as InteractionAwareActivity).imitateUserInteraction()
+                when (state.status) {
+                    Status.SUCCESS -> {
+                        edit_update_switcher.apply {
+                            displayedChild = 0
+                        }
+                    }
+                    Status.ERROR -> {
+                        edit_update_switcher.apply {
+                            if (displayedChild != 2) {
+                                displayedChild = 2
+                                error_code_text.text = getString(R.string.error_updating_profile_code, state.message)
                             }
                         }
                     }
-                })
+                    Status.LOADING -> {
+                        edit_update_switcher.apply {
+                            if (displayedChild == 0 || displayedChild == 2) {
+                                //showNext()
+                                displayedChild = 1
+                                update_profile_status_icon.setImageResource(R.drawable.identity_processing)
+                                (update_profile_status_icon.drawable as AnimationDrawable).start()
+                            }
+                        }
+                    }
+                    Status.CANCELED -> {
+                        edit_update_switcher.apply {
+                            if (displayedChild != 0) {
+                                displayedChild = 0
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, {
+            join_dashpay_container.visibility = if (it) {
+                View.VISIBLE
+            } else {
+                View.GONE
             }
         })
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
-        userInfoContainer.visibility = View.VISIBLE
+        edit_update_switcher.visibility = View.VISIBLE
+        edit_update_switcher.displayedChild = 0
         if (profile.displayName.isNotEmpty()) {
             username1.text = profile.displayName
             username2.text = profile.username
@@ -143,15 +162,9 @@ class MoreFragment : Fragment(R.layout.activity_more) {
             username2.visibility = View.GONE
         }
 
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
-                profile.username.toCharArray()[0])
-        if (profile.avatarUrl.isNotEmpty()) {
-            Glide.with(dashpayUserAvatar).load(profile.avatarUrl).circleCrop()
-                    .placeholder(defaultAvatar).into(dashpayUserAvatar)
-        } else {
-            dashpayUserAvatar.setImageDrawable(defaultAvatar)
-        }
-        editProfile.setOnClickListener {
+        ProfilePictureDisplay.display(dashpayUserAvatar, profile)
+
+        edit_profile.setOnClickListener {
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
     }
@@ -165,5 +178,4 @@ class MoreFragment : Fragment(R.layout.activity_more) {
         val wallet = WalletApplication.getInstance().wallet
         startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
     }
-
 }

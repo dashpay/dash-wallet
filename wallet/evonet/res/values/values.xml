@@ -18,7 +18,7 @@
 		<item>µtDASH, no decimal places</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_values">
-		<item>http://devnet-evonet-1117662964.us-west-2.elb.amazonaws.com:3001/insight</item>
+		<item>http://insight.evonet.networks.dash.org:3001/insight</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">
 		<item>Insight Evonet Block Explorer</item>

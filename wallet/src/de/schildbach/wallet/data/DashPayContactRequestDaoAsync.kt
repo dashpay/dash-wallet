@@ -15,16 +15,16 @@ interface DashPayContactRequestDaoAsync {
     fun loadAll(): LiveData<DashPayContactRequest?>
 
     @Query("SELECT * FROM dashpay_contact_request WHERE userId = :userId")
-    fun loadToOthers(userId: String): LiveData<DashPayContactRequest?>
+    fun loadToOthers(userId: String): LiveData<List<DashPayContactRequest?>>
 
     @Query("SELECT * FROM dashpay_contact_request WHERE toUserId = :toUserId")
-    fun loadFromOthers(toUserId: String): LiveData<DashPayContactRequest?>
+    fun loadFromOthers(toUserId: String): LiveData<List<DashPayContactRequest?>>
 
     fun loadDistinctToOthers(id: String):
-            LiveData<DashPayContactRequest?> = loadToOthers(id).getDistinct()
+            LiveData<List<DashPayContactRequest?>> = loadToOthers(id).getDistinct()
 
     fun loadDistinctFromOthers(id: String):
-            LiveData<DashPayContactRequest?> = loadFromOthers(id).getDistinct()
+            LiveData<List<DashPayContactRequest?>> = loadFromOthers(id).getDistinct()
 
     @Query("DELETE FROM dashpay_contact_request")
     fun clear()

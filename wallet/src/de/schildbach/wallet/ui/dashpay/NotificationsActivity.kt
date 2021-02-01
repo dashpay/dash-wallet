@@ -32,7 +32,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
@@ -73,7 +72,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     private var direction = UsernameSortOrderBy.DATE_ADDED
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
-    private var currentPosition = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,33 +123,8 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 }
             }
         })
-
-        dashPayViewModel.getContactRequestLiveData.observe(this, object : Observer<Resource<DashPayContactRequest>> {
-            override fun onChanged(it: Resource<DashPayContactRequest>?) {
-                if (it != null && currentPosition != -1) {
-                    when (it.status) {
-                        Status.LOADING -> {
-
-                        }
-                        Status.ERROR -> {
-                            var msg = it.message
-                            if (msg == null) {
-                                msg = "!!Error!!  ${it.exception!!.message}"
-                            }
-                            Toast.makeText(this@NotificationsActivity, msg, Toast.LENGTH_LONG).show()
-                        }
-                        Status.SUCCESS -> {
-                            // update the data
-                            (notificationsAdapter.getItem(currentPosition).notificationItem as NotificationItemContact).usernameSearchResult.toContactRequest = it.data!!
-                            notificationsAdapter.notifyItemChanged(currentPosition)
-                            currentPosition = -1
-                            lastSeenNotificationTime = it.data.timestamp.toLong()
-                        }
-                    }
-                }
-            }
-        })
         dashPayViewModel.sendContactRequestState.observe(this, Observer {
+            imitateUserInteraction()
             notificationsAdapter.sendContactRequestWorkStateMap = it
         })
     }
@@ -238,16 +211,13 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     }
 
     override fun onDestroy() {
-        walletApplication.configuration.setPrefsLastSeenNotificationTime(max(lastSeenNotificationTime,
+        walletApplication.configuration.setLastSeenNotificationTime(max(lastSeenNotificationTime,
                 walletApplication.configuration.lastSeenNotificationTime) + DateUtils.SECOND_IN_MILLIS)
         super.onDestroy()
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
-        if (currentPosition == -1) {
-            currentPosition = position
-            dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
-        }
+        dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {

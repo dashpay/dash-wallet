@@ -23,6 +23,7 @@ import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.dashevo.dpp.identifier.Identifier
 
 class NotificationsForUserLiveData(walletApplication: WalletApplication,
                                    platformRepo: PlatformRepo,
@@ -42,12 +43,14 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication,
         scope.launch(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
             val contactRequests = platformRepo.searchContacts("", UsernameSortOrderBy.DATE_ADDED, true)
+            var accountReference: Int = 0
             if (contactRequests.data != null) {
                 contactRequests.data.filter { cr ->
                     cr.dashPayProfile.userId == userId
                 }.forEach {
                     if (it.type == UsernameSearchResult.Type.REQUEST_RECEIVED) {
                         results.add(NotificationItemContact(it, true))
+                        accountReference = it.fromContactRequest!!.accountReference
                     } else {
                         results.add(NotificationItemContact(it))
                     }
@@ -56,12 +59,13 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication,
                         val invitationItem =
                                 if (incoming) it.copy(toContactRequest = null) else it.copy(fromContactRequest = null)
                         results.add(NotificationItemContact(invitationItem, isInvitationOfEstablished = true))
+                        accountReference = it.fromContactRequest!!.accountReference
                     }
                 }
             }
 
             val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
-            val txs = blockchainIdentity.getContactTransactions(userId!!)
+            val txs = blockchainIdentity.getContactTransactions(Identifier.from(userId), accountReference)
 
             txs.forEach {
                 results.add(NotificationItemPayment(it))

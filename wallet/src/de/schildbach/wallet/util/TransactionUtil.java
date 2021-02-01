@@ -169,8 +169,9 @@ public class TransactionUtil {
     public static boolean isSending(Transaction tx, Wallet wallet) {
         Coin value = tx.getValue(wallet);
         TransactionConfidence confidence = tx.getConfidence();
-        return (value.isNegative() || value.isZero()) && tx.getType() == Transaction.Type.TRANSACTION_NORMAL &&
-                (confidence.getConfidenceType() != TransactionConfidence.ConfidenceType.BUILDING && (confidence.numBroadcastPeers() == 0 ||
-                        confidence.getIXType() != TransactionConfidence.IXType.IX_LOCKED));
+        return !(value.isPositive() ||
+                (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) ||
+                (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING && (
+                        (confidence.numBroadcastPeers() > 0 || confidence.getIXType() != TransactionConfidence.IXType.IX_LOCKED))));
     }
 }

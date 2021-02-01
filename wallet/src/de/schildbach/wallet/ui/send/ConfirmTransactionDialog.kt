@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.send
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -28,12 +27,12 @@ import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
-import com.bumptech.glide.Glide
+import androidx.preference.PreferenceManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
-import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
 
@@ -94,11 +93,11 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     }
 
     private val username by lazy {
-        arguments!!.getString(ARG_PAYEE_USERNAME)
+        requireArguments().getString(ARG_PAYEE_USERNAME)
     }
 
     private val pendingContactRequest by lazy {
-        arguments!!.getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
+        requireArguments().getBoolean(ARG_PAYEE_PENDING_CONTACT_REQUEST, false)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -108,7 +107,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         maybeCleanUpPrefs()
-        arguments!!.apply {
+        requireArguments().apply {
             input_value.text = getString(ARG_AMOUNT)
             fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
             fiat_value.text = getString(ARG_AMOUNT_FIAT)
@@ -133,15 +132,8 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
             } else if (displayNameText != null) {
                 sendtoaddress.visibility = View.GONE
                 displayname.text = displayNameText
-                val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(requireContext(),
-                        username!![0])
 
-                if (avatarUrl!!.isNotEmpty()) {
-                    Glide.with(avatar).load(avatarUrl).circleCrop()
-                            .placeholder(defaultAvatar).into(avatar)
-                } else {
-                    avatar.background = defaultAvatar
-                }
+                ProfilePictureDisplay.display(avatar, avatarUrl!!, null, username!!)
                 confirm_auto_accept.isChecked = autoAcceptLastValue
                 if (pendingContactRequest) {
                     confirm_auto_accept.visibility = View.VISIBLE

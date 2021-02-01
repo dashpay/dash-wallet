@@ -86,6 +86,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
         }
     }
 
+    private lateinit var transactionResultViewBinder: TransactionResultViewBinder
+    private lateinit var transaction: Transaction
+
     private val isUserAuthorised: Boolean by lazy {
         intent.extras!!.getBoolean(EXTRA_USER_AUTHORIZED)
     }
@@ -105,7 +108,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
         val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
 
-        var profile: DashPayProfile? = null
+        var profile: DashPayProfile?
         var userId: String? = null
         if (blockchainIdentity != null) {
             userId = blockchainIdentity.getContactForTransaction(tx!!)
@@ -124,10 +127,13 @@ class TransactionResultActivity : AbstractWalletActivity() {
     }
 
     private fun finishInitialization(tx: Transaction, dashPayProfile: DashPayProfile?) {
-        val transactionResultViewBinder = TransactionResultViewBinder(container, dashPayProfile)
+        this.transaction = tx
+        transactionResultViewBinder = TransactionResultViewBinder(container, dashPayProfile, true)
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
         transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
+        val mainThreadExecutor = ContextCompat.getMainExecutor(walletApplication)
+        tx.confidence.addEventListener(mainThreadExecutor, transactionResultViewBinder)
         view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
         transaction_close_btn.setOnClickListener {
             when {
@@ -145,8 +151,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
             }
         }
 
-        check_icon.setImageDrawable(ContextCompat.getDrawable(this,
-                R.drawable.check_animated))
         check_icon.postDelayed({
             check_icon.visibility = View.VISIBLE
             (check_icon.drawable as Animatable).start()
@@ -159,6 +163,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
         } else {
             startActivity(LockScreenActivity.createIntentAsNewTask(this))
         }
+        transaction.confidence.removeEventListener(transactionResultViewBinder)
         super.finish()
     }
 

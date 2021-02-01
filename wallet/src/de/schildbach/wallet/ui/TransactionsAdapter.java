@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,8 +28,6 @@ import android.widget.TextView;
 
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.bumptech.glide.Glide;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
@@ -44,7 +41,6 @@ import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -61,6 +57,7 @@ import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.ui.dashpay.ProcessingIdentityViewHolder;
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -72,6 +69,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     private static final String PREFS_FILE_NAME = TransactionsAdapter.class.getSimpleName() + ".prefs";
     private static final String PREFS_KEY_HIDE_HELLO_CARD = "hide_hello_card";
+    private static final String PREFS_KEY_HIDE_JOIN_DASHPAY_CARD = "hide_join_dashpay_card";
 
     private final SharedPreferences preferences;
 
@@ -97,6 +95,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private static final int VIEW_TYPE_HEADER = 0;
     private static final int VIEW_TYPE_TRANSACTION = 1;
     private static final int VIEW_TYPE_PROCESSING_IDENTITY = 2;
+    private static final int VIEW_TYPE_JOIN_DASHPAY = 3;
 
     private Map<Sha256Hash, TransactionCacheEntry> transactionCache = new HashMap<>();
 
@@ -104,6 +103,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private BlockchainIdentityBaseData blockchainIdentityData;
 
     private TransactionsHeaderViewHolder.Filter filter = TransactionsHeaderViewHolder.Filter.ALL;
+    private boolean canJoinDashPay;
+    private int joinDashPayItemId = "JOIN_DASHPAY".hashCode();
 
     private static class TransactionCacheEntry {
         private final Coin value;
@@ -183,7 +184,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     public int getItemCount() {
         int count = filteredTransactions.size() + 1;
 
-        if (helloCardActiveAndNotHidden() && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
+        if (shouldShowHelloCard()) {
+            count += 1;
+        } else if (shouldShowJoinDashPay()) {
             count += 1;
         }
 
@@ -199,9 +202,15 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             return 0;
         }
 
-        if (helloCardActiveAndNotHidden()) {
+        if (shouldShowHelloCard()) {
             if (position == 1) {
                 return blockchainIdentityData.getId();
+            } else {
+                return WalletUtils.longHash(filteredTransactions.get(position - 2).transaction.getTxId());
+            }
+        } else if (shouldShowJoinDashPay()) {
+            if (position == 1) {
+                return joinDashPayItemId;
             } else {
                 return WalletUtils.longHash(filteredTransactions.get(position - 2).transaction.getTxId());
             }
@@ -215,8 +224,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         if (position == 0) {
             return VIEW_TYPE_HEADER;
         }
-        if (helloCardActiveAndNotHidden() && position == 1 && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
+        if (shouldShowHelloCard() && position == 1) {
             return VIEW_TYPE_PROCESSING_IDENTITY;
+        } else if (shouldShowJoinDashPay() && position == 1) {
+            return VIEW_TYPE_JOIN_DASHPAY;
         }
         return VIEW_TYPE_TRANSACTION;
     }
@@ -229,6 +240,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row, parent, false));
         } else if (viewType == VIEW_TYPE_HEADER) {
             return new TransactionsHeaderViewHolder(inflater, parent, this);
+        } else if (viewType == VIEW_TYPE_JOIN_DASHPAY) {
+            return new JoinDashPayViewHolder(inflater, parent);
         } else {
             throw new IllegalStateException("unknown type: " + viewType);
         }
@@ -243,7 +256,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
             TransactionHistoryItem transactionHistoryItem;
-            if (helloCardActiveAndNotHidden() && blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
+            if (shouldShowHelloCard()) {
+                transactionHistoryItem = filteredTransactions.get(position - 2);
+            } else if (shouldShowJoinDashPay()) {
                 transactionHistoryItem = filteredTransactions.get(position - 2);
             } else {
                 transactionHistoryItem = filteredTransactions.get(position - 1);
@@ -254,7 +269,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 @Override
                 public void onClick(final View v) {
                     TransactionHistoryItem transactionHistoryItem;
-                    if (getItemViewType(1) == VIEW_TYPE_PROCESSING_IDENTITY) {
+                    int viewType = getItemViewType(1);
+                    if (viewType == VIEW_TYPE_PROCESSING_IDENTITY || viewType == VIEW_TYPE_JOIN_DASHPAY) {
                         transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - 2);
                     } else {
                         transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - 1);
@@ -291,6 +307,14 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             });
         } else if (holder instanceof TransactionsHeaderViewHolder) {
             ((TransactionsHeaderViewHolder) holder).showEmptyState(filteredTransactions.size() == 0);
+        } else if (holder instanceof JoinDashPayViewHolder) {
+            ((JoinDashPayViewHolder) holder).bind(v -> {
+                if (onClickListener != null) {
+                    onClickListener.onJoinDashPayClicked();
+                    preferences.edit().putBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, true).apply();
+                    notifyDataSetChanged();
+                }
+            });
         }
     }
 
@@ -299,6 +323,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         void onTransactionRowClicked(TransactionHistoryItem transactionHistoryItem);
 
         void onProcessingIdentityRowClicked(BlockchainIdentityBaseData blockchainIdentityData, boolean retry);
+
+        void onJoinDashPayClicked();
+
     }
 
     private class TransactionViewHolder extends RecyclerView.ViewHolder {
@@ -312,12 +339,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         private final TextView rateNotAvailableView;
         private final ImageView icon;
 
-        private SimpleDateFormat dateFormat;
-
-        private String formatDate(long timeStamp) {
-            return dateFormat.format(timeStamp).replace("AM", "am").replace("PM", "pm");
-        }
-
         private TransactionViewHolder(final View itemView) {
             super(itemView);
             primaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_primary_status);
@@ -326,12 +347,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             timeView = (TextView) itemView.findViewById(R.id.transaction_row_time);
             dashSymbolView = (ImageView) itemView.findViewById(R.id.dash_amount_symbol);
             valueView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_value);
+            valueView.setApplyMarkup(false);
             signalView = (TextView) itemView.findViewById(R.id.transaction_amount_signal);
 
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
             fiatView.setApplyMarkup(false);
             rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
-            dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault());
 
             icon = itemView.findViewById(R.id.icon);
         }
@@ -388,16 +409,18 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             // Set the time. eg.  "<date> <time>"
             //
             final Date time = tx.getUpdateTime();
-            timeView.setText(formatDate(time.getTime()));
+            timeView.setText(WalletUtils.formatDate(time.getTime()));
 
             //
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
             //                  Received:  Received, Mining Rewards, Masternode Rewards
             //
-            DashPayProfile contact = transactionHistoryItem.dashPayProfile;
+            final DashPayProfile contact = transactionHistoryItem.dashPayProfile;
             if (contact == null) {
                 int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
                 primaryStatusView.setText(idPrimaryStatus);
+                icon.setImageResource(R.drawable.ic_dash_round);
+                icon.setOnClickListener(null);
             } else {
                 String name = "";
                 if (contact.getDisplayName().isEmpty()) {
@@ -407,14 +430,13 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 }
                 primaryStatusView.setText(name);
 
-                Drawable defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(icon.getContext(),
-                        name.charAt(0));
-                if (!contact.getAvatarUrl().isEmpty()) {
-                    Glide.with(icon).load(contact.getAvatarUrl()).circleCrop()
-                            .placeholder(defaultAvatar).into(icon);
-                } else {
-                    icon.setImageDrawable(defaultAvatar);
-                }
+                ProfilePictureDisplay.display(icon, contact.getAvatarUrl(), contact.getAvatarHash(), name);
+                icon.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        context.startActivity(DashPayUserActivity.createIntent(context, contact));
+                    }
+                });
             }
             primaryStatusView.setTextColor(primaryStatusColor);
 
@@ -491,9 +513,15 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         notifyDataSetChanged();
     }
 
-    private boolean helloCardActiveAndNotHidden() {
+    private boolean shouldShowHelloCard() {
         boolean hideHelloCard = preferences.getBoolean(PREFS_KEY_HIDE_HELLO_CARD, false);
-        return blockchainIdentityData != null && !hideHelloCard;
+        return blockchainIdentityData != null && !hideHelloCard &&
+                blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS;
+    }
+
+    private boolean shouldShowJoinDashPay() {
+        boolean hideJoinDashPay = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false);
+        return blockchainIdentityData == null && canJoinDashPay && !hideJoinDashPay;
     }
 
     public static void resetPreferences(Context context) {
@@ -546,4 +574,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             return dashPayProfile;
         }
     }
+
+    public void setCanJoinDashPay(boolean canJoinDashPay) {
+        this.canJoinDashPay = canJoinDashPay;
+        notifyDataSetChanged();
+    }
+
 }

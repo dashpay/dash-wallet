@@ -19,6 +19,7 @@ import android.app.Application
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -75,6 +76,8 @@ class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(appl
             val userData = platformRepo.searchUsernames(username, true).firstOrNull()
             emit(Resource.success(userData))
         } catch (ex: Exception) {
+            FirebaseCrashlytics.getInstance().log("Failed to load user")
+            FirebaseCrashlytics.getInstance().recordException(ex)
             emit(Resource.error(ex, null))
         }
     }

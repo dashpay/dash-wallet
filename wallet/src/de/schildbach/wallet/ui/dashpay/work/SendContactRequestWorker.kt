@@ -4,9 +4,9 @@ import android.content.Context
 import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import kotlinx.coroutines.delay
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 
@@ -29,7 +29,7 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
 
     private val platformRepo = PlatformRepo.getInstance()
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
         val toUserId = inputData.getString(KEY_TO_USER_ID)
@@ -39,6 +39,8 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
         try {
             encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
+            FirebaseCrashlytics.getInstance().log("Contact Request: failed to derive encryption key")
+            FirebaseCrashlytics.getInstance().recordException(ex)
             val msg = formatExceptionMessage("derive encryption key", ex)
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
         }
@@ -50,6 +52,8 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
                     KEY_TO_USER_ID to sendContactRequestResult.toUserId
             ))
         } catch (ex: Exception) {
+            FirebaseCrashlytics.getInstance().log("Contact Request: failed to send contact request")
+            FirebaseCrashlytics.getInstance().recordException(ex)
             Result.failure(workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("send contact request", ex)))
         }

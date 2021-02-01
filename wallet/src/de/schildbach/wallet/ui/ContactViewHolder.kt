@@ -17,25 +17,21 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.res.Resources
 import android.graphics.drawable.AnimationDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.annotation.ColorInt
-import androidx.annotation.DrawableRes
-import androidx.core.content.res.ResourcesCompat
+import androidx.annotation.LayoutRes
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dashpay_contact_row.view.*
+import kotlinx.android.synthetic.main.dashpay_contact_row_content.view.*
 
-class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
-    : RecyclerView.ViewHolder(inflater.inflate(R.layout.dashpay_contact_row, parent, false)) {
+class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes layout: Int, val isSuggestion: Boolean = false, val useFriendsIcon: Boolean = true)
+    : RecyclerView.ViewHolder(inflater.inflate(layout, parent, false)) {
 
     interface OnItemClickListener {
         fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult)
@@ -47,8 +43,6 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
     }
 
     fun bind(usernameSearchResult: UsernameSearchResult, sendContactRequestWorkState: Resource<WorkInfo>?, listener: OnItemClickListener?, contactRequestButtonClickListener: OnContactRequestButtonClickListener?) {
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
-                usernameSearchResult.username[0])
 
         val dashPayProfile = usernameSearchResult.dashPayProfile
         if (dashPayProfile.displayName.isEmpty()) {
@@ -59,15 +53,15 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
             itemView.username.text = usernameSearchResult.username
         }
 
-        if (dashPayProfile.avatarUrl.isNotEmpty()) {
-            Glide.with(itemView.avatar).load(dashPayProfile.avatarUrl).circleCrop()
-                    .placeholder(defaultAvatar).into(itemView.avatar)
-        } else {
-            itemView.avatar.background = defaultAvatar
-        }
+        ProfilePictureDisplay.display(itemView.avatar, dashPayProfile)
 
         itemView.setOnClickListener {
             listener?.onItemClicked(itemView, usernameSearchResult)
+        }
+
+        if (!isSuggestion) {
+            val isPendingRequest = usernameSearchResult.isPendingRequest
+            itemView.setBackgroundResource(if (isPendingRequest) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
         }
 
         ContactRelation.process(usernameSearchResult.type, sendContactRequestWorkState, object : ContactRelation.RelationshipCallback {
@@ -103,33 +97,12 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup)
             }
 
             override fun friends() {
-                itemView.relation_state.displayedChild = 0
+                if (useFriendsIcon) {
+                    itemView.relation_state.displayedChild = 0
+                } else {
+                    none()
+                }
             }
         })
-    }
-
-    fun setBackgroundResource(@DrawableRes resId: Int) {
-        itemView.setBackgroundResource(resId)
-    }
-
-    fun setBackgroundColor(@ColorInt color: Int) {
-        itemView.setBackgroundColor(color)
-    }
-
-    fun setForegroundResource(resId: Int) {
-        (itemView as FrameLayout).foreground = ResourcesCompat.getDrawable(itemView.resources, resId, null)
-    }
-
-    fun setMarginsDp(start: Int, top: Int, end: Int, bottom: Int) {
-        (itemView.layoutParams as ViewGroup.MarginLayoutParams).apply {
-            marginStart = dpToPx(start)
-            topMargin = dpToPx(top)
-            marginEnd = dpToPx(end)
-            bottomMargin = dpToPx(bottom)
-        }
-    }
-
-    private fun dpToPx(dp: Int): Int {
-        return (dp * Resources.getSystem().displayMetrics.density).toInt()
     }
 }

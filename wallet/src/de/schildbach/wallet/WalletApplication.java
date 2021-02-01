@@ -49,6 +49,7 @@ import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
+import androidx.work.WorkManager;
 
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
@@ -798,6 +799,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         PinRetryController.getInstance().clearPinFailPrefs();
         MnemonicCodeExt.clearWordlistPath(this);
         TransactionsAdapter.resetPreferences(this);
+        WorkManager.getInstance(this).pruneWork();
         try {
             new SecurityGuard().removeKeys();
         } catch (GeneralSecurityException | IOException e) {

@@ -141,6 +141,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         dashPayViewModel.getUsernameLiveData.observe(this, Observer {
+            imitateUserInteraction()
             when (it.status) {
                 Status.LOADING -> {
                     // this is delayed by the logic of checkUsernameNotExist(...) method,
@@ -202,7 +203,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         username_exists_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
         username_exists_req_label.typeface = mediumTypeFace
         username_exists_req_label.setTextColor(ResourcesCompat.getColor(resources, R.color.dark_text, null))
-        username_exists_req_label.setText(R.string.identity__username_available)
+        username_exists_req_label.setText(R.string.identity_username_available)
         register_btn.isEnabled = true
     }
 
@@ -249,36 +250,61 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun validateUsernameSize(uname: String): Boolean {
-        val isValid: Boolean
+        val lengthValid = uname.length in USERNAME_MIN_LENGTH..USERNAME_MAX_LENGTH
 
-        min_chars_req_img.visibility = if (uname.length in USERNAME_MIN_LENGTH..USERNAME_MAX_LENGTH) {
-            isValid = true
+        min_chars_req_img.visibility = if (uname.isNotEmpty()) {
             min_chars_req_label.typeface = mediumTypeFace
             View.VISIBLE
         } else {
-            isValid = false
             min_chars_req_label.typeface = regularTypeFace
             View.INVISIBLE
         }
 
-        return isValid
+        if (lengthValid) {
+            min_chars_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
+        } else {
+            min_chars_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+        }
+
+        return lengthValid
     }
 
     private fun validateUsernameCharacters(uname: String): Boolean {
-        val isValid: Boolean
-        val alphaNumValid = !Regex("[^a-z0-9]").containsMatchIn(uname)
+        val alphaNumHyphenValid = !Regex("[^a-zA-Z0-9\\-]").containsMatchIn(uname)
+        val startOrEndWithHyphen = uname.startsWith("-") || uname.endsWith("-")
+        val containsHyphen = uname.contains("-")
 
-        alphanum_req_img.visibility = if (uname.isNotEmpty() && alphaNumValid) {
-            isValid = true
+        alphanum_req_img.visibility = if (uname.isNotEmpty() || !alphaNumHyphenValid) {
             alphanum_req_label.typeface = mediumTypeFace
             View.VISIBLE
         } else {
-            isValid = false
             alphanum_req_label.typeface = regularTypeFace
             View.INVISIBLE
         }
 
-        return isValid
+        if (alphaNumHyphenValid) {
+            alphanum_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
+        } else {
+            alphanum_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+        }
+
+        if (containsHyphen) {
+            hyphen_req_img.visibility = View.VISIBLE
+            hyphen_req_label.visibility = View.VISIBLE
+            if (!startOrEndWithHyphen) {
+                // leave isValid with the same value that is already has (same as isValid && true)
+                hyphen_req_img.setImageResource(R.drawable.ic_username_requirement_checkmark)
+                hyphen_req_label.typeface = mediumTypeFace
+            } else {
+                hyphen_req_img.setImageResource(R.drawable.ic_username_requirement_x)
+                hyphen_req_label.typeface = regularTypeFace
+            }
+        } else {
+            hyphen_req_img.visibility = View.GONE
+            hyphen_req_label.visibility = View.GONE
+        }
+
+        return alphaNumHyphenValid && !startOrEndWithHyphen
     }
 
     private fun checkUsernameNotExist(username: String) {
@@ -295,7 +321,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val username = s?.toString()
 
         if (username != null) {
-            val usernameIsValid = validateUsernameCharacters(username) && validateUsernameSize(username)
+            var usernameIsValid = validateUsernameCharacters(username) and validateUsernameSize(username) //force validateUsernameSize to execute
 
             if (usernameIsValid) {//ensure username meets basic rules before making a Platform query
                 usernameAvailabilityValidationInProgressState()
@@ -319,6 +345,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val text = getString(R.string.username_being_created, username)
 
         processing_identity.visibility = View.VISIBLE
+        registration_content.visibility = View.GONE
         choose_username_title.startAnimation(fadeOutAnimation)
         processing_identity.startAnimation(slideInAnimation)
         (processing_identity_loading_image.drawable as AnimationDrawable).start()

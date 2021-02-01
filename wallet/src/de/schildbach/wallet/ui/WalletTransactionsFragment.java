@@ -39,6 +39,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.InteractionAwareActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +51,7 @@ import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 /**
  * @author Andreas Schildbach
@@ -81,6 +83,7 @@ public class WalletTransactionsFragment extends Fragment
     };
 
     private WalletTransactionsFragmentViewModel viewModel;
+    private MainActivityViewModel mainActivityViewModel;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -142,6 +145,7 @@ public class WalletTransactionsFragment extends Fragment
 
         updateView();
 
+        mainActivityViewModel = new ViewModelProvider(activity).get(MainActivityViewModel.class);
         viewModel = new ViewModelProvider(this).get(WalletTransactionsFragmentViewModel.class);
         viewModel.getTransactionHistoryItemData().observe(getViewLifecycleOwner(), new Observer<List<TransactionsAdapter.TransactionHistoryItem>>() {
             @Override
@@ -155,9 +159,13 @@ public class WalletTransactionsFragment extends Fragment
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null) {
+                    ((InteractionAwareActivity)requireActivity()).imitateUserInteraction();
                     adapter.setBlockchainIdentityData(blockchainIdentityData);
                 }
             }
+        });
+        mainActivityViewModel.isAbleToCreateIdentityLiveData().observe(getViewLifecycleOwner(), canJoinDashPay -> {
+            adapter.setCanJoinDashPay(canJoinDashPay);
         });
     }
 
@@ -199,6 +207,11 @@ public class WalletTransactionsFragment extends Fragment
                 startActivity(new Intent(activity, SearchUserActivity.class));
             }
         }
+    }
+
+    @Override
+    public void onJoinDashPayClicked() {
+        mainActivityViewModel.getShowCreateUsernameEvent().postValue(Unit.INSTANCE);
     }
 
     @Override

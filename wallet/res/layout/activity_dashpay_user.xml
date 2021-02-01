@@ -33,7 +33,7 @@
                 android:layout_width="128dp"
                 android:layout_height="128dp"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="62dp"
+                android:layout_marginTop="8dp"
                 android:transitionName="avatar"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -74,6 +74,15 @@
                 android:layout_height="wrap_content" />
 
         </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/activity_rv_top_line"
+            android:layout_width="match_parent"
+            android:layout_height="1px"
+            android:layout_marginStart="25dp"
+            android:layout_marginEnd="25dp"
+            android:layout_marginTop="8dp"
+            android:background="@color/dash_light_gray" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/activity_rv"

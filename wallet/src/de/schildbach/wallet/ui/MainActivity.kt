@@ -114,7 +114,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     fun initViewModel() {
         viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
-        viewModel.isAbleToCreateIdentityData.observe(this, Observer {
+        viewModel.isAbleToCreateIdentityLiveData.observe(this, Observer {
             // empty observer just to trigger data loading
             // viewModel is shared with some fragments keeping the observer active
             // inside the parent Activity will avoid recreation of relatively complex
@@ -134,6 +134,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             Handler().postDelayed({
                 startActivity(Intent(this, it))
             }, 500)
+        })
+        viewModel.showCreateUsernameEvent.observe(this, {
+            startActivity(Intent(this, CreateUsernameActivity::class.java))
         })
     }
 
@@ -168,7 +171,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         bottom_navigation.setOnNavigationItemSelectedListener { item ->
             when (item.itemId) {
-                bottom_navigation.selectedItemId -> true
+                bottom_navigation.selectedItemId -> {
+                    if (item.itemId == R.id.payments) {
+                        goBack()
+                    }
+                }
                 R.id.bottom_home -> goBack(true)
                 R.id.contacts -> showContacts()
                 R.id.payments -> showPayments()
@@ -192,7 +199,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun addFragment(fragment: Fragment, enterAnim: Int = R.anim.fragment_in,
-                            exitAnim: Int = R.anim.fragment_out, replace: Boolean = true) {
+                            exitAnim: Int = R.anim.fragment_out) {
         val transaction = startFragmentTransaction(enterAnim, exitAnim)
         transaction.add(R.id.fragment_container, fragment)
         transaction.addToBackStack(null).commit()
@@ -205,21 +212,19 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         transaction.addToBackStack(null).commit()
     }
 
-    fun goBack(goHome: Boolean = false): Boolean {
+    private fun goBack(goHome: Boolean = false): Boolean {
         if (!goHome && supportFragmentManager.backStackEntryCount > 1) {
             supportFragmentManager.popBackStack()
             return true
         } else if (goHome || supportFragmentManager.backStackEntryCount == 1) {
             supportFragmentManager.popBackStack(null,
                     FragmentManager.POP_BACK_STACK_INCLUSIVE)
-            bottom_navigation.menu.findItem(R.id.bottom_home)?.isChecked = true
             return true
         }
         return false
     }
 
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
-        bottom_navigation.menu.findItem(R.id.contacts)?.isChecked = true
         if (viewModel.hasIdentity) {
             val contactsFragment = ContactsFragment.newInstance(mode)
             if (mode == MODE_VIEW_REQUESTS) {
@@ -233,14 +238,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun showPayments(activeTab: Int = ACTIVE_TAB_RECENT) {
-        bottom_navigation.menu.findItem(R.id.payments)?.isChecked = true
         val paymentsFragment = PaymentsFragment.newInstance(activeTab)
         replaceFragment(paymentsFragment, R.anim.fragment_slide_up,
                 R.anim.fragment_slide_down)
     }
 
     private fun showMore() {
-        bottom_navigation.menu.findItem(R.id.more)?.isChecked = true
         val moreFragment = MoreFragment()
         replaceFragment(moreFragment)
     }
@@ -689,10 +692,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
             R.id.option_close -> {
                 goBack()
-                return true
-            }
-            R.id.contacts_add_contact -> {
-                startActivity(Intent(this, SearchUserActivity::class.java))
                 return true
             }
         }

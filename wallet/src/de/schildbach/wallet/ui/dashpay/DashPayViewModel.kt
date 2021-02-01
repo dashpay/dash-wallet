@@ -17,6 +17,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
 import androidx.lifecycle.*
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearch
@@ -41,11 +42,10 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     protected val walletApplication = application as WalletApplication
 
     private val usernameLiveData = MutableLiveData<String>()
-    private val userSearchLiveData = MutableLiveData<String>()
+    private val userSearchLiveData = MutableLiveData<UserSearch>()
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String>()
 
-    val notificationCountLiveData = NotificationCountLiveData(walletApplication, platformRepo, viewModelScope)
     val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, viewModelScope)
     val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformRepo)
     val frequentContactsLiveData = FrequentContactsLiveData(walletApplication, platformRepo, viewModelScope)
@@ -85,26 +85,37 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     // Search Usernames that start with "text".  Results are a list of documents for names
     // starting with text.  If no results are found then an empty list is returned.
     //
-    val searchUsernamesLiveData = Transformations.switchMap(userSearchLiveData) { text: String ->
+    val searchUsernamesLiveData = Transformations.switchMap(userSearchLiveData) { search: UserSearch ->
         searchUsernamesJob.cancel()
         searchUsernamesJob = Job()
         liveData(context = searchUsernamesJob + Dispatchers.IO) {
             emit(Resource.loading(null))
             try {
-                val result = platformRepo.searchUsernames(text)
+                var result = platformRepo.searchUsernames(search.text, false, search.limit)
+                result = result.filter {  !search.excludeIds.contains(it.dashPayProfile.userId) }
+                if (result.isNotEmpty()) {
+                    val limit = result.size.coerceAtMost(search.limit)
+                    result = result.subList(0, limit)
+                }
                 emit(Resource.success(result))
             } catch (ex: Exception) {
+                FirebaseCrashlytics.getInstance().log("Failed to search user")
+                FirebaseCrashlytics.getInstance().recordException(ex)
                 emit(Resource.error(formatExceptionMessage("search usernames", ex), null))
             }
         }
     }
 
-    fun searchUsernames(text: String) {
-        userSearchLiveData.value = text
+    fun searchUsernames(text: String, limit: Int = 100, removeContacts: Boolean = false) {
+        val excludeIds = arrayListOf<String>()
+        if (removeContacts) {
+            searchContactsLiveData.value?.data?.forEach { excludeIds.add(it.dashPayProfile.userId) }
+        }
+        userSearchLiveData.value = UserSearch(text, limit, excludeIds)
     }
 
     //
-    // Search Usernames and Display Names that contain "text".
+    // Search (established contacts) Usernames and Display Names that contain "text".
     //
     val searchContactsLiveData = Transformations.switchMap(contactsLiveData) { usernameSearch: UsernameSearch ->
         searchContactsJob.cancel()
@@ -123,10 +134,6 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         notificationsLiveData.query = text
     }
 
-    fun forceUpdateNotificationCount() {
-        notificationCountLiveData.onContactsUpdated()
-    }
-
     fun usernameDoneAndDismiss() {
         viewModelScope.launch(Dispatchers.IO) {
             platformRepo.doneAndDismiss()
@@ -139,8 +146,8 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun getNextContactAddress(userId: String): Address {
-        return platformRepo.getNextContactAddress(userId)
+    fun getNextContactAddress(userId: String, accountReference: Int): Address {
+        return platformRepo.getNextContactAddress(userId, accountReference)
     }
 
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(application)
@@ -223,4 +230,7 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         e.printStackTrace()
         return msg
     }
+
+    private inner class UserSearch(val text: String, val limit: Int = 100,
+                                   val excludeIds: ArrayList<String> = arrayListOf())
 }

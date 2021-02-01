@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'project-report'
 
 ext {
     archivesBaseName = 'dash-wallet'
@@ -39,17 +40,17 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'org.dashevo:dashpay:0.15-SNAPSHOT'
-    implementation 'org.dashevo:platform-core:0.15-SNAPSHOT'
-    implementation 'org.dashevo:dpp:0.15-SNAPSHOT'
-    implementation 'org.dashevo:dapi-client:0.15-SNAPSHOT'
+    implementation 'org.dashevo:dashpay:0.17-SNAPSHOT'
+    implementation 'org.dashevo:platform-core:0.17-SNAPSHOT'
+    implementation 'org.dashevo:dpp:0.17-SNAPSHOT'
+    implementation 'org.dashevo:dapi-client:0.17-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
     implementation 'com.google.zxing:core:3.3.3'    // 3.3.3 is the maximum to support Android 4.4 to 6.x
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
-
     implementation 'com.squareup.moshi:moshi:1.11.0'
+    implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation 'org.slf4j:slf4j-api:1.7.30'
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
@@ -61,6 +62,7 @@ dependencies {
     implementation 'com.amulyakhare:com.amulyakhare.textdrawable:1.0.1'
 
     implementation project(path: ':common')
+    implementation 'com.google.android.gms:play-services-auth:18.1.0'
 
     def room_version = "2.2.5"
     implementation "androidx.room:room-ktx:$room_version"
@@ -82,8 +84,34 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.11.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.11.0'
 
+    implementation 'com.github.MikeOrtiz:TouchImageView:3.0.3'
+
     implementation 'com.google.firebase:firebase-analytics:17.6.0'
     implementation 'com.google.firebase:firebase-inappmessaging-display:19.1.1'
+
+    // Import the BoM for the Firebase platform
+    implementation platform('com.google.firebase:firebase-bom:26.1.1')
+
+    // Declare the dependencies for the Crashlytics and Analytics libraries
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    implementation 'com.google.firebase:firebase-crashlytics'
+    implementation 'com.google.firebase:firebase-analytics'
+
+    // Declare the dependency for the Performance Monitoring library
+    // When using the BoM, you don't specify versions in Firebase library dependencies
+    //implementation 'com.google.firebase:firebase-perf-ktx'
+
+    // Google Drive Dependencies
+    implementation ('com.google.api-client:google-api-client-android:1.26.0') {
+        exclude group: 'com.google.guava', module: 'guava-jdk5'
+    }
+    implementation ('com.google.apis:google-api-services-drive:v3-rev173-1.25.0') {
+        exclude group: 'com.google.guava', module: 'guava-jdk5'
+    }
+
+    implementation ('com.google.http-client:google-http-client-gson:1.26.0') { // do we need this
+        exclude group: 'com.google.guava', module: 'guava-jdk5'
+    }
 
     implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
@@ -112,6 +140,11 @@ ext {
 
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
+
+def props = new Properties()
+if (file("../local.properties").exists()) {
+    file("../local.properties").withInputStream { props.load(it) }
+}
 
 android {
     compileSdkVersion 29
@@ -143,7 +176,28 @@ android {
         }
     }
 
+    signingConfigs {
+        debug {
+            storeFile file('keystore/debug.keystore')
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+
     buildTypes {
+        all {
+            def imgurClientId = props.getProperty("IMGUR_CLIENT_ID")
+            def imgurClientSecret = props.getProperty("IMGUR_CLIENT_SECRET")
+            if (imgurClientId == null) {
+                imgurClientId = "\"IMGUR_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"IMGUR_CLIENT_SECRET\""
+            }
+            buildConfigField("String", "IMGUR_CLIENT_ID", imgurClientId)
+            buildConfigField("String", "IMGUR_CLIENT_SECRET", imgurClientSecret)
+        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
@@ -184,6 +238,7 @@ android {
         }
         mobile {
             res.srcDirs = ["mobile/res"]
+            resources.srcDirs = ["mobile/resources"]
         }
     }
     flavorDimensions "default"
@@ -223,6 +278,7 @@ android {
         exclude 'org.bitcoin.production.checkpoints.txt'
         exclude 'org.bitcoin.test.checkpoints.txt'
         exclude 'google/protobuf/*.proto'
+        exclude 'META-INF/DEPENDENCIES'
     }
     dexOptions {
         preDexLibraries true
@@ -241,3 +297,4 @@ clean {
 }
 
 apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.firebase.crashlytics'

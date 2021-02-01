@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="80006"
-    android:versionName="2.0.0-dashpay">
+    android:versionCode="80066"
+    android:versionName="4.0-dashpay">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -55,6 +55,8 @@
         android:xlargeScreens="true" />
 
     <application
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:requestLegacyExternalStorage="true"
         android:name="de.schildbach.wallet.WalletApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -321,6 +323,10 @@
             android:theme="@style/My.Theme.ChildActivity"/>
 
         <activity android:name="de.schildbach.wallet.ui.EditProfileActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"/>
+
+        <activity android:name="de.schildbach.wallet.ui.dashpay.CropImageActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"/>
 

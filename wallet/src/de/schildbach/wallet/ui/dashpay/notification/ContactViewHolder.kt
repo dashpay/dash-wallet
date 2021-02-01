@@ -17,42 +17,31 @@
 package de.schildbach.wallet.ui.dashpay.notification
 
 import android.graphics.drawable.AnimationDrawable
-import android.text.Html
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.text.HtmlCompat
 import androidx.work.WorkInfo
-import com.bumptech.glide.Glide
 import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.notification_contact_request_received_row.view.*
-import java.text.SimpleDateFormat
-import java.util.*
 
 open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         NotificationViewHolder(R.layout.notification_contact_request_received_row, inflater, parent) {
-
-    private val dateFormat = SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault())
-
-    private fun formatDate(timeStamp: Long): String {
-        return dateFormat.format(timeStamp).replace("AM", "am").replace("PM", "pm")
-    }
 
     fun bind(notificationItem: NotificationItemContact, state: Resource<WorkInfo>?, isNew: Boolean,
              showAvatar: Boolean, onActionClickListener: OnContactActionClickListener? = null) {
 
         val usernameSearchResult = notificationItem.usernameSearchResult
 
-        val defaultAvatar = UserAvatarPlaceholderDrawable.getDrawable(itemView.context,
-                usernameSearchResult.username[0])
-
         itemView.apply {
-            setBackgroundResource(if (isNew) R.drawable.selectable_round_corners else R.drawable.selectable_round_corners_dark)
-            date.text = formatDate(usernameSearchResult.date)
+            setBackgroundResource(if (isNew) R.drawable.selectable_round_corners_white else R.drawable.selectable_round_corners)
+            date.text = WalletUtils.formatDate(usernameSearchResult.date)
 
             val dashPayProfile = usernameSearchResult.dashPayProfile
             val name = if (dashPayProfile.displayName.isEmpty()) {
@@ -87,18 +76,13 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
 
             @Suppress("DEPRECATION")
             val displayNameText = context.getString(displayNameResId, "<b>$name</b>")
-            display_name.text = Html.fromHtml(displayNameText)
+            display_name.text = HtmlCompat.fromHtml(displayNameText, HtmlCompat.FROM_HTML_MODE_COMPACT)
 
             val scale: Float = itemView.resources.displayMetrics.density
             itemView.layoutParams.height = (79 * scale + 0.5f).toInt()
             center_guideline.setGuidelinePercent(0.473f)
 
-            if (dashPayProfile.avatarUrl.isNotEmpty()) {
-                Glide.with(avatar).load(dashPayProfile.avatarUrl).circleCrop()
-                        .placeholder(defaultAvatar).into(avatar)
-            } else {
-                avatar.background = defaultAvatar
-            }
+            ProfilePictureDisplay.display(avatar, dashPayProfile)
             avatar.visibility = if (showAvatar) View.VISIBLE else View.GONE
 
             if (usernameSearchResult.isPendingRequest && !notificationItem.isInvitationOfEstablished) {

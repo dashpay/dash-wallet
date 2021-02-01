@@ -18,9 +18,11 @@
 package de.schildbach.wallet.data
 
 import androidx.room.TypeConverter
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
 import java.util.*
 import kotlin.collections.ArrayList
@@ -131,5 +133,21 @@ class RoomConverters {
     @TypeConverter
     fun fromArrayList(data: ArrayList<String>?): String? {
         return data?.joinToString(",")
+    }
+
+    @TypeConverter
+    fun fromIdentity(identity: Identity?): ByteArray? {
+        return identity?.toBuffer()
+    }
+
+    @TypeConverter
+    fun toIdentity(data: ByteArray?): Identity? {
+        return data?.run {
+            return try {
+                PlatformRepo.getInstance().platform.dpp.identity.createFromBuffer(data)
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
 }

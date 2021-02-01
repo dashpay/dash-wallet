@@ -61,12 +61,15 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.data.DashPayContactRequest;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.data.UsernameSearchResult;
@@ -79,7 +82,11 @@ import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
+import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet_test.R;
+
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 public class SendCoinsFragment extends Fragment {
 
@@ -272,7 +279,8 @@ public class SendCoinsFragment extends Fragment {
                 throw new IllegalArgumentException();
             }
 
-            if (paymentIntent.isIdentityPaymentRequest()) {
+            boolean isDashPayUser = PlatformRepo.getInstance().getBlockchainIdentity() != null;
+            if (isDashPayUser && paymentIntent.isIdentityPaymentRequest()) {
                 if (paymentIntent.payeeUsername != null) {
                     viewModel.loadUserDataByUsername(paymentIntent.payeeUsername).observe(getViewLifecycleOwner(), new Observer<Resource<UsernameSearchResult>>() {
                         @Override
@@ -280,8 +288,8 @@ public class SendCoinsFragment extends Fragment {
                             if (result.getStatus() == Status.SUCCESS && result.getData() != null) {
                                 handleDashIdentity(result.getData(), paymentIntent);
                             } else {
-                                log.error("error loading load identity for username {}", paymentIntent.payeeUsername);
-                                Toast.makeText(getContext(), "error loading load identity", Toast.LENGTH_LONG).show();
+                                log.error("error loading identity for username {}", paymentIntent.payeeUsername);
+                                Toast.makeText(getContext(), "error loading identity", Toast.LENGTH_LONG).show();
                             }
                         }
                     });
@@ -292,8 +300,8 @@ public class SendCoinsFragment extends Fragment {
                             if (result.getStatus() == Status.SUCCESS && result.getData() != null) {
                                 handleDashIdentity(result.getData(), paymentIntent);
                             } else {
-                                log.error("error loading load identity for userId {}", paymentIntent.payeeUserId);
-                                Toast.makeText(getContext(), "error loading load identity", Toast.LENGTH_LONG).show();
+                                log.error("error loading identity for userId {}", paymentIntent.payeeUserId);
+                                Toast.makeText(getContext(), "error loading identity", Toast.LENGTH_LONG).show();
                             }
                         }
                     });
@@ -309,19 +317,40 @@ public class SendCoinsFragment extends Fragment {
     private void handleDashIdentity(UsernameSearchResult userData, PaymentIntent paymentIntent) {
         viewModel.setUserData(userData);
         if (userData.getRequestReceived()) {
-            DashPayProfile dashPayProfile = userData.getDashPayProfile();
-            Address address = dashPayViewModel.getNextContactAddress(dashPayProfile.getUserId());
-            PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
-                    Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
-                    dashPayProfile.getUserId(), paymentIntent.getAmount());
-            viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
-            enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
+            final DashPayProfile dashPayProfile = userData.getDashPayProfile();
+            AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
+                    .loadDistinctToOthers(dashPayProfile.getUserId())
+                    .observe(getViewLifecycleOwner(), new Observer<List<DashPayContactRequest>>() {
+                        @Override
+                        public void onChanged(List<DashPayContactRequest> dashPayContactRequests) {
+                            if (dashPayContactRequests != null && dashPayContactRequests.size() > 0) {
+                                HashMap<Long, DashPayContactRequest> map = new HashMap<>(dashPayContactRequests.size());
 
-            if (paymentIntent.getAmount() != null && paymentIntent.getAmount().isGreaterThan(Coin.ZERO)) {
-                if (blockchainState != null && !blockchainState.getReplaying()) {
-                    authenticateOrConfirm();
-                }
-            }
+                                // This is currently using the first version, but it should use the version specified
+                                // in the ContactInfo.accountRef related to this contact.  Ideally the user should
+                                // approve of a change to the "accountReference" that is used.
+                                long firstTimestamp = System.currentTimeMillis();
+                                for (DashPayContactRequest contactRequest: dashPayContactRequests) {
+                                    map.put(contactRequest.getTimestamp(), contactRequest);
+                                    firstTimestamp = min(firstTimestamp, contactRequest.getTimestamp());
+                                }
+                                DashPayContactRequest mostRecentContactRequest = map.get(firstTimestamp);
+                                Address address = dashPayViewModel.getNextContactAddress(dashPayProfile.getUserId(), (int)mostRecentContactRequest.getAccountReference());
+                                PaymentIntent payToAddress = PaymentIntent.fromAddressWithIdentity(
+                                        Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+                                        dashPayProfile.getUserId(), paymentIntent.getAmount());
+                                viewModel.getBasePaymentIntent().setValue(Resource.success(payToAddress));
+                                enterAmountSharedViewModel.getDashPayProfileData().setValue(dashPayProfile);
+
+                                if (paymentIntent.getAmount() != null && paymentIntent.getAmount().isGreaterThan(Coin.ZERO)) {
+                                    if (blockchainState != null && !blockchainState.getReplaying()) {
+                                        authenticateOrConfirm();
+                                    }
+                                }
+                            }
+                        }
+                    });
+
         } else {
             viewModel.getBasePaymentIntent().setValue(Resource.success(paymentIntent));
         }

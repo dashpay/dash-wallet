@@ -235,6 +235,7 @@
     <string name="transaction_close">Close</string>
     <string name="transaction_details_amount_received">Amount Received</string>
     <string name="transaction_details_amount_sent">Amount Sent</string>
+    <string name="transaction_details_amount_sent_successfully">Sent Successfully</string>
     <string name="transaction_details_sent_from">Sent from</string>
     <string name="transaction_details_sent_to">Sent to</string>
     <string name="transaction_details_received_at">Received at</string>
@@ -354,10 +355,11 @@
     <string name="import_image_okay">Okay</string>
 
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
-    <string name="min_3_chars">Between 3 and 23 characters</string>
-    <string name="alphanum_only">Alphabets and Numbers only</string>
+    <string name="identity_min_3_chars">Between 3 and 23 characters</string>
+    <string name="identity_alphanum_only">Letters, numbers and hyphens only</string>
+    <string name="identity_hyphen_rule">Must start and end with a letter or number</string>
     <string name="identity_username_validating">Validating username…</string>
-        <string name="identity__username_available">Username available</string>
+    <string name="identity_username_available">Username available</string>
     <string name="identity_username_taken">Username taken</string>
     <string name="platform_communication_error">Communication error with Dash Platform</string>
     <string name="register">Register</string>
@@ -376,13 +378,13 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Registering Username</string>
     <string name="processing_home_step_3_restoring">(3/3) Recovering Username</string>
     <string name="processing_done_title">Hello %s,</string>
-    <string name="processing_done_subtitle">Your Evolution account is ready to use</string>
+    <string name="processing_done_subtitle">Your account is ready</string>
     <string name="processing_error_title">Error Upgrading</string>
     <string name="processing_error_retry">Retry</string>
     <string name="processing_username_unavailable_title">Username Unavailable</string>
     <string name="processing_username_unavailable_subtitle">Please choose another</string>
 
-    <string name="dashpay_upgrade_fee">DashPay Upgrade Fee</string>
+    <string name="dashpay_upgrade_fee">Upgrade Fee</string>
     <string name="search_user_find_a_user">Find a user on the Dash Network</string>
     <string name="search_for_a_user">Search for a User on the Dash Network</string>
     <string name="search_user_input_placeholder">enter the username to search here</string>
@@ -403,6 +405,8 @@
     <string name="contacts_no_results">There are no contacts that match</string>
 
     <string name="contacts_title">Contacts</string>
+    <string name="contacts_send_to_contact_title">Send to a Contact</string>
+    <string name="constacts_search_for">Search for a contact</string>
     <string name="contact_requests_title">Contact Requests</string>
     <string name="contacts_add_new_contact">Add new contact</string>
     <string name="contacts_contact_requests_count">Contact Requests (%d)</string>
@@ -423,7 +427,7 @@
     <string name="notifications_contact_has_accepted">%s has accepted your contact request.</string>
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
     <string name="notifications_you_sent">You sent a contact request to %s</string>
-    <string name="notifications_you_received">%s sent a contact request to you</string>
+    <string name="notifications_you_received">%s has sent you a contact request</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
 
@@ -438,7 +442,78 @@
     <string name="about_me">About me</string>
     <string name="char_count">%1$d/%2$d Characters</string>
     <string name="save">Save</string>
+    <string name="edit_profile_take_picture">Take a Photo with Camera</string>
+    <string name="edit_profile_choose_picture">Select from Gallery</string>
     <string name="upgrade_to_evolution_title">Upgrade to Evolution</string>
     <string name="upgrade_to_evolution_message">Create your Username, find friends &amp; family with their usernames and add them to your contacts</string>
+    <string name="image_cropper_title">Move and Zoom your photo to find the perfect fit</string>
+    <string name="select">Select</string>
+    <string name="unable_to_load_image">Unable to load image.</string>
+    <string name="profile_picture_upload_error_title">Upload Error</string>
+    <string name="profile_picture_upload_error_message">Unable to upload your picture.\nPlease try again.</string>
+    <string name="profile_picture_upload_try_again">Try again</string>
+    <string name="profile_picture_uploading_title">Please Wait</string>
+    <string name="profile_picture_uploading_message">Uploading your picture to the network</string>
+    <string name="picture_upload_policy">Picture Upload Policy</string>
+    <string name="imgur_policy_1">The image you select will be uploaded to Imgur anonymously.</string>
+    <string name="imgur_policy_2">Image uploaded can be viewed publicly by anyone.</string>
+    <string name="imgur_policy_3">You can always delete the image uploaded, as long as you have access to this wallet.</string>
+    <string name="profile_picture_delete_title">Are you sure?</string>
+    <string name="profile_picture_delete_message">This image will no longer be used on the Dash network</string>
+    <string name="agree">Agree</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+
+    <string name="updating_profile">Updating Profile on Dash Network</string>
+    <string name="google_drive_policy_one">No account information is stored on the Dash Network or by the DashPay wallet.</string>
+    <string name="google_drive_policy_two">Image uploaded can be viewed publicly by anyone.</string>
+    <string name="google_drive_policy_three">You can always delete or change the image as long as you have access to the wallet on this device.</string>
+
+    <string name="upload_image_message">Uploading your picture to the network</string>
+    <string name="upload_image_please_wait">Please Wait</string>
+    <string name="upload_image_error_message">Unable to upload your picture. Please try again.</string>
+    <string name="upload_image_upload_error">Upload Error</string>
+
+    <string name="edit_profile_google_drive">Google Drive</string>
+    <string name="edit_profile_imgur">Imgur</string>
+    <string name="google_drive_failed_authorization">Google Drive authorization failed.</string>
+
+
+    <string name="error_updating_profile_try_again">Try Again</string>
+    <string name="error_updating_profile_cancel">Cancel</string>
+    <string name="error_updating_profile_msg">Error updating your profile</string>
+    <string name="error_updating_profile_code">Code: %s</string>
+    <string name="edit_profile_public_url">Public URL</string>
+    <string name="public_url_enter_url">Paste your image URL</string>
+    <string name="public_url_error_message">Unable to fetch image. Please enter a valid image URL.</string>
+    <string name="public_url_message">You can specify any URL which is publicly available on the internet so users can see it on the Dash network.</string>
+    <string name="public_url_more_info">More info</string>
+    <string name="public_url_fetching_image">Fetching Image</string>
+
+    <string name="gravatar">Gravatar</string>
+    <string name="gravatar_email_prompt">Enter your Gravatar Email ID</string>
+    <string name="gravatar_fetching">Fetching your Gravatar</string>
+    <string name="gravatar_email_sample">sample@email.com</string>
+    <string name="gravatar_disclaimer">Your Email is not stored in the DashPay wallet nor on any servers. It is used once to get your Gravatar account details and then discarded.</string>
+    <string name="gravatar_email_error">Unable to fetch your Gravatar. Please enter a valid Gravatar email ID.</string>
+
+    <string name="where_to_store_your_picture">Where would you like to store your picture?</string>
+    <string name="external_storage_disclaimer">Your image will always be in your control. Dash does not store any of your data including your profile picture.</string>
+    <string name="select_source_sign_in_required">Sign in required</string>
+    <string name="select_source_google_drive">Google Drive</string>
+    <string name="select_source_no_sign_in_required">No account required</string>
+
+    <string name="join_dashpay_subtitle">Create Username, add your friends…</string>
+    <string name="join_dashpay_more_subtitle">Create your Username, find your friends and add them to your contacts</string>
+    <string name="join">Join</string>
+
+    <string name="more_suggestions">More Suggestions</string>
+    <string name="users_that_matches">Users that matches</string>
+    <string name="not_in_your_contacts">who are currently not in your contacts</string>
+    <string name="no_matching_contacts">No matching users in your contacts</string>
+    <string name="suggestions_empty_result_part_1">There are no users that matches with the name</string>
+    <string name="suggestions_empty_result_part_2">in your contacts</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="save_profile_reminder_text">Would you like to save the changes you made to your profile?</string>
 
 </resources>

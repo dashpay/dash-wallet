@@ -89,14 +89,15 @@ public final class Constants {
                 break;
             }
             case "_testNet3": {
-                DNS_SEED = new String[]{"testnet-seed.dashdot.io", "95.183.51.146", "35.161.101.35", "54.91.130.170"};
+                DNS_SEED = new String[]{"testnet-seed.dashdot.io"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = TestNet3Params.get();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                SUPPORTS_PLATFORM = false;
+                SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 break;
             }
             case "devNet": {
@@ -189,6 +190,8 @@ public final class Constants {
 
         /** Filename of the file containing Electrum servers. */
         public static final String ELECTRUM_SERVERS_FILENAME = "electrum-servers.txt";
+
+        public static final String PROFILE_PICTURE_FILENAME = "profileimage.jpg";
     }
 
     /** Maximum size of backups. Files larger will be rejected. */
@@ -285,8 +288,8 @@ public final class Constants {
 
     public static int USERNAME_MIN_LENGTH = 3;
     public static int USERNAME_MAX_LENGTH = 23;
-    public static int DISPLAY_NAME_MAX_LENGTH = 20;
-    public static int ABOUT_ME_MAX_LENGTH = 120;
+    public static int DISPLAY_NAME_MAX_LENGTH = 25;
+    public static int ABOUT_ME_MAX_LENGTH = 140;
 
     /** Desired number of scrypt iterations for deriving the spending PIN */
     public static final int SCRYPT_ITERATIONS_TARGET = 65536;
