@@ -137,7 +137,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         searchContacts()
 
         invite_friend_hint.setOnClickListener {
-            startActivity(InviteFriendActivity.createIntent(requireContext()))
+            InviteFriendActivity.startOrError(requireActivity())
         }
     }
 

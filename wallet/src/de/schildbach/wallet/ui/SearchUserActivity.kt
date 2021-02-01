@@ -149,10 +149,10 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
         }
 
         invite_friend_hint_view_qwerty.setOnClickListener {
-            startActivity(InviteFriendActivity.createIntent(this))
+            InviteFriendActivity.startOrError(this)
         }
         invite_friend_hint_view_asdf.setOnClickListener {
-            startActivity(InviteFriendActivity.createIntent(this))
+            InviteFriendActivity.startOrError(this)
         }
     }
 

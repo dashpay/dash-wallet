@@ -27,14 +27,16 @@ import android.view.Window
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
+import androidx.annotation.IntegerRes
 import androidx.annotation.StringRes
+import androidx.core.text.HtmlCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 
-class FancyAlertDialog : DialogFragment() {
+open class FancyAlertDialog : DialogFragment() {
 
     enum class Type {
         INFO,
@@ -58,6 +60,35 @@ class FancyAlertDialog : DialogFragment() {
             }
         }
 
+        @JvmStatic
+        fun newInstance(@StringRes title: Int, message: String): FancyAlertDialog {
+            return FancyAlertDialog().apply {
+                arguments = createArguments(Type.INFO, title, message)
+            }
+        }
+
+        fun createArguments(type: Type, @StringRes title: Int, messageHtml: String,
+                            @StringRes positiveButtonText: Int = 0, @StringRes negativeButtonText: Int = 0): Bundle {
+            return Bundle().apply {
+                putString("type", type.name)
+                putInt("title", title)
+                putString("message_html", messageHtml)
+                putInt("positive_text", positiveButtonText)
+                putInt("negative_text", negativeButtonText)
+            }
+        }
+
+        fun createArguments(type: Type, @StringRes title: Int, @StringRes message: Int,
+                            @StringRes positiveButtonText: Int = 0, @StringRes negativeButtonText: Int = 0): Bundle {
+            return Bundle().apply {
+                putString("type", type.name)
+                putInt("title", title)
+                putInt("message", message)
+                putInt("positive_text", positiveButtonText)
+                putInt("negative_text", negativeButtonText)
+            }
+        }
+
         fun showInfo(fragmentManager: FragmentManager, @StringRes title: Int, @StringRes message: Int, @DrawableRes image: Int): FancyAlertDialog {
             val args = Bundle().apply {
                 putString("type", Type.INFO.name)
@@ -73,13 +104,8 @@ class FancyAlertDialog : DialogFragment() {
 
         @JvmStatic
         fun newProgress(@StringRes title: Int, @StringRes message: Int = 0): FancyAlertDialog {
-            val args = Bundle().apply {
-                putString("type", Type.PROGRESS.name)
-                putInt("title", title)
-                putInt("message", message)
-            }
             return FancyAlertDialog().apply {
-                arguments = args
+                arguments = createArguments(Type.PROGRESS, title, message)
             }
         }
     }
@@ -89,19 +115,32 @@ class FancyAlertDialog : DialogFragment() {
         Type.valueOf(arguments!!.getString("type")!!)
     }
 
+    @IntegerRes
+    open val customContentViewResId: Int = 0
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         // Set transparent background and no title
         dialog?.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             requestFeature(Window.FEATURE_NO_TITLE)
         }
-        return inflater.inflate(R.layout.fancy_alert_dialog, container)
+        val view = inflater.inflate(R.layout.fancy_alert_dialog, container)
+        if (customContentViewResId != 0) {
+//            view.findViewById<View>(R.id.default_content).visibility = View.GONE
+            inflater.inflate(customContentViewResId, view.findViewById(R.id.custom_content))
+        }
+        return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setOrHideIfEmpty(title, "title")
-        setOrHideIfEmpty(message, "message")
+        val messageHtml = requireArguments().getString("message_html")
+        if (messageHtml != null) {
+            message.text = HtmlCompat.fromHtml(messageHtml, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        } else {
+            setOrHideIfEmpty(message, "message")
+        }
         setOrHideIfEmpty(image, "image")
         setOrHideIfEmpty(positive_button, "positive_text")
         setOrHideIfEmpty(negative_button, "negative_text")
@@ -117,7 +156,7 @@ class FancyAlertDialog : DialogFragment() {
     }
 
     private fun setOrHideIfEmpty(view: View, argKey: String) {
-        val resId = arguments!!.getInt(argKey)
+        val resId = requireArguments().getInt(argKey)
         if (resId != 0) {
             when (view) {
                 is TextView -> view.setText(resId)
@@ -131,7 +170,6 @@ class FancyAlertDialog : DialogFragment() {
 
     private fun setupInfo() {
         progress.visibility = View.GONE
-        image.visibility = View.VISIBLE
         positive_button.setOnClickListener {
             dismiss()
             sharedViewModel.onPositiveButtonClick.call()
@@ -143,7 +181,6 @@ class FancyAlertDialog : DialogFragment() {
     }
 
     private fun setupProgress() {
-        progress.visibility = View.VISIBLE
         image.visibility = View.GONE
         positive_button.visibility = View.GONE
         negative_button.visibility = View.GONE

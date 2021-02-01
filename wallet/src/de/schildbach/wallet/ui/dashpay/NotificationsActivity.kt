@@ -115,7 +115,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         dashPayViewModel.updateDashPayState()
 
         invite_friend_hint.setOnClickListener {
-            startActivity(InviteFriendActivity.createIntent(this))
+            InviteFriendActivity.startOrError(this)
         }
         invite_friend_hint_close.setOnClickListener {
             invite_friend_hint.visibility = View.GONE

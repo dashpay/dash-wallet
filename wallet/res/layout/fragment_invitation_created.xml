@@ -67,6 +67,7 @@
                     android:textStyle="bold" />
 
                 <Button
+                    android:id="@+id/preview_button"
                     style="@style/DashButton.Transparent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -128,7 +129,7 @@
                 tools:ignore="UselessLeaf" />
 
             <Button
-                android:id="@+id/send"
+                android:id="@+id/send_button"
                 style="@style/DashButton.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -139,7 +140,7 @@
                 android:text="@string/invitation_created_send_invitation" />
 
             <Button
-                android:id="@+id/maybe_later"
+                android:id="@+id/maybe_later_button"
                 style="@style/DashButton.Transparent.Dark"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

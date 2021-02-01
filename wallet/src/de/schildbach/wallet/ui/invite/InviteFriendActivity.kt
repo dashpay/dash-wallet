@@ -21,9 +21,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
-import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.FragmentActivity
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.util.canAffordIdentityCreation
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.ui.FancyAlertDialog
 import org.slf4j.LoggerFactory
 
 class InviteFriendActivity : InteractionAwareActivity() {
@@ -36,6 +39,17 @@ class InviteFriendActivity : InteractionAwareActivity() {
             return Intent(context, InviteFriendActivity::class.java).apply {
 //                action = if (username == null) ACTION_CREATE_NEW else ACTION_DISPLAY_COMPLETE
 //                putExtra(EXTRA_USERNAME, username)
+            }
+        }
+
+        fun startOrError(activity: FragmentActivity) {
+            if (WalletApplication.getInstance().wallet.canAffordIdentityCreation()) {
+                activity.startActivity(createIntent(activity))
+            } else {
+                val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_cant_afford_title,
+                        R.string.invitation_cant_afford_message, R.drawable.ic_cant_afford_invitation,
+                        0, R.string.invitation_preview_close)
+                errorDialog.show(activity.supportFragmentManager, null)
             }
         }
     }

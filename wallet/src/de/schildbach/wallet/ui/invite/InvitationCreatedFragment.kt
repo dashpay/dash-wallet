@@ -29,11 +29,16 @@ import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invitation_created.*
+import org.dash.wallet.common.ui.FancyAlertDialog
 
 class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created) {
 
     companion object {
         fun newInstance() = InvitationCreatedFragment()
+    }
+
+    val viewModel by lazy {
+        ViewModelProvider(this).get(BaseProfileViewModel::class.java)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -47,13 +52,40 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
 
 //        profile_picture_envelope.avatarProfile = requireArguments().getParcelable()
         diaplayOwnProfilePicture() // just for the testing purposes
+        preview_button.setOnClickListener {
+            showPreviewDialog()
+        }
+        send_button.setOnClickListener {
+            val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_creating_error_title,
+                    R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
+                    0, R.string.invitation_preview_close)
+            errorDialog.show(childFragmentManager, null)
+        }
+
+        maybe_later_button.setOnClickListener {
+            val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_cant_afford_title,
+                    R.string.invitation_cant_afford_message, R.drawable.ic_cant_afford_invitation,
+                    0, R.string.invitation_preview_close)
+            errorDialog.show(childFragmentManager, null)
+        }
     }
 
     private fun diaplayOwnProfilePicture() {
-        val viewModel = ViewModelProvider(this).get(BaseProfileViewModel::class.java)
         viewModel.dashPayProfileData.observe(viewLifecycleOwner, {
             profile_picture_envelope.avatarProfile = it
         })
+    }
+
+    private fun showPreviewDialog() {
+        val previewDialog = InvitationPreviewDialog.newInstance(requireContext(), viewModel.dashPayProfile!!)
+        previewDialog.show(childFragmentManager, null)
+//        val errorDialogViewModel = ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
+//        errorDialogViewModel.onPositiveButtonClick.observe(this, Observer {
+//            finish()
+//        })
+//        errorDialogViewModel.onNegativeButtonClick.observe(this, Observer {
+//            finish()
+//        })
     }
 
     override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {

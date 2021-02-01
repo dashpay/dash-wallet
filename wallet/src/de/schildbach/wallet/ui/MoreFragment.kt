@@ -31,11 +31,12 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
-import kotlinx.android.synthetic.main.fragment_updating_profile.*
 import kotlinx.android.synthetic.main.fragment_update_profile_error.*
+import kotlinx.android.synthetic.main.fragment_updating_profile.*
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
@@ -56,6 +57,9 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             blockchainState = it
         })
 
+        invite.setOnClickListener {
+            InviteFriendActivity.startOrError(requireActivity())
+        }
         buy_and_sell.setOnClickListener {
             if (blockchainState != null && blockchainState?.replaying!!) {
                 requireActivity().showBlockchainSyncingMessage()
