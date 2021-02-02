@@ -19,9 +19,11 @@ package de.schildbach.wallet.ui.invite
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
+import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_invite_friend.*
@@ -50,7 +52,8 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
 
     private fun initViewModel() {
         val platformPaymentConfirmDialogViewModel = ViewModelProvider(requireActivity())[PlatformPaymentConfirmDialog.SharedViewModel::class.java]
-        platformPaymentConfirmDialogViewModel.clickConfirmButtonEvent.observe(viewLifecycleOwner, {
+        platformPaymentConfirmDialogViewModel.clickConfirmButtonEvent.observe(viewLifecycleOwner, Observer {
+            triggerInviteCreation()
             requireActivity().supportFragmentManager.beginTransaction()
                     .replace(R.id.container, InvitationCreatedFragment.newInstance())
                     .commitNow()
@@ -63,5 +66,11 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
         val dialogMessage = getString(R.string.invitation_confirm_message)
         val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee.value)
         dialog.show(childFragmentManager, "SendInviteConfirmDialog")
+    }
+
+    private fun triggerInviteCreation() {
+        SendInviteOperation(walletApplication)
+                .create()
+                .enqueue()
     }
 }
