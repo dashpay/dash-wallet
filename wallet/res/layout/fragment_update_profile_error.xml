@@ -1,50 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:layout_marginStart="15dp"
     android:layout_marginTop="24dp"
     android:layout_marginEnd="15dp"
     android:background="@drawable/selectable_round_corners_white"
     android:orientation="vertical"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
     android:padding="16dp">
 
     <ImageView
         android:id="@+id/error_icon"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:layout_marginTop="21dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_error" />
+        app:srcCompat="@drawable/ic_update_profile_error" />
 
     <TextView
         android:id="@+id/error_updating_text"
-        android:layout_width="wrap_content"
+        style="@style/MontserratMedium"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="15dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginEnd="20dp"
+        android:gravity="center"
         android:text="@string/error_updating_profile_msg"
-        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/error_icon" />
 
     <TextView
         android:id="@+id/error_code_text"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/error_updating_profile_code"
-        android:textSize="16sp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="20dp"
+        android:gravity="center"
+        android:textColor="@color/medium_gray"
+        android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/error_updating_text" />
+        app:layout_constraintTop_toBottomOf="@id/error_updating_text"
+        tools:text="@string/network_error_contact_suggestions" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="50dp"
+        android:layout_marginTop="22dp"
         android:layout_marginBottom="21dp"
         android:gravity="center_horizontal"
         app:layout_constraintTop_toBottomOf="@+id/error_code_text">
@@ -52,11 +62,12 @@
         <Button
             android:id="@+id/error_try_again"
             style="@style/DashButton.Blue"
-            android:layout_width="wrap_content"
+            android:layout_width="110dp"
             android:layout_height="wrap_content"
-            android:text="@string/error_updating_profile_try_again"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/cancel" />
+            android:layout_marginTop="30dp"
+            android:layout_marginBottom="14dp"
+            android:text="@string/error_updating_profile_try_again"/>
+
 
         <Button
             android:id="@+id/cancel"

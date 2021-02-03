@@ -508,7 +508,7 @@
 
     <string name="error_updating_profile_try_again">Try Again</string>
     <string name="error_updating_profile_cancel">Cancel</string>
-    <string name="error_updating_profile_msg">Error updating your profile</string>
+    <string name="error_updating_profile_msg">Error updating profile</string>
     <string name="error_updating_profile_code">Code: %s</string>
     <string name="edit_profile_public_url">Public URL</string>
     <string name="public_url_enter_url">Paste your image URL</string>
