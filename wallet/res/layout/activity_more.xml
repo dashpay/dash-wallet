@@ -168,7 +168,7 @@
 
                 <include
                     android:id="@+id/error_updating_profile"
-                    layout="@layout/fragment_update_profile_error" />
+                    layout="@layout/update_profile_error" />
 
             </ViewFlipper>
 
