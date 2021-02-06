@@ -24,6 +24,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
@@ -129,7 +130,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
                     override fun onTransitionStart(transition: Transition) {
                         layout_title.visibility = View.GONE
                         find_a_user_label.visibility = View.GONE
-                        invite_friend_hint_view_qwerty.visibility = View.GONE
+                        invite_friend_hint_view_dashpay_provile_1.visibility = View.GONE
                     }
 
                 })
@@ -139,7 +140,8 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             }
         }
 
-        intent.getStringExtra(EXTRA_INIT_QUERY)?.let { initQuery ->
+        val initQuery = intent.getStringExtra(EXTRA_INIT_QUERY)
+        if (!TextUtils.isEmpty(initQuery)) {
             constraintSet2.applyTo(root)
             setChanged = true
             layout_title.visibility = View.GONE
@@ -148,10 +150,10 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             search.setText(initQuery)
         }
 
-        invite_friend_hint_view_qwerty.setOnClickListener {
+        invite_friend_hint_view_dashpay_provile_1.setOnClickListener {
             InviteFriendActivity.startOrError(this)
         }
-        invite_friend_hint_view_asdf.setOnClickListener {
+        invite_friend_hint_view_empty_result.setOnClickListener {
             InviteFriendActivity.startOrError(this)
         }
     }

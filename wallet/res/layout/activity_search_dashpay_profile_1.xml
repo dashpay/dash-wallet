@@ -98,7 +98,7 @@
     <include layout="@layout/user_search_loading" />
 
     <include
-        android:id="@+id/invite_friend_hint_view_qwerty"
+        android:id="@+id/invite_friend_hint_view_dashpay_provile_1"
         layout="@layout/invite_friend_hint_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

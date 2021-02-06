@@ -37,7 +37,7 @@
         tools:text="@string/search_user_no_results" />
 
     <include
-        android:id="@+id/invite_friend_hint_view_asdf"
+        android:id="@+id/invite_friend_hint_view_empty_result"
         layout="@layout/invite_friend_hint_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
