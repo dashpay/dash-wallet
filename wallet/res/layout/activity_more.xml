@@ -176,12 +176,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:animateLayoutChanges="true"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:paddingTop="20dp">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/invite"
-                    style="@style/MenuRow"
-                    android:layout_marginTop="20dp">
+                    style="@style/MenuRow">
 
                     <ImageView
                         android:id="@+id/invite_icon"
