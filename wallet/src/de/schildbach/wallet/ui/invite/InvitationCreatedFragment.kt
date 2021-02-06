@@ -58,14 +58,14 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         send_button.setOnClickListener {
             val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_creating_error_title,
                     R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
-                    0, R.string.invitation_preview_close)
+                    R.string.okay, 0)
             errorDialog.show(childFragmentManager, null)
         }
 
         maybe_later_button.setOnClickListener {
             val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_cant_afford_title,
                     R.string.invitation_cant_afford_message, R.drawable.ic_cant_afford_invitation,
-                    0, R.string.invitation_preview_close)
+                    R.string.okay, 0)
             errorDialog.show(childFragmentManager, null)
         }
     }

@@ -10,7 +10,7 @@
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toTopOf="parent"
-    app:viewToHideWhenSoftKeyboardIsOpen="@id/invite_friend_hint_view_asdf"
+    app:viewToHideWhenSoftKeyboardIsOpen="@id/invite_friend_hint_view_empty_result"
     tools:visibilty="visible">
 
     <ImageView
