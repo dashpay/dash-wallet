@@ -137,12 +137,30 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         GlobalScope.launch {
             blockchainIdentityDataDao.load()?.let {
                 blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
+                platformRepoInstance.initializeStateRepository()
                 while (isActive) {
                     log.info("Timer: Update contacts")
                     platformRepoInstance.updateContactRequests()
                     delay(UPDATE_TIMER_DELAY)
                 }
             }
+        }
+    }
+
+    private suspend fun initializeStateRepository() {
+        // load our id
+
+        val identityId = blockchainIdentity.uniqueIdString
+        platform.stateRepository.addValidIdentity(Identifier.from(identityId))
+
+        //load all id's of users who have sent us a contact request
+        dashPayContactRequestDao.loadFromOthers(identityId)?.forEach {
+            platform.stateRepository.addValidIdentity(it.userIdentifier)
+        }
+
+        // load all id's of users for whom we have profiles
+        dashPayProfileDao.loadAll().forEach {
+            platform.stateRepository.addValidIdentity(it.userIdentifier)
         }
     }
 
@@ -907,6 +925,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
+                platform.stateRepository.addValidIdentity(contactRequest.userIdentifier)
                 if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference)) {
 
                     userIdList.add(contactRequest.userId)

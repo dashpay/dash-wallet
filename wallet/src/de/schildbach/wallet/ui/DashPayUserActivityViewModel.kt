@@ -46,6 +46,7 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
     val userLiveData by lazy {
         liveData(Dispatchers.IO) {
             userData = platformRepo.getUser(userData.username).first()
+            platformRepo.platform.stateRepository.addValidIdentity(userData.dashPayProfile.userIdentifier)
             sendContactRequestState
             emit(userData)
         }
