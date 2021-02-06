@@ -98,7 +98,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         initViewModel()
 
         if (savedInstanceState == null) {
-            checkAlerts() //FIXME allet_test E/WindowManager: android.view.WindowLeaked: Activity de.schildbach.wallet.ui.MainActivity has leaked window DecorView@be910c7[] that was originally added here
+            checkAlerts()
         }
         config.touchLastUsed()
         handleIntent(intent)
@@ -418,16 +418,17 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             try {
                 CrashReporter.appendSavedCrashTrace(stackTrace)
             } catch (x: IOException) {
-                AbstractWalletActivity.log.info("problem appending crash info", x)
+                log.info("problem appending crash info", x)
             }
             val dialog: ReportIssueDialogBuilder = object : ReportIssueDialogBuilder(this,
                     R.string.report_issue_dialog_title_crash, R.string.report_issue_dialog_message_crash) {
-                override fun subject(): CharSequence? {
+
+                override fun subject(): CharSequence {
                     return Constants.REPORT_SUBJECT_BEGIN + packageInfo.versionName + " " + Constants.REPORT_SUBJECT_CRASH
                 }
 
                 @Throws(IOException::class)
-                override fun collectApplicationInfo(): CharSequence? {
+                override fun collectApplicationInfo(): CharSequence {
                     val applicationInfo = StringBuilder()
                     CrashReporter.appendApplicationInfo(applicationInfo, walletApplication)
                     return applicationInfo
@@ -449,7 +450,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     return wallet.toString(false, true, true, null)
                 }
             }
-            dialog.show()
+            if(!isFinishing) {
+                dialog.show()
+            }
         }
     }
 
