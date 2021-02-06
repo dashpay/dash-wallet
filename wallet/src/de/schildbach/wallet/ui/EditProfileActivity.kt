@@ -230,29 +230,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 finish()
             }
         })
-        editProfileViewModel.updateProfileRequestState.observe(this, Observer {
-            imitateUserInteraction()
-            when (it.status) {
-                Status.LOADING -> {
-                    if (it.progress == 100) {
-                        Toast.makeText(this@EditProfileActivity, "Update successful", Toast.LENGTH_LONG).show()
-                    }
-                }
-                Status.ERROR -> {
-                    var msg = it.message
-                    if (msg == null) {
-                        msg = "!!Error!!  ${it.exception!!.message}"
-                    }
-                    Toast.makeText(this@EditProfileActivity, msg, Toast.LENGTH_LONG).show()
-                    setEditingState(true)
-                }
-                else -> {
-                    // ignore
-                }
-            }
-            setEditingState(it.status != Status.SUCCESS)
-            updateSaveBtnState()
-        })
+
         externalUrlSharedViewModel.validUrlChosenEvent.observe(this, Observer {
             if (it != null) {
                 editProfileViewModel.avatarHash = externalUrlSharedViewModel.avatarHash
