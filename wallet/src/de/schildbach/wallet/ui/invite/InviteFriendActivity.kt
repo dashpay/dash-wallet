@@ -36,10 +36,7 @@ class InviteFriendActivity : InteractionAwareActivity() {
 
         @JvmStatic
         fun createIntent(context: Context): Intent {
-            return Intent(context, InviteFriendActivity::class.java).apply {
-//                action = if (username == null) ACTION_CREATE_NEW else ACTION_DISPLAY_COMPLETE
-//                putExtra(EXTRA_USERNAME, username)
-            }
+            return Intent(context, InviteFriendActivity::class.java)
         }
 
         fun startOrError(activity: FragmentActivity) {
