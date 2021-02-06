@@ -231,6 +231,7 @@ class TransactionResultViewBinder(private val containerView: View, private val p
     }
 
     override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
+        org.bitcoinj.core.Context.propagate(wallet.context)
         updateStatus()
         setTransactionDirection()
     }
