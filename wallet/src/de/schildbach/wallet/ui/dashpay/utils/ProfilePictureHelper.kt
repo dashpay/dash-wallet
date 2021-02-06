@@ -133,13 +133,23 @@ class ProfilePictureHelper {
         }
 
         /**
-         * Converts BigInteger to byte array removing the sign bit
+         * Converts BigInteger to an 8 byte array removing the sign bit
          * more info: https://github.com/icon-project/icon-sdk-java/issues/8
+         *
+         * this handles cases where value is 9 or more bytes by using the
+         * least significant 8 bytes.  It handles cases were value is less
+         * than 8 bytes by padding the byte array with leading zeros.
          */
         fun toByteArray(value: BigInteger): ByteArray {
             val array = value.toByteArray()
-            val srcPos = if (array[0] == 0.toByte()) 1 else 0
-            return Arrays.copyOfRange(array, srcPos, array.size)
+            return if (array.size >= 8) {
+                val srcPos = array.size - 8
+                Arrays.copyOfRange(array, srcPos, array.size)
+            } else {
+                val bytes = ByteArray(8)
+                System.arraycopy(array, 0, bytes, 8 - array.size, array.size)
+                bytes
+            }
         }
     }
 
