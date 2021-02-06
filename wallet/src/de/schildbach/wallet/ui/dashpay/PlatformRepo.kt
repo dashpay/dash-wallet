@@ -765,7 +765,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     private suspend fun updateDashPayProfile(userId: String) {
-        var profileDocument = Profiles(platform).get(userId)
+        var profileDocument = profiles.get(userId)
                 ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
         val nameDocuments = platform.names.getByOwnerId(userId)
@@ -1034,7 +1034,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private suspend fun updateContactProfiles(userIdList: List<String>, lastContactRequestTime: Long, checkingIntegrity: Boolean = false) {
         if (userIdList.isNotEmpty()) {
             val identifierList = userIdList.map { Identifier.from(it) }
-            val profileDocuments = Profiles(platform).getList(identifierList, lastContactRequestTime) //only handles 100 userIds
+            val profileDocuments = profiles.getList(identifierList, lastContactRequestTime) //only handles 100 userIds
             val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
             val nameDocuments = platform.names.getList(identifierList)
