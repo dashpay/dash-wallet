@@ -135,7 +135,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun initViewModel() {
-        val confirmTransactionSharedViewModel = ViewModelProvider(this).get(ConfirmTransactionDialog.SharedViewModel::class.java)
+        val confirmTransactionSharedViewModel = ViewModelProvider(this).get(PlatformPaymentConfirmDialog.SharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
             triggerIdentityCreation(false)
         })
