@@ -196,7 +196,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     @Throws(Exception::class)
     suspend fun getUser(username: String): List<UsernameSearchResult> {
-        return searchUsernames(username, true)
+        return try {
+            searchUsernames(username, true)
+        } catch (e: Exception) {
+            formatExceptionMessage("get single user failure", e)
+            throw e
+        }
     }
 
     /**
@@ -231,13 +236,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             nameDocuments.map { getIdentityForName(it) }
         }
 
-        var profileById: Map<Identifier, Document> = mapOf()
-
-        try {
-            val profileDocuments = Profiles(platform).getList(userIds)
-            profileById = profileDocuments.associateBy({ it.ownerId }, { it })
-        } catch (e: StatusRuntimeException) {
-            // swallow; we don't want to stop this method if no usernames have profiles
+        var profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
+            val profileDocuments = profiles.getList(userIds)
+            profileDocuments.associateBy({ it.ownerId }, { it })
+        } else {
+            log.warn("search usernames: userIdList is empty, though nameDocuments has ${nameDocuments.size} items")
+            mapOf()
         }
 
         val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
