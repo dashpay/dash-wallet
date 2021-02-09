@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Dash Core Group
+ * Copyright 2021 Dash Core Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.invite
 
 import android.content.Context
 import android.util.AttributeSet
+import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
@@ -35,4 +36,7 @@ class InvitePreviewEnvelopeView(context: Context, attrs: AttributeSet?) : Constr
         set(value) {
             ProfilePictureDisplay.display(avatar, value)
         }
+
+    val avatarView: ImageView
+        get() = avatar
 }
