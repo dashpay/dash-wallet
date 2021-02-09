@@ -44,12 +44,12 @@
         android:layout_marginTop="4dp"
         android:layout_marginEnd="20dp"
         android:gravity="center"
+        android:text="@string/network_error_unable_to_update_profile"
         android:textColor="@color/medium_gray"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/error_updating_text"
-        tools:text="@string/network_error_contact_suggestions" />
+        app:layout_constraintTop_toBottomOf="@id/error_updating_text" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -60,22 +60,22 @@
         app:layout_constraintTop_toBottomOf="@+id/error_code_text">
 
         <Button
-            android:visibility="gone"
             android:id="@+id/error_try_again"
             style="@style/DashButton.Blue"
-            android:fontFamily="@font/montserrat_regular"
             android:layout_width="110dp"
-            android:layout_marginEnd="5dp"
             android:layout_height="40dp"
-            android:text="@string/error_updating_profile_try_again"/>
+            android:layout_marginEnd="5dp"
+            android:fontFamily="@font/montserrat_regular"
+            android:text="@string/error_updating_profile_try_again"
+            android:visibility="gone" />
 
         <Button
-            android:id="@+id/cancel"
+            android:id="@+id/cancel_network_error"
             style="@style/DashButton.White.BlueText.BlueBorder"
-            android:fontFamily="@font/montserrat_regular"
             android:layout_width="110dp"
             android:layout_height="40dp"
-            android:text="@string/error_updating_profile_cancel"/>
+            android:fontFamily="@font/montserrat_regular"
+            android:text="@string/error_updating_profile_cancel" />
 
     </LinearLayout>
 
