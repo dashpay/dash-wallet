@@ -64,6 +64,11 @@ class ContactSearchResultsAdapter(private val listener: Listener,
             field = value
             notifyDataSetChanged()
         }
+    var networkAvailable = true
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -113,7 +118,8 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         when (item.viewType) {
             CONTACT -> {
                 val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.usernameSearchResult!!.dashPayProfile.userId]
-                (holder as ContactViewHolder).bind(item.usernameSearchResult, sendContactRequestWorkState, itemClickListener, listener)
+                (holder as ContactViewHolder).bind(item.usernameSearchResult, sendContactRequestWorkState,
+                        itemClickListener, listener, networkAvailable)
             }
             CONTACT_REQUEST_HEADER -> (holder as ContactRequestHeaderViewHolder).bind(results[position].requestCount)
             CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind()

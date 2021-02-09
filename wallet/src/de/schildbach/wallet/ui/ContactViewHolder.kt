@@ -42,7 +42,10 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
         fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int)
     }
 
-    fun bind(usernameSearchResult: UsernameSearchResult, sendContactRequestWorkState: Resource<WorkInfo>?, listener: OnItemClickListener?, contactRequestButtonClickListener: OnContactRequestButtonClickListener?) {
+    fun bind(usernameSearchResult: UsernameSearchResult,
+             sendContactRequestWorkState: Resource<WorkInfo>?, listener: OnItemClickListener?,
+             contactRequestButtonClickListener: OnContactRequestButtonClickListener?,
+             networkAvailable: Boolean = true) {
 
         val dashPayProfile = usernameSearchResult.dashPayProfile
         if (dashPayProfile.displayName.isEmpty()) {
@@ -82,6 +85,7 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
 
             override fun inviteReceived() {
                 itemView.relation_state.displayedChild = 2
+                itemView.accept_contact_request.isEnabled = networkAvailable
                 itemView.accept_contact_request.setOnClickListener {
                     contactRequestButtonClickListener?.onAcceptRequest(usernameSearchResult, adapterPosition)
                 }

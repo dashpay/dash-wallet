@@ -193,6 +193,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             it?.apply {
                 val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
                 updateNetworkErrorVisibility(networkError)
+                contactsAdapter.networkAvailable = !networkError
             }
         })
     }
