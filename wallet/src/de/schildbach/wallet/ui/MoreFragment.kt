@@ -57,6 +57,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             blockchainState = it
         })
 
+        invite.visibility = View.GONE
         invite.setOnClickListener {
             InviteFriendActivity.startOrError(requireActivity())
         }
@@ -171,6 +172,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         edit_profile.setOnClickListener {
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
+        invite.visibility = View.VISIBLE
     }
 
     override fun startActivity(intent: Intent) {

@@ -10,7 +10,7 @@
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toTopOf="parent"
-    app:viewToHideWhenSoftKeyboardIsOpen="@id/invite_friend_hint_view_asdf"
+    app:viewToHideWhenSoftKeyboardIsOpen="@id/invite_friend_hint_view_empty_result"
     tools:visibilty="visible">
 
     <ImageView
@@ -37,7 +37,7 @@
         tools:text="@string/search_user_no_results" />
 
     <include
-        android:id="@+id/invite_friend_hint_view_asdf"
+        android:id="@+id/invite_friend_hint_view_empty_result"
         layout="@layout/invite_friend_hint_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

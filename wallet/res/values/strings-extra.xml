@@ -354,7 +354,7 @@
     <string name="import_image_no_private_key_copied">No private key copied</string>
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
-    <string name="import_image_okay">Okay</string>
+    <string name="okay">Okay</string>
 
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
     <string name="identity_min_3_chars">Between 3 and 23 characters</string>
@@ -394,6 +394,7 @@
     <string name="invitation_cant_afford_message">You need at least 0.04 Dash to create an invitation</string>
     <string name="invitation_creating_error_title">Error Creating Invitation</string>
     <string name="invitation_creating_error_message">There was a problem creating your invitation. Please try again.</string>
+    <string name="invitation_share_message">Invitations are single use only. Do not share with a group.</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>
