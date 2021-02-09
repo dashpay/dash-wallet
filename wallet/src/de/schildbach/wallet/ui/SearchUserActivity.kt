@@ -210,7 +210,8 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
     }
 
     private fun updateNetworkErrorVisibility(networkError: Boolean) {
-        network_error_container.visibility = if (networkError) View.VISIBLE else View.GONE
+        network_error.visibility = if (networkError) View.VISIBLE else View.GONE
+        network_error_root.visibility = if (networkError) View.VISIBLE else View.GONE
     }
 
     private fun startLoading() {
