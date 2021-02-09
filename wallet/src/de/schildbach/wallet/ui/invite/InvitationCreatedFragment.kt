@@ -61,8 +61,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         val appCompatActivity = requireActivity() as AppCompatActivity
         appCompatActivity.setSupportActionBar(toolbar)
 
-//        profile_picture_envelope.avatarProfile = requireArguments().getParcelable()
-        displayOwnProfilePicture() // just for the testing purposes
+        displayOwnProfilePicture()
         preview_button.setOnClickListener {
             showPreviewDialog()
         }
