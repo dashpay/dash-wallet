@@ -22,8 +22,10 @@ import androidx.work.workDataOf
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dashevo.dpp.toHexString
 
 class SendInviteWorker(context: Context, parameters: WorkerParameters)
     : BaseWorker(context, parameters) {
@@ -32,6 +34,7 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
         const val KEY_PASSWORD = "SendInviteWorker.PASSWORD"
         const val KEY_TX_ID = "SendInviteWorker.KEY_TX_ID"
         const val KEY_USER_ID = "SendInviteWorker.KEY_USER_ID"
+        const val KEY_INVITE_ID = "SendInviteWorker.KEY_INVITE_ID"
 
         fun extractTxId(data: Data): ByteArray? {
             return data.getByteArray(KEY_TX_ID)
@@ -39,6 +42,10 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
 
         fun extractUserId(data: Data): String? {
             return data.getString(KEY_USER_ID)
+        }
+
+        fun extractInviteId(data: Data): String? {
+            return data.getString(KEY_INVITE_ID)
         }
     }
 
@@ -49,8 +56,9 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
 
         val encryptionKey: KeyParameter
+        val wallet = WalletApplication.getInstance().wallet!!
         try {
-            encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)
+            encryptionKey = wallet.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
             FirebaseCrashlytics.getInstance().log("Send Invite: failed to derive encryption key")
             FirebaseCrashlytics.getInstance().recordException(ex)
@@ -62,8 +70,9 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
             val blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()!!
             val cftx = platformRepo.createInviteFundingTransactionAsync(blockchainIdentity, encryptionKey)
             Result.success(workDataOf(
-                    KEY_TX_ID to cftx,
-                    KEY_USER_ID to cftx.creditBurnIdentityIdentifier.toStringBase58()
+                    KEY_TX_ID to cftx.txId.bytes,
+                    KEY_USER_ID to cftx.creditBurnIdentityIdentifier.toStringBase58(),
+                    KEY_INVITE_ID to Address.fromPubKeyHash(wallet.params, cftx.creditBurnPublicKeyId.bytes).toBase58()
             ))
         } catch (ex: Exception) {
             FirebaseCrashlytics.getInstance().log("Send Invite: failed to send contact request")
