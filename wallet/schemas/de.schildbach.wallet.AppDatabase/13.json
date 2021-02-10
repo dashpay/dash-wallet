@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 14,
-    "identityHash": "8076cf993cc97bb2769e09a52d62efca",
+    "version": 13,
+    "identityHash": "16a24aa38150846d3c493e8ffd553be4",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -383,62 +383,12 @@
         },
         "indices": [],
         "foreignKeys": []
-      },
-      {
-        "tableName": "invitation_table",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`userId` TEXT NOT NULL, `txid` BLOB NOT NULL, `createdAt` INTEGER NOT NULL, `memo` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `acceptedAt` INTEGER NOT NULL, PRIMARY KEY(`userId`))",
-        "fields": [
-          {
-            "fieldPath": "userId",
-            "columnName": "userId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "txid",
-            "columnName": "txid",
-            "affinity": "BLOB",
-            "notNull": true
-          },
-          {
-            "fieldPath": "createdAt",
-            "columnName": "createdAt",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "memo",
-            "columnName": "memo",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "sentAt",
-            "columnName": "sentAt",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "acceptedAt",
-            "columnName": "acceptedAt",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "columnNames": [
-            "userId"
-          ],
-          "autoGenerate": false
-        },
-        "indices": [],
-        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8076cf993cc97bb2769e09a52d62efca')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '16a24aa38150846d3c493e8ffd553be4')"
     ]
   }
 }

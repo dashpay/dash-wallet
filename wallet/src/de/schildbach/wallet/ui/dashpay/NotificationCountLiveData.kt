@@ -16,6 +16,7 @@ class NotificationCountLiveData(walletApplication: WalletApplication, platformRe
             // * payments
             // * notifications
 
+            //TODO: ???
             if (notificationCount >= 0)
                 postValue(notificationCount)
         }

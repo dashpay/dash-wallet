@@ -35,6 +35,7 @@ import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRestore
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
+import de.schildbach.wallet_test.R
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import org.bitcoinj.core.*
@@ -105,12 +106,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
     private val dashPayContactRequestDao = AppDatabase.getAppDatabase().dashPayContactRequestDao()
     private val invitationsDao = AppDatabase.getAppDatabase().invitationsDao()
+    private val userAlertDao = AppDatabase.getAppDatabase().userAlertDao()
 
     // Async
     private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
     private val invitationsDaoAsync = AppDatabase.getAppDatabase().invitationsDaoAsync()
+    private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
 
     private val securityGuard = SecurityGuard()
     private lateinit var blockchainIdentity: BlockchainIdentity
@@ -382,16 +385,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun getNotificationCount(date: Long): Int {
+        var count = 0
+        val alert = userAlertDao.load(date)
+        if (alert != null) {
+            count++
+        }
         val results = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
-        return if (results.status == Status.SUCCESS) {
+        if (results.status == Status.SUCCESS) {
             val list = results.data ?: return 0
-            var count = 0
             list.forEach { if (it.date >= date) ++count }
             log.info("New contacts at ${Date(date)} = $count - getNotificationCount")
-            count
-        } else {
-            -1
         }
+        return count
     }
 
     /**
@@ -711,14 +716,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         updateBlockchainIdentityData(blockchainIdentityData)
     }
 
-    suspend fun resetCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
+    suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
         blockchainIdentityDataDao.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
         blockchainIdentityData.creationStateErrorMessage = null
     }
 
-    suspend fun updateCreationState(blockchainIdentityData: BlockchainIdentityData,
-                                    state: BlockchainIdentityData.CreationState,
-                                    exception: Throwable? = null) {
+    suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
+                                            state: BlockchainIdentityData.CreationState,
+                                            exception: Throwable? = null) {
         val errorMessage = exception?.run { "${exception.javaClass.simpleName}: ${exception.message}" }
         if (errorMessage == null) {
             log.info("updating creation state {}", state)
@@ -1181,6 +1186,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDaoAsync.clear()
         dashPayProfileDaoAsync.clear()
         dashPayContactRequestDaoAsync.clear()
+        userAlertDaoAsync.clear()
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {

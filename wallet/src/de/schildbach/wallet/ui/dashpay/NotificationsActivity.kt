@@ -30,12 +30,14 @@ import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
+import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_notifications.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -45,7 +47,7 @@ import kotlin.collections.ArrayList
 import kotlin.math.max
 
 class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
-        NotificationsAdapter.OnItemClickListener, ContactViewHolder.OnContactActionClickListener {
+        NotificationsAdapter.OnItemClickListener, ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
 
     companion object {
         private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
@@ -80,7 +82,8 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         walletApplication = application as WalletApplication
         lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
 
-        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet, true, this, this)
+        notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet,
+                true, this, this, this)
 
         if (intent.extras != null && intent.extras!!.containsKey(EXTRA_MODE)) {
             mode = intent!!.extras!!.getInt(EXTRA_MODE)
@@ -127,7 +130,9 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         dashPayViewModel.notificationsLiveData.observe(this, Observer {
             if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
-                    processResults(it.data)
+                    val results = arrayListOf<NotificationItem>()
+                    results.addAll(it.data)
+                    processResults(results)
                 }
             }
         })
@@ -137,19 +142,33 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         })
     }
 
-    private fun processResults(data: List<NotificationItem>) {
+    private fun processResults(data: ArrayList<NotificationItem>) {
 
         val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
         // get the last seen date from the configuration
         val newDate = walletApplication.configuration.lastSeenNotificationTime
 
+        var userAlertItem: NotificationItemUserAlert? = null
+
         // find the most recent notification timestamp
         var lastNotificationTime = 0L
-        data.forEach { lastNotificationTime = max(lastNotificationTime, it.getDate()) }
+        data.forEach {
+            lastNotificationTime = max(lastNotificationTime, it.getDate())
+            //Remove User Alert from list to add it before the "New" header
+            if (it is NotificationItemUserAlert) {
+                userAlertItem = it
+                data.remove(it)
+            }
+        }
 
         val newItems = data.filter { r -> r.getDate() >= newDate }.toMutableList()
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
+
+        //Add User Alert item
+        if (userAlertItem != null) {
+            results.add(NotificationsAdapter.NotificationViewItem(userAlertItem!!))
+        }
 
         results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
         if (newItems.isEmpty()) {
@@ -205,6 +224,10 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 val tx = notificationItem.tx!!
                 Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
             }
+            is NotificationItemUserAlert -> {
+                Toast.makeText(this, "Will be handled in another ticket.",
+                        Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -237,6 +260,10 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
             searchContacts()
         }
+    }
+
+    override fun onUserAlertDismiss(alertId: Int) {
+        dashPayViewModel.dismissUserAlert(alertId)
     }
 
 }

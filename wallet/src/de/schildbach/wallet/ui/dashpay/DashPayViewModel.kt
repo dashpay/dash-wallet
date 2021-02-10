@@ -231,6 +231,13 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
         return msg
     }
 
+    fun dismissUserAlert(alertId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            AppDatabase.getAppDatabase().userAlertDaoAsync().dismiss(alertId)
+            notificationsLiveData.onContactsUpdated()
+        }
+    }
+
     private inner class UserSearch(val text: String, val limit: Int = 100,
                                    val excludeIds: ArrayList<String> = arrayListOf())
 }
