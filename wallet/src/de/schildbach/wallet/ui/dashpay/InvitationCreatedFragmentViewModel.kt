@@ -24,13 +24,18 @@ import android.view.View
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.liveData
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
+import de.schildbach.wallet.ui.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
 import org.bitcoinj.core.Address
+import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bouncycastle.crypto.params.KeyParameter
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream
@@ -89,12 +94,23 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
     val invitation : Invitation
         get() = invitationLiveData.value!!
 
-    fun getInvitationLink(): String {
+    val invitationLinkData = liveData<String>(Dispatchers.IO) {
         val tx = walletApplication.wallet.getTransaction(invitation.txid)
         val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
-        val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx)
 
-        return "sample://dashpay.invitation/$invite}"
+        val wallet = WalletApplication.getInstance().wallet!!
+        val password = SecurityGuard().retrievePassword()
+        var encryptionKey: KeyParameter? = null
+        try {
+            encryptionKey = wallet.keyCrypter!!.deriveKey(password)
+        } catch (ex: KeyCrypterException) {
+            FirebaseCrashlytics.getInstance().log("create invitation link: failed to derive encryption key")
+            FirebaseCrashlytics.getInstance().recordException(ex)
+            emit("")
+        }
+
+        val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx, encryptionKey)
+        emit("sample://dashpay.invitation/$invite")
     }
 
     val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, inviteId)

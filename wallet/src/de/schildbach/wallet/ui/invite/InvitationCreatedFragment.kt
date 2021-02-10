@@ -138,17 +138,19 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
     private fun shareInvitation(shareImage: Boolean) {
         IntentBuilder.from(requireActivity()).apply {
 
-            setSubject("DashPay invitation")
-            setText(viewModel.getInvitationLink())
-            if (shareImage) {
-                setType(Constants.MIMETYPE_INVITATION_WITH_IMAGE)
-                val fileUri: Uri = FileProvider.getUriForFile(requireContext(), "${BuildConfig.APPLICATION_ID}.file_attachment", viewModel.invitationPreviewImageFile!!)
-                setStream(fileUri)
-            } else {
-                setType(Constants.MIMETYPE_INVITATION)
-            }
-            setChooserTitle(R.string.invitation_share_message)
-            startChooser()
+            viewModel.invitationLinkData.observe(viewLifecycleOwner, Observer {
+                setSubject("DashPay invitation")
+                setText(it)
+                if (shareImage) {
+                    setType(Constants.MIMETYPE_INVITATION_WITH_IMAGE)
+                    val fileUri: Uri = FileProvider.getUriForFile(requireContext(), "${BuildConfig.APPLICATION_ID}.file_attachment", viewModel.invitationPreviewImageFile!!)
+                    setStream(fileUri)
+                } else {
+                    setType(Constants.MIMETYPE_INVITATION)
+                }
+                setChooserTitle(R.string.invitation_share_message)
+                startChooser()
+            })
         }
     }
 
