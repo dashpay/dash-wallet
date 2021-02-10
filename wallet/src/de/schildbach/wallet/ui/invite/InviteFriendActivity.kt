@@ -20,8 +20,10 @@ package de.schildbach.wallet.ui.invite
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.MenuItem
 import androidx.fragment.app.FragmentActivity
+import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.canAffordIdentityCreation
 import de.schildbach.wallet_test.R
@@ -58,6 +60,11 @@ class InviteFriendActivity : InteractionAwareActivity() {
         supportFragmentManager.beginTransaction()
                 .replace(R.id.container, InviteFriendFragment.newInstance())
                 .commitNow()
+
+        Log.i("FirebaseDynamicLinks", "We have a dynamic link!")
+        FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
+            Log.i("FirebaseDynamicLinks", "We have a dynamic link!")
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

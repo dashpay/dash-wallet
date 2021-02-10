@@ -25,12 +25,13 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ShareCompat.IntentBuilder
+import androidx.core.app.ShareCompat
 import androidx.core.content.FileProvider
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.google.firebase.dynamiclinks.ShortDynamicLink
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.InvitationCreatedFragmentViewModel
@@ -41,6 +42,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invitation_created.*
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.slf4j.LoggerFactory
 
 
 class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created) {
@@ -55,6 +57,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
             }
             return fragment
         }
+
         fun newInstanceFromIdentity(identity: String): InvitationCreatedFragment {
             val fragment = InvitationCreatedFragment()
             fragment.arguments = Bundle().apply {
@@ -64,9 +67,13 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         }
     }
 
+    private val log = LoggerFactory.getLogger(InvitationCreatedFragment::class.java)
+
     val viewModel by lazy {
         ViewModelProvider(this).get(InvitationCreatedFragmentViewModel::class.java)
     }
+
+    private var sharePreviewImage = true
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -82,12 +89,16 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
             showPreviewDialog()
         }
         send_button.setOnClickListener {
-            shareInvitation(true)
+            send_button.isEnabled = false
+            sharePreviewImage = true
+            viewModel.createDynamicLink()
             // save memo to the database
             viewModel.saveTag(tag_edit.text.toString())
         }
         send_button.setOnLongClickListener {
-            shareInvitation(false)
+            send_button.isEnabled = false
+            sharePreviewImage = false
+            viewModel.createDynamicLink()
             true
         }
 
@@ -118,9 +129,9 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
                 }
             })
         } else {*/
-            //in this case, we are viewing this screen from the history
-            val identityId = args.getString(ARG_IDENTITY_ID)!!
-            viewModel.identityIdLiveData.value = identityId
+        //in this case, we are viewing this screen from the history
+        val identityId = args.getString(ARG_IDENTITY_ID)!!
+        viewModel.identityIdLiveData.value = identityId
         //}
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner, Observer {
@@ -133,13 +144,34 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
             profile_picture_envelope.avatarProfile = it
             setupInvitationPreviewTemplate(it!!)
         })
+        viewModel.dynamicLinkData.observe(viewLifecycleOwner, {
+            when (it.status) {
+                Status.SUCCESS -> {
+                    log.info("success creating dynamicLink ${it.data!!.shortLink}, ${it.data.warnings}")
+                    shareInvitation(sharePreviewImage, it.data)
+                }
+                Status.ERROR -> {
+                    log.info("error creating dynamicLink")
+                    val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_creating_error_title,
+                            R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
+                            R.string.okay, 0)
+                    errorDialog.show(childFragmentManager, null)
+                }
+                Status.LOADING,
+                Status.CANCELED -> {
+                    // ignore
+                }
+            }
+            if (it.status != Status.LOADING) {
+                send_button.isEnabled = true
+            }
+        })
     }
 
-    private fun shareInvitation(shareImage: Boolean) {
-        IntentBuilder.from(requireActivity()).apply {
-
+    private fun shareInvitation(shareImage: Boolean, data: ShortDynamicLink) {
+        ShareCompat.IntentBuilder.from(requireActivity()).apply {
             setSubject("DashPay invitation")
-            setText(viewModel.getInvitationLink())
+            setText(data.shortLink.toString())
             if (shareImage) {
                 setType(Constants.MIMETYPE_INVITATION_WITH_IMAGE)
                 val fileUri: Uri = FileProvider.getUriForFile(requireContext(), "${BuildConfig.APPLICATION_ID}.file_attachment", viewModel.invitationPreviewImageFile!!)
