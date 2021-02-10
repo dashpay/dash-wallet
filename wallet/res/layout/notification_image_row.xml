@@ -15,8 +15,7 @@
         android:layout_height="wrap_content"
         app:srcCompat="@drawable/ic_notification_new_empty"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
         android:id="@+id/description"

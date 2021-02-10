@@ -40,6 +40,7 @@ import org.dash.wallet.common.util.GenericUtils;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
@@ -114,6 +115,13 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         });
         viewModel.getNotificationCountData().observe(getViewLifecycleOwner(), notificationCount -> {
             setNotificationCount();
+        });
+        long lastSeenNotification = config.getLastSeenNotificationTime();
+        AppDatabase.getAppDatabase().userAlertDaoAsync()
+                .load(lastSeenNotification).observe(getViewLifecycleOwner(), userAlert -> {
+            if (userAlert != null) {
+                viewModel.forceUpdateNotificationCount();
+            }
         });
     }
 
