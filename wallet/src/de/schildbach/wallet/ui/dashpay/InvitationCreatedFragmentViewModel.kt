@@ -20,7 +20,16 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
 import android.view.View
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Transformations
+import androidx.lifecycle.liveData
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
+import kotlinx.coroutines.Dispatchers
+import org.bitcoinj.core.Address
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream
@@ -59,4 +68,34 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
         view.draw(canvas)
         return bitmap
     }
+
+    fun saveTag(tag: String) {
+        invitation.memo = tag
+        AppDatabase.getAppDatabase().invitationsDaoAsync().insert(invitation)
+    }
+
+    private val pubkeyHash = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
+    val inviteId = Address.fromPubKeyHash(walletApplication.wallet.params, pubkeyHash).toBase58()
+
+    val identityIdLiveData = MutableLiveData<String>()
+
+    val invitationLiveData = Transformations.switchMap(identityIdLiveData) {
+        liveData (Dispatchers.IO) {
+            emit(AppDatabase.getAppDatabase().invitationsDao().loadByUserId(it)!!)
+        }
+    }
+
+    val invitation : Invitation
+        get() = invitationLiveData.value!!
+
+    fun getInvitationLink(): String {
+        val tx = walletApplication.wallet.getTransaction(invitation.txid)
+        val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
+        val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx)
+
+        return "sample://dashpay.invitation/$invite}"
+    }
+
+    val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, inviteId)
+
 }
