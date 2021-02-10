@@ -34,6 +34,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.firebase.dynamiclinks.ShortDynamicLink
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.InvitationCreatedFragmentViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil

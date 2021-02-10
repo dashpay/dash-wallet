@@ -325,14 +325,6 @@
                     android:host="dashpayinvite.page.link"
                     android:scheme="https" />
 
-<!--                <data-->
-<!--                    android:host="dashpay.org"-->
-<!--                    android:scheme="http" />-->
-
-<!--                <data-->
-<!--                    android:host="dashpay.org"-->
-<!--                    android:scheme="https" />-->
-
             </intent-filter>
 
         </activity>
