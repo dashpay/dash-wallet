@@ -18,15 +18,21 @@ package de.schildbach.wallet.ui.dashpay
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.net.Uri
 import android.os.Environment
 import android.view.View
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.liveData
+import com.google.firebase.dynamiclinks.DynamicLink
+import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
+import com.google.firebase.dynamiclinks.ShortDynamicLink
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import org.bitcoinj.core.Address
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -48,6 +54,8 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
             null
         }
     }
+
+    val dynamicLinkData = MutableLiveData<Resource<ShortDynamicLink>>()
 
     fun saveInviteBitmap(invitationBitmapTemplate: View) {
         invitationPreviewImageFile?.apply {
@@ -80,22 +88,44 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
     val identityIdLiveData = MutableLiveData<String>()
 
     val invitationLiveData = Transformations.switchMap(identityIdLiveData) {
-        liveData (Dispatchers.IO) {
+        liveData(Dispatchers.IO) {
             emit(AppDatabase.getAppDatabase().invitationsDao().loadByUserId(it)!!)
         }
     }
 
-    val invitation : Invitation
+    val invitation: Invitation
         get() = invitationLiveData.value!!
 
-    fun getInvitationLink(): String {
+    fun getInvitationData(): String {
         val tx = walletApplication.wallet.getTransaction(invitation.txid)
         val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
-        val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx)
-
-        return "sample://dashpay.invitation/$invite}"
+        return platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx)
     }
 
     val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, inviteId)
 
+    fun createDynamicLink() {
+        FirebaseDynamicLinks.getInstance()
+                .createDynamicLink().apply {
+                    link = Uri.parse("http://dashpay.org/invitation/${getInvitationData()}")
+                    domainUriPrefix = "https://dashpayinvite.page.link"
+                    setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
+                    setIosParameters(DynamicLink.IosParameters.Builder("org.dashfoundation.dash").apply {
+                        this.appStoreId = "1206647026"
+                    }.build())
+                }
+                .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
+                    title = "Join Dash"
+                    imageUrl = Uri.parse("https://paydash.site/invitation_preview.png")
+                    description = walletApplication.getString(R.string.invitation_preview_message, dashPayProfile!!.nameLabel)
+                }.build())
+                .buildShortDynamicLink()
+                .addOnSuccessListener {
+                    dynamicLinkData.value = Resource.success(it)
+                }
+                .addOnFailureListener {
+                    dynamicLinkData.value = Resource.error(it)
+                }
+        dynamicLinkData.value = Resource.loading(null)
+    }
 }
