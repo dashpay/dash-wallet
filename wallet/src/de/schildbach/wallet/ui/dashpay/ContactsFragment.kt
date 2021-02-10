@@ -37,10 +37,12 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contacts_list_layout.*
+import kotlinx.android.synthetic.main.invite_friend_hint_view.*
 import kotlinx.android.synthetic.main.no_contacts_results.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
@@ -133,6 +135,10 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             onSearchUser()
         }
         searchContacts()
+
+        invite_friend_hint.setOnClickListener {
+            InviteFriendActivity.startOrError(requireActivity())
+        }
     }
 
     private fun showEmptyPane() {

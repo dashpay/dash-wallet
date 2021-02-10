@@ -24,6 +24,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
@@ -45,8 +46,10 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
+import kotlinx.android.synthetic.main.invite_friend_hint_view.*
 import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -112,6 +115,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
                 transition.addListener(object : Transition.TransitionListener {
                     override fun onTransitionEnd(transition: Transition) {
                         finalizeViewsTransition()
+                        search_results_rv.visibility = View.VISIBLE
                     }
 
                     override fun onTransitionResume(transition: Transition) {
@@ -126,6 +130,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
                     override fun onTransitionStart(transition: Transition) {
                         layout_title.visibility = View.GONE
                         find_a_user_label.visibility = View.GONE
+                        invite_friend_hint_view_dashpay_provile_1.visibility = View.GONE
                     }
 
                 })
@@ -135,13 +140,21 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             }
         }
 
-        intent.getStringExtra(EXTRA_INIT_QUERY)?.let { initQuery ->
+        val initQuery = intent.getStringExtra(EXTRA_INIT_QUERY)
+        if (!TextUtils.isEmpty(initQuery)) {
             constraintSet2.applyTo(root)
             setChanged = true
             layout_title.visibility = View.GONE
             find_a_user_label.visibility = View.GONE
             finalizeViewsTransition()
             search.setText(initQuery)
+        }
+
+        invite_friend_hint_view_dashpay_provile_1.setOnClickListener {
+            InviteFriendActivity.startOrError(this)
+        }
+        invite_friend_hint_view_empty_result.setOnClickListener {
+            InviteFriendActivity.startOrError(this)
         }
     }
 

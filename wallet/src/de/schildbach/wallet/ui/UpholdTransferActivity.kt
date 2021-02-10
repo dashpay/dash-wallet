@@ -113,7 +113,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         enterAmountSharedViewModel.dashAmountData.observe(this, Observer<Coin> {
             enterAmountSharedViewModel.buttonEnabledData.setValue(it.isPositive)
         })
-        val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProvider(this).get(SingleActionSharedViewModel::class.java)
+        val confirmTransactionSharedViewModel = ViewModelProvider(this).get(ConfirmTransactionDialog.SharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
             withdrawalDialog.commitTransaction(this)
         })

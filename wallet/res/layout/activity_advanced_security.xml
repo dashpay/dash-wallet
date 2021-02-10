@@ -349,13 +349,15 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
             <Button
+                android:id="@+id/reset_to_default"
                 style="@style/DashButton.Transparent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="50dp"
                 android:layout_marginBottom="25dp"
-                android:onClick="resetToDefault"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
                 android:text="@string/reset_to_default"
                 android:textColor="@color/dash_blue"
                 android:textSize="15sp" />

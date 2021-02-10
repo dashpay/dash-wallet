@@ -36,9 +36,14 @@ class ProfilePictureDisplay {
 
         @JvmStatic
         fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false) {
+            display(avatarView, dashPayProfile, hideIfProfileNull, null)
+        }
+
+        @JvmStatic
+        fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false, listener: OnResourceReadyListener?) {
             if (dashPayProfile != null) {
                 avatarView.visibility = View.VISIBLE
-                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.avatarHash, dashPayProfile.username)
+                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.avatarHash, dashPayProfile.username, listener)
             } else if (hideIfProfileNull) {
                 avatarView.visibility = View.GONE
             }
@@ -46,6 +51,12 @@ class ProfilePictureDisplay {
 
         @JvmStatic
         fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String) {
+            display(avatarView, avatarUrlStr, avatarHash, username, null)
+        }
+
+        @JvmStatic
+        fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String,
+                    listener: OnResourceReadyListener?) {
             val fontSize = calcFontSize(avatarView)
             if (avatarUrlStr.isNotEmpty()) {
                 val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
@@ -57,12 +68,14 @@ class ProfilePictureDisplay {
                         .load(baseAvatarUrl)
                         .listener(object : RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+                                listener?.onResourceReady(null)
                                 return false
                             }
 
                             override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?,
                                                          dataSource: DataSource?, isFirstResource: Boolean): Boolean {
                                 ProfilePictureHelper.avatarHashAndFingerprint(context, baseAvatarUrl, avatarHash)
+                                listener?.onResourceReady(resource)
                                 return false
                             }
                         })
@@ -73,24 +86,25 @@ class ProfilePictureDisplay {
                         .transition(withCrossFade())
                         .into(avatarView)
             } else {
-                displayDefault(avatarView, username, fontSize)
+                displayDefault(avatarView, username, fontSize, listener)
             }
         }
 
         @JvmStatic
-        fun displayDefault(avatarView: ImageView, username: String) {
-            displayDefault(avatarView, username, calcFontSize(avatarView))
+        fun displayDefault(avatarView: ImageView, username: String, listener: OnResourceReadyListener? = null) {
+            displayDefault(avatarView, username, calcFontSize(avatarView), listener)
         }
 
-        private fun displayDefault(avatarView: ImageView, username: String, fontSize: Int) {
+        private fun displayDefault(avatarView: ImageView, username: String, fontSize: Int, listener: OnResourceReadyListener?) {
             val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
             avatarView.setImageDrawable(defaultAvatar)
+            listener?.onResourceReady(defaultAvatar)
         }
 
-        private const val FONT_SIZE_RATIO: Float = 30f / 64f
+        const val FONT_SIZE_RATIO: Float = 30f / 64f
 
         private fun calcFontSize(avatarView: ImageView): Int {
-            return (avatarView.layoutParams.width * FONT_SIZE_RATIO).toInt();
+            return (avatarView.layoutParams.width * FONT_SIZE_RATIO).toInt()
         }
 
         fun removePicZoomParameter(url: String): Uri {
@@ -110,5 +124,9 @@ class ProfilePictureDisplay {
             }
             return newUriBuilder.build()
         }
+    }
+
+    interface OnResourceReadyListener {
+        fun onResourceReady(resource: Drawable?)
     }
 }

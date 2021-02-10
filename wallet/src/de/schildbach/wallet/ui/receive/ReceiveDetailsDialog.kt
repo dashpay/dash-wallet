@@ -61,13 +61,13 @@ class ReceiveDetailsDialog : BaseBottomSheetDialogFragment() {
             val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat?
 
             receive_info.amount = dashAmount
-            input_value.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
+            dash_amount_view.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
             if (fiatAmount != null) {
-                fiat_symbol.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
-                fiat_value.text = fiatAmount.toPlainString()
+                fiat_symbol_view.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
+                fiat_amount_view.text = fiatAmount.toPlainString()
             } else {
-                fiat_symbol.visibility = View.GONE
-                fiat_value.visibility = View.GONE
+                fiat_symbol_view.visibility = View.GONE
+                fiat_amount_view.visibility = View.GONE
             }
         }
     }

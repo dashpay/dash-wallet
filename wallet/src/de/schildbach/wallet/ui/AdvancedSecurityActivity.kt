@@ -90,6 +90,10 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
 
         updateView()
         setTitle(R.string.security_title)
+
+        reset_to_default.setOnClickListener {
+            resetToDefault()
+        }
     }
 
     private fun getSecurityLevel(): SecurityLevel {
@@ -194,7 +198,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         })
     }
 
-    fun resetToDefault(view: View) {
+    fun resetToDefault() {
         configuration.autoLogoutEnabled = true
         configuration.autoLogoutMinutes = 1
         configuration.spendingConfirmationEnabled = true

@@ -192,6 +192,9 @@ public final class Constants {
         public static final String ELECTRUM_SERVERS_FILENAME = "electrum-servers.txt";
 
         public static final String PROFILE_PICTURE_FILENAME = "profileimage.jpg";
+
+        public static final String INVITATION_PREVIEW_IMAGE_FILENAME = "invitation-preview.jpg";
+
     }
 
     /** Maximum size of backups. Files larger will be rejected. */
@@ -225,6 +228,10 @@ public final class Constants {
 
     /** MIME type used for transmitting wallet backups. */
     public static final String MIMETYPE_WALLET_BACKUP = "application/x-"+CoinDefinition.coinName.toLowerCase()+"-wallet-backup";
+
+    /** MIME type used for sharing invitations */
+    public static final String MIMETYPE_INVITATION_WITH_IMAGE = "image/webp";
+    public static final String MIMETYPE_INVITATION = "text/plain";
 
     /** Number of confirmations until a transaction is fully confirmed. */
     public static final int MAX_NUM_CONFIRMATIONS = 6;

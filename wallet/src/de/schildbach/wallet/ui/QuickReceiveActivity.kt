@@ -59,7 +59,7 @@ class QuickReceiveActivity : ShortcutComponentActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.payment_options, menu)
+        menuInflater.inflate(R.menu.close_button_options, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
