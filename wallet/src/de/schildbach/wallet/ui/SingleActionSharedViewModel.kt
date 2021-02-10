@@ -19,9 +19,7 @@ package de.schildbach.wallet.ui
 
 import androidx.lifecycle.ViewModel
 
-class SingleActionSharedViewModel : ViewModel() {
+open class SingleActionSharedViewModel : ViewModel() {
 
     val clickConfirmButtonEvent = SingleLiveEvent<Boolean>()
-
-    var autoAcceptContactRequest: Boolean = false
 }

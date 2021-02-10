@@ -47,7 +47,7 @@ class TransactionResultViewBinder(private val containerView: View, private val p
     private val transactionTitle by lazy { containerView.findViewById<TextView>(R.id.transaction_title) }
     private val dashAmount by lazy { containerView.findViewById<CurrencyTextView>(R.id.dash_amount) }
     private val transactionFee by lazy { containerView.findViewById<CurrencyTextView>(R.id.transaction_fee) }
-    private val fiatValue by lazy { containerView.findViewById<CurrencyTextView>(R.id.fiat_value) }
+    private val fiatValue by lazy { containerView.findViewById<CurrencyTextView>(R.id.fiat_amount_view) }
     private val date by lazy { containerView.findViewById<TextView>(R.id.transaction_date_and_time) }
     private val statusContainer by lazy { containerView.findViewById<View>(R.id.status_layout) }
     private val primaryStatusTxt by lazy { containerView.findViewById<TextView>(R.id.transaction_primary_status) }

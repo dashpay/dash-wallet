@@ -17,13 +17,11 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.TextView
 import androidx.core.text.HtmlCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
@@ -72,7 +70,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         return when (viewType) {
             CONTACT_REQUEST_HEADER -> ContactRequestHeaderViewHolder(inflater, parent)
             CONTACT_HEADER -> ContactHeaderViewHolder(inflater, parent)
-            CONTACT -> ContactViewHolder(inflater, parent, R.layout.dashpay_contact_row)
+            CONTACT -> ContactViewHolder(inflater, parent, R.layout.dashpay_contact_row, useFriendsIcon = false)
             CONTACT_NO_RESULTS -> ContactsNoResultsViewHolder(inflater, parent)
             CONTACTS_SUGGESTIONS_HEADER -> ContactsSuggestionsHeaderViewHolder(inflater, parent)
             CONTACT_SUGGESTION_ROW -> ContactViewHolder(inflater, parent,

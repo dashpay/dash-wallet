@@ -176,12 +176,40 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:animateLayoutChanges="true"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:paddingTop="20dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/invite"
+                    style="@style/MenuRow">
+
+                    <ImageView
+                        android:id="@+id/invite_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_menu_invite" />
+
+                    <TextView
+                        android:id="@+id/invite_title"
+                        style="@style/MontserratMedium.MenuRowTitle"
+                        android:text="@string/menu_invite_title"
+                        app:layout_constraintStart_toEndOf="@+id/invite_icon"
+                        app:layout_constraintTop_toTopOf="@+id/invite_icon" />
+
+                    <TextView
+                        android:id="@+id/invite_subtitle"
+                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        android:text="@string/menu_invite_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/invite_title"
+                        app:layout_constraintTop_toBottomOf="@+id/invite_title" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/buy_and_sell"
-                    style="@style/MenuRow"
-                    android:layout_marginTop="20dp">
+                    style="@style/MenuRow">
 
                     <ImageView
                         android:id="@+id/buy_dash_icon"

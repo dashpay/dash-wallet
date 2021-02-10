@@ -258,6 +258,7 @@ class EditProfileActivity : BaseMenuActivity() {
                 editProfileViewModel.avatarHash = externalUrlSharedViewModel.avatarHash
                 editProfileViewModel.avatarFingerprint = externalUrlSharedViewModel.avatarFingerprint
                 editProfileViewModel.saveExternalBitmap(it)
+                setEditingState(true)
             } else {
                 val username = editProfileViewModel.dashPayProfile!!.username
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
@@ -364,11 +365,13 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
-        ProfilePictureDisplay.display(dashpayUserAvatar, profile)
-        initialAboutMe = profile.publicMessage
-        initialDisplayName = profile.displayName
-        about_me.setText(profile.publicMessage)
-        display_name.setText(profile.displayName)
+        if (!isEditing) {
+            ProfilePictureDisplay.display(dashpayUserAvatar, profile)
+            initialAboutMe = profile.publicMessage
+            initialDisplayName = profile.displayName
+            about_me.setText(profile.publicMessage)
+            display_name.setText(profile.displayName)
+        }
     }
 
     private fun setEditingState(isEditing: Boolean) {

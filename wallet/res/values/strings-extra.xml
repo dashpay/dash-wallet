@@ -249,6 +249,8 @@
     <string name="authenticate_switch_to_fingerprint">Use Fingerprint</string>
     <string name="authenticate_switch_to_pin">Use PIN</string>
 
+    <string name="menu_invite_title">Invite</string>
+    <string name="menu_invite_subtitle">Let your friends and family to join Dash</string>
     <string name="menu_buy_and_sell_title">Buy &amp; Sell Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connect with third party exchanges</string>
     <string name="menu_security_title">Security</string>
@@ -347,11 +349,19 @@
     <string name="payment_request_skip">Skip</string>
     <string name="payment_request_paid_to">Paid to</string>
 
+    <string name="import_image_not_valid_qr_code">Not a valid QR Code</string>
+    <string name="import_image_please_use_valid_qr_code">Please use a valid Dash QR Code</string>
+    <string name="import_image_no_private_key_copied">No private key copied</string>
+    <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
+    <string name="import_image_invalid_private">Invalid Private Key</string>
+    <string name="okay">Okay</string>
+
     <string name="choose_your_username">Choose your <b>Dash\nUsername</b></string>
-    <string name="min_3_chars">Between 3 and 23 characters</string>
-    <string name="alphanum_only">Letters and numbers only</string>
+    <string name="identity_min_3_chars">Between 3 and 23 characters</string>
+    <string name="identity_alphanum_only">Letters, numbers and hyphens only</string>
+    <string name="identity_hyphen_rule">Must start and end with a letter or number</string>
     <string name="identity_username_validating">Validating username…</string>
-        <string name="identity__username_available">Username available</string>
+    <string name="identity_username_available">Username available</string>
     <string name="identity_username_taken">Username taken</string>
     <string name="platform_communication_error">Communication error with Dash Platform</string>
     <string name="register">Register</string>
@@ -360,6 +370,31 @@
     <string name="new_account_confirm_accept">I Accept</string>
     <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
     <string name="new_account_confirm_message">You have chose %s as your username. Username cannot be changed once it is registered.</string>
+    <string name="invitation_confirm_title">Invitation Fee</string>
+    <string name="invitation_confirm_message">Each invitation will be funded with this amount so that the receiver can quickly create their username on the Dash Network</string>
+    <string name="invitation_init_title">Invite</string>
+    <string name="invitation_init_header">Invite your friends &amp; family</string>
+    <string name="invitation_init_message">Let your friends and family to join the Dash Network. Invite them to the world of social banking.</string>
+    <string name="invitation_init_button_text">Create a new Invitation</string>
+    <string name="invitation_notifications_hint">Invite your friends and family to the Dash Network</string>
+    <string name="invitation_notifications_hint1">Invite Someone to join the Dash Network</string>
+    <string name="invitation_notifications_hint1_or">or</string>
+    <string name="invitation_created_title">Invitation</string>
+    <string name="invitation_created_successfully">Invitation Created Successfully</string>
+    <string name="invitation_created_tag_title">Tag for your reference</string>
+    <string name="invitation_created_tag">eg: Dad</string>
+    <string name="invitation_created_preview">Preview Invitation</string>
+    <string name="invitation_created_copy_link">Copy Invitation Link</string>
+    <string name="invitation_created_send_invitation">Send Invitation</string>
+    <string name="invitation_created_maybe_later">Maybe later</string>
+    <string name="invitation_preview_title">Join Now</string>
+    <string name="invitation_preview_message">You have been invited by %s. Start using Dash cryptocurrency.</string>
+    <string name="invitation_preview_close">Close</string>
+    <string name="invitation_cant_afford_title">Insufficient Wallet Balance</string>
+    <string name="invitation_cant_afford_message">You need at least 0.04 Dash to create an invitation</string>
+    <string name="invitation_creating_error_title">Error Creating Invitation</string>
+    <string name="invitation_creating_error_message">There was a problem creating your invitation. Please try again.</string>
+    <string name="invitation_share_message">Invitations are single use only. Do not share with a group.</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>
@@ -397,6 +432,8 @@
     <string name="contacts_no_results">There are no contacts that match</string>
 
     <string name="contacts_title">Contacts</string>
+    <string name="contacts_send_to_contact_title">Send to a Contact</string>
+    <string name="constacts_search_for">Search for a contact</string>
     <string name="contact_requests_title">Contact Requests</string>
     <string name="contacts_add_new_contact">Add new contact</string>
     <string name="contacts_contact_requests_count">Contact Requests (%d)</string>

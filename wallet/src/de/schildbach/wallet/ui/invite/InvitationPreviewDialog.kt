@@ -1,0 +1,54 @@
+/*
+ * Copyright 2021 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package de.schildbach.wallet.ui.invite
+
+import android.content.Context
+import android.os.Bundle
+import android.view.View
+import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.invitation_preview_view.*
+import org.dash.wallet.common.ui.FancyAlertDialog
+
+open class InvitationPreviewDialog : FancyAlertDialog() {
+
+    companion object {
+        fun newInstance(context: Context, profile: DashPayProfile): FancyAlertDialog {
+            val username = if (profile.displayName.isEmpty()) {
+                profile.username
+            } else {
+                profile.displayName
+            }
+            val messageHtml = context.getString(R.string.invitation_preview_message, "<b>$username</b>")
+            return InvitationPreviewDialog().apply {
+                arguments = createArguments(Type.INFO, 0, messageHtml, 0, R.string.invitation_preview_close).apply {
+                    putParcelable("profile", profile)
+                }
+            }
+        }
+    }
+
+    override val customContentViewResId: Int
+        get() = R.layout.invitation_preview_view
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val profile = requireArguments().getParcelable<DashPayProfile>("profile")
+        profile_picture_envelope.avatarProfile = profile
+    }
+}

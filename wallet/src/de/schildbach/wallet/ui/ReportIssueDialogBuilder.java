@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -38,13 +37,15 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.R;
 
-import android.app.Application;
-import android.content.Context;
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.net.Uri;
 import androidx.core.content.FileProvider;
+
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.CheckBox;
@@ -56,7 +57,7 @@ import android.widget.Toast;
  * @author Andreas Schildbach
  */
 public abstract class ReportIssueDialogBuilder extends DialogBuilder implements OnClickListener {
-    private final Context context;
+    private final Activity context;
 
     private EditText viewDescription;
     private CheckBox viewCollectDeviceInfo;
@@ -66,7 +67,7 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
 
     private static final Logger log = LoggerFactory.getLogger(ReportIssueDialogBuilder.class);
 
-    public ReportIssueDialogBuilder(final Context context, final int titleResId, final int messageResId) {
+    public ReportIssueDialogBuilder(final Activity context, final int titleResId, final int messageResId) {
         super(context);
 
         this.context = context;
@@ -77,6 +78,22 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
         ((TextView) view.findViewById(R.id.report_issue_dialog_message)).setText(messageResId);
 
         viewDescription = (EditText) view.findViewById(R.id.report_issue_dialog_description);
+        viewDescription.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                imitateUserInteraction();
+            }
+        });
 
         viewCollectDeviceInfo = (CheckBox) view.findViewById(R.id.report_issue_dialog_collect_device_info);
         viewCollectInstalledPackages = (CheckBox) view
@@ -90,7 +107,7 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
         setNegativeButton(R.string.button_cancel, null);
     }
 
-    public static ReportIssueDialogBuilder createReportIssueDialog(final Context context,
+    public static ReportIssueDialogBuilder createReportIssueDialog(final Activity context,
                                                                    final WalletApplication application) {
         final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(context,
                 R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
@@ -132,6 +149,7 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
         reportDir.mkdir();
 
         text.append(viewDescription.getText()).append('\n');
+        imitateUserInteraction();
 
         try {
             final CharSequence contextualData = collectContextualData();
@@ -289,5 +307,9 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
     @Nullable
     protected CharSequence collectWalletDump() throws IOException {
         return null;
+    }
+
+    private void imitateUserInteraction() {
+        context.onUserInteraction();
     }
 }

@@ -461,6 +461,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if (stage == PreBlockStage.Starting && lastPreBlockStage == PreBlockStage.None) {
                 startPreBlockPercent = syncPercentage;
             }
+            if (preBlocksWeight > 0.99) {
+                startPreBlockPercent = 0;
+            }
             if (stage == PreBlockStage.StartRecovery && lastPreBlockStage == PreBlockStage.None) {
                 startPreBlockPercent = syncPercentage;
                 if (preBlocksWeight <= 0.10)
@@ -887,8 +890,9 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             DapiClient client = PlatformRepo.getInstance().getPlatform().getClient();
             client.setSimplifiedMasternodeListManager(application.getWallet().getContext().masternodeListManager, masternodes);
-            client.getDapiAddressListProvider().addBannedAddress("211.30.243.82");
-            client.getDapiAddressListProvider().addBannedAddress("54.184.89.215");
+            client.getDapiAddressListProvider().addBannedAddress("45.48.168.16");
+            client.getDapiAddressListProvider().addBannedAddress("71.239.154.151");
+            client.getDapiAddressListProvider().addBannedAddress("174.34.233.98");
         }
 
         updateAppWidget();

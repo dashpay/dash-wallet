@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<de.schildbach.wallet.ui.widget.KeyboardResponsiveConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/search_user_empty_result"
@@ -10,6 +10,7 @@
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toTopOf="parent"
+    app:viewToHideWhenSoftKeyboardIsOpen="@id/invite_friend_hint_view_empty_result"
     tools:visibilty="visible">
 
     <ImageView
@@ -27,7 +28,6 @@
         style="@style/MontserratMedium"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="28dp"
         android:gravity="center"
         android:textColor="@android:color/black"
         android:textSize="18sp"
@@ -36,4 +36,12 @@
         app:layout_constraintTop_toBottomOf="@id/no_results_icon"
         tools:text="@string/search_user_no_results" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <include
+        android:id="@+id/invite_friend_hint_view_empty_result"
+        layout="@layout/invite_friend_hint_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</de.schildbach.wallet.ui.widget.KeyboardResponsiveConstraintLayout>

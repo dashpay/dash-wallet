@@ -79,7 +79,6 @@ import de.schildbach.wallet.livedata.Status;
 import de.schildbach.wallet.ui.CheckPinDialog;
 import de.schildbach.wallet.ui.CheckPinSharedModel;
 import de.schildbach.wallet.ui.InputParser;
-import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
@@ -217,7 +216,8 @@ public class SendCoinsFragment extends Fragment {
                 }
             }
         });
-        final SingleActionSharedViewModel confirmTransactionSharedViewModel = new ViewModelProvider(activity).get(SingleActionSharedViewModel.class);
+        final ConfirmTransactionDialog.SharedViewModel confirmTransactionSharedViewModel
+                = new ViewModelProvider(activity).get(ConfirmTransactionDialog.SharedViewModel.class);
         confirmTransactionSharedViewModel.getClickConfirmButtonEvent().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean aBoolean) {

@@ -108,4 +108,11 @@ data class DashPayProfile(@PrimaryKey val userId: String,
         result = 31 * result + updatedAt.hashCode()
         return result
     }
+
+    val nameLabel: String
+        get() = if (displayName.isEmpty()) {
+            username
+        } else {
+            displayName
+        }
 }

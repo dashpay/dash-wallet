@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/fragment_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <include
+        android:id="@+id/invitation_bitmap_template"
+        layout="@layout/invitation_bitmap_template"
+        android:visibility="invisible" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:animateLayoutChanges="true"
+        android:background="@color/bg_less_bright"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/dash_lighter_gray"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.ActionBar"
+            app:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+            app:titleTextColor="@color/dash_black">
+
+            <TextView
+                android:id="@+id/toolbar_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/invitation_created_title"
+                android:textColor="@color/dash_black"
+                android:textSize="20sp"
+                app:fontFamily="@font/montserrat_semibold" />
+
+        </androidx.appcompat.widget.Toolbar>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/round_corners_white_bg"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <de.schildbach.wallet.ui.invite.InvitePreviewEnvelopeView
+                        android:id="@+id/profile_picture_envelope"
+                        android:layout_width="120dp"
+                        android:layout_height="120dp"
+                        android:layout_gravity="center_horizontal" />
+
+                    <TextView
+                        style="@style/MontserratMedium.Heading"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="8dp"
+                        android:gravity="center_horizontal"
+                        android:text="@string/invitation_created_successfully"
+                        android:textColor="@color/medium_gray"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/preview_button"
+                        style="@style/DashButton.Transparent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="16dp"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:text="@string/invitation_created_preview"
+                        android:textColor="@color/dash_blue"
+                        android:textSize="15sp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/display_name_label"
+                    style="@style/MontserratRegular"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    android:text="@string/invitation_created_tag_title"
+                    android:textColor="@color/medium_gray"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/tag_edit"
+                    style="@style/MontserratSemiBold"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/round_corners_white_bg"
+                    android:elevation="2dp"
+                    android:hint="@string/invitation_created_tag"
+                    android:inputType="textPersonName"
+                    android:lines="1"
+                    android:paddingLeft="20dp"
+                    android:paddingRight="20dp"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp"
+                    tools:ignore="UnusedAttribute" />
+
+                <Button
+                    style="@style/DashButton.Transparent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="16dp"
+                    android:drawableStart="@drawable/ic_copy_invitation_link"
+                    android:drawablePadding="16dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="@string/invitation_created_copy_link"
+                    android:textColor="@color/dash_blue"
+                    android:textSize="15sp" />
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    tools:ignore="UselessLeaf" />
+
+                <Button
+                    android:id="@+id/send_button"
+                    style="@style/DashButton.Blue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/invitation_created_send_invitation" />
+
+                <Button
+                    android:id="@+id/maybe_later_button"
+                    style="@style/DashButton.Transparent.Dark"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:text="@string/invitation_created_maybe_later" />
+
+            </LinearLayout>
+
+        </ScrollView>
+
+    </LinearLayout>
+
+</FrameLayout>

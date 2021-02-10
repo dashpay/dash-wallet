@@ -24,6 +24,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
@@ -36,11 +37,13 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
+import kotlinx.android.synthetic.main.invite_friend_hint_view.*
+import kotlinx.android.synthetic.main.no_contacts_results.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -102,22 +105,40 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
         initViewModel()
 
-        if (mode == MODE_VIEW_REQUESTS) {
-            search.visibility = View.GONE
-            icon.visibility = View.GONE
-            setupActionBarWithTitle(R.string.contact_requests_title)
-        } else {
-            // search should be available for all other modes
-            search.addTextChangedListener(this)
-            search.visibility = View.VISIBLE
-            icon.visibility = View.VISIBLE
-            setupActionBarWithTitle(R.string.contacts_title)
+        when (mode) {
+            MODE_VIEW_REQUESTS -> {
+                search.visibility = View.GONE
+                icon.visibility = View.GONE
+                setupActionBarWithTitle(R.string.contact_requests_title)
+            }
+            MODE_SEARCH_CONTACTS -> {
+                // search should be available for all other modes
+                search.addTextChangedListener(this)
+                search.visibility = View.VISIBLE
+                icon.visibility = View.VISIBLE
+                setupActionBarWithTitle(R.string.contacts_title)
+            }
+            MODE_SELECT_CONTACT -> {
+                search.addTextChangedListener(this)
+                search.visibility = View.VISIBLE
+                icon.visibility = View.VISIBLE
+                setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
+                forceHideBottomNav = true
+            }
         }
 
-        search_for_user.setOnClickListener {
-            startActivity(Intent(context, SearchUserActivity::class.java))
+        search_for_user_suggestions.setOnClickListener {
+            onSearchUser()
+        }
+
+        search_for_user_suggestions.setOnClickListener {
+            onSearchUser()
         }
         searchContacts()
+
+        invite_friend_hint.setOnClickListener {
+            InviteFriendActivity.startOrError(requireActivity())
+        }
     }
 
     private fun showEmptyPane() {
@@ -160,9 +181,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             if (it.data != null && it.data.isNotEmpty()) {
                 showSuggestedUsers(it.data)
             } else {
-                if (contactsAdapter.results.isEmpty()) {
-                    showEmptyPane()
-                }
+                showSuggestedUsers(null)
             }
         })
     }
@@ -193,7 +212,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         KeyboardUtil.hideKeyboard(requireContext(), requireView())
         val searchUsersBtn = suggestions_search_no_result.findViewById<View>(R.id.search_for_user_suggestions)
         searchUsersBtn.setOnClickListener {
-            startActivity(Intent(context, SearchUserActivity::class.java))
+            onSearchUser()
         }
         val text = getString(R.string.suggestions_empty_result_part_1) +
                 " \"<b>$query</b>\" " + getString(R.string.suggestions_empty_result_part_2)
@@ -222,19 +241,21 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             }
         }
 
-        if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS)
+        if (requests.isNotEmpty() && mode == MODE_SEARCH_CONTACTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_REQUEST_HEADER, requestCount = requestCount))
-        requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
-
+            requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        } else if (mode == MODE_VIEW_REQUESTS) {
+            requests.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        }
         // process contacts
         val contacts = if (mode != MODE_VIEW_REQUESTS)
             data.filter { r -> r.requestSent && r.requestReceived }
         else ArrayList()
 
-        if (contacts.isNotEmpty() && mode != MODE_VIEW_REQUESTS)
+        if (contacts.isNotEmpty() && mode != MODE_VIEW_REQUESTS) {
             results.add(ContactSearchResultsAdapter.ViewItem(null, ContactSearchResultsAdapter.CONTACT_HEADER))
-        contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
-
+            contacts.forEach { r -> results.add(ContactSearchResultsAdapter.ViewItem(r, ContactSearchResultsAdapter.CONTACT)) }
+        }
         contactsAdapter.results = results
     }
 
@@ -245,13 +266,23 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         return super.onCreateOptionsMenu(menu, menuInflater)
     }
 
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.contacts_add_contact -> {
+                onSearchUser()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     override fun onSortOrderChanged(direction: UsernameSortOrderBy) {
         this.direction = direction
         searchContacts()
     }
 
     override fun onSearchUser() {
-        startActivity(Intent(context, SearchUserActivity::class.java))
+        startActivity(SearchUserActivity.createIntent(requireContext(), query))
     }
 
     private fun searchContacts() {
@@ -263,8 +294,10 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         searchContactsRunnable = Runnable {
             contactsAdapter.query = query
             dashPayViewModel.searchContacts(query, direction)
-            if (!initialSearch && query.isNotEmpty()) {
-                dashPayViewModel.searchUsernames(query, limit = 3, removeContacts = true)
+            if (mode == MODE_SEARCH_CONTACTS) {
+                if (!initialSearch && query.isNotEmpty()) {
+                    dashPayViewModel.searchUsernames(query, limit = 3, removeContacts = true)
+                }
             }
         }
         searchHandler.postDelayed(searchContactsRunnable, 500)

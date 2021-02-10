@@ -1,59 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintTop_toTopOf="parent"
-    android:background="@color/dash_lighter_gray">
+    android:orientation="vertical">
 
-    <androidx.appcompat.widget.AppCompatEditText
-        android:id="@+id/search"
-        style="@style/MontserratMedium"
+    <LinearLayout
+        android:id="@+id/invite_friend_hint"
         android:layout_width="match_parent"
-        android:layout_height="45dp"
-        android:layout_marginStart="15dp"
-        android:layout_marginTop="22dp"
-        android:layout_marginEnd="15dp"
-        android:background="@drawable/round_corners_white_bg"
-        android:elevation="4dp"
-        android:inputType="textEmailAddress"
-        android:lines="1"
-        android:paddingStart="60dp"
-        android:paddingLeft="28dp"
-        android:paddingRight="28dp"
-        android:textColor="@android:color/black"
-        android:textSize="16sp"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:targetApi="lollipop" />
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:background="@drawable/semi_blue_background_rounded"
+        android:foreground="?attr/selectableItemBackground"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        tools:ignore="UnusedAttribute,ContentDescription">
 
-    <ImageView
-        android:id="@+id/icon"
-        android:layout_width="27.35dp"
-        android:layout_height="24dp"
-        android:layout_marginStart="20dp"
-        android:elevation="10dp"
-        app:layout_constraintBottom_toBottomOf="@id/search"
-        app:layout_constraintStart_toStartOf="@id/search"
-        app:layout_constraintTop_toTopOf="@id/search"
-        app:srcCompat="@drawable/ic_search" />
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            app:srcCompat="@drawable/ic_invite_envelope" />
+
+        <TextView
+            android:id="@+id/display_name"
+            style="@style/MontserratRegular"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="@string/invitation_notifications_hint"
+            android:textColor="@android:color/black"
+            android:textSize="14sp" />
+
+        <ImageView
+            android:id="@+id/invite_friend_hint_close"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            app:srcCompat="@drawable/ic_invite_close_disclimer_cross" />
+
+    </LinearLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/dash_lighter_gray"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <androidx.appcompat.widget.AppCompatEditText
+            android:id="@+id/search"
+            style="@style/MontserratMedium"
+            android:layout_width="match_parent"
+            android:layout_height="45dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="22dp"
+            android:layout_marginEnd="15dp"
+            android:background="@drawable/round_corners_white_bg"
+            android:elevation="4dp"
+            android:inputType="textEmailAddress"
+            android:lines="1"
+            android:paddingStart="60dp"
+            android:paddingLeft="28dp"
+            android:paddingRight="28dp"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:targetApi="lollipop" />
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="27.35dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="20dp"
+            android:elevation="10dp"
+            app:layout_constraintBottom_toBottomOf="@id/search"
+            app:layout_constraintStart_toStartOf="@id/search"
+            app:layout_constraintTop_toTopOf="@id/search"
+            app:srcCompat="@drawable/ic_search" />
 
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/contacts_rv"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginStart="15dp"
-        android:layout_marginEnd="15dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/search"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/contacts_rv"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginEnd="15dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/search" />
 
-    <!--include layout="@layout/user_search_empty_result" />
+        <!--include layout="@layout/user_search_empty_result" />
 
-    <include layout="@layout/user_search_loading" /-->
+        <include layout="@layout/user_search_loading" /-->
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

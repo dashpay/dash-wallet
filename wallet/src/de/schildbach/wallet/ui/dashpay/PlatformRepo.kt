@@ -170,9 +170,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun getUsername(username: String): Resource<Document> {
         return try {
             var nameDocument = platform.names.get(username)
-            if (nameDocument == null) {
-                nameDocument = platform.names.get(username, "")
-            }
             Resource.success(nameDocument)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage!!, null)
@@ -216,8 +213,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             nameDocuments.map { getIdentityForName(it) }
         }
 
-        val profileDocuments = Profiles(platform).getList(userIds)
-        val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+        var profileById: Map<Identifier, Document> = mapOf()
+
+        try {
+            val profileDocuments = Profiles(platform).getList(userIds)
+            profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+        } catch (e: StatusRuntimeException) {
+            // swallow; we don't want to stop this method if no usernames have profiles
+        }
 
         val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
                 ?: arrayListOf()
@@ -447,9 +450,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
         if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
-            val contactIdentity = platform.identities.get(toUserId)
             Context.propagate(walletApplication.wallet.context)
-            blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, cr!!, encryptionKey)
+            blockchainIdentity.addPaymentKeyChainFromContact(potentialContactIdentity!!, cr!!, encryptionKey)
 
             // update bloom filters now on main thread
             mainHandler.post {
@@ -538,10 +540,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     blockchainIdentity.registerIdentity(keyParameter)
                     return@withContext
                 } catch (e: InvalidIdentityAssetLockProofError) {
-                    log.info("instantSendLock error: retry registerIdentity again")
+                    log.info("instantSendLock error: retry registerIdentity again ($i)")
                     delay(3000)
                 }
             }
+            throw InvalidIdentityAssetLockProofError("failed after 3 tries")
         }
     }
 
