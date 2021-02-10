@@ -21,13 +21,17 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.InviteFriendViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
-import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_invite_friend.*
 import org.bitcoinj.core.Coin
+import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.ui.FancyAlertDialog
 
 class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
 
@@ -36,6 +40,8 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
     }
 
     private lateinit var walletApplication: WalletApplication
+
+    private lateinit var invitationViewModel: InviteFriendViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -53,11 +59,36 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
     private fun initViewModel() {
         val platformPaymentConfirmDialogViewModel = ViewModelProvider(requireActivity())[PlatformPaymentConfirmDialog.SharedViewModel::class.java]
         platformPaymentConfirmDialogViewModel.clickConfirmButtonEvent.observe(viewLifecycleOwner, Observer {
-            triggerInviteCreation()
-            requireActivity().supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, InvitationCreatedFragment.newInstance())
-                    .commitNow()
+            // is there enough funds?
+            if (walletApplication.wallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE) < Constants.DASH_PAY_FEE) {
+                val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_creating_error_title,
+                        R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
+                        R.string.okay, 0)
+                errorDialog.show(childFragmentManager, null)
+            } else {
+                // there are enough funds
+                val inviteId = invitationViewModel.sendInviteTransaction()
+                invitationViewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner, Observer {
+                    when (it.status) {
+                        Status.SUCCESS -> {
+                            if (it.data != null) {
+                                requireActivity().supportFragmentManager.beginTransaction()
+                                        .replace(R.id.container, InvitationCreatedFragment.newInstanceFromIdentity(it.data.first))
+                                        .commitNow()
+                            }
+                        }
+                        Status.LOADING -> {
+                            // sending has begun
+                        }
+                        else -> {
+                            // there was an error sending
+
+                        }
+                    }
+                })
+            }
         })
+        invitationViewModel = ViewModelProvider(requireActivity())[InviteFriendViewModel::class.java]
     }
 
     private fun showConfirmationDialog() {
@@ -66,11 +97,5 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
         val dialogMessage = getString(R.string.invitation_confirm_message)
         val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee.value)
         dialog.show(childFragmentManager, "SendInviteConfirmDialog")
-    }
-
-    private fun triggerInviteCreation() {
-        SendInviteOperation(walletApplication)
-                .create()
-                .enqueue()
     }
 }
