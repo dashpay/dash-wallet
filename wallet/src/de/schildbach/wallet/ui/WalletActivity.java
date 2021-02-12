@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipDescription;
@@ -76,7 +75,6 @@ import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 
 import java.io.IOException;
 import java.util.Currency;
-import java.util.List;
 import java.util.Locale;
 
 import de.schildbach.wallet.AppDatabase;
@@ -262,14 +260,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     @Override
     protected void onResume() {
         super.onResume();
-        ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
-        List<ActivityManager.RunningAppProcessInfo> runningAppProcesses = activityManager.getRunningAppProcesses();
-        if (runningAppProcesses != null) {
-            int importance = runningAppProcesses.get(0).importance;
-            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)
-                getWalletApplication().startBlockchainService(true);
-        }
 
+        getWalletApplication().startBlockchainService(true);
 
         checkLowStorageAlert();
         detectUserCountry();
