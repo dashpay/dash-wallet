@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -153,13 +152,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
     }
 
     private fun startBlockchainService() {
-        // hack for Android P bug https://issuetracker.google.com/issues/113122354
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val runningAppProcesses: List<ActivityManager.RunningAppProcessInfo> = activityManager.runningAppProcesses
-        val importance: Int = runningAppProcesses[0].importance
-        if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND){
-            walletApplication.startBlockchainService(false)
-        }
+        walletApplication.startBlockchainService(false)
     }
 
     private fun initView() {
