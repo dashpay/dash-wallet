@@ -577,6 +577,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         withContext(Dispatchers.IO) {
             blockchainIdentity.watchIdentity(100, 1000, RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
+            platform.stateRepository.addValidIdentity(blockchainIdentity.uniqueIdentifier)
         }
     }
 
@@ -713,6 +714,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
             currentMainKeyType = blockchainIdentityData.currentMainKeyType
                     ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
+
+
         }
     }
 
