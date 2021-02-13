@@ -1064,10 +1064,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (lastContactRequestTime == 0L) {
                 val remainingMissingProfiles = userIdList.filter { !profileById.containsKey(Identifier.from(it)) }
                 for (identityId in remainingMissingProfiles) {
-                    val nameDocument = nameById[Identifier.from(identityId)] // what happens if there is no username for the identity? crash
-                    val username = nameDocument!!.data["normalizedLabel"] as String
-                    val identityIdForName = getIdentityForName(nameDocument)
-                    dashPayProfileDao.insert(DashPayProfile(identityIdForName.toString(), username))
+                    val nameDocument = nameById[Identifier.from(identityId)]
+                    // what happens if there is no username for the identity? crash
+                    if (nameDocument != null) {
+                        val username = nameDocument.data["normalizedLabel"] as String
+                        val identityIdForName = getIdentityForName(nameDocument)
+                        dashPayProfileDao.insert(DashPayProfile(identityIdForName.toString(), username))
+                    } else {
+                        log.info("no username found for $identityId")
+                    }
                 }
             }
         }
