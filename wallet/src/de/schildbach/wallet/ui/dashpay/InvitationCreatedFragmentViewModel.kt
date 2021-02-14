@@ -24,6 +24,7 @@ import android.view.View
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
@@ -32,6 +33,8 @@ import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
 import de.schildbach.wallet.ui.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -44,6 +47,8 @@ import java.io.IOException
 open class InvitationCreatedFragmentViewModel(application: Application) : BaseProfileViewModel(application) {
 
     private val log = LoggerFactory.getLogger(InvitationCreatedFragmentViewModel::class.java)
+
+    val invitationDao = AppDatabase.getAppDatabase().invitationsDao()
 
     val invitationPreviewImageFile by lazy {
         try {
@@ -77,7 +82,9 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
 
     fun saveTag(tag: String) {
         invitation.memo = tag
-        AppDatabase.getAppDatabase().invitationsDaoAsync().insert(invitation)
+        viewModelScope.launch {
+            invitationDao.insert(invitation)
+        }
     }
 
     private val pubkeyHash = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
@@ -87,7 +94,7 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
 
     val invitationLiveData = Transformations.switchMap(identityIdLiveData) {
         liveData (Dispatchers.IO) {
-            emit(AppDatabase.getAppDatabase().invitationsDao().loadByUserId(it)!!)
+            emit(invitationDao.loadByUserId(it)!!)
         }
     }
 
@@ -112,7 +119,4 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
         val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx, encryptionKey)
         emit("sample://dashpay.invitation/$invite")
     }
-
-    val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, inviteId)
-
 }
