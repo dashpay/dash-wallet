@@ -75,6 +75,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -89,9 +90,9 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
+import de.schildbach.wallet.ui.ImportSharedImageActivity;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.ImportSharedImageActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -577,12 +578,20 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public void startBlockchainService(final boolean cancelCoinsReceived) {
-        if (cancelCoinsReceived) {
-            Intent blockchainServiceCancelCoinsReceivedIntent = new Intent(BlockchainService.ACTION_CANCEL_COINS_RECEIVED, null,
-                    this, BlockchainServiceImpl.class);
-            startService(blockchainServiceCancelCoinsReceivedIntent);
-        } else {
-            startService(blockchainServiceIntent);
+        // hack for Android P bug https://issuetracker.google.com/issues/113122354
+        ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> runningAppProcesses = activityManager != null ? activityManager.getRunningAppProcesses() : null;
+        if (runningAppProcesses != null) {
+            int importance = runningAppProcesses.get(0).importance;
+            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)
+
+                if (cancelCoinsReceived) {
+                    Intent blockchainServiceCancelCoinsReceivedIntent = new Intent(BlockchainService.ACTION_CANCEL_COINS_RECEIVED, null,
+                            this, BlockchainServiceImpl.class);
+                    startService(blockchainServiceCancelCoinsReceivedIntent);
+                } else {
+                    startService(blockchainServiceIntent);
+                }
         }
     }
 
