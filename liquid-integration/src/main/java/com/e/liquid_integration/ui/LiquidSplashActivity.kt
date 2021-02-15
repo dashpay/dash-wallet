@@ -69,6 +69,10 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         handleIntent(intent)
     }
 
+    /**
+     * Check deeplinking to get user logged in or not
+     */
+
     private fun handleIntent(intent: Intent?) {
         val action = intent!!.action
         val intentUri = intent.data
@@ -92,6 +96,9 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         super.onDestroy()
     }
 
+    /**
+     * call api for get session id
+     */
     private fun authUser() {
         if (GenericUtils.isInternetConnected(this)) {
             if (liquidClient!!.storedSessionId!!.isEmpty()) {
@@ -122,6 +129,9 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         }
     }
 
+    /**
+     * Call api to get user liquid details
+     */
     private fun getUserId() {
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
@@ -170,6 +180,9 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         finish()
     }
 
+    /**
+     * Open login url in webview
+     */
     private fun openLoginUrl(sessionId: String) {
 
         val url = "${LiquidConstants.INITIAL_URL}${sessionId}/liquid_oauth?preferred_action=follow_href&theme=light&return_url=${LiquidConstants.OAUTH_CALLBACK_URL}"
@@ -213,5 +226,4 @@ class LiquidSplashActivity : InteractionAwareActivity() {
             getUserId()
         }
     }
-
 }

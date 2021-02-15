@@ -4,11 +4,11 @@ import android.content.Context
 import android.widget.ImageView
 import android.widget.LinearLayout
 import com.e.liquid_integration.R
-import com.e.liquid_integration.`interface`.ValueSelectListner
+import com.e.liquid_integration.listener.ValueSelectListener
 import com.google.android.material.bottomsheet.BottomSheetDialog
 
 
-class SelectSellDashDialog(val _context: Context, val listner: ValueSelectListner) : BottomSheetDialog(_context) {
+class SelectSellDashDialog(val contexts: Context, val listener: ValueSelectListener) : BottomSheetDialog(contexts) {
 
     init {
         setCancelable(true)
@@ -19,7 +19,7 @@ class SelectSellDashDialog(val _context: Context, val listner: ValueSelectListne
     override fun create() {
 
         val bottomSheetView = layoutInflater.inflate(R.layout.dialog_sell_dash, null)
-        val dialog = BottomSheetDialog(_context, R.style.BottomSheetDialog) // Style here
+        val dialog = BottomSheetDialog(contexts, R.style.BottomSheetDialog) // Style here
         dialog.setContentView(bottomSheetView);
         dialog.show()
 
@@ -29,12 +29,12 @@ class SelectSellDashDialog(val _context: Context, val listner: ValueSelectListne
 
         llCreditCard.setOnClickListener {
             dialog.dismiss()
-            listner.onItemSelected(1)
+            listener.onItemSelected(1)
         }
 
         llCryptocurrency.setOnClickListener {
             dialog.dismiss()
-            listner.onItemSelected(2)
+            listener.onItemSelected(2)
         }
 
         collapseButton.setOnClickListener {

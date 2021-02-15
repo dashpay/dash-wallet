@@ -28,7 +28,6 @@ import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.common.UserInteractionAwareCallback
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class MoreActivity : GlobalFooterActivity() {
 
@@ -83,9 +82,7 @@ class MoreActivity : GlobalFooterActivity() {
     }
 
     private fun startBuyAndSellActivity() {
-       /* val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(this, wallet))*/
-        startActivity(Intent(this,BuyAndSellLiquidUpholdActivity::class.java))
+        startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this));
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

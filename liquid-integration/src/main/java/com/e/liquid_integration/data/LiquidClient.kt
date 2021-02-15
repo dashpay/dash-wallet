@@ -63,7 +63,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
         }
 
         fun getInstance(): LiquidClient? {
-            checkNotNull(instance) { "You must call UpholdClient#init() first" }
+            checkNotNull(instance) { "You must call LiquidClient#init() first" }
             return instance
         }
     }
@@ -177,18 +177,19 @@ class LiquidClient private constructor(context: Context, private val encryptionK
             })
         } catch (e: Exception) {
             callback.onError(e)
-            Log.v("onError....", e.toString())
         }
     }
 
 
-    fun getAllCurrencies(callback: CallbackCurrency<String>) {
+    /**
+     * call get all currency api
+     */
+    fun getAllCurrencies(callback: Callback<CurrencyResponse>) {
         try {
 
             service.getAllCurrencies(LiquidConstants.PUBLIC_API_KEY).enqueue(object : retrofit2.Callback<CurrencyResponse> {
                 override fun onResponse(call: Call<CurrencyResponse>, response: Response<CurrencyResponse>) {
                     if (response.isSuccessful) {
-                        println("Size::" + response.body()?.payload?.size)
                         response.body()?.let { callback.onSuccess(it) }
                     } else {
                         callback.onError(LiquidException("Error in fetching currencies", response.message(), response.code()))
@@ -229,10 +230,6 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     val isAuthenticated: Boolean get() = storedUserId != "" && storedSessionId != "" && storedSessionSecret != ""
 
-    interface CallbackCurrency<T> {
-        fun onSuccess(data: CurrencyResponse)
-        fun onError(e: Exception?)
-    }
 
     interface Callback<T> {
         fun onSuccess(data: T)

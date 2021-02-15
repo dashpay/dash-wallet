@@ -49,8 +49,8 @@ dependencies {
     implementation "org.dashj-android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
-    implementation 'com.google.zxing:core:3.3.3'
-    // 3.3.3 is the maximum to support Android 4.4 to 6.x
+    implementation 'com.google.zxing:core:3.3.3' // 3.3.3 is the maximum to support Android 4.4 to 6.x
+
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
 
@@ -63,11 +63,8 @@ dependencies {
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.tbuonomo.andrui:viewpagerdotsindicator:4.1.2'
-    implementation 'com.sambarboza:orbitview:0.2.0'
-    implementation 'com.amulyakhare:com.amulyakhare.textdrawable:1.0.1'
 
     implementation project(path: ':common')
-//    implementation project(path: ':ui-redesign')
     implementation 'com.google.android.gms:play-services-auth:18.1.0'
 
     def room_version = "2.2.5"
@@ -171,14 +168,6 @@ android {
         }
     }
 
-    /*signingConfigs {
-        debug {
-            storeFile file('keystore/debug.keystore')
-            storePassword "android"
-            keyAlias "androiddebugkey"
-            keyPassword "android"
-        }
-    }*/
     buildTypes {
         all {
             minifyEnabled true
@@ -189,29 +178,6 @@ android {
             debuggable true
         }
     }
-    /*buildTypes {
-        all {
-            def imgurClientId = props.getProperty("IMGUR_CLIENT_ID")
-            def imgurClientSecret = props.getProperty("IMGUR_CLIENT_SECRET")
-            if (imgurClientId == null) {
-                imgurClientId = "\"IMGUR_CLIENT_ID\""
-            }
-            if (imgurClientSecret == null) {
-                imgurClientSecret = "\"IMGUR_CLIENT_SECRET\""
-            }
-            buildConfigField("String", "IMGUR_CLIENT_ID", imgurClientId)
-            buildConfigField("String", "IMGUR_CLIENT_SECRET", imgurClientSecret)
-        }
-        release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
-            testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg', 'proguardTest-rules.txt'
-        }
-        debug {
-            multiDexEnabled true
-            debuggable true
-        }
-    }*/
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
@@ -237,13 +203,6 @@ android {
         devNet {
             res.srcDirs = ["devNet/res"]
         }
-        evonet {
-            res.srcDirs = ["evonet/res"]
-        }
-        mobile {
-            res.srcDirs = ["mobile/res"]
-            resources.srcDirs = ["mobile/resources"]
-        }
     }
     flavorDimensions "default"
     productFlavors {
@@ -259,18 +218,8 @@ android {
         devNet {
             applicationId = "hashengineering.darkcoin.wallet.devnet"
         }
-        evonet {
-            applicationId = "hashengineering.darkcoin.wallet.evonet"
-        }
-        mobile {
-            applicationId = "hashengineering.darkcoin.wallet.mobile"
-        }
     }
-   /* externalNativeBuild {
-        cmake {
-            path 'cpp/CMakeLists.txt'
-        }
-    }*/
+
     packagingOptions {
         exclude 'lib/x86_64/darwin/libscrypt.dylib'
         exclude 'lib/x86_64/freebsd/libscrypt.so'

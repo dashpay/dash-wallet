@@ -10,9 +10,6 @@ data class Data(
 	@field:SerializedName("new_step")
 	val newStep: String? = null,
 
-/*	@field:SerializedName("meta")
-	val meta: Meta? = null,*/
-
 	@field:SerializedName("old_step")
 	val oldStep: String? = null
 )

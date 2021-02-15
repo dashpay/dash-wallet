@@ -4,11 +4,11 @@ import android.content.Context
 import android.widget.ImageView
 import android.widget.LinearLayout
 import com.e.liquid_integration.R
-import com.e.liquid_integration.`interface`.ValueSelectListner
+import com.e.liquid_integration.listener.ValueSelectListener
 import com.google.android.material.bottomsheet.BottomSheetDialog
 
 
-class SelectBuyDashDialog(val _context: Context, private val listner: ValueSelectListner) : BottomSheetDialog(_context) {
+class SelectBuyDashDialog(val contexts: Context, private val listener: ValueSelectListener) : BottomSheetDialog(contexts) {
 
     init {
         setCancelable(true)
@@ -20,7 +20,7 @@ class SelectBuyDashDialog(val _context: Context, private val listner: ValueSelec
 
 
         val bottomSheetView = layoutInflater.inflate(R.layout.dialog_buy_dash, null)
-        val dialog = BottomSheetDialog(_context, R.style.BottomSheetDialog) // Style here
+        val dialog = BottomSheetDialog(contexts, R.style.BottomSheetDialog) // Style here
         dialog.setContentView(bottomSheetView);
         dialog.show()
 
@@ -32,7 +32,7 @@ class SelectBuyDashDialog(val _context: Context, private val listner: ValueSelec
         llCreditCard.setOnClickListener {
             dialog.dismiss()
 
-            listner.onItemSelected(1)
+            listener.onItemSelected(1)
 
             // Commented for future to use enter amount screen
 
@@ -44,19 +44,11 @@ class SelectBuyDashDialog(val _context: Context, private val listner: ValueSelec
                  startActivityForResult(intent, 101)
      */
 
-            /* val intent = Intent(this, BuyDashCryptoActivity::class.java)
-             intent.putExtra("From", "CreditCard")
-             startActivity(intent)*/
-
         }
 
         llCryptocurrency.setOnClickListener {
             dialog.dismiss()
-            listner.onItemSelected(2)
-            /* val intent = Intent(_context, BuyDashCryptoActivity::class.java)
-             intent.putExtra("From", "BuyCryptocurrency")
-             _context.startActivity(intent)*/
-
+            listener.onItemSelected(2)
         }
 
         collapseButton.setOnClickListener {

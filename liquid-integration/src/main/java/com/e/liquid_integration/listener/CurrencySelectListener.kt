@@ -1,7 +1,7 @@
-package com.e.liquid_integration.`interface`
+package com.e.liquid_integration.listener
 
 import com.e.liquid_integration.currency.PayloadItem
 
-interface CurrencySelectListner {
+interface CurrencySelectListener {
     fun onCurrencySelected(isLiquidSelcted: Boolean, isUpholdSelected: Boolean, selectedFilterCurrencyItem: PayloadItem?)
 }

@@ -9,9 +9,9 @@ import android.widget.Button
 import android.widget.TextView
 import com.e.liquid_integration.R
 import com.e.liquid_integration.data.LiquidConstants
-import com.e.liquid_integration.ui.LiquidLoginActivity
+import com.e.liquid_integration.ui.WebViewActivity
 
-class CountrySupportDialog(val _context: Context) : Dialog(_context, R.style.Theme_Dialog) {
+class CountrySupportDialog(val contexts: Context) : Dialog(contexts, R.style.Theme_Dialog) {
 
     init {
         setCanceledOnTouchOutside(false)
@@ -30,11 +30,10 @@ class CountrySupportDialog(val _context: Context) : Dialog(_context, R.style.The
 
         findViewById<TextView>(R.id.txtCountrySupported).setOnClickListener {
             dismiss()
-
-            val intent = Intent(_context, LiquidLoginActivity::class.java)
+            val intent = Intent(contexts, WebViewActivity::class.java)
             intent.putExtra("url", LiquidConstants.COUNTRY_NOT_SUPPORTED)
             intent.putExtra("title", "Liquid")
-            _context.startActivity(intent)
+            contexts.startActivity(intent)
 
         }
     }

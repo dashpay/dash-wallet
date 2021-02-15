@@ -16,9 +16,8 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Observer
 import com.e.liquid_integration.R
-import com.e.liquid_integration.`interface`.ValueSelectListner
+import com.e.liquid_integration.listener.ValueSelectListener
 import com.e.liquid_integration.currency.CurrencyResponse
 import com.e.liquid_integration.currency.PayloadItem
 import com.e.liquid_integration.data.LiquidClient
@@ -43,7 +42,7 @@ import org.json.JSONObject
 class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     companion object {
-        fun createIntent(context: Context?): Intent? {
+        fun createIntent(context: Context?): Intent {
             return if (LiquidClient.getInstance()!!.isAuthenticated) {
                 Intent(context, LiquidBuyAndSellDashActivity::class.java)
             } else {
@@ -54,7 +53,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     private var liquidClient: LiquidClient? = null
 
-    private lateinit var _context: Context
+    private lateinit var context: Context
     private var loadingDialog: ProgressDialog? = null
 
     private val cryptoCurrencyArrayList = ArrayList<PayloadItem>()
@@ -62,14 +61,13 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private var isSelectFiatCurrency = false
     private var isClickLogoutButton = false
 
-    // var currentExchangeRate: LiveData<ExchangeRate>? = null
     var currentExchangeRate: ExchangeRate? = null
 
     override
     fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_liquid_buy_and_sell_dash)
-        this._context = this@LiquidBuyAndSellDashActivity
+        this.context = this@LiquidBuyAndSellDashActivity
         liquidClient = LiquidClient.getInstance()
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
@@ -95,6 +93,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
         findViewById<LinearLayout>(R.id.llTransferToLiquid).setOnClickListener {
 
+            // Commented code for future to use for this flow required this activity
             /* val intent = Intent()
              intent.setClassName(this, "de.schildbach.wallet.ui.LiquidDashToDashTransferActivity")
              intent.putExtra("extra_title", getString(R.string.liquid))
@@ -117,16 +116,20 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         val defaultCurrency = walletDataProvider.defaultCurrencyCode()
 
         walletDataProvider.getExchangeRate(defaultCurrency).observe(this,
-                Observer { exchangeRate ->
+                { exchangeRate ->
                     if (exchangeRate != null) {
                         currentExchangeRate = exchangeRate
                     }
                 })
     }
 
+    /**
+     * SHow dialog of sell dash option fiat or cryptocurrency
+     */
+
     private fun showSellDashDialog() {
 
-        SelectSellDashDialog(_context, object : ValueSelectListner {
+        SelectSellDashDialog(context, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 if (value == 1) {
                     isSelectFiatCurrency = true
@@ -145,26 +148,27 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                     }
                 }
             }
-        })//.show()
+        })
     }
 
+    /**
+     * Show dialog fiat or cryptocurrency selected currency
+     */
     private fun showSellDashCurrencyDialog() {
         if (isSelectFiatCurrency) {
 
-            SellDashCryptoCurrencyDialog(_context, "FiatCurrency", fiatCurrencyList, object : ValueSelectListner {
+            SellDashCryptoCurrencyDialog(context, "FiatCurrency", fiatCurrencyList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
-
                 }
-
-            })//.show()
+            })
 
         } else {
 
-            SellDashCryptoCurrencyDialog(_context, "CryptoCurrency", cryptoCurrencyArrayList, object : ValueSelectListner {
+            SellDashCryptoCurrencyDialog(context, "CryptoCurrency", cryptoCurrencyArrayList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
 
                 }
-            })//.show()
+            })
         }
     }
 
@@ -184,13 +188,17 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         revokeAccessToken()
     }
 
+    /**
+     * Show dialog for buy dash option to select credit card and cryptocurrency
+     */
+
     private fun buyDash() {
 
-        SelectBuyDashDialog(_context, object : ValueSelectListner {
+        SelectBuyDashDialog(context, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 if (value == 1) {
 
-                    val intent = Intent(_context, BuyDashWithCreditCardActivity::class.java)
+                    val intent = Intent(context, BuyDashWithCreditCardActivity::class.java)
                     intent.putExtra("Amount", "5")
                     startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
 
@@ -206,8 +214,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
         })
     }
-
-
+    /**
+     * call api to  get liquid wallet balance
+     */
     private fun getUserLiquidAccountBalance() {
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
@@ -231,6 +240,10 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             GenericUtils.showToast(this, getString(com.e.liquid_integration.R.string.internet_connected))
         }
     }
+
+    /**
+     * Show iiquid wallet balance
+     */
 
     private fun showDashLiquidBalance(data: String) {
 
@@ -269,22 +282,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 findViewById<TextView>(R.id.txtUSAmount).setText(defaultCurrency + " " + if (dashAmount.isZero) "0.00" else fiatFormat.format(localValue))
 
             }
-
-
-            /*val base = Gson().fromJson(data, DashBalanceResponse::class.java)
-
-            if (base.success!!) {
-
-                for (i in base.payload?.cryptoAccounts!!.indices) {
-
-                    if (base.payload.cryptoAccounts[i]!!.currency == "DASH") {
-                        llLiquidAmount.visibility = View.VISIBLE
-                        txtUSAmount.text = base.payload.cryptoAccounts[i]!!.balance
-                        amount = base.payload.cryptoAccounts[i]!!.balance
-                        break
-                    }
-                }
-            }*/
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -305,24 +302,15 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         }
     }
 
+    /**
+     * Show dialog for logout from liquid
+     */
     private fun revokeAccessToken() {
 
         val dialogBuilder = AlertDialog.Builder(this)
         dialogBuilder.setMessage(R.string.liquid_logout_title)
         dialogBuilder.setPositiveButton(android.R.string.ok) { dialog, button ->
             openLogoutUrl()
-            /*loadingDialog!!.show()
-            LiquidClient.getInstance()?.revokeAccessToken(object : LiquidClient.Callback<String?> {
-                override fun onSuccess(data: String?) {
-                    loadingDialog!!.hide()
-                    LiquidClient.getInstance()?.clearStoredSessionData()
-                    finish()
-                }
-
-                override fun onError(e: Exception?) {
-                    loadingDialog!!.hide()
-                }
-            })*/
         }
         dialogBuilder.setNegativeButton(android.R.string.cancel) { dialog, which ->
 
@@ -330,11 +318,11 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         dialogBuilder.show()
     }
 
-    private fun appAvailable(package_name: String): Boolean {
+    private fun appAvailable(packageName: String): Boolean {
         val pm: PackageManager = packageManager
         val installed: Boolean
         installed = try {
-            pm.getPackageInfo(package_name, PackageManager.GET_ACTIVITIES)
+            pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
             true
         } catch (e: PackageManager.NameNotFoundException) {
             false
@@ -380,6 +368,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         }
     }
 
+    /**
+     * Call api of logut from liquid
+     */
     private fun callRevokeAccessTokenAPI() {
         loadingDialog!!.show()
         LiquidClient.getInstance()?.revokeAccessToken(object : LiquidClient.Callback<String?> {
@@ -401,7 +392,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         if (GenericUtils.isInternetConnected(this)) {
 
             loadingDialog!!.show()
-            liquidClient?.getAllCurrencies(object : LiquidClient.CallbackCurrency<String> {
+            liquidClient?.getAllCurrencies(object : LiquidClient.Callback<CurrencyResponse>{
 
                 override fun onSuccess(data: CurrencyResponse) {
                     if (isFinishing) {
@@ -441,14 +432,13 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     private fun showCurrencyDialog() {
-        BuyDashCryptoCurrencyDialog(this, cryptoCurrencyArrayList, object : ValueSelectListner {
+        BuyDashCryptoCurrencyDialog(this, cryptoCurrencyArrayList, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
-                val intent = Intent(_context, BuyDashWithCryptoCurrencyActivity::class.java)
-                intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].symbol)
+                val intent = Intent(context, BuyDashWithCryptoCurrencyActivity::class.java)
+                intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].ccyCode)
                 startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
-
             }
-        })//.show()
+        })
     }
 
     override fun onDestroy() {

@@ -25,6 +25,7 @@ import retrofit2.http.Body;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
 import retrofit2.http.Url;
@@ -34,9 +35,10 @@ public interface UpholdService {
     @FormUrlEncoded
     @POST("oauth2/token")
     Call<UpholdAccessToken> getAccessToken(@Field("client_id") String clientId,
-                                           @Field("client_secret")String clientSecret,
+                                           @Field("client_secret") String clientSecret,
                                            @Field("code") String code,
                                            @Field("grant_type") String grantType);
+
     @FormUrlEncoded
     @POST("oauth2/revoke")
     Call<String> revokeAccessToken(@Field("token") String token);
@@ -57,5 +59,7 @@ public interface UpholdService {
     Call<Object> commitTransaction(@Path("cardId") String cardId, @Path("txId") String txId);
 
     @GET
-    Call<String> getUpholdCurrency(@Url String url);
+    Call<String> getUpholdCurrency(@Header("Range") String range, @Url String url);
+
+
 }

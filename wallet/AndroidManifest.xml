@@ -324,7 +324,7 @@
 
 
         <activity
-            android:name="com.e.liquid_integration.ui.LiquidLoginActivity"
+            android:name="com.e.liquid_integration.ui.WebViewActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
@@ -333,10 +333,6 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity
-            android:name="com.e.liquid_integration.ui.SellDashActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
             android:name="com.e.liquid_integration.ui.LiquidBuyAndSellDashActivity"

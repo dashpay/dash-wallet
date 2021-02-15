@@ -35,7 +35,6 @@ interface LiquidService {
     @GET("api/v1/session/{session_id}/terminate")
     fun terminateSession(@Path("session_id") sessionId: String, @Header("Authorization") token: String): Call<LiquidTerminateSession>
 
-    //@FormUrlEncoded
     @GET("api/v1/settlement/currencies")
     fun getAllCurrencies(@Query("public_api_key") publicApiKey: String): Call<CurrencyResponse>
 }

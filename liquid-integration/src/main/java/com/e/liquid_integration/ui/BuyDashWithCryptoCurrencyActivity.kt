@@ -7,10 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
-import android.webkit.CookieManager
-import android.webkit.JavascriptInterface
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
@@ -22,6 +19,7 @@ import com.e.liquid_integration.dialog.CountrySupportDialog
 import com.e.liquid_integration.model.WidgetResponse
 import com.google.gson.Gson
 import org.dash.wallet.common.WalletDataProvider
+
 
 class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
 
@@ -80,9 +78,17 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         webview.settings.domStorageEnabled = true
         webview.addJavascriptInterface(JavaScriptInterface(), mJsInterfaceName)
         webview.setBackgroundColor(0xFFFFFF)
+        webview.settings.setAllowFileAccessFromFileURLs(true);
+        webview.settings.setAllowUniversalAccessFromFileURLs(true);
 
+        webview.setWebChromeClient(object : WebChromeClient() {
+            // Grant permissions for cam
+          override  fun onPermissionRequest(request: PermissionRequest) {
+               println("Permission request::::")
+                askCameraPermission()
+            }
+        })
         webview.loadUrl(LiquidConstants.BUY_WITH_CREDIT_CARD_URL)
-        askCameraPermission()
     }
 
 
@@ -101,7 +107,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
             bindListener();
-            sendInitialization();
+            sendInitialization()
         }
 
     }
@@ -110,41 +116,23 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         val initializationConfig = InitializationConfig(
                 public_api_key = LiquidConstants.PUBLIC_API_KEY,
 
-                /* payout_default = InitializationIdentityPayout(
-                         currency = "DASH",
-                         quantity = "5"
-                 ),*/
                 payout_settlement = InitializationSettlement(
                         method = "BLOCKCHAIN_TRANSFER",
                         currency = "DASH",
-                        //   quantity = "10",//"1.0",
                         input_parameters = SettlementParameters(
                                 account_key = SettlementParameter(
                                         type = "WALLET_ADDRESS",
-                                        value = walletAddress.toString()//"XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()//"XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()// "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"
+                                        value =walletAddress.toString()//"XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()// "
                                 )
                         )
                 ),
 
                 funding_default = InitializationIdentityFunding(
                         currency = intent.getStringExtra("CurrencySelected"),
-                        // quantity = "1",
                         currency_scheme = "CRYPTO"
 
                 ),
 
-                /*funding_settlement = InitializationSettlement(
-                        currency_scheme = "CRYPTO",
-                      *//*  method = "BLOCKCHAIN_TRANSFER",
-                        //currency = "BCH",
-                        //   quantity = "10",//"1.0",
-                        input_parameters = SettlementParameters(
-                                account_key = SettlementParameter(
-                                        type = "WALLET_ADDRESS",
-                                        value = "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()// "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"
-                                )
-                        )*//*
-                ),*/
                 identity = InitializationIdentity(
                         UserSession(LiquidClient.getInstance()!!.storedSessionId, LiquidClient.getInstance()!!.storedSessionSecret)
                 )
@@ -181,7 +169,6 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    // FirebaseCrashlytics.getInstance().recordException(RuntimeException(eventData))
                 }
             }
         }
@@ -232,5 +219,12 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-
+    override fun onBackPressed() {
+        if (isTransestionSuccessful) {
+            setResult(Activity.RESULT_OK)
+            super.onBackPressed()
+        } else {
+            finish()
+        }
+    }
 }

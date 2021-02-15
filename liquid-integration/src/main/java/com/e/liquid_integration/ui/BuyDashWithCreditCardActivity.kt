@@ -41,7 +41,6 @@ data class InitializationSettlement(
         var currency_scheme: String? = null,
         var method: String? = null,
         var currency: String? = null,
-        /*var quantity: String? = null,*/
         var input_parameters: SettlementParameters? = null
 )
 
@@ -88,13 +87,9 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
 
     companion object {
         const val REQUEST_CODE_CAMERA_PERMISSION = 101
-
-
         fun newInstance(context: Context?): Intent {
-            val intent = Intent(context, BuyDashWithCreditCardActivity::class.java)
-            return intent
+            return Intent(context, BuyDashWithCreditCardActivity::class.java)
         }
-
     }
 
     private val mJsInterfaceName = "Android"
@@ -117,7 +112,6 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-
         val actionBar = supportActionBar
         actionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
@@ -134,15 +128,15 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             CookieManager.getInstance().removeAllCookies(null)
-        };
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             CookieManager.getInstance().flush()
-        };
+        }
 
-        webview.clearCache(true);
-        webview.clearFormData();
-        webview.clearHistory();
-        webview.clearSslPreferences();
+        webview.clearCache(true)
+        webview.clearFormData()
+        webview.clearHistory()
+        webview.clearSslPreferences()
 
 
         webview.webViewClient = MyBrowser()
@@ -150,6 +144,18 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         webview.settings.domStorageEnabled = true
         webview.addJavascriptInterface(JavaScriptInterface(), mJsInterfaceName)
         webview.setBackgroundColor(0xFFFFFF)
+        webview.settings.allowFileAccessFromFileURLs = true
+        webview.settings.allowUniversalAccessFromFileURLs = true
+
+        webview.setWebChromeClient(object : WebChromeClient() {
+            // Grant permissions for cam
+            override fun onPermissionRequest(request: PermissionRequest) {
+                println("Permission request::::")
+                askCameraPermission()
+
+            }
+        })
+
 
         webview.loadUrl(LiquidConstants.BUY_WITH_CREDIT_CARD_URL)
 
@@ -199,11 +205,10 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                 payout_settlement = InitializationSettlement(
                         method = "BLOCKCHAIN_TRANSFER",
                         currency = "DASH",
-                        // quantity = userAmount,//"1.0",
                         input_parameters = SettlementParameters(
                                 account_key = SettlementParameter(
                                         type = "WALLET_ADDRESS",
-                                        value = walletAddress.toString()// "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()// "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"
+                                        value = walletAddress.toString()// This is for test in test net because wallet address in testnet not working "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"
                                 )
                         )
                 ),
@@ -235,16 +240,8 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         override fun onPageFinished(webview: WebView, url: String) {
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
-            bindListener();
-            sendInitialization();
-        }
-
-        override fun onReceivedError(webview: WebView, request: WebResourceRequest, webResourceError: WebResourceError) {
-            super.onReceivedError(webview, request, webResourceError)
-            if (request.isForMainFrame) {
-                error = webResourceError.description.toString()
-                // reload_button.visibility = View.VISIBLE
-            }
+            bindListener()
+            sendInitialization()
         }
     }
 
@@ -266,7 +263,6 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                             val stepTransition = Gson().fromJson(eventData, WidgetResponse::class.java)
                             when (stepTransition.data?.newStep) {
                                 "success" -> {
-                                    //finish()
                                     setResult(Activity.RESULT_OK)
                                     isTransestionSuccessful = true
                                 }
@@ -278,7 +274,6 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    // FirebaseCrashlytics.getInstance().recordException(RuntimeException(eventData))
                 }
             }
         }
@@ -299,13 +294,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
             setResult(Activity.RESULT_OK)
             super.onBackPressed()
         } else {
-            /* if (webview.canGoBack()) {
-                 webview.goBack();
-             } else {
-                 finish()
-             }*/
             finish()
         }
     }
-
 }

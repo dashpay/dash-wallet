@@ -71,7 +71,6 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.UserInteractionAwareCallback;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -930,7 +929,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        startActivity(UpholdAccountActivity.createIntent(this, wallet));
+        startActivity(BuyAndSellLiquidUpholdActivity.Companion.createIntent(this));
     }
 
     //Dash Specific

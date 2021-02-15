@@ -9,19 +9,19 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.e.liquid_integration.R
-import com.e.liquid_integration.`interface`.ValueSelectListner
+import com.e.liquid_integration.listener.ValueSelectListener
 import com.e.liquid_integration.currency.PayloadItem
 
 
-class CryptoCurrencyAdapter(val _context: Context, val
-currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : RecyclerView.Adapter<CryptoCurrencyAdapter.CurrencyViewHolder>() {
+class CryptoCurrencyAdapter(val context: Context, val
+currencyArrayList: List<PayloadItem>, val listener: ValueSelectListener) : RecyclerView.Adapter<CryptoCurrencyAdapter.CurrencyViewHolder>() {
 
     var layoutInflater: LayoutInflater? = null
     var selectedPosition = -1
 
     init {
         layoutInflater =
-                _context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+                context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
     }
 
 
@@ -43,7 +43,7 @@ currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : Recycle
         }
 
 
-        holder.txtCurrency.text = currencyArrayList[position].symbol
+        holder.txtCurrency.text = currencyArrayList[position].ccyCode
         holder.txtCurrencyName.text = currencyArrayList[position].label
 
         holder.rlCurrency.setOnClickListener {
@@ -52,7 +52,7 @@ currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : Recycle
             notifyItemChanged(copyOfLastCheckedPosition)
             notifyItemChanged(selectedPosition)
 
-            listner.onItemSelected(position)
+            listener.onItemSelected(position)
 
         }
     }

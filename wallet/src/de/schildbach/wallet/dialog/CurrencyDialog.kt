@@ -5,8 +5,8 @@ import android.view.View
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.e.liquid_integration.`interface`.CurrencySelectListner
-import com.e.liquid_integration.`interface`.ValueSelectListner
+import com.e.liquid_integration.listener.CurrencySelectListener
+import com.e.liquid_integration.listener.ValueSelectListener
 import com.e.liquid_integration.currency.PayloadItem
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.adapter.CurrencyAdapter
@@ -16,7 +16,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 
-class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList: ArrayList<PayloadItem>, private val upholdCurrencyArrayList: ArrayList<UpholdCurrencyResponse>, val selectedFilterCurrencyItem: PayloadItem?, val listner: CurrencySelectListner) : BottomSheetDialog(_context) {
+class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList: ArrayList<PayloadItem>, private val upholdCurrencyArrayList: ArrayList<UpholdCurrencyResponse>, val selectedFilterCurrencyItem: PayloadItem?, val listener: CurrencySelectListener) : BottomSheetDialog(_context) {
     private var rvCurrency: RecyclerView? = null
     private var txtClearFilter: TextView? = null
 
@@ -64,7 +64,7 @@ class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList:
         txtClearFilter = bottomSheetView.findViewById(R.id.txtClearFilter)
         rvCurrency?.layoutManager = LinearLayoutManager(_context)
 
-        val currencyAdapter = CurrencyAdapter(_context, currencyArrayList, object : ValueSelectListner {
+        val currencyAdapter = CurrencyAdapter(_context, currencyArrayList, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
 
                 var isUpholdSupport = false
@@ -92,7 +92,7 @@ class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList:
                 }
 
 
-                listner.onCurrencySelected(isLiquidSupport, isUpholdSupport, item)
+                listener.onCurrencySelected(isLiquidSupport, isUpholdSupport, item)
                 Timer().schedule(object : TimerTask() {
                     override fun run() {
                         dialog.dismiss()
@@ -107,7 +107,7 @@ class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList:
 
             for (i in currencyArrayList.indices) {
                 if ((selectedFilterCurrencyItem.symbol.equals(currencyArrayList[i].symbol, ignoreCase = true))) {
-                    currencyAdapter?.setSelectedPositions(i)
+                    currencyAdapter.setSelectedPositions(i)
                     txtClearFilter?.visibility = View.VISIBLE
                     break
                 }
@@ -116,9 +116,9 @@ class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList:
         }
 
         txtClearFilter?.setOnClickListener {
-            currencyAdapter?.setSelectedPositions(-1)
+            currencyAdapter.setSelectedPositions(-1)
             txtClearFilter?.visibility = View.GONE
-            listner.onCurrencySelected(true, true, null)
+            listener.onCurrencySelected(true, true, null)
         }
     }
 }
