@@ -1,7 +1,6 @@
 package de.schildbach.wallet.ui
 
 import android.Manifest
-import android.app.ActivityManager
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
@@ -146,13 +145,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         showBackupWalletDialogIfNeeded()
         checkLowStorageAlert()
         detectUserCountry()
-        val activityManager = applicationContext.getSystemService(ACTIVITY_SERVICE) as ActivityManager
-        val runningAppProcesses = activityManager.runningAppProcesses
-        if (runningAppProcesses != null) {
-            val importance = runningAppProcesses[0].importance
-            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND)
-                walletApplication.startBlockchainService(true)
-        }
+        walletApplication.startBlockchainService(true)
     }
 
     override fun onNewIntent(intent: Intent?) {
