@@ -147,6 +147,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    /**
+     * This method looks at all items in the database tables
+     * that have existing identites and saves them for future use.
+     *
+     * Sometimes Platform Nodes return IdentityNotFound Errors and
+     * this list is used to determine if that node should be banned
+     */
     private suspend fun initializeStateRepository() {
         // load our id
 
@@ -218,6 +225,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         // Names.search does support retrieving 100 names at a time if retrieveAll = false
         //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
+        // Sometimes when onlyExactUsername = true, an exception is thrown here and that results in a crash
+        // it is not clear why a search for an existing username results in a failure to find it again.
         val nameDocuments = if (!onlyExactUsername) {
             platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
         } else {
@@ -720,8 +729,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             currentMainKeyIndex = blockchainIdentityData.currentMainKeyIndex ?: 0
             currentMainKeyType = blockchainIdentityData.currentMainKeyType
                     ?: IdentityPublicKey.TYPES.ECDSA_SECP256K1
-
-
         }
     }
 
