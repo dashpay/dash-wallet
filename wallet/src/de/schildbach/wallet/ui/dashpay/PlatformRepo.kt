@@ -218,9 +218,16 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         // Names.search does support retrieving 100 names at a time if retrieveAll = false
         //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
-        val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN,
-                retrieveAll = false, limit = limit)
-
+        val nameDocuments = if (!onlyExactUsername) {
+            platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
+        } else {
+            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
+            if (nameDocument != null) {
+                listOf(nameDocument)
+            } else {
+                listOf()
+            }
+        }
         val userIds = if (onlyExactUsername) {
             val result = mutableListOf<Identifier>()
             val exactNameDoc = try {
@@ -577,7 +584,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         withContext(Dispatchers.IO) {
             blockchainIdentity.watchIdentity(100, 1000, RetryDelayType.SLOW20)
                     ?: throw TimeoutException("the identity was not found to be registered in the allotted amount of time")
-            platform.stateRepository.addValidIdentity(blockchainIdentity.uniqueIdentifier)
         }
     }
 
