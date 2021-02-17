@@ -21,7 +21,6 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.InvitationFragmentViewModel
@@ -30,7 +29,6 @@ import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_invite_friend.*
 import org.bitcoinj.core.Coin
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.ui.FancyAlertDialog
 
 class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
@@ -69,41 +67,30 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
 
     private fun confirmButtonClick() {
         showProgress()
-        // is there enough funds?
-        if (walletApplication.wallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE) < Constants.DASH_PAY_FEE) {
-            val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_cant_afford_title,
-                    R.string.invitation_cant_afford_message, R.drawable.ic_cant_afford_invitation,
-                    0, R.string.invitation_preview_close)
-            errorDialog.show(requireActivity().supportFragmentManager, null)
-        } else {
-            // there are enough funds
-            val inviteId = viewModel.sendInviteTransaction()
-            viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner, {
-                if (it.status != Status.LOADING) {
-                    dismissProgress()
-                }
-                when (it.status) {
-                    Status.SUCCESS -> {
-                        if (it.data != null) {
-                            requireActivity().supportFragmentManager.beginTransaction()
-                                    .replace(R.id.container, InvitationCreatedFragment.newInstanceFromInvitation())
-                                    .commitNow()
-                        }
-                    }
-                    Status.LOADING -> {
-                        // sending has begun
-                    }
-                    else -> {
-                        // there was an error sending
-                        val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_creating_error_title,
-                                R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
-                                R.string.okay, 0)
-                        errorDialog.show(childFragmentManager, null)
+        viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner, {
+            if (it.status != Status.LOADING) {
+                dismissProgress()
+            }
+            when (it.status) {
+                Status.SUCCESS -> {
+                    if (it.data != null) {
+                        requireActivity().supportFragmentManager.beginTransaction()
+                                .replace(R.id.container, InvitationCreatedFragment.newInstanceFromInvitation())
+                                .commitNow()
                     }
                 }
-            })
-        }
-
+                Status.LOADING -> {
+                    // sending has begun
+                }
+                else -> {
+                    // there was an error sending
+                    val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_creating_error_title,
+                            R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
+                            R.string.okay, 0)
+                    errorDialog.show(childFragmentManager, null)
+                }
+            }
+        })
     }
 
     private fun showConfirmationDialog() {

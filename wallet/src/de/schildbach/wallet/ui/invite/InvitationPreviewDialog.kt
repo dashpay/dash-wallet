@@ -36,7 +36,10 @@ open class InvitationPreviewDialog : FancyAlertDialog() {
         fun newInstance(context: Context, nameLabel: String): FancyAlertDialog {
             val messageHtml = context.getString(R.string.invitation_preview_message, "<b>${nameLabel}</b>")
             return InvitationPreviewDialog().apply {
-                arguments = createArguments(Type.INFO, 0, messageHtml, 0, R.string.invitation_preview_close)
+                arguments = createBaseArguments(Type.INFO, 0, 0, R.string.invitation_preview_close)
+                        .apply {
+                            putString("message", messageHtml)
+                        }
             }
         }
     }

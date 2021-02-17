@@ -49,9 +49,10 @@ class InviteFriendActivity : InteractionAwareActivity() {
             if (WalletApplication.getInstance().wallet.canAffordIdentityCreation()) {
                 activity.startActivity(createIntent(activity))
             } else {
-                val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_cant_afford_title,
-                        R.string.invitation_cant_afford_message, R.drawable.ic_cant_afford_invitation,
-                        0, R.string.invitation_preview_close)
+                val title = activity.getString(R.string.invitation_cant_afford_title)
+                val message = activity.getString(R.string.invitation_cant_afford_message, Constants.DASH_PAY_FEE)
+                val errorDialog = FancyAlertDialog.newInstance(title, message,
+                        R.drawable.ic_cant_afford_invitation, 0, R.string.invitation_preview_close)
                 errorDialog.show(activity.supportFragmentManager, null)
             }
         }

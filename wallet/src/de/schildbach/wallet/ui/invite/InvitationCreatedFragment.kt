@@ -44,13 +44,11 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invitation_created.*
-import org.dash.wallet.common.ui.FancyAlertDialog
 
 
 class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created) {
 
     companion object {
-        private const val ARG_DYNAMIC_LINK = "dynamic_link"
         private const val ARG_IDENTITY_ID = "identity_id"
 
         fun newInstanceFromInvitation(): InvitationCreatedFragment {
@@ -98,10 +96,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         }
 
         maybe_later_button.setOnClickListener {
-            val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_cant_afford_title,
-                    R.string.invitation_cant_afford_message, R.drawable.ic_cant_afford_invitation,
-                    R.string.okay, 0)
-            errorDialog.show(childFragmentManager, null)
+            requireActivity().finish()
         }
 
         initViewModel()
@@ -114,7 +109,6 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
                 viewModel.identityIdLiveData.value = identityId
             }
         }
-//        viewModel.identityIdLiveData.value = viewModel.sendInviteStatusLiveData.value!!.data!!.userId
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner, Observer {
             tag_edit.setText(it.memo)
