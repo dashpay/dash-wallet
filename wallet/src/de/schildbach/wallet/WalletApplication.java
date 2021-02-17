@@ -93,6 +93,8 @@ import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.ui.ImportSharedImageActivity;
 import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.ImportSharedImageActivity;
+import de.schildbach.wallet.ui.RestoreWalletActivity;
 import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -153,7 +155,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
                 || (activity instanceof WalletUriHandlerActivity)
                 || (activity instanceof ScanActivity)
                 || (activity instanceof ImportSharedImageActivity)
-                || (activity instanceof ShortcutComponentActivity);
+                || (activity instanceof ShortcutComponentActivity)
+                || (activity instanceof RestoreWalletActivity);
     }
 
     @Override

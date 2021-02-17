@@ -66,6 +66,8 @@
         <activity
             android:name="de.schildbach.wallet.ui.OnboardingActivity"
             android:screenOrientation="portrait"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
             android:theme="@style/SplashActivity.Theme">
 
             <intent-filter>
@@ -94,6 +96,7 @@
             android:windowSoftInputMode="stateAlwaysHidden"
             android:exported="true"
             android:label="@string/app_name_short"
+            android:taskAffinity=""
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.NoStatusBar" />
@@ -119,6 +122,8 @@
             android:name="de.schildbach.wallet.ui.send.SendCoinsActivity"
             android:label="@string/pay_title"
             android:screenOrientation="portrait"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
             android:theme="@style/My.Theme.ChildActivity"
             tools:ignore="LockedOrientationActivity">
             <intent-filter android:label="@string/send_coins_activity_title" >
@@ -178,6 +183,8 @@
         <activity
             android:name="de.schildbach.wallet.ui.RestoreWalletActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
             android:theme="@style/My.Theme.Dialog" >
             <intent-filter android:label="@string/import_keys_intent_filter_action" >
                 <action android:name="android.intent.action.VIEW" />
@@ -204,6 +211,8 @@
         <activity
             android:name="de.schildbach.wallet.ui.WalletUriHandlerActivity"
             android:label="@string/app_name"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
             android:theme="@style/My.Theme.Transparent" >
 
             <intent-filter>
@@ -220,6 +229,8 @@
         <activity
             android:name="de.schildbach.wallet.ui.ImportSharedImageActivity"
             android:label="@string/app_name"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
             android:theme="@style/My.Theme.Transparent" >
 
             <intent-filter android:label="@string/sweep_wallet_activity_title">
