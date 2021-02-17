@@ -65,9 +65,9 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         };
 
         webview.clearCache(true);
-        webview.clearFormData();
-        webview.clearHistory();
-        webview.clearSslPreferences();
+        webview.clearFormData()
+        webview.clearHistory()
+        webview.clearSslPreferences()
 
 
         findViewById<View>(R.id.ivInfo).setOnClickListener {
@@ -78,14 +78,25 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         webview.settings.domStorageEnabled = true
         webview.addJavascriptInterface(JavaScriptInterface(), mJsInterfaceName)
         webview.setBackgroundColor(0xFFFFFF)
-        webview.settings.setAllowFileAccessFromFileURLs(true);
-        webview.settings.setAllowUniversalAccessFromFileURLs(true);
+        webview.settings.setJavaScriptEnabled(true)
+        webview.settings.setDomStorageEnabled(true)
+        webview.settings.setJavaScriptCanOpenWindowsAutomatically(true)
+        webview.settings.setAllowFileAccess(true)
+        webview.settings.allowUniversalAccessFromFileURLs = true
+        webview.settings.allowFileAccessFromFileURLs = true
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            webview.settings.mediaPlaybackRequiresUserGesture = false
+        }
 
         webview.setWebChromeClient(object : WebChromeClient() {
             // Grant permissions for cam
-          override  fun onPermissionRequest(request: PermissionRequest) {
-               println("Permission request::::")
-                askCameraPermission()
+            override fun onPermissionRequest(request: PermissionRequest) {
+                println("Permission request::::")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    request.grant(request.resources)
+                    askCameraPermission()
+                }
             }
         })
         webview.loadUrl(LiquidConstants.BUY_WITH_CREDIT_CARD_URL)
@@ -106,7 +117,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         override fun onPageFinished(webview: WebView, url: String) {
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
-            bindListener();
+            bindListener()
             sendInitialization()
         }
 
@@ -122,7 +133,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
                         input_parameters = SettlementParameters(
                                 account_key = SettlementParameter(
                                         type = "WALLET_ADDRESS",
-                                        value =walletAddress.toString()//"XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()// "
+                                        value = walletAddress.toString()//"XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"//walletAddress.toString()// "
                                 )
                         )
                 ),

@@ -21,6 +21,12 @@
     <uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> <!-- group: STORAGE -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- group: STORAGE -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--  <uses-feature android:name="android.hardware.camera" android:required="true" />
+      <uses-feature android:name="android.hardware.camera.front" android:required="true" />
+  -->
+
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -30,16 +36,16 @@
         android:required="false" />
     <uses-feature
         android:name="android.hardware.camera"
-        android:required="false" />
+        android:required="true" />
     <uses-feature
         android:name="android.hardware.camera.front"
-        android:required="false" />
+        android:required="true" />
     <uses-feature
         android:name="android.hardware.camera.autofocus"
-        android:required="false" />
+        android:required="true" />
     <uses-feature
         android:name="android.hardware.camera.flash"
-        android:required="false" />
+        android:required="true" />
     <uses-feature
         android:name="android.hardware.screen.landscape"
         android:required="false" />
@@ -328,10 +334,6 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity
-            android:name="com.e.liquid_integration.ui.BuyDashCryptoActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
 
 
         <activity

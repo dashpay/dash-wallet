@@ -144,14 +144,21 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         webview.settings.domStorageEnabled = true
         webview.addJavascriptInterface(JavaScriptInterface(), mJsInterfaceName)
         webview.setBackgroundColor(0xFFFFFF)
-        webview.settings.allowFileAccessFromFileURLs = true
-        webview.settings.allowUniversalAccessFromFileURLs = true
-
+        // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+        webview.settings.setAllowUniversalAccessFromFileURLs(true);
+        webview.settings.setAllowFileAccessFromFileURLs(true);
+        //  }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            webview.settings.mediaPlaybackRequiresUserGesture = false
+        }
         webview.setWebChromeClient(object : WebChromeClient() {
             // Grant permissions for cam
             override fun onPermissionRequest(request: PermissionRequest) {
                 println("Permission request::::")
-                askCameraPermission()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    request.grant(request.resources)
+                    askCameraPermission()
+                }
 
             }
         })
