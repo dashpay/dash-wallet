@@ -13,19 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.schildbach.wallet.ui.dashpay.work
+package de.schildbach.wallet.ui.invite
 
 import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.work.WorkInfo
+import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 
-class SendInviteStatusLiveData(application: Application, private val inviteId: String) : SingleWorkStatusLiveData<SendInviteWorker.OutputDataWrapper>(application) {
+open class InviteFriendViewModel(application: Application) : AndroidViewModel(application) {
 
-    override val workInfoList: LiveData<List<WorkInfo>>
-        get() = workManager.getWorkInfosForUniqueWorkLiveData(SendInviteOperation.uniqueWorkName(inviteId))
+    val walletApplication = application as WalletApplication
 
-
-    override fun successResult(workInfo: WorkInfo): SendInviteWorker.OutputDataWrapper {
-        return SendInviteWorker.OutputDataWrapper(workInfo.outputData)
+    fun dashPayProfileData(username: String): LiveData<DashPayProfile?> {
+        return AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUsernameDistinct(username)
     }
 }

@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet;
 
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.text.format.DateUtils;
@@ -30,8 +31,6 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.evolution.Masternode;
-import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.MobileDevNetParams;
@@ -229,10 +228,6 @@ public final class Constants {
     /** MIME type used for transmitting wallet backups. */
     public static final String MIMETYPE_WALLET_BACKUP = "application/x-"+CoinDefinition.coinName.toLowerCase()+"-wallet-backup";
 
-    /** MIME type used for sharing invitations */
-    public static final String MIMETYPE_INVITATION_WITH_IMAGE = "image/webp";
-    public static final String MIMETYPE_INVITATION = "text/plain";
-
     /** Number of confirmations until a transaction is fully confirmed. */
     public static final int MAX_NUM_CONFIRMATIONS = 6;
 
@@ -345,4 +340,53 @@ public final class Constants {
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.01");
 
     public static boolean IS_TESTNET_BUILD = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_TESTNET);
+
+    public interface Invitation {
+
+        /*** MIME type used for sharing invitations*/
+        String MIMETYPE = "text/plain";
+        String MIMETYPE_WITH_IMAGE = "image/webp";
+
+        String DOMAIN_URI_PREFIX = "https://invitations.dashpay.io/link";
+
+        String IOS_APP_BUNDLEID = "org.dashfoundation.dash";
+        String IOS_APP_APPSTOREID = "1206647026";
+
+        String UTM_SOURCE = "DashPay Android";
+        String UTM_CAMPAIGN = "DashPay Alpha Program";
+        String UTM_MEDIUM = "email";
+
+        static Uri appLinkUrl(String username, String displayName, String cftx) {
+            return Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
+                    .appendQueryParameter("user", username)
+                    .appendQueryParameter("displayName", displayName)
+                    .appendQueryParameter("cftx", cftx)
+                    .build();
+        }
+
+        public static class AppLinkData {
+
+            private final Uri appLink;
+
+            public AppLinkData(String appLink) {
+                this.appLink = Uri.parse(appLink);
+            }
+
+            public AppLinkData(Uri appLink) {
+                this.appLink = appLink;
+            }
+
+            public String getUsername() {
+                return appLink.getQueryParameter("user");
+            }
+
+            public String getDisplayName() {
+                return appLink.getQueryParameter("displayName");
+            }
+
+            public String getCftx() {
+                return appLink.getQueryParameter("cftx");
+            }
+        }
+    }
 }

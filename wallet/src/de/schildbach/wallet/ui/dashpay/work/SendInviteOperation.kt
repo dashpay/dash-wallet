@@ -24,7 +24,6 @@ import androidx.work.*
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
-import org.bitcoinj.core.Sha256Hash
 import java.util.*
 
 class SendInviteOperation(val application: Application) {
@@ -36,7 +35,7 @@ class SendInviteOperation(val application: Application) {
 
         fun uniqueWorkName(toUserId: String) = WORK_NAME + toUserId
 
-        fun operationStatus(application: Application, toUserId: String): LiveData<Resource<Pair<String, Sha256Hash>>> {
+        fun operationStatus(application: Application, toUserId: String): LiveData<Resource<SendInviteWorker.OutputDataWrapper>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
             return workManager.getWorkInfosForUniqueWorkLiveData(uniqueWorkName(toUserId)).switchMap {
                 return@switchMap liveData {
@@ -54,9 +53,7 @@ class SendInviteOperation(val application: Application) {
                     val workInfo = it[0]
                     when (workInfo.state) {
                         WorkInfo.State.SUCCEEDED -> {
-                            val userIdOut = SendInviteWorker.extractUserId(workInfo.outputData)!!
-                            val txid = Sha256Hash.wrap(SendInviteWorker.extractTxId(workInfo.outputData)!!)
-                            emit(Resource.success(Pair(userIdOut, txid)))
+                            emit(Resource.success(SendInviteWorker.OutputDataWrapper(workInfo.outputData)))
                         }
                         WorkInfo.State.FAILED -> {
                             val errorMessage = BaseWorker.extractError(workInfo.outputData)

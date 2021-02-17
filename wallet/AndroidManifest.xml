@@ -72,6 +72,7 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
@@ -82,13 +83,15 @@
 
         </activity>
 
-        <activity android:name="de.schildbach.wallet.ui.VerifySeedActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.VerifySeedActivity"
             android:theme="@style/My.Theme.ChildActivity"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait" />
 
-        <activity android:name="de.schildbach.wallet.ui.ViewSeedActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.ViewSeedActivity"
             android:theme="@style/My.Theme.ChildActivity"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait" />
 
         <activity
             android:name="de.schildbach.wallet.ui.MainActivity"
@@ -105,8 +108,10 @@
             android:targetActivity="de.schildbach.wallet.ui.MainActivity">
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+
                 <data android:mimeType="application/x-drktx" />
                 <data android:mimeType="application/x-dashtx" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity-alias>
@@ -123,7 +128,7 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
             tools:ignore="LockedOrientationActivity">
-            <intent-filter android:label="@string/send_coins_activity_title" >
+            <intent-filter android:label="@string/send_coins_activity_title">
                 <action android:name="android.intent.action.VIEW" />
 
                 <data android:scheme="dash" />
@@ -133,7 +138,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
-            <intent-filter android:label="@string/send_coins_activity_title" >
+            <intent-filter android:label="@string/send_coins_activity_title">
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
 
                 <data android:scheme="dash" />
@@ -147,8 +152,7 @@
             android:name="de.schildbach.wallet.ui.SendCoinsQrActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.Transparent" >
-        </activity>
+            android:theme="@style/My.Theme.Transparent" />
         <activity
             android:name="de.schildbach.wallet.ui.RequestCoinsActivity"
             android:configChanges="keyboard|keyboardHidden"
@@ -174,14 +178,15 @@
             android:name="de.schildbach.wallet.ui.preference.PreferenceActivity"
             android:label="@string/preferences_activity_title"
             android:theme="@style/My.Theme.ChildActivity" />
-        <activity android:name="de.schildbach.wallet.ui.BlockInfoActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.BlockInfoActivity"
             android:label="@string/block_info"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
             android:name="de.schildbach.wallet.ui.RestoreWalletActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
-            android:theme="@style/My.Theme.Dialog" >
-            <intent-filter android:label="@string/import_keys_intent_filter_action" >
+            android:theme="@style/My.Theme.Dialog">
+            <intent-filter android:label="@string/import_keys_intent_filter_action">
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
@@ -206,7 +211,7 @@
         <activity
             android:name="de.schildbach.wallet.ui.WalletUriHandlerActivity"
             android:label="@string/app_name"
-            android:theme="@style/My.Theme.Transparent" >
+            android:theme="@style/My.Theme.Transparent">
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -222,7 +227,7 @@
         <activity
             android:name="de.schildbach.wallet.ui.ImportSharedImageActivity"
             android:label="@string/app_name"
-            android:theme="@style/My.Theme.Transparent" >
+            android:theme="@style/My.Theme.Transparent">
 
             <intent-filter android:label="@string/sweep_wallet_activity_title">
                 <action android:name="android.intent.action.SEND" />
@@ -231,50 +236,62 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdSplashActivity"
+        <activity
+            android:name="org.dash.wallet.integration.uphold.ui.UpholdSplashActivity"
             android:theme="@style/My.Theme.ChildActivity"
-            android:launchMode="singleTask"/>
-        <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
-            android:theme="@style/My.Theme.ChildActivity"/>
+            android:launchMode="singleTask" />
+        <activity
+            android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
+            android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.LockScreenActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.LockScreenActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
 
-        <activity android:name="de.schildbach.wallet.ui.SetPinActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.SetPinActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.SecurityActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.SecurityActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.RestoreWalletFromSeedActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.RestoreWalletFromSeedActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="adjustResize" />
 
-        <activity android:name="de.schildbach.wallet.ui.AdvancedSecurityActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.AdvancedSecurityActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.SettingsActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.SettingsActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.AboutActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.AboutActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.ToolsActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.ToolsActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.QuickReceiveActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.QuickReceiveActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.ReceiveActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.ReceiveActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
@@ -283,19 +300,23 @@
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.ForgotPinActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.ForgotPinActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.WelcomeActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.WelcomeActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
 
-        <activity android:name="de.schildbach.wallet.ui.UpholdTransferActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.AppUpgradeActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.AppUpgradeActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
 
@@ -311,18 +332,20 @@
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize">
 
-            <intent-filter>
+            <intent-filter android:autoVerify="true"
+                tools:targetApi="m">
+
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="dashpayinvite.page.link"
+                    android:host="invitations.dashpay.io"
                     android:scheme="http" />
 
                 <data
-                    android:host="dashpayinvite.page.link"
+                    android:host="invitations.dashpay.io"
                     android:scheme="https" />
 
             </intent-filter>
@@ -344,15 +367,17 @@
         <activity
             android:name="de.schildbach.wallet.ui.DashPayUserActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"/>
+            android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.EditProfileActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.EditProfileActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"/>
+            android:theme="@style/My.Theme.ChildActivity" />
 
-        <activity android:name="de.schildbach.wallet.ui.dashpay.CropImageActivity"
+        <activity
+            android:name="de.schildbach.wallet.ui.dashpay.CropImageActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"/>
+            android:theme="@style/My.Theme.ChildActivity" />
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"
@@ -362,7 +387,7 @@
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.file_attachment"
             android:exported="false"
-            android:grantUriPermissions="true" >
+            android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_provider" />
@@ -370,7 +395,7 @@
 
         <receiver
             android:name="de.schildbach.wallet.WalletBalanceWidgetProvider"
-            android:label="@string/appwidget_wallet_balance_title" >
+            android:label="@string/appwidget_wallet_balance_title">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -387,7 +412,7 @@
             android:name="de.schildbach.wallet.offline.AcceptBluetoothService"
             android:exported="false" />
 
-        <receiver android:name="de.schildbach.wallet.service.BootstrapReceiver" >
+        <receiver android:name="de.schildbach.wallet.service.BootstrapReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>

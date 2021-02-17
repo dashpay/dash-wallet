@@ -119,6 +119,7 @@
                     tools:ignore="UnusedAttribute" />
 
                 <Button
+                    android:id="@+id/copy_invitation_link"
                     style="@style/DashButton.Transparent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

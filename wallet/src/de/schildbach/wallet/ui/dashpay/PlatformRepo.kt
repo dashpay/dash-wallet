@@ -35,7 +35,6 @@ import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRestore
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
-import de.schildbach.wallet_test.R
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import org.bitcoinj.core.*
@@ -69,7 +68,6 @@ import kotlin.collections.HashSet
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import kotlin.jvm.Throws
 
 class PlatformRepo private constructor(val walletApplication: WalletApplication) {
 
@@ -1121,6 +1119,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun getIdentityForName(nameDocument: Document): Identifier {
         val records = nameDocument.data["records"] as Map<*, *>
         return Identifier.from(records["dashUniqueIdentityId"])
+    }
+
+    suspend fun getLocalUserProfile(): DashPayProfile? {
+        val blockchainIdentity = getBlockchainIdentity()
+        return dashPayProfileDao.loadByUserId(blockchainIdentity!!.uniqueIdString)
     }
 
     suspend fun getLocalUserDataByUsername(username: String): UsernameSearchResult? {

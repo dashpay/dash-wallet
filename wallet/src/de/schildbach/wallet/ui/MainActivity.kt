@@ -15,6 +15,7 @@ import android.os.Handler
 import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
+import android.util.Log
 import android.view.MenuItem
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
@@ -26,6 +27,7 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.common.collect.ImmutableList
+import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.PaymentIntent
@@ -39,6 +41,7 @@ import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CO
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
+import de.schildbach.wallet.ui.invite.InvitationPreviewDialog
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
@@ -151,6 +154,19 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         handleIntent(intent!!)
+        Log.i("FirebaseDynamicLinks2", "We have a dynamic link! $intent")
+        FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
+            if (it != null) {
+                Log.i("FirebaseDynamicLinks2", "We have a dynamic link! ${it.extensions}; ${it.link}")
+                val nameLabel = it.link!!.getQueryParameter("displayName") ?: ""
+                showPreviewDialog(nameLabel)
+            }
+        }
+    }
+
+    private fun showPreviewDialog(nameLabel: String) {
+        val previewDialog = InvitationPreviewDialog.newInstance(this, nameLabel)
+        previewDialog.show(supportFragmentManager, null)
     }
 
     //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
@@ -450,7 +466,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     return wallet.toString(false, true, true, null)
                 }
             }
-            if(!isFinishing) {
+            if (!isFinishing) {
                 dialog.show()
             }
         }

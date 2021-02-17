@@ -22,9 +22,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.ViewModelProvider
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.util.canAffordIdentityCreation
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
@@ -53,6 +57,10 @@ class InviteFriendActivity : InteractionAwareActivity() {
         }
     }
 
+    val viewModel by lazy {
+        ViewModelProvider(this).get(InviteFriendViewModel::class.java)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fragment_holder)
@@ -61,10 +69,39 @@ class InviteFriendActivity : InteractionAwareActivity() {
                 .replace(R.id.container, InviteFriendFragment.newInstance())
                 .commitNow()
 
-        Log.i("FirebaseDynamicLinks", "We have a dynamic link!")
-        FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
-            Log.i("FirebaseDynamicLinks", "We have a dynamic link!")
-        }
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleIntent(intent!!)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        Log.i("FirebaseDynamicLinks2", "We have a dynamic link! $intent")
+        Log.i("FirebaseDynamicLinks2", "We have a dynamic link! ${intent!!.data}")
+        FirebaseDynamicLinks.getInstance()
+                .getDynamicLink(intent)
+                .addOnSuccessListener {
+                    Log.i("FirebaseDynamicLinks2", "it: ${it}")
+                    if (it != null) {
+                        Log.i("FirebaseDynamicLinks2", "We have a dynamic link! ${it.extensions}; ${it.link}")
+                        val appLinkData = Constants.Invitation.AppLinkData(it.link!!)
+                        viewModel.dashPayProfileData(appLinkData.username).observe(this, { dashPayProfile ->
+                            if (dashPayProfile != null) {
+                                showPreviewDialog(dashPayProfile)
+                            } else {
+                                Toast.makeText(this, "Unable to find user ${appLinkData.username}", Toast.LENGTH_LONG).show()
+                                log.error("unable to find inviting user ${it.link}")
+                            }
+                        })
+                    }
+                }
+    }
+
+    private fun showPreviewDialog(dashPayProfile: DashPayProfile) {
+        val previewDialog = InvitationPreviewDialog.newInstance(this, dashPayProfile)
+        previewDialog.show(supportFragmentManager, null)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
