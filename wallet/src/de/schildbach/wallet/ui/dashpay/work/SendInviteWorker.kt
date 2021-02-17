@@ -110,7 +110,7 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
                 .createDynamicLink().apply {
                     link = Constants.Invitation.appLinkUrl(username, nameLabel, cftx)
                     domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
-                    setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
+                    setAndroidParameters(DynamicLink.AndroidParameters.Builder("hashengineering.darkcoin.wallet").build())
                     setIosParameters(DynamicLink.IosParameters.Builder(
                             Constants.Invitation.IOS_APP_BUNDLEID
                     ).apply {

@@ -324,12 +324,6 @@
             android:name="de.schildbach.wallet.ui.CreateUsernameActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
-            android:windowSoftInputMode="stateHidden|adjustResize" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.invite.InviteFriendActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize">
 
             <intent-filter android:autoVerify="true"
@@ -351,6 +345,12 @@
             </intent-filter>
 
         </activity>
+
+        <activity
+            android:name="de.schildbach.wallet.ui.invite.InviteFriendActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
             android:name="de.schildbach.wallet.ui.SearchUserActivity"
