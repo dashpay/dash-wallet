@@ -116,13 +116,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
         searchContacts()
         dashPayViewModel.updateDashPayState()
-
-        invite_friend_hint.setOnClickListener {
-            InviteFriendActivity.startOrError(this)
-        }
-        invite_friend_hint_close.setOnClickListener {
-            invite_friend_hint.visibility = View.GONE
-        }
     }
 
     private fun initViewModel() {
