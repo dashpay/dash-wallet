@@ -248,6 +248,9 @@
 
         <activity android:name="de.schildbach.wallet.ui.LockScreenActivity"
             android:screenOrientation="portrait"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
             android:theme="@style/LockScreenActivity.Theme" />
 
         <activity android:name="de.schildbach.wallet.ui.SetPinActivity"
