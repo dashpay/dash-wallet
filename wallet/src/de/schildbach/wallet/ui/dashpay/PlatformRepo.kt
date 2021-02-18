@@ -38,12 +38,7 @@ import de.schildbach.wallet.ui.send.DeriveKeyTask
 import de.schildbach.wallet_test.R
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Base58
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
-import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.evolution.EvolutionContact
@@ -74,6 +69,7 @@ import kotlin.collections.HashSet
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.jvm.Throws
 
 class PlatformRepo private constructor(val walletApplication: WalletApplication) {
 
@@ -109,14 +105,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
     private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
     private val dashPayContactRequestDao = AppDatabase.getAppDatabase().dashPayContactRequestDao()
+    private val invitationsDao = AppDatabase.getAppDatabase().invitationsDao()
     private val userAlertDao = AppDatabase.getAppDatabase().userAlertDao()
 
     // Async
     private val blockchainIdentityDataDaoAsync = AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync()
     private val dashPayProfileDaoAsync = AppDatabase.getAppDatabase().dashPayProfileDaoAsync()
     private val dashPayContactRequestDaoAsync = AppDatabase.getAppDatabase().dashPayContactRequestDaoAsync()
+    private val invitationsDaoAsync = AppDatabase.getAppDatabase().invitationsDaoAsync()
     private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
-
 
     private val securityGuard = SecurityGuard()
     private lateinit var blockchainIdentity: BlockchainIdentity
@@ -512,10 +509,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet
-            val hasKeys = wallet.hasAuthenticationKeyChains()
-            if (!hasKeys) {
-                wallet.initializeAuthenticationKeyChains(seed, keyParameter)
-            }
+            //val hasKeys = wallet.hasAuthenticationKeyChains()
+            //if (!hasKeys) {
+            wallet.initializeAuthenticationKeyChains(seed, keyParameter)
+            //}
         }
     }
 
@@ -743,7 +740,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     private suspend fun updateDashPayProfile(userId: String) {
-        var profileDocument = Profiles(platform).get(userId)
+        var profileDocument = profiles.get(userId)
                 ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
         val nameDocuments = platform.names.getByOwnerId(userId)
@@ -957,6 +954,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
 
             updateSyncStatus(PreBlockStage.Complete)
+
+            // fetch updated invitations
+            updateInvitations()
+
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
             log.error(formatExceptionMessage("error updating contacts", e))
@@ -996,6 +997,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             userIdSet.add(it.userId)
         }
 
+        invitationsDao.loadAll().forEach {
+            userIdSet.add(it.userId)
+        }
+
         // Also add our ownerId to get our profile, in case it was updated on a different device
         userIdSet.add(userId)
 
@@ -1007,6 +1012,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * Fetches updated profiles of users in userIdList after lastContactRequestTime
      *
      * if lastContactRequestTime is 0, then all profiles are retrieved
+     *
+     * This does not handle the case if userIdList.size > 100
      */
     private suspend fun updateContactProfiles(userIdList: List<String>, lastContactRequestTime: Long, checkingIntegrity: Boolean = false) {
         if (userIdList.isNotEmpty()) {
@@ -1206,6 +1213,102 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val currentProfile = dashPayProfileDao.loadByUserId(dashPayProfile.userId)
         if (currentProfile == null || (currentProfile.updatedAt < dashPayProfile.updatedAt)) {
             updateDashPayProfile(dashPayProfile)
+        }
+    }
+
+    //
+    // Step 2 is to create the credit funding transaction
+    //
+    suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
+            : CreditFundingTransaction {
+        Context.propagate(walletApplication.wallet.context)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Coin.CENT, keyParameter)
+        val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
+                System.currentTimeMillis())
+        // update database
+        updateInvitation(invitation)
+
+        sendTransaction(cftx)
+        //update database
+        invitation.sentAt = System.currentTimeMillis();
+        updateInvitation(invitation)
+        return cftx
+    }
+
+    suspend fun updateInvitation(invitation: Invitation) {
+        invitationsDao.insert(invitation)
+    }
+
+    private suspend fun sendTransaction(cftx: CreditFundingTransaction): Boolean {
+        log.info("Sending credit funding transaction: ${cftx.txId}")
+        return suspendCoroutine { continuation ->
+            cftx.confidence.addEventListener(object : TransactionConfidence.Listener {
+                override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
+                    when (reason) {
+                        // If this transaction is in a block, then it has been sent successfully
+                        TransactionConfidence.Listener.ChangeReason.DEPTH -> {
+                            // TODO: a chainlock is needed to accompany the block information
+                            // to provide sufficient proof
+                        }
+                        // If this transaction is InstantSend Locked, then it has been sent successfully
+                        TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
+                            // TODO: allow for received (IX_REQUEST) instantsend locks
+                            // until the bug related to instantsend lock verification is fixed.
+                            if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
+                                confidence.removeEventListener(this)
+                                continuation.resumeWith(Result.success(true))
+                            }
+                        }
+                        // If this transaction has been seen by more than 1 peer, then it has been sent successfully
+                        TransactionConfidence.Listener.ChangeReason.SEEN_PEERS -> {
+                            // being seen by other peers is no longer sufficient proof
+                        }
+                        // If this transaction was rejected, then it was not sent successfully
+                        TransactionConfidence.Listener.ChangeReason.REJECT -> {
+                            if (confidence!!.hasRejections() && confidence.rejections.size >= 1) {
+                                confidence.removeEventListener(this)
+                                log.info("Error sending ${cftx.txId}: ${confidence.rejectedTransactionException.rejectMessage.reasonString}")
+                                continuation.resumeWithException(confidence.rejectedTransactionException)
+                            }
+                        }
+                        TransactionConfidence.Listener.ChangeReason.TYPE -> {
+                            if (confidence!!.hasErrors()) {
+                                confidence.removeEventListener(this)
+                                val code = when (confidence.confidenceType) {
+                                    TransactionConfidence.ConfidenceType.DEAD -> RejectMessage.RejectCode.INVALID
+                                    TransactionConfidence.ConfidenceType.IN_CONFLICT -> RejectMessage.RejectCode.DUPLICATE
+                                    else -> RejectMessage.RejectCode.OTHER
+                                }
+                                val rejectMessage = RejectMessage(Constants.NETWORK_PARAMETERS, code, confidence.transactionHash,
+                                        "Credit funding transaction is dead or double-spent", "cftx-dead-or-double-spent")
+                                log.info("Error sending ${cftx.txId}: ${rejectMessage.reasonString}")
+                                continuation.resumeWithException(RejectedTransactionException(cftx, rejectMessage))
+                            }
+                        }
+                        else -> {
+                            // ignore
+                        }
+                    }
+                }
+            })
+            walletApplication.broadcastTransaction(cftx)
+        }
+    }
+
+    /**
+     * Updates invitation status
+     */
+    suspend fun updateInvitations() {
+        val invitations = invitationsDao.loadAll()
+        for (invitation in invitations) {
+            if (invitation.acceptedAt == 0L) {
+                val identity = platform.identities.get(invitation.userId)
+                if (identity != null) {
+                    updateDashPayProfile(identity.id.toString())
+                    invitation.acceptedAt = System.currentTimeMillis()
+                    updateInvitation(invitation)
+                }
+            }
         }
     }
 }
