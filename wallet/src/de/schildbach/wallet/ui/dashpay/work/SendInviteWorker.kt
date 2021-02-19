@@ -33,6 +33,8 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
 import org.slf4j.LoggerFactory
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -103,7 +105,7 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
     }
 
     private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: String): DynamicLink {
-        log.error("creating dynamic link for invitation")
+        log.info("creating dynamic link for invitation")
         val username = dashPayProfile.username
         val nameLabel = dashPayProfile.nameLabel
         return FirebaseDynamicLinks.getInstance()
@@ -119,9 +121,9 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
                 }
                 .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
                     title = applicationContext.getString(R.string.invitation_preview_title)
-                    imageUrl = Uri.parse("https://invitations.dashpay.io/invitation-preview.png")
+                    val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
+                    imageUrl = Uri.parse("https://dashpay.site/image.php?image=$avatarUrlEncoded")
                     description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
-
                 }.build())
                 .setGoogleAnalyticsParameters(DynamicLink.GoogleAnalyticsParameters.Builder(
                         Constants.Invitation.UTM_SOURCE,

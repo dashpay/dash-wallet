@@ -136,13 +136,22 @@ open class FancyAlertDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val titleStr = requireArguments().getString("title")
+
+        val titleStr = try {
+            requireArguments().getString("title")
+        } catch (ex: ClassCastException) {
+            null
+        }
         if (titleStr != null) {
             title.text = titleStr
         } else {
             setOrHideIfEmpty(title, "title")
         }
-        val messageStr = requireArguments().getString("message")
+        val messageStr = try {
+            requireArguments().getString("message")
+        } catch (ex: ClassCastException) {
+            null
+        }
         if (messageStr != null) {
             message.text = HtmlCompat.fromHtml(messageStr, HtmlCompat.FROM_HTML_MODE_COMPACT)
         } else {

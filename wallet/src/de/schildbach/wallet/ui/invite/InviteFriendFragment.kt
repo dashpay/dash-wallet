@@ -67,6 +67,7 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
 
     private fun confirmButtonClick() {
         showProgress()
+        viewModel.sendInviteTransaction()
         viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner, {
             if (it.status != Status.LOADING) {
                 dismissProgress()
