@@ -50,6 +50,7 @@ import org.bitcoinj.evolution.EvolutionContact
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dashevo.dapiclient.model.GrpcExceptionInfo
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
@@ -64,6 +65,7 @@ import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
+import org.dashevo.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
@@ -550,10 +552,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet
-            val hasKeys = wallet.hasAuthenticationKeyChains()
-            if (!hasKeys) {
-                wallet.initializeAuthenticationKeyChains(seed, keyParameter)
-            }
+            // this will initialize any missing key chains
+            wallet.initializeAuthenticationKeyChains(seed, keyParameter)
         }
     }
 
@@ -865,6 +865,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    var counterForReport = 0;
     /**
      * updateContactRequests will fetch new Contact Requests from the network
      * and verify that we have all requests and profiles in the local database
@@ -1012,6 +1013,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             updatingContacts.set(false)
             if (preDownloadBlocks.get()) {
                 finishPreBlockDownload()
+            }
+
+            counterForReport++
+            if (counterForReport % 4 == 0) {
+                log.info(platform.client.reportNetworkStatus())
             }
         }
     }
