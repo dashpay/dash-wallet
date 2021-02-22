@@ -765,7 +765,16 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
                                             state: BlockchainIdentityData.CreationState,
                                             exception: Throwable? = null) {
-        val errorMessage = exception?.run { "${exception.javaClass.simpleName}: ${exception.message}" }
+        val errorMessage = exception?.run {
+            var message = "${exception.javaClass.simpleName}: ${exception.message}"
+            if (this is StatusRuntimeException) {
+                val exceptionInfo = GrpcExceptionInfo(this)
+                if (exceptionInfo.errors.isNotEmpty() && exceptionInfo.errors.first().containsKey("name")) {
+                    message += " ${exceptionInfo.errors.first()["name"]}"
+                }
+            }
+            message
+        }
         if (errorMessage == null) {
             log.info("updating creation state {}", state)
         } else {
