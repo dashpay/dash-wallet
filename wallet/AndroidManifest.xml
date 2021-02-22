@@ -68,6 +68,7 @@
             android:screenOrientation="portrait"
             android:taskAffinity=""
             android:launchMode="singleTask"
+            android:excludeFromRecents="true"
             android:theme="@style/SplashActivity.Theme">
 
             <intent-filter>
@@ -84,6 +85,9 @@
 
         <activity android:name="de.schildbach.wallet.ui.VerifySeedActivity"
             android:theme="@style/My.Theme.ChildActivity"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
             android:screenOrientation="portrait"/>
 
         <activity android:name="de.schildbach.wallet.ui.ViewSeedActivity"
