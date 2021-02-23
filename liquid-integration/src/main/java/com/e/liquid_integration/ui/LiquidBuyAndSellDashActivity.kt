@@ -17,7 +17,6 @@ import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import com.e.liquid_integration.R
-import com.e.liquid_integration.listener.ValueSelectListener
 import com.e.liquid_integration.currency.CurrencyResponse
 import com.e.liquid_integration.currency.PayloadItem
 import com.e.liquid_integration.data.LiquidClient
@@ -26,6 +25,7 @@ import com.e.liquid_integration.dialog.BuyDashCryptoCurrencyDialog
 import com.e.liquid_integration.dialog.SelectBuyDashDialog
 import com.e.liquid_integration.dialog.SelectSellDashDialog
 import com.e.liquid_integration.dialog.SellDashCryptoCurrencyDialog
+import com.e.liquid_integration.listener.ValueSelectListener
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.params.TestNet3Params
@@ -159,6 +159,11 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
             SellDashCryptoCurrencyDialog(context, "FiatCurrency", fiatCurrencyList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
+                    val intent = Intent(context, SellDashActivity::class.java)
+                    intent.putExtra("CurrencySelected", fiatCurrencyList[value].ccyCode)
+                    intent.putExtra("CurrencyType", "FIAT")
+                    startActivity(intent)
+
                 }
             })
 
@@ -166,6 +171,10 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
             SellDashCryptoCurrencyDialog(context, "CryptoCurrency", cryptoCurrencyArrayList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
+                    val intent = Intent(context, SellDashActivity::class.java)
+                    intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].ccyCode)
+                    intent.putExtra("CurrencyType", "CRYPTO")
+                    startActivity(intent)
 
                 }
             })
@@ -214,6 +223,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
         })
     }
+
     /**
      * call api to  get liquid wallet balance
      */
@@ -392,7 +402,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         if (GenericUtils.isInternetConnected(this)) {
 
             loadingDialog!!.show()
-            liquidClient?.getAllCurrencies(object : LiquidClient.Callback<CurrencyResponse>{
+            liquidClient?.getAllCurrencies(object : LiquidClient.Callback<CurrencyResponse> {
 
                 override fun onSuccess(data: CurrencyResponse) {
                     if (isFinishing) {

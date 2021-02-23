@@ -292,7 +292,6 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
                         return
                     }
                     liquidCurrencyArrayList.clear()
-                    //   loadingDialog!!.hide()
                     liquidCurrencyArrayList.addAll(data.payload)
                     checkAndCallApiOfUpload()
                 }
@@ -301,35 +300,11 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
                     if (isFinishing) {
                         return
                     }
-
-                    //  loadingDialog!!.hide()
                     checkAndCallApiOfUpload()
                 }
 
             })
 
-            /*liquidClient?.getAllCurrencies(object : LiquidClient.CallbackCurrency<String> {
-
-                override fun onSuccess(data: CurrencyResponse) {
-                    if (isFinishing) {
-                        return
-                    }
-                    liquidCurrencyArrayList.clear()
-                    //   loadingDialog!!.hide()
-                    liquidCurrencyArrayList.addAll(data.payload)
-                    checkAndCallApiOfUpload()
-
-                }
-
-                override fun onError(e: Exception?) {
-                    if (isFinishing) {
-                        return
-                    }
-
-                    //  loadingDialog!!.hide()
-                    checkAndCallApiOfUpload()
-                }
-            })*/
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
         }

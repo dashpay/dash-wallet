@@ -3,15 +3,19 @@ package com.e.liquid_integration.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.annotation.TargetApi
 import android.app.Activity
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.webkit.*
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
@@ -61,7 +65,8 @@ data class InitializationIdentityFunding(
 
 data class InitializationIdentityPayout(
         var currency: String? = null,
-        var quantity: String? = null
+        var quantity: String? = null,
+        var currency_scheme: String? = null
 )
 
 
@@ -98,6 +103,11 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
     private var walletAddress: String? = null
     private var userAmount: String? = null
     private var isTransestionSuccessful = false
+
+    private var mPermissionRequest: PermissionRequest? = null
+    val FILE_CHOOSER_RESULT_CODE = 1
+    var uploadMessage: ValueCallback<Uri?>? = null
+    var uploadMessageAboveL: ValueCallback<Array<Uri?>?>? = null
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -144,22 +154,74 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         webview.settings.domStorageEnabled = true
         webview.addJavascriptInterface(JavaScriptInterface(), mJsInterfaceName)
         webview.setBackgroundColor(0xFFFFFF)
-        // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-        webview.settings.setAllowUniversalAccessFromFileURLs(true);
-        webview.settings.setAllowFileAccessFromFileURLs(true);
-        //  }
+        webview.settings.javaScriptEnabled = true
+        webview.settings.domStorageEnabled = true
+        webview.settings.javaScriptCanOpenWindowsAutomatically = true
+        webview.settings.allowFileAccess = true
+        webview.settings.allowUniversalAccessFromFileURLs = true
+        webview.settings.allowFileAccessFromFileURLs = true
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             webview.settings.mediaPlaybackRequiresUserGesture = false
         }
+
+        /**
+         * This is for checking camera permission for selfie and upload document
+         */
         webview.setWebChromeClient(object : WebChromeClient() {
-            // Grant permissions for cam
+
+            override fun onPermissionRequestCanceled(request: PermissionRequest?) {
+                super.onPermissionRequestCanceled(request)
+                Toast.makeText(
+                        this@BuyDashWithCreditCardActivity,
+                        "Permission Denied. Please enable from setting.",
+                        Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            @SuppressLint("NewApi")
             override fun onPermissionRequest(request: PermissionRequest) {
-                println("Permission request::::")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    request.grant(request.resources)
-                    askCameraPermission()
+                mPermissionRequest = request
+                for (str in request.resources) {
+                    if (str.equals(PermissionRequest.RESOURCE_VIDEO_CAPTURE)) {
+                        runOnUiThread({
+                            askCameraPermission()
+                        })
+                        break
+                    }
                 }
 
+            }
+
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                super.onProgressChanged(view, newProgress)
+            }
+
+            //For Android API < 11 (3.0 OS)
+            fun openFileChooser(valueCallback: ValueCallback<Uri?>) {
+                uploadMessage = valueCallback
+                openImageChooserActivity()
+            }
+
+            //For Android API >= 11 (3.0 OS)
+            fun openFileChooser(
+                    valueCallback: ValueCallback<Uri?>,
+                    acceptType: String?,
+                    capture: String?
+            ) {
+                uploadMessage = valueCallback
+                openImageChooserActivity()
+            }
+
+            //For Android API >= 21 (5.0 OS)
+            override fun onShowFileChooser(
+                    webView: WebView?,
+                    filePathCallback: ValueCallback<Array<Uri?>?>,
+                    fileChooserParams: FileChooserParams?
+            ): Boolean {
+                uploadMessageAboveL = filePathCallback
+                openImageChooserActivity()
+                return true
             }
         })
 
@@ -170,23 +232,84 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
             CountrySupportDialog(this).show()
         }
 
-        askCameraPermission()
     }
 
-    private fun askCameraPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            //redirectToWidget()
-            //Already Granted permission
-        } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CODE_CAMERA_PERMISSION)
+
+    private fun openImageChooserActivity() {
+        val i = Intent(Intent.ACTION_GET_CONTENT)
+        i.addCategory(Intent.CATEGORY_OPENABLE)
+        i.setType("image/*")
+        startActivityForResult(Intent.createChooser(i, "Image Chooser"), FILE_CHOOSER_RESULT_CODE)
+    }
+
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == FILE_CHOOSER_RESULT_CODE) {
+            if (null == uploadMessage && null == uploadMessageAboveL) return
+            val result = if (data == null || resultCode != RESULT_OK) null else data.data
+            if (uploadMessageAboveL != null) {
+                onActivityResultAboveL(requestCode, resultCode, data)
+            } else if (uploadMessage != null) {
+                uploadMessage!!.onReceiveValue(result)
+                uploadMessage = null
+            }
         }
-
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private fun onActivityResultAboveL(requestCode: Int, resultCode: Int, intent: Intent?) {
+        if (requestCode != FILE_CHOOSER_RESULT_CODE || uploadMessageAboveL == null) return
+        var results: Array<Uri?>? = null
+        if (resultCode == RESULT_OK) {
+            if (intent != null) {
+                val dataString = intent.dataString
+                val clipData: ClipData? = intent.clipData
+                if (clipData != null) {
+                    results = arrayOfNulls(clipData.getItemCount())
+                    for (i in 0 until clipData.getItemCount()) {
+                        val item: ClipData.Item = clipData.getItemAt(i)
+                        results[i] = item.getUri()
+                    }
+                }
+                if (dataString != null) results = arrayOf(Uri.parse(dataString))
+            }
+        }
+        uploadMessageAboveL!!.onReceiveValue(results)
+        uploadMessageAboveL = null
+    }
+
+
+
+    @SuppressLint("NewApi")
+    private fun askCameraPermission() {
+        if (ContextCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.CAMERA
+                ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            mPermissionRequest!!.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE));
+
+        } else {
+            ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.CAMERA),
+                    REQUEST_CODE_CAMERA_PERMISSION
+            )
+        }
+    }
+
+    @SuppressLint("NewApi")
+    override fun onRequestPermissionsResult(
+            requestCode: Int,
+            permissions: Array<out String>,
+            grantResults: IntArray
+    ) {
         if (requestCode == REQUEST_CODE_CAMERA_PERMISSION) {
             when {
-                grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED -> ""
+                grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED -> {
+                    mPermissionRequest!!.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+                }
                 else -> showDialog(REQUEST_CODE_CAMERA_PERMISSION)
             }
         } else {
@@ -201,6 +324,11 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         );
     }
 
+
+    /**
+     * Passing paylod into widget
+     *
+     */
     private fun sendInitialization() {
         val initializationConfig = InitializationConfig(
                 public_api_key = LiquidConstants.PUBLIC_API_KEY,
@@ -215,7 +343,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                         input_parameters = SettlementParameters(
                                 account_key = SettlementParameter(
                                         type = "WALLET_ADDRESS",
-                                        value = walletAddress.toString()// This is for test in test net because wallet address in testnet not working "XaxsLtAAh9LeyPdxTC5o2ZuwQaniELzYtQ"
+                                        value = walletAddress.toString()
                                 )
                         )
                 ),
@@ -252,12 +380,10 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        webview.removeJavascriptInterface(mJsInterfaceName)
-        super.onDestroy()
-    }
 
-
+    /**
+     * Handle widget transaction
+     */
     private inner class JavaScriptInterface {
         @JavascriptInterface
         fun handleData(eventData: String) {
@@ -294,6 +420,11 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
             }
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    override fun onDestroy() {
+        webview.removeJavascriptInterface(mJsInterfaceName)
+        super.onDestroy()
     }
 
     override fun onBackPressed() {
