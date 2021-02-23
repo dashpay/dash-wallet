@@ -232,7 +232,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val nameDocuments = if (!onlyExactUsername) {
             platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
         } else {
-            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
+            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN, MulticallQuery.Companion.CallType.UNTIL_FOUND)
             if (nameDocument != null) {
                 listOf(nameDocument)
             } else {
