@@ -16,6 +16,9 @@ import de.schildbach.wallet.data.DashPayContactRequestDao;
 import de.schildbach.wallet.data.DashPayProfile;
 import de.schildbach.wallet.data.DashPayProfileDaoAsync;
 import de.schildbach.wallet.data.DashPayProfileDao;
+import de.schildbach.wallet.data.Invitation;
+import de.schildbach.wallet.data.InvitationsDao;
+import de.schildbach.wallet.data.InvitationsDaoAsync;
 import de.schildbach.wallet.data.RoomConverters;
 import de.schildbach.wallet.data.UserAlertDao;
 import de.schildbach.wallet.data.UserAlertDaoAsync;
@@ -24,7 +27,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.dashpay.UserAlert;
 
 @Database(entities = {ExchangeRate.class, BlockchainState.class, BlockchainIdentityData.class,
-        DashPayProfile.class, DashPayContactRequest.class, UserAlert.class}, version = 13)
+        DashPayProfile.class, DashPayContactRequest.class, UserAlert.class, Invitation.class}, version = 14)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -46,10 +49,13 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract DashPayContactRequestDao dashPayContactRequestDao();
 
+    public abstract InvitationsDao invitationsDao();
+
+    public abstract InvitationsDaoAsync invitationsDaoAsync();
+
     public abstract UserAlertDao userAlertDao();
 
     public abstract UserAlertDaoAsync userAlertDaoAsync();
-
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {

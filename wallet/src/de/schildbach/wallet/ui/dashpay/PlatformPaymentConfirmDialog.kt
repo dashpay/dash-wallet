@@ -22,6 +22,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
@@ -90,7 +91,7 @@ class PlatformPaymentConfirmDialog : BaseBottomSheetDialogFragment() {
             ViewModelProvider(this)[SharedViewModel::class.java]
         } ?: throw IllegalStateException("Invalid Activity")
         viewModel = ViewModelProvider(this).get(NewAccountConfirmDialogViewModel::class.java)
-        viewModel.exchangeRateData.observe(viewLifecycleOwner, {
+        viewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
             updateView()
         })
         updateView()

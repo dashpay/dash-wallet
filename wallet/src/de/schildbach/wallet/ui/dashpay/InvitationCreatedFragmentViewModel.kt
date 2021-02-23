@@ -20,7 +20,25 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
 import android.view.View
+
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Transformations
+import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
+import de.schildbach.wallet.ui.security.SecurityGuard
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
+import org.bitcoinj.crypto.KeyCrypterException
+import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bouncycastle.crypto.params.KeyParameter
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream
@@ -29,6 +47,8 @@ import java.io.IOException
 open class InvitationCreatedFragmentViewModel(application: Application) : BaseProfileViewModel(application) {
 
     private val log = LoggerFactory.getLogger(InvitationCreatedFragmentViewModel::class.java)
+
+    val invitationDao = AppDatabase.getAppDatabase().invitationsDao()
 
     val invitationPreviewImageFile by lazy {
         try {
@@ -58,5 +78,45 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
         view.layout(view.left, view.top, view.right, view.bottom)
         view.draw(canvas)
         return bitmap
+    }
+
+    fun saveTag(tag: String) {
+        invitation.memo = tag
+        viewModelScope.launch {
+            invitationDao.insert(invitation)
+        }
+    }
+
+    private val pubkeyHash = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
+    val inviteId = Address.fromPubKeyHash(walletApplication.wallet.params, pubkeyHash).toBase58()
+
+    val identityIdLiveData = MutableLiveData<String>()
+
+    val invitationLiveData = Transformations.switchMap(identityIdLiveData) {
+        liveData (Dispatchers.IO) {
+            emit(invitationDao.loadByUserId(it)!!)
+        }
+    }
+
+    val invitation : Invitation
+        get() = invitationLiveData.value!!
+
+    val invitationLinkData = liveData<String>(Dispatchers.IO) {
+        val tx = walletApplication.wallet.getTransaction(invitation.txid)
+        val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
+
+        val wallet = WalletApplication.getInstance().wallet!!
+        val password = SecurityGuard().retrievePassword()
+        var encryptionKey: KeyParameter? = null
+        try {
+            encryptionKey = wallet.keyCrypter!!.deriveKey(password)
+        } catch (ex: KeyCrypterException) {
+            FirebaseCrashlytics.getInstance().log("create invitation link: failed to derive encryption key")
+            FirebaseCrashlytics.getInstance().recordException(ex)
+            emit("")
+        }
+
+        val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx, encryptionKey)
+        emit("sample://dashpay.invitation/$invite")
     }
 }

@@ -36,8 +36,23 @@ public class TransactionUtil {
                     break;
                 default:
                     TransactionConfidence confidence = tx.getConfidence();
-                    if (CreditFundingTransaction.isCreditFundingTransaction(tx))
-                        typeId = R.string.dashpay_upgrade_fee;
+                    if (CreditFundingTransaction.isCreditFundingTransaction(tx)) {
+                        CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
+                        switch (wallet.getAuthenticationKeyType(cftx.getCreditBurnPublicKeyId().getBytes())) {
+                            case INVITATION_FUNDING:
+                                typeId = R.string.dashpay_invite_fee;
+                                break;
+                            case BLOCKCHAIN_IDENTITY_FUNDING:
+                                typeId = R.string.dashpay_upgrade_fee;
+                                break;
+                            case BLOCKCHAIN_IDENTITY_TOPUP:
+                                typeId = R.string.dashpay_topup_fee;
+                                break;
+                            default:
+                                typeId = R.string.transaction_row_status_sent;
+                                break;
+                        }
+                    }
                     else if (confidence.hasErrors())
                         typeId = R.string.transaction_row_status_error_sending;
                     else if (WalletUtils.isEntirelySelf(tx, wallet))
