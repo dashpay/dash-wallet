@@ -25,12 +25,14 @@ import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.NotificationsForUserLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
+import java.lang.Exception
 
 class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -45,9 +47,13 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
 
     val userLiveData by lazy {
         liveData(Dispatchers.IO) {
-            userData = platformRepo.getUser(userData.username).first()
-            sendContactRequestState
-            emit(userData)
+            try {
+                userData = platformRepo.getUser(userData.username).first()
+                sendContactRequestState
+                emit(Resource.success(userData))
+            } catch (ex: Exception) {
+                emit(Resource.error("Failed to load Profile", null))
+            }
         }
     }
 

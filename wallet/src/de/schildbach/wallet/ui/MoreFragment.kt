@@ -35,8 +35,11 @@ import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
-import kotlinx.android.synthetic.main.fragment_update_profile_error.*
 import kotlinx.android.synthetic.main.fragment_updating_profile.*
+import kotlinx.android.synthetic.main.update_profile_error.*
+import kotlinx.android.synthetic.main.update_profile_error.error_try_again
+import kotlinx.android.synthetic.main.update_profile_error.view.*
+import kotlinx.android.synthetic.main.update_profile_network_unavailable.*
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
@@ -47,6 +50,13 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     private var blockchainState: BlockchainState? = null
     private lateinit var editProfileViewModel: EditProfileViewModel
     private lateinit var mainActivityViewModel: MainActivityViewModel
+
+    companion object {
+        const val PROFILE_VIEW = 0
+        const val UPDATING_PROFILE_VIEW = 1
+        const val UPDATE_PROFILE_ERROR_VIEW = 2
+        const val UPDATE_PROFILE_NETWORK_ERROR_VIEW = 3
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -84,18 +94,22 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         error_try_again.setOnClickListener {
             editProfileViewModel.retryBroadcastProfile()
         }
-        cancel.setOnClickListener {
-            if (edit_update_switcher.displayedChild == 2) {
-                edit_update_switcher.displayedChild = 0 // reset to previous profile
-                editProfileViewModel.clearLastAttemptedProfile()
-            }
-
+        listOf(cancel, cancel_network_error).forEach {
+            it.setOnClickListener { dismissProfileError() }
         }
         edit_update_switcher.isVisible = false
         join_dashpay_btn.setOnClickListener {
             mainActivityViewModel.goBackAndStartActivityEvent.postValue(CreateUsernameActivity::class.java)
         }
         initViewModel()
+    }
+
+    private fun dismissProfileError() {
+        val allowedScreensToSwitch = listOf(UPDATE_PROFILE_ERROR_VIEW, UPDATE_PROFILE_NETWORK_ERROR_VIEW)
+        if (edit_update_switcher.displayedChild in allowedScreensToSwitch) {
+            edit_update_switcher.displayedChild = PROFILE_VIEW // reset to previous profile
+            editProfileViewModel.clearLastAttemptedProfile()
+        }
     }
 
     private fun initViewModel() {
@@ -115,22 +129,29 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
                 when (state.status) {
                     Status.SUCCESS -> {
                         edit_update_switcher.apply {
-                            displayedChild = 0
+                            displayedChild = PROFILE_VIEW
                         }
                     }
                     Status.ERROR -> {
                         edit_update_switcher.apply {
-                            if (displayedChild != 2) {
-                                displayedChild = 2
+                            val networkUnavailable = blockchainState?.impediments?.contains(BlockchainState.Impediment.NETWORK) == true
+                            if (networkUnavailable) {
+                                if (displayedChild != UPDATE_PROFILE_NETWORK_ERROR_VIEW) {
+                                    displayedChild = UPDATE_PROFILE_NETWORK_ERROR_VIEW
+                                }
+                            } else if (displayedChild != UPDATE_PROFILE_ERROR_VIEW) {
+                                displayedChild = UPDATE_PROFILE_ERROR_VIEW
                                 error_code_text.text = getString(R.string.error_updating_profile_code, state.message)
                             }
                         }
                     }
                     Status.LOADING -> {
                         edit_update_switcher.apply {
-                            if (displayedChild == 0 || displayedChild == 2) {
+                            val allowedScreensToSwitch = listOf(PROFILE_VIEW, UPDATE_PROFILE_ERROR_VIEW,
+                                    UPDATE_PROFILE_NETWORK_ERROR_VIEW)
+                            if (displayedChild in allowedScreensToSwitch) {
                                 //showNext()
-                                displayedChild = 1
+                                displayedChild = UPDATING_PROFILE_VIEW
                                 update_profile_status_icon.setImageResource(R.drawable.identity_processing)
                                 (update_profile_status_icon.drawable as AnimationDrawable).start()
                             }
@@ -138,8 +159,8 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
                     }
                     Status.CANCELED -> {
                         edit_update_switcher.apply {
-                            if (displayedChild != 0) {
-                                displayedChild = 0
+                            if (displayedChild != PROFILE_VIEW) {
+                                displayedChild = PROFILE_VIEW
                             }
                         }
                     }
@@ -158,7 +179,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
     private fun showProfileSection(profile: DashPayProfile) {
         edit_update_switcher.visibility = View.VISIBLE
-        edit_update_switcher.displayedChild = 0
+        edit_update_switcher.displayedChild = PROFILE_VIEW
         if (profile.displayName.isNotEmpty()) {
             username1.text = profile.displayName
             username2.text = profile.username
