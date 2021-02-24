@@ -29,19 +29,23 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
+import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.Constants.USERNAME_MAX_LENGTH
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
-import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
+import de.schildbach.wallet.ui.invite.InvitationPreviewDialog
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
@@ -58,7 +62,14 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
-    private lateinit var dashPayViewModel: DashPayViewModel
+
+    val dashPayViewModel by lazy {
+        ViewModelProvider(this).get(DashPayViewModel::class.java)
+    }
+
+    //    val viewModel by lazy {
+//        ViewModelProvider(this).get(InviteFriendViewModel::class.java)
+//    }
     private lateinit var walletApplication: WalletApplication
 
     private var reuseTransaction: Boolean = false
@@ -123,9 +134,42 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 showKeyBoard()
             }
             else -> {
-                showKeyBoard()
+                if (intent.action != Intent.ACTION_VIEW) {  // don't show the kayboard if launched from dynamic link
+                    showKeyBoard()
+                }
             }
         }
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleIntent(intent!!)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        FirebaseDynamicLinks.getInstance()
+                .getDynamicLink(intent)
+                .addOnSuccessListener {
+                    log.debug("dynamic link received")
+                    if (it != null) {
+                        log.debug("${it.extensions}; ${it.link}")
+                        val appLinkData = Constants.Invitation.AppLinkData(it.link!!)
+                        dashPayViewModel.dashPayProfileData(appLinkData.username).observe(this, { dashPayProfile ->
+                            if (dashPayProfile != null) {
+                                showPreviewDialog(dashPayProfile)
+                            } else {
+                                Toast.makeText(this, "Unable to find user ${appLinkData.username}", Toast.LENGTH_LONG).show()
+                                log.error("unable to find inviting user ${it.link}")
+                            }
+                        })
+                    }
+                }
+    }
+
+    private fun showPreviewDialog(dashPayProfile: DashPayProfile) {
+        val previewDialog = InvitationPreviewDialog.newInstance(this, dashPayProfile)
+        previewDialog.show(supportFragmentManager, null)
     }
 
     private fun showKeyBoard() {
@@ -139,8 +183,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
             triggerIdentityCreation(false)
         })
-
-        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
 
         dashPayViewModel.getUsernameLiveData.observe(this, Observer {
             imitateUserInteraction()

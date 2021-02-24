@@ -45,67 +45,69 @@ open class FancyAlertDialog : DialogFragment() {
 
     companion object {
 
-        fun newInstance(@StringRes title: Int, @StringRes message: Int, @DrawableRes image: Int,
-                        @StringRes positiveButtonText: Int, @StringRes negativeButtonText: Int): FancyAlertDialog {
-            val args = Bundle().apply {
-                putString("type", Type.INFO.name)
-                putInt("title", title)
-                putInt("message", message)
+        fun createBaseArguments(type: Type, @DrawableRes image: Int,
+                                @StringRes positiveButtonText: Int = 0, @StringRes negativeButtonText: Int = 0): Bundle {
+            return Bundle().apply {
+                putString("type", type.name)
                 putInt("image", image)
                 putInt("positive_text", positiveButtonText)
                 putInt("negative_text", negativeButtonText)
             }
+        }
+
+        fun newInstance(@StringRes title: Int, @StringRes message: Int, @DrawableRes image: Int,
+                        @StringRes positiveButtonText: Int, @StringRes negativeButtonText: Int): FancyAlertDialog {
+
             return FancyAlertDialog().apply {
-                arguments = args
+                arguments = createBaseArguments(Type.INFO, image, positiveButtonText, negativeButtonText)
+                        .apply {
+                            putInt("title", title)
+                            putInt("message", message)
+                        }
+            }
+        }
+
+        fun newInstance(title: String, messageHtml: String, @DrawableRes image: Int,
+                        @StringRes positiveButtonText: Int, @StringRes negativeButtonText: Int): FancyAlertDialog {
+            return FancyAlertDialog().apply {
+                arguments = createBaseArguments(Type.INFO, image, positiveButtonText, negativeButtonText)
+                        .apply {
+                            putString("title", title)
+                            putString("message", messageHtml)
+                        }
             }
         }
 
         @JvmStatic
-        fun newInstance(@StringRes title: Int, message: String): FancyAlertDialog {
+        fun newInstance(title: String, message: String): FancyAlertDialog {
             return FancyAlertDialog().apply {
-                arguments = createArguments(Type.INFO, title, message)
-            }
-        }
-
-        fun createArguments(type: Type, @StringRes title: Int, messageHtml: String,
-                            @StringRes positiveButtonText: Int = 0, @StringRes negativeButtonText: Int = 0): Bundle {
-            return Bundle().apply {
-                putString("type", type.name)
-                putInt("title", title)
-                putString("message_html", messageHtml)
-                putInt("positive_text", positiveButtonText)
-                putInt("negative_text", negativeButtonText)
-            }
-        }
-
-        fun createArguments(type: Type, @StringRes title: Int, @StringRes message: Int,
-                            @StringRes positiveButtonText: Int = 0, @StringRes negativeButtonText: Int = 0): Bundle {
-            return Bundle().apply {
-                putString("type", type.name)
-                putInt("title", title)
-                putInt("message", message)
-                putInt("positive_text", positiveButtonText)
-                putInt("negative_text", negativeButtonText)
+                arguments = createBaseArguments(Type.INFO, 0, 0, 0)
+                        .apply {
+                            putString("title", title)
+                            putString("message", message)
+                        }
             }
         }
 
         fun showInfo(fragmentManager: FragmentManager, @StringRes title: Int, @StringRes message: Int, @DrawableRes image: Int): FancyAlertDialog {
-            val args = Bundle().apply {
-                putString("type", Type.INFO.name)
-                putInt("title", title)
-                putInt("message", message)
-                putInt("image", image)
-            }
             return FancyAlertDialog().apply {
-                arguments = args
-                show(fragmentManager, "progress")
+                arguments = createBaseArguments(Type.INFO, image, 0, 0)
+                        .apply {
+                            putInt("title", title)
+                            putInt("message", message)
+                        }
+                show(fragmentManager, null)
             }
         }
 
         @JvmStatic
         fun newProgress(@StringRes title: Int, @StringRes message: Int = 0): FancyAlertDialog {
             return FancyAlertDialog().apply {
-                arguments = createArguments(Type.PROGRESS, title, message)
+                arguments = createBaseArguments(Type.PROGRESS, 0, 0, 0)
+                        .apply {
+                            putInt("title", title)
+                            putInt("message", message)
+                        }
             }
         }
     }
@@ -134,10 +136,24 @@ open class FancyAlertDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setOrHideIfEmpty(title, "title")
-        val messageHtml = requireArguments().getString("message_html")
-        if (messageHtml != null) {
-            message.text = HtmlCompat.fromHtml(messageHtml, HtmlCompat.FROM_HTML_MODE_COMPACT)
+
+        val titleStr = try {
+            requireArguments().getString("title")
+        } catch (ex: ClassCastException) {
+            null
+        }
+        if (titleStr != null) {
+            title.text = titleStr
+        } else {
+            setOrHideIfEmpty(title, "title")
+        }
+        val messageStr = try {
+            requireArguments().getString("message")
+        } catch (ex: ClassCastException) {
+            null
+        }
+        if (messageStr != null) {
+            message.text = HtmlCompat.fromHtml(messageStr, HtmlCompat.FROM_HTML_MODE_COMPACT)
         } else {
             setOrHideIfEmpty(message, "message")
         }

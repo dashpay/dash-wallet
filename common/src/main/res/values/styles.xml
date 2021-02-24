@@ -490,8 +490,11 @@
     </style>
 
     <style name="DashButton.Transparent" parent="DashButton.Blue">
-        <item name="android:textColor">@drawable/transparent_button_text</item>
         <item name="android:background">@drawable/transparent_button_background</item>
+    </style>
+
+    <style name="DashButton.Transparent.BlueText" parent="DashButton.Transparent">
+        <item name="android:textColor">@drawable/transparent_button_text</item>
     </style>
 
     <style name="DashButton.Transparent.Dark" parent="DashButton.Blue">

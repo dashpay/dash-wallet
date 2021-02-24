@@ -20,7 +20,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
 import android.view.View
-
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.liveData
@@ -30,6 +29,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
 import de.schildbach.wallet.ui.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
@@ -44,9 +44,28 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-open class InvitationCreatedFragmentViewModel(application: Application) : BaseProfileViewModel(application) {
+open class InvitationFragmentViewModel(application: Application) : BaseProfileViewModel(application) {
 
-    private val log = LoggerFactory.getLogger(InvitationCreatedFragmentViewModel::class.java)
+    private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
+
+    private val pubkeyHash = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
+
+    private val inviteId = Address.fromPubKeyHash(walletApplication.wallet.params, pubkeyHash).toBase58()
+
+    val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, inviteId)
+
+    val dynamicLinkData
+        get() = sendInviteStatusLiveData.value!!.data!!.dynamicLink
+
+    val shortDynamicLinkData
+        get() = sendInviteStatusLiveData.value!!.data!!.shortDynamicLink
+
+    fun sendInviteTransaction(): String {
+        SendInviteOperation(walletApplication)
+                .create(inviteId)
+                .enqueue()
+        return inviteId
+    }
 
     val invitationDao = AppDatabase.getAppDatabase().invitationsDao()
 
@@ -87,21 +106,18 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
         }
     }
 
-    private val pubkeyHash = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
-    val inviteId = Address.fromPubKeyHash(walletApplication.wallet.params, pubkeyHash).toBase58()
-
     val identityIdLiveData = MutableLiveData<String>()
 
     val invitationLiveData = Transformations.switchMap(identityIdLiveData) {
-        liveData (Dispatchers.IO) {
+        liveData(Dispatchers.IO) {
             emit(invitationDao.loadByUserId(it)!!)
         }
     }
 
-    val invitation : Invitation
+    val invitation: Invitation
         get() = invitationLiveData.value!!
 
-    val invitationLinkData = liveData<String>(Dispatchers.IO) {
+    val invitationLinkData = liveData(Dispatchers.IO) {
         val tx = walletApplication.wallet.getTransaction(invitation.txid)
         val cftx = walletApplication.wallet.getCreditFundingTransaction(tx)
 
@@ -117,6 +133,6 @@ open class InvitationCreatedFragmentViewModel(application: Application) : BasePr
         }
 
         val invite = platformRepo.getBlockchainIdentity()!!.getInvitationString(cftx, encryptionKey)
-        emit("sample://dashpay.invitation/$invite")
+        emit(invite)
     }
 }
