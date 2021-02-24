@@ -353,6 +353,12 @@
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
+            android:name="de.schildbach.wallet.ui.invite.InvitationsHistoryActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <activity
             android:name="de.schildbach.wallet.ui.SearchUserActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"

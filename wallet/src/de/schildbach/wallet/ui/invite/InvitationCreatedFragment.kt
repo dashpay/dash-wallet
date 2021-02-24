@@ -96,7 +96,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         }
 
         maybe_later_button.setOnClickListener {
-            requireActivity().finish()
+            startActivity(InvitationsHistoryActivity.createIntent(requireContext()))
         }
 
         initViewModel()
