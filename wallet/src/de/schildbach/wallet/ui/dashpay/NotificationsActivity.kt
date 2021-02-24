@@ -146,21 +146,23 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
         // find the most recent notification timestamp
         var lastNotificationTime = 0L
+
         data.forEach {
             lastNotificationTime = max(lastNotificationTime, it.getDate())
-            //Remove User Alert from list to add it before the "New" header
             if (it is NotificationItemUserAlert) {
                 userAlertItem = it
-                data.remove(it)
             }
         }
+
+        //Remove User Alert from list to add it before the "New" header
+        userAlertItem?.apply { data.remove(this) }
 
         val newItems = data.filter { r -> r.getDate() >= newDate }.toMutableList()
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
         //Add User Alert item
-        if (userAlertItem != null) {
-            results.add(NotificationsAdapter.NotificationViewItem(userAlertItem!!))
+        userAlertItem?.apply {
+            results.add(NotificationsAdapter.NotificationViewItem(this))
         }
 
         results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
