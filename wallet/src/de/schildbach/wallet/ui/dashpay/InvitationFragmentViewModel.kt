@@ -23,6 +23,7 @@ import android.view.View
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
@@ -32,6 +33,8 @@ import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
 import de.schildbach.wallet.ui.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -64,6 +67,8 @@ open class InvitationFragmentViewModel(application: Application) : BaseProfileVi
         return inviteId
     }
 
+    val invitationDao = AppDatabase.getAppDatabase().invitationsDao()
+
     val invitationPreviewImageFile by lazy {
         try {
             val storageDir: File = application.getExternalFilesDir(Environment.DIRECTORY_PICTURES)!!
@@ -95,15 +100,17 @@ open class InvitationFragmentViewModel(application: Application) : BaseProfileVi
     }
 
     fun saveTag(tag: String) {
-//        invitation.memo = tag
-//        AppDatabase.getAppDatabase().invitationsDaoAsync().insert(invitation)
+        invitation.memo = tag
+        viewModelScope.launch {
+            invitationDao.insert(invitation)
+        }
     }
 
     val identityIdLiveData = MutableLiveData<String>()
 
     val invitationLiveData = Transformations.switchMap(identityIdLiveData) {
         liveData(Dispatchers.IO) {
-            emit(AppDatabase.getAppDatabase().invitationsDao().loadByUserId(it)!!)
+            emit(invitationDao.loadByUserId(it)!!)
         }
     }
 
