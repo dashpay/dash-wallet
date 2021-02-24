@@ -116,13 +116,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
 
         searchContacts()
         dashPayViewModel.updateDashPayState()
-
-        invite_friend_hint.setOnClickListener {
-            InviteFriendActivity.startOrError(this)
-        }
-        invite_friend_hint_close.setOnClickListener {
-            invite_friend_hint.visibility = View.GONE
-        }
     }
 
     private fun initViewModel() {
@@ -225,8 +218,7 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
             }
             is NotificationItemUserAlert -> {
-                Toast.makeText(this, "Will be handled in another ticket.",
-                        Toast.LENGTH_SHORT).show()
+                InviteFriendActivity.startOrError(this)
             }
         }
     }

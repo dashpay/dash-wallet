@@ -139,10 +139,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         }
         searchContacts()
 
-        invite_friend_hint.setOnClickListener {
-            InviteFriendActivity.startOrError(requireActivity())
-        }
-
         network_error_subtitle.setText(R.string.network_error_contact_suggestions)
     }
 
