@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_dashpay_user.*
+import kotlinx.android.synthetic.main.contact_request_view.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
@@ -155,6 +156,14 @@ class DashPayUserActivity : InteractionAwareActivity(),
 
         activity_rv.layoutManager = LinearLayoutManager(this)
         activity_rv.adapter = this.notificationsAdapter
+
+        dashPayViewModel.blockchainStateData.observe(this, {
+            it?.apply {
+                val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
+                main_button.isEnabled = !networkError
+                accept.isEnabled = !networkError
+            }
+        })
     }
 
     private fun updateContactRelationUi() {

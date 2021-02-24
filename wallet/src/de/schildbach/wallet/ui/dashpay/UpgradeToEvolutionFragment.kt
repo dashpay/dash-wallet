@@ -59,6 +59,7 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
         mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
         mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, Observer {
             upgradeBtn.isEnabled = it
+            balance_requirement_disclaimer.visibility = if (it) View.GONE else View.VISIBLE
         })
     }
 }

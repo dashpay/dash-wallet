@@ -475,7 +475,7 @@
     <string name="save">Save</string>
     <string name="edit_profile_take_picture">Take a Photo with Camera</string>
     <string name="edit_profile_choose_picture">Select from Gallery</string>
-    <string name="upgrade_to_evolution_title">Upgrade to Evolution</string>
+    <string name="upgrade_to_evolution_title">Join DashPay</string>
     <string name="upgrade_to_evolution_message">Create your Username, find friends &amp; family with their usernames and add them to your contacts</string>
     <string name="image_cropper_title">Move and Zoom your photo to find the perfect fit</string>
     <string name="select">Select</string>
@@ -512,7 +512,7 @@
 
     <string name="error_updating_profile_try_again">Try Again</string>
     <string name="error_updating_profile_cancel">Cancel</string>
-    <string name="error_updating_profile_msg">Error updating your profile</string>
+    <string name="error_updating_profile_msg">Error updating profile</string>
     <string name="error_updating_profile_code">Code: %s</string>
     <string name="edit_profile_public_url">Public URL</string>
     <string name="public_url_enter_url">Paste your image URL</string>
@@ -547,5 +547,12 @@
     <string name="save_changes">Save Changes</string>
     <string name="save_profile_reminder_text">Would you like to save the changes you made to your profile?</string>
     <string name="invitation_notification_text">Invite your friends and family to the Dash Network</string>
+    <string name="dashpay_min_balance_disclaimer">You need at least <b>0.01 Dash</b> to get started</string>
+
+    <string name="network_unavailable">Network Unavailable</string>
+    <string name="network_error_contact_details">Unable to fetch contact details</string>
+    <string name="network_error_user_search">Unable to search for a user</string>
+    <string name="network_error_contact_suggestions">Unable to provide suggestions</string>
+    <string name="network_error_unable_to_update_profile">Unable to update your profile</string>
 
 </resources>

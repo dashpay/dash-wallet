@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <TextView
         android:id="@+id/title"
-        style="@style/MontserratMedium"
+        style="@style/MontserratSemiBold"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/upgrade_to_evolution_title"
@@ -25,9 +26,9 @@
         android:layout_marginTop="14dp"
         android:layout_marginEnd="22dp"
         android:gravity="center"
-        android:text="@string/upgrade_to_evolution_message"
+        android:text="@string/join_dashpay_more_subtitle"
         android:textColor="@color/medium_gray"
-        android:textSize="14sp"
+        android:textSize="12sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/title" />
@@ -52,5 +53,19 @@
         android:text="@string/upgrade"
         android:textSize="18sp"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+    <TextView
+        android:id="@+id/balance_requirement_disclaimer"
+        style="@style/MontserratMedium"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:text="@string/dashpay_min_balance_disclaimer"
+        android:textColor="@android:color/black"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/upgradeBtn"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
