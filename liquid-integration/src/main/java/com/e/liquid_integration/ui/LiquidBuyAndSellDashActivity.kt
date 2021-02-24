@@ -415,7 +415,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
                     for (i in data.payload.indices) {
                         if (data.payload[i].type == "CRYPTO") {
-                            cryptoCurrencyArrayList.add(data.payload[i])
+                            if (data.payload[i].ccyCode != "DASH") {
+                                cryptoCurrencyArrayList.add(data.payload[i])
+                            }
                         } else if (data.payload[i].type == "FIAT") {
                             fiatCurrencyList.add(data.payload[i])
                         }
