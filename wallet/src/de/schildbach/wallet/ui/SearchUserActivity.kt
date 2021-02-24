@@ -43,13 +43,16 @@ import androidx.transition.Transition
 import androidx.transition.TransitionManager
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
+import kotlinx.android.synthetic.main.activity_search_dashpay_profile_root.*
 import kotlinx.android.synthetic.main.invite_friend_hint_view.*
+import kotlinx.android.synthetic.main.network_unavailable.*
 import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -156,6 +159,8 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
         invite_friend_hint_view_empty_result.setOnClickListener {
             InviteFriendActivity.startOrError(this)
         }
+
+        network_error_subtitle.setText(R.string.network_error_user_search)
     }
 
     private fun finalizeViewsTransition() {
@@ -196,6 +201,17 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             imitateUserInteraction()
             adapter.sendContactRequestWorkStateMap = it
         })
+        dashPayViewModel.blockchainStateData.observe(this, {
+            it?.apply {
+                val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
+                updateNetworkErrorVisibility(networkError)
+            }
+        })
+    }
+
+    private fun updateNetworkErrorVisibility(networkError: Boolean) {
+        network_error.visibility = if (networkError) View.VISIBLE else View.GONE
+        network_error_root.visibility = if (networkError) View.VISIBLE else View.GONE
     }
 
     private fun startLoading() {
