@@ -33,7 +33,6 @@ import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
 import de.schildbach.wallet.ui.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException

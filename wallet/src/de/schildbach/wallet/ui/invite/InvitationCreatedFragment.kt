@@ -51,13 +51,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
     companion object {
         private const val ARG_IDENTITY_ID = "identity_id"
 
-        fun newInstanceFromInvitation(): InvitationCreatedFragment {
-            // in this case we use ViewModel shared with InviteFriendFragment
-            // so there is no need to transfer any data other way
-            return InvitationCreatedFragment()
-        }
-
-        fun newInstanceFromIdentity(identity: String): InvitationCreatedFragment {
+        fun newInstance(identity: String): InvitationCreatedFragment {
             val fragment = InvitationCreatedFragment()
             fragment.arguments = Bundle().apply {
                 putString(ARG_IDENTITY_ID, identity)
@@ -87,8 +81,6 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         }
         send_button.setOnClickListener {
             shareInvitation(true)
-            // save memo to the database
-            viewModel.saveTag(tag_edit.text.toString())
         }
         send_button.setOnLongClickListener {
             shareInvitation(false)
@@ -97,18 +89,15 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
 
         maybe_later_button.setOnClickListener {
             startActivity(InvitationsHistoryActivity.createIntent(requireContext()))
+            requireActivity().finish()
         }
 
         initViewModel()
     }
 
     private fun initViewModel() {
-        arguments?.apply {
-            if (containsKey(ARG_IDENTITY_ID)) {
-                val identityId = requireArguments().getString(ARG_IDENTITY_ID)!!
-                viewModel.identityIdLiveData.value = identityId
-            }
-        }
+        val identityId = requireArguments().getString(ARG_IDENTITY_ID)!!
+        viewModel.identityIdLiveData.value = identityId
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner, Observer {
             tag_edit.setText(it.memo)
@@ -121,6 +110,9 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
     }
 
     private fun shareInvitation(shareImage: Boolean) {
+        // save memo to the database
+        viewModel.saveTag(tag_edit.text.toString())
+
         val shortLink = viewModel.shortDynamicLinkData
         ShareCompat.IntentBuilder.from(requireActivity()).apply {
             setSubject(getString(R.string.invitation_share_title))
@@ -165,7 +157,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
     }
 
     override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.close_button_options, menu)
+        menuInflater.inflate(R.menu.close_button_white_options, menu)
         super.onCreateOptionsMenu(menu, menuInflater)
     }
 
