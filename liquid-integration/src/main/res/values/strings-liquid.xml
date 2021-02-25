@@ -40,6 +40,7 @@
     <string name="disconnect" translatable="false">Disconnect</string>
     <string name="select_crypto_currency" translatable="false">Select Crypto Currency</string>
     <string name="select_sell_currency" translatable="false">Select Sell Currency</string>
+    <string name="select_buy_currency" translatable="false">Select Buy Currency</string>
     <string name="select_fiat_currency" translatable="false">Select Fiat Currency</string>
     <string name="show_payment_qr_code" translatable="false">Show Payment QR Code</string>
     <string name="pay_with_btc_from_liquid" translatable="false">Pay with BTC from Liquid</string>

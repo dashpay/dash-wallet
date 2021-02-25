@@ -28,6 +28,7 @@ import com.e.liquid_integration.dialog.SellDashCryptoCurrencyDialog
 import com.e.liquid_integration.listener.ValueSelectListener
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
@@ -101,7 +102,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
              intent.putExtra("extra_max_amount", "17")
              startActivityForResult(intent, 101)*/
             val walletDataProvider = application as WalletDataProvider
-            val address = Address.fromBase58(TestNet3Params.get(), "yTgh4Z1RrMXbJrbkbS7Lgk8NEZERJigMsy")
+            val address = Address.fromBase58(MainNetParams.get(), "yTgh4Z1RrMXbJrbkbS7Lgk8NEZERJigMsy")
             val amount = Coin.CENT
             walletDataProvider.startSendCoinsForResult(this, 1234, address, amount)
         }

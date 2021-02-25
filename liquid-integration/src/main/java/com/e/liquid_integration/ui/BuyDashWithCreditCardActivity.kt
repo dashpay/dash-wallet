@@ -288,7 +288,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                         Manifest.permission.CAMERA
                 ) == PackageManager.PERMISSION_GRANTED
         ) {
-            mPermissionRequest!!.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE));
+            mPermissionRequest!!.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
 
         } else {
             ActivityCompat.requestPermissions(

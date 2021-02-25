@@ -31,11 +31,14 @@ class SellDashCryptoCurrencyDialog(val contexts: Context, val currencyType: Stri
         dialog.show()
 
 
-        if (currencyType.equals("CryptoCurrency")) {
+        /*if (currencyType.equals("CryptoCurrency")) {
             bottomSheetView.findViewById<TextView>(R.id.txtCurrencyType).text = contexts.getString(R.string.select_crypto_currency)
         } else {
             bottomSheetView.findViewById<TextView>(R.id.txtCurrencyType).text = contexts.getString(R.string.select_fiat_currency)
-        }
+        }*/
+
+        bottomSheetView.findViewById<TextView>(R.id.txtCurrencyType).text = contexts.getString(R.string.select_buy_currency)
+
 
         rvCryptoCurrency = bottomSheetView.findViewById(R.id.rvCryptoCurrency)
         rvCryptoCurrency?.layoutManager = LinearLayoutManager(contexts)
