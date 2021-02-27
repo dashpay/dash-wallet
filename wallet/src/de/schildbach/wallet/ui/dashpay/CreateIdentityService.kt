@@ -221,9 +221,19 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
+        var requiresRestart = false
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
+
+            // handle case of "InvalidIdentityAssetLockProofSignatureError", where we need to start over from scratch
+            if (blockchainIdentityData.creationState == CreationState.IDENTITY_REGISTERING &&
+                    blockchainIdentityData.creationStateErrorMessage!!.contains("InvalidIdentityAssetLockProofSignatureError")) {
+                blockchainIdentityData.creationState = CreationState.NONE
+                blockchainIdentityData.creditFundingTxId = null
+                requiresRestart = true
+            }
         }
+
         platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
 
         val wallet = walletApplication.wallet
@@ -279,6 +289,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERING) {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
             //
             // Step 4: Preorder the username
             if (!blockchainIdentity.getUsernames().contains(blockchainIdentityData.username!!)) {
@@ -286,7 +297,6 @@ class CreateIdentityService : LifecycleService() {
             }
             platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
         }
 
         if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERED) {

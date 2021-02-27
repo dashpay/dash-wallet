@@ -44,6 +44,7 @@ import org.bitcoinj.evolution.EvolutionContact
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dashevo.dapiclient.model.GrpcExceptionInfo
 import org.dashevo.dashpay.BlockchainIdentity
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
@@ -58,6 +59,7 @@ import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
+import org.dashevo.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
@@ -132,12 +134,37 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         GlobalScope.launch {
             blockchainIdentityDataDao.load()?.let {
                 blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
+                platformRepoInstance.initializeStateRepository()
                 while (isActive) {
                     log.info("Timer: Update contacts")
                     platformRepoInstance.updateContactRequests()
                     delay(UPDATE_TIMER_DELAY)
                 }
             }
+        }
+    }
+
+    /**
+     * This method looks at all items in the database tables
+     * that have existing identites and saves them for future use.
+     *
+     * Sometimes Platform Nodes return IdentityNotFound Errors and
+     * this list is used to determine if that node should be banned
+     */
+    private suspend fun initializeStateRepository() {
+        // load our id
+
+        val identityId = blockchainIdentity.uniqueIdString
+        platform.stateRepository.addValidIdentity(Identifier.from(identityId))
+
+        //load all id's of users who have sent us a contact request
+        dashPayContactRequestDao.loadFromOthers(identityId)?.forEach {
+            platform.stateRepository.addValidIdentity(it.userIdentifier)
+        }
+
+        // load all id's of users for whom we have profiles
+        dashPayProfileDao.loadAll().forEach {
+            platform.stateRepository.addValidIdentity(it.userIdentifier)
         }
     }
 
@@ -173,7 +200,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     @Throws(Exception::class)
     suspend fun getUser(username: String): List<UsernameSearchResult> {
-        return searchUsernames(username, true)
+        return try {
+            searchUsernames(username, true)
+        } catch (e: Exception) {
+            formatExceptionMessage("get single user failure", e)
+            throw e
+        }
     }
 
     /**
@@ -190,9 +222,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         // Names.search does support retrieving 100 names at a time if retrieveAll = false
         //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
-        val nameDocuments = platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN,
-                retrieveAll = false, limit = limit)
-
+        // Sometimes when onlyExactUsername = true, an exception is thrown here and that results in a crash
+        // it is not clear why a search for an existing username results in a failure to find it again.
+        val nameDocuments = if (!onlyExactUsername) {
+            platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
+        } else {
+            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN, MulticallQuery.Companion.CallType.UNTIL_FOUND)
+            if (nameDocument != null) {
+                listOf(nameDocument)
+            } else {
+                listOf()
+            }
+        }
         val userIds = if (onlyExactUsername) {
             val result = mutableListOf<Identifier>()
             val exactNameDoc = try {
@@ -208,13 +249,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             nameDocuments.map { getIdentityForName(it) }
         }
 
-        var profileById: Map<Identifier, Document> = mapOf()
-
-        try {
-            val profileDocuments = Profiles(platform).getList(userIds)
-            profileById = profileDocuments.associateBy({ it.ownerId }, { it })
-        } catch (e: StatusRuntimeException) {
-            // swallow; we don't want to stop this method if no usernames have profiles
+        var profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
+            val profileDocuments = profiles.getList(userIds)
+            profileDocuments.associateBy({ it.ownerId }, { it })
+        } else {
+            log.warn("search usernames: userIdList is empty, though nameDocuments has ${nameDocuments.size} items")
+            mapOf()
         }
 
         val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
@@ -507,10 +547,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val wallet = walletApplication.wallet
-            //val hasKeys = wallet.hasAuthenticationKeyChains()
-            //if (!hasKeys) {
+            // this will initialize any missing key chains
             wallet.initializeAuthenticationKeyChains(seed, keyParameter)
-            //}
         }
     }
 
@@ -722,7 +760,16 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
                                             state: BlockchainIdentityData.CreationState,
                                             exception: Throwable? = null) {
-        val errorMessage = exception?.run { "${exception.javaClass.simpleName}: ${exception.message}" }
+        val errorMessage = exception?.run {
+            var message = "${exception.javaClass.simpleName}: ${exception.message}"
+            if (this is StatusRuntimeException) {
+                val exceptionInfo = GrpcExceptionInfo(this)
+                if (exceptionInfo.errors.isNotEmpty() && exceptionInfo.errors.first().containsKey("name")) {
+                    message += " ${exceptionInfo.errors.first()["name"]}"
+                }
+            }
+            message
+        }
         if (errorMessage == null) {
             log.info("updating creation state {}", state)
         } else {
@@ -813,6 +860,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    var counterForReport = 0;
     /**
      * updateContactRequests will fetch new Contact Requests from the network
      * and verify that we have all requests and profiles in the local database
@@ -902,6 +950,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
+                platform.stateRepository.addValidIdentity(contactRequest.userIdentifier)
                 if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference)) {
 
                     userIdList.add(contactRequest.userId)
@@ -964,6 +1013,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (preDownloadBlocks.get()) {
                 finishPreBlockDownload()
             }
+
+            counterForReport++
+            if (counterForReport % 4 == 0) {
+                log.info(platform.client.reportNetworkStatus())
+            }
         }
     }
 
@@ -1016,7 +1070,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private suspend fun updateContactProfiles(userIdList: List<String>, lastContactRequestTime: Long, checkingIntegrity: Boolean = false) {
         if (userIdList.isNotEmpty()) {
             val identifierList = userIdList.map { Identifier.from(it) }
-            val profileDocuments = Profiles(platform).getList(identifierList, lastContactRequestTime) //only handles 100 userIds
+            val profileDocuments = profiles.getList(identifierList, lastContactRequestTime) //only handles 100 userIds
             val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
             val nameDocuments = platform.names.getList(identifierList)
@@ -1043,10 +1097,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             if (lastContactRequestTime == 0L) {
                 val remainingMissingProfiles = userIdList.filter { !profileById.containsKey(Identifier.from(it)) }
                 for (identityId in remainingMissingProfiles) {
-                    val nameDocument = nameById[Identifier.from(identityId)] // what happens if there is no username for the identity? crash
-                    val username = nameDocument!!.data["normalizedLabel"] as String
-                    val identityIdForName = getIdentityForName(nameDocument)
-                    dashPayProfileDao.insert(DashPayProfile(identityIdForName.toString(), username))
+                    val nameDocument = nameById[Identifier.from(identityId)]
+                    // what happens if there is no username for the identity? crash
+                    if (nameDocument != null) {
+                        val username = nameDocument.data["normalizedLabel"] as String
+                        val identityIdForName = getIdentityForName(nameDocument)
+                        dashPayProfileDao.insert(DashPayProfile(identityIdForName.toString(), username))
+                    } else {
+                        log.info("no username found for $identityId")
+                    }
                 }
             }
         }

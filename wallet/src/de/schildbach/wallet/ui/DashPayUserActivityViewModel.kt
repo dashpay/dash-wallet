@@ -49,6 +49,7 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
         liveData(Dispatchers.IO) {
             try {
                 userData = platformRepo.getUser(userData.username).first()
+                platformRepo.platform.stateRepository.addValidIdentity(userData.dashPayProfile.userIdentifier)
                 sendContactRequestState
                 emit(Resource.success(userData))
             } catch (ex: Exception) {
