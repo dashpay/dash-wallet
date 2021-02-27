@@ -18,17 +18,14 @@ package de.schildbach.wallet.ui.dashpay.work
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.work.WorkInfo
-import org.bitcoinj.core.Sha256Hash
 
-class SendInviteStatusLiveData(application: Application, val inviteId: String) : SingleWorkStatusLiveData<Pair<String, Sha256Hash>>(application) {
+class SendInviteStatusLiveData(application: Application, private val inviteId: String) : SingleWorkStatusLiveData<SendInviteWorker.OutputDataWrapper>(application) {
 
     override val workInfoList: LiveData<List<WorkInfo>>
         get() = workManager.getWorkInfosForUniqueWorkLiveData(SendInviteOperation.uniqueWorkName(inviteId))
 
 
-    override fun successResult(workInfo: WorkInfo): Pair<String, Sha256Hash> {
-        val userId = SendInviteWorker.extractUserId(workInfo.outputData)!!
-        val txid = SendInviteWorker.extractTxId(workInfo.outputData)!!
-        return Pair(userId, Sha256Hash.wrap(txid))
+    override fun successResult(workInfo: WorkInfo): SendInviteWorker.OutputDataWrapper {
+        return SendInviteWorker.OutputDataWrapper(workInfo.outputData)
     }
 }

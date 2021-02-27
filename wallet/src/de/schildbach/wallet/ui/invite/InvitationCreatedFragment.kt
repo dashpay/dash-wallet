@@ -16,6 +16,9 @@
 
 package de.schildbach.wallet.ui.invite
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
@@ -25,7 +28,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ShareCompat.IntentBuilder
+import androidx.core.app.ShareCompat
 import androidx.core.content.FileProvider
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.Fragment
@@ -33,29 +36,22 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.ui.dashpay.InvitationCreatedFragmentViewModel
+import de.schildbach.wallet.ui.dashpay.InvitationFragmentViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
+import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invitation_created.*
-import org.dash.wallet.common.ui.FancyAlertDialog
 
 
 class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created) {
 
     companion object {
-        private const val ARG_INVITE_ID = "invite_id"
         private const val ARG_IDENTITY_ID = "identity_id"
-        fun newInstanceFromInvitation(inviteId: String): InvitationCreatedFragment {
-            val fragment = InvitationCreatedFragment()
-            fragment.arguments = Bundle().apply {
-                putString(ARG_INVITE_ID, inviteId)
-            }
-            return fragment
-        }
-        fun newInstanceFromIdentity(identity: String): InvitationCreatedFragment {
+
+        fun newInstance(identity: String): InvitationCreatedFragment {
             val fragment = InvitationCreatedFragment()
             fragment.arguments = Bundle().apply {
                 putString(ARG_IDENTITY_ID, identity)
@@ -65,7 +61,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
     }
 
     val viewModel by lazy {
-        ViewModelProvider(this).get(InvitationCreatedFragmentViewModel::class.java)
+        ViewModelProvider(requireActivity()).get(InvitationFragmentViewModel::class.java)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -77,14 +73,14 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         val appCompatActivity = requireActivity() as AppCompatActivity
         appCompatActivity.setSupportActionBar(toolbar)
 
-        displayOwnProfilePicture()
         preview_button.setOnClickListener {
             showPreviewDialog()
         }
+        copy_invitation_link.setOnClickListener {
+            copyInvitationLink()
+        }
         send_button.setOnClickListener {
             shareInvitation(true)
-            // save memo to the database
-            viewModel.saveTag(tag_edit.text.toString())
         }
         send_button.setOnLongClickListener {
             shareInvitation(false)
@@ -92,43 +88,21 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         }
 
         maybe_later_button.setOnClickListener {
-            val errorDialog = FancyAlertDialog.newInstance(R.string.invitation_cant_afford_title,
-                    R.string.invitation_cant_afford_message, R.drawable.ic_cant_afford_invitation,
-                    R.string.okay, 0)
-            errorDialog.show(childFragmentManager, null)
+            startActivity(InvitationsHistoryActivity.createIntent(requireContext()))
+            requireActivity().finish()
         }
 
-        val args = requireArguments()
-        val inviteId = args.getString(ARG_INVITE_ID)
-        /*if (inviteId != null) {
-            // in this case, we are loading this from a send invite operation
-            viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner, Observer {
-                when (it.status) {
-                    Status.SUCCESS -> {
-                        if (it.data != null) {
-                            send_button.isEnabled = true
-                            viewModel.identityIdLiveData.value = it.data.first
-                        } else {
-                            send_button.isEnabled = false
-                        }
-                    }
-                    else -> {
-                        send_button.isEnabled = false
-                    }
-                }
-            })
-        } else {*/
-            //in this case, we are viewing this screen from the history
-            val identityId = args.getString(ARG_IDENTITY_ID)!!
-            viewModel.identityIdLiveData.value = identityId
-        //}
+        initViewModel()
+    }
+
+    private fun initViewModel() {
+        val identityId = requireArguments().getString(ARG_IDENTITY_ID)!!
+        viewModel.identityIdLiveData.value = identityId
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner, Observer {
             tag_edit.setText(it.memo)
         })
-    }
 
-    private fun displayOwnProfilePicture() {
         viewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
             profile_picture_envelope.avatarProfile = it
             setupInvitationPreviewTemplate(it!!)
@@ -136,21 +110,22 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
     }
 
     private fun shareInvitation(shareImage: Boolean) {
-        IntentBuilder.from(requireActivity()).apply {
+        // save memo to the database
+        viewModel.saveTag(tag_edit.text.toString())
 
-            viewModel.invitationLinkData.observe(viewLifecycleOwner, Observer {
-                setSubject("DashPay invitation")
-                setText(it)
-                if (shareImage) {
-                    setType(Constants.MIMETYPE_INVITATION_WITH_IMAGE)
-                    val fileUri: Uri = FileProvider.getUriForFile(requireContext(), "${BuildConfig.APPLICATION_ID}.file_attachment", viewModel.invitationPreviewImageFile!!)
-                    setStream(fileUri)
-                } else {
-                    setType(Constants.MIMETYPE_INVITATION)
-                }
-                setChooserTitle(R.string.invitation_share_message)
-                startChooser()
-            })
+        val shortLink = viewModel.shortDynamicLinkData
+        ShareCompat.IntentBuilder.from(requireActivity()).apply {
+            setSubject(getString(R.string.invitation_share_title))
+            setText(shortLink)
+            if (shareImage) {
+                setType(Constants.Invitation.MIMETYPE_WITH_IMAGE)
+                val fileUri: Uri = FileProvider.getUriForFile(requireContext(), "${BuildConfig.APPLICATION_ID}.file_attachment", viewModel.invitationPreviewImageFile!!)
+                setStream(fileUri)
+            } else {
+                setType(Constants.Invitation.MIMETYPE)
+            }
+            setChooserTitle(R.string.invitation_share_message)
+            startChooser()
         }
     }
 
@@ -160,8 +135,8 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         val message = HtmlCompat.fromHtml(messageHtml, HtmlCompat.FROM_HTML_MODE_COMPACT)
         val messageView = invitation_bitmap_template.findViewById<TextView>(R.id.bitmap_template_message)
         messageView.text = message
-        ProfilePictureDisplay.display(profilePictureEnvelope.avatarView, profile, false,
-                object : ProfilePictureDisplay.OnResourceReadyListener {
+        ProfilePictureDisplay.display(profilePictureEnvelope.avatarView, profile, false, disableTransition = true,
+                listener = object : ProfilePictureDisplay.OnResourceReadyListener {
                     override fun onResourceReady(resource: Drawable?) {
                         invitation_bitmap_template.post {
                             viewModel.saveInviteBitmap(invitation_bitmap_template)
@@ -175,8 +150,14 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         previewDialog.show(childFragmentManager, null)
     }
 
+    private fun copyInvitationLink() {
+        val clipboardManager = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboardManager.setPrimaryClip(ClipData.newPlainText(getString(R.string.invitation_share_title), viewModel.shortDynamicLinkData))
+        Toast(context).toast(R.string.receive_copied)
+    }
+
     override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.close_button_options, menu)
+        menuInflater.inflate(R.menu.close_button_white_options, menu)
         super.onCreateOptionsMenu(menu, menuInflater)
     }
 

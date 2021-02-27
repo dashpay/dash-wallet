@@ -20,6 +20,7 @@ import androidx.lifecycle.*
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearch
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
@@ -74,6 +75,10 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
 
     fun searchUsername(username: String?) {
         usernameLiveData.value = username
+    }
+
+    fun dashPayProfileData(username: String): LiveData<DashPayProfile?> {
+        return AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUsernameDistinct(username)
     }
 
     override fun onCleared() {

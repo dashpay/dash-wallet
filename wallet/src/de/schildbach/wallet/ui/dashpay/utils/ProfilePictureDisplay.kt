@@ -36,14 +36,14 @@ class ProfilePictureDisplay {
 
         @JvmStatic
         fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false) {
-            display(avatarView, dashPayProfile, hideIfProfileNull, null)
+            display(avatarView, dashPayProfile, hideIfProfileNull, false, null)
         }
 
         @JvmStatic
-        fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false, listener: OnResourceReadyListener?) {
+        fun display(avatarView: ImageView, dashPayProfile: DashPayProfile?, hideIfProfileNull: Boolean = false, disableTransition: Boolean, listener: OnResourceReadyListener?) {
             if (dashPayProfile != null) {
                 avatarView.visibility = View.VISIBLE
-                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.avatarHash, dashPayProfile.username, listener)
+                display(avatarView, dashPayProfile.avatarUrl, dashPayProfile.avatarHash, dashPayProfile.username, disableTransition, listener)
             } else if (hideIfProfileNull) {
                 avatarView.visibility = View.GONE
             }
@@ -51,12 +51,12 @@ class ProfilePictureDisplay {
 
         @JvmStatic
         fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String) {
-            display(avatarView, avatarUrlStr, avatarHash, username, null)
+            display(avatarView, avatarUrlStr, avatarHash, username, false, null)
         }
 
         @JvmStatic
         fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String,
-                    listener: OnResourceReadyListener?) {
+                    disableTransition: Boolean, listener: OnResourceReadyListener?) {
             val fontSize = calcFontSize(avatarView)
             if (avatarUrlStr.isNotEmpty()) {
                 val defaultAvatar: Drawable? = getDrawable(avatarView.context, username[0], fontSize)
@@ -64,7 +64,7 @@ class ProfilePictureDisplay {
                 val zoomRectF = ProfilePictureHelper.extractZoomedRect(avatarUrl)
                 val baseAvatarUrl = ProfilePictureHelper.removePicZoomParameter(avatarUrl)
                 val context = avatarView.context.applicationContext
-                Glide.with(context)
+                val a = Glide.with(context)
                         .load(baseAvatarUrl)
                         .listener(object : RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
@@ -83,8 +83,10 @@ class ProfilePictureDisplay {
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                         .transform(ProfilePictureTransformation.create(avatarUrlStr))
                         .placeholder(defaultAvatar)
-                        .transition(withCrossFade())
-                        .into(avatarView)
+                        .apply {
+                            takeIf { !disableTransition }
+                                    ?.apply(transition(withCrossFade()))
+                        }.into(avatarView)
             } else {
                 displayDefault(avatarView, username, fontSize, listener)
             }
