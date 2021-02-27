@@ -45,13 +45,10 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashevo.dapiclient.model.GrpcExceptionInfo
-import org.dashevo.dashpay.BlockchainIdentity
+import org.dashevo.dashpay.*
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_UNIQUE
-import org.dashevo.dashpay.ContactRequests
-import org.dashevo.dashpay.Profiles
-import org.dashevo.dashpay.RetryDelayType
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.errors.InvalidIdentityAssetLockProofError
 import org.dashevo.dpp.identifier.Identifier
@@ -70,6 +67,7 @@ import kotlin.collections.HashSet
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.jvm.Throws
 
 class PlatformRepo private constructor(val walletApplication: WalletApplication) {
 
@@ -101,6 +99,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     val platform = Platform(Constants.NETWORK_PARAMETERS)
     private val profiles = Profiles(platform)
+    private val contactRequests = ContactRequests(platform)
 
     private val blockchainIdentityDataDao = AppDatabase.getAppDatabase().blockchainIdentityDataDao()
     private val dashPayProfileDao = AppDatabase.getAppDatabase().dashPayProfileDao()
@@ -473,20 +472,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         log.info("potential contact identity: $potentialContactIdentity")
 
         //Create Contact Request
-        val contactRequests = ContactRequests(platform)
-        contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
+        val cr = contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
         log.info("contact request sent")
 
         //Verify that the Contact Request was seen on the network
-        val cr = contactRequests.watchContactRequest(Identifier.from(this.blockchainIdentity.uniqueId.bytes),
-                Identifier.from(toUserId), 100, 500, RetryDelayType.LINEAR)
+        //val cr = contactRequests.watchContactRequest(Identifier.from(this.blockchainIdentity.uniqueId.bytes),
+        //        Identifier.from(toUserId), 100, 500, RetryDelayType.LINEAR)
 
         // add our receiving from this contact keychain if it doesn't exist
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
         if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
             Context.propagate(walletApplication.wallet.context)
-            blockchainIdentity.addPaymentKeyChainFromContact(potentialContactIdentity!!, cr!!, encryptionKey)
+            blockchainIdentity.addPaymentKeyChainFromContact(potentialContactIdentity, cr, encryptionKey)
 
             // update bloom filters now on main thread
             mainHandler.post {
@@ -511,7 +509,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val avatarUrl = if (dashPayProfile.avatarUrl.isNotEmpty()) dashPayProfile.avatarUrl else null
 
         //Create Contact Request
-        if (dashPayProfile.createdAt == 0L) {
+        val createdProfile = if (dashPayProfile.createdAt == 0L) {
             blockchainIdentity.registerProfile(displayName,
                     publicMessage,
                     avatarUrl,
@@ -530,6 +528,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         //Verify that the Contact Request was seen on the network
         val updatedProfile = blockchainIdentity.watchProfile(100, 5000, RetryDelayType.LINEAR)
+
+        if (createdProfile != updatedProfile) {
+            log.warn("Created profile doesn't match profile from network $createdProfile != $updatedProfile")
+        }
 
         log.info("updated profile: $updatedProfile")
         if (updatedProfile != null) {
@@ -568,6 +570,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
+            Context.getOrCreate(walletApplication.wallet.params)
             for (i in 0 until 3) {
                 try {
                     blockchainIdentity.registerIdentity(keyParameter)
@@ -657,20 +660,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         withContext(Dispatchers.IO) {
             val username = blockchainIdentity.currentUsername!!
             blockchainIdentity.registerProfile(username, "", "", null, null, keyParameter)
-        }
-    }
-
-    //
-    // Step 6: Verify that the profile was registered
-    //
-    suspend fun verifyProfileCreatedAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            val profile = blockchainIdentity.watchProfile(10, 5000, RetryDelayType.SLOW20)
-                    ?: throw TimeoutException("the profile was not found to be created in the allotted amount of time")
-
-            val dashPayProfile = DashPayProfile.fromDocument(profile, blockchainIdentity.currentUsername!!)
-
-            updateDashPayProfile(dashPayProfile!!)
         }
     }
 
@@ -918,16 +907,18 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             updateSyncStatus(PreBlockStage.FixMissingProfiles)
 
             // Get all out our contact requests
-            val toContactDocuments = ContactRequests(platform).get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
+            val toContactDocuments = contactRequests.get(userId, toUserId = false, afterTime = lastContactRequestTime, retrieveAll = true)
             toContactDocuments.forEach {
-                val contactRequest = DashPayContactRequest.fromDocument(it)
-                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference)) {
 
-                    userIdList.add(contactRequest.toUserId)
-                    dashPayContactRequestDao.insert(contactRequest)
+                val contactRequest = ContactRequest(it)
+                val dashPayContactRequest = DashPayContactRequest.fromDocument(contactRequest)
+                if (!dashPayContactRequestDao.exists(dashPayContactRequest.userId, dashPayContactRequest.toUserId, contactRequest.accountReference)) {
+
+                    userIdList.add(dashPayContactRequest.toUserId)
+                    dashPayContactRequestDao.insert(dashPayContactRequest)
 
                     // add our receiving from this contact keychain if it doesn't exist
-                    val contact = EvolutionContact(userId, contactRequest.toUserId)
+                    val contact = EvolutionContact(userId, dashPayContactRequest.toUserId)
                     try {
                         if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
                             val contactIdentity = platform.identities.get(contactRequest.toUserId)
@@ -936,7 +927,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                                 // Don't bother with DeriveKeyTask here, just call deriveKey
                                 encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                             }
-                            blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, it, encryptionKey!!)
+                            blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, contactRequest, encryptionKey!!)
                             addedContact = true
                         }
                     } catch (e: KeyCrypterException) {
@@ -947,7 +938,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
             updateSyncStatus(PreBlockStage.GetReceivedRequests)
             // Get all contact requests where toUserId == userId, the users who have added me
-            val fromContactDocuments = ContactRequests(platform).get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
+            val fromContactDocuments = contactRequests.get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
                 val contactRequest = DashPayContactRequest.fromDocument(it)
                 platform.stateRepository.addValidIdentity(contactRequest.userIdentifier)
