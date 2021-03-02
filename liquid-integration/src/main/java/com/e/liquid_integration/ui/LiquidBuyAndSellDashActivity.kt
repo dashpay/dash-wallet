@@ -71,6 +71,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         this.context = this@LiquidBuyAndSellDashActivity
         liquidClient = LiquidClient.getInstance()
 
+        
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         val actionBar = supportActionBar
