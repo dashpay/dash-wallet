@@ -52,6 +52,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         }
     }
 
+    
     private var liquidClient: LiquidClient? = null
 
     private lateinit var context: Context
