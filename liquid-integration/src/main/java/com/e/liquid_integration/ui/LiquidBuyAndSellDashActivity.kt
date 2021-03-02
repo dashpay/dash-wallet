@@ -51,7 +51,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             }
         }
     }
-
     
     private var liquidClient: LiquidClient? = null
 
