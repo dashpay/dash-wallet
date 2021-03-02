@@ -80,6 +80,7 @@ public class Configuration {
     public static final String PREFS_LAST_SEEN_NOTIFICATION_TIME = "last_seen_notification_time";
     private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
     private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
+    private static final String PREFS_DEV_MODE = "developer_mode";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
@@ -450,5 +451,12 @@ public class Configuration {
     }
     public void setAcceptedUploadPolicy(String service, Boolean accepted) {
         prefs.edit().putBoolean(PREFS_UPLOAD_POLICY + service, accepted).apply();
+    }
+
+    public Boolean getDeveloperMode() {
+        return prefs.getBoolean(PREFS_DEV_MODE, false);
+    }
+    public void setDeveloperMode(boolean activate) {
+        prefs.edit().putBoolean(PREFS_DEV_MODE, activate).apply();
     }
 }
