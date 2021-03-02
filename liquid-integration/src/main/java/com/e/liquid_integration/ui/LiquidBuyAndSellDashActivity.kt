@@ -123,6 +123,8 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                         currentExchangeRate = exchangeRate
                     }
                 })
+
+
     }
 
     /**
