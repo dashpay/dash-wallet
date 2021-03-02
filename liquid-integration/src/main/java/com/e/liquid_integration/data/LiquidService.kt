@@ -32,6 +32,9 @@ interface LiquidService {
     @GET("api/v1/session/{session_id}/accounts")
     fun getUserAccount(@Path("session_id") sessionId: String, @Header("Authorization") token: String): Call<String>
 
+    @GET("api/v1/session/{session_id}/accounts/DASH")
+    fun getUserAccountAddress(@Path("session_id") sessionId: String, @Query("require_address") requireAddress: Boolean, @Header("Authorization") token: String): Call<String>
+
     @GET("api/v1/session/{session_id}/terminate")
     fun terminateSession(@Path("session_id") sessionId: String, @Header("Authorization") token: String): Call<LiquidTerminateSession>
 

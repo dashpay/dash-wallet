@@ -101,10 +101,11 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
              intent.putExtra("extra_message", "Enter the amount to transfer")
              intent.putExtra("extra_max_amount", "17")
              startActivityForResult(intent, 101)*/
-            val walletDataProvider = application as WalletDataProvider
+            getUserLiquidAccountAddress()
+            /*val walletDataProvider = application as WalletDataProvider
             val address = Address.fromBase58(MainNetParams.get(), "yTgh4Z1RrMXbJrbkbS7Lgk8NEZERJigMsy")
             val amount = Coin.CENT
-            walletDataProvider.startSendCoinsForResult(this, 1234, address, amount)
+            walletDataProvider.startSendCoinsForResult(this, 1234, address, amount)*/
         }
 
 
@@ -238,6 +239,42 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                     }
                     loadingDialog!!.hide()
                     showDashLiquidBalance(data)
+                }
+
+                override fun onError(e: Exception?) {
+                    if (isFinishing) {
+                        return
+                    }
+                    loadingDialog!!.hide()
+                }
+            })
+        } else {
+            GenericUtils.showToast(this, getString(com.e.liquid_integration.R.string.internet_connected))
+        }
+    }
+
+    /**
+     * call api to  get address
+     */
+    private fun getUserLiquidAccountAddress() {
+        if (GenericUtils.isInternetConnected(this)) {
+            loadingDialog!!.show()
+            liquidClient?.getUserAccountAddress(liquidClient?.storedSessionId!!, true, object : LiquidClient.Callback<String> {
+                override fun onSuccess(data: String) {
+                    if (isFinishing) {
+                        return
+                    }
+                    loadingDialog!!.hide()
+//                    showDashLiquidBalance(data)
+                    val jsonObject = JSONObject(data)
+                    val payloadObject = jsonObject.getJSONObject("payload")
+                    if (payloadObject.length() != 0) {
+                        payloadObject.getString("send_to_btc_address")
+                    }
+                    /*val walletDataProvider = application as WalletDataProvider
+                    val address = Address.fromBase58(MainNetParams.get(), payloadObject.getString("send_to_btc_address"))
+                    val amount = Coin.CENT
+                    walletDataProvider.startSendCoinsForResult(this@LiquidBuyAndSellDashActivity, 1234, address, amount)*/
                 }
 
                 override fun onError(e: Exception?) {

@@ -129,7 +129,8 @@ data class Contact(
 	val submitted: Boolean? = null,
 
 	@field:SerializedName("deferrable")
-	val deferrable: Deferrable? = null,
+	val deferrable: Boolean? = null,
+//	val deferrable: Deferrable? = null,
 
 	@field:SerializedName("reviewed")
 	val reviewed: Boolean? = null,

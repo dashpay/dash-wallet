@@ -155,6 +155,31 @@ class LiquidClient private constructor(context: Context, private val encryptionK
         }
     }
 
+    fun getUserAccountAddress(sessionId: String, require_address: Boolean, callback: Callback<String>) {
+        try {
+            val token = getAuthToken("/api/v1/session/$sessionId/accounts/DASH")
+
+            service.getUserAccountAddress(sessionId, require_address, token).enqueue(object : retrofit2.Callback<String?> {
+
+                override fun onResponse(call: Call<String?>, response: Response<String?>) {
+                    if (response.isSuccessful) {
+                        callback.onSuccess(response.body()!!)
+                    } else {
+                        callback.onError(LiquidException("Error obtaining liquid user id", response.message(), response.code()))
+                    }
+                }
+
+
+                override fun onFailure(call: Call<String?>, t: Throwable) {
+                    callback.onError(Exception(t))
+                }
+            })
+
+        } catch (e: Exception) {
+            callback.onError(e)
+        }
+    }
+
 
     fun revokeAccessToken(callback: Callback<String?>) {
         try {
