@@ -124,7 +124,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                     }
                 })
 
-
     }
 
     /**
