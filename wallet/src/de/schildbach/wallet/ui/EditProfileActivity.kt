@@ -60,11 +60,13 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureHelper
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_edit_profile.*
+import org.bitcoinj.core.Sha256Hash
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
+import java.math.BigInteger
 
 class EditProfileActivity : BaseMenuActivity() {
 
@@ -252,6 +254,14 @@ class EditProfileActivity : BaseMenuActivity() {
                     showUploadingDialog()
                 }
                 Status.SUCCESS -> {
+                    ProfilePictureHelper.avatarHashAndFingerprint(this, it.data!!.toUri(), null,
+                            object: ProfilePictureHelper.OnResourceReadyListener {
+                                override fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?) {
+                                    editProfileViewModel.avatarHash = avatarHash
+                                    editProfileViewModel.avatarFingerprint = avatarFingerprint
+                                }
+                            }
+                    )
                     showUploadedProfilePicture(it.data)
                 }
                 Status.ERROR -> {
