@@ -26,7 +26,6 @@ import android.view.ViewTreeObserver;
 
 import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.coordinatorlayout.widget.CoordinatorLayout;
 
 import de.schildbach.wallet_test.R;
 
@@ -37,6 +36,7 @@ public class KeyboardResponsiveConstraintLayout extends ConstraintLayout {
 
     private final int idOfViewToHide;
     private @Nullable View viewToHide;
+    private int initialVisibility;  //preserve the original visibility of viewToHide
 
     public KeyboardResponsiveConstraintLayout(Context context) {
         this(context, null);
@@ -72,7 +72,8 @@ public class KeyboardResponsiveConstraintLayout extends ConstraintLayout {
                 if (difference > 0) {
                     viewToHide.setVisibility(View.GONE);
                 } else {
-                    viewToHide.setVisibility(View.VISIBLE);
+                    if (initialVisibility == View.VISIBLE)
+                        viewToHide.setVisibility(View.VISIBLE);
                 }
             }
         }
@@ -96,6 +97,7 @@ public class KeyboardResponsiveConstraintLayout extends ConstraintLayout {
 
         if (idOfViewToHide != -1) {
             viewToHide = findViewById(idOfViewToHide);
+            initialVisibility = viewToHide.getVisibility();
         }
     }
 
@@ -106,5 +108,6 @@ public class KeyboardResponsiveConstraintLayout extends ConstraintLayout {
         getViewTreeObserver().removeOnGlobalLayoutListener(layoutListener);
 
         viewToHide = null;
+        initialVisibility = View.VISIBLE;
     }
 }
