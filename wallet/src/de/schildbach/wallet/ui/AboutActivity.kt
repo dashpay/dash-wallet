@@ -133,12 +133,17 @@ class AboutActivity : BaseMenuActivity(), SensorEventListener {
                 val acceleration = sqrt(x.toDouble().pow(2.0) +
                         y.toDouble().pow(2.0) +
                         z.toDouble().pow(2.0)) - SensorManager.GRAVITY_EARTH
-                //log.info("Acceleration is " + acceleration + "m/s^2")
+
                 if (acceleration > SHAKE_THRESHOLD) {
                     mLastShakeTime = curTime
-                    log.info("Shake, Rattle, and Roll")
-                    configuration.developerMode = true
-                    Toast.makeText(this, R.string.about_developer_mode, LENGTH_LONG).show()
+                    log.info("Shake detected: developer mode changing to ${!configuration.developerMode}")
+                    configuration.developerMode = if (!configuration.developerMode) {
+                        Toast.makeText(this, R.string.about_developer_mode, LENGTH_LONG).show()
+                        true
+                    } else {
+                        Toast.makeText(this, R.string.about_developer_mode_disabled, LENGTH_LONG).show()
+                        false
+                    }
                 }
             }
         }
