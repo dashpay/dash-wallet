@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
+import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.icon
 import kotlinx.android.synthetic.main.contacts_list_layout.search
@@ -132,7 +133,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             }
         }
 
-        search_for_user_suggestions.setOnClickListener {
+        search_for_user.setOnClickListener {
             onSearchUser()
         }
 
