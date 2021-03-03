@@ -161,8 +161,11 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
         //Add User Alert item
-        userAlertItem?.apply {
-            results.add(NotificationsAdapter.NotificationViewItem(this))
+        //Developer Mode Feature
+        if (walletApplication.configuration.developerMode) {
+            userAlertItem?.apply {
+                results.add(NotificationsAdapter.NotificationViewItem(this))
+            }
         }
 
         results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))

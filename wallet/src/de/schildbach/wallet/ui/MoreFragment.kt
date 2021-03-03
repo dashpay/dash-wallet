@@ -50,6 +50,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     private var blockchainState: BlockchainState? = null
     private lateinit var editProfileViewModel: EditProfileViewModel
     private lateinit var mainActivityViewModel: MainActivityViewModel
+    private val walletApplication = WalletApplication.getInstance()
 
     companion object {
         const val PROFILE_VIEW = 0
@@ -193,7 +194,10 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         edit_profile.setOnClickListener {
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
-        invite.visibility = View.VISIBLE
+        //Developer Mode Feature
+        if (walletApplication.configuration.developerMode) {
+            invite.visibility = View.VISIBLE
+        }
     }
 
     override fun startActivity(intent: Intent) {

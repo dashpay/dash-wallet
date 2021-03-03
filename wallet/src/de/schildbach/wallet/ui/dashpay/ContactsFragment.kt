@@ -31,6 +31,7 @@ import androidx.core.text.HtmlCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -44,6 +45,7 @@ import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.contacts_list_layout.*
 import kotlinx.android.synthetic.main.contacts_list_layout.icon
+import kotlinx.android.synthetic.main.contacts_list_layout.search
 import kotlinx.android.synthetic.main.invite_friend_hint_view.*
 import kotlinx.android.synthetic.main.network_unavailable.*
 import kotlinx.android.synthetic.main.no_contacts_results.*
@@ -138,6 +140,12 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             onSearchUser()
         }
         searchContacts()
+
+        // Developer Mode Feature
+        // Hide the invite UI
+        if (!WalletApplication.getInstance().configuration.developerMode) {
+            invite_friend_hint.visibility = View.GONE
+        }
 
         invite_friend_hint.setOnClickListener {
             InviteFriendActivity.startOrError(requireActivity())
