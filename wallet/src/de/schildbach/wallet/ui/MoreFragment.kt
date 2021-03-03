@@ -194,9 +194,19 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         edit_profile.setOnClickListener {
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
-        //Developer Mode Feature
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Developer Mode Feature
+        initDeveloperMode()
+    }
+
+    private fun initDeveloperMode() {
         if (walletApplication.configuration.developerMode) {
             invite.visibility = View.VISIBLE
+        } else {
+            invite.visibility = View.GONE
         }
     }
 
