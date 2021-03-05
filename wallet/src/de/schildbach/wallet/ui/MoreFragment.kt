@@ -42,6 +42,7 @@ import kotlinx.android.synthetic.main.update_profile_error.view.*
 import kotlinx.android.synthetic.main.update_profile_network_unavailable.*
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+import org.slf4j.LoggerFactory
 
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
@@ -56,6 +57,8 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         const val UPDATING_PROFILE_VIEW = 1
         const val UPDATE_PROFILE_ERROR_VIEW = 2
         const val UPDATE_PROFILE_NETWORK_ERROR_VIEW = 3
+
+        private val log = LoggerFactory.getLogger(MoreFragment::class.java)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -163,6 +166,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
                                 displayedChild = PROFILE_VIEW
                             }
                         }
+                        log.info("update profile operation cancelled")
                     }
                 }
             }

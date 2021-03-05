@@ -24,13 +24,15 @@ import androidx.work.*
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
-import java.util.*
+import org.slf4j.LoggerFactory
 
 class SendInviteOperation(val application: Application) {
 
     class SendInviteOperationException(message: String) : java.lang.Exception(message)
 
     companion object {
+        private val log = LoggerFactory.getLogger(SendInviteOperation::class.java)
+
         const val WORK_NAME = "SendInvite.WORK#"
 
         fun uniqueWorkName(toUserId: String) = WORK_NAME + toUserId
@@ -68,6 +70,7 @@ class SendInviteOperation(val application: Application) {
                             })
                         }
                         WorkInfo.State.CANCELLED -> {
+                            log.info("send invite operation cancelled")
                             emit(Resource.canceled(null))
                         }
                         else -> {
