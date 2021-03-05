@@ -359,6 +359,8 @@ class EditProfileActivity : BaseMenuActivity() {
             initialDisplayName = profile.displayName
             about_me.setText(profile.publicMessage)
             display_name.setText(profile.displayName)
+            editProfileViewModel.avatarHash = profile.avatarHash?.let { Sha256Hash.wrap(it) }
+            editProfileViewModel.avatarFingerprint = profile.avatarFingerprint?.let { BigInteger(it) }
         }
     }
 
