@@ -18,6 +18,7 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import android.view.MenuItem
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -31,6 +32,7 @@ import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECENT
 import de.schildbach.wallet.ui.RestoreFromFileHelper.OnRestoreWalletListener
@@ -149,6 +151,26 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         checkLowStorageAlert()
         detectUserCountry()
         walletApplication.startBlockchainService(true)
+
+        val txId = "ad7e7cc5611f6f2277cbccba69c3cf9dba59f03fbf31b04682d890215585bb6c"
+        viewModel.validateInvitation(txId).observe(this, Observer {
+            when {
+                it.status == Status.LOADING -> {
+                    Toast.makeText(this, "Loading Invitation data", Toast.LENGTH_LONG).show()
+                }
+                it.exception != null -> {
+                    Toast.makeText(this, "Failed to load Invitation Data", Toast.LENGTH_LONG).show()
+                }
+                else -> {
+                    val text = if (it.data == true) {
+                        "Invitation is valid"
+                    } else {
+                        "Invitation is invalid"
+                    }
+                    Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+                }
+            }
+        })
     }
 
     override fun onNewIntent(intent: Intent?) {

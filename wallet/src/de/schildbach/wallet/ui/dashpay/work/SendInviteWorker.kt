@@ -92,7 +92,7 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
             Result.success(workDataOf(
                     KEY_TX_ID to cftx.txId.bytes,
                     KEY_USER_ID to cftx.creditBurnIdentityIdentifier.toStringBase58(),
-                    KEY_INVITE_ID to Address.fromPubKeyHash(wallet.params, cftx.creditBurnPublicKeyId.bytes).toBase58(),
+                    KEY_INVITE_ID to Address.fromPubKeyHash(wallet.params, cftx.txId.bytes).toBase58(),
                     KEY_DYNAMIC_LINK to dynamicLink.uri.toString(),
                     KEY_SHORT_DYNAMIC_LINK to shortDynamicLink.shortLink.toString()
             ))
