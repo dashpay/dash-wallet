@@ -34,15 +34,8 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
         liveData.postValue(Resource.loading())
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                //TODO: Move to Platform repo?
-                //TODO: Implement Retry?
-                val tx = platformRepo.platform.client.getTransaction(txId)
-                if (tx != null) {
-                    val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.toByteArray())
-                    val identity = platformRepo.platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
-                    val isValid = identity == null
-                    liveData.postValue(Resource.success(isValid))
-                }
+                val isValid = platformRepo.validateInvitation(txId)
+                liveData.postValue(Resource.success(isValid))
             } catch (e: Exception) {
                 liveData.postValue(Resource.error(e))
             }
