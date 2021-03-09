@@ -133,7 +133,7 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
                     override fun onTransitionStart(transition: Transition) {
                         layout_title.visibility = View.GONE
                         find_a_user_label.visibility = View.GONE
-                        invite_friend_hint_view_dashpay_provile_1.visibility = View.GONE
+                        invite_friend_hint_view_dashpay_profile_1.visibility = View.GONE
                     }
 
                 })
@@ -153,7 +153,13 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
             search.setText(initQuery)
         }
 
-        invite_friend_hint_view_dashpay_provile_1.setOnClickListener {
+        //Developer Mode Feature
+        if (!walletApplication.configuration.developerMode) {
+            invite_friend_hint_view_dashpay_profile_1.visibility = View.GONE
+            invite_friend_hint_view_empty_result.visibility = View.GONE //this line doesn't hide the invite Layout item
+        }
+
+        invite_friend_hint_view_dashpay_profile_1.setOnClickListener {
             InviteFriendActivity.startOrError(this)
         }
         invite_friend_hint_view_empty_result.setOnClickListener {

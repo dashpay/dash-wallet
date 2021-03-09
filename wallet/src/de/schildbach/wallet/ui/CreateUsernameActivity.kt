@@ -148,23 +148,25 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun handleIntent(intent: Intent) {
-        FirebaseDynamicLinks.getInstance()
-                .getDynamicLink(intent)
-                .addOnSuccessListener {
-                    log.debug("dynamic link received")
-                    if (it != null) {
-                        log.debug("${it.extensions}; ${it.link}")
-                        val appLinkData = Constants.Invitation.AppLinkData(it.link!!)
-                        dashPayViewModel.dashPayProfileData(appLinkData.username).observe(this, { dashPayProfile ->
-                            if (dashPayProfile != null) {
-                                showPreviewDialog(dashPayProfile)
-                            } else {
-                                Toast.makeText(this, "Unable to find user ${appLinkData.username}", Toast.LENGTH_LONG).show()
-                                log.error("unable to find inviting user ${it.link}")
-                            }
-                        })
+        if (walletApplication.configuration.developerMode) {
+            FirebaseDynamicLinks.getInstance()
+                    .getDynamicLink(intent)
+                    .addOnSuccessListener {
+                        log.debug("dynamic link received")
+                        if (it != null) {
+                            log.debug("${it.extensions}; ${it.link}")
+                            val appLinkData = Constants.Invitation.AppLinkData(it.link!!)
+                            dashPayViewModel.dashPayProfileData(appLinkData.username).observe(this, { dashPayProfile ->
+                                if (dashPayProfile != null) {
+                                    showPreviewDialog(dashPayProfile)
+                                } else {
+                                    Toast.makeText(this, "Unable to find user ${appLinkData.username}", Toast.LENGTH_LONG).show()
+                                    log.error("unable to find inviting user ${it.link}")
+                                }
+                            })
+                        }
                     }
-                }
+        }
     }
 
     private fun showPreviewDialog(dashPayProfile: DashPayProfile) {

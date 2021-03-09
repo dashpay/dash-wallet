@@ -45,7 +45,7 @@ class InviteFriendActivity : InteractionAwareActivity() {
                 activity.startActivity(createIntent(activity))
             } else {
                 val title = activity.getString(R.string.invitation_cant_afford_title)
-                val message = activity.getString(R.string.invitation_cant_afford_message, Constants.DASH_PAY_FEE)
+                val message = activity.getString(R.string.invitation_cant_afford_message, Constants.DASH_PAY_FEE.toPlainString())
                 val errorDialog = FancyAlertDialog.newInstance(title, message,
                         R.drawable.ic_cant_afford_invitation, 0, R.string.invitation_preview_close)
                 errorDialog.show(activity.supportFragmentManager, null)

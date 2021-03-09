@@ -555,4 +555,6 @@
     <string name="network_error_contact_suggestions">Unable to provide suggestions</string>
     <string name="network_error_unable_to_update_profile">Unable to update your profile</string>
 
+    <string name="about_developer_mode">Developer mode activated: all features enabled!</string>
+    <string name="about_developer_mode_disabled">Developer mode deactivated.</string>
 </resources>

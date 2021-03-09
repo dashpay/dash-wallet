@@ -19,17 +19,37 @@ package de.schildbach.wallet.ui
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
+import android.widget.Toast.LENGTH_LONG
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_about.*
 import org.bitcoinj.core.VersionMessage
 import org.dash.wallet.common.UserInteractionAwareCallback
+import org.slf4j.LoggerFactory
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 
-class AboutActivity : BaseMenuActivity() {
+class AboutActivity : BaseMenuActivity(), SensorEventListener {
+
+    // variables for shake detection
+    private val SHAKE_THRESHOLD = 1.50f // m/S**2
+
+    private val MIN_TIME_BETWEEN_SHAKES_MILLISECS = 1000
+    private var mLastShakeTime: Long = 0
+    private lateinit var mSensorMgr: SensorManager
+
+    companion object {
+        private val log = LoggerFactory.getLogger(AboutActivity::class.java)
+    }
 
     override fun getLayoutId(): Int {
         return R.layout.activity_about
@@ -50,7 +70,32 @@ class AboutActivity : BaseMenuActivity() {
         }
         review_and_rate.setOnClickListener { openReviewAppIntent() }
         contact_support.setOnClickListener { handleReportIssue() }
+
+        // Get a sensor manager to listen for shakes
+
+        // Get a sensor manager to listen for shakes
+        mSensorMgr = getSystemService(SENSOR_SERVICE) as SensorManager
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Listen for shakes
+        val accelerometer = mSensorMgr.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        if (accelerometer != null) {
+            mSensorMgr.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // stop listening for shakes
+        val accelerometer = mSensorMgr.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        if (accelerometer != null) {
+            mSensorMgr.unregisterListener(this)
+        }
+    }
+
+
 
     override fun finish() {
         super.finish()
@@ -76,6 +121,36 @@ class AboutActivity : BaseMenuActivity() {
         val dialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                 WalletApplication.getInstance()).show()
         dialog.window!!.callback = UserInteractionAwareCallback(dialog.window!!.callback, this)
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event != null && event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+            val curTime = System.currentTimeMillis()
+            if (curTime - mLastShakeTime > MIN_TIME_BETWEEN_SHAKES_MILLISECS) {
+                val x = event.values[0]
+                val y = event.values[1]
+                val z = event.values[2]
+                val acceleration = sqrt(x.toDouble().pow(2.0) +
+                        y.toDouble().pow(2.0) +
+                        z.toDouble().pow(2.0)) - SensorManager.GRAVITY_EARTH
+
+                if (acceleration > SHAKE_THRESHOLD) {
+                    mLastShakeTime = curTime
+                    log.info("Shake detected: developer mode changing to ${!configuration.developerMode}")
+                    configuration.developerMode = if (!configuration.developerMode) {
+                        Toast.makeText(this, R.string.about_developer_mode, LENGTH_LONG).show()
+                        true
+                    } else {
+                        Toast.makeText(this, R.string.about_developer_mode_disabled, LENGTH_LONG).show()
+                        false
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        // Ignore
     }
 
 }
