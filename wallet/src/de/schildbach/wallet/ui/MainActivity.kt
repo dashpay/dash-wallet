@@ -154,12 +154,14 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         handleIntent(intent!!)
-        Log.i("FirebaseDynamicLinks2", "We have a dynamic link! $intent")
-        FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
-            if (it != null) {
-                Log.i("FirebaseDynamicLinks2", "We have a dynamic link! ${it.extensions}; ${it.link}")
-                val nameLabel = it.link!!.getQueryParameter("displayName") ?: ""
-                showPreviewDialog(nameLabel)
+        if (walletApplication.configuration.developerMode) {
+            Log.i("FirebaseDynamicLinks2", "We have a dynamic link! $intent")
+            FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
+                if (it != null) {
+                    Log.i("FirebaseDynamicLinks2", "We have a dynamic link! ${it.extensions}; ${it.link}")
+                    val nameLabel = it.link!!.getQueryParameter("displayName") ?: ""
+                    showPreviewDialog(nameLabel)
+                }
             }
         }
     }
