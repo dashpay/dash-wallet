@@ -2,14 +2,18 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivityViewModel(application: Application) : BaseProfileViewModel(application) {
 
@@ -20,6 +24,20 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
         } else {
             emit(false)
         }
+    }
+
+    fun validateInvitation(txId: String): MutableLiveData<Resource<Boolean>> {
+        val liveData = MutableLiveData<Resource<Boolean>>()
+        liveData.postValue(Resource.loading())
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val isValid = platformRepo.validateInvitation(txId)
+                liveData.postValue(Resource.success(isValid))
+            } catch (e: Exception) {
+                liveData.postValue(Resource.error(e))
+            }
+        }
+        return liveData
     }
 
     val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()

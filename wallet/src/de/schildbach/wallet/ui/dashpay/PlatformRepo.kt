@@ -1376,4 +1376,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
         }
     }
+
+    fun validateInvitation(txId: String): Boolean {
+        val tx = platform.client.getTransaction(txId)
+        var identity: Identity? = null
+        if (tx != null) {
+            val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.toByteArray())
+            identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
+        }
+        return identity == null
+    }
+
 }
