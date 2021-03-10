@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <de.schildbach.wallet.ui.invite.InviteErrorEnvelopeView
+        android:id="@+id/profile_picture_envelope"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:layout_gravity="center_horizontal" />
+
+</FrameLayout>
