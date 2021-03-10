@@ -399,8 +399,8 @@
     <string name="invitation_share_title">DashPay invitation</string>
     <string name="invitation_already_claimed_title">Invitation already claimed</string>
     <string name="invitation_already_claimed_message">Your invitation from %s has been already claimed</string>
-    <string name="invitation_invalid_invitation_title">Invalid Invitation</string>
-    <string name="invitation_invalid_invitation_message">Your invitation from %s is not valid</string>
+    <string name="invitation_invalid_invite_title">Invalid Invitation</string>
+    <string name="invitation_invalid_invite_message">Your invitation from %s is not valid</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>

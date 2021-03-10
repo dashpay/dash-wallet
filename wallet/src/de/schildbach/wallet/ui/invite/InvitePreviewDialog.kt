@@ -21,10 +21,10 @@ import android.os.Bundle
 import android.view.View
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.invitation_already_claimed_view.*
+import kotlinx.android.synthetic.main.invitation_preview_view.*
 import org.dash.wallet.common.ui.FancyAlertDialog
 
-open class InvitationAlreadyClaimedDialog : FancyAlertDialog() {
+open class InvitePreviewDialog : FancyAlertDialog() {
 
     companion object {
         fun newInstance(context: Context, profile: DashPayProfile): FancyAlertDialog {
@@ -34,9 +34,9 @@ open class InvitationAlreadyClaimedDialog : FancyAlertDialog() {
         }
 
         fun newInstance(context: Context, nameLabel: String): FancyAlertDialog {
-            val messageHtml = context.getString(R.string.invitation_already_claimed_message, "<b>${nameLabel}</b>")
-            return InvitationAlreadyClaimedDialog().apply {
-                arguments = createBaseArguments(Type.INFO, 0, R.string.okay, 0)
+            val messageHtml = context.getString(R.string.invitation_preview_message, "<b>${nameLabel}</b>")
+            return InvitePreviewDialog().apply {
+                arguments = createBaseArguments(Type.INFO, 0, 0, R.string.invitation_preview_close)
                         .apply {
                             putString("message", messageHtml)
                         }
@@ -45,7 +45,7 @@ open class InvitationAlreadyClaimedDialog : FancyAlertDialog() {
     }
 
     override val customContentViewResId: Int
-        get() = R.layout.invitation_already_claimed_view
+        get() = R.layout.invitation_preview_view
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

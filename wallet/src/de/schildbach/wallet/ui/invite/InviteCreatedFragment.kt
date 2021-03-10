@@ -43,16 +43,16 @@ import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
-import kotlinx.android.synthetic.main.fragment_invitation_created.*
+import kotlinx.android.synthetic.main.fragment_invite_created.*
 
 
-class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created) {
+class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
 
     companion object {
         private const val ARG_IDENTITY_ID = "identity_id"
 
-        fun newInstance(identity: String): InvitationCreatedFragment {
-            val fragment = InvitationCreatedFragment()
+        fun newInstance(identity: String): InviteCreatedFragment {
+            val fragment = InviteCreatedFragment()
             fragment.arguments = Bundle().apply {
                 putString(ARG_IDENTITY_ID, identity)
             }
@@ -88,7 +88,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
         }
 
         maybe_later_button.setOnClickListener {
-            startActivity(InvitationsHistoryActivity.createIntent(requireContext()))
+            startActivity(InvitesHistoryActivity.createIntent(requireContext()))
             requireActivity().finish()
         }
 
@@ -146,7 +146,7 @@ class InvitationCreatedFragment : Fragment(R.layout.fragment_invitation_created)
     }
 
     private fun showPreviewDialog() {
-        val previewDialog = InvitationPreviewDialog.newInstance(requireContext(), viewModel.dashPayProfile!!)
+        val previewDialog = InvitePreviewDialog.newInstance(requireContext(), viewModel.dashPayProfile!!)
         previewDialog.show(childFragmentManager, null)
     }
 

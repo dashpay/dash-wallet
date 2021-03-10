@@ -1,11 +1,15 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.livedata.Resource
@@ -14,8 +18,13 @@ import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 
 class MainActivityViewModel(application: Application) : BaseProfileViewModel(application) {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(MainActivityViewModel::class.java)
+    }
 
     private val isPlatformAvailableData = liveData(Dispatchers.IO) {
         val status = platformRepo.isPlatformAvailable()
@@ -26,18 +35,35 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
         }
     }
 
-    fun validateInvitation(txId: String): MutableLiveData<Resource<Boolean>> {
-        val liveData = MutableLiveData<Resource<Boolean>>()
-        liveData.postValue(Resource.loading())
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val isValid = platformRepo.validateInvitation(txId)
-                liveData.postValue(Resource.success(isValid))
-            } catch (e: Exception) {
-                liveData.postValue(Resource.error(e))
+    val inviteData = MutableLiveData<Resource<Pair<Uri, Boolean>>>()
+
+    fun handleInvite(intent: Intent) {
+        FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
+            val link = it?.link
+            if (link != null && Constants.Invitation.isValid(link)) {
+                log.debug("received invite $link")
+
+//                dashPayProfile?.username.apply {
+//                    if (this == link.getQueryParameter("user")) {
+//                        inviteData.postValue(Resource.canceled(Pair(link, false)))
+//                        return@addOnSuccessListener
+//                    }
+//                }
+
+                inviteData.value = Resource.loading()
+                val cftx = link.getQueryParameter("cftx")!!
+                viewModelScope.launch(Dispatchers.IO) {
+                    try {
+                        val isValid = platformRepo.validateInvitation(cftx)
+                        inviteData.postValue(Resource.success(Pair(link, isValid)))
+                    } catch (e: Exception) {
+                        inviteData.postValue(Resource.error(e, Pair(link, false)))
+                    }
+                }
+            } else {
+                log.debug("invalid invite ignored")
             }
         }
-        return liveData
     }
 
     val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()

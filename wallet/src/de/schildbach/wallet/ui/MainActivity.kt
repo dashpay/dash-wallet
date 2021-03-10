@@ -15,7 +15,6 @@ import android.os.Handler
 import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
-import android.util.Log
 import android.view.MenuItem
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
@@ -27,7 +26,6 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.common.collect.ImmutableList
-import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.PaymentIntent
@@ -41,7 +39,7 @@ import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CO
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
-import de.schildbach.wallet.ui.invite.InvitationPreviewDialog
+import de.schildbach.wallet.ui.invite.InvitesHandler
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
@@ -90,6 +88,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private var fingerprintHelper: FingerprintHelper? = null
     private var retryCreationIfInProgress = true
 
+    private val inviteHandler by lazy {
+        InvitesHandler(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -104,6 +106,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             checkAlerts()
         }
         config.touchLastUsed()
+
         handleIntent(intent)
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
@@ -141,6 +144,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         viewModel.showCreateUsernameEvent.observe(this, {
             startActivity(Intent(this, CreateUsernameActivity::class.java))
         })
+        if (walletApplication.configuration.developerMode) {
+            viewModel.inviteData.observe(this, {
+                inviteHandler.handle(it)
+            })
+        }
     }
 
     override fun onResume() {
@@ -154,21 +162,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         handleIntent(intent!!)
-        if (walletApplication.configuration.developerMode) {
-            Log.i("FirebaseDynamicLinks2", "We have a dynamic link! $intent")
-            FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
-                if (it != null) {
-                    Log.i("FirebaseDynamicLinks2", "We have a dynamic link! ${it.extensions}; ${it.link}")
-                    val nameLabel = it.link!!.getQueryParameter("displayName") ?: ""
-                    showPreviewDialog(nameLabel)
-                }
-            }
-        }
-    }
-
-    private fun showPreviewDialog(nameLabel: String) {
-        val previewDialog = InvitationPreviewDialog.newInstance(this, nameLabel)
-        previewDialog.show(supportFragmentManager, null)
     }
 
     //BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
@@ -407,6 +400,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         val action = intent.action
         if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
             val inputType = intent.type
+
+            @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             val ndefMessage = intent
                     .getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)[0] as NdefMessage
             val input = Nfc.extractMimePayload(Constants.MIMETYPE_TRANSACTION, ndefMessage)
@@ -419,6 +414,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     InputParser.dialog(this@MainActivity, null, 0, messageResId, *messageArgs)
                 }
             }.parse()
+
+        } else if (Intent.ACTION_VIEW == action) {
+
+            viewModel.handleInvite(intent)
         }
     }
 

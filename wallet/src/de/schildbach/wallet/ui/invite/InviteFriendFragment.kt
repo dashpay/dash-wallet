@@ -76,7 +76,7 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
                 Status.SUCCESS -> {
                     if (it.data != null) {
                         requireActivity().supportFragmentManager.beginTransaction()
-                                .replace(R.id.container, InvitationCreatedFragment.newInstance(it.data.userId))
+                                .replace(R.id.container, InviteCreatedFragment.newInstance(it.data.userId))
                                 .commitNow()
                     }
                 }
