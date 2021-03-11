@@ -174,22 +174,34 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun isPlatformAvailable(): Resource<Boolean> {
-        // this checks only one random node, but will retry 10 times.
-        // it is possible that some nodes are not available due to location,
-        // firewalls or other reasons
-        return try {
-            val response = platform.client.getStatus()
-            Resource.success(response!!.connections > 0 && /*response.errors.isBlank() &&*/
-                    Constants.NETWORK_PARAMETERS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.MINIMUM) <= response.protocolVersion)
-        } catch (e: Exception) {
-            Resource.error(e.localizedMessage!!, null)
+    /**
+     * Calls Platform.check() three times asynchronously
+     *
+     * @return true if platform is available
+     */
+    suspend fun isPlatformAvailable(): Resource<Boolean> {
+        return withContext (Dispatchers.IO) {
+            var success = 0
+            val checks = arrayListOf<Deferred<Boolean>>()
+            for (i in 0 until 3) {
+                checks.add(async { platform.check() })
+            }
+
+            for (check in checks) {
+                success += if (check.await()) 1 else 0
+            }
+
+            return@withContext if (success >= 2) {
+                Resource.success(true)
+            } else {
+                Resource.error("Platform is not available")
+            }
         }
     }
 
     fun getUsername(username: String): Resource<Document> {
         return try {
-            var nameDocument = platform.names.get(username)
+            val nameDocument = platform.names.get(username)
             Resource.success(nameDocument)
         } catch (e: Exception) {
             Resource.error(e.localizedMessage!!, null)
