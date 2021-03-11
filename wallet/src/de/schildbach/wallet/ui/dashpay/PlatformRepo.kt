@@ -135,7 +135,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
                 platformRepoInstance.initializeStateRepository()
                 while (isActive) {
-                    log.info("Timer: Update contacts")
                     platformRepoInstance.updateContactRequests()
                     delay(UPDATE_TIMER_DELAY)
                 }
@@ -838,14 +837,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     fun updateSyncStatus(stage: PreBlockStage) {
         if (stage == PreBlockStage.Starting && lastPreBlockStage != PreBlockStage.None) {
-            log.info("skipping ${stage.name} because an idnetity was restored")
+            log.debug("skipping ${stage.name} because an identity was restored")
             return
         }
         if (preDownloadBlocks.get()) {
             firePreBlockProgressListeners(stage)
             lastPreBlockStage = stage
         } else {
-            log.info("skipping ${stage.name} because PREBLOCKS is OFF")
+            log.debug("skipping ${stage.name} because PREBLOCKS is OFF")
         }
     }
 
@@ -1006,7 +1005,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
 
             counterForReport++
-            if (counterForReport % 4 == 0) {
+            if (counterForReport % 8 == 0) {
+                // record the report to the logs every 2 minutes
                 log.info(platform.client.reportNetworkStatus())
             }
         }
