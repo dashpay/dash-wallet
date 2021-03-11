@@ -29,6 +29,7 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
+import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -157,7 +158,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private fun initViewModel() {
         val confirmTransactionSharedViewModel = ViewModelProvider(this).get(PlatformPaymentConfirmDialog.SharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
-            triggerIdentityCreation(false)
+            if (intent.action == ACTION_FROM_INVITE) {
+                Toast.makeText(this, "Creating identity from invitations in not yet implemented", Toast.LENGTH_LONG).show()
+                finish()
+            } else {
+                triggerIdentityCreation(false)
+            }
         })
 
         dashPayViewModel.getUsernameLiveData.observe(this, Observer {
