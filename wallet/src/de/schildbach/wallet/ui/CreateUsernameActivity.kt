@@ -37,7 +37,7 @@ import de.schildbach.wallet.Constants.USERNAME_MAX_LENGTH
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.IncomingInvitation
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -60,7 +60,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private lateinit var completeUsername: String
 
     private val invite by lazy {
-        intent.getParcelableExtra<IncomingInvitation>(EXTRA_INVITE)
+        intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
     }
 
     val dashPayViewModel by lazy {
@@ -103,7 +103,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             }
         }
 
-        fun createIntentFromInvite(context: Context, invite: IncomingInvitation): Intent {
+        fun createIntentFromInvite(context: Context, invite: InvitationLinkData): Intent {
             return Intent(context, CreateUsernameActivity::class.java).apply {
                 action = ACTION_FROM_INVITE
                 putExtra(EXTRA_INVITE, invite)

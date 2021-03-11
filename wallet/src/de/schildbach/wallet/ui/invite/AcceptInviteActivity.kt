@@ -24,7 +24,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
-import de.schildbach.wallet.data.IncomingInvitation
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_accept_invite.*
@@ -34,7 +34,7 @@ class AcceptInviteActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_INVITE = "extra_invite"
 
-        fun createIntent(context: Context, invite: IncomingInvitation): Intent {
+        fun createIntent(context: Context, invite: InvitationLinkData): Intent {
             return Intent(context, AcceptInviteActivity::class.java).apply {
                 putExtra(EXTRA_INVITE, invite)
             }
@@ -52,7 +52,7 @@ class AcceptInviteActivity : AppCompatActivity() {
             if (viewpager.currentItem < 2) {
                 viewpager.setCurrentItem(viewpager.currentItem + 1, true)
             } else {
-                val invite = intent.getParcelableExtra<IncomingInvitation>(EXTRA_INVITE)
+                val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
                 startActivity(CreateUsernameActivity.createIntentFromInvite(this, invite))
                 finish()
             }

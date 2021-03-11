@@ -17,7 +17,7 @@
 package de.schildbach.wallet.ui.invite
 
 import androidx.appcompat.app.AppCompatActivity
-import de.schildbach.wallet.data.IncomingInvitation
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
@@ -27,13 +27,15 @@ class InvitesHandler(val activity: AppCompatActivity) {
 
     private lateinit var inviteLoadingDialog: FancyAlertDialog
 
-    fun handle(inviteResource: Resource<IncomingInvitation>) {
+    fun handle(inviteResource: Resource<InvitationLinkData>) {
+        if (inviteResource.status != Status.LOADING) {
+            inviteLoadingDialog.dismissAllowingStateLoss()
+        }
         when (inviteResource.status) {
             Status.LOADING -> {
                 showInviteLoadingProgress()
             }
             Status.ERROR -> {
-                inviteLoadingDialog.dismissAllowingStateLoss()
                 val displayName = inviteResource.data!!.displayName
                 showInvalidInviteDialog(displayName)
             }
@@ -41,7 +43,6 @@ class InvitesHandler(val activity: AppCompatActivity) {
                 showUsernameAlreadyDialog()
             }
             Status.SUCCESS -> {
-                inviteLoadingDialog.dismissAllowingStateLoss()
                 val invite = inviteResource.data!!
                 if (invite.isValid) {
                     activity.startActivity(AcceptInviteActivity.createIntent(activity, invite))
@@ -67,7 +68,7 @@ class InvitesHandler(val activity: AppCompatActivity) {
         inviteErrorDialog.show(activity.supportFragmentManager, null)
     }
 
-    private fun showInviteAlreadyClaimedDialog(invite: IncomingInvitation) {
+    private fun showInviteAlreadyClaimedDialog(invite: InvitationLinkData) {
         val displayName = invite.displayName
         val profilePictureUrl = invite.avatarUrl
         val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, displayName, profilePictureUrl)

@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet;
 
-import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.text.format.DateUtils;
@@ -31,7 +30,6 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.evolution.CreditFundingTransaction;
 import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.MobileDevNetParams;
@@ -44,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.EnumSet;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet_test.BuildConfig;
@@ -357,47 +354,5 @@ public final class Constants {
         String UTM_SOURCE = "DashPay Android";
         String UTM_CAMPAIGN = "DashPay Alpha Program";
         String UTM_MEDIUM = "email";
-
-        static Uri appLinkUrl(String username, String displayName, String avatarUrl, CreditFundingTransaction cftx) {
-            return Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
-                    .appendQueryParameter("user", username)
-                    .appendQueryParameter("display-name", displayName)
-                    .appendQueryParameter("avatar-url", avatarUrl)
-                    .appendQueryParameter("cftx", cftx.getTxId().toString())
-                    .build();
-        }
-
-        static boolean isValid(Uri link) {
-            Set<String> queryParams = link.getQueryParameterNames();
-            return queryParams.contains("user")
-                    && queryParams.contains("display-name")
-                    && queryParams.contains("avatar-url")
-                    && queryParams.contains("cftx");
-        }
-
-        public static class AppLinkData {
-
-            private final Uri appLink;
-
-            public AppLinkData(String appLink) {
-                this.appLink = Uri.parse(appLink);
-            }
-
-            public AppLinkData(Uri appLink) {
-                this.appLink = appLink;
-            }
-
-            public String getUsername() {
-                return appLink.getQueryParameter("user");
-            }
-
-            public String getDisplayName() {
-                return appLink.getQueryParameter("displayName");
-            }
-
-            public String getCftx() {
-                return appLink.getQueryParameter("cftx");
-            }
-        }
     }
 }
