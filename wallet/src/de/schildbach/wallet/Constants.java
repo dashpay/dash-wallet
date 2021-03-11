@@ -363,7 +363,7 @@ public final class Constants {
                     .appendQueryParameter("user", username)
                     .appendQueryParameter("display-name", displayName)
                     .appendQueryParameter("avatar-url", avatarUrl)
-                    .appendQueryParameter("cftx", cftx.getTxId().toStringBase58())
+                    .appendQueryParameter("cftx", cftx.getTxId().toString())
                     .build();
         }
 

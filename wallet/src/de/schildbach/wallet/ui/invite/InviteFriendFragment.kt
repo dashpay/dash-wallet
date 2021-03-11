@@ -106,7 +106,7 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
         if (::loadingDialog.isInitialized && loadingDialog.isAdded) {
             loadingDialog.dismissAllowingStateLoss()
         }
-        loadingDialog = FancyAlertDialog.newProgress(R.string.invitation_creating_progress_message, 0)
+        loadingDialog = FancyAlertDialog.newProgress(R.string.invitation_creating_progress_title, 0)
         loadingDialog.show(parentFragmentManager, null)
     }
 

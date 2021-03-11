@@ -73,7 +73,7 @@ class InvitesHandler(val activity: AppCompatActivity) {
         if (::inviteLoadingDialog.isInitialized && inviteLoadingDialog.isAdded) {
             inviteLoadingDialog.dismissAllowingStateLoss()
         }
-        inviteLoadingDialog = FancyAlertDialog.newProgress(0, 0)
+        inviteLoadingDialog = FancyAlertDialog.newProgress(R.string.invitation_verifying_progress_title, 0)
         inviteLoadingDialog.show(activity.supportFragmentManager, null)
     }
 }

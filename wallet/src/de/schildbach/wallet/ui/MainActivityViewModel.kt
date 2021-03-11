@@ -43,12 +43,12 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
             if (link != null && Constants.Invitation.isValid(link)) {
                 log.debug("received invite $link")
 
-//                dashPayProfile?.username.apply {
-//                    if (this == link.getQueryParameter("user")) {
-//                        inviteData.postValue(Resource.canceled(Pair(link, false)))
-//                        return@addOnSuccessListener
-//                    }
-//                }
+                dashPayProfile?.username.apply {
+                    if (this == link.getQueryParameter("user")) {
+                        inviteData.postValue(Resource.canceled(Pair(link, false)))
+                        return@addOnSuccessListener
+                    }
+                }
 
                 inviteData.value = Resource.loading()
                 val cftx = link.getQueryParameter("cftx")!!
