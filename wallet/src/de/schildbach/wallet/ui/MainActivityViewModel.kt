@@ -2,7 +2,6 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import android.content.Intent
-import android.net.Uri
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.liveData
@@ -12,6 +11,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.data.IncomingInvitation
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
@@ -35,7 +35,7 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
         }
     }
 
-    val inviteData = MutableLiveData<Resource<Pair<Uri, Boolean>>>()
+    val inviteData = MutableLiveData<Resource<IncomingInvitation>>()
 
     fun handleInvite(intent: Intent) {
         FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
@@ -45,7 +45,7 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
 
                 dashPayProfile?.username.apply {
                     if (this == link.getQueryParameter("user")) {
-                        inviteData.postValue(Resource.canceled(Pair(link, false)))
+                        inviteData.postValue(Resource.canceled(IncomingInvitation(link, false)))
                         return@addOnSuccessListener
                     }
                 }
@@ -55,9 +55,9 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
                 viewModelScope.launch(Dispatchers.IO) {
                     try {
                         val isValid = platformRepo.validateInvitation(cftx)
-                        inviteData.postValue(Resource.success(Pair(link, isValid)))
+                        inviteData.postValue(Resource.success(IncomingInvitation(link, isValid)))
                     } catch (e: Exception) {
-                        inviteData.postValue(Resource.error(e, Pair(link, false)))
+                        inviteData.postValue(Resource.error(e, IncomingInvitation(link, false)))
                     }
                 }
             } else {

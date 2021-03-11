@@ -358,7 +358,7 @@
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.invite.InviteWelcomeActivity"
+            android:name="de.schildbach.wallet.ui.invite.AcceptInviteActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize" />

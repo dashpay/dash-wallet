@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui.invite
 
 import android.content.Context
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import de.schildbach.wallet.data.DashPayProfile
@@ -63,7 +62,7 @@ open class InviteAlreadyClaimedDialog : FancyAlertDialog() {
             val profile = args.getParcelable<DashPayProfile>("profile")
             profile_picture_envelope.avatarProfile = profile
         } else {
-            val avatarUrl = Uri.decode(args.getString("avatar-url")!!)
+            val avatarUrl = args.getString("avatar-url")!!
             ProfilePictureDisplay.display(profile_picture_envelope.avatarView, avatarUrl, null, "user-name")
         }
     }
