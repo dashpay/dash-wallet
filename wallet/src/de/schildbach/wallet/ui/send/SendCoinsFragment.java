@@ -57,6 +57,7 @@ import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.util.GenericUtils;
+import org.dashevo.dashpay.BlockchainIdentity;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -279,8 +280,15 @@ public class SendCoinsFragment extends Fragment {
                 throw new IllegalArgumentException();
             }
 
-            boolean isDashPayUser = PlatformRepo.getInstance().getBlockchainIdentity() != null;
-            if (isDashPayUser && paymentIntent.isIdentityPaymentRequest()) {
+            BlockchainIdentity blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity();
+            boolean isDashUserOrNotMe = blockchainIdentity != null;
+            // make sure that this payment intent is not to me
+            if (paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUsername != null &&
+                    paymentIntent.payeeUsername.equals(blockchainIdentity.getCurrentUsername())) {
+                isDashUserOrNotMe = false;
+            }
+
+            if (isDashUserOrNotMe && paymentIntent.isIdentityPaymentRequest()) {
                 if (paymentIntent.payeeUsername != null) {
                     viewModel.loadUserDataByUsername(paymentIntent.payeeUsername).observe(getViewLifecycleOwner(), new Observer<Resource<UsernameSearchResult>>() {
                         @Override
