@@ -69,9 +69,7 @@ class InvitesHandler(val activity: AppCompatActivity) {
     }
 
     private fun showInviteAlreadyClaimedDialog(invite: InvitationLinkData) {
-        val displayName = invite.displayName
-        val profilePictureUrl = invite.avatarUrl
-        val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, displayName, profilePictureUrl)
+        val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, invite)
         inviteAlreadyClaimedDialog.show(activity.supportFragmentManager, null)
     }
 

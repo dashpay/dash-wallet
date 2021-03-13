@@ -40,7 +40,7 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${DEPLOY_TYPE}" = "DashPay" ] || [ "${T
 #    echo "* [dash-wallet-palinka-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/wallet-palinka-debug.apk)"
 #    echo "* [dash-wallet-evonet-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/wallet-evonet-debug.apk)"
     if [ "${TRAVIS_TAG:0:4}" = "NMA-" ]; then
-      printf 'https://dashpay.atlassian.net/browse/%s\n\n' "$TRAVIS_TAG"
+      printf '\n\nhttps://dashpay.atlassian.net/browse/%s\n\n' "$TRAVIS_TAG"
     fi
     echo "### Deploy info:"
     # print the content of `git show "$TRAVIS_TAG"` into README.md until the first occurence of 'diff'

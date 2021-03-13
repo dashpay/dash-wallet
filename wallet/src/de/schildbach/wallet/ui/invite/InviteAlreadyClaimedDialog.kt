@@ -20,6 +20,7 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.invitation_already_claimed_view.*
@@ -28,15 +29,19 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 open class InviteAlreadyClaimedDialog : FancyAlertDialog() {
 
     companion object {
+
+        private const val EXTRA_PROFILE = "profile"
+        private const val EXTRA_INVITE = "invite"
+
         fun newInstance(context: Context, profile: DashPayProfile): FancyAlertDialog {
             return newInstance(context, profile.nameLabel).apply {
-                arguments!!.putParcelable("profile", profile)
+                arguments!!.putParcelable(EXTRA_PROFILE, profile)
             }
         }
 
-        fun newInstance(context: Context, nameLabel: String, profilePictureUrl: String): FancyAlertDialog {
-            return newInstance(context, nameLabel).apply {
-                arguments!!.putString("avatar-url", profilePictureUrl)
+        fun newInstance(context: Context, invite: InvitationLinkData): FancyAlertDialog {
+            return newInstance(context, invite.displayName).apply {
+                arguments!!.putParcelable(EXTRA_INVITE, invite)
             }
         }
 
@@ -58,12 +63,12 @@ open class InviteAlreadyClaimedDialog : FancyAlertDialog() {
         super.onViewCreated(view, savedInstanceState)
 
         val args = requireArguments()
-        if (args.containsKey("profile")) {
-            val profile = args.getParcelable<DashPayProfile>("profile")
+        if (args.containsKey(EXTRA_PROFILE)) {
+            val profile = args.getParcelable<DashPayProfile>(EXTRA_PROFILE)
             profile_picture_envelope.avatarProfile = profile
         } else {
-            val avatarUrl = args.getString("avatar-url")!!
-            ProfilePictureDisplay.display(profile_picture_envelope.avatarView, avatarUrl, null, "user-name")
+            val invite = args.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
+            ProfilePictureDisplay.display(profile_picture_envelope.avatarView, invite.avatarUrl, null, invite.displayName)
         }
     }
 }

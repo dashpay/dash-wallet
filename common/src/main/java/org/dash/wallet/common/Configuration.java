@@ -454,7 +454,7 @@ public class Configuration {
     }
 
     public Boolean getDeveloperMode() {
-        return prefs.getBoolean(PREFS_DEV_MODE, false);
+        return BuildConfig.DEBUG || prefs.getBoolean(PREFS_DEV_MODE, false);
     }
     public void setDeveloperMode(boolean activate) {
         prefs.edit().putBoolean(PREFS_DEV_MODE, activate).apply();

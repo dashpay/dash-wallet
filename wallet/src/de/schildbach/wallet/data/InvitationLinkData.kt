@@ -58,7 +58,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
     }
 
     val avatarUrl by lazy {
-        Uri.encode(link.getQueryParameter("avatar-url")!!)!!
+        Uri.decode(link.getQueryParameter("avatar-url")!!)!!
     }
 
     val cftx by lazy {
