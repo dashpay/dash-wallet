@@ -9,12 +9,15 @@ import androidx.work.*
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
+import org.slf4j.LoggerFactory
 
 class SendContactRequestOperation(val application: Application) {
 
     class SendContactRequestOperationException(message: String) : java.lang.Exception(message)
 
     companion object {
+        private val log = LoggerFactory.getLogger(SendContactRequestOperation::class.java)
+
         const val WORK_NAME = "SendContactRequest.WORK#"
 
         fun uniqueWorkName(toUserId: String) = WORK_NAME + toUserId
@@ -54,6 +57,7 @@ class SendContactRequestOperation(val application: Application) {
                             })
                         }
                         WorkInfo.State.CANCELLED -> {
+                            log.info("send contact request operation cancelled")
                             emit(Resource.canceled(null))
                         }
                         else -> {

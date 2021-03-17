@@ -22,6 +22,7 @@ import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import kotlinx.android.parcel.IgnoredOnParcel
 import kotlinx.android.parcel.Parcelize
+import org.dashevo.dashpay.Profile
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identifier.Identifier
 import org.dashevo.dpp.util.HashUtils
@@ -53,6 +54,20 @@ data class DashPayProfile(@PrimaryKey val userId: String,
             } else {
                 defaultValue
             }
+        }
+
+        private fun getString(value: String?) : String {
+            return value ?: ""
+        }
+
+        fun fromDocument(profile: Profile, username: String): DashPayProfile? {
+            return DashPayProfile(profile.ownerId.toString(),
+                    username,
+                    getString(profile.displayName),
+                    getString(profile.publicMessage),
+                    getString(profile.avatarUrl),
+                    profile.avatarHash,
+                    profile.avatarFingerprint)
         }
 
         fun fromDocument(document: Document, username: String): DashPayProfile? {

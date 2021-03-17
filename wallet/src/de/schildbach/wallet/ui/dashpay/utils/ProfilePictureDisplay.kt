@@ -26,6 +26,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.signature.ObjectKey
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.ProfilePictureTransformation
 import de.schildbach.wallet.ui.UserAvatarPlaceholderDrawable.Companion.getDrawable
@@ -64,7 +65,7 @@ class ProfilePictureDisplay {
                 val zoomRectF = ProfilePictureHelper.extractZoomedRect(avatarUrl)
                 val baseAvatarUrl = ProfilePictureHelper.removePicZoomParameter(avatarUrl)
                 val context = avatarView.context.applicationContext
-                val a = Glide.with(context)
+                Glide.with(context)
                         .load(baseAvatarUrl)
                         .listener(object : RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
@@ -79,7 +80,7 @@ class ProfilePictureDisplay {
                                 return false
                             }
                         })
-                        .signature(ProfilePictureHelper.HashAndZoomSignature(avatarHash, zoomRectF))
+                        .signature(ObjectKey(zoomRectF.hashCode()))
                         .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
                         .transform(ProfilePictureTransformation.create(avatarUrlStr))
                         .placeholder(defaultAvatar)
