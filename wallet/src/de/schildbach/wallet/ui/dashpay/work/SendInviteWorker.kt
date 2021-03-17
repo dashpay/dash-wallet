@@ -27,6 +27,7 @@ import com.google.firebase.dynamiclinks.ShortDynamicLink
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
@@ -112,9 +113,9 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
         val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
         return FirebaseDynamicLinks.getInstance()
                 .createDynamicLink().apply {
-                    link = Constants.Invitation.appLinkUrl(username, nameLabel, avatarUrlEncoded, cftx)
+                    link = InvitationLinkData.create(username, nameLabel, avatarUrlEncoded, cftx).link
                     domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
-                    setAndroidParameters(DynamicLink.AndroidParameters.Builder("hashengineering.darkcoin.wallet").build())
+                    setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
                     setIosParameters(DynamicLink.IosParameters.Builder(
                             Constants.Invitation.IOS_APP_BUNDLEID
                     ).apply {

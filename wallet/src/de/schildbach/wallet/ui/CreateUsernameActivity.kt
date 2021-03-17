@@ -33,19 +33,16 @@ import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.Constants.USERNAME_MAX_LENGTH
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityData
-import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
-import de.schildbach.wallet.ui.invite.InvitePreviewDialog
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
@@ -62,6 +59,10 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(this, R.anim.fade_out) }
     private lateinit var completeUsername: String
+
+    private val invite by lazy {
+        intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
+    }
 
     val dashPayViewModel by lazy {
         ViewModelProvider(this).get(DashPayViewModel::class.java)
@@ -83,8 +84,10 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         private const val ACTION_CREATE_NEW = "action_create_new"
         private const val ACTION_DISPLAY_COMPLETE = "action_display_complete"
         private const val ACTION_REUSE_TRANSACTION = "action_reuse_transaction"
+        private const val ACTION_FROM_INVITE = "action_from_invite"
 
         private const val EXTRA_USERNAME = "extra_username"
+        private const val EXTRA_INVITE = "extra_invite"
 
         @JvmStatic
         fun createIntent(context: Context, username: String? = null): Intent {
@@ -98,6 +101,13 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         fun createIntentReuseTransaction(context: Context): Intent {
             return Intent(context, CreateUsernameActivity::class.java).apply {
                 action = ACTION_REUSE_TRANSACTION
+            }
+        }
+
+        fun createIntentFromInvite(context: Context, invite: InvitationLinkData): Intent {
+            return Intent(context, CreateUsernameActivity::class.java).apply {
+                action = ACTION_FROM_INVITE
+                putExtra(EXTRA_INVITE, invite)
             }
         }
     }
@@ -133,45 +143,10 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 reuseTransaction = true
                 showKeyBoard()
             }
-            else -> {
-                if (intent.action != Intent.ACTION_VIEW) {  // don't show the kayboard if launched from dynamic link
-                    showKeyBoard()
-                }
+            ACTION_FROM_INVITE -> {
+                // don't show the keyboard if launched from invite
             }
         }
-        handleIntent(intent)
-    }
-
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-        handleIntent(intent!!)
-    }
-
-    private fun handleIntent(intent: Intent) {
-        if (walletApplication.configuration.developerMode) {
-            FirebaseDynamicLinks.getInstance()
-                    .getDynamicLink(intent)
-                    .addOnSuccessListener {
-                        log.debug("dynamic link received")
-                        if (it != null) {
-                            log.debug("${it.extensions}; ${it.link}")
-                            val appLinkData = Constants.Invitation.AppLinkData(it.link!!)
-                            dashPayViewModel.dashPayProfileData(appLinkData.username).observe(this, { dashPayProfile ->
-                                if (dashPayProfile != null) {
-                                    showPreviewDialog(dashPayProfile)
-                                } else {
-                                    Toast.makeText(this, "Unable to find user ${appLinkData.username}", Toast.LENGTH_LONG).show()
-                                    log.error("unable to find inviting user ${it.link}")
-                                }
-                            })
-                        }
-                    }
-        }
-    }
-
-    private fun showPreviewDialog(dashPayProfile: DashPayProfile) {
-        val previewDialog = InvitePreviewDialog.newInstance(this, dashPayProfile)
-        previewDialog.show(supportFragmentManager, null)
     }
 
     private fun showKeyBoard() {
@@ -183,7 +158,12 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private fun initViewModel() {
         val confirmTransactionSharedViewModel = ViewModelProvider(this).get(PlatformPaymentConfirmDialog.SharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
-            triggerIdentityCreation(false)
+            if (intent.action == ACTION_FROM_INVITE) {
+                Toast.makeText(this, "Creating identity from invitations in not yet implemented", Toast.LENGTH_LONG).show()
+                finish()
+            } else {
+                triggerIdentityCreation(false)
+            }
         })
 
         dashPayViewModel.getUsernameLiveData.observe(this, Observer {
@@ -404,11 +384,11 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun showConfirmationDialog() {
-        val upgradeFee = Coin.CENT
+        val upgradeFee = if (intent.action == ACTION_FROM_INVITE) null else Coin.CENT.value
         val username = "<b>“${username.text}”</b>"
         val dialogMessage = getString(R.string.new_account_confirm_message, username)
         val dialogTitle = getString(R.string.dashpay_upgrade_fee)
-        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee.value)
+        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee)
         dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
     }
 

@@ -106,6 +106,7 @@
         <activity-alias
             android:name="de.schildbach.wallet.MainActivity"
             android:targetActivity="de.schildbach.wallet.ui.MainActivity">
+
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
 
@@ -125,10 +126,12 @@
 
                 <data
                     android:host="invitations.dashpay.io"
+                    android:path="/applink"
                     android:scheme="http" />
 
                 <data
                     android:host="invitations.dashpay.io"
+                    android:path="/applink"
                     android:scheme="https" />
 
             </intent-filter>
@@ -358,7 +361,7 @@
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.invite.InviteWelcomeActivity"
+            android:name="de.schildbach.wallet.ui.invite.AcceptInviteActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize" />

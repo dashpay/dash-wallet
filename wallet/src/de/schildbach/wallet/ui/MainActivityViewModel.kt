@@ -2,16 +2,15 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import android.content.Intent
-import android.net.Uri
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
@@ -35,29 +34,27 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
         }
     }
 
-    val inviteData = MutableLiveData<Resource<Pair<Uri, Boolean>>>()
+    val inviteData = MutableLiveData<Resource<InvitationLinkData>>()
 
     fun handleInvite(intent: Intent) {
         FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
             val link = it?.link
-            if (link != null && Constants.Invitation.isValid(link)) {
+            if (link != null && InvitationLinkData.isValid(link)) {
                 log.debug("received invite $link")
-
-                dashPayProfile?.username.apply {
-                    if (this == link.getQueryParameter("user")) {
-                        inviteData.postValue(Resource.canceled(Pair(link, false)))
-                        return@addOnSuccessListener
-                    }
-                }
+                val invite = InvitationLinkData(link, false)
 
                 inviteData.value = Resource.loading()
-                val cftx = link.getQueryParameter("cftx")!!
                 viewModelScope.launch(Dispatchers.IO) {
                     try {
-                        val isValid = platformRepo.validateInvitation(cftx)
-                        inviteData.postValue(Resource.success(Pair(link, isValid)))
+                        invite.validation = platformRepo.validateInvitation(invite.cftx)
+
+                        if (invite.user == dashPayProfile?.username) {
+                            inviteData.postValue(Resource.canceled(invite))
+                        } else {
+                            inviteData.postValue(Resource.success(invite))
+                        }
                     } catch (e: Exception) {
-                        inviteData.postValue(Resource.error(e, Pair(link, false)))
+                        inviteData.postValue(Resource.error(e, invite))
                     }
                 }
             } else {

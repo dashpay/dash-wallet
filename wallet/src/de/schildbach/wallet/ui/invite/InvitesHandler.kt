@@ -16,9 +16,8 @@
 
 package de.schildbach.wallet.ui.invite
 
-import android.net.Uri
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet_test.R
@@ -28,31 +27,38 @@ class InvitesHandler(val activity: AppCompatActivity) {
 
     private lateinit var inviteLoadingDialog: FancyAlertDialog
 
-    fun handle(inviteResource: Resource<Pair<Uri, Boolean>>) {
+    fun handle(inviteResource: Resource<InvitationLinkData>) {
+        if (inviteResource.status != Status.LOADING) {
+            inviteLoadingDialog.dismissAllowingStateLoss()
+        }
         when (inviteResource.status) {
             Status.LOADING -> {
                 showInviteLoadingProgress()
             }
             Status.ERROR -> {
-                inviteLoadingDialog.dismissAllowingStateLoss()
-                val displayName = inviteResource.data!!.first.getQueryParameter("display-name")!!
+                val displayName = inviteResource.data!!.displayName
                 showInvalidInviteDialog(displayName)
             }
             Status.CANCELED -> {
-                Toast.makeText(activity, "This is your own invitation", Toast.LENGTH_LONG).show()
-                activity.startActivity(InvitesHistoryActivity.createIntent(activity))
+                showUsernameAlreadyDialog()
             }
             Status.SUCCESS -> {
-                inviteLoadingDialog.dismissAllowingStateLoss()
-                val isValid = inviteResource.data!!.second
-                if (isValid) {
-                    activity.startActivity(InviteWelcomeActivity.createIntent(activity))
+                val invite = inviteResource.data!!
+                if (invite.isValid) {
+                    activity.startActivity(AcceptInviteActivity.createIntent(activity, invite))
                 } else {
-                    val link = inviteResource.data.first
-                    showInviteAlreadyClaimedDialog(link)
+                    showInviteAlreadyClaimedDialog(invite)
                 }
             }
         }
+    }
+
+    private fun showUsernameAlreadyDialog() {
+        val inviteErrorDialog = FancyAlertDialog.newInstance(
+                R.string.invitation_username_already_found_title,
+                R.string.invitation_username_already_found_message,
+                R.drawable.ic_invalid_invite, R.string.okay, 0)
+        inviteErrorDialog.show(activity.supportFragmentManager, null)
     }
 
     private fun showInvalidInviteDialog(displayName: String) {
@@ -62,10 +68,8 @@ class InvitesHandler(val activity: AppCompatActivity) {
         inviteErrorDialog.show(activity.supportFragmentManager, null)
     }
 
-    private fun showInviteAlreadyClaimedDialog(link: Uri) {
-        val displayName = link.getQueryParameter("display-name")!!
-        val profilePictureUrl = link.getQueryParameter("avatar-url")!!
-        val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, displayName, profilePictureUrl)
+    private fun showInviteAlreadyClaimedDialog(invite: InvitationLinkData) {
+        val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, invite)
         inviteAlreadyClaimedDialog.show(activity.supportFragmentManager, null)
     }
 
