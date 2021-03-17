@@ -124,7 +124,8 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
                 }
                 .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
                     title = applicationContext.getString(R.string.invitation_preview_title)
-                    imageUrl = Uri.parse("https://dashpay.site/image.php?image=$avatarUrlEncoded")
+                    val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.toString())
+                    imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
                     description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
                 }.build())
                 .setGoogleAnalyticsParameters(DynamicLink.GoogleAnalyticsParameters.Builder(
