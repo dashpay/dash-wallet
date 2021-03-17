@@ -47,6 +47,7 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
             log.info("successfully restored wallet from seed")
             walletApplication.configuration.disarmBackupSeedReminder()
             walletApplication.configuration.isRestoringBackup = true
+            walletApplication.configuration.disableNotifications()
             walletApplication.resetBlockchainState()
             startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
         }

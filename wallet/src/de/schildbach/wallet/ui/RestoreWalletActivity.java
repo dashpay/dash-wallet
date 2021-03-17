@@ -182,6 +182,7 @@ public final class RestoreWalletActivity extends AbstractWalletActivity
 
             restoreWallet(WalletUtils.restoreWalletFromProtobufOrBase58(is, Constants.NETWORK_PARAMETERS));
             application.getConfiguration().setRestoringBackup(true);
+            application.getConfiguration().disableNotifications();
             log.info("successfully restored encrypted wallet from external source");
         } catch (final IOException x) {
             final DialogBuilder dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title);

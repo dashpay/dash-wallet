@@ -116,13 +116,16 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
         viewModel.getNotificationCountData().observe(getViewLifecycleOwner(), notificationCount -> {
             setNotificationCount();
         });
-        long lastSeenNotification = config.getLastSeenNotificationTime();
-        AppDatabase.getAppDatabase().userAlertDaoAsync()
-                .load(lastSeenNotification).observe(getViewLifecycleOwner(), userAlert -> {
-            if (userAlert != null) {
-                viewModel.forceUpdateNotificationCount();
-            }
-        });
+        // don't query alerts if notifications are disabled
+        if (config.areNotificationsDisabled()) {
+            long lastSeenNotification = config.getLastSeenNotificationTime();
+            AppDatabase.getAppDatabase().userAlertDaoAsync()
+                    .load(lastSeenNotification).observe(getViewLifecycleOwner(), userAlert -> {
+                if (userAlert != null) {
+                    viewModel.forceUpdateNotificationCount();
+                }
+            });
+        }
     }
 
     @Override

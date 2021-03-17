@@ -10,15 +10,19 @@ class NotificationCountLiveData(walletApplication: WalletApplication, platformRe
 
     override fun onContactsUpdated() {
         scope.launch(Dispatchers.IO) {
-            val notificationCount = platformRepo.getNotificationCount(walletApplication.configuration.lastSeenNotificationTime)
+            if (!walletApplication.configuration.areNotificationsDisabled()) {
+                val notificationCount = platformRepo.getNotificationCount(walletApplication.configuration.lastSeenNotificationTime)
 
-            // TODO: Count other types of notifications such as:
-            // * payments
-            // * notifications
+                // TODO: Count other types of notifications such as:
+                // * payments
+                // * notifications
 
-            //TODO: ???
-            if (notificationCount >= 0)
-                postValue(notificationCount)
+                //TODO: ???
+                if (notificationCount >= 0)
+                    postValue(notificationCount)
+            } else {
+                postValue(0)
+            }
         }
     }
 }
