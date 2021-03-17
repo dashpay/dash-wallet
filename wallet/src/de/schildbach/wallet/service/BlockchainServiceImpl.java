@@ -387,7 +387,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             @Override
             public void run() {
                 lastMessageTime.set(System.currentTimeMillis());
-                log.info("Runnable % = " +syncPercentage);
+                log.debug("Runnable % = " + syncPercentage);
 
                 config.maybeIncrementBestChainHeightEver(blockChain.getChainHead().getHeight());
                 if(config.isRestoringBackup()) {
@@ -473,7 +473,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             if (increment > preBlocksWeight * 100)
                 increment = preBlocksWeight * 100;
 
-            log.info("PreBlockDownload: " + increment + "%..." + preBlocksWeight + " " + stage.name() + " " + peerGroup.getSyncStage().name());
+            log.debug("PreBlockDownload: " + increment + "%..." + preBlocksWeight + " " + stage.name() + " " + peerGroup.getSyncStage().name());
             if (peerGroup != null && peerGroup.getSyncStage() == PeerGroup.SyncStage.PREBLOCKS) {
                 syncPercentage = (int)(startPreBlockPercent + increment);
                 log.info("PreBlockDownload: " + syncPercentage + "%..." + peerGroup.getSyncStage().name());
