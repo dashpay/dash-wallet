@@ -21,9 +21,9 @@ import android.util.AttributeSet
 import de.schildbach.wallet_test.R
 
 
-class InvitePreviewEnvelopeView(context: Context, attrs: AttributeSet?) : InviteEnvelopeView(context, attrs) {
+class InviteErrorEnvelopeView(context: Context, attrs: AttributeSet?) : InviteEnvelopeView(context, attrs) {
 
     override val contentViewResId: Int
-        get() = R.layout.invite_preview_envelope_view
+        get() = R.layout.invite_error_envelope_view
 
 }

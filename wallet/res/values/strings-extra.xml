@@ -394,9 +394,14 @@
     <string name="invitation_cant_afford_message">You need at least %s Dash to create an invitation</string>
     <string name="invitation_creating_error_title">Error Creating Invitation</string>
     <string name="invitation_creating_error_message">There was a problem creating your invitation. Please try again.</string>
-    <string name="invitation_creating_progress_message">Creating invitation</string>
+    <string name="invitation_creating_progress_title">Creating invitation</string>
+    <string name="invitation_verifying_progress_title">Verifying invitation</string>
     <string name="invitation_share_message">Invitations are single use only. Do not share with a group.</string>
     <string name="invitation_share_title">DashPay invitation</string>
+    <string name="invitation_already_claimed_title">Invitation already claimed</string>
+    <string name="invitation_already_claimed_message">Your invitation from %s has been already claimed</string>
+    <string name="invitation_invalid_invite_title">Invalid Invitation</string>
+    <string name="invitation_invalid_invite_message">Your invitation from %s is not valid</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>

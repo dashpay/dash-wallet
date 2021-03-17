@@ -114,6 +114,25 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+
+            <intent-filter android:autoVerify="true"
+                tools:targetApi="m">
+
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="invitations.dashpay.io"
+                    android:scheme="http" />
+
+                <data
+                    android:host="invitations.dashpay.io"
+                    android:scheme="https" />
+
+            </intent-filter>
+
         </activity-alias>
 
         <activity
@@ -324,27 +343,7 @@
             android:name="de.schildbach.wallet.ui.CreateUsernameActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
-            android:windowSoftInputMode="stateHidden|adjustResize">
-
-            <intent-filter android:autoVerify="true"
-                tools:targetApi="m">
-
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="invitations.dashpay.io"
-                    android:scheme="http" />
-
-                <data
-                    android:host="invitations.dashpay.io"
-                    android:scheme="https" />
-
-            </intent-filter>
-
-        </activity>
+            android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
             android:name="de.schildbach.wallet.ui.invite.InviteFriendActivity"
@@ -353,7 +352,13 @@
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.invite.InvitationsHistoryActivity"
+            android:name="de.schildbach.wallet.ui.invite.InvitesHistoryActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.invite.InviteWelcomeActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize" />

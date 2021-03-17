@@ -17,14 +17,16 @@
 package de.schildbach.wallet.ui.invite
 
 import android.content.Context
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.invitation_preview_view.*
+import kotlinx.android.synthetic.main.invitation_already_claimed_view.*
 import org.dash.wallet.common.ui.FancyAlertDialog
 
-open class InvitationPreviewDialog : FancyAlertDialog() {
+open class InviteAlreadyClaimedDialog : FancyAlertDialog() {
 
     companion object {
         fun newInstance(context: Context, profile: DashPayProfile): FancyAlertDialog {
@@ -33,10 +35,16 @@ open class InvitationPreviewDialog : FancyAlertDialog() {
             }
         }
 
+        fun newInstance(context: Context, nameLabel: String, profilePictureUrl: String): FancyAlertDialog {
+            return newInstance(context, nameLabel).apply {
+                arguments!!.putString("avatar-url", profilePictureUrl)
+            }
+        }
+
         fun newInstance(context: Context, nameLabel: String): FancyAlertDialog {
-            val messageHtml = context.getString(R.string.invitation_preview_message, "<b>${nameLabel}</b>")
-            return InvitationPreviewDialog().apply {
-                arguments = createBaseArguments(Type.INFO, 0, 0, R.string.invitation_preview_close)
+            val messageHtml = context.getString(R.string.invitation_already_claimed_message, "<b>${nameLabel}</b>")
+            return InviteAlreadyClaimedDialog().apply {
+                arguments = createBaseArguments(Type.INFO, 0, R.string.okay, 0)
                         .apply {
                             putString("message", messageHtml)
                         }
@@ -45,12 +53,18 @@ open class InvitationPreviewDialog : FancyAlertDialog() {
     }
 
     override val customContentViewResId: Int
-        get() = R.layout.invitation_preview_view
+        get() = R.layout.invitation_already_claimed_view
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val profile = requireArguments().getParcelable<DashPayProfile>("profile")
-        profile_picture_envelope.avatarProfile = profile
+        val args = requireArguments()
+        if (args.containsKey("profile")) {
+            val profile = args.getParcelable<DashPayProfile>("profile")
+            profile_picture_envelope.avatarProfile = profile
+        } else {
+            val avatarUrl = Uri.decode(args.getString("avatar-url")!!)
+            ProfilePictureDisplay.display(profile_picture_envelope.avatarView, avatarUrl, null, "user-name")
+        }
     }
 }

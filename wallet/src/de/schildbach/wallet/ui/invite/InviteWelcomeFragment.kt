@@ -25,14 +25,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_payments.*
 import kotlinx.android.synthetic.main.activity_payments.toolbar
-import kotlinx.android.synthetic.main.fragment_invitation_created.*
+import kotlinx.android.synthetic.main.fragment_invite_created.*
 
-class InvitationsHistoryFragment : Fragment(R.layout.fragment_invitations_history) {
+class InviteWelcomeFragment : Fragment(R.layout.fragment_invite_welcome) {
 
     companion object {
-        fun newInstance() = InvitationsHistoryFragment()
+        fun newInstance() = InviteWelcomeFragment()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

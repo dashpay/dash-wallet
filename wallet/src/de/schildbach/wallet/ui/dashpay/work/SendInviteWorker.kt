@@ -31,6 +31,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
+import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bouncycastle.crypto.params.KeyParameter
 import org.slf4j.LoggerFactory
 import java.net.URLEncoder
@@ -87,12 +88,12 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
             val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
             val cftx = platformRepo.createInviteFundingTransactionAsync(blockchainIdentity, encryptionKey)
             val dashPayProfile = platformRepo.getLocalUserProfile()
-            val dynamicLink = createDynamicLink(dashPayProfile!!, cftx.creditBurnIdentityIdentifier.toStringBase58())
+            val dynamicLink = createDynamicLink(dashPayProfile!!, cftx)
             val shortDynamicLink = buildShortDynamicLink(dynamicLink)
             Result.success(workDataOf(
                     KEY_TX_ID to cftx.txId.bytes,
                     KEY_USER_ID to cftx.creditBurnIdentityIdentifier.toStringBase58(),
-                    KEY_INVITE_ID to Address.fromPubKeyHash(wallet.params, cftx.txId.bytes).toBase58(),
+                    KEY_INVITE_ID to Address.fromPubKeyHash(wallet.params, cftx.creditBurnPublicKeyId.bytes).toBase58(),
                     KEY_DYNAMIC_LINK to dynamicLink.uri.toString(),
                     KEY_SHORT_DYNAMIC_LINK to shortDynamicLink.shortLink.toString()
             ))
@@ -104,13 +105,14 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
         }
     }
 
-    private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: String): DynamicLink {
+    private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: CreditFundingTransaction): DynamicLink {
         log.info("creating dynamic link for invitation")
         val username = dashPayProfile.username
         val nameLabel = dashPayProfile.nameLabel
+        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
         return FirebaseDynamicLinks.getInstance()
                 .createDynamicLink().apply {
-                    link = Constants.Invitation.appLinkUrl(username, nameLabel, cftx)
+                    link = Constants.Invitation.appLinkUrl(username, nameLabel, avatarUrlEncoded, cftx)
                     domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
                     setAndroidParameters(DynamicLink.AndroidParameters.Builder("hashengineering.darkcoin.wallet").build())
                     setIosParameters(DynamicLink.IosParameters.Builder(
@@ -121,7 +123,6 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
                 }
                 .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
                     title = applicationContext.getString(R.string.invitation_preview_title)
-                    val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
                     imageUrl = Uri.parse("https://dashpay.site/image.php?image=$avatarUrlEncoded")
                     description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
                 }.build())

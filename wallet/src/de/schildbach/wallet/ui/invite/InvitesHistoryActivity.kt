@@ -25,14 +25,14 @@ import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
-class InvitationsHistoryActivity : InteractionAwareActivity() {
+class InvitesHistoryActivity : InteractionAwareActivity() {
 
     companion object {
-        private val log = LoggerFactory.getLogger(InvitationsHistoryActivity::class.java)
+        private val log = LoggerFactory.getLogger(InvitesHistoryActivity::class.java)
 
         @JvmStatic
         fun createIntent(context: Context): Intent {
-            return Intent(context, InvitationsHistoryActivity::class.java)
+            return Intent(context, InvitesHistoryActivity::class.java)
         }
     }
 
@@ -41,7 +41,7 @@ class InvitationsHistoryActivity : InteractionAwareActivity() {
         setContentView(R.layout.activity_fragment_holder)
 
         supportFragmentManager.beginTransaction()
-                .replace(R.id.container, InvitationsHistoryFragment.newInstance())
+                .replace(R.id.container, InvitesHistoryFragment.newInstance())
                 .commitNow()
     }
 

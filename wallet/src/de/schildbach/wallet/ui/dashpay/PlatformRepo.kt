@@ -1187,8 +1187,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     suspend fun getLocalUserProfile(): DashPayProfile? {
-        val blockchainIdentity = getBlockchainIdentity()
-        return dashPayProfileDao.loadByUserId(blockchainIdentity!!.uniqueIdString)
+        val blockchainIdentityBaseData = loadBlockchainIdentityBaseData()!!
+        return dashPayProfileDao.loadByUserId(blockchainIdentityBaseData.userId!!)
     }
 
     suspend fun getLocalUserDataByUsername(username: String): UsernameSearchResult? {

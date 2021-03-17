@@ -45,7 +45,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
-import de.schildbach.wallet.ui.invite.InvitationPreviewDialog
+import de.schildbach.wallet.ui.invite.InvitePreviewDialog
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
@@ -170,7 +170,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     }
 
     private fun showPreviewDialog(dashPayProfile: DashPayProfile) {
-        val previewDialog = InvitationPreviewDialog.newInstance(this, dashPayProfile)
+        val previewDialog = InvitePreviewDialog.newInstance(this, dashPayProfile)
         previewDialog.show(supportFragmentManager, null)
     }
 
