@@ -279,12 +279,13 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
+        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERED) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
             //
             // Step 3: Verify that the identity was registered
             //
-            platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
+            //platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
@@ -299,12 +300,13 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
+        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERED) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERED)
             //
             // Step 4: Verify that the username was preordered
             //
-            platformRepo.isNamePreorderedAsync(blockchainIdentity)
+            //platformRepo.isNamePreorderedAsync(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
@@ -317,12 +319,13 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
+        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= CreationState.USERNAME_REGISTERED) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
             //
             // Step 5: Verify that the username was registered
             //
-            platformRepo.isNameRegisteredAsync(blockchainIdentity)
+            //platformRepo.isNameRegisteredAsync(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 

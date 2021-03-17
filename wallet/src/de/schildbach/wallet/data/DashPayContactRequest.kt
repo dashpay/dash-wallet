@@ -6,6 +6,7 @@ import androidx.room.Ignore
 import kotlinx.android.parcel.IgnoredOnParcel
 import org.bitcoinj.core.Base58
 import kotlinx.android.parcel.Parcelize
+import org.dashevo.dashpay.ContactRequest
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identifier.Identifier
 
@@ -47,7 +48,23 @@ data class DashPayContactRequest(val userId: String,
                     encryptedAccountLabel,
                     autoAcceptProof)
         }
+
+        fun fromDocument(document: ContactRequest): DashPayContactRequest {
+            val timestamp: Long = if (document.createdAt != null) document.createdAt!! else 0L
+
+            return DashPayContactRequest(document.ownerId.toString(),
+                    document.toUserId.toString(),
+                    document.accountReference,
+                    document.encryptedPublicKey,
+                    document.senderKeyIndex,
+                    document.recipientKeyIndex,
+                    timestamp,
+                    document.encryptedAccountLabel,
+                    document.autoAcceptProof)
+        }
     }
+
+
 
     @delegate:Ignore
     @IgnoredOnParcel

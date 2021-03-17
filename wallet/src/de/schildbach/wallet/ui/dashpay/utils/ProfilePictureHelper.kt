@@ -32,6 +32,7 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.util.Util
 import com.google.common.base.Stopwatch
 import org.bitcoinj.core.Sha256Hash
+import org.dashevo.dpp.toBase64
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.math.BigInteger
@@ -59,10 +60,10 @@ class ProfilePictureHelper {
                         override fun onResourceReady(resource: File, transition: Transition<in File>?) {
                             val serverAvatarHash = Sha256Hash.of(resource)
                             watch.stop()
-                            log.info("server avatarHash: '{}', took {}", serverAvatarHash.toStringBase58(), watch)
+                            log.debug("server avatarHash: '{}', took {}", serverAvatarHash.bytes.toBase64(), watch)
                             if (profileAvatarHash != null && !(profileAvatarHash contentEquals serverAvatarHash.bytes)) {
-                                val profileAvatarHashBase58 = Sha256Hash.wrap(profileAvatarHash).toStringBase58()
-                                log.info("server avatarHash ({}) doesn't match the profile avatarHash ({})", serverAvatarHash.toStringBase58(), profileAvatarHashBase58)
+                                val profileAvatarHashBase64 = Sha256Hash.wrap(profileAvatarHash).bytes.toBase64()
+                                log.info("server avatarHash ({}) doesn't match the profile avatarHash ({})", serverAvatarHash.bytes.toBase64(), profileAvatarHashBase64)
                             }
                             val avatarFingerprint = CocoaImageDHash.of(BitmapFactory.decodeFile(resource.path))
                             listener?.apply {
