@@ -302,6 +302,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             override fun onRestoreWallet(wallet: Wallet) {
                 restoreWallet(wallet)
                 config.isRestoringBackup = true
+                config.disableNotifications()
             }
 
             override fun onRetryRequest() {

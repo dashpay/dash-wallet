@@ -1029,6 +1029,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private fun finishPreBlockDownload() {
         log.info("PreDownloadBlocks: complete")
+        if (walletApplication.configuration.areNotificationsDisabled()) {
+            // this will enable notifications, since platform information has been synced
+            walletApplication.configuration.lastSeenNotificationTime = System.currentTimeMillis()
+        }
         preDownloadBlocksFuture?.set(true)
         preDownloadBlocks.set(false)
     }

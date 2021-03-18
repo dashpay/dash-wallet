@@ -42,6 +42,7 @@ class RestoreWalletFromFileViewModel(application: Application) : AndroidViewMode
             showUpgradeWalletAction.call(wallet)
         } else {
             walletApplication.wallet = wallet
+            walletApplication.configuration.disableNotifications()
             log.info("successfully restored wallet from file")
             walletApplication.resetBlockchainState()
             startActivityAction.call(SetPinActivity.createIntent(getApplication(),

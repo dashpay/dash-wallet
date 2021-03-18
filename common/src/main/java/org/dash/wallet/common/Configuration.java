@@ -85,6 +85,8 @@ public class Configuration {
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
 
+    private static final long DISABLE_NOTIFICATIONS = -1;
+
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration(final SharedPreferences prefs, final Resources res) {
@@ -432,6 +434,14 @@ public class Configuration {
 
     public long getLastSeenNotificationTime() {
         return prefs.getLong(PREFS_LAST_SEEN_NOTIFICATION_TIME, 0);
+    }
+
+    public boolean areNotificationsDisabled() {
+        return getLastSeenNotificationTime() == DISABLE_NOTIFICATIONS;
+    }
+
+    public void disableNotifications() {
+        setLastSeenNotificationTime(DISABLE_NOTIFICATIONS);
     }
 
     public void setLastSeenNotificationTime(long lastSeenNotificationTime) {
