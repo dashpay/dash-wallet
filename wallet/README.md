@@ -80,8 +80,6 @@ use
 	git clone -b master https://github.com/HashEngineering/dash-wallet.git dash-wallet
 	cd dash-wallet
 	git pull
-	git submodule init
-    git submodule update
     
 	# each time
 	cd dash-wallet
