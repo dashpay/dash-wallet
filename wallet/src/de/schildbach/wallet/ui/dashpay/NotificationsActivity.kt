@@ -133,6 +133,9 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
             imitateUserInteraction()
             notificationsAdapter.sendContactRequestWorkStateMap = it
         })
+        dashPayViewModel.recentlyModifiedContactsLiveData.observe(this, {
+            notificationsAdapter.recentlyModifiedContacts = it
+        })
     }
 
     private fun processResults(data: ArrayList<NotificationItem>) {
