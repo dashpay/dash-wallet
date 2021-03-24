@@ -60,6 +60,8 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     private var contactRequestJob = Job()
     private var getContactJob = Job()
 
+    val recentlyModifiedContactsLiveData = MutableLiveData<HashSet<String>>()
+
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
         getUsernameJob = Job()
@@ -161,6 +163,13 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
     fun allUsersLiveData() = AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserId()
 
     fun sendContactRequest(toUserId: String) {
+        var recentlyModifiedContacts = recentlyModifiedContactsLiveData.value
+        if (recentlyModifiedContacts == null) {
+            recentlyModifiedContacts = hashSetOf(toUserId)
+        } else {
+            recentlyModifiedContacts.add(toUserId)
+        }
+        recentlyModifiedContactsLiveData.postValue(recentlyModifiedContacts)
         SendContactRequestOperation(walletApplication)
                 .create(toUserId)
                 .enqueue()
