@@ -16,23 +16,25 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.KeyguardManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.telephony.TelephonyManager
-import android.view.KeyCharacterMap
-import android.view.KeyEvent
-import android.view.View
-import android.view.ViewConfiguration
+import android.view.*
 import android.view.animation.AnimationUtils
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
+import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -43,12 +45,11 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
-import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
 
 
-class LockScreenActivity : InteractionAwareActivity() {
+class LockScreenActivity : AppCompatActivity() {
 
     private val walletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
@@ -66,6 +67,9 @@ class LockScreenActivity : InteractionAwareActivity() {
             setLockState(State.ENTER_PIN)
         }
     }
+
+    private val autoLogout = AutoLogout(configuration)
+    private var deviceWasLocked = false
 
     private enum class State {
         ENTER_PIN,
@@ -89,6 +93,7 @@ class LockScreenActivity : InteractionAwareActivity() {
         initViewModel()
 
         setupBackupSeedReminder()
+        setupAutoLogout()
     }
 
     override fun setContentView(contentViewResId: Int) {
@@ -98,6 +103,24 @@ class LockScreenActivity : InteractionAwareActivity() {
     override fun setContentView(contentView: View?) {
         regular_content.removeAllViews()
         regular_content.addView(contentView)
+    }
+
+    private fun setupAutoLogout() {
+        autoLogout.setOnLogoutListener { isAppInBackground ->
+            if (!isAppInBackground) {
+                setLockState(State.ENTER_PIN)
+            }
+        }
+        maybeStartAutoLogoutTimer()
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        resetAutoLogoutTimer()
+    }
+
+    private fun resetAutoLogoutTimer() {
+        autoLogout.resetTimerIfActive()
     }
 
     private fun setupBackupSeedReminder() {
@@ -143,8 +166,23 @@ class LockScreenActivity : InteractionAwareActivity() {
 
     override fun onStart() {
         super.onStart()
+        registerDeviceInteractiveReceiver()
+
+        if (configuration.autoLogoutEnabled && (deviceWasLocked || autoLogout.shouldLogout())) {
+            setLockState(State.ENTER_PIN)
+            if (autoLogout.isTimerActive) {
+                autoLogout.stopTimer()
+            }
+        }
+
         setupInitState()
         startBlockchainService()
+    }
+
+    override fun onStop() {
+        unregisterDeviceInteractiveReceiver()
+        autoLogout.setAppInBackground(true)
+        super.onStop()
     }
 
     private fun startBlockchainService() {
@@ -197,8 +235,8 @@ class LockScreenActivity : InteractionAwareActivity() {
     }
 
     private fun initViewModel() {
-        viewModel = ViewModelProviders.of(this).get(LockScreenViewModel::class.java)
-        checkPinViewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
+        viewModel = ViewModelProvider(this).get(LockScreenViewModel::class.java)
+        checkPinViewModel = ViewModelProvider(this).get(CheckPinViewModel::class.java)
         checkPinViewModel.checkPinLiveData.observe(this, Observer {
             when (it.status) {
                 Status.ERROR -> {
@@ -221,7 +259,7 @@ class LockScreenActivity : InteractionAwareActivity() {
                 }
             }
         })
-        enableFingerprintViewModel = ViewModelProviders.of(this)[CheckPinSharedModel::class.java]
+        enableFingerprintViewModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
             val pin = it.second
             onCorrectPin(pin)
@@ -230,7 +268,7 @@ class LockScreenActivity : InteractionAwareActivity() {
 
     private fun onCorrectPin(pin: String) {
         pinRetryController.clearPinFailPrefs()
-        walletApplication.maybeStartAutoLogoutTimer()
+        maybeStartAutoLogoutTimer()
         val intent: Intent
         if (shouldShowBackupReminder) {
             intent = VerifySeedActivity.createIntent(this, pin)
@@ -242,6 +280,10 @@ class LockScreenActivity : InteractionAwareActivity() {
 //            intent = WalletActivity.createIntent(this)
             root_view_switcher.displayedChild = 1
         }
+    }
+
+    private fun maybeStartAutoLogoutTimer() {
+        autoLogout.setup()
     }
 
     private fun setLockState(state: State) {
@@ -261,7 +303,6 @@ class LockScreenActivity : InteractionAwareActivity() {
                 action_login_with_fingerprint.visibility = View.VISIBLE
 
                 numeric_keyboard.visibility = View.VISIBLE
-                numeric_keyboard.isEnabled = true
 
                 if (state == State.INVALID_PIN) {
                     checkPinViewModel.pin.clear()
@@ -269,7 +310,13 @@ class LockScreenActivity : InteractionAwareActivity() {
                     Handler().postDelayed({
                         pin_preview.clear()
                     }, 200)
+                } else {
+                    numeric_keyboard.isEnabled = true
+                    pin_preview.clear()
+                    checkPinViewModel.pin.clear()
+                    pin_preview.clearBadPin()
                 }
+
                 if (pinRetryController.failCount() > 0) {
                     pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
                 }
@@ -303,6 +350,8 @@ class LockScreenActivity : InteractionAwareActivity() {
 
                 action_scan_to_pay.isEnabled = false
                 numeric_keyboard.visibility = View.GONE
+
+                deviceWasLocked = false
             }
         }
 
@@ -378,6 +427,35 @@ class LockScreenActivity : InteractionAwareActivity() {
         dialogBuilder.show()
     }
 
-    private val shouldShowBackupReminder = configuration.getRemindBackupSeed()
+    private val shouldShowBackupReminder = configuration.remindBackupSeed
             && configuration.lastBackupSeedReminderMoreThan24hAgo()
+
+    private fun registerDeviceInteractiveReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        registerReceiver(deviceInteractiveReceiver, filter)
+    }
+
+    private fun unregisterDeviceInteractiveReceiver() {
+        unregisterReceiver(deviceInteractiveReceiver)
+    }
+
+    private val deviceInteractiveReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val myKM = context.getSystemService(KEYGUARD_SERVICE) as KeyguardManager
+            deviceWasLocked = deviceWasLocked or if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) myKM.isDeviceLocked else myKM.inKeyguardRestrictedInputMode()
+        }
+    }
+
+    override fun onPause() {
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        super.onPause()
+    }
+
+    override fun onResume() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        super.onResume()
+    }
 }

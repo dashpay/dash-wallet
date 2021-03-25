@@ -400,7 +400,6 @@ class SetPinActivity : InteractionAwareActivity() {
             } else {
                 goHome()
             }
-            walletApplication.maybeStartAutoLogoutTimer()
         })
         enableFingerprintViewModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {

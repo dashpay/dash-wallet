@@ -27,11 +27,11 @@ public class AutoLogout {
 
     private static final long LOCK_TIMER_TICK_MS = TimeUnit.SECONDS.toMillis(5);
 
-    private Handler lockTimerClock = new Handler();
+    private final Handler lockTimerClock = new Handler();
     private long tickCounter;
     private boolean timerActive = false;
 
-    private Configuration config;
+    private final Configuration config;
 
     private boolean appInBackground = false;
 
@@ -47,7 +47,7 @@ public class AutoLogout {
         }
     };
 
-    AutoLogout(Configuration config) {
+    public AutoLogout(Configuration config) {
         this.config = config;
         this.config.registerOnSharedPreferenceChangeListener(configListener);
     }
@@ -68,7 +68,7 @@ public class AutoLogout {
         timerActive = true;
     }
 
-    private Runnable timerTask = new Runnable() {
+    private final Runnable timerTask = new Runnable() {
         @Override
         public void run() {
             tickCounter += LOCK_TIMER_TICK_MS;
@@ -117,7 +117,7 @@ public class AutoLogout {
         return timerActive;
     }
 
-    interface OnLogoutListener {
+    public interface OnLogoutListener {
         void onLogout(boolean isAppInBackground);
     }
 }
