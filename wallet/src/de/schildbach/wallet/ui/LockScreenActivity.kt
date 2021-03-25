@@ -41,12 +41,14 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
+import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
+import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
 
 
-class LockScreenActivity : SendCoinsQrActivity() {
+class LockScreenActivity : InteractionAwareActivity() {
 
     private val walletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
@@ -59,9 +61,9 @@ class LockScreenActivity : SendCoinsQrActivity() {
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
     private val temporaryLockCheckRunnable = Runnable {
         if (pinRetryController.isLocked) {
-            setState(State.LOCKED)
+            setLockState(State.LOCKED)
         } else {
-            setState(State.ENTER_PIN)
+            setLockState(State.ENTER_PIN)
         }
     }
 
@@ -79,7 +81,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_lock_screen)
+        super.setContentView(R.layout.activity_lock_screen_root)
         setupKeyboardBottomMargin()
 
         pinRetryController = PinRetryController.getInstance()
@@ -87,6 +89,15 @@ class LockScreenActivity : SendCoinsQrActivity() {
         initViewModel()
 
         setupBackupSeedReminder()
+    }
+
+    override fun setContentView(contentViewResId: Int) {
+        setContentView(layoutInflater.inflate(contentViewResId, null))
+    }
+
+    override fun setContentView(contentView: View?) {
+        regular_content.removeAllViews()
+        regular_content.addView(contentView)
     }
 
     private fun setupBackupSeedReminder() {
@@ -142,16 +153,16 @@ class LockScreenActivity : SendCoinsQrActivity() {
 
     private fun initView() {
         action_login_with_pin.setOnClickListener {
-            setState(State.ENTER_PIN)
+            setLockState(State.ENTER_PIN)
         }
         action_login_with_fingerprint.setOnClickListener {
-            setState(State.USE_FINGERPRINT)
+            setLockState(State.USE_FINGERPRINT)
         }
         action_receive.setOnClickListener {
             startActivity(QuickReceiveActivity.createIntent(this))
         }
         action_scan_to_pay.setOnClickListener {
-            performScanning(it)
+//            performScanning(it)
         }
         numeric_keyboard.setFunctionEnabled(false)
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -193,13 +204,13 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 Status.ERROR -> {
                     pinRetryController.failedAttempt(it.data!!)
                     if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
+                        setLockState(State.LOCKED)
                     } else {
-                        setState(State.INVALID_PIN)
+                        setLockState(State.INVALID_PIN)
                     }
                 }
                 Status.LOADING -> {
-                    setState(State.DECRYPTING)
+                    setLockState(State.DECRYPTING)
                 }
                 Status.SUCCESS -> {
                     if (EnableFingerprintDialog.shouldBeShown(this)) {
@@ -224,15 +235,16 @@ class LockScreenActivity : SendCoinsQrActivity() {
         if (shouldShowBackupReminder) {
             intent = VerifySeedActivity.createIntent(this, pin)
             configuration.resetBackupSeedReminderTimer()
+            startActivity(intent)
+            finish()
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } else {
-            intent = WalletActivity.createIntent(this)
+//            intent = WalletActivity.createIntent(this)
+            root_view_switcher.displayedChild = 1
         }
-        startActivity(intent)
-        finish()
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
-    private fun setState(state: State) {
+    private fun setLockState(state: State) {
 
         action_scan_to_pay.isEnabled = true
 
@@ -293,18 +305,22 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 numeric_keyboard.visibility = View.GONE
             }
         }
+
+        if (root_view_switcher.displayedChild != 0) {
+            root_view_switcher.displayedChild = 0
+        }
     }
 
     private fun setupInitState() {
         if (pinRetryController.isLocked) {
-            setState(State.LOCKED)
+            setLockState(State.LOCKED)
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             fingerprintHelper = FingerprintHelper(this)
             fingerprintHelper?.run {
                 if (init() && isFingerprintEnabled) {
-                    setState(State.USE_FINGERPRINT)
+                    setLockState(State.USE_FINGERPRINT)
                     startFingerprintListener()
                     return
                 } else {
@@ -314,7 +330,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
                 }
             }
         }
-        setState(State.ENTER_PIN)
+        setLockState(State.ENTER_PIN)
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -357,7 +373,7 @@ class LockScreenActivity : SendCoinsQrActivity() {
         dialogBuilder.setMessage(R.string.fingerprint_changed_message)
         dialogBuilder.setPositiveButton(android.R.string.ok) { _, _ ->
             fingerprintHelper!!.resetFingerprintKeyChanged()
-            setState(State.ENTER_PIN)
+            setLockState(State.ENTER_PIN)
         }
         dialogBuilder.show()
     }

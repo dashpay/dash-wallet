@@ -116,7 +116,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
 //            WalletActivity.createIntent(this)
 //        }
 //        startActivity(intent)
-        startActivity(WalletActivity.createIntent(this))
+//        startActivity(WalletActivity.createIntent(this))
+        startActivity(Intent(this, LockScreenActivity::class.java))
         finish()
     }
 
