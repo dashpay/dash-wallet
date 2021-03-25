@@ -68,6 +68,7 @@
             android:screenOrientation="portrait"
             android:taskAffinity=""
             android:launchMode="singleTask"
+            android:excludeFromRecents="true"
             android:theme="@style/SplashActivity.Theme">
 
             <intent-filter>
@@ -99,7 +100,7 @@
             android:taskAffinity=""
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.NoStatusBar" />
+            android:theme="@style/SplashActivity.Theme" />
 
         <activity-alias
             android:name="de.schildbach.wallet.WalletActivity"

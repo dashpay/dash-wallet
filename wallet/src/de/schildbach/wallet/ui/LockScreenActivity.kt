@@ -49,7 +49,7 @@ import org.dash.wallet.common.ui.DialogBuilder
 import java.util.concurrent.TimeUnit
 
 
-class LockScreenActivity : AppCompatActivity() {
+open class LockScreenActivity : AppCompatActivity() {
 
     private val walletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
@@ -94,6 +94,8 @@ class LockScreenActivity : AppCompatActivity() {
 
         setupBackupSeedReminder()
         setupAutoLogout()
+
+        setupInitState()
     }
 
     override fun setContentView(contentViewResId: Int) {
@@ -175,7 +177,6 @@ class LockScreenActivity : AppCompatActivity() {
             }
         }
 
-        setupInitState()
         startBlockchainService()
     }
 
