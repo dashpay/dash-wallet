@@ -48,21 +48,6 @@ import java.util.concurrent.TimeUnit
 
 class LockScreenActivity : SendCoinsQrActivity() {
 
-    companion object {
-        @JvmStatic
-        fun createIntent(context: Context): Intent {
-            return Intent(context, LockScreenActivity::class.java)
-        }
-
-        @JvmStatic
-        fun createIntentAsNewTask(context: Context): Intent {
-            return createIntent(context)
-                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                            or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-        }
-    }
-
     private val walletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
     private lateinit var viewModel: LockScreenViewModel

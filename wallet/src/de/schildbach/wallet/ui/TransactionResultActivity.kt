@@ -91,7 +91,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
                         startActivity(WalletActivity.createIntent(this))
                     }
                     else -> {
-                        startActivity(LockScreenActivity.createIntentAsNewTask(this))
+//                        startActivity(LockScreenActivity.createIntentAsNewTask(this))
+                        startActivity(WalletActivity.createIntent(this))
                     }
                 }
             }

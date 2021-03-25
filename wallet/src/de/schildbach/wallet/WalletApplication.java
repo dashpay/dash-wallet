@@ -830,9 +830,9 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
     private void lockTheApp(Context context, Activity activity) {
         if (!isSpecialActivity(activity)) {
-            context = context.getApplicationContext();
-            Intent lockScreenIntent = LockScreenActivity.createIntentAsNewTask(context);
-            context.startActivity(lockScreenIntent);
+//            context = context.getApplicationContext();
+//            Intent lockScreenIntent = LockScreenActivity.createIntentAsNewTask(context);
+//            context.startActivity(lockScreenIntent);
         }
         deviceWasLocked = false;
     }

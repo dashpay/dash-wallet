@@ -110,12 +110,13 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun startMainActivity() {
-        val intent = if (walletApplication.configuration.autoLogoutEnabled) {
-            LockScreenActivity.createIntent(this)
-        } else {
-            WalletActivity.createIntent(this)
-        }
-        startActivity(intent)
+//        val intent = if (walletApplication.configuration.autoLogoutEnabled) {
+//            LockScreenActivity.createIntent(this)
+//        } else {
+//            WalletActivity.createIntent(this)
+//        }
+//        startActivity(intent)
+        startActivity(WalletActivity.createIntent(this))
         finish()
     }
 
