@@ -22,6 +22,7 @@ import android.os.Process
 import android.text.format.DateUtils
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
+import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import com.google.common.util.concurrent.SettableFuture
 import de.schildbach.wallet.AppDatabase
@@ -121,6 +122,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val backgroundHandler: Handler
 
     private var mainHandler: Handler = Handler(walletApplication.mainLooper)
+    private lateinit var platformSyncJob: Job
 
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
 
@@ -130,10 +132,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun init() {
-        GlobalScope.launch {
+        platformSyncJob = GlobalScope.launch {
             blockchainIdentityDataDao.load()?.let {
                 blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
                 platformRepoInstance.initializeStateRepository()
+                log.info("Starting the platform sync job")
                 while (isActive) {
                     platformRepoInstance.updateContactRequests()
                     delay(UPDATE_TIMER_DELAY)
@@ -141,6 +144,34 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
         }
     }
+
+    fun resume() {
+        if(!platformSyncJob.isActive && this::blockchainIdentity.isInitialized) {
+            platformSyncJob = GlobalScope.launch {
+                log.info("Resuming the platform sync job")
+                while (isActive) {
+                    platformRepoInstance.updateContactRequests()
+                    delay(UPDATE_TIMER_DELAY)
+                }
+            }
+        }
+    }
+
+    fun shutdown() {
+        Preconditions.checkState(platformSyncJob.isActive)
+        log.info("Shutting down the platform sync job")
+        platformSyncJob.cancel("shutdown the platform sync")
+    }
+
+    /*fun platformSync() {
+        platformSyncScope = GlobalScope.launch {
+            while (isActive) {
+                platformRepoInstance.updateContactRequests()
+                delay(UPDATE_TIMER_DELAY)
+            }
+        }
+        scope.c
+    }*/
 
     /**
      * This method looks at all items in the database tables

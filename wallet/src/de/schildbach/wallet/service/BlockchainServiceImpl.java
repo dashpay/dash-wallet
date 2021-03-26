@@ -893,6 +893,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             client.getDapiAddressListProvider().addBannedAddress("45.48.168.16");
             client.getDapiAddressListProvider().addBannedAddress("71.239.154.151");
             client.getDapiAddressListProvider().addBannedAddress("174.34.233.98");
+
+            PlatformRepo.getInstance().resume();
         }
 
         updateAppWidget();
@@ -995,6 +997,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         application.getWallet().removeCoinsReceivedEventListener(walletEventListener);
 
         unregisterReceiver(connectivityReceiver);
+
+        PlatformRepo.getInstance().shutdown();
 
         if (peerGroup != null) {
             peerGroup.removeDisconnectedEventListener(peerConnectivityListener);
