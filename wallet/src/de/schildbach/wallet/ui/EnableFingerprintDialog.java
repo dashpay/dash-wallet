@@ -30,7 +30,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.lifecycle.ViewModelProviders;
+import androidx.lifecycle.ViewModelProvider;
 
 import org.dash.wallet.common.ui.DialogBuilder;
 
@@ -48,7 +48,7 @@ public class EnableFingerprintDialog extends DialogFragment {
     private FingerprintView fingerprintView;
     private CancellationSignal fingerprintCancellationSignal;
 
-    private CheckPinSharedModel sharedModel;
+    private SharedViewModel sharedModel;
 
     private static final String PASSWORD_ARG = "fingerprint_password";
     private static final String ARG_REQUEST_CODE = "arg_request_code";
@@ -149,9 +149,13 @@ public class EnableFingerprintDialog extends DialogFragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         if (getActivity() != null) {
-            sharedModel = ViewModelProviders.of(getActivity()).get(CheckPinSharedModel.class);
+            sharedModel = new ViewModelProvider(getActivity()).get(SharedViewModel.class);
         } else {
             throw new IllegalStateException("Invalid Activity");
         }
+    }
+
+    public static class SharedViewModel extends CheckPinSharedModel {
+
     }
 }

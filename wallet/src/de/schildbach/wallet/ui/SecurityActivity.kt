@@ -28,6 +28,7 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.FingerprintHelper
@@ -63,7 +64,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             configuration.hideBalance = hideBalanceOnLaunch
         }
 
-        val checkPinSharedModel: CheckPinSharedModel = ViewModelProviders.of(this).get(CheckPinSharedModel::class.java)
+        val checkPinSharedModel: CheckPinSharedModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
         checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (requestCode, pin) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_BACKUP -> {
@@ -90,7 +91,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             }
         })
 
-        val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProviders.of(this).get(DecryptSeedSharedModel::class.java)
+        val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProvider(this)[DecryptSeedSharedModel::class.java]
         decryptSeedSharedModel.onDecryptSeedCallback.observe(this, Observer<Pair<Int?, DeterministicSeed?>> { (requestCode, seed) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {

@@ -31,7 +31,7 @@ import org.dash.wallet.common.InteractionAwareActivity
  * @author Samuel Barbosa
  */
 @SuppressLint("Registered")
-abstract class BaseMenuActivity : InteractionAwareActivity() {
+abstract class BaseMenuActivity : LockScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

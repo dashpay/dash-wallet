@@ -19,6 +19,7 @@ package de.schildbach.wallet;
 import android.content.SharedPreferences;
 import android.os.Handler;
 
+import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 
 import java.util.concurrent.TimeUnit;
@@ -85,7 +86,7 @@ public class AutoLogout {
 
     public boolean shouldLogout() {
         long autoLogoutMillis = TimeUnit.MINUTES.toMillis(config.getAutoLogoutMinutes());
-        boolean logoutTimeExceeded = (config.getAutoLogoutMinutes() == 0) || tickCounter >= autoLogoutMillis;
+        boolean logoutTimeExceeded = (config.getAutoLogoutMinutes() == 0 && WalletApplication.getInstance().appWasInBackground) || tickCounter >= autoLogoutMillis;
         return config.getAutoLogoutEnabled() && logoutTimeExceeded;
     }
 

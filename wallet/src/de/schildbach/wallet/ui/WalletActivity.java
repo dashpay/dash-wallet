@@ -85,7 +85,6 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.ShortcutsPane;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
@@ -113,7 +112,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
-    private FingerprintHelper fingerprintHelper;
 
     private ShortcutsPane shortcutsPane;
 
@@ -160,8 +158,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
 
-        initFingerprintHelper();
-
         this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 
         View appBar = findViewById(R.id.app_bar);
@@ -186,16 +182,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 updateSyncState();
             }
         });
-    }
-
-    private void initFingerprintHelper() {
-        //Init fingerprint helper
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            fingerprintHelper = new FingerprintHelper(this);
-            if (!fingerprintHelper.init()) {
-                fingerprintHelper = null;
-            }
-        }
     }
 
     private void initView() {
@@ -775,10 +761,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         config.disarmBackupReminder();
         this.wallet = application.getWallet();
         upgradeWalletKeyChains(Constants.BIP44_PATH, true);
-
-        if (fingerprintHelper != null) {
-            fingerprintHelper.clear();
-        }
     }
 
     private void resetBlockchain() {

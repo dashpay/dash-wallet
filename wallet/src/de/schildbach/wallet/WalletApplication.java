@@ -127,7 +127,7 @@ public class WalletApplication extends MultiDexApplication {
 
     private static final int BLOCKCHAIN_SYNC_JOB_ID = 1;
 
-    private boolean appInBackground = false;
+    public boolean appWasInBackground = false;
 
     public boolean myPackageReplaced = false;
 
@@ -162,7 +162,7 @@ public class WalletApplication extends MultiDexApplication {
 
             @Override
             protected void onStartedFirst(Activity activity) {
-                appInBackground = false;
+//                appInBackground = false;
             }
 
             @Override
@@ -177,7 +177,7 @@ public class WalletApplication extends MultiDexApplication {
 
             @Override
             protected void onStoppedLast() {
-                appInBackground = true;
+                appWasInBackground = true;
             }
         });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);

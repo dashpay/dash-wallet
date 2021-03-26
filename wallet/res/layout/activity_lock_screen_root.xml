@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ViewAnimator xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root_view_switcher"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dash_blue"
     android:fitsSystemWindows="false">
 
-    <include layout="@layout/activity_lock_screen" />
-
-    <FrameLayout
-        android:id="@+id/regular_content"
+    <ViewAnimator
+        android:id="@+id/root_view_switcher"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-</ViewAnimator>
+        <include layout="@layout/activity_lock_screen" />
+
+        <FrameLayout
+            android:id="@+id/regular_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fitsSystemWindows="true" />
+
+    </ViewAnimator>
+</FrameLayout>
