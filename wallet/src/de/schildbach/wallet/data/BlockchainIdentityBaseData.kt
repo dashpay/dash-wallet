@@ -25,7 +25,9 @@ data class BlockchainIdentityBaseData(val id: Int,
                                       val username: String?,
                                       val userId: String?,
                                       val restoring: Boolean,
-                                      val creditFundingTxId: Sha256Hash? = null) {
+                                      val creditFundingTxId: Sha256Hash? = null,
+                                      val usingInvite: Boolean = false,
+                                      val invite: InvitationLinkData? = null) {
 
     val creationInProgress: Boolean
         get() = creationState > BlockchainIdentityData.CreationState.NONE &&

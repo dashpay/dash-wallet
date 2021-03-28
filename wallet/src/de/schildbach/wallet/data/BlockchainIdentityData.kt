@@ -36,6 +36,8 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
                                   var restoring: Boolean,
                                   var identity: Identity? = null,
                                   var creditFundingTxId: Sha256Hash? = null,
+                                  var usingInvite: Boolean = false,
+                                  var invite: InvitationLinkData? = null,
                                   var preorderSalt: ByteArray? = null,
                                   var registrationStatus: BlockchainIdentity.RegistrationStatus? = null,
                                   var usernameStatus: BlockchainIdentity.UsernameStatus? = null,
