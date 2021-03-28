@@ -404,7 +404,7 @@
     <string name="invitation_invalid_invite_message">Your invitation from %s is not valid</string>
     <string name="invitation_username_already_found_title">Username already found</string>
     <string name="invitation_username_already_found_message">You cannot claim this invite since you already have a Dash username</string>
-    <string name="invitation_accept_title_1">Get you Username</string>
+    <string name="invitation_accept_title_1">Get your Username</string>
     <string name="invitation_accept_message_1">Pay to usernames. No more alphanumeric addresses</string>
     <string name="invitation_accept_title_2">Add your Friends &amp; Family</string>
     <string name="invitation_accept_message_2">Invite your family, find your friends by searching their usernames</string>
@@ -423,6 +423,7 @@
     <string name="processing_done_title">Hello %s,</string>
     <string name="processing_done_subtitle">Your account is ready</string>
     <string name="processing_error_title">Error Upgrading</string>
+    <string name="processing_error_title_from_invite">Error Upgrading from invite</string>
     <string name="processing_error_retry">Retry</string>
     <string name="processing_username_unavailable_title">Username Unavailable</string>
     <string name="processing_username_unavailable_subtitle">Please choose another</string>

@@ -46,9 +46,10 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
                 inviteData.value = Resource.loading()
                 viewModelScope.launch(Dispatchers.IO) {
                     try {
-                        invite.validation = platformRepo.validateInvitation(invite.cftx)
+                        invite.validation = platformRepo.validateInvitation(invite)
 
-                        if (invite.user == dashPayProfile?.username) {
+                        if (hasIdentity) {
+                            // we have an identity, so cancel this invite
                             inviteData.postValue(Resource.canceled(invite))
                         } else {
                             inviteData.postValue(Resource.success(invite))

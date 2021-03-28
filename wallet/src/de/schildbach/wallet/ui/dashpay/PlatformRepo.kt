@@ -610,6 +610,25 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+
+    //
+    // Step 2 is to obtain the credit funding transaction for invites
+    //
+    suspend fun obtainCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
+        withContext(Dispatchers.IO) {
+            Context.propagate(walletApplication.wallet.context)
+            val cftxData = platform.client.getTransaction(invite.cftx)
+            val cftx = CreditFundingTransaction(platform.params, cftxData!!.toByteArray())
+            val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
+            cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
+
+            val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock))
+
+            cftx.confidence.setInstantSendLock(instantSendLock)
+            blockchainIdentity.initializeCreditFundingTransaction(cftx)
+        }
+    }
+
     //
     // Step 3: Register the identity
     //
@@ -1415,14 +1434,38 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun validateInvitation(txId: String): Boolean {
-        val tx = platform.client.getTransaction(txId)
-        var identity: Identity? = null
+    fun validateInvitation(invite: InvitationLinkData): Boolean {
+        val tx = platform.client.getTransaction(invite.cftx)
         if (tx != null) {
             val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.toByteArray())
-            identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
+            val identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
+            if (identity == null) {
+                return try {
+                    DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
+                    InstantSendLock(Constants.NETWORK_PARAMETERS, Utils.HEX.decode(invite.instantSendLock))
+                    log.info("Invite is valid")
+                    true
+                } catch (e: AddressFormatException.WrongNetwork) {
+                    log.warn("Invite has private key from wrong network: $e")
+                    false
+                } catch (e: AddressFormatException) {
+                    log.warn("Invite has invalid private key: $e")
+                    false
+                } catch (e: Exception) {
+                    log.warn("Invite has invalid instantSendLock: $e")
+                    false
+                }
+            } else {
+                log.warn("Invitation has been used: ${identity.id}")
+            }
         }
-        return identity == null
+        return false
+    }
+
+    fun clearBlockchainData() {
+        GlobalScope.launch(Dispatchers.IO) {
+            blockchainIdentityDataDao.clear()
+        }
     }
 
 }
