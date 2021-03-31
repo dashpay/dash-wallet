@@ -1468,4 +1468,25 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun handleSentCreditFundingTransaction(cftx: CreditFundingTransaction) {
+        if (this::blockchainIdentity.isInitialized) {
+            GlobalScope.launch(Dispatchers.IO) {
+                val inviteFundingKeyChain = walletApplication.wallet.invitationFundingKeyChain
+                val identityId = cftx.creditBurnIdentityIdentifier.toStringBase58();
+                if (inviteFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) == null) {
+                    // this is not in our database
+                    val invite = Invitation(identityId, cftx.txId, cftx.updateTime.time,
+                            "", cftx.updateTime.time, 0)
+
+                    // profile information here
+                    if(updateDashPayProfile(identityId)) {
+                        val profile = dashPayProfileDao.loadByUserId(identityId)
+                        invite.acceptedAt = profile?.createdAt ?: -1 // it was accepted in the past, use profile creation as the default
+                    }
+                    invitationsDao.insert(invite)
+                }
+            }
+        }
+    }
+
 }

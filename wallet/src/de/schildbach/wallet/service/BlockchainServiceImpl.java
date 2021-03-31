@@ -47,6 +47,7 @@ import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
+import com.lambdaworks.jni.Platform;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;
@@ -240,8 +241,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
             if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
+                // Handle credit function transactions (username creation, topup, invites)
                 CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
-                ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), cftx.getCreditBurnIdentityIdentifier().getBytes()));
+                PlatformRepo platformRepo = PlatformRepo.getInstance();
+                if (platformRepo != null) {
+                    platformRepo.handleSentCreditFundingTransaction(cftx);
+                }
             }
             updateAppWidget();
         }
