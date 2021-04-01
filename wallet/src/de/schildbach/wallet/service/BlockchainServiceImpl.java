@@ -47,7 +47,6 @@ import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.common.base.Stopwatch;
-import com.lambdaworks.jni.Platform;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Block;

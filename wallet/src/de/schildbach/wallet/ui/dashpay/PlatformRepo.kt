@@ -838,7 +838,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDao.insert(blockchainIdentityData)
     }
 
-    private suspend fun updateDashPayProfile(userId: String) {
+    private suspend fun updateDashPayProfile(userId: String): Boolean {
         var profileDocument = profiles.get(userId)
                 ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
@@ -849,7 +849,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             val profile = DashPayProfile.fromDocument(profileDocument, username)
             dashPayProfileDao.insert(profile!!)
+            return true
         }
+        return false
     }
 
     suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
@@ -1489,5 +1491,4 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
         }
     }
-
 }
