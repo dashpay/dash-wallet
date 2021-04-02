@@ -57,7 +57,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
         if (finishIfNotInitialized()) {
             return;
         }
-
+        getIntent().putExtra(LockScreenActivity.INTENT_EXTRA_KEEP_UNLOCKED, true);
         if (savedInstanceState == null && isQuickScan()) {
             performScanning(null);
         }
@@ -80,7 +80,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
             new StringInputParser(input, true) {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, false);
+                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, false, true);
 
                     if (isQuickScan()) {
                         SendCoinsQrActivity.this.finish();

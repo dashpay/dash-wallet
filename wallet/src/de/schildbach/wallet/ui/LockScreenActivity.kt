@@ -52,10 +52,12 @@ import java.util.concurrent.TimeUnit
 open class LockScreenActivity : AppCompatActivity() {
 
     companion object {
-        private val walletApplication = WalletApplication.getInstance()
-        private val configuration = walletApplication.configuration
-        private val autoLogout = AutoLogout(configuration)
+        const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
     }
+
+    val walletApplication: WalletApplication = WalletApplication.getInstance()
+    private val configuration = walletApplication.configuration
+    private val autoLogout: AutoLogout = walletApplication.autoLogout
 
     private lateinit var viewModel: LockScreenViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
@@ -89,8 +91,18 @@ open class LockScreenActivity : AppCompatActivity() {
     private lateinit var fingerprintCancellationSignal: CancellationSignal
     private lateinit var pinRetryController: PinRetryController
 
+    private val keepUnlocked by lazy {
+        intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (walletApplication.wallet == null) {
+            finish()
+            return
+        }
+
         super.setContentView(R.layout.activity_lock_screen_root)
         setupKeyboardBottomMargin()
 
@@ -99,7 +111,6 @@ open class LockScreenActivity : AppCompatActivity() {
         initViewModel()
 
         setupBackupSeedReminder()
-        setupAutoLogout()
 
         setupInitState()
     }
@@ -111,10 +122,6 @@ open class LockScreenActivity : AppCompatActivity() {
     override fun setContentView(contentView: View?) {
         regular_content.removeAllViews()
         regular_content.addView(contentView)
-    }
-
-    private fun setupAutoLogout() {
-        maybeStartAutoLogoutTimer()
     }
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
@@ -179,15 +186,15 @@ open class LockScreenActivity : AppCompatActivity() {
         registerDeviceInteractiveReceiver()
         autoLogout.setOnLogoutListener(onLogoutListener)
 
-        if (configuration.autoLogoutEnabled && (deviceWasLocked || (autoLogout.shouldLogout() && walletApplication.appWasInBackground))) {
-            walletApplication.appWasInBackground = false
+        if (!keepUnlocked && (autoLogout.keepLockedUntilPinEntered || configuration.autoLogoutEnabled && (deviceWasLocked || autoLogout.shouldLogout()))) {
             setLockState(State.ENTER_PIN)
+            autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
                 autoLogout.stopTimer()
             }
         } else {
             root_view_switcher.displayedChild = 1
-            maybeStartAutoLogoutTimer()
+            autoLogout.maybeStartAutoLogoutTimer()
         }
 
         startBlockchainService()
@@ -195,7 +202,6 @@ open class LockScreenActivity : AppCompatActivity() {
 
     override fun onStop() {
         unregisterDeviceInteractiveReceiver()
-        autoLogout.setAppInBackground(true)
         super.onStop()
     }
 
@@ -212,9 +218,11 @@ open class LockScreenActivity : AppCompatActivity() {
         }
         action_receive.setOnClickListener {
             startActivity(QuickReceiveActivity.createIntent(this))
+            autoLogout.keepLockedUntilPinEntered = true
         }
         action_scan_to_pay.setOnClickListener {
-//            performScanning(it)
+            startActivity(SendCoinsQrActivity.createIntent(this, true))
+            autoLogout.keepLockedUntilPinEntered = true
         }
         numeric_keyboard.setFunctionEnabled(false)
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -275,7 +283,6 @@ open class LockScreenActivity : AppCompatActivity() {
         })
         enableFingerprintViewModel = ViewModelProvider(this)[EnableFingerprintDialog.SharedViewModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
-            val requestCode = it.first
             val pin = it.second
             onCorrectPin(pin)
         })
@@ -283,7 +290,8 @@ open class LockScreenActivity : AppCompatActivity() {
 
     private fun onCorrectPin(pin: String) {
         pinRetryController.clearPinFailPrefs()
-        maybeStartAutoLogoutTimer()
+        autoLogout.keepLockedUntilPinEntered = false
+        autoLogout.maybeStartAutoLogoutTimer()
         if (shouldShowBackupReminder) {
             val intent = VerifySeedActivity.createIntent(this, pin)
             configuration.resetBackupSeedReminderTimer()
@@ -294,10 +302,6 @@ open class LockScreenActivity : AppCompatActivity() {
 //            intent = WalletActivity.createIntent(this)
             root_view_switcher.displayedChild = 1
         }
-    }
-
-    private fun maybeStartAutoLogoutTimer() {
-        autoLogout.setup()
     }
 
     private fun setLockState(state: State) {

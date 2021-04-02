@@ -400,6 +400,10 @@ class SetPinActivity : InteractionAwareActivity() {
             } else {
                 goHome()
             }
+            walletApplication.autoLogout.apply {
+                maybeStartAutoLogoutTimer()
+                keepLockedUntilPinEntered = false
+            }
         })
         enableFingerprintViewModel = ViewModelProvider(this)[EnableFingerprintDialog.SharedViewModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
@@ -409,16 +413,6 @@ class SetPinActivity : InteractionAwareActivity() {
                 finish()
             }
         })
-    }
-
-    private fun startActivityNewTask(intent: Intent) {
-        intent.apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-//            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(intent)
-        finish()
     }
 
     override fun finish() {
@@ -448,12 +442,12 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun startVerifySeedActivity() {
-        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
-        startActivityNewTask(intent)
+        startActivity(VerifySeedActivity.createIntent(this, seed.toTypedArray()))
+        finish()
     }
 
     private fun goHome() {
-        val intent = Intent(this, WalletActivity::class.java)
-        startActivityNewTask(intent)
+        startActivity(WalletActivity.createIntent(this))
+        finish()
     }
 }

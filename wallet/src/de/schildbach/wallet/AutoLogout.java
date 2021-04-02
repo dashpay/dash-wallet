@@ -19,7 +19,6 @@ package de.schildbach.wallet;
 import android.content.SharedPreferences;
 import android.os.Handler;
 
-import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 
 import java.util.concurrent.TimeUnit;
@@ -34,7 +33,8 @@ public class AutoLogout {
 
     private final Configuration config;
 
-    private boolean appInBackground = false;
+    private boolean appWentBackground = true;
+    public boolean keepLockedUntilPinEntered = true;
 
     private OnLogoutListener onLogoutListener;
 
@@ -43,6 +43,7 @@ public class AutoLogout {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
             if (Configuration.PREFS_KEY_AUTO_LOGOUT_ENABLED.equals(key) || Configuration.PREFS_KEY_AUTO_LOGOUT_MINUTES.equals(key)) {
+                setAppWentBackground(false);
                 setup();
             }
         }
@@ -64,6 +65,10 @@ public class AutoLogout {
         }
     }
 
+    public void maybeStartAutoLogoutTimer() {
+        setup();
+    }
+
     public void startTimer() {
         lockTimerClock.postDelayed(timerTask, LOCK_TIMER_TICK_MS);
         timerActive = true;
@@ -72,10 +77,11 @@ public class AutoLogout {
     private final Runnable timerTask = new Runnable() {
         @Override
         public void run() {
+            System.out.println("dupa12: " + tickCounter);
             tickCounter += LOCK_TIMER_TICK_MS;
             if (shouldLogout()) {
                 if (onLogoutListener != null) {
-                    onLogoutListener.onLogout(appInBackground);
+                    onLogoutListener.onLogout(appWentBackground);
                 }
                 timerActive = false;
             } else {
@@ -86,7 +92,7 @@ public class AutoLogout {
 
     public boolean shouldLogout() {
         long autoLogoutMillis = TimeUnit.MINUTES.toMillis(config.getAutoLogoutMinutes());
-        boolean logoutTimeExceeded = (config.getAutoLogoutMinutes() == 0 && WalletApplication.getInstance().appWasInBackground) || tickCounter >= autoLogoutMillis;
+        boolean logoutTimeExceeded = (config.getAutoLogoutMinutes() == 0) ? appWentBackground : (tickCounter >= autoLogoutMillis);
         return config.getAutoLogoutEnabled() && logoutTimeExceeded;
     }
 
@@ -110,8 +116,9 @@ public class AutoLogout {
         }
     }
 
-    public void setAppInBackground(boolean appInBackground) {
-        this.appInBackground = appInBackground;
+    public void setAppWentBackground(boolean appWentBackground) {
+        this.appWentBackground = appWentBackground;
+        System.out.println("dupa34: " + appWentBackground);
     }
 
     public boolean isTimerActive() {

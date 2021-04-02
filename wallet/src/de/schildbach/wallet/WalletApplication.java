@@ -60,6 +60,7 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,15 +87,8 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
-import de.schildbach.wallet.ui.ImportSharedImageActivity;
-import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.RestoreWalletActivity;
-import de.schildbach.wallet.ui.ShortcutComponentActivity;
-import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.security.SecurityGuard;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
@@ -103,7 +97,8 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication {
+public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler {
+
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -127,9 +122,9 @@ public class WalletApplication extends MultiDexApplication {
 
     private static final int BLOCKCHAIN_SYNC_JOB_ID = 1;
 
-    public boolean appWasInBackground = false;
-
     public boolean myPackageReplaced = false;
+
+    private AutoLogout autoLogout;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -141,28 +136,18 @@ public class WalletApplication extends MultiDexApplication {
         return walletFile.exists();
     }
 
-    private boolean isSpecialActivity(Activity activity) {
-        return (activity instanceof OnboardingActivity)
-                || (activity instanceof SendCoinsActivity)
-                || (activity instanceof WalletUriHandlerActivity)
-                || (activity instanceof ScanActivity)
-                || (activity instanceof ImportSharedImageActivity)
-                || (activity instanceof ShortcutComponentActivity)
-                || (activity instanceof RestoreWalletActivity);
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
-
+        autoLogout = new AutoLogout(config);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
 
             @Override
             protected void onStartedFirst(Activity activity) {
-//                appInBackground = false;
+
             }
 
             @Override
@@ -177,7 +162,7 @@ public class WalletApplication extends MultiDexApplication {
 
             @Override
             protected void onStoppedLast() {
-                appWasInBackground = true;
+                autoLogout.setAppWentBackground(true);
             }
         });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
@@ -341,6 +326,7 @@ public class WalletApplication extends MultiDexApplication {
             backupWallet();
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void initLogging() {
         // create log dir
         final File logDir = new File(getFilesDir(), "log");
@@ -349,6 +335,7 @@ public class WalletApplication extends MultiDexApplication {
         // migrate old logs
         final File oldLogDir = getDir("log", MODE_PRIVATE);
         if (oldLogDir.exists()) {
+            //noinspection ConstantConditions
             for (final File logFile : oldLogDir.listFiles())
                 if (logFile.isFile() && logFile.length() > 0)
                     logFile.renameTo(new File(logDir, logFile.getName()));
@@ -778,5 +765,14 @@ public class WalletApplication extends MultiDexApplication {
 
     public static WalletApplication getInstance() {
         return instance;
+    }
+
+    public AutoLogout getAutoLogout() {
+        return autoLogout;
+    }
+
+    @Override
+    public void resetAutoLogoutTimer() {
+        autoLogout.resetTimerIfActive();
     }
 }

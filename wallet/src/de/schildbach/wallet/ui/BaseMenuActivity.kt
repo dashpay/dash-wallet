@@ -22,10 +22,8 @@ import android.os.Bundle
 import android.view.MenuItem
 import androidx.annotation.LayoutRes
 import androidx.appcompat.widget.Toolbar
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.InteractionAwareActivity
 
 /**
  * @author Samuel Barbosa
@@ -68,9 +66,6 @@ abstract class BaseMenuActivity : LockScreenActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
-
-    protected val walletApplication
-        get() = application as WalletApplication
 
     protected val configuration: Configuration
         get() = walletApplication.configuration
