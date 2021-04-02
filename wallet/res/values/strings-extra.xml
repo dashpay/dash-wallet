@@ -572,4 +572,16 @@
 
     <string name="about_developer_mode">Developer mode activated: all features enabled!</string>
     <string name="about_developer_mode_disabled">Developer mode deactivated.</string>
+    <string name="invite_history_create_new_invite">Create a new invitation</string>
+    <string name="invitations_history_header">Invitations History</string>
+    <string name="invitations_filter_title">Filter Invitations</string>
+    <string name="invite_history_empty">No invites have been created.</string>
+    <string name="invite_history_empty_claimed">There are no claimed invites.</string>
+    <string name="invite_history_empty_pending">There are no pending invites.</string>
+    <string-array name="invite_filter">
+        <item>All</item>
+        <item>Pending</item>
+        <item>Claimed</item>
+    </string-array>
+
 </resources>
