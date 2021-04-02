@@ -32,6 +32,7 @@ import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
+import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
@@ -73,7 +74,14 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
         invite.visibility = View.GONE
         invite.setOnClickListener {
-            InviteFriendActivity.startOrError(requireActivity())
+            mainActivityViewModel.inviteHistory.observe(requireActivity(), Observer {
+                if (it == null || it.isEmpty()) {
+                    InviteFriendActivity.startOrError(requireActivity())
+                } else {
+                    startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                }
+            })
+
         }
         buy_and_sell.setOnClickListener {
             if (blockchainState != null && blockchainState?.replaying!!) {
@@ -173,7 +181,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             }
         })
 
-        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, {
+        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, Observer {
             join_dashpay_container.visibility = if (it) {
                 View.VISIBLE
             } else {
