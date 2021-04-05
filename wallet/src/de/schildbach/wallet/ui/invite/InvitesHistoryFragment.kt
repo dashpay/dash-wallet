@@ -22,16 +22,14 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import de.schildbach.wallet.data.Invitation
-import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_create_new_invite.*
-import kotlinx.android.synthetic.main.fragment_invite_created.*
 import kotlinx.android.synthetic.main.fragment_invites_history.*
 import org.slf4j.LoggerFactory
 
@@ -53,9 +51,16 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
 
         setHasOptionsMenu(true)
 
+        val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
         toolbar.title = requireContext().getString(R.string.menu_invite_title)
         val appCompatActivity = requireActivity() as AppCompatActivity
         appCompatActivity.setSupportActionBar(toolbar)
+        val actionBar = appCompatActivity.supportActionBar
+        actionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setDisplayShowHomeEnabled(true)
+        }
+
 
         initViewModel()
 
@@ -91,24 +96,19 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
         })
     }
 
-    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.close_button_white_options, menu)
-        super.onCreateOptionsMenu(menu, menuInflater)
-    }
+    //override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
+    //    menuInflater.inflate(R.menu.close_button_white_options, menu)
+    //    super.onCreateOptionsMenu(menu, menuInflater)
+    //}
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.option_close -> {
-                requireActivity().run {
-                    KeyboardUtil.hideKeyboard(this, tag_edit)
-                    finish()
-                }
-                true
-            }
-            else -> {
-                super.onOptionsItemSelected(item)
+        when (item.itemId) {
+            android.R.id.home -> {
+                requireActivity().onBackPressed()
+                return true
             }
         }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onItemClicked(view: View, invitation: Invitation) {
