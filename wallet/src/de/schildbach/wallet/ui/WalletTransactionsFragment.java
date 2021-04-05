@@ -223,6 +223,14 @@ public class WalletTransactionsFragment extends Fragment
                         PlatformRepo.getInstance().clearBlockchainData();
                         adapter.setBlockchainIdentityData(null);
                         return;
+                    } else if (errorMessage.contains("InsuffientFundsError")) {
+                        InvitesHandler handler = new InvitesHandler(activity);
+                        FancyAlertDialog dialog = FancyAlertDialog.Companion.newProgress(R.string.invitation_invalid_invite_title, R.string.dashpay_insuffient_credits);
+                        dialog.show(getParentFragmentManager(), null);
+
+                        // now erase the blockchain data
+                        PlatformRepo.getInstance().clearBlockchainData();
+                        adapter.setBlockchainIdentityData(null);
                     }
                 }
                 activity.startService(CreateIdentityService.createIntentForRetryFromInvite(activity,false));
