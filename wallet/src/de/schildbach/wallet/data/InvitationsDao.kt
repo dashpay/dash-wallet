@@ -37,4 +37,7 @@ interface InvitationsDao {
 
     @Query("DELETE FROM invitation_table")
     suspend fun clear()
+
+    @Query("SELECT COUNT(*) FROM invitation_table")
+    suspend fun count(): Int
 }

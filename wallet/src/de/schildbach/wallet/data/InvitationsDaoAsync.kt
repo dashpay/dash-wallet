@@ -38,4 +38,7 @@ interface InvitationsDaoAsync {
 
     @Query("DELETE FROM invitation_table")
     fun clear()
+
+    @Query("SELECT COUNT(*) FROM invitation_table")
+    fun countAllRequests(): Int
 }
