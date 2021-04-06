@@ -1,11 +1,7 @@
-ext {
-    dashjVersion = "0.18-SNAPSHOT"
-}
-
 buildscript {
     ext.kotlin_version = '1.4.10'
     ext.ok_http_version = '3.12.12'
-
+    ext.dashjVersion = "0.18-SNAPSHOT"
     repositories {
         google()
         jcenter()

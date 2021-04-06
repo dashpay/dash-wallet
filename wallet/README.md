@@ -80,8 +80,6 @@ use
 	git clone -b master https://github.com/HashEngineering/dash-wallet.git dash-wallet
 	cd dash-wallet
 	git pull
-	git submodule init
-    git submodule update
     
 	# each time
 	cd dash-wallet
@@ -100,19 +98,17 @@ If installation fails, make sure "Developer options" and "USB debugging" are ena
 connection is established.
 
 
-### BUILDING THE DEVNET VERSION (MOBILE)
+### BUILDING THE TESTNET VERSION
 
-It's important to know that this development version uses Mobile Devnet, is debuggable and the wallet file
+It's important to know that this development version uses TestNet, is debuggable and the wallet file
 is world readable/writeable. The goal is to be able to debug easily.
 
-The `mobile` flavor builds for the Mobile Devnet.
+The `_testNet3` flavor builds for the TestNet.
 
 	# first time only
 	git clone -b evonet-develop https://github.com/dashevo/dash-wallet.git dash-wallet
 	cd dash-wallet
 	git pull
-	git submodule init
-    git submodule update
     cd ..
 
 	git clone -b master https://github.com/dashevo/android-dpp.git android-dpp
@@ -139,7 +135,7 @@ The `mobile` flavor builds for the Mobile Devnet.
 	# each time or build in Android Studio
 	cd dash-wallet
 	git pull
-    gradle clean assembleMobileDebug -x test
+    gradle clean assemble_testNet3Release -x test
 
 To install the app on your Android device, use:
 
@@ -147,7 +143,7 @@ To install the app on your Android device, use:
     sudo apt install android-tools-adb
 
 	# each time
-	adb install wallet/build/outputs/apk/dash-wallet-mobile-debug.apk
+	adb install wallet/build/outputs/apk/dash-wallet-_testNet3-debug.apk
 
 
 ### BUILDING THE PRODUCTION VERSION

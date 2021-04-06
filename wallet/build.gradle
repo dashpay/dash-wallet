@@ -13,6 +13,9 @@ repositories {
         name 'OJO snapshots'
     }
     maven {
+        url 'http://dl.bintray.com/dash/Dashj'
+    }
+    maven {
         url 'https://maven.google.com/'
         name 'Google'
     }
@@ -45,6 +48,9 @@ dependencies {
     implementation 'org.dashevo:dpp:0.18-SNAPSHOT'
     implementation 'org.dashevo:dapi-client:0.18-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
+    implementation "org.dashj-android:dashj-bls-android:0.18"
+    implementation "org.dashj-android:dashj-x11-android:0.17.5"
+    implementation "org.dashj-android:dashj-scrypt-android:0.17.5"
     implementation 'com.google.guava:guava:29.0-android'
     implementation 'com.google.zxing:core:3.3.3'    // 3.3.3 is the maximum to support Android 4.4 to 6.x
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
@@ -147,6 +153,7 @@ if (file("../local.properties").exists()) {
 
 android {
     compileSdkVersion 29
+    android.ndkVersion '21.3.6528147'
 
     lintOptions {
         abortOnError false
@@ -159,15 +166,7 @@ android {
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        ndk {
-            abiFilters 'armeabi-v7a', 'x86', 'arm64-v8a', 'x86_64'
-        }
-        externalNativeBuild {
-            cmake {
-                cFlags '-DHAVE_CONFIG_H -DWORD=32'
-                cppFlags ""
-            }
-        }
+
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
@@ -261,11 +260,7 @@ android {
             applicationId = "hashengineering.darkcoin.wallet.mobile"
         }
     }
-    externalNativeBuild {
-        cmake {
-            path 'cpp/CMakeLists.txt'
-        }
-    }
+
     packagingOptions {
         exclude 'lib/x86_64/darwin/libscrypt.dylib'
         exclude 'lib/x86_64/freebsd/libscrypt.so'
@@ -289,10 +284,6 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-}
-
-clean {
-    file('src/main/jniLibs').deleteDir()
 }
 
 apply plugin: 'com.google.gms.google-services'
