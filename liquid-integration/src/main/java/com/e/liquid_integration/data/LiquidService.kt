@@ -21,13 +21,13 @@ import retrofit2.Call
 import retrofit2.http.*
 
 interface LiquidService {
+    //force_kyc param will take you to kyc process without creating new user
     @FormUrlEncoded
     @POST("api/v1/session")
-    fun getSessionId(@Field("public_api_key") publicApiKey: String): Call<LiquidSessionId>
+    fun getSessionId(@Field("public_api_key") publicApiKey: String/*, @Field("force_kyc") forceKyc: Boolean*/): Call<LiquidSessionId>
 
     @GET("api/v1/session/{session_id}/kyc_state")
     fun getUserKycState(@Path("session_id") sessionId: String, @Header("Authorization") token: String): Call<UserKycState>
-
 
     @GET("api/v1/session/{session_id}/accounts")
     fun getUserAccount(@Path("session_id") sessionId: String, @Header("Authorization") token: String): Call<String>

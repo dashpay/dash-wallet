@@ -70,7 +70,8 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
 
     fun getSessionId(publicApiKey: String, callback: Callback<String>) {
-        service.getSessionId(publicApiKey).enqueue(object : retrofit2.Callback<LiquidSessionId?> {
+        //force_kyc commented param will take you to kyc process without creating new user
+        service.getSessionId(publicApiKey/*,true*/).enqueue(object : retrofit2.Callback<LiquidSessionId?> {
             override fun onResponse(call: Call<LiquidSessionId?>, response: Response<LiquidSessionId?>) {
                 if (response.isSuccessful) {
                     try {
