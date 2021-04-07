@@ -27,9 +27,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_create_new_invite.*
 import kotlinx.android.synthetic.main.fragment_invites_history.*
 import org.slf4j.LoggerFactory
 
@@ -70,9 +68,9 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
 
         initHistoryView()
 
-        create_new_invitation.setOnClickListener {
-            InviteFriendActivity.startOrError(requireActivity())
-        }
+        //create_new_invitation.setOnClickListener {
+        //    InviteFriendActivity.startOrError(requireActivity())
+        //}
     }
 
     private fun initViewModel() {
@@ -92,6 +90,7 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
         invitesHistoryViewModel.invitationHistory.observe(requireActivity(), Observer {
             if (it != null) {
                 invitesAdapter.history = it.sortedBy { invite -> invite.sentAt }
+                        .map { invite -> InvitationItem(InvitesAdapter.INVITE, invite) }
             }
         })
     }
@@ -111,9 +110,18 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onItemClicked(view: View, invitation: Invitation) {
-        if (invitation.userId != InvitesAdapter.headerId.toStringBase58()) {
-            log.info("showing invitation for ${invitation.userId}")
+    override fun onItemClicked(view: View, invitationItem: InvitationItem) {
+        when (invitationItem.type) {
+            InvitesAdapter.INVITE_HEADER,
+            InvitesAdapter.EMPTY_HISTORY -> {
+
+            }
+            InvitesAdapter.INVITE_CREATE -> {
+                InviteFriendActivity.startOrError(requireActivity())
+            }
+            else -> {
+                log.info("showing invitation for ${invitationItem.invitation!!.userId}")
+            }
         }
     }
 }

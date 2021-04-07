@@ -17,10 +17,6 @@ open class InvitesHeaderViewHolder(inflater: LayoutInflater,
         fun onFilter(filter: InvitesHistoryViewModel.Filter)
     }
 
-    init {
-
-    }
-
     fun bind(invitation: Invitation?,
              filter: InvitesHistoryViewModel.Filter,
              filterClick: SingleLiveEvent<InvitesHistoryViewModel.Filter>) {

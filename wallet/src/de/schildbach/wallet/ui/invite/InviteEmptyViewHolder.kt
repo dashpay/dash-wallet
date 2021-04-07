@@ -9,7 +9,7 @@ import kotlinx.android.synthetic.main.invite_empty_history_row.view.*
 open class InviteEmptyViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         InvitesHistoryViewHolder(R.layout.invite_empty_history_row, inflater, parent) {
 
-    fun bind(invitation: Invitation, filter: InvitesHistoryViewModel.Filter) {
+    fun bind(filter: InvitesHistoryViewModel.Filter) {
         itemView.apply {
             empty_text.setText(when (filter) {
                 InvitesHistoryViewModel.Filter.CLAIMED -> R.string.invite_history_empty_claimed

@@ -6,11 +6,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.ui.SingleLiveEvent
-import de.schildbach.wallet.util.PlatformUtils
-import org.bitcoinj.core.Sha256Hash
 import java.util.ArrayList
 
-class InvitesAdapter(private val itemClickListener: OnItemClickListener, private val filterClick: SingleLiveEvent<InvitesHistoryViewModel.Filter>)
+class InvitesAdapter(private val itemClickListener: OnItemClickListener,
+                     private val filterClick: SingleLiveEvent<InvitesHistoryViewModel.Filter>)
     : RecyclerView.Adapter<InvitesHistoryViewHolder>(),
         InvitesHeaderViewHolder.OnFilterListener {
 
@@ -18,22 +17,26 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener, private
         const val INVITE_HEADER = 1
         const val INVITE = 2
         const val EMPTY_HISTORY = 3
-        val headerId: Sha256Hash = Sha256Hash.of(Sha256Hash.ZERO_HASH.bytes)
-        val emptyId: Sha256Hash = Sha256Hash.of(headerId.bytes)
-        val headerInvite = Invitation(headerId.toStringBase58(), headerId, 0)
-        val emptyInvite = Invitation(emptyId.toStringBase58(), emptyId, 0)
+        const val INVITE_CREATE = 4
+        //val headerId: Sha256Hash = Sha256Hash.of(Sha256Hash.ZERO_HASH.bytes)
+        //val emptyId: Sha256Hash = Sha256Hash.of(headerId.bytes)
+        //val createId: Sha256Hash = Sha256Hash.of(BigInteger.valueOf(INVITE_CREATE.toLong()).toByteArray())
+        val headerInvite = InvitationItem(INVITE_HEADER)
+        val emptyInvite = InvitationItem(EMPTY_HISTORY)
+        val createInvite = InvitationItem(INVITE_CREATE)
     }
 
     private var filter = InvitesHistoryViewModel.Filter.ALL
 
     interface OnItemClickListener {
-        fun onItemClicked(view: View, invitation: Invitation)
+        fun onItemClicked(view: View, invitationItem: InvitationItem)
     }
 
-    var history: List<Invitation> = arrayListOf()
+    var history: List<InvitationItem> = arrayListOf()
         set(value) {
             field = value
             filteredResults.clear()
+            filteredResults.add(createInvite)
             filteredResults.add(headerInvite)
             if (value.isNotEmpty()) {
                 filteredResults.addAll(value)
@@ -42,7 +45,7 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener, private
             }
             notifyDataSetChanged()
         }
-    var filteredResults: MutableList<Invitation> = arrayListOf()
+    var filteredResults: MutableList<InvitationItem> = arrayListOf()
 
     init {
         setHasStableIds(true)
@@ -53,6 +56,7 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener, private
             INVITE_HEADER -> InvitesHeaderViewHolder(LayoutInflater.from(parent.context), this, parent)
             INVITE -> InviteViewHolder(LayoutInflater.from(parent.context), parent)
             EMPTY_HISTORY -> InviteEmptyViewHolder(LayoutInflater.from(parent.context), parent)
+            INVITE_CREATE -> CreateInviteViewHolder(LayoutInflater.from(parent.context), parent)
             else -> throw IllegalArgumentException("Invalid viewType $viewType")
         }
     }
@@ -61,42 +65,41 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener, private
         return filteredResults.size
     }
 
-    fun getItem(position: Int): Invitation {
+    fun getItem(position: Int): InvitationItem {
         return filteredResults[position]
     }
 
     override fun getItemId(position: Int): Long {
-        return PlatformUtils.longHashFromEncodedString(getItem(position).userId)
+        return getItem(position).id
     }
 
     override fun onBindViewHolder(holder: InvitesHistoryViewHolder, position: Int) {
-        val invite = getItem(position)
+        val inviteItem = getItem(position)
         when (getItemViewType(position)) {
             INVITE_HEADER -> {
                 (holder as InvitesHeaderViewHolder).bind(null, filter, filterClick)
             }
             INVITE -> {
-                (holder as InviteViewHolder).bind(invite, position)
+                (holder as InviteViewHolder).bind(inviteItem.invitation, position)
             }
             EMPTY_HISTORY -> {
-                (holder as InviteEmptyViewHolder).bind(invite, filter)
+                (holder as InviteEmptyViewHolder).bind(filter)
+            }
+            INVITE_CREATE -> {
+                (holder as CreateInviteViewHolder).bind()
             }
             else -> throw IllegalArgumentException("Invalid viewType ${getItemViewType(position)}")
         }
         holder.itemView.setOnClickListener {
             itemClickListener.run {
-                onItemClicked(it, invite)
+                onItemClicked(it, inviteItem)
             }
         }
     }
 
     override fun getItemViewType(position: Int): Int {
         val item = filteredResults[position]
-        return when {
-            (item.userId == headerId.toStringBase58()) -> INVITE_HEADER
-            (item.userId == emptyId.toStringBase58()) -> EMPTY_HISTORY
-            else ->  INVITE
-        }
+        return item.type
     }
 
     override fun onFilter(filter: InvitesHistoryViewModel.Filter) {
@@ -105,25 +108,22 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener, private
     }
 
     private fun filter() {
-        val resultTransactions: MutableList<Invitation> = ArrayList()
+        val resultTransactions: MutableList<InvitationItem> = ArrayList()
         //add header
+        resultTransactions.add(createInvite)
         resultTransactions.add(headerInvite)
-        for (invite in history) {
-            when (invite.userId) {
-                /*headerId.toStringBase58() -> {
-                    // always keep header
-                    resultTransactions.add(invite)
-                }*/
-                else -> when (filter) {
-                    InvitesHistoryViewModel.Filter.ALL -> resultTransactions.add(invite)
+        for (inviteItem in history) {
+            if (inviteItem.type == INVITE) {
+                when (filter) {
+                    InvitesHistoryViewModel.Filter.ALL -> resultTransactions.add(inviteItem)
                     InvitesHistoryViewModel.Filter.PENDING -> {
-                        if (invite.acceptedAt == 0L) {
-                            resultTransactions.add(invite)
+                        if (inviteItem.invitation!!.acceptedAt == 0L) {
+                            resultTransactions.add(inviteItem)
                         }
                     }
                     InvitesHistoryViewModel.Filter.CLAIMED -> {
-                        if (invite.acceptedAt != 0L) {
-                            resultTransactions.add(invite)
+                        if (inviteItem.invitation!!.acceptedAt != 0L) {
+                            resultTransactions.add(inviteItem)
                         }
                     }
                 }
@@ -131,8 +131,9 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener, private
         }
         filteredResults.clear()
         filteredResults.addAll(resultTransactions)
-        if (filteredResults.size == 1)
+        if (filteredResults.size == 1) {
             filteredResults.add(emptyInvite)
+        }
 
         notifyDataSetChanged()
     }

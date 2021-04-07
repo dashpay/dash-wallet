@@ -47,7 +47,7 @@
             android:id="@+id/filter_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:srcCompat="@drawable/ic_arrow_icon" />
+            app:srcCompat="@drawable/ic_filter_icon" />
 
     </LinearLayout>
 
