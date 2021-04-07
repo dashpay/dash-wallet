@@ -17,8 +17,6 @@
 package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -67,10 +65,6 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
         history_rv.adapter = this.invitesAdapter
 
         initHistoryView()
-
-        //create_new_invitation.setOnClickListener {
-        //    InviteFriendActivity.startOrError(requireActivity())
-        //}
     }
 
     private fun initViewModel() {
@@ -95,11 +89,6 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
         })
     }
 
-    //override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-    //    menuInflater.inflate(R.menu.close_button_white_options, menu)
-    //    super.onCreateOptionsMenu(menu, menuInflater)
-    //}
-
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
@@ -117,10 +106,12 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
 
             }
             InvitesAdapter.INVITE_CREATE -> {
-                InviteFriendActivity.startOrError(requireActivity())
+                InviteFriendActivity.startOrError(requireActivity(), startedByHistory = true)
             }
             else -> {
                 log.info("showing invitation for ${invitationItem.invitation!!.userId}")
+                startActivity(InviteFriendActivity.createIntentExistingInvite(requireActivity(),
+                        invitationItem.invitation.userId))
             }
         }
     }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
 
 //
 // https://stackoverflow.com/questions/49075413/easy-way-to-get-current-activity-fragment-lifecycleowner-from-within-view
@@ -32,4 +34,13 @@ fun Context.lifecycleOwner(): LifecycleOwner? {
     } else {
         null
     }
+}
+
+fun <T> LiveData<T>.observeOnce(lifecycleOwner: LifecycleOwner, observer: Observer<T>) {
+    observe(lifecycleOwner, object : Observer<T> {
+        override fun onChanged(t: T?) {
+            observer.onChanged(t)
+            removeObserver(this)
+        }
+    })
 }

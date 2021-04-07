@@ -27,7 +27,9 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
@@ -56,6 +58,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     private lateinit var createInviteViewModel: CreateInviteViewModel
     private val walletApplication = WalletApplication.getInstance()
     private var showInviteSection = false
+    private var lastInviteCount = -1
 
     companion object {
         const val PROFILE_VIEW = 0
@@ -77,7 +80,9 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
         invite.visibility = View.GONE
         invite.setOnClickListener {
-            mainActivityViewModel.inviteHistory.observe(requireActivity(), Observer {
+            // use observeOnce to avoid the history screen being recreated
+            // after returning to the More Screen after an invite is created
+            mainActivityViewModel.inviteHistory.observeOnce(requireActivity(), Observer {
                 if (it == null || it.isEmpty()) {
                     InviteFriendActivity.startOrError(requireActivity())
                 } else {
@@ -117,6 +122,16 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             mainActivityViewModel.goBackAndStartActivityEvent.postValue(CreateUsernameActivity::class.java)
         }
         initViewModel()
+    }
+
+    private fun startInviteFlow(invitations: List<Invitation>?) {
+        if (invitations == null || invitations.isEmpty()) {
+            lastInviteCount = 0
+            InviteFriendActivity.startOrError(requireActivity(), false)
+        } else {
+            lastInviteCount = invitations.size
+            startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+        }
     }
 
     private fun dismissProfileError() {
