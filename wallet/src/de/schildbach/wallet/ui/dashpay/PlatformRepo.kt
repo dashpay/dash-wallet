@@ -1351,7 +1351,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
             : CreditFundingTransaction {
         Context.propagate(walletApplication.wallet.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Coin.CENT, keyParameter)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database
@@ -1441,12 +1441,26 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    /**
+     * validates an invite
+     *
+     * @return Returns true if it is valid, false if the invite has been used.
+     *
+     * @throws Exception if the invite is invalid
+     */
+
     fun validateInvitation(invite: InvitationLinkData): Boolean {
         val tx = platform.client.getTransaction(invite.cftx)
         if (tx != null) {
             val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.toByteArray())
             val identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
             if (identity == null) {
+                // determine if the invite has enough credits
+                if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {
+                    val reason = "Invite does not have enough credits ${cfTx.lockedOutput.value} < ${Constants.DASH_PAY_INVITE_MIN}"
+                    log.warn(reason);
+                    throw InsufficientMoneyException(cfTx.lockedOutput.value, reason)
+                }
                 return try {
                     DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
                     InstantSendLock(Constants.NETWORK_PARAMETERS, Utils.HEX.decode(invite.instantSendLock))
@@ -1454,19 +1468,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     true
                 } catch (e: AddressFormatException.WrongNetwork) {
                     log.warn("Invite has private key from wrong network: $e")
-                    false
+                    throw e
                 } catch (e: AddressFormatException) {
                     log.warn("Invite has invalid private key: $e")
-                    false
+                    throw e
                 } catch (e: Exception) {
                     log.warn("Invite has invalid instantSendLock: $e")
-                    false
+                    throw e
                 }
             } else {
                 log.warn("Invitation has been used: ${identity.id}")
             }
         }
-        return false
+        log.warn("Invitation uses an invalid transaction ${invite.cftx}")
+        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
     }
 
     fun clearBlockchainData() {
