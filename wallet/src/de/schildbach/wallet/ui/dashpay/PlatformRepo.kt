@@ -80,7 +80,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         const val UPDATE_TIMER_DELAY = 15000L // 15 seconds
 
         private lateinit var platformRepoInstance: PlatformRepo
-
         @JvmStatic
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
@@ -160,20 +159,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun shutdown() {
-        Preconditions.checkState(platformSyncJob.isActive)
-        log.info("Shutting down the platform sync job")
-        platformSyncJob.cancel("shutdown the platform sync")
-    }
-
-    /*fun platformSync() {
-        platformSyncScope = GlobalScope.launch {
-            while (isActive) {
-                platformRepoInstance.updateContactRequests()
-                delay(UPDATE_TIMER_DELAY)
-            }
+        if (this::blockchainIdentity.isInitialized) {
+            Preconditions.checkState(platformSyncJob.isActive)
+            log.info("Shutting down the platform sync job")
+            platformSyncJob.cancel("shutdown the platform sync")
         }
-        scope.c
-    }*/
+    }
 
     /**
      * This method looks at all items in the database tables
@@ -185,17 +176,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private suspend fun initializeStateRepository() {
         // load our id
 
-        val identityId = blockchainIdentity.uniqueIdString
-        platform.stateRepository.addValidIdentity(Identifier.from(identityId))
+        if (this::blockchainIdentity.isInitialized && blockchainIdentity.registered) {
+            val identityId = blockchainIdentity.uniqueIdString
+            platform.stateRepository.addValidIdentity(Identifier.from(identityId))
 
-        //load all id's of users who have sent us a contact request
-        dashPayContactRequestDao.loadFromOthers(identityId)?.forEach {
-            platform.stateRepository.addValidIdentity(it.userIdentifier)
-        }
+            //load all id's of users who have sent us a contact request
+            dashPayContactRequestDao.loadFromOthers(identityId)?.forEach {
+                platform.stateRepository.addValidIdentity(it.userIdentifier)
+            }
 
-        // load all id's of users for whom we have profiles
-        dashPayProfileDao.loadAll().forEach {
-            platform.stateRepository.addValidIdentity(it.userIdentifier)
+            // load all id's of users for whom we have profiles
+            dashPayProfileDao.loadAll().forEach {
+                platform.stateRepository.addValidIdentity(it.userIdentifier)
+            }
         }
     }
 
