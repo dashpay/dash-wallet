@@ -68,9 +68,6 @@ class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) : Base
                 sharedViewModel.filterBy.call(InvitesHistoryViewModel.Filter.CLAIMED)
                 dismiss()
             }
-            cancel.setOnClickListener {
-                dismiss()
-            }
         }
 
         dialog?.setOnShowListener { dialog ->
