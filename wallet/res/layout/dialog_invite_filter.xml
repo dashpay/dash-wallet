@@ -14,14 +14,13 @@
         android:layout_height="14dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="16dp"
-        android:visibility="gone"
         app:srcCompat="@drawable/ic_expand_less" />
 
 
     <LinearLayout
         android:id="@+id/filter_title"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="44dp"
         android:background="@drawable/selectable_background_dark"
         android:paddingTop="10dp"
         android:paddingBottom="10dp">
@@ -36,7 +35,7 @@
             android:layout_marginEnd="10dp"
             android:layout_marginStart="10dp"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:maxLines="1"
             android:text="@string/invitations_filter_title"
             android:textSize="13sp" />
 
@@ -44,14 +43,13 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
+
         android:background="#c7c7c7" />
 
     <LinearLayout
         android:id="@+id/first"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="50dp"
         android:background="@drawable/selectable_background_dark"
         android:paddingTop="10dp"
         android:paddingBottom="10dp">
@@ -68,7 +66,8 @@
             android:maxLines="2"
             android:layout_gravity="center_vertical|center_horizontal"
             android:textAlignment="center"
-            android:textSize="16sp" />
+            android:textSize="13sp"
+            tools:text="First Item" />
 
     </LinearLayout>
 
@@ -82,7 +81,7 @@
     <LinearLayout
         android:id="@+id/second"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="50dp"
         android:background="@drawable/selectable_background_dark"
         android:paddingTop="10dp"
         android:paddingBottom="10dp">
@@ -96,23 +95,22 @@
             android:textAlignment="center"
             android:layout_marginEnd="10dp"
             android:layout_marginStart="10dp"            android:ellipsize="end"
-            android:maxLines="2"
-            android:textSize="16sp" />
+            android:maxLines="1"
+            android:textSize="13sp"
+            tools:text="Second Item"/>
 
     </LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
         android:background="#c7c7c7" />
 
 
     <LinearLayout
         android:id="@+id/third"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="50dp"
         android:background="@drawable/selectable_background_dark"
         android:paddingTop="10dp"
         android:paddingBottom="10dp">
@@ -127,24 +125,21 @@
             android:layout_marginEnd="10dp"
             android:layout_marginStart="10dp"            android:ellipsize="end"
             android:maxLines="2"
-            android:textSize="16sp" />
+            android:textSize="13sp"
+            tools:text="Third Item" />
 
     </LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
         android:background="#c7c7c7" />
 
     <LinearLayout
         android:id="@+id/cancel"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:background="@drawable/selectable_background_dark"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp">
+        android:layout_height="56dp"
+        android:background="@drawable/selectable_background_dark" >
 
         <TextView
             style="@style/MontserratRegular"
@@ -152,9 +147,9 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical|center_horizontal"
             android:textAlignment="center"
-            android:layout_marginEnd="31dp"
+            android:textColor="@color/dash_blue"
             android:text="@string/button_cancel"
-            android:textSize="16sp" />
+            android:textSize="13sp" />
 
     </LinearLayout>
 
