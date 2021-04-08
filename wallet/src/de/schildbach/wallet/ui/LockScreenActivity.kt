@@ -279,6 +279,7 @@ open class LockScreenActivity : AppCompatActivity() {
     private fun onCorrectPin(pin: String) {
         pinRetryController.clearPinFailPrefs()
         autoLogout.keepLockedUntilPinEntered = false
+        autoLogout.deviceWasLocked = false
         autoLogout.maybeStartAutoLogoutTimer()
         if (shouldShowBackupReminder) {
             val intent = VerifySeedActivity.createIntent(this, pin)
@@ -287,7 +288,6 @@ open class LockScreenActivity : AppCompatActivity() {
             finish()
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } else {
-//            intent = WalletActivity.createIntent(this)
             root_view_switcher.displayedChild = 1
         }
     }
@@ -326,7 +326,6 @@ open class LockScreenActivity : AppCompatActivity() {
                 if (pinRetryController.failCount() > 0) {
                     pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
                 }
-                autoLogout.deviceWasLocked = false
             }
             State.USE_FINGERPRINT -> {
                 view_flipper.displayedChild = 1
