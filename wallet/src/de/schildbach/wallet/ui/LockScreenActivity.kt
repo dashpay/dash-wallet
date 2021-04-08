@@ -326,6 +326,7 @@ open class LockScreenActivity : AppCompatActivity() {
                 if (pinRetryController.failCount() > 0) {
                     pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
                 }
+                autoLogout.deviceWasLocked = false
             }
             State.USE_FINGERPRINT -> {
                 view_flipper.displayedChild = 1
@@ -356,8 +357,6 @@ open class LockScreenActivity : AppCompatActivity() {
 
                 action_scan_to_pay.isEnabled = false
                 numeric_keyboard.visibility = View.GONE
-
-                autoLogout.deviceWasLocked = false
             }
         }
 
