@@ -79,10 +79,6 @@ public abstract class AbstractWalletActivity extends GlobalFooterActivity implem
         }
     }
 
-    protected WalletApplication getWalletApplication() {
-        return application;
-    }
-
     @Override
     public Wallet getWallet() {
         return application.getWallet();

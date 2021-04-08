@@ -42,7 +42,7 @@ class SetPinActivity : InteractionAwareActivity() {
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
     private lateinit var viewModel: SetPinViewModel
-    private lateinit var enableFingerprintViewModel: CheckPinSharedModel
+    private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
     private lateinit var pinProgressSwitcherView: ViewSwitcher
     private lateinit var pinPreviewView: PinPreviewView
     private lateinit var pageTitleView: TextView
@@ -400,9 +400,12 @@ class SetPinActivity : InteractionAwareActivity() {
             } else {
                 goHome()
             }
-            walletApplication.maybeStartAutoLogoutTimer()
+            walletApplication.autoLogout.apply {
+                maybeStartAutoLogoutTimer()
+                keepLockedUntilPinEntered = false
+            }
         })
-        enableFingerprintViewModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
+        enableFingerprintViewModel = ViewModelProvider(this)[EnableFingerprintDialog.SharedViewModel::class.java]
         enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
             if (initialPin != null) {
                 goHome()
@@ -410,16 +413,6 @@ class SetPinActivity : InteractionAwareActivity() {
                 finish()
             }
         })
-    }
-
-    private fun startActivityNewTask(intent: Intent) {
-        intent.apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(intent)
-        finish()
     }
 
     override fun finish() {
@@ -449,12 +442,12 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun startVerifySeedActivity() {
-        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
-        startActivityNewTask(intent)
+        startActivity(VerifySeedActivity.createIntent(this, seed.toTypedArray()))
+        finish()
     }
 
     private fun goHome() {
-        val intent = Intent(this, WalletActivity::class.java)
-        startActivityNewTask(intent)
+        startActivity(WalletActivity.createIntent(this))
+        finish()
     }
 }

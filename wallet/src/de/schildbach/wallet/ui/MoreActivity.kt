@@ -36,6 +36,12 @@ class MoreActivity : GlobalFooterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if(walletApplication.wallet == null) {
+            finish()
+            return
+        }
+
         setContentViewWithFooter(R.layout.activity_more)
         activateMoreButton()
 

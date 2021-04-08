@@ -22,17 +22,14 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
-import android.app.KeyguardManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
@@ -90,17 +87,8 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
-import de.schildbach.wallet.ui.ImportSharedImageActivity;
-import de.schildbach.wallet.ui.LockScreenActivity;
-import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.ImportSharedImageActivity;
-import de.schildbach.wallet.ui.RestoreWalletActivity;
-import de.schildbach.wallet.ui.ShortcutComponentActivity;
-import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
-import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.security.SecurityGuard;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
@@ -110,6 +98,7 @@ import de.schildbach.wallet_test.R;
  * @author Andreas Schildbach
  */
 public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler {
+
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -133,8 +122,6 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
     private static final int BLOCKCHAIN_SYNC_JOB_ID = 1;
 
-    private boolean deviceWasLocked = false;
-
     public boolean myPackageReplaced = false;
 
     private AutoLogout autoLogout;
@@ -149,16 +136,6 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         return walletFile.exists();
     }
 
-    private boolean isSpecialActivity(Activity activity) {
-        return (activity instanceof OnboardingActivity)
-                || (activity instanceof SendCoinsActivity)
-                || (activity instanceof WalletUriHandlerActivity)
-                || (activity instanceof ScanActivity)
-                || (activity instanceof ImportSharedImageActivity)
-                || (activity instanceof ShortcutComponentActivity)
-                || (activity instanceof RestoreWalletActivity);
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -166,17 +143,12 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         autoLogout = new AutoLogout(config);
+        autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
 
             @Override
             protected void onStartedFirst(Activity activity) {
-                autoLogout.setAppInBackground(false);
-                if (wallet != null && config.getAutoLogoutEnabled() && (deviceWasLocked || autoLogout.shouldLogout())) {
-                    lockTheApp(WalletApplication.this, activity);
-                    if (autoLogout.isTimerActive()) {
-                        autoLogout.stopTimer();
-                    }
-                }
+
             }
 
             @Override
@@ -191,14 +163,13 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
 
             @Override
             protected void onStoppedLast() {
-                autoLogout.setAppInBackground(true);
+                autoLogout.setAppWentBackground(true);
             }
         });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         if (walletFileExists()) {
             fullInitialization();
         }
-        registerDeviceInteractiveReceiver();
     }
 
     public void fullInitialization() {
@@ -283,15 +254,6 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
         }
-
-        autoLogout.setOnLogoutListener(new AutoLogout.OnLogoutListener() {
-            @Override
-            public void onLogout(boolean isAppInBackground) {
-                if (!isAppInBackground) {
-                    lockTheApp(WalletApplication.this, null);
-                }
-            }
-        });
         initUphold();
     }
 
@@ -302,15 +264,6 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
 
         UpholdClient.init(getApplicationContext(), authenticationHash);
-    }
-
-    public void maybeStartAutoLogoutTimer() {
-        autoLogout.setup();
-    }
-
-    @Override
-    public void resetAutoLogoutTimer() {
-        autoLogout.resetTimerIfActive();
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -374,6 +327,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             backupWallet();
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void initLogging() {
         // create log dir
         final File logDir = new File(getFilesDir(), "log");
@@ -382,6 +336,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         // migrate old logs
         final File oldLogDir = getDir("log", MODE_PRIVATE);
         if (oldLogDir.exists()) {
+            //noinspection ConstantConditions
             for (final File logFile : oldLogDir.listFiles())
                 if (logFile.isFile() && logFile.length() > 0)
                     logFile.renameTo(new File(logDir, logFile.getName()));
@@ -813,27 +768,12 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         return instance;
     }
 
-    private void registerDeviceInteractiveReceiver() {
-
-        final IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_SCREEN_ON);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-
-        registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                KeyguardManager myKM = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-                deviceWasLocked |= Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? myKM.isDeviceLocked() : myKM.inKeyguardRestrictedInputMode();
-            }
-        }, filter);
+    public AutoLogout getAutoLogout() {
+        return autoLogout;
     }
 
-    private void lockTheApp(Context context, Activity activity) {
-        if (!isSpecialActivity(activity)) {
-            context = context.getApplicationContext();
-            Intent lockScreenIntent = LockScreenActivity.createIntentAsNewTask(context);
-            context.startActivity(lockScreenIntent);
-        }
-        deviceWasLocked = false;
+    @Override
+    public void resetAutoLogoutTimer() {
+        autoLogout.resetTimerIfActive();
     }
 }
