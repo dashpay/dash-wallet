@@ -16,11 +16,7 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.KeyguardManager
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -76,8 +72,6 @@ open class LockScreenActivity : AppCompatActivity() {
             setLockState(State.ENTER_PIN)
         }
     }
-
-    private var deviceWasLocked = false
 
     private enum class State {
         ENTER_PIN,
@@ -183,10 +177,9 @@ open class LockScreenActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        registerDeviceInteractiveReceiver()
         autoLogout.setOnLogoutListener(onLogoutListener)
 
-        if (!keepUnlocked && (autoLogout.keepLockedUntilPinEntered || configuration.autoLogoutEnabled && (deviceWasLocked || autoLogout.shouldLogout()))) {
+        if (!keepUnlocked && (autoLogout.keepLockedUntilPinEntered || configuration.autoLogoutEnabled && autoLogout.shouldLogout())) {
             setLockState(State.ENTER_PIN)
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
@@ -198,11 +191,6 @@ open class LockScreenActivity : AppCompatActivity() {
         }
 
         startBlockchainService()
-    }
-
-    override fun onStop() {
-        unregisterDeviceInteractiveReceiver()
-        super.onStop()
     }
 
     private fun startBlockchainService() {
@@ -369,7 +357,7 @@ open class LockScreenActivity : AppCompatActivity() {
                 action_scan_to_pay.isEnabled = false
                 numeric_keyboard.visibility = View.GONE
 
-                deviceWasLocked = false
+                autoLogout.deviceWasLocked = false
             }
         }
 
@@ -447,25 +435,6 @@ open class LockScreenActivity : AppCompatActivity() {
 
     private val shouldShowBackupReminder = configuration.remindBackupSeed
             && configuration.lastBackupSeedReminderMoreThan24hAgo()
-
-    private fun registerDeviceInteractiveReceiver() {
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_SCREEN_ON)
-            addAction(Intent.ACTION_SCREEN_OFF)
-        }
-        registerReceiver(deviceInteractiveReceiver, filter)
-    }
-
-    private fun unregisterDeviceInteractiveReceiver() {
-        unregisterReceiver(deviceInteractiveReceiver)
-    }
-
-    private val deviceInteractiveReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val myKM = context.getSystemService(KEYGUARD_SERVICE) as KeyguardManager
-            deviceWasLocked = deviceWasLocked or if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) myKM.isDeviceLocked else myKM.inKeyguardRestrictedInputMode()
-        }
-    }
 
     override fun onPause() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)

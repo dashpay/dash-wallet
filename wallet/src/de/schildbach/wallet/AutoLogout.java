@@ -16,7 +16,13 @@
 
 package de.schildbach.wallet;
 
+import android.app.KeyguardManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Handler;
 
 import org.dash.wallet.common.Configuration;
@@ -37,6 +43,8 @@ public class AutoLogout {
     public boolean keepLockedUntilPinEntered = true;
 
     private OnLogoutListener onLogoutListener;
+
+    public boolean deviceWasLocked = false;
 
     @SuppressWarnings("FieldCanBeLocal")
     private SharedPreferences.OnSharedPreferenceChangeListener configListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -77,7 +85,6 @@ public class AutoLogout {
     private final Runnable timerTask = new Runnable() {
         @Override
         public void run() {
-            System.out.println("dupa12: " + tickCounter);
             tickCounter += LOCK_TIMER_TICK_MS;
             if (shouldLogout()) {
                 if (onLogoutListener != null) {
@@ -93,7 +100,7 @@ public class AutoLogout {
     public boolean shouldLogout() {
         long autoLogoutMillis = TimeUnit.MINUTES.toMillis(config.getAutoLogoutMinutes());
         boolean logoutTimeExceeded = (config.getAutoLogoutMinutes() == 0) ? appWentBackground : (tickCounter >= autoLogoutMillis);
-        return config.getAutoLogoutEnabled() && logoutTimeExceeded;
+        return (config.getAutoLogoutEnabled() && logoutTimeExceeded) || deviceWasLocked;
     }
 
     public void stopTimer() {
@@ -118,11 +125,23 @@ public class AutoLogout {
 
     public void setAppWentBackground(boolean appWentBackground) {
         this.appWentBackground = appWentBackground;
-        System.out.println("dupa34: " + appWentBackground);
     }
 
     public boolean isTimerActive() {
         return timerActive;
+    }
+
+    public void registerDeviceInteractiveReceiver(Context context) {
+        final IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        context.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                KeyguardManager myKM = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+                deviceWasLocked |= Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? myKM.isDeviceLocked() : myKM.inKeyguardRestrictedInputMode();
+            }
+        }, filter);
     }
 
     public interface OnLogoutListener {

@@ -143,6 +143,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
         autoLogout = new AutoLogout(config);
+        autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
 
             @Override
