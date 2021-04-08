@@ -45,7 +45,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         @JvmStatic
         fun createIntent(context: Context): Intent {
             return Intent(context, OnboardingActivity::class.java)
-//                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
     }
 
@@ -114,12 +113,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun startMainActivity() {
-//        val intent = if (walletApplication.configuration.autoLogoutEnabled) {
-//            LockScreenActivity.createIntent(this)
-//        } else {
-//            WalletActivity.createIntent(this)
-//        }
-//        startActivity(intent)
         startActivity(WalletActivity.createIntent(this))
         finish()
     }
