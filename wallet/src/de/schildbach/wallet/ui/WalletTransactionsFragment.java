@@ -170,7 +170,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
         emptyView = view.findViewById(R.id.wallet_transactions_empty);
         loading = view.findViewById(R.id.loading);
-        filterSpinner = view.findViewById(R.id.history_filter);
+        //TODO: Replace by the new icon + bottom sheet
+        //filterSpinner = view.findViewById(R.id.history_filter);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -193,6 +194,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
+        //TODO: Replace by the new icon + bottom sheet
+        /*
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         filterSpinner.setAdapter(adapter);
@@ -218,6 +221,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
             }
         });
+         */
 
         return view;
     }
