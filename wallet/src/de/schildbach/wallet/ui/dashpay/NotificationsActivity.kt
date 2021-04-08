@@ -34,10 +34,12 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
+import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_notifications.*
 import org.dash.wallet.common.InteractionAwareActivity
@@ -223,7 +225,13 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
                 Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
             }
             is NotificationItemUserAlert -> {
-                InviteFriendActivity.startOrError(this)
+                dashPayViewModel.inviteHistory.observeOnce(this, Observer {
+                    if (it == null || it.isEmpty()) {
+                        InviteFriendActivity.startOrError(this)
+                    } else {
+                        startActivity(InvitesHistoryActivity.createIntent(this))
+                    }
+                })
             }
         }
     }

@@ -89,7 +89,6 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
                     startActivity(InvitesHistoryActivity.createIntent(requireContext()))
                 }
             })
-
         }
         buy_and_sell.setOnClickListener {
             if (blockchainState != null && blockchainState?.replaying!!) {
@@ -122,16 +121,6 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             mainActivityViewModel.goBackAndStartActivityEvent.postValue(CreateUsernameActivity::class.java)
         }
         initViewModel()
-    }
-
-    private fun startInviteFlow(invitations: List<Invitation>?) {
-        if (invitations == null || invitations.isEmpty()) {
-            lastInviteCount = 0
-            InviteFriendActivity.startOrError(requireActivity(), false)
-        } else {
-            lastInviteCount = invitations.size
-            startActivity(InvitesHistoryActivity.createIntent(requireContext()))
-        }
     }
 
     private fun dismissProfileError() {

@@ -38,8 +38,10 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
+import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
@@ -54,6 +56,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.InteractionAwareActivity
+import kotlin.jvm.Throws
 
 class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
@@ -149,7 +152,13 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         }
 
         invite_friend_hint.setOnClickListener {
-            InviteFriendActivity.startOrError(requireActivity())
+            dashPayViewModel.inviteHistory.observeOnce(requireActivity(), Observer {
+                if (it == null || it.isEmpty()) {
+                    InviteFriendActivity.startOrError(requireActivity())
+                } else {
+                    startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                }
+            })
         }
 
         network_error_subtitle.setText(R.string.network_error_contact_suggestions)
@@ -198,7 +207,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                 showSuggestedUsers(null)
             }
         })
-        dashPayViewModel.blockchainStateData.observe(viewLifecycleOwner, {
+        dashPayViewModel.blockchainStateData.observe(viewLifecycleOwner, Observer {
             it?.apply {
                 val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
                 updateNetworkErrorVisibility(networkError)
