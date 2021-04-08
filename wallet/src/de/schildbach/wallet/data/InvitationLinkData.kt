@@ -31,21 +31,21 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
         private const val PARAM_CFTX = "cftx"
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: CreditFundingTransaction): InvitationLinkData {
-            val link = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
+            val linkBuilder = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
                     .appendQueryParameter(PARAM_USER, username)
-                    .appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
-                    .appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
                     .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())
-                    .build()
-            return InvitationLinkData(link, null)
+            if (displayName.isNotEmpty()) {
+                linkBuilder.appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
+            }
+            if (avatarUrl.isNotEmpty()) {
+                linkBuilder.appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
+            }
+            return InvitationLinkData(linkBuilder.build(), null)
         }
 
         fun isValid(link: Uri): Boolean {
             val queryParams = link.queryParameterNames
-            return (queryParams.contains(PARAM_USER)
-                    && queryParams.contains(PARAM_DISPLAY_NAME)
-                    && queryParams.contains(PARAM_AVATAR_URL)
-                    && queryParams.contains(PARAM_CFTX))
+            return (queryParams.contains(PARAM_USER) && queryParams.contains(PARAM_CFTX))
         }
     }
 
