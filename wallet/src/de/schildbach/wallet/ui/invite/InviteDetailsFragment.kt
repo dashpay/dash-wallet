@@ -22,8 +22,6 @@ import android.content.Context
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
@@ -31,28 +29,33 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ShareCompat
 import androidx.core.content.FileProvider
 import androidx.core.text.HtmlCompat
+import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet.util.Toast
+import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
-import kotlinx.android.synthetic.main.fragment_invite_created.*
+import kotlinx.android.synthetic.main.fragment_invite_details.*
 
 
-class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
+class InviteDetailsFragment : Fragment(R.layout.fragment_invite_details) {
 
     companion object {
         private const val ARG_IDENTITY_ID = "identity_id"
         private const val ARG_STARTED_FROM_HISTORY = "started_from_history"
 
-        fun newInstance(identity: String, startedFromHistory: Boolean = false): InviteCreatedFragment {
-            val fragment = InviteCreatedFragment()
+        fun newInstance(identity: String, startedFromHistory: Boolean = false): InviteDetailsFragment {
+            val fragment = InviteDetailsFragment()
             fragment.arguments = Bundle().apply {
                 putString(ARG_IDENTITY_ID, identity)
                 putBoolean(ARG_STARTED_FROM_HISTORY, startedFromHistory)
@@ -60,6 +63,8 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
             return fragment
         }
     }
+
+    var tagModified = false
 
     val viewModel by lazy {
         ViewModelProvider(requireActivity()).get(InvitationFragmentViewModel::class.java)
@@ -70,9 +75,15 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
 
         setHasOptionsMenu(true)
 
-        toolbar.title = ""
+        toolbar.title = requireContext().getString(R.string.menu_invite_title)
         val appCompatActivity = requireActivity() as AppCompatActivity
         appCompatActivity.setSupportActionBar(toolbar)
+
+        val actionBar = appCompatActivity.supportActionBar
+        actionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            setDisplayShowHomeEnabled(true)
+        }
 
         preview_button.setOnClickListener {
             showPreviewDialog()
@@ -87,15 +98,11 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
             shareInvitation(false)
             true
         }
-
-        maybe_later_button.setOnClickListener {
-            // was this fragment created indirectly by InvitesHistoryActivity
-            // If yes, then Maybe Later will start InvitesHistoryActivity
-            // If no, InvitesHistoryActivity started this fragment, so just finish()
-            if (!requireArguments().getBoolean(ARG_STARTED_FROM_HISTORY)) {
-                startActivity(InvitesHistoryActivity.createIntent(requireContext()))
-            }
-            requireActivity().finish()
+        tag_edit.doAfterTextChanged {
+            tagModified = true
+        }
+        profile_button.setOnClickListener {
+            startActivity(DashPayUserActivity.createIntent(requireContext(), viewModel.invitedUserProfile.value!!))
         }
 
         initViewModel()
@@ -107,11 +114,47 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
 
         viewModel.invitationLiveData.observe(viewLifecycleOwner, Observer {
             tag_edit.setText(it.memo)
+            date.text = WalletUtils.formatDate(it.sentAt);
+            memo.text = it.memo
+            if (it.acceptedAt != 0L) {
+                showClaimed()
+            } else {
+                showPending(it)
+            }
         })
 
         viewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
-            profile_picture_envelope.avatarProfile = it
             setupInvitationPreviewTemplate(it!!)
+        })
+
+    }
+
+    private fun showPending(it: Invitation) {
+        send_button.isVisible = it.canSendAgain()
+        copy_invitation_link.visibility = send_button.visibility
+        claimed_view.isVisible = false
+        if (!it.canSendAgain()) {
+            memo.setText(R.string.invitation_invalid_invite_title)
+            pending_view.isVisible = false
+        }
+    }
+
+    private fun showClaimed() {
+        viewModel.invitedUserProfile.observe(viewLifecycleOwner, Observer {
+            if (it != null) {
+                icon.setImageResource(R.drawable.ic_claimed_invite)
+                claimed_view.isVisible = true
+                pending_view.isVisible = false
+                preview_button.isVisible = false
+                ProfilePictureDisplay.display(avatarIcon, it)
+                if (it.displayName.isEmpty()) {
+                    display_name.text = it.username
+                    username.text = ""
+                } else {
+                    display_name.text = it.displayName
+                    username.text = it.username
+                }
+            }
         })
     }
 
@@ -119,7 +162,7 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
         // save memo to the database
         viewModel.saveTag(tag_edit.text.toString())
 
-        val shortLink = viewModel.shortDynamicLinkData
+        val shortLink = viewModel.invitation.shortDynamicLink
         ShareCompat.IntentBuilder.from(requireActivity()).apply {
             setSubject(getString(R.string.invitation_share_title))
             setText(shortLink)
@@ -158,13 +201,8 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
 
     private fun copyInvitationLink() {
         val clipboardManager = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboardManager.setPrimaryClip(ClipData.newPlainText(getString(R.string.invitation_share_title), viewModel.shortDynamicLinkData))
+        clipboardManager.setPrimaryClip(ClipData.newPlainText(getString(R.string.invitation_share_title), viewModel.invitation.shortDynamicLink))
         Toast(context).toast(R.string.receive_copied)
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.close_button_white_options, menu)
-        super.onCreateOptionsMenu(menu, menuInflater)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -176,9 +214,20 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
                 }
                 true
             }
+            android.R.id.home -> {
+                requireActivity().onBackPressed()
+                return true
+            }
             else -> {
                 super.onOptionsItemSelected(item)
             }
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // save memo to the database
+        if (tagModified)
+            viewModel.saveTag(tag_edit.text.toString())
     }
 }

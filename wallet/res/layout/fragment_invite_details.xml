@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/fragment_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <include
+        android:id="@+id/invitation_bitmap_template"
+        layout="@layout/invitation_bitmap_template"
+        android:visibility="invisible" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:animateLayoutChanges="true"
+        android:background="@color/bg_less_bright"
+        android:orientation="vertical">
+
+        <include
+            layout="@layout/app_bar_general"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/round_corners_white_bg"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:id="@+id/icon"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="85dp"
+                        app:srcCompat="@drawable/ic_pending_invite" />
+
+                    <TextView
+                        android:id="@+id/memo"
+                        style="@style/MontserratMedium.Heading"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="8dp"
+                        android:gravity="center_horizontal"
+                        android:textColor="@color/medium_gray"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        tools:text="Invitation to Wayne" />
+
+                    <TextView
+                        android:id="@+id/date"
+                        style="@style/MontserratMedium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="8dp"
+                        android:gravity="center_horizontal"
+                        android:text="@string/invitation_created_successfully"
+                        android:textColor="@color/medium_gray"
+                        android:textSize="12sp"
+                        tools:text="Feb 19, 2021 12:34PM" />
+
+                    <Button
+                        android:id="@+id/preview_button"
+                        style="@style/DashButton.Transparent.BlueText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="16dp"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:text="@string/invitation_created_preview"
+                        android:textColor="@color/dash_blue"
+                        android:textSize="15sp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/pending_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/display_name_label"
+                        style="@style/MontserratRegular"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="28dp"
+                        android:text="@string/invitation_created_tag_title"
+                        android:textColor="@color/medium_gray"
+                        android:textSize="14sp" />
+
+                    <EditText
+                        android:id="@+id/tag_edit"
+                        style="@style/MontserratSemiBold"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/round_corners_white_bg"
+                        android:elevation="2dp"
+                        android:hint="@string/invitation_created_tag"
+                        android:inputType="textPersonName"
+                        android:lines="1"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="20dp"
+                        android:textColor="@android:color/black"
+                        android:textSize="18sp"
+                        tools:ignore="UnusedAttribute" />
+
+                    <Button
+                        android:id="@+id/copy_invitation_link"
+                        style="@style/DashButton.Transparent.BlueText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="16dp"
+                        android:drawableStart="@drawable/ic_copy_invitation_link"
+                        android:drawablePadding="16dp"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:text="@string/invitation_created_copy_link"
+                        android:textColor="@color/dash_blue"
+                        android:textSize="15sp"
+                        android:visibility="gone"
+                        tools:visibility="visible"/>
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        tools:ignore="UselessLeaf" />
+
+                    <Button
+                        android:id="@+id/send_button"
+                        style="@style/DashButton.Blue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/invitation_created_send_invitation_again"
+                        android:visibility="gone"
+                        tools:visibility="visible"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/claimed_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/profile_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:background="@drawable/selectable_round_corners_white">
+
+                        <ImageView
+                            android:id="@+id/avatarIcon"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="20dp"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            tools:src="@tools:sample/avatars" />
+
+                        <TextView
+                            android:id="@id/display_name"
+                            style="@style/MontserratSemiBold"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:textSize="14sp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/avatarIcon"
+                            app:layout_constraintTop_toTopOf="@id/avatarIcon"
+                            tools:text="Wayne Campbell" />
+
+                        <TextView
+                            android:id="@id/username"
+                            style="@style/MontserratSemiBold"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:textSize="12sp"
+                            app:layout_constraintEnd_toEndOf="@id/display_name"
+                            app:layout_constraintStart_toEndOf="@+id/avatar"
+                            app:layout_constraintStart_toStartOf="@id/display_name"
+                            app:layout_constraintTop_toBottomOf="@id/display_name"
+                            tools:text="waynecampbell" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </ScrollView>
+
+    </LinearLayout>
+
+</FrameLayout>

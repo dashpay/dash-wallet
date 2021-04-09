@@ -61,6 +61,7 @@ import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.dashevo.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
+import java.lang.NullPointerException
 import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -80,6 +81,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         const val UPDATE_TIMER_DELAY = 15000L // 15 seconds
 
         private lateinit var platformRepoInstance: PlatformRepo
+
         @JvmStatic
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
@@ -147,7 +149,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun resume() {
-        if(!platformSyncJob.isActive && this::blockchainIdentity.isInitialized) {
+        if (!platformSyncJob.isActive && this::blockchainIdentity.isInitialized) {
             platformSyncJob = GlobalScope.launch {
                 log.info("Resuming the platform sync job")
                 while (isActive) {
@@ -206,7 +208,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * @return true if platform is available
      */
     suspend fun isPlatformAvailable(): Resource<Boolean> {
-        return withContext (Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             var success = 0
             val checks = arrayListOf<Deferred<Boolean>>()
             for (i in 0 until 3) {
@@ -920,6 +922,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     var counterForReport = 0;
+
     /**
      * updateContactRequests will fetch new Contact Requests from the network
      * and verify that we have all requests and profiles in the local database
@@ -1368,6 +1371,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         invitationsDao.insert(invitation)
     }
 
+    suspend fun getInvitation(userId: String): Invitation? {
+        return invitationsDao.loadByUserId(userId)
+    }
+
     private suspend fun sendTransaction(cftx: CreditFundingTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
@@ -1490,22 +1497,28 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun handleSentCreditFundingTransaction(cftx: CreditFundingTransaction) {
+    fun handleSentCreditFundingTransaction(cftx: CreditFundingTransaction, blockTimestamp: Long) {
         if (this::blockchainIdentity.isInitialized) {
             GlobalScope.launch(Dispatchers.IO) {
+                //Context.getOrCreate(platform.params)
                 val isInvite = walletApplication.wallet.invitationFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
                 val isTopup = walletApplication.wallet.blockchainIdentityTopupKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
                 val isIdentity = walletApplication.wallet.blockchainIdentityFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
                 val identityId = cftx.creditBurnIdentityIdentifier.toStringBase58();
-                if (isInvite && !isTopup &&!isIdentity) {
+                if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
                     // this is not in our database
-                    val invite = Invitation(identityId, cftx.txId, cftx.updateTime.time,
-                            "", cftx.updateTime.time, 0)
+                    val invite = Invitation(identityId, cftx.txId, blockTimestamp,
+                            "", blockTimestamp, 0)
 
                     // profile information here
-                    if(updateDashPayProfile(identityId)) {
-                        val profile = dashPayProfileDao.loadByUserId(identityId)
-                        invite.acceptedAt = profile?.createdAt ?: -1 // it was accepted in the past, use profile creation as the default
+                    try {
+                        if (updateDashPayProfile(identityId)) {
+                            val profile = dashPayProfileDao.loadByUserId(identityId)
+                            invite.acceptedAt = profile?.createdAt
+                                    ?: -1 // it was accepted in the past, use profile creation as the default
+                        }
+                    } catch (e: NullPointerException) {
+                        // swallow, the identity was not found for this invite
                     }
                     invitationsDao.insert(invite)
                 }

@@ -78,7 +78,7 @@ class InviteFriendActivity : InteractionAwareActivity() {
                     .commitNow()
         } else {
             supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, InviteCreatedFragment.newInstance(userId, startedByHistory))
+                    .replace(R.id.container, InviteDetailsFragment.newInstance(userId, startedByHistory))
                     .commitNow()
         }
     }

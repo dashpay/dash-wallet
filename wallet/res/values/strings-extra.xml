@@ -386,6 +386,7 @@
     <string name="invitation_created_preview">Preview Invitation</string>
     <string name="invitation_created_copy_link">Copy Invitation Link</string>
     <string name="invitation_created_send_invitation">Send Invitation</string>
+    <string name="invitation_created_send_invitation_again">Send again</string>
     <string name="invitation_created_maybe_later">Maybe later</string>
     <string name="invitation_preview_title">Join Now</string>
     <string name="invitation_preview_message">You have been invited by %s. Start using Dash cryptocurrency.</string>

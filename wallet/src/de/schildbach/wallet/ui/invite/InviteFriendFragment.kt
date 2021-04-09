@@ -23,7 +23,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.InvitationFragmentViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
