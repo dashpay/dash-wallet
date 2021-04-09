@@ -93,7 +93,7 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener,
                 (holder as InvitesHeaderViewHolder).bind(null, filter, filterClick)
             }
             INVITE -> {
-                (holder as InviteViewHolder).bind(inviteItem.invitation, position)
+                (holder as InviteViewHolder).bind(inviteItem.invitation, inviteItem.uniqueIndex)
             }
             EMPTY_HISTORY -> {
                 (holder as InviteEmptyViewHolder).bind(filter)

@@ -82,9 +82,10 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
 
     private fun initHistoryView() {
         invitesHistoryViewModel.invitationHistory.observe(requireActivity(), Observer {
+            var inviteNumber = 1
             if (it != null) {
                 invitesAdapter.history = it.sortedBy { invite -> invite.sentAt }
-                        .map { invite -> InvitationItem(InvitesAdapter.INVITE, invite) }
+                        .map { invite -> InvitationItem(InvitesAdapter.INVITE, invite, inviteNumber++) }
             }
         })
     }

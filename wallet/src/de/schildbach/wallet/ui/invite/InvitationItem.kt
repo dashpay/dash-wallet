@@ -18,13 +18,11 @@ package de.schildbach.wallet.ui.invite
 
 import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.util.PlatformUtils
-import de.schildbach.wallet.util.WalletUtils
 import org.bitcoinj.core.Sha256Hash
-import java.math.BigInteger
 
 data class InvitationItem(val type: Int,
                           val invitation: Invitation? = null,
-                          val data: Int = 0) {
+                          val uniqueIndex: Int = 0) {
 
     val id: Long by lazy {
         if (invitation != null) {
