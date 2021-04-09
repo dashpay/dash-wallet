@@ -31,6 +31,8 @@ import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
@@ -41,10 +43,14 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
+import androidx.core.text.HtmlCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
@@ -77,9 +83,11 @@ import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
@@ -112,6 +120,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
     private Spinner filterSpinner;
+    private TextView syncingText;
 
     @Nullable
     private Direction direction;
@@ -172,6 +181,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         loading = view.findViewById(R.id.loading);
         //TODO: Replace by the new icon + bottom sheet
         //filterSpinner = view.findViewById(R.id.history_filter);
+        syncingText = view.findViewById(R.id.syncing);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -222,6 +232,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
          */
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
+            @Override
+            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
+                updateSyncState(blockchainState);
+            }
+        });
 
         return view;
     }
@@ -409,6 +425,61 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         } else {
             showTransactionList();
         }
+    }
+
+    private void updateSyncState(BlockchainState blockchainState) {
+        if (blockchainState == null) {
+            return;
+        }
+
+        int percentage = blockchainState.getPercentageSync();
+        if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
+            //This is to prevent showing 100% when using the Rescan blockchain function.
+            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            percentage = 0;
+        }
+
+        String syncing = getString(R.string.syncing);
+        SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
+        int start = syncing.length() + 1;
+        int end = str.length();
+        str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        syncingText.setText(str);
+
+        /*
+        //ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
+        if (blockchainState != null && blockchainState.syncFailed()) {
+            updateSyncPaneVisibility(R.id.sync_status_pane, true);
+            //findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
+            //findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
+            return;
+        }
+
+        updateSyncPaneVisibility(R.id.sync_error_pane, false);
+        updateSyncPaneVisibility(R.id.sync_progress_pane, true);
+        TextView syncStatusTitle = findViewById(R.id.sync_status_title);
+        TextView syncStatusMessage = findViewById(R.id.sync_status_message);
+        syncProgressView.setProgress(percentage);
+        TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
+        syncPercentageView.setText(percentage + "%");
+
+        if (blockchainState.isSynced()) {
+            syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
+            syncStatusTitle.setText(R.string.sync_status_sync_title);
+            syncStatusMessage.setText(R.string.sync_status_sync_completed);
+            updateSyncPaneVisibility(R.id.sync_status_pane, false);
+        } else {
+            syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
+            updateSyncPaneVisibility(R.id.sync_status_pane, true);
+            syncStatusTitle.setText(R.string.sync_status_syncing_title);
+            syncStatusMessage.setText(R.string.sync_status_syncing_sub_title);
+        }
+         */
+    }
+
+    private void updateSyncPaneVisibility(int id, boolean visible) {
+        //findViewById(id).setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     private void showTransactionList() {

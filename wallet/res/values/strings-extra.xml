@@ -313,7 +313,7 @@
     </string-array>
 
     <string name="sync_status_wait">Please wait for the sync to complete</string>
-    <string name="sync_status_syncing_title">Syncing</string>
+    <string name="sync_status_syncing_title">Syncing %1$d</string>
     <string name="sync_status_syncing_sub_title">with Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Unable to connect</string>
     <string name="sync_status_check_connection">Check your connection</string>
@@ -340,4 +340,6 @@
     <string name="import_image_no_private_key_copied">No private key copied</string>
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
+
+    <string name="syncing">Syncing</string>
 </resources>

@@ -119,6 +119,8 @@ public final class HeaderBalanceFragment extends Fragment {
 
         viewBalanceDash = view.findViewById(R.id.wallet_balance_dash);
         viewBalanceDash.setApplyMarkup(false);
+        viewBalanceDash.setFormat(config.getFormat().noCode());
+        viewBalanceDash.setAmount(Coin.ZERO);
 
         viewBalanceLocal = view.findViewById(R.id.wallet_balance_local);
         viewBalanceLocal.setInsignificantRelativeSize(1);
@@ -175,13 +177,11 @@ public final class HeaderBalanceFragment extends Fragment {
 
     private void updateView() {
         View balances = view.findViewById(R.id.balances_layout);
-        TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
 
         if (hideBalance) {
             caption.setText(R.string.home_balance_hidden);
             hideShowBalanceHint.setText(R.string.home_balance_show_hint);
             balances.setVisibility(View.INVISIBLE);
-            walletBalanceSyncMessage.setVisibility(View.GONE);
             showBalanceButton.setVisibility(View.VISIBLE);
             return;
         }
@@ -196,10 +196,8 @@ public final class HeaderBalanceFragment extends Fragment {
 
         if (blockchainState != null && blockchainState.isSynced()) {
             balances.setVisibility(View.VISIBLE);
-            walletBalanceSyncMessage.setVisibility(View.GONE);
         } else {
             balances.setVisibility(View.INVISIBLE);
-            walletBalanceSyncMessage.setVisibility(View.VISIBLE);
             return;
         }
 
@@ -207,8 +205,6 @@ public final class HeaderBalanceFragment extends Fragment {
             viewBalanceLocal.setVisibility(View.GONE);
 
         if (balance != null) {
-            viewBalanceDash.setVisibility(View.VISIBLE);
-            viewBalanceDash.setFormat(config.getFormat().noCode());
             viewBalanceDash.setAmount(balance);
 
             if (showLocalBalance) {
@@ -225,7 +221,7 @@ public final class HeaderBalanceFragment extends Fragment {
                 }
             }
         } else {
-            viewBalanceDash.setVisibility(View.INVISIBLE);
+            viewBalanceDash.setAmount(Coin.ZERO);
         }
 
         activity.invalidateOptionsMenu();
