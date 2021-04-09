@@ -122,9 +122,9 @@ deploy:
     skip_cleanup: true
     on:
       branch: master
-    # deploy evonet-develop
+    # deploy dashpay
   - provider: script
     script: bash .deploy/deploy.sh DashPay
     skip_cleanup: true
     on:
-      branch: evonet-develop
+      branch: dashpay
