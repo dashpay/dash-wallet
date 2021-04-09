@@ -44,6 +44,9 @@ before_script:
   - git checkout master
   - git submodule update  --init --recursive
   - mvn clean install -DskipTests -pl :dashj-core
+  - cd bls
+  - mvn clean install -DskipTests -pl :dashj-bls
+  - cd ..
   - cd ..
   - git clone https://github.com/dashevo/android-dpp.git
   - cd android-dpp
