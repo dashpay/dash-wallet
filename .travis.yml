@@ -41,7 +41,7 @@ before_script:
   #- export ANDROID_NDK_HOME=$ANDROID_NDK_HOME
   - git clone https://github.com/dashevo/dashj.git
   - cd dashj
-  - git checkout master
+  - git checkout fix-bls-build
   - git submodule update  --init --recursive
   - cd bls
   - mvn clean install -DskipTests -pl :dashj-bls
