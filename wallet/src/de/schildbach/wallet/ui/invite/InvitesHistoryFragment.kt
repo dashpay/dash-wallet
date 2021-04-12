@@ -112,7 +112,8 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
             else -> {
                 log.info("showing invitation for ${invitationItem.invitation!!.userId}")
                 startActivity(InviteFriendActivity.createIntentExistingInvite(requireActivity(),
-                        invitationItem.invitation.userId))
+                        invitationItem.invitation.userId,
+                        invitationItem.uniqueIndex))
             }
         }
     }

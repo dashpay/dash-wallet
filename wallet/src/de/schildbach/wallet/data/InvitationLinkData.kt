@@ -28,12 +28,12 @@ import org.bouncycastle.crypto.params.KeyParameter
 data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcelable {
 
     companion object {
-        private const val PARAM_USER = "user"
+        private const val PARAM_USER = "du"
         private const val PARAM_DISPLAY_NAME = "display-name"
         private const val PARAM_AVATAR_URL = "avatar-url"
-        private const val PARAM_CFTX = "cftx"
+        private const val PARAM_CFTX = "assetlocktx"
         private const val PARAM_PRIVATE_KEY = "pk"
-        private const val PARAM_IS_LOCK = "is-lock"
+        private const val PARAM_IS_LOCK = "islock"
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: CreditFundingTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
             val privateKey = cftx.creditBurnPublicKey.decrypt(aesKeyParameter)
@@ -61,22 +61,22 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     @IgnoredOnParcel
     val user by lazy {
-        link.getQueryParameter("user")!!
+        link.getQueryParameter(PARAM_USER)!!
     }
 
     @IgnoredOnParcel
     val displayName by lazy {
-        link.getQueryParameter("display-name")!!
+        link.getQueryParameter(PARAM_DISPLAY_NAME)!!
     }
 
     @IgnoredOnParcel
     val avatarUrl by lazy {
-        Uri.decode(link.getQueryParameter("avatar-url")!!)!!
+        Uri.decode(link.getQueryParameter(PARAM_AVATAR_URL)!!)!!
     }
 
     @IgnoredOnParcel
     val cftx by lazy {
-        link.getQueryParameter("cftx")!!
+        link.getQueryParameter(PARAM_CFTX)!!
     }
 
     @IgnoredOnParcel

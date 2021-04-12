@@ -36,6 +36,8 @@ class InviteFriendActivity : InteractionAwareActivity() {
         private val log = LoggerFactory.getLogger(InviteFriendActivity::class.java)
         private const val ARG_IDENTITY_ID = "identity_id"
         private const val ARG_STARTED_BY_HISTORY = "started_by_history"
+        private const val ARG_INVITE_INDEX = "invite_index"
+
 
         @JvmStatic
         fun createIntent(context: Context, startedByHistory: Boolean): Intent {
@@ -57,10 +59,11 @@ class InviteFriendActivity : InteractionAwareActivity() {
             }
         }
 
-        fun createIntentExistingInvite(context: Context, userId: String, startedByHistory: Boolean = true): Intent? {
+        fun createIntentExistingInvite(context: Context, userId: String, inviteIndex: Int, startedByHistory: Boolean = true): Intent? {
             val intent = Intent(context, InviteFriendActivity::class.java)
             intent.putExtra(ARG_IDENTITY_ID, userId)
             intent.putExtra(ARG_STARTED_BY_HISTORY, startedByHistory)
+            intent.putExtra(ARG_INVITE_INDEX, inviteIndex)
             return intent
         }
     }
@@ -77,8 +80,9 @@ class InviteFriendActivity : InteractionAwareActivity() {
                     .replace(R.id.container, InviteFriendFragment.newInstance(startedByHistory))
                     .commitNow()
         } else {
+            val inviteIndex = intent.extras?.getInt(ARG_INVITE_INDEX, -1) ?: -1
             supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, InviteDetailsFragment.newInstance(userId, startedByHistory))
+                    .replace(R.id.container, InviteDetailsFragment.newInstance(userId, inviteIndex, startedByHistory))
                     .commitNow()
         }
     }

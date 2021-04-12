@@ -21,6 +21,7 @@
     <color name="dash_green_dark">#27AE60</color>
     <color name="dash_medium_gray">#979797</color>
     <color name="dash_golden">#F5A623</color>
+    <color name="dash_light_blue">#A6D7F5</color>
 
     <color name="ripple_light">#60ffffff</color>
     <color name="ripple_dark">#80012060</color>
