@@ -36,6 +36,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants.USERNAME_MAX_LENGTH
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Status
@@ -98,9 +99,9 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         }
 
         @JvmStatic
-        fun createIntentReuseTransaction(context: Context): Intent {
+        fun createIntentReuseTransaction(context: Context, blockchainIdentityData: BlockchainIdentityBaseData): Intent {
             return Intent(context, CreateUsernameActivity::class.java).apply {
-                action = ACTION_REUSE_TRANSACTION
+                action = if (blockchainIdentityData.usingInvite) ACTION_FROM_INVITE_REUSE_TRANSACTION else ACTION_REUSE_TRANSACTION
             }
         }
 
@@ -109,13 +110,6 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             return Intent(context, CreateUsernameActivity::class.java).apply {
                 action = ACTION_FROM_INVITE
                 putExtra(EXTRA_INVITE, invite)
-            }
-        }
-
-        @JvmStatic
-        fun createIntentFromInviteReuseTransaction(context: Context): Intent {
-            return Intent(context, CreateUsernameActivity::class.java).apply {
-                action = ACTION_FROM_INVITE_REUSE_TRANSACTION
             }
         }
     }

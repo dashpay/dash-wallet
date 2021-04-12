@@ -17,9 +17,13 @@
 package de.schildbach.wallet.ui.invite
 
 import androidx.appcompat.app.AppCompatActivity
+import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Resource.Companion.error
+import de.schildbach.wallet.livedata.Resource.Companion.loading
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.getInstance
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.FancyAlertDialog
 
@@ -79,5 +83,43 @@ class InvitesHandler(val activity: AppCompatActivity) {
         }
         inviteLoadingDialog = FancyAlertDialog.newProgress(R.string.invitation_verifying_progress_title, 0)
         inviteLoadingDialog.show(activity.supportFragmentManager, null)
+    }
+
+    private fun showInsuffientFundsDialog() {
+        val dialog = FancyAlertDialog.newProgress(R.string.invitation_invalid_invite_title, R.string.dashpay_insuffient_credits)
+        dialog.show(activity.supportFragmentManager, null)
+    }
+
+    /**
+     * handle non-recoverable errors from using an invite
+     */
+    fun handleError(blockchainIdentityData: BlockchainIdentityBaseData): Boolean {
+        // handle errors
+        var errorMessage: String
+        if (blockchainIdentityData.creationStateErrorMessage.also { errorMessage = it!! } != null) {
+            when {
+                (errorMessage.contains("IdentityAssetLockTransactionOutPointAlreadyExistsError")) -> {
+                    showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
+                    // now erase the blockchain data
+                    getInstance().clearBlockchainData()
+                    return true
+                }
+
+                errorMessage.contains("InvalidIdentityAssetLockProofSignatureError") -> {
+                    handle(loading(blockchainIdentityData.invite, 0))
+                    handle(error(errorMessage, blockchainIdentityData.invite))
+                    // now erase the blockchain data
+                    getInstance().clearBlockchainData()
+                    return true
+                }
+                errorMessage.contains("InsuffientFundsError") -> {
+                    showInsuffientFundsDialog()
+                    // now erase the blockchain data
+                    getInstance().clearBlockchainData()
+                    return true
+                }
+            }
+        }
+        return false
     }
 }
