@@ -439,13 +439,18 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             percentage = 0;
         }
 
-        String syncing = getString(R.string.syncing);
-        SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
-        int start = syncing.length() + 1;
-        int end = str.length();
-        str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        syncingText.setText(str);
+        if (blockchainState.isSynced()) {
+            syncingText.setVisibility(View.GONE);
+        } else {
+            syncingText.setVisibility(View.VISIBLE);
+            String syncing = getString(R.string.syncing);
+            SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
+            int start = syncing.length() + 1;
+            int end = str.length();
+            str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            syncingText.setText(str);
+        }
 
         /*
         //ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
