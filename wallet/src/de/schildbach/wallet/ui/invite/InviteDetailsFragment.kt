@@ -48,7 +48,7 @@ import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_details.*
 
 
-class InviteDetailsFragment : Fragment(R.layout.fragment_invite_details) {
+class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
 
     companion object {
         private const val ARG_IDENTITY_ID = "identity_id"
@@ -66,9 +66,9 @@ class InviteDetailsFragment : Fragment(R.layout.fragment_invite_details) {
 
     var tagModified = false
 
-    val viewModel by lazy {
-        ViewModelProvider(requireActivity()).get(InvitationFragmentViewModel::class.java)
-    }
+    //val viewModel by lazy {
+    //    ViewModelProvider(requireActivity()).get(InvitationFragmentViewModel::class.java)
+    //}
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -162,47 +162,11 @@ class InviteDetailsFragment : Fragment(R.layout.fragment_invite_details) {
         // save memo to the database
         viewModel.saveTag(tag_edit.text.toString())
 
-        val shortLink = viewModel.invitation.shortDynamicLink
-        ShareCompat.IntentBuilder.from(requireActivity()).apply {
-            setSubject(getString(R.string.invitation_share_title))
-            setText(shortLink)
-            if (shareImage) {
-                setType(Constants.Invitation.MIMETYPE_WITH_IMAGE)
-                val fileUri: Uri = FileProvider.getUriForFile(requireContext(), "${BuildConfig.APPLICATION_ID}.file_attachment", viewModel.invitationPreviewImageFile!!)
-                setStream(fileUri)
-            } else {
-                setType(Constants.Invitation.MIMETYPE)
-            }
-            setChooserTitle(R.string.invitation_share_message)
-            startChooser()
-        }
-    }
-
-    private fun setupInvitationPreviewTemplate(profile: DashPayProfile) {
-        val profilePictureEnvelope: InvitePreviewEnvelopeView = invitation_bitmap_template.findViewById(R.id.bitmap_template_profile_picture_envelope)
-        val messageHtml = getString(R.string.invitation_preview_message, "<b>${profile.nameLabel}</b>")
-        val message = HtmlCompat.fromHtml(messageHtml, HtmlCompat.FROM_HTML_MODE_COMPACT)
-        val messageView = invitation_bitmap_template.findViewById<TextView>(R.id.bitmap_template_message)
-        messageView.text = message
-        ProfilePictureDisplay.display(profilePictureEnvelope.avatarView, profile, false, disableTransition = true,
-                listener = object : ProfilePictureDisplay.OnResourceReadyListener {
-                    override fun onResourceReady(resource: Drawable?) {
-                        invitation_bitmap_template.post {
-                            viewModel.saveInviteBitmap(invitation_bitmap_template)
-                        }
-                    }
-                })
-    }
-
-    private fun showPreviewDialog() {
-        val previewDialog = InvitePreviewDialog.newInstance(requireContext(), viewModel.dashPayProfile!!)
-        previewDialog.show(childFragmentManager, null)
+        super.shareInvitation(shareImage, viewModel.invitation.shortDynamicLink)
     }
 
     private fun copyInvitationLink() {
-        val clipboardManager = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboardManager.setPrimaryClip(ClipData.newPlainText(getString(R.string.invitation_share_title), viewModel.invitation.shortDynamicLink))
-        Toast(context).toast(R.string.receive_copied)
+        super.copyInvitationLink(viewModel.invitation.shortDynamicLink)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
