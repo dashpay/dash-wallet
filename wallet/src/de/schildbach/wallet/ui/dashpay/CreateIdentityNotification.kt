@@ -49,8 +49,9 @@ class CreateIdentityNotification(val service: LifecycleService) {
         updateNotification(R.string.processing_done_subtitle, 0, 0, 0)
     }
 
-    fun displayErrorAndStopService() {
-        val notification: Notification = createNotification(R.string.processing_home_title, R.string.processing_error_title, 0, 0).run {
+    fun displayErrorAndStopService(isInvite: Boolean) {
+        val messageResId = if (isInvite) R.string.processing_error_title_from_invite else R.string.processing_error_title
+        val notification: Notification = createNotification(R.string.processing_home_title, messageResId, 0, 0).run {
 //            setAutoCancel(true)
 //            val startAppIntent = OnboardingActivity.createIntent(service)
 //            val contentIntent = PendingIntent.getActivity(service, 0, startAppIntent, PendingIntent.FLAG_UPDATE_CURRENT)

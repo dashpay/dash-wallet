@@ -29,6 +29,7 @@ import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
@@ -336,7 +337,10 @@ public final class Constants {
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
+    // 100,000,000 credits
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.01");
+    //  10,000,000
+    public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);
 
     public static boolean IS_TESTNET_BUILD = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_TESTNET);
 

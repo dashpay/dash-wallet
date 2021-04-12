@@ -604,6 +604,25 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+
+    //
+    // Step 2 is to obtain the credit funding transaction for invites
+    //
+    suspend fun obtainCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
+        withContext(Dispatchers.IO) {
+            Context.propagate(walletApplication.wallet.context)
+            val cftxData = platform.client.getTransaction(invite.cftx)
+            val cftx = CreditFundingTransaction(platform.params, cftxData!!.toByteArray())
+            val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
+            cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
+
+            val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock))
+
+            cftx.confidence.setInstantSendLock(instantSendLock)
+            blockchainIdentity.initializeCreditFundingTransaction(cftx)
+        }
+    }
+
     //
     // Step 3: Register the identity
     //
@@ -1319,7 +1338,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
             : CreditFundingTransaction {
         Context.propagate(walletApplication.wallet.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Coin.CENT, keyParameter)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database
@@ -1409,14 +1428,53 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun validateInvitation(txId: String): Boolean {
-        val tx = platform.client.getTransaction(txId)
-        var identity: Identity? = null
+    /**
+     * validates an invite
+     *
+     * @return Returns true if it is valid, false if the invite has been used.
+     *
+     * @throws Exception if the invite is invalid
+     */
+
+    fun validateInvitation(invite: InvitationLinkData): Boolean {
+        val tx = platform.client.getTransaction(invite.cftx)
         if (tx != null) {
             val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.toByteArray())
-            identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
+            val identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
+            if (identity == null) {
+                // determine if the invite has enough credits
+                if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {
+                    val reason = "Invite does not have enough credits ${cfTx.lockedOutput.value} < ${Constants.DASH_PAY_INVITE_MIN}"
+                    log.warn(reason);
+                    throw InsufficientMoneyException(cfTx.lockedOutput.value, reason)
+                }
+                return try {
+                    DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
+                    InstantSendLock(Constants.NETWORK_PARAMETERS, Utils.HEX.decode(invite.instantSendLock))
+                    log.info("Invite is valid")
+                    true
+                } catch (e: AddressFormatException.WrongNetwork) {
+                    log.warn("Invite has private key from wrong network: $e")
+                    throw e
+                } catch (e: AddressFormatException) {
+                    log.warn("Invite has invalid private key: $e")
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("Invite has invalid instantSendLock: $e")
+                    throw e
+                }
+            } else {
+                log.warn("Invitation has been used: ${identity.id}")
+            }
         }
-        return identity == null
+        log.warn("Invitation uses an invalid transaction ${invite.cftx}")
+        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
+    }
+
+    fun clearBlockchainData() {
+        GlobalScope.launch(Dispatchers.IO) {
+            blockchainIdentityDataDao.clear()
+        }
     }
 
 }

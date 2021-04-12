@@ -40,6 +40,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
+import org.dash.wallet.common.ui.FancyAlertDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +50,11 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
+import de.schildbach.wallet.ui.dashpay.PlatformRepo;
+import de.schildbach.wallet.ui.invite.InviteAlreadyClaimedDialog;
+import de.schildbach.wallet.ui.invite.InvitesHandler;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
@@ -194,16 +199,55 @@ public class WalletTransactionsFragment extends Fragment
     @Override
     public void onProcessingIdentityRowClicked(final BlockchainIdentityBaseData blockchainIdentityData, boolean retry) {
         if (retry) {
-            activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
+            // check to see if an invite was used
+            if (!blockchainIdentityData.getUsingInvite()) {
+                activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
+            } else {
+                // handle errors
+                String errorMessage;
+                if ((errorMessage = blockchainIdentityData.getCreationStateErrorMessage()) != null) {
+                    if (errorMessage.contains("IdentityAssetLockTransactionOutPointAlreadyExistsError")) {
+                        FancyAlertDialog dialog = InviteAlreadyClaimedDialog.newInstance(activity, blockchainIdentityData.getInvite());
+                        dialog.show(getParentFragmentManager(), null);
+
+                        // now erase the blockchain data
+                        PlatformRepo.getInstance().clearBlockchainData();
+                        adapter.setBlockchainIdentityData(null);
+                        return;
+                    } else if (errorMessage.contains("InvalidIdentityAssetLockProofSignatureError")) {
+                        InvitesHandler handler = new InvitesHandler(activity);
+                        handler.handle(Resource.loading(blockchainIdentityData.getInvite(), 0));
+                        handler.handle(Resource.error(errorMessage, blockchainIdentityData.getInvite()));
+
+                        // now erase the blockchain data
+                        PlatformRepo.getInstance().clearBlockchainData();
+                        adapter.setBlockchainIdentityData(null);
+                        return;
+                    } else if (errorMessage.contains("InsuffientFundsError")) {
+                        InvitesHandler handler = new InvitesHandler(activity);
+                        FancyAlertDialog dialog = FancyAlertDialog.Companion.newProgress(R.string.invitation_invalid_invite_title, R.string.dashpay_insuffient_credits);
+                        dialog.show(getParentFragmentManager(), null);
+
+                        // now erase the blockchain data
+                        PlatformRepo.getInstance().clearBlockchainData();
+                        adapter.setBlockchainIdentityData(null);
+                    }
+                }
+                activity.startService(CreateIdentityService.createIntentForRetryFromInvite(activity,false));
+            }
         } else {
             if (blockchainIdentityData.getCreationStateErrorMessage() != null) {
                 if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
-                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(activity));
+                    // check to see if an invite was used
+                    if (!blockchainIdentityData.getUsingInvite()) {
+                        startActivity(CreateUsernameActivity.createIntentReuseTransaction(activity));
+                    } else {
+                        startActivity(CreateUsernameActivity.createIntentFromInviteReuseTransaction(activity));
+                    }
                 } else {
                     Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
                 }
             } else if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
-                //startActivity(CreateUsernameActivity.createIntent(activity, blockchainIdentityData.getUsername()));
                 startActivity(new Intent(activity, SearchUserActivity.class));
             }
         }
