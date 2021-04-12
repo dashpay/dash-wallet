@@ -53,6 +53,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
     data class ImageViewItem(private val idValue: Int, val textResId: Int, val imageResId: Int) : NotificationViewItem(NotificationItemStub(idValue.toString()))
 
     private var filter = ProfileActivityHeaderHolder.Filter.ALL
+    var recentlyModifiedContacts: HashSet<String>? = null
 
     init {
         setHasStableIds(true)
@@ -110,8 +111,11 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
             }
             NOTIFICATION_CONTACT -> {
                 val item = notificationItem as NotificationItemContact
-                val sendContactRequestWorkState = sendContactRequestWorkStateMap[item.usernameSearchResult.dashPayProfile.userId]
-                (holder as ContactViewHolder).bind(item, sendContactRequestWorkState, notificationViewItem.isNew, showAvatars, onContactActionClickListener)
+                val contactId = item.usernameSearchResult.dashPayProfile.userId
+                var recentlyModified = recentlyModifiedContacts?.contains(contactId) == true
+                val sendContactRequestWorkState = sendContactRequestWorkStateMap[contactId]
+                (holder as ContactViewHolder).bind(item, sendContactRequestWorkState,
+                        notificationViewItem.isNew, recentlyModified, showAvatars, onContactActionClickListener)
             }
             NOTIFICATION_PAYMENT -> {
                 holder.bind(notificationItem, transactionCache, wallet)
