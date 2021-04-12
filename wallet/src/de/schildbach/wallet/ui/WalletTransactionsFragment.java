@@ -21,7 +21,6 @@ import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -39,16 +38,11 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
-import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.core.content.ContextCompat;
-import androidx.core.text.HtmlCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.loader.app.LoaderManager;
@@ -59,13 +53,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
@@ -92,7 +83,6 @@ import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
@@ -451,40 +441,6 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
                     Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             syncingText.setText(str);
         }
-
-        /*
-        //ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
-        if (blockchainState != null && blockchainState.syncFailed()) {
-            updateSyncPaneVisibility(R.id.sync_status_pane, true);
-            //findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
-            //findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
-            return;
-        }
-
-        updateSyncPaneVisibility(R.id.sync_error_pane, false);
-        updateSyncPaneVisibility(R.id.sync_progress_pane, true);
-        TextView syncStatusTitle = findViewById(R.id.sync_status_title);
-        TextView syncStatusMessage = findViewById(R.id.sync_status_message);
-        syncProgressView.setProgress(percentage);
-        TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
-        syncPercentageView.setText(percentage + "%");
-
-        if (blockchainState.isSynced()) {
-            syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
-            syncStatusTitle.setText(R.string.sync_status_sync_title);
-            syncStatusMessage.setText(R.string.sync_status_sync_completed);
-            updateSyncPaneVisibility(R.id.sync_status_pane, false);
-        } else {
-            syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
-            updateSyncPaneVisibility(R.id.sync_status_pane, true);
-            syncStatusTitle.setText(R.string.sync_status_syncing_title);
-            syncStatusMessage.setText(R.string.sync_status_syncing_sub_title);
-        }
-         */
-    }
-
-    private void updateSyncPaneVisibility(int id, boolean visible) {
-        //findViewById(id).setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     private void showTransactionList() {
