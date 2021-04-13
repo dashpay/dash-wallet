@@ -4,6 +4,7 @@ buildscript {
     ext.dashjVersion = "0.17.6"
     repositories {
         google()
+        mavenCentral()
         jcenter()
     }
 
@@ -21,6 +22,7 @@ allprojects {
     repositories {
         google()
         mavenLocal()
+        mavenCentral()
         jcenter()
         maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
     }
