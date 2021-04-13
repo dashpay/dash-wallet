@@ -306,12 +306,6 @@
     <string name="welcome_screen_title_3">More Control</string>
     <string name="welcome_screen_subtitle_3">Have complete control and customize your wallet based on your needs</string>
 
-    <string-array name="history_filter">
-        <item>All</item>
-        <item>Received</item>
-        <item>Sent</item>
-    </string-array>
-
     <string name="sync_status_wait">Please wait for the sync to complete</string>
     <string name="sync_status_syncing_title">Syncing %1$d</string>
     <string name="sync_status_syncing_sub_title">with Dash blockchain</string>
@@ -343,4 +337,8 @@
 
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
+
+    <string name="all_transactions">All</string>
+    <string name="received_transactions">Received</string>
+    <string name="sent_transactions">Sent</string>
 </resources>

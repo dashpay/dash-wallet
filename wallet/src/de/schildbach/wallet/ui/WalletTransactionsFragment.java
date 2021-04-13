@@ -44,7 +44,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
@@ -109,8 +111,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private View loading;
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
-    private Spinner filterSpinner;
     private TextView syncingText;
+    private TransactionsFilterSharedViewModel transactionsFilterSharedViewModel;
 
     @Nullable
     private Direction direction;
@@ -169,9 +171,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
         emptyView = view.findViewById(R.id.wallet_transactions_empty);
         loading = view.findViewById(R.id.loading);
-        //TODO: Replace by the new icon + bottom sheet
-        //filterSpinner = view.findViewById(R.id.history_filter);
         syncingText = view.findViewById(R.id.syncing);
+        transactionsFilterSharedViewModel = new ViewModelProvider(requireActivity())
+                .get(TransactionsFilterSharedViewModel.class);
+        view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
+            new TransactionsFilterDialog().show(getChildFragmentManager(), null);
+        });
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -194,34 +199,20 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
-        //TODO: Replace by the new icon + bottom sheet
-        /*
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        filterSpinner.setAdapter(adapter);
-        filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                switch (position) {
-                    case 0:
-                        direction = null;
-                        break;
-                    case 1:
-                        direction = Direction.RECEIVED;
-                        break;
-                    case 2:
-                        direction = Direction.SENT;
-                        break;
-                }
-                reloadTransactions();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
+        LifecycleOwner lifecycleOwner = getViewLifecycleOwner();
+        transactionsFilterSharedViewModel.getOnAllTransactionsSelected().observe(lifecycleOwner, aVoid -> {
+            direction = null;
+            reloadTransactions();
         });
-         */
+        transactionsFilterSharedViewModel.getOnReceivedTransactionsSelected().observe(lifecycleOwner, aVoid -> {
+            direction = Direction.RECEIVED;
+            reloadTransactions();
+        });
+        transactionsFilterSharedViewModel.getOnSentTransactionsSelected().observe(lifecycleOwner, aVoid -> {
+            direction = Direction.SENT;
+            reloadTransactions();
+        });
+
         AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
             @Override
             public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
