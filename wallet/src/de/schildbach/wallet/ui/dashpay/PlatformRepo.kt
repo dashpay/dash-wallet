@@ -1313,12 +1313,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     This should not be a suspended method.
      */
-    fun clearDatabase() {
+    fun clearDatabase(includeInvitations: Boolean) {
         blockchainIdentityDataDaoAsync.clear()
         dashPayProfileDaoAsync.clear()
         dashPayContactRequestDaoAsync.clear()
         userAlertDaoAsync.clear()
-        invitationsDaoAsync.clear()
+        if (includeInvitations) {
+            invitationsDaoAsync.clear()
+        }
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
