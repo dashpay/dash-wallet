@@ -69,16 +69,20 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         }
 
         maybe_later_button.setOnClickListener {
-            // was this fragment created indirectly by InvitesHistoryActivity
-            // If yes, then Maybe Later will start InvitesHistoryActivity
-            // If no, InvitesHistoryActivity started this fragment, so just finish()
-            if (!requireArguments().getBoolean(ARG_STARTED_FROM_HISTORY)) {
-                startActivity(InvitesHistoryActivity.createIntent(requireContext()))
-            }
-            requireActivity().finish()
+            finishActivity()
         }
 
         initViewModel()
+    }
+
+    private fun finishActivity() {
+        // was this fragment created indirectly by InvitesHistoryActivity
+        // If yes, then Maybe Later will start InvitesHistoryActivity
+        // If no, InvitesHistoryActivity started this fragment, so just finish()
+        if (!requireArguments().getBoolean(ARG_STARTED_FROM_HISTORY)) {
+            startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+        }
+        requireActivity().finish()
     }
 
     private fun initViewModel() {
@@ -100,6 +104,8 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         viewModel.saveTag(tag_edit.text.toString())
 
         super.shareInvitation(shareImage, viewModel.shortDynamicLinkData)
+
+        finishActivity()
     }
 
     private fun copyInvitationLink() {
