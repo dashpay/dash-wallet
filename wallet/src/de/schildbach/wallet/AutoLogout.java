@@ -26,6 +26,7 @@ import android.os.Build;
 import android.os.Handler;
 
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.InteractionAwareActivity;
 
 import java.util.concurrent.TimeUnit;
 
@@ -89,6 +90,7 @@ public class AutoLogout {
             if (shouldLogout()) {
                 if (onLogoutListener != null) {
                     onLogoutListener.onLogout(appWentBackground);
+                    WalletApplication.getInstance().sendBroadcast(new Intent(InteractionAwareActivity.FORCE_FINISH_ACTION));
                 }
                 timerActive = false;
             } else {

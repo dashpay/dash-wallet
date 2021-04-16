@@ -89,8 +89,7 @@ class MoreActivity : GlobalFooterActivity() {
     }
 
     private fun startBuyAndSellActivity() {
-        val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(this, wallet))
+        startActivity(UpholdAccountActivity.createIntent(this))
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
