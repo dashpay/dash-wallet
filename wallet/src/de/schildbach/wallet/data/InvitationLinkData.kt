@@ -37,25 +37,25 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: CreditFundingTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
             val privateKey = cftx.creditBurnPublicKey.decrypt(aesKeyParameter)
-            val link = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
+            val linkBuilder = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
                     .appendQueryParameter(PARAM_USER, username)
-                    .appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
-                    .appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
                     .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())
                     .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS))
                     .appendQueryParameter(PARAM_IS_LOCK, cftx.confidence.instantSendlock.toStringHex())
-                    .build()
-            return InvitationLinkData(link, null)
+
+            if (displayName.isNotEmpty()) {
+                linkBuilder.appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
+            }
+            if (avatarUrl.isNotEmpty()) {
+                linkBuilder.appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
+            }
+            return InvitationLinkData(linkBuilder.build(), null)
         }
 
         fun isValid(link: Uri): Boolean {
             val queryParams = link.queryParameterNames
-            return (queryParams.contains(PARAM_USER)
-                    && queryParams.contains(PARAM_DISPLAY_NAME)
-                    && queryParams.contains(PARAM_AVATAR_URL)
-                    && queryParams.contains(PARAM_CFTX)
-                    && queryParams.contains(PARAM_PRIVATE_KEY)
-                    && queryParams.contains(PARAM_IS_LOCK))
+            return (queryParams.contains(PARAM_USER) && queryParams.contains(PARAM_CFTX)
+                    && queryParams.contains(PARAM_PRIVATE_KEY) && queryParams.contains(PARAM_IS_LOCK))
         }
     }
 
@@ -66,12 +66,14 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     @IgnoredOnParcel
     val displayName by lazy {
-        link.getQueryParameter(PARAM_DISPLAY_NAME)!!
+        link.getQueryParameter(PARAM_DISPLAY_NAME) ?: user
     }
 
     @IgnoredOnParcel
     val avatarUrl by lazy {
-        Uri.decode(link.getQueryParameter(PARAM_AVATAR_URL)!!)!!
+        link.getQueryParameter("avatar-url")?.run {
+            Uri.decode(this)
+        } ?: ""
     }
 
     @IgnoredOnParcel

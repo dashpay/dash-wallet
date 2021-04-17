@@ -352,8 +352,8 @@ public final class Constants {
 
         String DOMAIN_URI_PREFIX = "https://invitations.dashpay.io/link";
 
-        String IOS_APP_BUNDLEID = "org.dashfoundation.dash";
-        String IOS_APP_APPSTOREID = "1206647026";
+        String IOS_APP_BUNDLEID = "org.dashfoundation.dashpaytn";
+        String IOS_APP_APPSTOREID = "1560401158";
 
         String UTM_SOURCE = "DashPay Android";
         String UTM_CAMPAIGN = "DashPay Alpha Program";

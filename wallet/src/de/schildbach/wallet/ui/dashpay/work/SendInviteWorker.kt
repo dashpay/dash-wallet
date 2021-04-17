@@ -113,11 +113,10 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
     private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: CreditFundingTransaction, aesKeyParameter: KeyParameter): DynamicLink {
         log.info("creating dynamic link for invitation")
         val username = dashPayProfile.username
-        val nameLabel = dashPayProfile.nameLabel
         val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
         return FirebaseDynamicLinks.getInstance()
                 .createDynamicLink().apply {
-                    link = InvitationLinkData.create(username, nameLabel, avatarUrlEncoded, cftx, aesKeyParameter).link
+                    link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, cftx, aesKeyParameter).link
                     domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
                     setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
                     setIosParameters(DynamicLink.IosParameters.Builder(
@@ -128,6 +127,7 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
                 }
                 .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
                     title = applicationContext.getString(R.string.invitation_preview_title)
+                    val nameLabel = dashPayProfile.nameLabel
                     val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.toString())
                     imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
                     description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
