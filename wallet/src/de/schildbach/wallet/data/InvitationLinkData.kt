@@ -29,11 +29,14 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     companion object {
         private const val PARAM_USER = "du"
+        private const val PARAM_USER_2 = "user"
         private const val PARAM_DISPLAY_NAME = "display-name"
         private const val PARAM_AVATAR_URL = "avatar-url"
         private const val PARAM_CFTX = "assetlocktx"
+        private const val PARAM_CFTX_2 = "cftx"
         private const val PARAM_PRIVATE_KEY = "pk"
         private const val PARAM_IS_LOCK = "islock"
+        private const val PARAM_IS_LOCK_2 = "is-lock"
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: CreditFundingTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
             val privateKey = cftx.creditBurnPublicKey.decrypt(aesKeyParameter)
@@ -61,7 +64,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     @IgnoredOnParcel
     val user by lazy {
-        link.getQueryParameter(PARAM_USER)!!
+        link.getQueryParameter(PARAM_USER) ?: link.getQueryParameter(PARAM_USER_2)!!
     }
 
     @IgnoredOnParcel
@@ -78,7 +81,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     @IgnoredOnParcel
     val cftx by lazy {
-        link.getQueryParameter(PARAM_CFTX)!!
+        link.getQueryParameter(PARAM_CFTX) ?: link.getQueryParameter(PARAM_CFTX_2)!!
     }
 
     @IgnoredOnParcel
@@ -88,7 +91,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     @IgnoredOnParcel
     val instantSendLock by lazy {
-        link.getQueryParameter(PARAM_IS_LOCK)
+        link.getQueryParameter(PARAM_IS_LOCK) ?: link.getQueryParameter(PARAM_IS_LOCK_2)!!
     }
 
     val isValid: Boolean

@@ -57,6 +57,7 @@ import org.dashevo.dpp.errors.InvalidIdentityAssetLockProofError
 import org.dashevo.dpp.identifier.Identifier
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
+import org.dashevo.dpp.toHexString
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.dashevo.platform.multicall.MulticallQuery
@@ -623,7 +624,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun obtainCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet.context)
-            val cftxData = platform.client.getTransaction(invite.cftx)
+            var cftxData = platform.client.getTransaction(invite.cftx)
+            //TODO: remove when iOS uses big endian
+            if (cftxData == null)
+                cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
             val cftx = CreditFundingTransaction(platform.params, cftxData!!.toByteArray())
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
             cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
@@ -1459,7 +1463,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      */
 
     fun validateInvitation(invite: InvitationLinkData): Boolean {
-        val tx = platform.client.getTransaction(invite.cftx)
+        var tx = platform.client.getTransaction(invite.cftx)
+        //TODO: remove when iOS uses big endian
+        if (tx == null)
+            tx = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
         if (tx != null) {
             val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.toByteArray())
             val identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
