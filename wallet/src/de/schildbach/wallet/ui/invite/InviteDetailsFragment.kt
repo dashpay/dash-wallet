@@ -113,6 +113,9 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             startActivity(DashPayUserActivity.createIntent(requireContext(), viewModel.invitedUserProfile.value!!))
         }
 
+        pending_view.isVisible = false
+        claimed_view.isVisible = false
+
         initViewModel()
     }
 
@@ -150,6 +153,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
 
     private fun showPending(it: Invitation) {
         send_button.isVisible = it.canSendAgain()
+        pending_view.isVisible = true
         copy_invitation_link.visibility = send_button.visibility
         claimed_view.isVisible = false
         if (!it.canSendAgain()) {
@@ -165,6 +169,8 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 claimed_view.isVisible = true
                 pending_view.isVisible = false
                 preview_button.isVisible = false
+                profile_button.isVisible = true
+                status.setText(R.string.invitation_details_invite_used_by)
                 ProfilePictureDisplay.display(avatarIcon, it)
                 if (it.displayName.isEmpty()) {
                     display_name.text = it.username
@@ -173,6 +179,12 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                     display_name.text = it.displayName
                     username.text = it.username
                 }
+            } else {
+                // this means that a username was not registered (yet)
+                status.setText(R.string.invitation_details_invite_without_username)
+                pending_view.isVisible = false
+                profile_button.isVisible = false
+                claimed_view.isVisible = true
             }
         })
     }

@@ -25,6 +25,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
@@ -105,11 +106,26 @@ open class InvitationFragmentViewModel(application: Application) : BaseProfileVi
 
     val identityIdLiveData = MutableLiveData<String>()
 
-    val invitedUserProfile = blockchainIdentityData.switchMap {
-        if (it?.userId != null) {
-            AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(identityIdLiveData.value!!)
-        } else {
-            MutableLiveData()   //empty
+    val invitedUserProfile: LiveData<DashPayProfile?>
+        get() = AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(identityIdLiveData.value!!)
+    /*blockchainIdentityData.switchMap {
+        liveData(Dispatchers.IO) {
+            var data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
+            if (data == null) {
+                platformRepo.updateDashPayProfile(identityIdLiveData.value!!)
+                data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
+                emit(data)
+            }
+            emit(data)
+        }
+    }*/
+
+    fun updateInvitedUserProfile() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
+            if (data == null) {
+                platformRepo.updateDashPayProfile(identityIdLiveData.value!!)
+            }
         }
     }
 

@@ -169,6 +169,7 @@
                     android:orientation="vertical">
 
                     <TextView
+                        android:id="@+id/status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/invitation_details_invite_used_by"
@@ -199,7 +200,8 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
-                            android:textSize="14sp"
+                            android:layout_marginEnd="10dp"
+                            android:textSize="17sp"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toEndOf="@+id/avatarIcon"
                             app:layout_constraintTop_toTopOf="@id/avatarIcon"
@@ -207,14 +209,14 @@
 
                         <TextView
                             android:id="@id/username"
-                            style="@style/MontserratSemiBold"
+                            style="@style/MontserratRegular"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
+                            android:layout_marginEnd="10dp"
                             android:textSize="12sp"
-                            app:layout_constraintEnd_toEndOf="@id/display_name"
-                            app:layout_constraintStart_toEndOf="@+id/avatar"
-                            app:layout_constraintStart_toStartOf="@id/display_name"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/avatarIcon"
                             app:layout_constraintTop_toBottomOf="@id/display_name"
                             tools:text="waynecampbell" />
 

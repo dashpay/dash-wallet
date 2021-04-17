@@ -581,6 +581,7 @@
     <string name="invite_history_empty_claimed">There are no claimed invites.</string>
     <string name="invite_history_empty_pending">There are no pending invites.</string>
     <string name="invitation_details_invite_used_by">Invitation used by</string>
+    <string name="invitation_details_invite_without_username">Invitation claimed.  Username registration pending.</string>
     <string-array name="invite_filter">
         <item>All</item>
         <item>Pending</item>
