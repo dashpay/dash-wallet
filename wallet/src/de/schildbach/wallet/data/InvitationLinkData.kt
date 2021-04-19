@@ -58,7 +58,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
         fun isValid(link: Uri): Boolean {
             val queryParams = link.queryParameterNames
             return (((queryParams.contains(PARAM_USER) || queryParams.contains(PARAM_USER_2))
-                    && queryParams.contains(PARAM_CFTX)
+                    && (queryParams.contains(PARAM_CFTX) || queryParams.contains(PARAM_CFTX_2))
                     && queryParams.contains(PARAM_PRIVATE_KEY)
                     && (queryParams.contains(PARAM_IS_LOCK_2) || queryParams.contains(PARAM_IS_LOCK))))
         }
