@@ -28,6 +28,7 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.NotificationsForUserLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.TransactionsLiveData
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,6 +43,7 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
 
     private val platformRepo = PlatformRepo.getInstance()
     private val walletApplication = application as WalletApplication
+    val transactionsLiveData = TransactionsLiveData()
 
     lateinit var userData: UsernameSearchResult
 
