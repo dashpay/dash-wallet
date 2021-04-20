@@ -40,6 +40,7 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener,
     }
 
     private var filter = InvitesHistoryViewModel.Filter.ALL
+    private var showCreateInviteItem = false
 
     interface OnItemClickListener {
         fun onItemClicked(view: View, invitationItem: InvitationItem)
@@ -49,7 +50,9 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener,
         set(value) {
             field = value
             filteredResults.clear()
-            filteredResults.add(createInvite)
+            if (showCreateInviteItem) {
+                filteredResults.add(createInvite)
+            }
             filteredResults.add(headerInvite)
             if (value.isNotEmpty()) {
                 filteredResults.addAll(value)
@@ -123,7 +126,9 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener,
     private fun filter() {
         val resultTransactions: MutableList<InvitationItem> = ArrayList()
         //add header
-        resultTransactions.add(createInvite)
+        if (showCreateInviteItem) {
+            resultTransactions.add(createInvite)
+        }
         resultTransactions.add(headerInvite)
         for (inviteItem in history) {
             if (inviteItem.type == INVITE) {
@@ -149,5 +154,10 @@ class InvitesAdapter(private val itemClickListener: OnItemClickListener,
         }
 
         notifyDataSetChanged()
+    }
+
+    fun showCreateInvite(it: Boolean) {
+        showCreateInviteItem = it
+        filter()
     }
 }

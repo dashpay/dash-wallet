@@ -1487,6 +1487,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             } else {
                 log.warn("Invitation has been used: ${identity.id}")
+                return false
             }
         }
         log.warn("Invitation uses an invalid transaction ${invite.cftx}")

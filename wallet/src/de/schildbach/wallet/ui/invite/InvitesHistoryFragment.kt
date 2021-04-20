@@ -25,8 +25,11 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_invites_history.*
+import org.dash.wallet.common.ui.FancyAlertDialog
 import org.slf4j.LoggerFactory
 
 class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), InvitesAdapter.OnItemClickListener {
@@ -39,6 +42,7 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
 
     private lateinit var invitesHistoryViewModel: InvitesHistoryViewModel
     private lateinit var filterViewModel: InvitesHistoryFilterViewModel
+    private lateinit var createInviteViewModel: CreateInviteViewModel
 
     private lateinit var invitesAdapter: InvitesAdapter
 
@@ -77,6 +81,13 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
         filterViewModel = ViewModelProvider(this)[InvitesHistoryFilterViewModel::class.java]
         filterViewModel.filterBy.observe(this, Observer {
             invitesAdapter.onFilter(it)
+        })
+
+        createInviteViewModel = ViewModelProvider(this)[CreateInviteViewModel::class.java]
+        createInviteViewModel.isAbleToCreateInviteLiveData.observe(requireActivity(), Observer {
+            if (it != null) {
+                invitesAdapter.showCreateInvite(it)
+            }
         })
     }
 

@@ -37,6 +37,7 @@ import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
@@ -46,6 +47,7 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_details.*
+import org.dash.wallet.common.ui.FancyAlertDialog
 
 
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
@@ -110,7 +112,16 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             }
         }
         profile_button.setOnClickListener {
-            startActivity(DashPayUserActivity.createIntent(requireContext(), viewModel.invitedUserProfile.value!!))
+            viewModel.invitedUserProfile.observeOnce(requireActivity(), Observer {
+                if(it != null) {
+                    startActivity(DashPayUserActivity.createIntent(requireContext(), it))
+                } else {
+                    /*not sure why this is happening*/
+                    val errorDialog = FancyAlertDialog.newProgress(R.string.invitation_creating_error_message_not_synced,
+                            R.string.invitation_verifying_progress_title)
+                    errorDialog.show(childFragmentManager, null)
+                }
+            })
         }
 
         pending_view.isVisible = false
@@ -145,7 +156,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         viewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
             setupInvitationPreviewTemplate(it!!)
         })
-
+        viewModel.updateInvitedUserProfile()
     }
 
     private fun getTagHint() =
