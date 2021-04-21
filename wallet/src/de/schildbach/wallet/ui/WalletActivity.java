@@ -40,8 +40,6 @@ import android.telephony.TelephonyManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -904,40 +902,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
             return;
         }
 
-        int percentage = blockchainState.getPercentageSync();
-        if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
-            //This is to prevent showing 100% when using the Rescan blockchain function.
-            //The first few broadcasted blockchainStates are with percentage sync at 100%
-            percentage = 0;
-        }
-
-        ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
         if (blockchainState != null && blockchainState.syncFailed()) {
-            updateSyncPaneVisibility(R.id.sync_status_pane, true);
-            findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
             findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
             return;
         }
 
         updateSyncPaneVisibility(R.id.sync_error_pane, false);
-        updateSyncPaneVisibility(R.id.sync_progress_pane, true);
-        TextView syncStatusTitle = findViewById(R.id.sync_status_title);
-        TextView syncStatusMessage = findViewById(R.id.sync_status_message);
-        syncProgressView.setProgress(percentage);
-        TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
-        syncPercentageView.setText(percentage + "%");
-
-        if (blockchainState.isSynced()) {
-            syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
-            syncStatusTitle.setText(R.string.sync_status_sync_title);
-            syncStatusMessage.setText(R.string.sync_status_sync_completed);
-            updateSyncPaneVisibility(R.id.sync_status_pane, false);
-        } else {
-            syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
-            updateSyncPaneVisibility(R.id.sync_status_pane, true);
-            syncStatusTitle.setText(R.string.sync_status_syncing_title);
-            syncStatusMessage.setText(R.string.sync_status_syncing_sub_title);
-        }
     }
 
     /**
