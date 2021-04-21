@@ -16,11 +16,26 @@
 
 package org.dash.wallet.common;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
 import android.view.WindowManager;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class InteractionAwareActivity extends AppCompatActivity {
+
+    public static final String FORCE_FINISH_ACTION = "InteractionAwareActivity.FORCE_FINISH_ACTION";
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        IntentFilter filter = new IntentFilter(FORCE_FINISH_ACTION);
+        registerReceiver(forceFinishReceiver, filter);
+    }
 
     @Override
     public void onUserInteraction() {
@@ -39,4 +54,17 @@ public class InteractionAwareActivity extends AppCompatActivity {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
         super.onResume();
     }
+
+    @Override
+    public void finish() {
+        unregisterReceiver(forceFinishReceiver);
+        super.finish();
+    }
+
+    private final BroadcastReceiver forceFinishReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            finish();
+        }
+    };
 }

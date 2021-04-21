@@ -849,7 +849,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        startActivity(UpholdAccountActivity.createIntent(this, wallet));
+        startActivity(UpholdAccountActivity.createIntent(this));
     }
 
     //Dash Specific

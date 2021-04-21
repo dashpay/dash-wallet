@@ -48,6 +48,7 @@ import androidx.multidex.MultiDexApplication;
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -60,8 +61,11 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
+import org.dash.wallet.common.util.WalletDataProvider;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +101,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler {
+public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler, WalletDataProvider {
 
     private static WalletApplication instance;
     private Configuration config;
@@ -164,6 +168,9 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             @Override
             protected void onStoppedLast() {
                 autoLogout.setAppWentBackground(true);
+                if (config.getAutoLogoutEnabled() && config.getAutoLogoutMinutes() == 0) {
+                    sendBroadcast(new Intent(InteractionAwareActivity.FORCE_FINISH_ACTION));
+                }
             }
         });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
@@ -775,5 +782,17 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     @Override
     public void resetAutoLogoutTimer() {
         autoLogout.resetTimerIfActive();
+    }
+
+    @NotNull
+    @Override
+    public Address freshReceiveAddress() {
+        return wallet.freshReceiveAddress();
+    }
+
+    @NotNull
+    @Override
+    public Address currentReceiveAddress() {
+        return wallet.currentReceiveAddress();
     }
 }

@@ -15,6 +15,7 @@
 package org.dash.wallet.common.customtabs;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.net.Uri;
 import androidx.browser.customtabs.CustomTabsIntent;
 
@@ -45,6 +46,8 @@ public class CustomTabActivityHelper {
             }
         } else {
             customTabsIntent.intent.setPackage(packageName);
+//            customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+//            customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
             customTabsIntent.launchUrl(activity, uri);
         }
     }
