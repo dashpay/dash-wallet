@@ -203,47 +203,18 @@ public class WalletTransactionsFragment extends Fragment
             if (!blockchainIdentityData.getUsingInvite()) {
                 activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
             } else {
-                // handle errors
-                String errorMessage;
-                if ((errorMessage = blockchainIdentityData.getCreationStateErrorMessage()) != null) {
-                    if (errorMessage.contains("IdentityAssetLockTransactionOutPointAlreadyExistsError")) {
-                        FancyAlertDialog dialog = InviteAlreadyClaimedDialog.newInstance(activity, blockchainIdentityData.getInvite());
-                        dialog.show(getParentFragmentManager(), null);
-
-                        // now erase the blockchain data
-                        PlatformRepo.getInstance().clearBlockchainData();
-                        adapter.setBlockchainIdentityData(null);
-                        return;
-                    } else if (errorMessage.contains("InvalidIdentityAssetLockProofSignatureError")) {
-                        InvitesHandler handler = new InvitesHandler(activity);
-                        handler.handle(Resource.loading(blockchainIdentityData.getInvite(), 0));
-                        handler.handle(Resource.error(errorMessage, blockchainIdentityData.getInvite()));
-
-                        // now erase the blockchain data
-                        PlatformRepo.getInstance().clearBlockchainData();
-                        adapter.setBlockchainIdentityData(null);
-                        return;
-                    } else if (errorMessage.contains("InsuffientFundsError")) {
-                        InvitesHandler handler = new InvitesHandler(activity);
-                        FancyAlertDialog dialog = FancyAlertDialog.Companion.newProgress(R.string.invitation_invalid_invite_title, R.string.dashpay_insuffient_credits);
-                        dialog.show(getParentFragmentManager(), null);
-
-                        // now erase the blockchain data
-                        PlatformRepo.getInstance().clearBlockchainData();
-                        adapter.setBlockchainIdentityData(null);
-                    }
+                // handle errors from using an invite
+                InvitesHandler handler = new InvitesHandler(activity);
+                if (handler.handleError(blockchainIdentityData)) {
+                    adapter.setBlockchainIdentityData(null);
+                } else {
+                    activity.startService(CreateIdentityService.createIntentForRetryFromInvite(activity, false));
                 }
-                activity.startService(CreateIdentityService.createIntentForRetryFromInvite(activity,false));
             }
         } else {
             if (blockchainIdentityData.getCreationStateErrorMessage() != null) {
                 if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.USERNAME_REGISTERING) {
-                    // check to see if an invite was used
-                    if (!blockchainIdentityData.getUsingInvite()) {
-                        startActivity(CreateUsernameActivity.createIntentReuseTransaction(activity));
-                    } else {
-                        startActivity(CreateUsernameActivity.createIntentFromInviteReuseTransaction(activity));
-                    }
+                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(activity, blockchainIdentityData));
                 } else {
                     Toast.makeText(getContext(), blockchainIdentityData.getCreationStateErrorMessage(), Toast.LENGTH_LONG).show();
                 }

@@ -386,6 +386,7 @@
     <string name="invitation_created_preview">Preview Invitation</string>
     <string name="invitation_created_copy_link">Copy Invitation Link</string>
     <string name="invitation_created_send_invitation">Send Invitation</string>
+    <string name="invitation_created_send_invitation_again">Send again</string>
     <string name="invitation_created_maybe_later">Maybe later</string>
     <string name="invitation_preview_title">Join Now</string>
     <string name="invitation_preview_message">You have been invited by %s. Start using Dash cryptocurrency.</string>
@@ -394,6 +395,7 @@
     <string name="invitation_cant_afford_message">You need at least %s Dash to create an invitation</string>
     <string name="invitation_creating_error_title">Error Creating Invitation</string>
     <string name="invitation_creating_error_message">There was a problem creating your invitation. Please try again.</string>
+    <string name="invitation_creating_error_message_not_synced">Wait for syncing to complete and try again.</string>
     <string name="invitation_creating_progress_title">Creating invitation</string>
     <string name="invitation_verifying_progress_title">Verifying invitation</string>
     <string name="invitation_share_message">Invitations are single use only. Do not share with a group.</string>
@@ -579,6 +581,8 @@
     <string name="invite_history_empty">No invites have been created.</string>
     <string name="invite_history_empty_claimed">There are no claimed invites.</string>
     <string name="invite_history_empty_pending">There are no pending invites.</string>
+    <string name="invitation_details_invite_used_by">Invitation used by</string>
+    <string name="invitation_details_invite_without_username">Invitation claimed.  Username registration pending.</string>
     <string-array name="invite_filter">
         <item>All</item>
         <item>Pending</item>

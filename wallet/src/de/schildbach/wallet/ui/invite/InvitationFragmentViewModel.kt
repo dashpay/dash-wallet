@@ -13,22 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.schildbach.wallet.ui.dashpay
+package de.schildbach.wallet.ui.invite
 
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
 import android.view.View
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.liveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
 import de.schildbach.wallet.ui.security.SecurityGuard
@@ -106,6 +105,29 @@ open class InvitationFragmentViewModel(application: Application) : BaseProfileVi
     }
 
     val identityIdLiveData = MutableLiveData<String>()
+
+    val invitedUserProfile: LiveData<DashPayProfile?>
+        get() = AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(identityIdLiveData.value!!)
+    /*blockchainIdentityData.switchMap {
+        liveData(Dispatchers.IO) {
+            var data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
+            if (data == null) {
+                platformRepo.updateDashPayProfile(identityIdLiveData.value!!)
+                data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
+                emit(data)
+            }
+            emit(data)
+        }
+    }*/
+
+    fun updateInvitedUserProfile() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
+            if (data == null) {
+                platformRepo.updateDashPayProfile(identityIdLiveData.value!!)
+            }
+        }
+    }
 
     val invitationLiveData = Transformations.switchMap(identityIdLiveData) {
         liveData(Dispatchers.IO) {

@@ -601,6 +601,7 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
+
     private fun handleRestoreIdentityAction(identity: ByteArray) {
         workInProgress = true
         serviceScope.launch(createIdentityexceptionHandler) {

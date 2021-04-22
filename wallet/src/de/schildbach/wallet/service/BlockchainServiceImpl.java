@@ -244,7 +244,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
                 PlatformRepo platformRepo = PlatformRepo.getInstance();
                 if (platformRepo != null) {
-                    platformRepo.handleSentCreditFundingTransaction(cftx);
+                    long blockChainHeadTime = blockChain.getChainHead().getHeader().getTime().getTime();
+                    platformRepo.handleSentCreditFundingTransaction(cftx, blockChainHeadTime);
                 }
             }
             updateAppWidget();
@@ -1056,7 +1057,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 @Override
                 public void run() {
                     // This code is not executed during a wipe, only a blockchain reset
-                    PlatformRepo.getInstance().clearDatabase();
+                    PlatformRepo.getInstance().clearDatabase(false);
                 }
             });
         }

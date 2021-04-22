@@ -91,6 +91,10 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
             val dashPayProfile = platformRepo.getLocalUserProfile()
             val dynamicLink = createDynamicLink(dashPayProfile!!, cftx, encryptionKey)
             val shortDynamicLink = buildShortDynamicLink(dynamicLink)
+            val invitation = platformRepo.getInvitation(cftx.creditBurnIdentityIdentifier.toStringBase58())!!
+            invitation.shortDynamicLink = shortDynamicLink.shortLink.toString()
+            invitation.dynamicLink = dynamicLink.uri.toString()
+            platformRepo.updateInvitation(invitation)
             Result.success(workDataOf(
                     KEY_TX_ID to cftx.txId.bytes,
                     KEY_USER_ID to cftx.creditBurnIdentityIdentifier.toStringBase58(),
