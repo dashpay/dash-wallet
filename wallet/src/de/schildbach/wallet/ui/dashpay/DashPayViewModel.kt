@@ -255,4 +255,6 @@ open class DashPayViewModel(application: Application) : AndroidViewModel(applica
 
     private inner class UserSearch(val text: String, val limit: Int = 100,
                                    val excludeIds: ArrayList<String> = arrayListOf())
+
+    val inviteHistory = AppDatabase.getAppDatabase().invitationsDaoAsync().loadAll()
 }

@@ -36,6 +36,7 @@ import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRestore
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
+import de.schildbach.wallet.util.canAffordIdentityCreation
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import org.bitcoinj.core.*
@@ -457,10 +458,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return msg
     }
 
+    suspend fun shouldShowAlert(): Boolean {
+        val hasSentInvites = invitationsDao.count() > 0
+        val blockchainIdentityData = blockchainIdentityDataDao.load()
+        val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
+        val canAffordIdentityCreation = walletApplication.wallet.canAffordIdentityCreation()
+        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
+    }
+
+
     suspend fun getNotificationCount(date: Long): Int {
         var count = 0
         // Developer Mode Feature
-        if (walletApplication.configuration.developerMode) {
+        if (walletApplication.configuration.developerMode && shouldShowAlert()) {
             val alert = userAlertDao.load(date)
             if (alert != null) {
                 count++
@@ -831,7 +841,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDao.insert(blockchainIdentityData)
     }
 
-    private suspend fun updateDashPayProfile(userId: String) {
+    private suspend fun updateDashPayProfile(userId: String): Boolean {
         var profileDocument = profiles.get(userId)
                 ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
@@ -842,7 +852,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             val profile = DashPayProfile.fromDocument(profileDocument, username)
             dashPayProfileDao.insert(profile!!)
+            return true
         }
+        return false
     }
 
     suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
@@ -1303,6 +1315,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         dashPayProfileDaoAsync.clear()
         dashPayContactRequestDaoAsync.clear()
         userAlertDaoAsync.clear()
+        invitationsDaoAsync.clear()
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
@@ -1477,4 +1490,26 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun handleSentCreditFundingTransaction(cftx: CreditFundingTransaction) {
+        if (this::blockchainIdentity.isInitialized) {
+            GlobalScope.launch(Dispatchers.IO) {
+                val isInvite = walletApplication.wallet.invitationFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isTopup = walletApplication.wallet.blockchainIdentityTopupKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isIdentity = walletApplication.wallet.blockchainIdentityFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val identityId = cftx.creditBurnIdentityIdentifier.toStringBase58();
+                if (isInvite && !isTopup &&!isIdentity) {
+                    // this is not in our database
+                    val invite = Invitation(identityId, cftx.txId, cftx.updateTime.time,
+                            "", cftx.updateTime.time, 0)
+
+                    // profile information here
+                    if(updateDashPayProfile(identityId)) {
+                        val profile = dashPayProfileDao.loadByUserId(identityId)
+                        invite.acceptedAt = profile?.createdAt ?: -1 // it was accepted in the past, use profile creation as the default
+                    }
+                    invitationsDao.insert(invite)
+                }
+            }
+        }
+    }
 }

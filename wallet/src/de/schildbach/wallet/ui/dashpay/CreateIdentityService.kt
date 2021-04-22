@@ -385,15 +385,7 @@ class CreateIdentityService : LifecycleService() {
         //         However, a default empty profile will be saved to the local database.
         val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
         platformRepo.updateDashPayProfile(emptyProfile)
-        if (blockchainIdentityData.creationState < CreationState.DONE) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
-            if (wallet.balance.isGreaterThan(Constants.DASH_PAY_FEE)) {
-                delay(1000L) //1s delay as required on NMA-491
-                val userAlert = UserAlert(R.string.invitation_notification_text,
-                        R.drawable.ic_invitation)
-                AppDatabase.getAppDatabase().userAlertDao().insert(userAlert)
-            }
-        }
+        addInviteUserAlert(wallet)
 
         PlatformRepo.getInstance().init()
 
@@ -587,15 +579,8 @@ class CreateIdentityService : LifecycleService() {
         //         However, a default empty profile will be saved to the local database.
         val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
         platformRepo.updateDashPayProfile(emptyProfile)
-        if (blockchainIdentityData.creationState < CreationState.DONE) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
-            if (walletApplication.wallet.balance.isGreaterThan(Constants.DASH_PAY_FEE)) {
-                delay(1000L) //1s delay as required on NMA-491
-                val userAlert = UserAlert(R.string.invitation_notification_text,
-                        R.drawable.ic_invitation)
-                AppDatabase.getAppDatabase().userAlertDao().insert(userAlert)
-            }
-        }
+
+        addInviteUserAlert(walletApplication.wallet)
 
         PlatformRepo.getInstance().init()
 
@@ -603,6 +588,18 @@ class CreateIdentityService : LifecycleService() {
         log.info("username registration complete")
     }
 
+    private suspend fun addInviteUserAlert(wallet: Wallet) {
+        if (blockchainIdentityData.creationState < CreationState.DONE) {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)
+
+            // this alert will be shown or not based on the current balance and will be
+            // managed by NotificationsLiveData
+            val userAlert = UserAlert(R.string.invitation_notification_text,
+                        R.drawable.ic_invitation)
+            AppDatabase.getAppDatabase().userAlertDao().insert(userAlert)
+
+        }
+    }
 
     private fun handleRestoreIdentityAction(identity: ByteArray) {
         workInProgress = true
@@ -697,6 +694,8 @@ class CreateIdentityService : LifecycleService() {
         // blockchainIdentity hasn't changed
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DASHPAY_PROFILE_CREATED)
         platformRepo.updateSyncStatus(PreBlockStage.GetProfile)
+
+        addInviteUserAlert(walletApplication.wallet)
 
         // We are finished recovering
         platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.DONE)

@@ -240,9 +240,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
             if(CreditFundingTransaction.isCreditFundingTransaction(tx) && tx.getPurpose() == Transaction.Purpose.UNKNOWN) {
-                //TODO: We probably can remove this
-                //CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
-                //ContextCompat.startForegroundService(getApplicationContext(), CreateIdentityService.createIntentForRestore(getApplicationContext(), cftx.getCreditBurnIdentityIdentifier().getBytes()));
+                // Handle credit function transactions (username creation, topup, invites)
+                CreditFundingTransaction cftx = wallet.getCreditFundingTransaction(tx);
+                PlatformRepo platformRepo = PlatformRepo.getInstance();
+                if (platformRepo != null) {
+                    platformRepo.handleSentCreditFundingTransaction(cftx);
+                }
             }
             updateAppWidget();
         }

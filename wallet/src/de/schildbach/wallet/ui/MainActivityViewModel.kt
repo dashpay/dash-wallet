@@ -34,6 +34,8 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
         }
     }
 
+    val inviteHistory = AppDatabase.getAppDatabase().invitationsDaoAsync().loadAll()
+
     val inviteData = MutableLiveData<Resource<InvitationLinkData>>()
 
     fun handleInvite(intent: Intent) {

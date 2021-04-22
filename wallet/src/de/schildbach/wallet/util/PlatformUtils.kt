@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.util
 
+import org.bitcoinj.core.Sha256Hash
 import org.dashevo.dpp.util.HashUtils
 import java.lang.IllegalArgumentException
 import java.math.BigInteger
@@ -31,5 +32,9 @@ object PlatformUtils {
         } catch (e: IllegalArgumentException) {
             UUID.fromString(s).mostSignificantBits
         }
+    }
+
+    fun longHash(s: Sha256Hash): Long {
+        return longHashFromEncodedString(s.toString())
     }
 }

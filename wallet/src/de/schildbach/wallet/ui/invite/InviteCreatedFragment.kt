@@ -50,11 +50,13 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
 
     companion object {
         private const val ARG_IDENTITY_ID = "identity_id"
+        private const val ARG_STARTED_FROM_HISTORY = "started_from_history"
 
-        fun newInstance(identity: String): InviteCreatedFragment {
+        fun newInstance(identity: String, startedFromHistory: Boolean = false): InviteCreatedFragment {
             val fragment = InviteCreatedFragment()
             fragment.arguments = Bundle().apply {
                 putString(ARG_IDENTITY_ID, identity)
+                putBoolean(ARG_STARTED_FROM_HISTORY, startedFromHistory)
             }
             return fragment
         }
@@ -88,7 +90,12 @@ class InviteCreatedFragment : Fragment(R.layout.fragment_invite_created) {
         }
 
         maybe_later_button.setOnClickListener {
-            startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+            // was this fragment created indirectly by InvitesHistoryActivity
+            // If yes, then Maybe Later will start InvitesHistoryActivity
+            // If no, InvitesHistoryActivity started this fragment, so just finish()
+            if (!requireArguments().getBoolean(ARG_STARTED_FROM_HISTORY)) {
+                startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+            }
             requireActivity().finish()
         }
 

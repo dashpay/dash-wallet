@@ -561,7 +561,7 @@
     <string name="suggestions_empty_result_part_2">in your contacts</string>
     <string name="save_changes">Save Changes</string>
     <string name="save_profile_reminder_text">Would you like to save the changes you made to your profile?</string>
-    <string name="invitation_notification_text">Invite your friends and family to the Dash Network</string>
+    <string name="invitation_notification_text">Invite your friends and family to join the Dash Network.</string>
     <string name="dashpay_min_balance_disclaimer">You need at least <b>0.01 Dash</b> to get started</string>
     <string name="dashpay_insuffient_credits">Insufficient credits to perform this action.</string>
 
@@ -573,4 +573,16 @@
 
     <string name="about_developer_mode">Developer mode activated: all features enabled!</string>
     <string name="about_developer_mode_disabled">Developer mode deactivated.</string>
+    <string name="invite_history_create_new_invite">Create a new invitation</string>
+    <string name="invitations_history_header">Invitations History</string>
+    <string name="invitations_filter_title">Filter Invitations</string>
+    <string name="invite_history_empty">No invites have been created.</string>
+    <string name="invite_history_empty_claimed">There are no claimed invites.</string>
+    <string name="invite_history_empty_pending">There are no pending invites.</string>
+    <string-array name="invite_filter">
+        <item>All</item>
+        <item>Pending</item>
+        <item>Claimed</item>
+    </string-array>
+
 </resources>
