@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.invite
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
@@ -45,6 +46,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_created.*
 
+const val REQUEST_CODE_SHARE = 1
 
 abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) {
 
@@ -64,7 +66,7 @@ abstract class InvitationFragment(fragmentResId: Int) : Fragment(fragmentResId) 
                 setType(Constants.Invitation.MIMETYPE)
             }
             setChooserTitle(R.string.invitation_share_message)
-            startChooser()
+            startActivityForResult(createChooserIntent(), REQUEST_CODE_SHARE)
         }
     }
 

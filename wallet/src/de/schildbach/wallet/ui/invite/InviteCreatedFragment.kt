@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui.invite
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
@@ -61,13 +62,8 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
             copyInvitationLink()
         }
         send_button.setOnClickListener {
-            shareInvitation(true)
-        }
-        send_button.setOnLongClickListener {
             shareInvitation(false)
-            true
         }
-
         maybe_later_button.setOnClickListener {
             finishActivity()
         }
@@ -104,8 +100,13 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         viewModel.saveTag(tag_edit.text.toString())
 
         super.shareInvitation(shareImage, viewModel.shortDynamicLinkData)
+    }
 
-        finishActivity()
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_SHARE) {
+            finishActivity()
+        }
     }
 
     private fun copyInvitationLink() {
