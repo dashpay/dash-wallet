@@ -112,6 +112,13 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                 putExtra(EXTRA_INVITE, invite)
             }
         }
+
+        @JvmStatic
+        fun createIntentFromInviteReuseTransaction(context: Context): Intent {
+            return Intent(context, CreateUsernameActivity::class.java).apply {
+                action = ACTION_FROM_INVITE_REUSE_TRANSACTION
+            }
+        }
     }
 
 

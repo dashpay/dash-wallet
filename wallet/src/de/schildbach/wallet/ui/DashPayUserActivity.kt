@@ -120,6 +120,9 @@ class DashPayUserActivity : InteractionAwareActivity(),
                 }
             }
         })
+        viewModel.transactionsLiveData.observe(this, {
+            viewModel.notificationsForUser.onContactsUpdated()
+        })
 
         val username = viewModel.userData.username
         val profile = viewModel.userData.dashPayProfile
@@ -268,7 +271,6 @@ class DashPayUserActivity : InteractionAwareActivity(),
     }
 
     private fun processResults(data: List<NotificationItem>) {
-
         val results = ArrayList<NotificationsAdapter.NotificationViewItem>()
 
         results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_profile_activity))
