@@ -31,6 +31,7 @@ class CreateInviteViewModel(application: Application) : BaseProfileViewModel(app
         get() = blockchainStateData.value
 
     val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
+
     val canAffordIdentityCreation: Boolean?
         get() = canAffordIdentityCreationLiveData.value
 

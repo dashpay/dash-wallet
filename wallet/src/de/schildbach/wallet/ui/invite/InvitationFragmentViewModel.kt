@@ -108,17 +108,6 @@ open class InvitationFragmentViewModel(application: Application) : BaseProfileVi
 
     val invitedUserProfile: LiveData<DashPayProfile?>
         get() = AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(identityIdLiveData.value!!)
-    /*blockchainIdentityData.switchMap {
-        liveData(Dispatchers.IO) {
-            var data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
-            if (data == null) {
-                platformRepo.updateDashPayProfile(identityIdLiveData.value!!)
-                data = AppDatabase.getAppDatabase().dashPayProfileDao().loadByUserId(identityIdLiveData.value!!)
-                emit(data)
-            }
-            emit(data)
-        }
-    }*/
 
     fun updateInvitedUserProfile() {
         viewModelScope.launch(Dispatchers.IO) {

@@ -71,10 +71,6 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     var tagModified = false
     var inviteIndex = -1
 
-    //val viewModel by lazy {
-    //    ViewModelProvider(requireActivity()).get(InvitationFragmentViewModel::class.java)
-    //}
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
