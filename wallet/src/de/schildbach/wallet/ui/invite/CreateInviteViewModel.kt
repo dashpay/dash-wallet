@@ -32,6 +32,9 @@ class CreateInviteViewModel(application: Application) : BaseProfileViewModel(app
 
     val canAffordIdentityCreationLiveData = CanAffordIdentityCreationLiveData(walletApplication)
 
+    val canAffordIdentityCreation: Boolean?
+        get() = canAffordIdentityCreationLiveData.value
+
     val isAbleToCreateInviteLiveData = MediatorLiveData<Boolean>().apply {
         addSource(blockchainStateData) {
             value = combineLatestData()

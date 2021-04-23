@@ -847,7 +847,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDao.insert(blockchainIdentityData)
     }
 
-    private suspend fun updateDashPayProfile(userId: String): Boolean {
+    suspend fun updateDashPayProfile(userId: String): Boolean {
         var profileDocument = profiles.get(userId)
                 ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
@@ -1058,6 +1058,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
             updateSyncStatus(PreBlockStage.GetNewProfiles)
 
+            // fetch updated invitations
+            updateInvitations()
+
             // fetch updated profiles from the network
             updateContactProfiles(userId, lastContactRequestTime)
 
@@ -1069,9 +1072,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
 
             updateSyncStatus(PreBlockStage.Complete)
-
-            // fetch updated invitations
-            updateInvitations()
 
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
@@ -1440,7 +1440,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     /**
      * Updates invitation status
      */
-    suspend fun updateInvitations() {
+    private suspend fun updateInvitations() {
         val invitations = invitationsDao.loadAll()
         for (invitation in invitations) {
             if (invitation.acceptedAt == 0L) {
@@ -1494,6 +1494,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             } else {
                 log.warn("Invitation has been used: ${identity.id}")
+                return false
             }
         }
         log.warn("Invitation uses an invalid transaction ${invite.cftx}")

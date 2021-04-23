@@ -76,7 +76,7 @@ data class InvitationLinkData(val link: Uri, var validation: Boolean?) : Parcela
 
     @IgnoredOnParcel
     val avatarUrl by lazy {
-        link.getQueryParameter("avatar-url")?.run {
+        link.getQueryParameter(PARAM_AVATAR_URL)?.run {
             Uri.decode(this)
         } ?: ""
     }

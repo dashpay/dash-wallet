@@ -37,6 +37,7 @@ import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
@@ -46,6 +47,7 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_details.*
+import org.dash.wallet.common.ui.FancyAlertDialog
 
 
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
@@ -68,10 +70,6 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
 
     var tagModified = false
     var inviteIndex = -1
-
-    //val viewModel by lazy {
-    //    ViewModelProvider(requireActivity()).get(InvitationFragmentViewModel::class.java)
-    //}
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -110,8 +108,20 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             }
         }
         profile_button.setOnClickListener {
-            startActivity(DashPayUserActivity.createIntent(requireContext(), viewModel.invitedUserProfile.value!!))
+            viewModel.invitedUserProfile.observeOnce(requireActivity(), Observer {
+                if(it != null) {
+                    startActivity(DashPayUserActivity.createIntent(requireContext(), it))
+                } else {
+                    /*not sure why this is happening*/
+                    val errorDialog = FancyAlertDialog.newProgress(R.string.invitation_creating_error_message_not_synced,
+                            R.string.invitation_verifying_progress_title)
+                    errorDialog.show(childFragmentManager, null)
+                }
+            })
         }
+
+        pending_view.isVisible = false
+        claimed_view.isVisible = false
 
         initViewModel()
     }
@@ -142,7 +152,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         viewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
             setupInvitationPreviewTemplate(it!!)
         })
-
+        viewModel.updateInvitedUserProfile()
     }
 
     private fun getTagHint() =
@@ -150,6 +160,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
 
     private fun showPending(it: Invitation) {
         send_button.isVisible = it.canSendAgain()
+        pending_view.isVisible = true
         copy_invitation_link.visibility = send_button.visibility
         claimed_view.isVisible = false
         if (!it.canSendAgain()) {
@@ -165,6 +176,8 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 claimed_view.isVisible = true
                 pending_view.isVisible = false
                 preview_button.isVisible = false
+                profile_button.isVisible = true
+                status.setText(R.string.invitation_details_invite_used_by)
                 ProfilePictureDisplay.display(avatarIcon, it)
                 if (it.displayName.isEmpty()) {
                     display_name.text = it.username
@@ -173,6 +186,12 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                     display_name.text = it.displayName
                     username.text = it.username
                 }
+            } else {
+                // this means that a username was not registered (yet)
+                status.setText(R.string.invitation_details_invite_without_username)
+                pending_view.isVisible = false
+                profile_button.isVisible = false
+                claimed_view.isVisible = true
             }
         })
     }

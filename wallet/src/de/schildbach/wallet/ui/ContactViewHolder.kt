@@ -70,11 +70,12 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
         ContactRelation.process(usernameSearchResult.type, sendContactRequestWorkState, object : ContactRelation.RelationshipCallback {
 
             override fun none() {
-                itemView.relation_state.displayedChild = 4
+                itemView.relation_state.visibility = View.GONE
             }
 
             override fun inviting() {
                 itemView.relation_state.displayedChild = 3
+                itemView.relation_state.visibility = View.VISIBLE
                 itemView.pending_work_text.setText(R.string.sending_contact_request_short)
                 (itemView.pending_work_icon.drawable as AnimationDrawable).start()
             }
@@ -85,6 +86,7 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
 
             override fun inviteReceived() {
                 itemView.relation_state.displayedChild = 2
+                itemView.relation_state.visibility = View.VISIBLE
                 itemView.accept_contact_request.isEnabled = networkAvailable
                 itemView.accept_contact_request.setOnClickListener {
                     contactRequestButtonClickListener?.onAcceptRequest(usernameSearchResult, adapterPosition)
@@ -96,12 +98,14 @@ class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup, @LayoutRes 
 
             override fun acceptingInvite() {
                 itemView.relation_state.displayedChild = 3
+                itemView.relation_state.visibility = View.VISIBLE
                 itemView.pending_work_text.setText(R.string.accepting_contact_request_short)
                 (itemView.pending_work_icon.drawable as AnimationDrawable).start()
             }
 
             override fun friends() {
                 if (useFriendsIcon) {
+                    itemView.relation_state.visibility = View.VISIBLE
                     itemView.relation_state.displayedChild = 0
                 } else {
                     none()
