@@ -25,34 +25,42 @@ data class Resource<out T>(val status: Status, val data: T?, val message: String
             return Resource(SUCCESS, data, null, null)
         }
 
+        @JvmStatic
         fun <T> error(msg: String): Resource<T> {
             return Resource(ERROR, null, msg, null)
         }
 
+        @JvmStatic
         fun <T> error(msg: String, data: T?): Resource<T> {
             return Resource(ERROR, data, msg, null)
         }
 
+        @JvmStatic
         fun <T> error(exception: Exception): Resource<T> {
             return Resource(ERROR, null, null, exception)
         }
 
+        @JvmStatic
         fun <T> error(exception: Exception, data: T?): Resource<T> {
             return Resource(ERROR, data, null, exception)
         }
 
+        @JvmStatic
         fun <T> error(exception: Exception, msg: String): Resource<T> {
             return Resource(ERROR, null, msg, exception)
         }
 
+        @JvmStatic
         fun <T> loading(data: T? = null, progress: Int? = null): Resource<T> {
             return Resource(LOADING, data, progress?.toString(), null)
         }
 
+        @JvmStatic
         fun <T> canceled(): Resource<T> {
             return Resource(CANCELED, null, null, null)
         }
 
+        @JvmStatic
         fun <T> canceled(data: T?): Resource<T> {
             return Resource(CANCELED, data, null, null)
         }

@@ -130,7 +130,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
-                    startService(CreateIdentityService.createIntentForRetry(this, false))
+                    if (!it.usingInvite) {
+                        startService(CreateIdentityService.createIntentForRetry(this, false))
+                    } else {
+                        startService(CreateIdentityService.createIntentForRetryFromInvite(this, false))
+                    }
                 }
             }
         })

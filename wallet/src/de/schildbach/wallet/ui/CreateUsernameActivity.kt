@@ -29,7 +29,6 @@ import android.text.TextWatcher
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
-import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -37,6 +36,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants.USERNAME_MAX_LENGTH
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Status
@@ -46,7 +46,6 @@ import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
-import kotlinx.android.synthetic.main.dialog_platform_payment_confirm.*
 import kotlinx.android.synthetic.main.users_orbit.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
@@ -74,6 +73,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     private lateinit var walletApplication: WalletApplication
 
     private var reuseTransaction: Boolean = false
+    private var useInvite: Boolean = false
 
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable
@@ -85,6 +85,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         private const val ACTION_DISPLAY_COMPLETE = "action_display_complete"
         private const val ACTION_REUSE_TRANSACTION = "action_reuse_transaction"
         private const val ACTION_FROM_INVITE = "action_from_invite"
+        private const val ACTION_FROM_INVITE_REUSE_TRANSACTION = "action_from_invite_reuse_transaction"
 
         private const val EXTRA_USERNAME = "extra_username"
         private const val EXTRA_INVITE = "extra_invite"
@@ -98,16 +99,24 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         }
 
         @JvmStatic
-        fun createIntentReuseTransaction(context: Context): Intent {
+        fun createIntentReuseTransaction(context: Context, blockchainIdentityData: BlockchainIdentityBaseData): Intent {
             return Intent(context, CreateUsernameActivity::class.java).apply {
-                action = ACTION_REUSE_TRANSACTION
+                action = if (blockchainIdentityData.usingInvite) ACTION_FROM_INVITE_REUSE_TRANSACTION else ACTION_REUSE_TRANSACTION
             }
         }
 
+        @JvmStatic
         fun createIntentFromInvite(context: Context, invite: InvitationLinkData): Intent {
             return Intent(context, CreateUsernameActivity::class.java).apply {
                 action = ACTION_FROM_INVITE
                 putExtra(EXTRA_INVITE, invite)
+            }
+        }
+
+        @JvmStatic
+        fun createIntentFromInviteReuseTransaction(context: Context): Intent {
+            return Intent(context, CreateUsernameActivity::class.java).apply {
+                action = ACTION_FROM_INVITE_REUSE_TRANSACTION
             }
         }
     }
@@ -145,6 +154,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             }
             ACTION_FROM_INVITE -> {
                 // don't show the keyboard if launched from invite
+                useInvite = true
             }
         }
     }
@@ -159,8 +169,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         val confirmTransactionSharedViewModel = ViewModelProvider(this).get(PlatformPaymentConfirmDialog.SharedViewModel::class.java)
         confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
             if (intent.action == ACTION_FROM_INVITE) {
-                Toast.makeText(this, "Creating identity from invitations in not yet implemented", Toast.LENGTH_LONG).show()
-                finish()
+                triggerIdentityCreationFromInvite(reuseTransaction)
             } else {
                 triggerIdentityCreation(false)
             }
@@ -250,6 +259,26 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             showProcessingState()
             startService(CreateIdentityService.createIntent(this, username))
         }
+    }
+
+    private fun triggerIdentityCreationFromInvite(reuseTransaction: Boolean) {
+        val username = username.text.toString()
+        if (reuseTransaction) {
+            startService(CreateIdentityService.createIntentFromInviteForNewUsername(this, username))
+            finish()
+        } else {
+            AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(this, Observer {
+                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
+                    finish()
+                } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
+                    completeUsername = it.username ?: ""
+                    showCompleteState()
+                }
+            })
+            showProcessingState()
+            startService(CreateIdentityService.createIntentFromInvite(this, username, invite))
+        }
+        showProcessingState()
     }
 
     private fun doneAndDismiss() {

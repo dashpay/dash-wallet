@@ -21,6 +21,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.View
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory

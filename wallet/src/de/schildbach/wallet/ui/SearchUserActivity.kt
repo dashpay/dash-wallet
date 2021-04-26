@@ -46,8 +46,10 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
+import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
 import kotlinx.android.synthetic.main.activity_search_dashpay_profile_root.*
@@ -160,13 +162,23 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
         }
 
         invite_friend_hint_view_dashpay_profile_1.setOnClickListener {
-            InviteFriendActivity.startOrError(this)
+            startInviteFlow()
         }
         invite_friend_hint_view_empty_result.setOnClickListener {
-            InviteFriendActivity.startOrError(this)
+            startInviteFlow()
         }
 
         network_error_subtitle.setText(R.string.network_error_user_search)
+    }
+
+    private fun startInviteFlow() {
+        dashPayViewModel.inviteHistory.observeOnce(this, Observer {
+            if (it == null || it.isEmpty()) {
+                InviteFriendActivity.startOrError(this)
+            } else {
+                startActivity(InvitesHistoryActivity.createIntent(this))
+            }
+        })
     }
 
     private fun finalizeViewsTransition() {

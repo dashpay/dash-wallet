@@ -35,7 +35,8 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
         NotificationViewHolder(R.layout.notification_contact_request_received_row, inflater, parent) {
 
     fun bind(notificationItem: NotificationItemContact, state: Resource<WorkInfo>?, isNew: Boolean,
-             showAvatar: Boolean, onActionClickListener: OnContactActionClickListener? = null) {
+             recentlyModified: Boolean, showAvatar: Boolean,
+             onActionClickListener: OnContactActionClickListener? = null) {
 
         val usernameSearchResult = notificationItem.usernameSearchResult
 
@@ -74,31 +75,37 @@ open class ContactViewHolder(inflater: LayoutInflater, parent: ViewGroup) :
                 }
             }
 
+            if (isNew) {
+                display_name.maxLines = 2
+            } else {
+                display_name.maxLines = 3
+            }
+
             @Suppress("DEPRECATION")
             val displayNameText = context.getString(displayNameResId, "<b>$name</b>")
             display_name.text = HtmlCompat.fromHtml(displayNameText, HtmlCompat.FROM_HTML_MODE_COMPACT)
-
-            val scale: Float = itemView.resources.displayMetrics.density
-            itemView.layoutParams.height = (79 * scale + 0.5f).toInt()
-            center_guideline.setGuidelinePercent(0.473f)
 
             ProfilePictureDisplay.display(avatar, dashPayProfile)
             avatar.visibility = if (showAvatar) View.VISIBLE else View.GONE
 
             if (usernameSearchResult.isPendingRequest && !notificationItem.isInvitationOfEstablished) {
                 if (state != null && state.status == Status.LOADING) {
+                    //Loading
                     accept_contact_request.visibility = View.GONE
                     ignore_contact_request.visibility = View.GONE
                     contact_added.visibility = View.GONE
                     pending_work_icon.visibility = View.VISIBLE
                     (pending_work_icon.drawable as AnimationDrawable).start()
                 } else {
+                    //Pending
                     accept_contact_request.visibility = View.VISIBLE
                     ignore_contact_request.visibility = View.VISIBLE
                     contact_added.visibility = View.GONE
                     pending_work_icon.visibility = View.GONE
                 }
             } else {
+                //Added - Success
+                buttons.visibility = if (isNew || recentlyModified) View.VISIBLE else View.GONE
                 accept_contact_request.visibility = View.GONE
                 ignore_contact_request.visibility = View.GONE
                 contact_added.visibility = View.VISIBLE

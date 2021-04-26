@@ -34,15 +34,22 @@ class InviteFriendActivity : InteractionAwareActivity() {
 
     companion object {
         private val log = LoggerFactory.getLogger(InviteFriendActivity::class.java)
+        private const val ARG_IDENTITY_ID = "identity_id"
+        private const val ARG_STARTED_BY_HISTORY = "started_by_history"
+        private const val ARG_INVITE_INDEX = "invite_index"
+
 
         @JvmStatic
-        fun createIntent(context: Context): Intent {
-            return Intent(context, InviteFriendActivity::class.java)
+        fun createIntent(context: Context, startedByHistory: Boolean): Intent {
+            val intent = Intent(context, InviteFriendActivity::class.java)
+            intent.putExtra(ARG_IDENTITY_ID, "")
+            intent.putExtra(ARG_STARTED_BY_HISTORY, startedByHistory)
+            return intent
         }
 
-        fun startOrError(activity: FragmentActivity) {
+        fun startOrError(activity: FragmentActivity, startedByHistory: Boolean = false) {
             if (WalletApplication.getInstance().wallet.canAffordIdentityCreation()) {
-                activity.startActivity(createIntent(activity))
+                activity.startActivity(createIntent(activity, startedByHistory))
             } else {
                 val title = activity.getString(R.string.invitation_cant_afford_title)
                 val message = activity.getString(R.string.invitation_cant_afford_message, Constants.DASH_PAY_FEE.toPlainString())
@@ -51,15 +58,33 @@ class InviteFriendActivity : InteractionAwareActivity() {
                 errorDialog.show(activity.supportFragmentManager, null)
             }
         }
+
+        fun createIntentExistingInvite(context: Context, userId: String, inviteIndex: Int, startedByHistory: Boolean = true): Intent? {
+            val intent = Intent(context, InviteFriendActivity::class.java)
+            intent.putExtra(ARG_IDENTITY_ID, userId)
+            intent.putExtra(ARG_STARTED_BY_HISTORY, startedByHistory)
+            intent.putExtra(ARG_INVITE_INDEX, inviteIndex)
+            return intent
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fragment_holder)
 
-        supportFragmentManager.beginTransaction()
-                .replace(R.id.container, InviteFriendFragment.newInstance())
-                .commitNow()
+        val userId = intent.extras?.getString(ARG_IDENTITY_ID, "") ?: ""
+        val startedByHistory = intent.extras?.getBoolean(ARG_STARTED_BY_HISTORY, false) ?: false
+
+        if (userId.isEmpty()) {
+            supportFragmentManager.beginTransaction()
+                    .replace(R.id.container, InviteFriendFragment.newInstance(startedByHistory))
+                    .commitNow()
+        } else {
+            val inviteIndex = intent.extras?.getInt(ARG_INVITE_INDEX, -1) ?: -1
+            supportFragmentManager.beginTransaction()
+                    .replace(R.id.container, InviteDetailsFragment.newInstance(userId, inviteIndex, startedByHistory))
+                    .commitNow()
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

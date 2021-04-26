@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.data
 
+import android.net.Uri
 import androidx.room.TypeConverter
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Coin
@@ -148,6 +149,18 @@ class RoomConverters {
             } catch (e: Exception) {
                 null
             }
+        }
+    }
+
+    @TypeConverter
+    fun fromInvitationLinkData(invite: InvitationLinkData?): String {
+        return invite?.getUri().toString()
+    }
+
+    @TypeConverter
+    fun toInvitationLinkData(data: String?): InvitationLinkData? {
+        return data?.run {
+            InvitationLinkData(Uri.parse(data),false)
         }
     }
 }

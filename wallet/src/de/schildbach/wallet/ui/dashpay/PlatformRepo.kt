@@ -36,6 +36,7 @@ import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService.Companion.createIntentForRestore
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DeriveKeyTask
+import de.schildbach.wallet.util.canAffordIdentityCreation
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import org.bitcoinj.core.*
@@ -56,10 +57,12 @@ import org.dashevo.dpp.errors.InvalidIdentityAssetLockProofError
 import org.dashevo.dpp.identifier.Identifier
 import org.dashevo.dpp.identity.Identity
 import org.dashevo.dpp.identity.IdentityPublicKey
+import org.dashevo.dpp.toHexString
 import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.dashevo.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
+import java.lang.NullPointerException
 import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -79,6 +82,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         const val UPDATE_TIMER_DELAY = 15000L // 15 seconds
 
         private lateinit var platformRepoInstance: PlatformRepo
+
         @JvmStatic
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
@@ -146,7 +150,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     fun resume() {
-        if(!platformSyncJob.isActive && this::blockchainIdentity.isInitialized) {
+        if (!platformSyncJob.isActive && this::blockchainIdentity.isInitialized) {
             platformSyncJob = GlobalScope.launch {
                 log.info("Resuming the platform sync job")
                 while (isActive) {
@@ -205,7 +209,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * @return true if platform is available
      */
     suspend fun isPlatformAvailable(): Resource<Boolean> {
-        return withContext (Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             var success = 0
             val checks = arrayListOf<Deferred<Boolean>>()
             for (i in 0 until 3) {
@@ -457,10 +461,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return msg
     }
 
+    suspend fun shouldShowAlert(): Boolean {
+        val hasSentInvites = invitationsDao.count() > 0
+        val blockchainIdentityData = blockchainIdentityDataDao.load()
+        val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
+        val canAffordIdentityCreation = walletApplication.wallet.canAffordIdentityCreation()
+        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
+    }
+
+
     suspend fun getNotificationCount(date: Long): Int {
         var count = 0
         // Developer Mode Feature
-        if (walletApplication.configuration.developerMode) {
+        if (walletApplication.configuration.developerMode && shouldShowAlert()) {
             val alert = userAlertDao.load(date)
             if (alert != null) {
                 count++
@@ -600,6 +613,28 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         withContext(Dispatchers.IO) {
             Context.propagate(walletApplication.wallet.context)
             val cftx = blockchainIdentity.createCreditFundingTransaction(Coin.CENT, keyParameter)
+            blockchainIdentity.initializeCreditFundingTransaction(cftx)
+        }
+    }
+
+
+    //
+    // Step 2 is to obtain the credit funding transaction for invites
+    //
+    suspend fun obtainCreditFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
+        withContext(Dispatchers.IO) {
+            Context.propagate(walletApplication.wallet.context)
+            var cftxData = platform.client.getTransaction(invite.cftx)
+            //TODO: remove when iOS uses big endian
+            if (cftxData == null)
+                cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
+            val cftx = CreditFundingTransaction(platform.params, cftxData!!.toByteArray())
+            val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
+            cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
+
+            val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock))
+
+            cftx.confidence.setInstantSendLock(instantSendLock)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
         }
     }
@@ -812,7 +847,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDao.insert(blockchainIdentityData)
     }
 
-    private suspend fun updateDashPayProfile(userId: String) {
+    suspend fun updateDashPayProfile(userId: String): Boolean {
         var profileDocument = profiles.get(userId)
                 ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
 
@@ -823,7 +858,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             val profile = DashPayProfile.fromDocument(profileDocument, username)
             dashPayProfileDao.insert(profile!!)
+            return true
         }
+        return false
     }
 
     suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
@@ -889,6 +926,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     var counterForReport = 0;
+
     /**
      * updateContactRequests will fetch new Contact Requests from the network
      * and verify that we have all requests and profiles in the local database
@@ -1020,6 +1058,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
             updateSyncStatus(PreBlockStage.GetNewProfiles)
 
+            // fetch updated invitations
+            updateInvitations()
+
             // fetch updated profiles from the network
             updateContactProfiles(userId, lastContactRequestTime)
 
@@ -1031,9 +1072,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
 
             updateSyncStatus(PreBlockStage.Complete)
-
-            // fetch updated invitations
-            updateInvitations()
 
             log.info("updating contacts and profiles took $watch")
         } catch (e: Exception) {
@@ -1279,11 +1317,14 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     This should not be a suspended method.
      */
-    fun clearDatabase() {
+    fun clearDatabase(includeInvitations: Boolean) {
         blockchainIdentityDataDaoAsync.clear()
         dashPayProfileDaoAsync.clear()
         dashPayContactRequestDaoAsync.clear()
         userAlertDaoAsync.clear()
+        if (includeInvitations) {
+            invitationsDaoAsync.clear()
+        }
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
@@ -1319,7 +1360,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
             : CreditFundingTransaction {
         Context.propagate(walletApplication.wallet.context)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(Coin.CENT, keyParameter)
+        val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
                 System.currentTimeMillis())
         // update database
@@ -1334,6 +1375,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     suspend fun updateInvitation(invitation: Invitation) {
         invitationsDao.insert(invitation)
+    }
+
+    suspend fun getInvitation(userId: String): Invitation? {
+        return invitationsDao.loadByUserId(userId)
     }
 
     private suspend fun sendTransaction(cftx: CreditFundingTransaction): Boolean {
@@ -1395,7 +1440,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     /**
      * Updates invitation status
      */
-    suspend fun updateInvitations() {
+    private suspend fun updateInvitations() {
         val invitations = invitationsDao.loadAll()
         for (invitation in invitations) {
             if (invitation.acceptedAt == 0L) {
@@ -1409,14 +1454,85 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun validateInvitation(txId: String): Boolean {
-        val tx = platform.client.getTransaction(txId)
-        var identity: Identity? = null
+    /**
+     * validates an invite
+     *
+     * @return Returns true if it is valid, false if the invite has been used.
+     *
+     * @throws Exception if the invite is invalid
+     */
+
+    fun validateInvitation(invite: InvitationLinkData): Boolean {
+        var tx = platform.client.getTransaction(invite.cftx)
+        //TODO: remove when iOS uses big endian
+        if (tx == null)
+            tx = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
         if (tx != null) {
             val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.toByteArray())
-            identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
+            val identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
+            if (identity == null) {
+                // determine if the invite has enough credits
+                if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {
+                    val reason = "Invite does not have enough credits ${cfTx.lockedOutput.value} < ${Constants.DASH_PAY_INVITE_MIN}"
+                    log.warn(reason);
+                    throw InsufficientMoneyException(cfTx.lockedOutput.value, reason)
+                }
+                return try {
+                    DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
+                    InstantSendLock(Constants.NETWORK_PARAMETERS, Utils.HEX.decode(invite.instantSendLock))
+                    log.info("Invite is valid")
+                    true
+                } catch (e: AddressFormatException.WrongNetwork) {
+                    log.warn("Invite has private key from wrong network: $e")
+                    throw e
+                } catch (e: AddressFormatException) {
+                    log.warn("Invite has invalid private key: $e")
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("Invite has invalid instantSendLock: $e")
+                    throw e
+                }
+            } else {
+                log.warn("Invitation has been used: ${identity.id}")
+                return false
+            }
         }
-        return identity == null
+        log.warn("Invitation uses an invalid transaction ${invite.cftx}")
+        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
     }
 
+    fun clearBlockchainData() {
+        GlobalScope.launch(Dispatchers.IO) {
+            blockchainIdentityDataDao.clear()
+        }
+    }
+
+    fun handleSentCreditFundingTransaction(cftx: CreditFundingTransaction, blockTimestamp: Long) {
+        if (this::blockchainIdentity.isInitialized) {
+            GlobalScope.launch(Dispatchers.IO) {
+                //Context.getOrCreate(platform.params)
+                val isInvite = walletApplication.wallet.invitationFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isTopup = walletApplication.wallet.blockchainIdentityTopupKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val isIdentity = walletApplication.wallet.blockchainIdentityFundingKeyChain.findKeyFromPubHash(cftx.creditBurnPublicKeyId.bytes) != null
+                val identityId = cftx.creditBurnIdentityIdentifier.toStringBase58();
+                if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
+                    // this is not in our database
+                    val invite = Invitation(identityId, cftx.txId, blockTimestamp,
+                            "", blockTimestamp, 0)
+
+                    // profile information here
+                    try {
+                        if (updateDashPayProfile(identityId)) {
+                            val profile = dashPayProfileDao.loadByUserId(identityId)
+                            invite.acceptedAt = profile?.createdAt
+                                    ?: -1 // it was accepted in the past, use profile creation as the default
+                        }
+                    } catch (e: NullPointerException) {
+                        // swallow, the identity was not found for this invite
+                    }
+                    invitationsDao.insert(invite)
+                }
+            }
+        }
+    }
 }

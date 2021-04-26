@@ -27,7 +27,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.dashpay.UserAlert;
 
 @Database(entities = {ExchangeRate.class, BlockchainState.class, BlockchainIdentityData.class,
-        DashPayProfile.class, DashPayContactRequest.class, UserAlert.class, Invitation.class}, version = 14)
+        DashPayProfile.class, DashPayContactRequest.class, UserAlert.class, Invitation.class}, version = 16)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 

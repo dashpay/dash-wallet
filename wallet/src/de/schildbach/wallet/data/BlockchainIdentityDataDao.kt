@@ -17,7 +17,7 @@ interface BlockchainIdentityDataDao {
     @Query("SELECT * FROM blockchain_identity LIMIT 1")
     suspend fun load(): BlockchainIdentityData?
 
-    @Query("SELECT id, creationState, creationStateErrorMessage, username, userId, restoring, creditFundingTxId FROM blockchain_identity LIMIT 1")
+    @Query("SELECT id, creationState, creationStateErrorMessage, username, userId, restoring, creditFundingTxId, usingInvite, invite FROM blockchain_identity LIMIT 1")
     suspend fun loadBase(): BlockchainIdentityBaseData?
 
     @Query("DELETE FROM blockchain_identity")

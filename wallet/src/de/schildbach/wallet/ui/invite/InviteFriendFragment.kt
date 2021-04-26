@@ -23,7 +23,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.dashpay.InvitationFragmentViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
 import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
@@ -31,10 +30,10 @@ import kotlinx.android.synthetic.main.fragment_invite_friend.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.FancyAlertDialog
 
-class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
+class InviteFriendFragment(val startedByHistory: Boolean) : Fragment(R.layout.fragment_invite_friend) {
 
     companion object {
-        fun newInstance() = InviteFriendFragment()
+        fun newInstance(startedFromHistory: Boolean) = InviteFriendFragment(startedFromHistory)
     }
 
     private lateinit var walletApplication: WalletApplication
@@ -68,7 +67,7 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
     private fun confirmButtonClick() {
         showProgress()
         viewModel.sendInviteTransaction()
-        viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner, {
+        viewModel.sendInviteStatusLiveData.observe(viewLifecycleOwner, Observer {
             if (it.status != Status.LOADING) {
                 dismissProgress()
             }
@@ -76,7 +75,7 @@ class InviteFriendFragment : Fragment(R.layout.fragment_invite_friend) {
                 Status.SUCCESS -> {
                     if (it.data != null) {
                         requireActivity().supportFragmentManager.beginTransaction()
-                                .replace(R.id.container, InviteCreatedFragment.newInstance(it.data.userId))
+                                .replace(R.id.container, InviteCreatedFragment.newInstance(it.data.userId, startedByHistory))
                                 .commitNow()
                     }
                 }

@@ -27,11 +27,15 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
+import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
+import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
@@ -51,7 +55,10 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     private var blockchainState: BlockchainState? = null
     private lateinit var editProfileViewModel: EditProfileViewModel
     private lateinit var mainActivityViewModel: MainActivityViewModel
+    private lateinit var createInviteViewModel: CreateInviteViewModel
     private val walletApplication = WalletApplication.getInstance()
+    private var showInviteSection = false
+    private var lastInviteCount = -1
 
     companion object {
         const val PROFILE_VIEW = 0
@@ -73,7 +80,15 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
         invite.visibility = View.GONE
         invite.setOnClickListener {
-            InviteFriendActivity.startOrError(requireActivity())
+            // use observeOnce to avoid the history screen being recreated
+            // after returning to the More Screen after an invite is created
+            mainActivityViewModel.inviteHistory.observeOnce(requireActivity(), Observer {
+                if (it == null || it.isEmpty()) {
+                    InviteFriendActivity.startOrError(requireActivity())
+                } else {
+                    startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                }
+            })
         }
         buy_and_sell.setOnClickListener {
             if (blockchainState != null && blockchainState?.replaying!!) {
@@ -117,8 +132,9 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     }
 
     private fun initViewModel() {
-        mainActivityViewModel = ViewModelProvider(requireActivity()).get(MainActivityViewModel::class.java)
-        editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
+        mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
+        editProfileViewModel = ViewModelProvider(this)[EditProfileViewModel::class.java]
+        createInviteViewModel = ViewModelProvider(this)[CreateInviteViewModel::class.java]
 
         // observe our profile
         editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer { dashPayProfile ->
@@ -173,13 +189,26 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             }
         })
 
-        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, {
+        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, Observer {
             join_dashpay_container.visibility = if (it) {
                 View.VISIBLE
             } else {
                 View.GONE
             }
         })
+
+        createInviteViewModel.isAbleToPerformInviteAction.observe(viewLifecycleOwner, Observer {
+            showInviteSection(it)
+        })
+    }
+
+    private fun showInviteSection(showInviteSection: Boolean) {
+        this.showInviteSection = showInviteSection
+
+        //show the invite section only after the profile section is visible
+        //to avoid flickering
+        if (edit_update_switcher.isVisible)
+            showHideInviteSection()
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
@@ -198,16 +227,19 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         edit_profile.setOnClickListener {
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
+        //if the invite section is not visible, show/hide it
+        if (!invite.isVisible)
+            showHideInviteSection()
     }
 
     override fun onResume() {
         super.onResume()
         // Developer Mode Feature
-        initDeveloperMode()
+        showHideInviteSection()
     }
 
-    private fun initDeveloperMode() {
-        if (walletApplication.configuration.developerMode) {
+    private fun showHideInviteSection() {
+        if (walletApplication.configuration.developerMode && showInviteSection) {
             invite.visibility = View.VISIBLE
         } else {
             invite.visibility = View.GONE

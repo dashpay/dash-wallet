@@ -89,8 +89,12 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
             val blockchainIdentity = platformRepo.getBlockchainIdentity()!!
             val cftx = platformRepo.createInviteFundingTransactionAsync(blockchainIdentity, encryptionKey)
             val dashPayProfile = platformRepo.getLocalUserProfile()
-            val dynamicLink = createDynamicLink(dashPayProfile!!, cftx)
+            val dynamicLink = createDynamicLink(dashPayProfile!!, cftx, encryptionKey)
             val shortDynamicLink = buildShortDynamicLink(dynamicLink)
+            val invitation = platformRepo.getInvitation(cftx.creditBurnIdentityIdentifier.toStringBase58())!!
+            invitation.shortDynamicLink = shortDynamicLink.shortLink.toString()
+            invitation.dynamicLink = dynamicLink.uri.toString()
+            platformRepo.updateInvitation(invitation)
             Result.success(workDataOf(
                     KEY_TX_ID to cftx.txId.bytes,
                     KEY_USER_ID to cftx.creditBurnIdentityIdentifier.toStringBase58(),
@@ -106,13 +110,13 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
         }
     }
 
-    private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: CreditFundingTransaction): DynamicLink {
+    private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: CreditFundingTransaction, aesKeyParameter: KeyParameter): DynamicLink {
         log.info("creating dynamic link for invitation")
         val username = dashPayProfile.username
         val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
         return FirebaseDynamicLinks.getInstance()
                 .createDynamicLink().apply {
-                    link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, cftx).link
+                    link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, cftx, aesKeyParameter).link
                     domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
                     setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
                     setIosParameters(DynamicLink.IosParameters.Builder(

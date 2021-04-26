@@ -20,6 +20,7 @@ import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
+import com.google.firebase.dynamiclinks.ShortDynamicLink
 import kotlinx.android.parcel.IgnoredOnParcel
 import kotlinx.android.parcel.Parcelize
 import org.bitcoinj.core.Sha256Hash
@@ -45,7 +46,9 @@ data class Invitation(@PrimaryKey val userId: String,
                       val createdAt: Long,
                       var memo: String = "",
                       var sentAt: Long = 0,
-                      var acceptedAt: Long = 0) : Parcelable {
+                      var acceptedAt: Long = 0,
+                      var shortDynamicLink: String? = null,
+                      var dynamicLink: String? = null) : Parcelable {
 
     @IgnoredOnParcel
     @delegate:Ignore
@@ -74,5 +77,9 @@ data class Invitation(@PrimaryKey val userId: String,
 
     override fun hashCode(): Int {
         return txid.hashCode()
+    }
+
+    fun canSendAgain(): Boolean {
+        return shortDynamicLink != null
     }
 }

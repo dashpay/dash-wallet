@@ -823,7 +823,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                PlatformRepo.getInstance().clearDatabase();
+                PlatformRepo.getInstance().clearDatabase(true);
                 ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });

@@ -39,9 +39,10 @@ open class InviteAlreadyClaimedDialog : FancyAlertDialog() {
             }
         }
 
+        @JvmStatic
         fun newInstance(context: Context, invite: InvitationLinkData): FancyAlertDialog {
             return newInstance(context, invite.displayName).apply {
-                arguments!!.putParcelable(EXTRA_INVITE, invite)
+                requireArguments().putParcelable(EXTRA_INVITE, invite)
             }
         }
 

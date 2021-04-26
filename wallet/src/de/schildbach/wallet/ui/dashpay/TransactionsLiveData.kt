@@ -27,7 +27,7 @@ import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.utils.Threading
 import java.util.*
 
-class TransactionsLiveData(val walletApplication: WalletApplication) : LiveData<List<Transaction>>() {
+class TransactionsLiveData(val walletApplication: WalletApplication = WalletApplication.getInstance()) : LiveData<List<Transaction>>() {
 
     private val wallet = walletApplication.wallet
 
