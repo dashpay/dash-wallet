@@ -2,8 +2,8 @@ package com.e.liquid_integration.data
 
 object LiquidConstants {
 
-     // const val PUBLIC_API_KEY = "pk_sandbox_b2985a24-d772-45c3-9ac9-fca940548c2f"
-   const val PUBLIC_API_KEY = "pk_28ef60cd-5bde-44c0-b5cc-99b6e69e348c"// Production key
+      const val PUBLIC_API_KEY = "pk_sandbox_b2985a24-d772-45c3-9ac9-fca940548c2f"
+//   const val PUBLIC_API_KEY = "pk_28ef60cd-5bde-44c0-b5cc-99b6e69e348c"// Production key
 
 
     const val CLIENT_BASE_URL = "https://partners.liquid.com/"
