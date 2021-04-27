@@ -22,8 +22,10 @@
     <string name="choose_your_payment_method" translatable="false">Choose your payment method</string>
     <string name="crypto_support" translatable="false">Crypto Support</string>
     <string name="okay" translatable="false">Okay</string>
+    <string name="close" translatable="false">Close</string>
     <string name="list_of_countries" translatable="false">View list of countries that are not supported</string>
     <string name="buying_dash_not_supported" translatable="false">Buying Dash with cryptocurrency is not supported in some countries</string>
+    <string name="buying_dash_sucess_message" translatable="false">You can close this screen, your Dash will be sent to your wallet.</string>
 
     <string name="confirm" translatable="false">Confirm</string>
     <string name="card_fees" translatable="false">Card Fees</string>

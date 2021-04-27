@@ -24,6 +24,7 @@ import com.e.liquid_integration.R
 import com.e.liquid_integration.data.LiquidClient
 import com.e.liquid_integration.data.LiquidConstants
 import com.e.liquid_integration.dialog.CountrySupportDialog
+import com.e.liquid_integration.dialog.CreditCardTransactionSuccessSupportDialog
 import com.e.liquid_integration.model.WidgetResponse
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
@@ -126,6 +127,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         actionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
+            setHomeAsUpIndicator(R.drawable.ic_close)
         }
 
         setTitle(getString(R.string.buy_dash))
@@ -397,6 +399,14 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                             when (stepTransition.data?.newStep) {
                                 "success" -> {
                                     setResult(Activity.RESULT_OK)
+                                    if(!isTransestionSuccessful) {  // it will pervert to show dialog multiple time
+                                        CreditCardTransactionSuccessSupportDialog(this@BuyDashWithCreditCardActivity, object : CreditCardTransactionSuccessSupportDialog.OnClickListenerInterface {
+                                            override fun onClick() {
+                                                println("CreditCardTransactionSuccessSupportDialog:: onClick")
+                                                onBackPressed()
+                                            }
+                                        }).show()
+                                    }
                                     isTransestionSuccessful = true
                                 }
                             }
