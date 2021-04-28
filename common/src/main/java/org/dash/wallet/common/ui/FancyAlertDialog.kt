@@ -152,6 +152,8 @@ open class FancyAlertDialog : DialogFragment() {
         setOrHideIfEmpty(image, "image")
         setOrHideIfEmpty(positive_button, "positive_text")
         setOrHideIfEmpty(negative_button, "negative_text")
+        button_space.visibility = if (positive_button.visibility == View.VISIBLE
+                && negative_button.visibility == View.VISIBLE) View.VISIBLE else View.GONE
 
         when (type) {
             Type.INFO -> {
