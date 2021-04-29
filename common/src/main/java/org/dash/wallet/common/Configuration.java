@@ -81,6 +81,8 @@ public class Configuration {
     private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
     private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
     private static final String PREFS_DEV_MODE = "developer_mode";
+    private static final String PREFS_INVITER = "inviter";
+    private static final String PREFS_INVITER_CONTACT_REQUEST_SENT_INFO = "inviter_contact_request_sent_info";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
@@ -468,5 +470,21 @@ public class Configuration {
     }
     public void setDeveloperMode(boolean activate) {
         prefs.edit().putBoolean(PREFS_DEV_MODE, activate).apply();
+    }
+
+    public String getInviter() {
+        return prefs.getString(PREFS_INVITER, null);
+    }
+
+    public void setInviter(String iviter) {
+        prefs.edit().putString(PREFS_INVITER, iviter).apply();
+    }
+
+    public Boolean getInviterContactRequestSentInfoShown() {
+        return prefs.getBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, false);
+    }
+
+    public void setInviterContactRequestSentInfoShown(Boolean shown) {
+        prefs.edit().putBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, shown).apply();
     }
 }

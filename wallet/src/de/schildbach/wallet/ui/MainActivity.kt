@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECENT
 import de.schildbach.wallet.ui.RestoreFromFileHelper.OnRestoreWalletListener
@@ -39,6 +40,7 @@ import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CO
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
+import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.invite.InvitesHandler
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
@@ -153,6 +155,25 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 inviteHandler.handle(it)
             })
         }
+        viewModel.sendContactRequestState.observe(this, Observer {
+            config.inviter?.also { initInvitationUserId ->
+                if (!config.inviterContactRequestSentInfoShown) {
+                    it?.get(initInvitationUserId)?.apply {
+                        if (status == Status.SUCCESS) {
+                            showInviteSendContactRequestDialog(initInvitationUserId)
+                            config.inviterContactRequestSentInfoShown = true
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    private fun showInviteSendContactRequestDialog(initInvitationUserId: String) {
+        viewModel.platformRepo.loadProfileByUserId(initInvitationUserId).observe(this@MainActivity, Observer {
+            val dialog = InviteSendContactRequestDialog.newInstance(this@MainActivity, it!!)
+            dialog.show(supportFragmentManager, null)
+        })
     }
 
     override fun onResume() {

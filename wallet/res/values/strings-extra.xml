@@ -413,6 +413,7 @@
     <string name="invitation_accept_title_3">Personalize</string>
     <string name="invitation_accept_message_3">Upload your picture, personalize your identity</string>
     <string name="invitation_accept_continue">Continue</string>
+    <string name="invitation_contact_request_sent_message">A contact request has been sent to %s since they invited you.</string>
 
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>

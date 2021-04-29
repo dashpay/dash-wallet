@@ -62,7 +62,6 @@ import org.dashevo.platform.Names
 import org.dashevo.platform.Platform
 import org.dashevo.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
-import java.lang.NullPointerException
 import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -72,7 +71,6 @@ import kotlin.collections.HashSet
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import kotlin.jvm.Throws
 
 class PlatformRepo private constructor(val walletApplication: WalletApplication) {
 
@@ -86,7 +84,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         @JvmStatic
         fun initPlatformRepo(walletApplication: WalletApplication) {
             platformRepoInstance = PlatformRepo(walletApplication)
-            platformRepoInstance.init()
+            platformRepoInstance.initGlobal()
         }
 
         @JvmStatic
@@ -135,11 +133,17 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         backgroundHandler = Handler(backgroundThread.looper)
     }
 
-    fun init() {
+    fun initGlobal() {
         platformSyncJob = GlobalScope.launch {
-            blockchainIdentityDataDao.load()?.let {
-                blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
-                platformRepoInstance.initializeStateRepository()
+            init()
+        }
+    }
+
+    suspend fun init() {
+        blockchainIdentityDataDao.load()?.let {
+            blockchainIdentity = initBlockchainIdentity(it, walletApplication.wallet)
+            platformRepoInstance.initializeStateRepository()
+            platformSyncJob = GlobalScope.launch {
                 log.info("Starting the platform sync job")
                 while (isActive) {
                     platformRepoInstance.updateContactRequests()

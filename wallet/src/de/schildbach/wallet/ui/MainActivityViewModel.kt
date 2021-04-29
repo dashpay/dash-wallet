@@ -15,6 +15,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
+import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -99,4 +100,6 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
 
     val goBackAndStartActivityEvent = SingleLiveEvent<Class<*>>()
     val showCreateUsernameEvent = SingleLiveEventExt<Unit>()
+
+    val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(application)
 }

@@ -16,6 +16,7 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainIdentityData.CreationState
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet.ui.send.DecryptSeedTask
 import de.schildbach.wallet.ui.send.DeriveKeyTask
@@ -484,7 +485,7 @@ class CreateIdentityService : LifecycleService() {
 
         // do one last validation of the invite
         //if(!platformRepo.validateInvitation(invite!!)) {
-            // stop the username registration process
+        // stop the username registration process
         //}
 
         // This step will fail because register identity
@@ -520,6 +521,19 @@ class CreateIdentityService : LifecycleService() {
 
         finishRegistration(blockchainIdentity, encryptionKey)
 
+        invite?.apply {
+            val results = platformRepo.getUser(user)
+            if (results.isNotEmpty()) {
+                val inviterUserId = results[0].dashPayProfile.userId
+                SendContactRequestOperation(walletApplication)
+                        .create(inviterUserId)
+                        .enqueue()
+                walletApplication.configuration.apply {
+                    inviter = inviterUserId
+                    inviterContactRequestSentInfoShown = false
+                }
+            }
+        }
     }
 
     private suspend fun finishRegistration(blockchainIdentity: BlockchainIdentity, encryptionKey: KeyParameter) {
@@ -595,7 +609,7 @@ class CreateIdentityService : LifecycleService() {
             // this alert will be shown or not based on the current balance and will be
             // managed by NotificationsLiveData
             val userAlert = UserAlert(R.string.invitation_notification_text,
-                        R.drawable.ic_invitation)
+                    R.drawable.ic_invitation)
             AppDatabase.getAppDatabase().userAlertDao().insert(userAlert)
 
         }
