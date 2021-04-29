@@ -24,6 +24,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -65,6 +67,7 @@ public final class HeaderBalanceFragment extends Fragment {
     private View view;
     private CurrencyTextView viewBalanceDash;
     private CurrencyTextView viewBalanceLocal;
+    private TextView syncingIndicator;
 
     private boolean showLocalBalance;
 
@@ -116,9 +119,12 @@ public final class HeaderBalanceFragment extends Fragment {
         hideShowBalanceHint = view.findViewById(R.id.hide_show_balance_hint);
         this.view = view;
         showBalanceButton = view.findViewById(R.id.show_balance_button);
+        syncingIndicator = view.findViewById(R.id.balance_syncing_indicator);
 
         viewBalanceDash = view.findViewById(R.id.wallet_balance_dash);
         viewBalanceDash.setApplyMarkup(false);
+        viewBalanceDash.setFormat(config.getFormat().noCode());
+        viewBalanceDash.setAmount(Coin.ZERO);
 
         viewBalanceLocal = view.findViewById(R.id.wallet_balance_local);
         viewBalanceLocal.setInsignificantRelativeSize(1);
@@ -175,13 +181,11 @@ public final class HeaderBalanceFragment extends Fragment {
 
     private void updateView() {
         View balances = view.findViewById(R.id.balances_layout);
-        TextView walletBalanceSyncMessage = view.findViewById(R.id.wallet_balance_sync_message);
 
         if (hideBalance) {
             caption.setText(R.string.home_balance_hidden);
             hideShowBalanceHint.setText(R.string.home_balance_show_hint);
             balances.setVisibility(View.INVISIBLE);
-            walletBalanceSyncMessage.setVisibility(View.GONE);
             showBalanceButton.setVisibility(View.VISIBLE);
             return;
         }
@@ -194,21 +198,21 @@ public final class HeaderBalanceFragment extends Fragment {
             return;
         }
 
-        if (blockchainState != null && blockchainState.isSynced()) {
-            balances.setVisibility(View.VISIBLE);
-            walletBalanceSyncMessage.setVisibility(View.GONE);
+        if (blockchainState != null && !blockchainState.isSynced()) {
+            syncingIndicator.setVisibility(View.VISIBLE);
+            startSyncingIndicatorAnimation();
         } else {
-            balances.setVisibility(View.INVISIBLE);
-            walletBalanceSyncMessage.setVisibility(View.VISIBLE);
-            return;
+            syncingIndicator.setVisibility(View.GONE);
+            if (syncingIndicator.getAnimation() != null) {
+                syncingIndicator.getAnimation().cancel();
+            }
         }
 
-        if (!showLocalBalance)
+        if (!showLocalBalance) {
             viewBalanceLocal.setVisibility(View.GONE);
+        }
 
         if (balance != null) {
-            viewBalanceDash.setVisibility(View.VISIBLE);
-            viewBalanceDash.setFormat(config.getFormat().noCode());
             viewBalanceDash.setAmount(balance);
 
             if (showLocalBalance) {
@@ -225,10 +229,21 @@ public final class HeaderBalanceFragment extends Fragment {
                 }
             }
         } else {
-            viewBalanceDash.setVisibility(View.INVISIBLE);
+            viewBalanceDash.setAmount(Coin.ZERO);
         }
 
         activity.invalidateOptionsMenu();
+    }
+
+    private void startSyncingIndicatorAnimation() {
+        Animation currentAnimation = syncingIndicator.getAnimation();
+        if (currentAnimation == null || currentAnimation.hasEnded()) {
+            AlphaAnimation alphaAnimation = new AlphaAnimation(0.2f, 0.8f);
+            alphaAnimation.setDuration(833);
+            alphaAnimation.setRepeatCount(Animation.INFINITE);
+            alphaAnimation.setRepeatMode(Animation.REVERSE);
+            syncingIndicator.startAnimation(alphaAnimation);
+        }
     }
 
     private void showExchangeRatesActivity() {

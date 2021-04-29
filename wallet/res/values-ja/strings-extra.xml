@@ -329,4 +329,5 @@
     <string name="payment_request_close">閉じる</string>
     <string name="payment_request_skip">スキップする</string>
     <string name="payment_request_paid_to">お支払い済</string>
-</resources>
+
+    </resources>

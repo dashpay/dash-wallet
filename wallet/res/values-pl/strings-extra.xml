@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Ustaw nowy PIN</string>
     <string name="forgot_pin_instruction_3">Zaloguj się z nowym PINem by mieć dostęp do portfela</string>
     <string name="forgot_pin_warning">Jeśli zapomniałeś kodu PIN i zgubiłeś frazy odzyskiwania, nie będziesz w stanie odzyskać dostępu do portfela i środków.</string>
+    <string name="forgot_pin_recover">Wpisz Frazy Odzyskiwania</string>
+    <string name="forgot_pin_passphrase_doesnt_match">Ta fraza nie pasuje do tej wykreowanej kiedy portfel został stworzony. </string>
+
     <string name="send_coins_auto_lock_feasible">Ta transakcja powinna się usadowić natychmiast bez braku dodatkowych opłat</string>
     <string name="send_coins_auto_lock_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę. Wykonać natychmiast za dodatkowe %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Rozliczenie transakcji może potrwać dłuższą chwilę.</string>
@@ -329,8 +332,15 @@
     <string name="payment_request_please_try_again">Spróbuj jeszcze raz</string>
     <string name="payment_request_try_again">Spróbuj ponownie</string>
     <string name="payment_request_problem_title">Płatność nie została uznana</string>
+    <string name="payment_request_problem_message">Twoja płatność nie mogła zostać uznana przez serwer, skontaktuj się ze sprzedawcą. </string>
     <string name="payment_request_expired_title">Żądanie płatności przedawniło się</string>
     <string name="payment_request_close">Zamknij</string>
     <string name="payment_request_skip">Pomiń</string>
     <string name="payment_request_paid_to">Płatność została wysłana do</string>
+
+    <string name="import_image_not_valid_qr_code">Błędny kod QR</string>
+    <string name="import_image_please_use_valid_qr_code">Użyj poprawnego kodu QR Dash</string>
+    <string name="import_image_no_private_key_copied">Klucz prywatny nie został skopiowany</string>
+    <string name="import_image_import_valid_private_key">Skopiuj ważny klucz prywatny, aby importować z niego Dash</string>
+    <string name="import_image_invalid_private">Niewłaściwy Klucz Prywatny</string>
 </resources>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/wallet_transactions_group"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -26,7 +27,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -37,27 +38,45 @@
             android:paddingRight="16dp"
             android:paddingBottom="8dp">
 
+            <ImageView
+                android:id="@+id/transaction_filter_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_transaction_filter" />
+
             <TextView
+                android:id="@+id/transaction_list_title"
+                style="@style/MontserratSemiBold"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
                 android:text="@string/history_title"
-                android:textSize="@dimen/font_size_small"
-                android:textStyle="bold"
-                app:fontFamily="@font/montserrat" />
+                android:textColor="@color/black_text"
+                android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <Spinner
-                android:id="@+id/history_filter"
+            <TextView
+                android:id="@+id/syncing"
+                style="@style/MontserratRegular"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
+                android:layout_gravity="center_vertical"
+                android:layout_marginEnd="16dp"
                 android:layout_weight="1"
-                android:background="@android:color/transparent"
-                android:gravity="end"
-                android:textAlignment="textEnd" />
+                android:textColor="@android:color/black"
+                android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/transaction_filter_btn"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Syncing 63%" />
 
-        </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/wallet_transactions_list"

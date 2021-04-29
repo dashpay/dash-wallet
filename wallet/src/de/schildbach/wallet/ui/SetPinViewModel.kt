@@ -76,7 +76,7 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun initWallet() {
-        startNextActivity.call(walletApplication.configuration.getRemindBackupSeed())
+        startNextActivity.call(walletApplication.configuration.remindBackupSeed)
     }
 
     fun checkPin() {

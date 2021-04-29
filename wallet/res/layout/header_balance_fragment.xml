@@ -34,25 +34,28 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <TextView
-                    android:id="@+id/wallet_balance_sync_message"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:gravity="center_horizontal"
-                    android:text="@string/sync_status_wait"
-                    android:textColor="@color/dash_light_gray"
-                    android:textSize="16sp"
-                    app:fontFamily="@font/montserrat_regular" />
-
                 <LinearLayout
                     android:id="@+id/balances_layout"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
                     android:background="@drawable/selectable_background_light"
+                    android:gravity="center"
                     android:orientation="vertical"
                     android:padding="8dp">
+
+                    <TextView
+                        android:id="@+id/balance_syncing_indicator"
+                        style="@style/MontserratRegular"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:alpha="0.8"
+                        android:gravity="center"
+                        android:text="@string/syncing_balance"
+                        android:textColor="@android:color/white"
+                        android:textSize="10sp"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
 
                     <LinearLayout
                         android:id="@+id/balances"

@@ -34,26 +34,18 @@ import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.LocaleList;
 import android.telephony.TelephonyManager;
-import android.view.ContextMenu;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
-import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -90,7 +82,6 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity;
 import de.schildbach.wallet.ui.widget.ShortcutsPane;
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.CrashReporter;
-import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
@@ -118,10 +109,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
-    private FingerprintHelper fingerprintHelper;
 
-    private DrawerLayout viewDrawer;
-    private View viewFakeForSafetySubmenu;
     private ShortcutsPane shortcutsPane;
 
     private Handler handler = new Handler();
@@ -146,7 +134,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         wallet = application.getWallet();
 
         setContentViewFooter(R.layout.home_activity);
-        setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
+        setSupportActionBar(findViewById(R.id.toolbar));
         activateHomeButton();
 
         if (savedInstanceState == null) {
@@ -166,8 +154,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             //Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false);
         }
-
-        initFingerprintHelper();
 
         this.clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 
@@ -195,26 +181,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
         });
     }
 
-    private void initFingerprintHelper() {
-        //Init fingerprint helper
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            fingerprintHelper = new FingerprintHelper(this);
-            if (!fingerprintHelper.init()) {
-                fingerprintHelper = null;
-            }
-        }
-    }
-
     private void initView() {
-        initNavigationDrawer();
         initShortcutActions();
-        findViewById(R.id.uphold_account_section).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startUpholdActivity();
-                viewDrawer.closeDrawer(GravityCompat.START);
-            }
-        });
     }
 
     private void initShortcutActions() {
@@ -244,23 +212,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         shortcutsPane.showSecureNow(config.getRemindBackupSeed());
     }
 
-    private void initNavigationDrawer() {
-        final NavigationView navigationView = findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
-
-        viewFakeForSafetySubmenu = new View(this);
-        viewFakeForSafetySubmenu.setVisibility(View.GONE);
-        viewDrawer = findViewById(R.id.drawer_layout);
-        viewDrawer.addView(viewFakeForSafetySubmenu);
-        registerForContextMenu(viewFakeForSafetySubmenu);
-        viewDrawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
-    }
-
     @Override
     protected void onResume() {
         super.onResume();
-
-        getWalletApplication().startBlockchainService(true);
 
         checkLowStorageAlert();
         detectUserCountry();
@@ -804,10 +758,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         config.disarmBackupReminder();
         this.wallet = application.getWallet();
         upgradeWalletKeyChains(Constants.BIP44_PATH, true);
-
-        if (fingerprintHelper != null) {
-            fingerprintHelper.clear();
-        }
     }
 
     private void resetBlockchain() {
@@ -836,26 +786,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             handleEncryptKeysRestoredWallet();
         } else {
             resetBlockchain();
-        }
-    }
-
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        MenuInflater inflater = getMenuInflater();
-        if (v == viewFakeForSafetySubmenu) {
-            inflater.inflate(R.menu.wallet_safety_options, menu);
-
-            final String externalStorageState = Environment.getExternalStorageState();
-
-            menu.findItem(R.id.wallet_options_restore_wallet).setEnabled(
-                    Environment.MEDIA_MOUNTED.equals(externalStorageState) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState));
-            menu.findItem(R.id.wallet_options_backup_wallet).setEnabled(Environment.MEDIA_MOUNTED.equals(externalStorageState));
-            menu.findItem(R.id.wallet_options_encrypt_keys).setTitle(
-                    wallet.isEncrypted() ? R.string.wallet_options_encrypt_keys_change : R.string.wallet_options_encrypt_keys_set);
-
-            boolean showFingerprintOption = fingerprintHelper != null && !fingerprintHelper.isFingerprintEnabled();
-            menu.findItem(R.id.wallet_options_enable_fingerprint).setVisible(showFingerprintOption);
         }
     }
 
@@ -905,8 +835,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
             SweepWalletActivity.start(this, true);
         } else if (id == R.id.nav_network_monitor) {
             startActivity(new Intent(this, NetworkMonitorActivity.class));
-        } else if (id == R.id.nav_safety) {
-            openContextMenu(viewFakeForSafetySubmenu);
         } else if (id == R.id.nav_settings) {
             startActivity(new Intent(this, PreferenceActivity.class));
         } else if (id == R.id.nav_disconnect) {
@@ -914,18 +842,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         } else if (id == R.id.nav_report_issue) {
             handleReportIssue();
         }
-
-        viewDrawer.closeDrawer(GravityCompat.START);
         return true;
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (viewDrawer.isDrawerOpen(GravityCompat.START)) {
-            viewDrawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
-        }
     }
 
     private void startUpholdActivity() {
@@ -984,40 +901,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
             return;
         }
 
-        int percentage = blockchainState.getPercentageSync();
-        if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
-            //This is to prevent showing 100% when using the Rescan blockchain function.
-            //The first few broadcasted blockchainStates are with percentage sync at 100%
-            percentage = 0;
-        }
-
-        ProgressBar syncProgressView = findViewById(R.id.sync_status_progress);
         if (blockchainState != null && blockchainState.syncFailed()) {
-            updateSyncPaneVisibility(R.id.sync_status_pane, true);
-            findViewById(R.id.sync_progress_pane).setVisibility(View.GONE);
             findViewById(R.id.sync_error_pane).setVisibility(View.VISIBLE);
             return;
         }
 
         updateSyncPaneVisibility(R.id.sync_error_pane, false);
-        updateSyncPaneVisibility(R.id.sync_progress_pane, true);
-        TextView syncStatusTitle = findViewById(R.id.sync_status_title);
-        TextView syncStatusMessage = findViewById(R.id.sync_status_message);
-        syncProgressView.setProgress(percentage);
-        TextView syncPercentageView = findViewById(R.id.sync_status_percentage);
-        syncPercentageView.setText(percentage + "%");
-
-        if (blockchainState.isSynced()) {
-            syncPercentageView.setTextColor(getResources().getColor(R.color.success_green));
-            syncStatusTitle.setText(R.string.sync_status_sync_title);
-            syncStatusMessage.setText(R.string.sync_status_sync_completed);
-            updateSyncPaneVisibility(R.id.sync_status_pane, false);
-        } else {
-            syncPercentageView.setTextColor(getResources().getColor(R.color.dash_gray));
-            updateSyncPaneVisibility(R.id.sync_status_pane, true);
-            syncStatusTitle.setText(R.string.sync_status_syncing_title);
-            syncStatusMessage.setText(R.string.sync_status_syncing_sub_title);
-        }
     }
 
     /**

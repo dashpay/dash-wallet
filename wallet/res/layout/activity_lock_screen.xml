@@ -5,8 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="false"
-    android:fitsSystemWindows="false"
-    tools:background="@color/dash_deep_blue">
+    android:background="@drawable/splash_activity_background">
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/logo_guideline"

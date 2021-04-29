@@ -93,7 +93,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
         rlUphold.setOnClickListener {
             val wallet = WalletApplication.getInstance().wallet
-            startActivity(UpholdAccountActivity.createIntent(this, wallet))
+            startActivity(UpholdAccountActivity.createIntent(this))
         }
 
         setLoginStatus()

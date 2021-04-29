@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">قم بإعداد رقم سري جديد</string>
     <string name="forgot_pin_instruction_3">تسجيل الدخول باستخدام الرقم السري الجديد الخاص بك للوصول إلى محفظتك</string>
     <string name="forgot_pin_warning">إذا نسيت رقم التعريف الشخصي الخاص بك وفقدت عبارة الاسترداد الخاصة بك ، فلا يمكنك العودة إلى محفظتك وأموالك.</string>
+    <string name="forgot_pin_recover">أدخل عبارة الاسترداد</string>
+    <string name="forgot_pin_passphrase_doesnt_match">عبارة الاسترداد لا تتطابق مع ما تم إعداد هذه المحفظة به.</string>
+
     <string name="send_coins_auto_lock_feasible">يجب تسوية هذه الصفقة على الفور بدون رسوم إضافية</string>
     <string name="send_coins_auto_lock_not_feasible">قد تستغرق هذه المعاملة عدة دقائق لتسويتها. أكمل على الفور مقابل%1$s%2$s؟</string>
     <string name="send_coins_instant_send_not_feasible">قد تستغرق هذه المعاملة عدة دقائق لتسويتها.</string>
@@ -335,8 +338,15 @@
     <string name="payment_request_please_try_again">حاول مرة اخرى</string>
     <string name="payment_request_try_again">حاول ثانية</string>
     <string name="payment_request_problem_title">لم يتم الإعتراف بالدفع</string>
+    <string name="payment_request_problem_message">تعذر على الخادم معالجة دفعتك ، يرجى الاستفسار من التاجر</string>
     <string name="payment_request_expired_title">انتهت صلاحية طلب الدفع</string>
     <string name="payment_request_close">اغلاق</string>
     <string name="payment_request_skip">تخطي</string>
     <string name="payment_request_paid_to">تم الدفع الى</string>
+
+    <string name="import_image_not_valid_qr_code">رمز QR غير صالح</string>
+    <string name="import_image_please_use_valid_qr_code">الرجاء استخدام رمز QR صالح لداش</string>
+    <string name="import_image_no_private_key_copied">لم يتم نسخ أي مفتاح خاص</string>
+    <string name="import_image_import_valid_private_key">انسخ مفتاحًا خاصًا صالحًا لاستيراد داش منه</string>
+    <string name="import_image_invalid_private">مفتاح خاص غير صالح</string>
 </resources>

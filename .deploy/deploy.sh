@@ -20,8 +20,8 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${T
   git clone git@github.com:dash-mobile-team/dash-wallet-staging.git
   DEPLOY_DIR=dash-wallet-staging/"$TRAVIS_TAG"
   mkdir -p "$DEPLOY_DIR"
-  cp wallet/build/outputs/apk/_testNet3/debug/dash-wallet-_testNet3-debug.apk "$DEPLOY_DIR"/dash-wallet-_testNet3-debug.apk
-  cp wallet/build/outputs/apk/prod/debug/dash-wallet-prod-debug.apk "$DEPLOY_DIR"/dash-wallet-prod-debug.apk
+  cp wallet/build/outputs/apk/_testNet3/debug/wallet-_testNet3-debug.apk "$DEPLOY_DIR"/wallet-_testNet3-debug.apk
+  cp wallet/build/outputs/apk/prod/debug/wallet-prod-debug.apk "$DEPLOY_DIR"/wallet-prod-debug.apk
 #  cp wallet/build/outputs/apk/_testNet3/debug/dash-wallet-_testNet3-debug.apk dash-wallet-staging/"$TRAVIS_TAG"/dash-wallet-_testNet3-debug.apk
 
   # generate README.md file
@@ -31,8 +31,8 @@ if [ "${DEPLOY_TYPE}" = "master" ] || [ "${TRAVIS_TAG:0:4}" = "NMA-" ] || [ "${T
 #  fi
   {
     echo "### Test builds:"
-    echo "* [dash-wallet-prod-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-prod-debug.apk)"
-    echo "* [dash-wallet-_testNet3-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/dash-wallet-_testNet3-debug.apk)"
+    echo "* [wallet-prod-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/wallet-prod-debug.apk)"
+    echo "* [wallet-_testNet3-debug.apk](https://github.com/dash-mobile-team/dash-wallet-staging/raw/master/$TRAVIS_TAG/wallet-_testNet3-debug.apk)"
     echo "### Deploy info:"
     # print the content of `git show "$TRAVIS_TAG"` into README.md until the first occurence of 'diff'
     # the very last line containing 'diff' is removed by | head -n -1

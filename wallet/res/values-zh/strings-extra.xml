@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">设置一个新PIN</string>
     <string name="forgot_pin_instruction_3">通过您的新PIN来访问钱包</string>
     <string name="forgot_pin_warning">如果您遗忘了PIN并丢失了恢复密语, 就无法再访问您的钱包和资金.</string>
+    <string name="forgot_pin_recover">输入助记词</string>
+    <string name="forgot_pin_passphrase_doesnt_match">该助记词与本钱包原设定的助记词不匹配.</string>
+
     <string name="send_coins_auto_lock_feasible">此交易应即时确认并且无附加手续费</string>
     <string name="send_coins_auto_lock_not_feasible">此项交易确认需要几分钟. 立刻完成需要 %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">此项交易确认需要几分钟.</string>
@@ -320,8 +323,15 @@
     <string name="payment_request_please_try_again">请重试</string>
     <string name="payment_request_try_again">再试一次</string>
     <string name="payment_request_problem_title">支付无法被确认</string>
+    <string name="payment_request_problem_message">您的交易无法被服务器处理, 请联系商家</string>
     <string name="payment_request_expired_title">支付请求已过期</string>
     <string name="payment_request_close">关闭</string>
     <string name="payment_request_skip">跳过</string>
     <string name="payment_request_paid_to">支付给</string>
+
+    <string name="import_image_not_valid_qr_code">不是一个有效的二维码</string>
+    <string name="import_image_please_use_valid_qr_code">请使用有效的Dash二维码</string>
+    <string name="import_image_no_private_key_copied">未复制私钥</string>
+    <string name="import_image_import_valid_private_key">复制一个有效的私钥并将其中的Dash导入</string>
+    <string name="import_image_invalid_private">无效的私钥</string>
 </resources>

@@ -41,6 +41,7 @@ import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.WalletDataProvider;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -51,8 +52,6 @@ import java.math.BigDecimal;
 
 public class UpholdAccountActivity extends InteractionAwareActivity {
 
-    public static final String WALLET_RECEIVING_ADDRESS_EXTRA = "uphold_receiving_address_extra";
-
     public static final int REQUEST_CODE_TRANSFER = 1;
 
     private CurrencyTextView balanceView;
@@ -60,15 +59,13 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     private String receivingAddress;
     private final MonetaryFormat monetaryFormat = new MonetaryFormat().noCode().minDecimals(8);
 
-    public static Intent createIntent(Context context, Wallet wallet) {
+    public static Intent createIntent(Context context) {
         Intent intent;
         if (UpholdClient.getInstance().isAuthenticated()) {
             intent = new Intent(context, UpholdAccountActivity.class);
         } else {
             intent = new Intent(context, UpholdSplashActivity.class);
         }
-        intent.putExtra(UpholdAccountActivity.WALLET_RECEIVING_ADDRESS_EXTRA,
-                wallet.currentReceiveAddress().toString());
         return intent;
     }
 
@@ -77,10 +74,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.uphold_account_screen);
 
-        receivingAddress = getIntent().getStringExtra(WALLET_RECEIVING_ADDRESS_EXTRA);
-        if (receivingAddress == null) {
-            finish();
-        }
+        receivingAddress = ((WalletDataProvider) getApplication()).currentReceiveAddress().toBase58();
 
         balanceView = findViewById(R.id.uphold_account_balance);
         balanceView.setFormat(monetaryFormat);
