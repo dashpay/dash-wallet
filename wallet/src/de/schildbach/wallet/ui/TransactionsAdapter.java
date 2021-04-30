@@ -46,9 +46,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -84,7 +86,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     private final List<TransactionHistoryItem> transactions = new ArrayList<>();
     private final List<TransactionHistoryItem> filteredTransactions = new ArrayList<>();
-    private final HashMap<Date, List<TransactionHistoryItem>> transactionsByDate = new HashMap<>();
+    private final LinkedHashMap<Long, List<TransactionHistoryItem>> transactionsByDate = new LinkedHashMap<>();
     private ArrayList<Integer> dateStartingIndexes = new ArrayList<>();
     private HashMap<Integer, Date> datesByTransactionHeaderIndex = new HashMap<>();
 
@@ -202,7 +204,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     private int getHeadersCountBeforePosition(int position) {
         int headersCountBeforePosition = 0;
-        Date[] dates = new Date[transactionsByDate.keySet().size()];
+        Long[] dates = new Long[transactionsByDate.keySet().size()];
         transactionsByDate.keySet().toArray(dates);
 
         for (int i : dateStartingIndexes) {
@@ -237,13 +239,13 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         }
 
         int headersCountBeforePosition = getHeadersCountBeforePosition(position);
-        Date[] dates = new Date[transactionsByDate.keySet().size()];
+        Long[] dates = new Long[transactionsByDate.keySet().size()];
         transactionsByDate.keySet().toArray(dates);
         if (dates.length > 0) {
             for (int i : dateStartingIndexes) {
-                Date headerDate = dates[dateStartingIndexes.indexOf(i)];
+                Long headerTime = dates[dateStartingIndexes.indexOf(i)];
                 if (position == i) {
-                    return headerDate.getTime();
+                    return headerTime;
                 }
             }
         }
@@ -313,7 +315,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 @Override
                 public void onClick(final View v) {
                     TransactionHistoryItem transactionHistoryItem;
-                    int headersBeforePosition = getHeadersCountBeforePosition(transactionHolder.getAdapterPosition()) + 1; ''
+                    int headersBeforePosition = getHeadersCountBeforePosition(transactionHolder.getAdapterPosition()) + 1;
                     int viewType = getItemViewType(1);
                     if (viewType == VIEW_TYPE_PROCESSING_IDENTITY || viewType == VIEW_TYPE_JOIN_DASHPAY) {
                         transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - 2);
@@ -599,6 +601,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     private void filter() {
+        filteredTransactions.clear();
         transactionsByDate.clear();
         dateStartingIndexes.clear();
         datesByTransactionHeaderIndex.clear();
@@ -614,13 +617,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             txGroupHeaderIndex++;
         }
 
-        if (filteredTransactions.size() > 0) {
-            dateStartingIndexes.add(txGroupHeaderIndex);
-            Date date = filteredTransactions.get(0).transaction.getUpdateTime();
-            date = getDateAtHourZero(date);
-            datesByTransactionHeaderIndex.put(1, date);
-        }
-
         final List<TransactionHistoryItem> resultTransactions = new ArrayList<>();
         for (TransactionHistoryItem transactionHistoryItem : transactions) {
             Transaction tx = transactionHistoryItem.transaction;
@@ -632,19 +628,17 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     || (filter == TransactionsHeaderViewHolder.Filter.OUTGOING && sent && !isInternal)) {
 
                 Date txDate = transactionHistoryItem.transaction.getUpdateTime();
-
                 Date txDateCopy = getDateAtHourZero(txDate);
 
                 //Create Transactions by Date HashMap
-                if (!transactionsByDate.containsKey(txDate)) {
-                    transactionsByDate.put(txDateCopy, new ArrayList<>());
+                if (!transactionsByDate.containsKey(txDateCopy.getTime())) {
+                    transactionsByDate.put(txDateCopy.getTime(), new ArrayList<>());
                 }
-                Objects.requireNonNull(transactionsByDate.get(txDateCopy)).add(transactionHistoryItem);
+                Objects.requireNonNull(transactionsByDate.get(txDateCopy.getTime())).add(transactionHistoryItem);
 
-                if (!txDateCopy.equals(lastDate) && transactionsByDate.containsKey(lastDate)) {
+                if (!txDateCopy.equals(lastDate) && transactionsByDate.containsKey(lastDate.getTime())) {
                     int txPosition = resultTransactions.size();
-                    int headersBeforePosition = 1;
-                    headersBeforePosition += getHeadersCountBeforePosition(txPosition);
+                    int headersBeforePosition = getHeadersCountBeforePosition(txPosition);
                     int txGroupHeaderNextIndex = 1 + resultTransactions.size() + headersBeforePosition;
                     dateStartingIndexes.add(txGroupHeaderNextIndex);
                     datesByTransactionHeaderIndex.put(txGroupHeaderNextIndex, txDate);
@@ -656,6 +650,14 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         }
 
         filteredTransactions.addAll(resultTransactions);
+
+        if (filteredTransactions.size() > 0) {
+            dateStartingIndexes.add(txGroupHeaderIndex);
+            Date date = filteredTransactions.get(0).transaction.getUpdateTime();
+            date = getDateAtHourZero(date);
+            datesByTransactionHeaderIndex.put(1, date);
+        }
+
         notifyDataSetChanged();
     }
 
