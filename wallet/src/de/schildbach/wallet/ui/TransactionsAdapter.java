@@ -20,7 +20,9 @@ package de.schildbach.wallet.ui;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,6 +30,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Address;
@@ -46,14 +49,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -67,6 +66,8 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay;
 import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+
+import static de.schildbach.wallet.util.DateExtensionsKt.getDateAtHourZero;
 
 /**
  * @author Andreas Schildbach
@@ -212,11 +213,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         if (position == 1) {
             return 1;
         }
+
         int nonTxItemsBeforePosition = 1;
-        if (position == 2) {
+        int viewType = getItemViewType(position);
+        if (viewType == VIEW_TYPE_TRANSACTION || viewType == VIEW_TYPE_TRANSACTION_GROUP_HEADER) {
             if (shouldShowJoinDashPay() || shouldShowHelloCard()) {
                 nonTxItemsBeforePosition++;
-                return nonTxItemsBeforePosition;
             }
         }
 
@@ -229,22 +231,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         return nonTxItemsBeforePosition;
     }
 
-    private boolean isTransactionGroupHeader(int position) {
-        if (position == 0) {
-            return false;
-        }
-        if (shouldShowJoinDashPay() || shouldShowJoinDashPay()) {
-            if (position == 1) {
-                return false;
-            } else if (position == 2 && filteredTransactions.size() > 1) {
-                return true;
-            }
-        } else if (position == 1 && filteredTransactions.size() > 1) {
-            return true;
-        }
-        return false;
-    }
-
     @Override
     public long getItemId(int position) {
         if (position == RecyclerView.NO_POSITION) {
@@ -252,7 +238,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         }
 
         int viewType = getItemViewType(position);
-        int headersCountBeforePosition = getNonTransactionItemsBeforePosition(position);
         switch (viewType) {
             case VIEW_TYPE_PROCESSING_IDENTITY:
                 return blockchainIdentityData.getId();
@@ -263,7 +248,12 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             case VIEW_TYPE_TRANSACTION_GROUP_HEADER:
                 return position;
             case VIEW_TYPE_TRANSACTION:
-                return WalletUtils.longHash(filteredTransactions.get(position - headersCountBeforePosition)
+                int headersCountBeforePosition = getNonTransactionItemsBeforePosition(position);
+                int txIndex = position - headersCountBeforePosition;
+                if (txIndex < 0) {
+                    txIndex = 0;
+                }
+                return WalletUtils.longHash(filteredTransactions.get(txIndex)
                         .transaction.getTxId());
         }
 
@@ -275,6 +265,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         if (position == 0) {
             return VIEW_TYPE_HEADER;
         }
+
         if (position == 1) {
             if (shouldShowHelloCard()) {
                 return VIEW_TYPE_PROCESSING_IDENTITY;
@@ -318,7 +309,11 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             int headersCountBeforePosition = getNonTransactionItemsBeforePosition(position);
 
             TransactionHistoryItem transactionHistoryItem;
-            transactionHistoryItem = filteredTransactions.get(position - headersCountBeforePosition);
+            int txIndex = position - headersCountBeforePosition;
+            if (txIndex < 0) {
+                txIndex = 0;
+            }
+            transactionHistoryItem = filteredTransactions.get(txIndex);
             transactionHolder.bind(transactionHistoryItem);
 
             transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -326,12 +321,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 public void onClick(final View v) {
                     TransactionHistoryItem transactionHistoryItem;
                     int headersBeforePosition = getNonTransactionItemsBeforePosition(transactionHolder.getAdapterPosition());
-                    int viewType = getItemViewType(transactionHolder.getAdapterPosition());
-                    if (viewType == VIEW_TYPE_PROCESSING_IDENTITY || viewType == VIEW_TYPE_JOIN_DASHPAY) {
-                        transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - headersBeforePosition);
-                    } else {
-                        transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - headersBeforePosition);
-                    }
+                    transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - headersBeforePosition);
 
                     if (onClickListener != null) {
                         onClickListener.onTransactionRowClicked(transactionHistoryItem);
@@ -391,7 +381,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private class TransactionViewHolder extends RecyclerView.ViewHolder {
         private final TextView primaryStatusView;
         private final TextView secondaryStatusView;
-        private final TextView timeView;
         private final ImageView dashSymbolView;
         private final CurrencyTextView valueView;
         private final TextView signalView;
@@ -404,7 +393,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             primaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_primary_status);
             secondaryStatusView = (TextView) itemView.findViewById(R.id.transaction_row_secondary_status);
 
-            timeView = (TextView) itemView.findViewById(R.id.transaction_row_time);
             dashSymbolView = (ImageView) itemView.findViewById(R.id.dash_amount_symbol);
             valueView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_value);
             valueView.setApplyMarkup(false);
@@ -417,12 +405,50 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             icon = itemView.findViewById(R.id.icon);
         }
 
+        private int toDp(float dip) {
+            Resources r = itemView.getContext().getResources();
+            return (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP,
+                    dip,
+                    r.getDisplayMetrics()
+            );
+        }
+
         private void bind(final TransactionHistoryItem transactionHistoryItem) {
-            if (itemView instanceof CardView)
-                ((CardView) itemView)
-                        .setCardBackgroundColor(itemView.isActivated() ? colorBackgroundSelected : colorBackground);
+
+            if (itemView instanceof CardView) {
+                ((CardView) itemView).setCardBackgroundColor(itemView.isActivated()
+                        ? colorBackgroundSelected : colorBackground);
+            }
 
             final Transaction tx = transactionHistoryItem.transaction;
+
+            Long txTime = getDateAtHourZero(tx.getUpdateTime()).getTime();
+            List<TransactionHistoryItem> transactionsAtDate = transactionsByDate.get(txTime);
+
+            if (transactionsAtDate.indexOf(transactionHistoryItem) == 0) {
+                itemView.findViewById(R.id.separator).setVisibility(View.GONE);
+            } else {
+                itemView.findViewById(R.id.separator).setVisibility(View.VISIBLE);
+            }
+
+            int hMargin = toDp(15);
+            int vMargin = toDp(10);
+
+            if (transactionsAtDate.indexOf(transactionHistoryItem) == transactionsAtDate.size() - 1) {
+                Drawable bgDrawable = ContextCompat.getDrawable(itemView.getContext(),
+                        R.drawable.selectable_rectangle_white_bottom_radius);
+                itemView.setBackground(bgDrawable);
+
+                ((ViewGroup.MarginLayoutParams) itemView.getLayoutParams()).setMargins(hMargin, 0,
+                        hMargin, vMargin);
+            } else {
+                Drawable bgDrawable = ContextCompat.getDrawable(itemView.getContext(),
+                        R.drawable.selectable_rectangle_white);
+                itemView.setBackground(bgDrawable);
+                ((ViewGroup.MarginLayoutParams) itemView.getLayoutParams()).setMargins(hMargin,
+                        0, hMargin, 0);
+            }
 
             final TransactionConfidence confidence = tx.getConfidence();
             final Coin fee = tx.getFee();
@@ -464,12 +490,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 secondaryStatusColor = colorSecondaryStatus;
                 valueColor = txCache.sent ? colorValueNegative : colorValuePositve;
             }
-
-            //
-            // Set the time. eg.  "<date> <time>"
-            //
-            final Date time = tx.getUpdateTime();
-            timeView.setText(WalletUtils.formatDate(time.getTime()));
 
             //
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
@@ -598,29 +618,14 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         filter();
     }
 
-    private Date getDateAtHourZero(Date date) {
-        long daysInMillis = TimeUnit.DAYS.toMillis(1);
-        Date txDateCopy = new Date(date.getTime());
-        long timeAtHourZero = (date.getTime() / daysInMillis) * daysInMillis;
-        txDateCopy.setTime(timeAtHourZero);
-        return txDateCopy;
-    }
-
     private void filter() {
         filteredTransactions.clear();
         transactionsByDate.clear();
         transactionGroupHeaderIndexes.clear();
 
         int txGroupHeaderIndex = 1;
-        if (shouldShowHelloCard()) {
-            txGroupHeaderIndex++;
-        }
-        if (shouldShowJoinDashPay()) {
-            txGroupHeaderIndex++;
-        }
-
         final List<TransactionHistoryItem> resultTransactions = new ArrayList<>();
-        int txIndex = 0;
+
         int headersCount = 0;
         for (TransactionHistoryItem transactionHistoryItem : transactions) {
             Transaction tx = transactionHistoryItem.transaction;
@@ -637,6 +642,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 //Create Transactions by Date HashMap
                 if (!transactionsByDate.containsKey(txDateCopy.getTime())) {
                     int headerPosition = txGroupHeaderIndex + headersCount;
+                    if (shouldShowJoinDashPay() || shouldShowHelloCard()) {
+                        headerPosition++;
+                    }
                     transactionGroupHeaderIndexes.add(headerPosition);
                     transactionsByDate.put(txDateCopy.getTime(), new ArrayList<>());
                     dateAtPosition.put(headerPosition, txDateCopy.getTime());
@@ -644,7 +652,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 }
                 Objects.requireNonNull(transactionsByDate.get(txDateCopy.getTime())).add(transactionHistoryItem);
                 resultTransactions.add(transactionHistoryItem);
-                txIndex++;
                 txGroupHeaderIndex++;
             }
         }
@@ -676,7 +683,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     public void setCanJoinDashPay(boolean canJoinDashPay) {
         this.canJoinDashPay = canJoinDashPay;
-        notifyDataSetChanged();
+        filter();
     }
 
 }

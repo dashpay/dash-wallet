@@ -33,4 +33,7 @@
 
     <dimen name="space_medium">20dp</dimen>
 
+    <dimen name="date_text_big">18sp</dimen>
+    <dimen name="date_text_small">12sp</dimen>
+
 </resources>
