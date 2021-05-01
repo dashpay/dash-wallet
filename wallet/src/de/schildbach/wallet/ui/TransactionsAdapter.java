@@ -46,11 +46,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -87,8 +88,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final List<TransactionHistoryItem> transactions = new ArrayList<>();
     private final List<TransactionHistoryItem> filteredTransactions = new ArrayList<>();
     private final LinkedHashMap<Long, List<TransactionHistoryItem>> transactionsByDate = new LinkedHashMap<>();
-    private ArrayList<Integer> dateStartingIndexes = new ArrayList<>();
-    private HashMap<Integer, Date> datesByTransactionHeaderIndex = new HashMap<>();
+    private final ArrayList<Integer> transactionGroupHeaderIndexes = new ArrayList<>();
 
     private MonetaryFormat format;
 
@@ -191,7 +191,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     @Override
     public int getItemCount() {
-        int count = filteredTransactions.size() + dateStartingIndexes.size() + 1;
+        int transactionGroups = transactionsByDate.keySet().size();
+        int count = filteredTransactions.size() + transactionGroups + 1;
 
         if (shouldShowHelloCard()) {
             count += 1;
@@ -202,56 +203,69 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         return count;
     }
 
-    private int getHeadersCountBeforePosition(int position) {
-        int headersCountBeforePosition = 0;
-        Long[] dates = new Long[transactionsByDate.keySet().size()];
-        transactionsByDate.keySet().toArray(dates);
-
-        for (int i : dateStartingIndexes) {
-            if (position > i) {
-                headersCountBeforePosition++;
-            } else {
-                return headersCountBeforePosition;
+    private int getNonTransactionItemsBeforePosition(int position) {
+        if (position == 0) {
+            return 0;
+        }
+        if (position == 1) {
+            return 1;
+        }
+        int nonTxItemsBeforePosition = 1;
+        if (position == 2) {
+            if (shouldShowJoinDashPay() || shouldShowHelloCard()) {
+                nonTxItemsBeforePosition++;
+                return nonTxItemsBeforePosition;
             }
         }
-        return headersCountBeforePosition;
+
+        for (Integer transactionGroupHeaderIndex : transactionGroupHeaderIndexes) {
+            if (position > transactionGroupHeaderIndex) {
+                nonTxItemsBeforePosition++;
+            }
+        }
+
+        return nonTxItemsBeforePosition;
+    }
+
+    private boolean isTransactionGroupHeader(int position) {
+        if (position == 0) {
+            return false;
+        }
+        if (shouldShowJoinDashPay() || shouldShowJoinDashPay()) {
+            if (position == 1) {
+                return false;
+            } else if (position == 2 && filteredTransactions.size() > 1) {
+                return true;
+            }
+        } else if (position == 1 && filteredTransactions.size() > 1) {
+            return true;
+        }
+        return false;
     }
 
     @Override
     public long getItemId(int position) {
-        if (position == RecyclerView.NO_POSITION)
+        if (position == RecyclerView.NO_POSITION) {
             return RecyclerView.NO_ID;
-
-        if (position == 0) {
-            return 0;
         }
 
         int viewType = getItemViewType(position);
-
-        if (position == 1) {
-            if (viewType == VIEW_TYPE_PROCESSING_IDENTITY) {
+        int headersCountBeforePosition = getNonTransactionItemsBeforePosition(position);
+        switch (viewType) {
+            case VIEW_TYPE_PROCESSING_IDENTITY:
                 return blockchainIdentityData.getId();
-            } else if (viewType == VIEW_TYPE_JOIN_DASHPAY) {
+            case VIEW_TYPE_JOIN_DASHPAY:
                 return JOIN_DASHPAY_ITEM_ID;
-            } else {
-                return WalletUtils.longHash(filteredTransactions.get(position - 1).transaction.getTxId());
-            }
+            case VIEW_TYPE_HEADER:
+                return VIEW_TYPE_HEADER;
+            case VIEW_TYPE_TRANSACTION_GROUP_HEADER:
+                return position;
+            case VIEW_TYPE_TRANSACTION:
+                return WalletUtils.longHash(filteredTransactions.get(position - headersCountBeforePosition)
+                        .transaction.getTxId());
         }
 
-        int headersCountBeforePosition = getHeadersCountBeforePosition(position);
-        Long[] dates = new Long[transactionsByDate.keySet().size()];
-        transactionsByDate.keySet().toArray(dates);
-        if (dates.length > 0) {
-            for (int i : dateStartingIndexes) {
-                Long headerTime = dates[dateStartingIndexes.indexOf(i)];
-                if (position == i) {
-                    return headerTime;
-                }
-            }
-        }
-
-        return WalletUtils.longHash(filteredTransactions.get(position - headersCountBeforePosition - 1)
-                .transaction.getTxId());
+        return position;
     }
 
     @Override
@@ -264,11 +278,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 return VIEW_TYPE_PROCESSING_IDENTITY;
             } else if (shouldShowJoinDashPay()) {
                 return VIEW_TYPE_JOIN_DASHPAY;
-            } else {
-                return VIEW_TYPE_TRANSACTION_GROUP_HEADER;
             }
         }
-        if (dateStartingIndexes.contains(position)) {
+
+        if (transactionGroupHeaderIndexes.contains(position)) {
             return VIEW_TYPE_TRANSACTION_GROUP_HEADER;
         }
 
@@ -300,25 +313,20 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             final long itemId = getItemId(position);
             transactionHolder.itemView.setActivated(itemId == selectedItemId);
 
+            int headersCountBeforePosition = getNonTransactionItemsBeforePosition(position);
+
             TransactionHistoryItem transactionHistoryItem;
-            if (shouldShowHelloCard()) {
-                transactionHistoryItem = filteredTransactions.get(position - 3);
-            } else if (shouldShowJoinDashPay()) {
-                transactionHistoryItem = filteredTransactions.get(position - 3);
-            } else {
-                int headersBeforePosition = getHeadersCountBeforePosition(position);
-                transactionHistoryItem = filteredTransactions.get(position - 1 - headersBeforePosition) ;
-            }
+            transactionHistoryItem = filteredTransactions.get(position - headersCountBeforePosition);
             transactionHolder.bind(transactionHistoryItem);
 
             transactionHolder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(final View v) {
                     TransactionHistoryItem transactionHistoryItem;
-                    int headersBeforePosition = getHeadersCountBeforePosition(transactionHolder.getAdapterPosition()) + 1;
-                    int viewType = getItemViewType(1);
+                    int headersBeforePosition = getNonTransactionItemsBeforePosition(transactionHolder.getAdapterPosition());
+                    int viewType = getItemViewType(transactionHolder.getAdapterPosition());
                     if (viewType == VIEW_TYPE_PROCESSING_IDENTITY || viewType == VIEW_TYPE_JOIN_DASHPAY) {
-                        transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - 2);
+                        transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - headersBeforePosition);
                     } else {
                         transactionHistoryItem = filteredTransactions.get(transactionHolder.getAdapterPosition() - headersBeforePosition);
                     }
@@ -363,12 +371,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 }
             });
         } else if (holder instanceof TransactionGroupHeaderViewHolder) {
-            Date date = datesByTransactionHeaderIndex.get(position);
-            if (date == null) {
-                date = new Date();
-            }
-            date = getDateAtHourZero(date);
-            ((TransactionGroupHeaderViewHolder) holder).bind(date);
+            //TODO:
+            //((TransactionGroupHeaderViewHolder) holder).bind(date);
         }
     }
 
@@ -603,11 +607,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private void filter() {
         filteredTransactions.clear();
         transactionsByDate.clear();
-        dateStartingIndexes.clear();
-        datesByTransactionHeaderIndex.clear();
-
-        Date lastDate = new Date();
-        lastDate.setTime(0);
+        transactionGroupHeaderIndexes.clear();
 
         int txGroupHeaderIndex = 1;
         if (shouldShowHelloCard()) {
@@ -618,6 +618,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         }
 
         final List<TransactionHistoryItem> resultTransactions = new ArrayList<>();
+        int txIndex = 0;
+        int headersCount = 0;
         for (TransactionHistoryItem transactionHistoryItem : transactions) {
             Transaction tx = transactionHistoryItem.transaction;
             boolean sent = tx.getValue(wallet).signum() < 0;
@@ -632,32 +634,24 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
                 //Create Transactions by Date HashMap
                 if (!transactionsByDate.containsKey(txDateCopy.getTime())) {
+                    if (txIndex == 0) {
+                        transactionGroupHeaderIndexes.add(txGroupHeaderIndex);
+                    } else {
+                        transactionGroupHeaderIndexes.add(txGroupHeaderIndex + headersCount);
+                    }
                     transactionsByDate.put(txDateCopy.getTime(), new ArrayList<>());
+                    headersCount++;
                 }
                 Objects.requireNonNull(transactionsByDate.get(txDateCopy.getTime())).add(transactionHistoryItem);
-
-                if (!txDateCopy.equals(lastDate) && transactionsByDate.containsKey(lastDate.getTime())) {
-                    int txPosition = resultTransactions.size();
-                    int headersBeforePosition = getHeadersCountBeforePosition(txPosition);
-                    int txGroupHeaderNextIndex = 1 + resultTransactions.size() + headersBeforePosition;
-                    dateStartingIndexes.add(txGroupHeaderNextIndex);
-                    datesByTransactionHeaderIndex.put(txGroupHeaderNextIndex, txDate);
-                }
                 resultTransactions.add(transactionHistoryItem);
-
-                lastDate = txDateCopy;
+                txIndex++;
+                txGroupHeaderIndex++;
             }
         }
 
         filteredTransactions.addAll(resultTransactions);
 
-        if (filteredTransactions.size() > 0) {
-            dateStartingIndexes.add(txGroupHeaderIndex);
-            Date date = filteredTransactions.get(0).transaction.getUpdateTime();
-            date = getDateAtHourZero(date);
-            datesByTransactionHeaderIndex.put(1, date);
-        }
-
+        Log.d("txDate", transactionGroupHeaderIndexes.toString());
         notifyDataSetChanged();
     }
 
