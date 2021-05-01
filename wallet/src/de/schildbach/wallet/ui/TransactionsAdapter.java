@@ -51,6 +51,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
@@ -89,6 +90,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final List<TransactionHistoryItem> filteredTransactions = new ArrayList<>();
     private final LinkedHashMap<Long, List<TransactionHistoryItem>> transactionsByDate = new LinkedHashMap<>();
     private final ArrayList<Integer> transactionGroupHeaderIndexes = new ArrayList<>();
+    private final HashMap<Integer, Long> dateAtPosition = new HashMap<>();
 
     private MonetaryFormat format;
 
@@ -371,8 +373,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 }
             });
         } else if (holder instanceof TransactionGroupHeaderViewHolder) {
-            //TODO:
-            //((TransactionGroupHeaderViewHolder) holder).bind(date);
+            Date date = new Date(dateAtPosition.get(holder.getAdapterPosition()));
+            ((TransactionGroupHeaderViewHolder) holder).bind(date);
         }
     }
 
@@ -634,12 +636,10 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
                 //Create Transactions by Date HashMap
                 if (!transactionsByDate.containsKey(txDateCopy.getTime())) {
-                    if (txIndex == 0) {
-                        transactionGroupHeaderIndexes.add(txGroupHeaderIndex);
-                    } else {
-                        transactionGroupHeaderIndexes.add(txGroupHeaderIndex + headersCount);
-                    }
+                    int headerPosition = txGroupHeaderIndex + headersCount;
+                    transactionGroupHeaderIndexes.add(headerPosition);
                     transactionsByDate.put(txDateCopy.getTime(), new ArrayList<>());
+                    dateAtPosition.put(headerPosition, txDateCopy.getTime());
                     headersCount++;
                 }
                 Objects.requireNonNull(transactionsByDate.get(txDateCopy.getTime())).add(transactionHistoryItem);
