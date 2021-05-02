@@ -456,12 +456,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         if (msg == null) {
             msg = "Unknown error - ${e.javaClass.simpleName}"
         }
-        log.error("$description: $msg")
+        log.error("$description: $msg", e)
         if (e is StatusRuntimeException) {
             log.error("---> ${e.trailers}")
         }
-        log.error(msg)
-        e.printStackTrace()
         return msg
     }
 
@@ -1145,46 +1143,54 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * This does not handle the case if userIdList.size > 100
      */
     private suspend fun updateContactProfiles(userIdList: List<String>, lastContactRequestTime: Long, checkingIntegrity: Boolean = false) {
-        if (userIdList.isNotEmpty()) {
-            val identifierList = userIdList.map { Identifier.from(it) }
-            val profileDocuments = profiles.getList(identifierList, lastContactRequestTime) //only handles 100 userIds
-            val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
+        try {
+            if (userIdList.isNotEmpty()) {
+                val identifierList = userIdList.map { Identifier.from(it) }
+                val profileDocuments = profiles.getList(identifierList, lastContactRequestTime) //only handles 100 userIds
+                val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
-            val nameDocuments = platform.names.getList(identifierList)
-            val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
+                val nameDocuments = platform.names.getList(identifierList)
+                val nameById = nameDocuments.associateBy({ getIdentityForName(it) }, { it })
 
-            for (id in profileById.keys) {
-                val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
-                val username = nameDocument!!.data["normalizedLabel"] as String
-                val identityId = getIdentityForName(nameDocument)
+                for (id in profileById.keys) {
+                    if (nameById.containsKey(id)) {
+                        val nameDocument = nameById[id] // what happens if there is no username for the identity? crash
+                        val username = nameDocument!!.data["normalizedLabel"] as String
+                        val identityId = getIdentityForName(nameDocument)
 
-                val profileDocument = profileById[id]
+                        val profileDocument = profileById[id]
 
-                val profile = if (profileDocument != null)
-                    DashPayProfile.fromDocument(profileDocument, username)
-                else DashPayProfile(identityId.toString(), username)
+                        val profile = if (profileDocument != null)
+                            DashPayProfile.fromDocument(profileDocument, username)
+                        else DashPayProfile(identityId.toString(), username)
 
-                dashPayProfileDao.insert(profile!!)
-                if (checkingIntegrity) {
-                    log.info("check database integrity: adding missing profile $username:$id")
-                }
-            }
-
-            // add a blank profile for any identity that is still missing a profile
-            if (lastContactRequestTime == 0L) {
-                val remainingMissingProfiles = userIdList.filter { !profileById.containsKey(Identifier.from(it)) }
-                for (identityId in remainingMissingProfiles) {
-                    val nameDocument = nameById[Identifier.from(identityId)]
-                    // what happens if there is no username for the identity? crash
-                    if (nameDocument != null) {
-                        val username = nameDocument.data["normalizedLabel"] as String
-                        val identityIdForName = getIdentityForName(nameDocument)
-                        dashPayProfileDao.insert(DashPayProfile(identityIdForName.toString(), username))
+                        dashPayProfileDao.insert(profile!!)
+                        if (checkingIntegrity) {
+                            log.info("check database integrity: adding missing profile $username:$id")
+                        }
                     } else {
-                        log.info("no username found for $identityId")
+                        log.info("domain document for $id could not be found, though a profile exists")
+                    }
+                }
+
+                // add a blank profile for any identity that is still missing a profile
+                if (lastContactRequestTime == 0L) {
+                    val remainingMissingProfiles = userIdList.filter { !profileById.containsKey(Identifier.from(it)) }
+                    for (identityId in remainingMissingProfiles) {
+                        val nameDocument = nameById[Identifier.from(identityId)]
+                        // what happens if there is no username for the identity? crash
+                        if (nameDocument != null) {
+                            val username = nameDocument.data["normalizedLabel"] as String
+                            val identityIdForName = getIdentityForName(nameDocument)
+                            dashPayProfileDao.insert(DashPayProfile(identityIdForName.toString(), username))
+                        } else {
+                            log.info("no username found for $identityId")
+                        }
                     }
                 }
             }
+        } catch (e: Exception) {
+            formatExceptionMessage("update contact profiles", e)
         }
     }
 
@@ -1193,35 +1199,39 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val watch = Stopwatch.createStarted()
         log.info("check database integrity: starting")
 
-        val userIdList = HashSet<String>()
-        val missingProfiles = HashSet<String>()
+        try {
+            val userIdList = HashSet<String>()
+            val missingProfiles = HashSet<String>()
 
-        var toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
-        val toContactMap = HashMap<String, DashPayContactRequest>()
-        toContactDocuments!!.forEach {
-            userIdList.add(it.toUserId)
-            toContactMap[it.toUserId] = it
-        }
-        // Get all contact requests where toUserId == userId, the users who have added me
-        val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
-        val fromContactMap = HashMap<String, DashPayContactRequest>()
-        fromContactDocuments!!.forEach {
-            userIdList.add(it.userId)
-            fromContactMap[it.userId] = it
-        }
-
-        for (user in userIdList) {
-            val profile = dashPayProfileDao.loadByUserId(user)
-            if (profile == null) {
-                missingProfiles.add(user)
+            val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
+            val toContactMap = HashMap<String, DashPayContactRequest>()
+            toContactDocuments!!.forEach {
+                userIdList.add(it.toUserId)
+                toContactMap[it.toUserId] = it
             }
-        }
+            // Get all contact requests where toUserId == userId, the users who have added me
+            val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
+            val fromContactMap = HashMap<String, DashPayContactRequest>()
+            fromContactDocuments!!.forEach {
+                userIdList.add(it.userId)
+                fromContactMap[it.userId] = it
+            }
 
-        if (missingProfiles.isNotEmpty()) {
-            updateContactProfiles(missingProfiles.toList(), 0, true)
-        }
+            for (user in userIdList) {
+                val profile = dashPayProfileDao.loadByUserId(user)
+                if (profile == null) {
+                    missingProfiles.add(user)
+                }
+            }
 
-        log.info("check database integrity complete in $watch")
+            if (missingProfiles.isNotEmpty()) {
+                updateContactProfiles(missingProfiles.toList(), 0, true)
+            }
+        } catch (e: Exception) {
+            formatExceptionMessage("check database integrity", e)
+        } finally {
+            log.info("check database integrity complete in $watch")
+        }
     }
 
     fun addContactsUpdatedListener(listener: OnContactsUpdated) {
