@@ -180,20 +180,6 @@
             android:label="@string/block_info"
             android:theme="@style/LockScreenActivity.Child.Theme" />
         <activity
-            android:name="de.schildbach.wallet.ui.RestoreWalletActivity"
-            android:configChanges="orientation|keyboard|keyboardHidden"
-            android:taskAffinity=""
-            android:theme="@style/My.Theme.Dialog" >
-            <intent-filter android:label="@string/import_keys_intent_filter_action" >
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-
-                <data android:mimeType="application/x-darkcoin-wallet-backup" />
-                <data android:mimeType="application/x-dash-wallet-backup" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name="de.schildbach.wallet.ui.scan.ScanActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:stateNotNeeded="true"
