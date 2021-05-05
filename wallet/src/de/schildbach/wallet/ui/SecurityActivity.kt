@@ -27,6 +27,7 @@ import android.widget.CompoundButton
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
@@ -36,6 +37,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.BuildConfig
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
 
@@ -107,8 +109,12 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             fingerprint_auth_switch.isChecked = fingerprintHelper.isFingerprintEnabled
             fingerprint_auth_switch.setOnCheckedChangeListener(fingerprintSwitchListener)
             configuration.enableFingerprint = fingerprintHelper.isFingerprintEnabled
-    } else {
+        } else {
             fingerprint_auth_group.visibility = GONE
+        }
+
+        if (BuildConfig.DEBUG) {
+            backup_wallet.visibility = VISIBLE
         }
     }
 
