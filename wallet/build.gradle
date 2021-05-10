@@ -9,6 +9,7 @@ ext {
 repositories {
     mavenLocal()
     mavenCentral()
+    maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
     maven {
         url 'https://maven.google.com/'
         name 'Google'
@@ -37,10 +38,10 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'org.dashevo:dashpay:0.18-SNAPSHOT'
-    implementation 'org.dashevo:platform-core:0.18-SNAPSHOT'
-    implementation 'org.dashevo:dpp:0.18-SNAPSHOT'
-    implementation 'org.dashevo:dapi-client:0.18-SNAPSHOT'
+    implementation 'org.dashj.platform:dashpay:0.19-SNAPSHOT'
+    implementation 'org.dashj.platform:platform-core:0.19-SNAPSHOT'
+    implementation 'org.dashj.platform:dpp:0.19-SNAPSHOT'
+    implementation 'org.dashj.platform:dapi-client:0.19-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:0.18"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"

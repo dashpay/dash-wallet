@@ -153,8 +153,8 @@ class RoomConverters {
     }
 
     @TypeConverter
-    fun fromInvitationLinkData(invite: InvitationLinkData?): String {
-        return invite?.getUri().toString()
+    fun fromInvitationLinkData(invite: InvitationLinkData?): String? {
+        return invite?.link?.toString()
     }
 
     @TypeConverter
