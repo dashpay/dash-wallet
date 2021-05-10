@@ -590,4 +590,7 @@
         <item>Claimed</item>
     </string-array>
 
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+
 </resources>
