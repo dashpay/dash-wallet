@@ -56,11 +56,10 @@ abstract class BaseWorker(context: Context, parameters: WorkerParameters)
         if (msg == null) {
             msg = "Unknown error - ${e.javaClass.simpleName}"
         }
-        log.error("$description: $msg")
+        log.error("$description: $msg", e)
         if (e is StatusRuntimeException) {
             log.error("---> ${e.trailers}")
         }
-        log.error(msg)
         e.printStackTrace()
         return msg
     }
