@@ -273,7 +273,7 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        var requiresRestart = false
+        var isRetry = false
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
 
@@ -282,7 +282,7 @@ class CreateIdentityService : LifecycleService() {
                     blockchainIdentityData.creationStateErrorMessage!!.contains("InvalidIdentityAssetLockProofSignatureError")) {
                 blockchainIdentityData.creationState = CreationState.NONE
                 blockchainIdentityData.creditFundingTxId = null
-                requiresRestart = true
+                isRetry = true
             }
         }
 
@@ -327,7 +327,14 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 3: Register the identity
             //
-            platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
+            if(isRetry) {
+                val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+                if (existingIdentity != null) {
+                    platformRepo.recoverIdentityAsync(blockchainIdentity, walletApplication.wallet.blockchainIdentityKeyChain.watchingKey.pubKey)
+                }
+            } else {
+                platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
+            }
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
@@ -433,7 +440,7 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        var requiresRestart = false
+        var isRetry = false
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {
             // if this happens, then the invite cannot be used
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
@@ -443,7 +450,7 @@ class CreateIdentityService : LifecycleService() {
                     blockchainIdentityData.creationStateErrorMessage!!.contains("InvalidIdentityAssetLockProofSignatureError")) {
                 blockchainIdentityData.creationState = CreationState.NONE
                 blockchainIdentityData.creditFundingTxId = null
-                requiresRestart = true
+                isRetry = true
             }
         }
 
@@ -495,7 +502,14 @@ class CreateIdentityService : LifecycleService() {
             // Step 3: Register the identity
             //
             try {
-                platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
+                if(isRetry) {
+                    val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+                    if (existingIdentity != null) {
+                        platformRepo.recoverIdentityAsync(blockchainIdentity, walletApplication.wallet.blockchainIdentityKeyChain.watchingKey.pubKey)
+                    }
+                } else {
+                    platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
+                }
             } catch (e: StatusRuntimeException) {
                 //2021-03-26 10:08:08.411 28005-28085/hashengineering.darkcoin.wallet_test W/DapiClient: [DefaultDispatcher-worker-2] RPC failed with 54.187.224.80: Status{code=INVALID_ARGUMENT, description=State Transition is invalid, cause=null}: Metadata(server=nginx/1.19.7,date=Fri, 26 Mar 2021 17:08:09 GMT,content-type=application/grpc,content-length=0,errors=[{"name":"IdentityAssetLockTransactionOutPointAlreadyExistsError","message":"Asset lock transaction outPoint already exists","outPoint":{"type":"Buffer","data":[55,69,23,188,75,149,231,235,207,70,187,182,129,183,150,17,229,10,161,32,78,107,54,101,131,27,181,254,197,4,167,134,1,0,0,0]}}])
                 // did this fail because the invitation was already used?
