@@ -284,6 +284,8 @@ public class SendCoinsFragment extends Fragment {
             boolean isDashUserOrNotMe = blockchainIdentity != null;
             // make sure that this payment intent is not to me
             if (paymentIntent.isIdentityPaymentRequest() && paymentIntent.payeeUsername != null &&
+                    blockchainIdentity != null &&
+                    blockchainIdentity.getCurrentUsername() != null &&
                     paymentIntent.payeeUsername.equals(blockchainIdentity.getCurrentUsername())) {
                 isDashUserOrNotMe = false;
             }
