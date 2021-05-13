@@ -24,11 +24,11 @@ import com.e.liquid_integration.R
 import com.e.liquid_integration.data.LiquidClient
 import com.e.liquid_integration.data.LiquidConstants
 import com.e.liquid_integration.dialog.CountrySupportDialog
-import com.e.liquid_integration.dialog.CreditCardTransactionSuccessSupportDialog
 import com.e.liquid_integration.model.WidgetResponse
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import org.dash.wallet.common.WalletDataProvider
+import org.slf4j.LoggerFactory
 
 
 data class SettlementParameter(
@@ -88,10 +88,12 @@ class WidgetEvent(
         var event: String?
 )
 
-
 class BuyDashWithCreditCardActivity : AppCompatActivity() {
 
     companion object {
+
+        private val log = LoggerFactory.getLogger(BuyDashWithCreditCardActivity::class.java)
+
         const val REQUEST_CODE_CAMERA_PERMISSION = 101
         fun newInstance(context: Context?): Intent {
             return Intent(context, BuyDashWithCreditCardActivity::class.java)
@@ -282,7 +284,6 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
     }
 
 
-
     @SuppressLint("NewApi")
     private fun askCameraPermission() {
         if (ContextCompat.checkSelfPermission(
@@ -356,7 +357,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         )
         val initializationJson = Gson().toJson(initializationConfig)
 
-        println("PARAMS:::" + initializationJson)
+        log.debug("PARAMS:::$initializationJson")
         executeJavascriptInWebview(
                 "window.initializeWidget(JSON.parse('$initializationJson'));"
         );
@@ -391,7 +392,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    println("EventData::$eventData")
+                    log.debug("EventData::$eventData")
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {
@@ -399,13 +400,11 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                             when (stepTransition.data?.newStep) {
                                 "success" -> {
                                     setResult(Activity.RESULT_OK)
-                                    if(!isTransestionSuccessful) {  // it will pervert to show dialog multiple time
-                                        CreditCardTransactionSuccessSupportDialog(this@BuyDashWithCreditCardActivity, object : CreditCardTransactionSuccessSupportDialog.OnClickListenerInterface {
-                                            override fun onClick() {
-                                                println("CreditCardTransactionSuccessSupportDialog:: onClick")
-                                                onBackPressed()
-                                            }
-                                        }).show()
+                                    if (!isTransestionSuccessful) {
+                                        findViewById<View>(R.id.closePane).visibility = View.VISIBLE
+                                        findViewById<View>(R.id.btnOkay).setOnClickListener {
+                                            onBackPressed()
+                                        }
                                     }
                                     isTransestionSuccessful = true
                                 }
@@ -416,7 +415,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    log.warn(e.message, e)
                 }
             }
         }

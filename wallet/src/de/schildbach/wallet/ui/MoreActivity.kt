@@ -29,6 +29,10 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.common.UserInteractionAwareCallback
 
+private const val REQUEST_CODE_BUY_SELL = 100
+
+private const val RESULT_CODE_GO_HOME = 100
+
 class MoreActivity : GlobalFooterActivity() {
 
     private var blockchainState: BlockchainState? = null
@@ -36,7 +40,7 @@ class MoreActivity : GlobalFooterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if(walletApplication.wallet == null) {
+        if (walletApplication.wallet == null) {
             finish()
             return
         }
@@ -88,7 +92,7 @@ class MoreActivity : GlobalFooterActivity() {
     }
 
     private fun startBuyAndSellActivity() {
-        startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this));
+        startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(this), REQUEST_CODE_BUY_SELL);
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -101,4 +105,10 @@ class MoreActivity : GlobalFooterActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == RESULT_CODE_GO_HOME) {
+            onBackPressed()
+        }
+    }
 }

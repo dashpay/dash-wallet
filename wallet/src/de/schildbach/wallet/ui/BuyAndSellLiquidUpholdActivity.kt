@@ -11,10 +11,10 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.ViewModelProviders
-import com.e.liquid_integration.listener.CurrencySelectListener
 import com.e.liquid_integration.currency.CurrencyResponse
 import com.e.liquid_integration.currency.PayloadItem
 import com.e.liquid_integration.data.LiquidClient
+import com.e.liquid_integration.listener.CurrencySelectListener
 import com.e.liquid_integration.ui.LiquidBuyAndSellDashActivity
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -35,6 +35,8 @@ import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
 import java.math.BigDecimal
 
+
+private const val RESULT_CODE_GO_HOME = 100
 
 class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
@@ -274,6 +276,8 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
             if (LiquidClient.getInstance()!!.isAuthenticated) {
                 getUserLiquidAccountBalance()
             }
+            setResult(RESULT_CODE_GO_HOME)
+            finish()
         }
     }
 
@@ -286,7 +290,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
             loadingDialog!!.show()
 
-            liquidClient?.getAllCurrencies(object : LiquidClient.Callback<CurrencyResponse>{
+            liquidClient?.getAllCurrencies(object : LiquidClient.Callback<CurrencyResponse> {
                 override fun onSuccess(data: CurrencyResponse) {
                     if (isFinishing) {
                         return
