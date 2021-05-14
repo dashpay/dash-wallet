@@ -53,7 +53,7 @@ In the generated e-mail, replace the support address with yours.
 It's important to know that the development version uses Testnet, is debuggable and the wallet file
 is world readable/writeable. The goal is to be able to debug easily.
 
-The _testNet3 flavor builds for Testnet.
+The _testNet3 and staging flavors builds for Testnet.
 
 You can probably skip some steps, especially if you built Android apps before.
 

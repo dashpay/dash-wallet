@@ -97,7 +97,8 @@ notifications:
 
 script:
 - ./gradlew test
-- ./gradlew assemble_testNet3Debug
+- ./gradlew assembleStagingDebug
+#- ./gradlew assemble_testNet3Debug
 #- ./gradlew assembleMobileDebug
 #- ./gradlew assembleEvonetDebug
 #- ./gradlew assembleDevNetDebug
