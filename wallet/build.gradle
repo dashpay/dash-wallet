@@ -80,16 +80,11 @@ dependencies {
 
     implementation 'com.github.MikeOrtiz:TouchImageView:3.0.3'
 
-    implementation 'com.google.firebase:firebase-analytics:17.6.0'
-    implementation 'com.google.firebase:firebase-inappmessaging-display:19.1.1'
-
     // Import the BoM for the Firebase platform
     implementation platform('com.google.firebase:firebase-bom:26.1.1')
 
-    // Declare the dependencies for the Crashlytics and Analytics libraries
-    // When using the BoM, you don't specify versions in Firebase library dependencies
-    implementation 'com.google.firebase:firebase-crashlytics'
     implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-inappmessaging-display'
 
     // Declare the dependency for the Performance Monitoring library
     // When using the BoM, you don't specify versions in Firebase library dependencies
@@ -241,6 +236,5 @@ android {
 }
 
 apply plugin: 'com.google.gms.google-services'
-apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
