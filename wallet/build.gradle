@@ -10,13 +10,6 @@ repositories {
     mavenLocal()
     mavenCentral()
     maven {
-        url 'http://oss.jfrog.org/artifactory/oss-snapshot-local'
-        name 'OJO snapshots'
-    }
-    maven {
-        url 'http://dl.bintray.com/dash/Dashj'
-    }
-    maven {
         url 'https://maven.google.com/'
         name 'Google'
     }
@@ -45,9 +38,9 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation "org.dashj-android:dashj-bls-android:0.17.5"
-    implementation "org.dashj-android:dashj-x11-android:0.17.5"
-    implementation "org.dashj-android:dashj-scrypt-android:0.17.5"
+    implementation "org.dashj.android:dashj-bls-android:0.17.5"
+    implementation "org.dashj.android:dashj-x11-android:0.17.5"
+    implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
     implementation 'com.google.zxing:core:3.3.3' // 3.3.3 is the maximum to support Android 4.4 to 6.x
