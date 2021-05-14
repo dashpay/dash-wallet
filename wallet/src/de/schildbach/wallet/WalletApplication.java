@@ -43,10 +43,9 @@ import android.widget.Toast;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.multidex.MultiDexApplication;
 
-import com.e.liquid_integration.data.LiquidClient;
-import com.e.liquid_integration.ui.LiquidSplashActivity;
+import org.dash.wallet.integration.liquid.data.LiquidClient;
+
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 

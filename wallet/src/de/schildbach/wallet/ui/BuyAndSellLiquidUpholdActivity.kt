@@ -11,11 +11,11 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.ViewModelProviders
-import com.e.liquid_integration.currency.CurrencyResponse
-import com.e.liquid_integration.currency.PayloadItem
-import com.e.liquid_integration.data.LiquidClient
-import com.e.liquid_integration.listener.CurrencySelectListener
-import com.e.liquid_integration.ui.LiquidBuyAndSellDashActivity
+import org.dash.wallet.integration.liquid.currency.CurrencyResponse
+import org.dash.wallet.integration.liquid.currency.PayloadItem
+import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
+import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.WalletApplication

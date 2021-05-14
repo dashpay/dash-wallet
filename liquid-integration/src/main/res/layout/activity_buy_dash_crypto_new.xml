@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/bg_less_bright"
     android:orientation="vertical"
-    tools:context=".ui.BuyDashCryptoActivity">
+    tools:context="org.dash.wallet.integration.liquid.ui.BuyDashCryptoActivity">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"

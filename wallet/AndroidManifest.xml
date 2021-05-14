@@ -350,31 +350,31 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
-            android:name="com.e.liquid_integration.ui.BuyDashWithCreditCardActivity"
+            android:name="org.dash.wallet.integration.liquid.ui.BuyDashWithCreditCardActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
-            android:name="com.e.liquid_integration.ui.BuyDashWithCryptoCurrencyActivity"
+            android:name="org.dash.wallet.integration.liquid.ui.BuyDashWithCryptoCurrencyActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
-            android:name="com.e.liquid_integration.ui.SellDashActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
-
-
-        <activity
-            android:name="com.e.liquid_integration.ui.WebViewActivity"
+            android:name="org.dash.wallet.integration.liquid.ui.SellDashActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
 
 
         <activity
-            android:name="com.e.liquid_integration.ui.LiquidBuyAndSellDashActivity"
+            android:name="org.dash.wallet.integration.liquid.ui.WebViewActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity" />
+
+
+        <activity
+            android:name="org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
-            android:name="com.e.liquid_integration.ui.LiquidSplashActivity"
+            android:name="org.dash.wallet.integration.liquid.ui.LiquidSplashActivity"
             android:launchMode="singleTop"
             android:theme="@style/My.Theme.ChildActivity">
 

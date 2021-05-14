@@ -5,9 +5,9 @@ import android.view.View
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.e.liquid_integration.listener.CurrencySelectListener
-import com.e.liquid_integration.listener.ValueSelectListener
-import com.e.liquid_integration.currency.PayloadItem
+import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
+import org.dash.wallet.integration.liquid.listener.ValueSelectListener
+import org.dash.wallet.integration.liquid.currency.PayloadItem
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.adapter.CurrencyAdapter
 import de.schildbach.wallet_test.R
