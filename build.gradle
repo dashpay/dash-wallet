@@ -1,7 +1,7 @@
 buildscript {
     ext.kotlin_version = '1.4.31'
     ext.ok_http_version = '3.12.12'
-    ext.dashjVersion = "0.17.6"
+    ext.dashjVersion = "0.17.7"
     repositories {
         google()
         mavenCentral()
