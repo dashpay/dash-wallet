@@ -29,12 +29,12 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
-import com.e.liquid_integration.R
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.liquid.R
 
 
 class LiquidSplashActivity : InteractionAwareActivity() {

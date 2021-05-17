@@ -3,9 +3,9 @@ package org.dash.wallet.integration.liquid.dialog
 import android.content.Context
 import android.widget.ImageView
 import android.widget.LinearLayout
-import com.e.liquid_integration.R
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import org.dash.wallet.integration.liquid.R
 
 
 class SelectBuyDashDialog(val contexts: Context, private val listener: ValueSelectListener) : BottomSheetDialog(contexts) {

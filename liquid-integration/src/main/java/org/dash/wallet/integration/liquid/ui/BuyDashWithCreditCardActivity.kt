@@ -20,7 +20,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.e.liquid_integration.R
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
@@ -28,6 +27,7 @@ import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.integration.liquid.R
 import org.slf4j.LoggerFactory
 
 

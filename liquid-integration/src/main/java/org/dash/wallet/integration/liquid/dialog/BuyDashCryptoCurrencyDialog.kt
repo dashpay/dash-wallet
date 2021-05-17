@@ -4,11 +4,11 @@ import android.content.Context
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.e.liquid_integration.R
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.adapter.CryptoCurrencyAdapter
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import org.dash.wallet.integration.liquid.R
 import java.util.*
 
 

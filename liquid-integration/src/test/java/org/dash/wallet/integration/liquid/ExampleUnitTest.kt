@@ -1,4 +1,4 @@
-package com.e.liquid_integration
+package org.dash.wallet.integration.liquid
 
 import org.junit.Test
 

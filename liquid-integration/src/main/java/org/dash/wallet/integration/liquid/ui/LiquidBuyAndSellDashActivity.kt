@@ -16,7 +16,6 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
-import com.e.liquid_integration.R
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -34,6 +33,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.liquid.R
 import org.json.JSONObject
 
 
@@ -248,7 +248,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 }
             })
         } else {
-            GenericUtils.showToast(this, getString(com.e.liquid_integration.R.string.internet_connected))
+            GenericUtils.showToast(this, getString(R.string.internet_connected))
         }
     }
 
@@ -284,7 +284,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 }
             })
         } else {
-            GenericUtils.showToast(this, getString(com.e.liquid_integration.R.string.internet_connected))
+            GenericUtils.showToast(this, getString(R.string.internet_connected))
         }
     }
 

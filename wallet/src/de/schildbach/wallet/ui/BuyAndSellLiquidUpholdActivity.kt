@@ -86,7 +86,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
         loadingDialog = ProgressDialog(this)
         loadingDialog!!.isIndeterminate = true
         loadingDialog!!.setCancelable(false)
-        loadingDialog!!.setMessage(getString(com.e.liquid_integration.R.string.loading))
+        loadingDialog!!.setMessage(getString(org.dash.wallet.integration.liquid.R.string.loading))
 
 
         rlLiquid.setOnClickListener {
@@ -192,7 +192,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
                 }
             })
         } else {
-            GenericUtils.showToast(this, getString(com.e.liquid_integration.R.string.internet_connected))
+            GenericUtils.showToast(this, getString(org.dash.wallet.integration.liquid.R.string.internet_connected))
         }
     }
 

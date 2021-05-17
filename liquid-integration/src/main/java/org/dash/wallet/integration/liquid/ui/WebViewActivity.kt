@@ -5,8 +5,8 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.webkit.WebView
 import androidx.appcompat.widget.Toolbar
-import com.e.liquid_integration.R
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.integration.liquid.R
 
 class WebViewActivity : InteractionAwareActivity() {
 

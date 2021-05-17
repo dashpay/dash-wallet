@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
-import com.e.liquid_integration.R
+import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.ui.WebViewActivity
 

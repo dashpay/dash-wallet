@@ -8,7 +8,7 @@ import android.widget.ImageView
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.e.liquid_integration.R
+import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 
