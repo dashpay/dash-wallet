@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Neue PIN einrichten</string>
     <string name="forgot_pin_instruction_3">Mit neuer PIN einloggen, um Zugang zur Wallet zu erhalten</string>
     <string name="forgot_pin_warning">Wenn Du deine PIN vergisst und deine Wiederherstellungsphrase verlierst, kannst du nicht mehr auf deine Wallet und dein Guthaben zugreifen.</string>
+    <string name="forgot_pin_recover">Wiederherstellungsphrase eingeben</string>
+    <string name="forgot_pin_passphrase_doesnt_match">Diese Wiederherstellungsphrase stimmt nicht mit der Einrichtungseinstellung dieser Wallet überein.</string>
+
     <string name="send_coins_auto_lock_feasible">Diese Transaktion wird sofort und ohne zusätzliche Gebühren abgeschlossen</string>
     <string name="send_coins_auto_lock_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden. Soll sie für zusätzlich %1$s%2$s sofort bestätigt werden?</string>
     <string name="send_coins_instant_send_not_feasible">Diese Transaktion benötigt einige Minuten, um bestätigt zu werden.</string>
@@ -262,7 +265,7 @@
     <string name="hash">Hash</string>
     <string name="block_info">Block-Info</string>
 
-    <string name="scan_private_key">Private Key scannen</string>
+    <string name="scan_private_key">Privaten Schlüssel scannen</string>
     <string name="scan_private_key_intro_1">Du bist im Betreff, Guthaben von einer Dash Paper Wallet zu transferieren.</string>
     <string name="scan_private_key_intro_2">Hierdurch werden alle Coins von dieser Wallet an die Wallet auf deinem Gerät versandt.</string>
     <string name="scan_private_key_intro_3">Sobald die Transaktion bestätigt ist, ist die andere Wallet wertlos und sollte aus Sicherheitsgründen nicht wieder verwendet werden.</string>
@@ -323,8 +326,15 @@
     <string name="payment_request_please_try_again">Bitte erneut versuchen</string>
     <string name="payment_request_try_again">Erneut versuchen</string>
     <string name="payment_request_problem_title">Zahlung nicht anerkannt</string>
+    <string name="payment_request_problem_message">Deine Zahlung konnte nicht vom Server verarbeitet werden, wende dich bitte an den Händler.</string>
     <string name="payment_request_expired_title">Zahlungsanforderung abgelaufen</string>
     <string name="payment_request_close">Schließen</string>
     <string name="payment_request_skip">Überspringen</string>
     <string name="payment_request_paid_to">Gezahlt an</string>
+
+    <string name="import_image_not_valid_qr_code">Kein gültiger QR-Code</string>
+    <string name="import_image_please_use_valid_qr_code">Bitte verwende einen gültigen Dash QR-Code</string>
+    <string name="import_image_no_private_key_copied">Kein privater Schlüssel kopiert</string>
+    <string name="import_image_import_valid_private_key">Kopiere einen gültigen privaten Schlüssel, um Dash von ihm zu importieren</string>
+    <string name="import_image_invalid_private">Ungültiger privater Schlüssel</string>
 </resources>

@@ -28,7 +28,10 @@ import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.common.UserInteractionAwareCallback
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+
+private const val REQUEST_CODE_BUY_SELL = 100
+
+private const val RESULT_CODE_GO_HOME = 100
 
 class MoreActivity : GlobalFooterActivity() {
 
@@ -36,6 +39,12 @@ class MoreActivity : GlobalFooterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (walletApplication.wallet == null) {
+            finish()
+            return
+        }
+
         setContentViewWithFooter(R.layout.activity_more)
         activateMoreButton()
 
@@ -83,9 +92,7 @@ class MoreActivity : GlobalFooterActivity() {
     }
 
     private fun startBuyAndSellActivity() {
-       /* val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(this, wallet))*/
-        startActivity(Intent(this,BuyAndSellLiquidUpholdActivity::class.java))
+        startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(this), REQUEST_CODE_BUY_SELL);
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -98,4 +105,10 @@ class MoreActivity : GlobalFooterActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == RESULT_CODE_GO_HOME) {
+            onBackPressed()
+        }
+    }
 }

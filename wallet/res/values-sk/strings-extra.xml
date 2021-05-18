@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Nastaviť nový PIN kód</string>
     <string name="forgot_pin_instruction_3">Pre prístup k vašej peňaženke sa prihláste pomocou nového PIN kódu</string>
     <string name="forgot_pin_warning">Ak ste zabudli svoj PIN kód a stratili ste frázu pre obnovenie, nemôžete získať späť prístup k svojej peňaženke a finančným prostriedkom.</string>
+    <string name="forgot_pin_recover">Zadajte frázu pre obnovenie</string>
+    <string name="forgot_pin_passphrase_doesnt_match">Fráza obnovenia sa nezhoduje s tou, s akou bola nastavená táto peňaženka.</string>
+
     <string name="send_coins_auto_lock_feasible">Táto transakcia by sa mala okamžite vyrovnať bez ďalších poplatkov</string>
     <string name="send_coins_auto_lock_not_feasible">Táto transakcia môže trvať niekoľko minút. Potvrdiť ihneď za %1$s%2$s? </string>
     <string name="send_coins_instant_send_not_feasible">Táto transakcia môže trvať niekoľko minút.</string>
@@ -329,8 +332,15 @@
     <string name="payment_request_please_try_again">Prosím skúste znova</string>
     <string name="payment_request_try_again">Skúsiť znova</string>
     <string name="payment_request_problem_title">Platba nebola uznaná</string>
+    <string name="payment_request_problem_message">Vaša platba nemohla byť spracovaná serverom, prosím informujte sa u obchodníka</string>
     <string name="payment_request_expired_title">Žiadosť o platbu vypršala</string>
     <string name="payment_request_close">Ukončiť</string>
     <string name="payment_request_skip">Preskočiť</string>
     <string name="payment_request_paid_to">Zaplatené</string>
+
+    <string name="import_image_not_valid_qr_code">Neplatný QR kód</string>
+    <string name="import_image_please_use_valid_qr_code">Použite platný Dash QR kód</string>
+    <string name="import_image_no_private_key_copied">Nebol skopírovaný žiadny súkromný kľúč</string>
+    <string name="import_image_import_valid_private_key">Pre import Dashu skopírujte platný súkromný kľúč</string>
+    <string name="import_image_invalid_private">Neplatný privátny kľúč</string>
 </resources>

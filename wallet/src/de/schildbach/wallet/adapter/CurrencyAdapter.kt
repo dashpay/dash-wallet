@@ -8,12 +8,12 @@ import android.widget.ImageView
 import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.e.liquid_integration.`interface`.ValueSelectListner
-import com.e.liquid_integration.currency.PayloadItem
+import org.dash.wallet.integration.liquid.listener.ValueSelectListener
+import org.dash.wallet.integration.liquid.currency.PayloadItem
 import de.schildbach.wallet_test.R
 
 class CurrencyAdapter(_context: Context, val
-currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : RecyclerView.Adapter<CurrencyAdapter.CurrencyViewHolder>() {
+currencyArrayList: List<PayloadItem>, val listener: ValueSelectListener) : RecyclerView.Adapter<CurrencyAdapter.CurrencyViewHolder>() {
     var layoutInflater: LayoutInflater? = null
     var selectedPosition = -1
 
@@ -54,7 +54,7 @@ currencyArrayList: List<PayloadItem>, val listner: ValueSelectListner) : Recycle
             notifyItemChanged(copyOfLastCheckedPosition)
             notifyItemChanged(selectedPosition)
 
-            listner.onItemSelected(position)
+            listener.onItemSelected(position)
         }
     }
 

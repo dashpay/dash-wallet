@@ -1,17 +1,28 @@
 package de.schildbach.wallet.ui
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.ui.receive.ReceiveDetailsDialog
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.InteractionAwareActivity
 
-class ReceiveActivity : InteractionAwareActivity() {
+class ReceiveActivity : LockScreenActivity() {
+
+    companion object {
+
+        @JvmStatic
+        fun createIntent(context: Context): Intent {
+            return Intent(context, ReceiveActivity::class.java).apply {
+                putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
+            }
+        }
+    }
 
     private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
 
@@ -35,7 +46,7 @@ class ReceiveActivity : InteractionAwareActivity() {
 
         setTitle(R.string.receive_title)
 
-        enterAmountSharedViewModel = ViewModelProviders.of(this).get(EnterAmountSharedViewModel::class.java)
+        enterAmountSharedViewModel = ViewModelProvider(this)[EnterAmountSharedViewModel::class.java]
         enterAmountSharedViewModel.maxButtonVisibleData.value = false
         enterAmountSharedViewModel.buttonTextData.call(R.string.receive_title)
         enterAmountSharedViewModel.messageTextData.value = R.string.receive_enter_amount_message

@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/dash_deep_blue"
+    android:fitsSystemWindows="true"
     android:orientation="vertical">
 
     <androidx.appcompat.widget.Toolbar
@@ -15,104 +17,105 @@
         app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
         <TextView
-            style="@style/MontserratMedium"
             android:id="@+id/uphold_logout"
+            style="@style/MontserratMedium"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="end"
-            android:gravity="center_vertical"
             android:background="?android:attr/selectableItemBackground"
-            android:paddingRight="16dp"
-            android:paddingLeft="16dp"
-            android:text="@string/uphold_logout"
             android:clickable="true"
             android:focusable="true"
+            android:gravity="center_vertical"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="@string/uphold_logout"
             android:textSize="14sp" />
 
     </androidx.appcompat.widget.Toolbar>
 
     <RelativeLayout
-        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/bg_less_bright"
+        android:orientation="vertical"
         tools:ignore="MissingDefaultResource">
 
         <ImageView
             android:id="@+id/uphold_logo"
-            android:layout_centerHorizontal="true"
             android:layout_width="wrap_content"
             android:layout_height="141dp"
+            android:layout_centerHorizontal="true"
             android:layout_marginTop="60dp"
             android:layout_marginBottom="36dp"
-            android:src="@drawable/uphold_logo"/>
+            android:src="@drawable/uphold_logo" />
 
         <LinearLayout
             android:id="@+id/uphold_account_title"
-            android:gravity="bottom"
-            android:layout_below="@id/uphold_logo"
-            android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_below="@id/uphold_logo"
             android:layout_centerHorizontal="true"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="12dp"
+            android:gravity="bottom"
+            android:orientation="horizontal">
 
             <TextView
+                style="@style/MontserratMedium.DB.14"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/uphold_account_dash_balance"
-                style="@style/MontserratMedium.DB.14"/>
+                android:text="@string/uphold_account_dash_balance" />
 
         </LinearLayout>
 
         <LinearLayout
-            android:layout_below="@id/uphold_account_title"
-            android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_below="@id/uphold_account_title"
             android:layout_centerHorizontal="true"
-            android:layout_marginBottom="32dp">
+            android:layout_marginBottom="32dp"
+            android:orientation="horizontal">
 
             <ImageView
-                android:src="@drawable/ic_dash_d_white_bottom"
-                android:tint="@color/colorPrimary"
-                android:layout_marginTop="4dp"
                 android:layout_width="24dp"
-                android:layout_height="24dp" />
+                android:layout_height="24dp"
+                android:layout_marginTop="4dp"
+                android:src="@drawable/ic_dash_d_white_bottom"
+                android:tint="@color/colorPrimary" />
 
             <org.dash.wallet.common.ui.CurrencyTextView
                 android:id="@+id/uphold_account_balance"
+                style="@style/MontserratRegular"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="8dp"
                 android:layout_marginStart="8dp"
-                android:textSize="26sp"
-                tools:text="0.00"
+                android:layout_marginLeft="8dp"
                 android:includeFontPadding="false"
                 android:textColor="@color/colorPrimary"
-                style="@style/MontserratRegular" />
+                android:textSize="26sp"
+                tools:text="0.00" />
 
         </LinearLayout>
 
         <Button
             android:id="@+id/uphold_buy_dash_btn"
             style="@style/DashButton.White"
-            android:layout_alignParentBottom="true"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/uphold_buy_dash_button"
+            android:layout_alignParentBottom="true"
+            android:layout_margin="16dp"
             android:maxLines="2"
-            android:layout_margin="16dp" />
+            android:text="@string/uphold_buy_dash_button" />
 
         <Button
             android:id="@+id/uphold_transfer_to_this_wallet_button"
             style="@style/DashButton.Blue"
-            android:layout_above="@id/uphold_buy_dash_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/uphold_transfer_to_this_wallet_button"
-            android:maxLines="2"
+            android:layout_above="@id/uphold_buy_dash_btn"
             android:layout_marginLeft="16dp"
-            android:layout_marginRight="16dp"/>
+            android:layout_marginRight="16dp"
+            android:maxLines="2"
+            android:text="@string/uphold_transfer_to_this_wallet_button" />
 
     </RelativeLayout>
 

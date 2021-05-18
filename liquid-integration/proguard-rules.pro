@@ -24,11 +24,11 @@
 -keep class org.dash.wallet.integration.uphold.** {
     public protected private *;
 }
--keep class com.e.liquid_integration.** {
+-keep class org.dash.wallet.integration.liquid.** {
     public protected private *;
 }
 -keep interface org.dash.wallet.integration.uphold.** {*;}
--keep interface com.e.liquid_integration.** {*;}
+-keep interface org.dash.wallet.integration.liquid.** {*;}
 
 
 

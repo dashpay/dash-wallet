@@ -21,7 +21,6 @@ import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -31,20 +30,23 @@ import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import android.text.format.DateUtils;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
@@ -53,13 +55,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.TransactionInput;
-import org.bitcoinj.core.TransactionOutput;
-import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType;
+import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
@@ -77,14 +76,15 @@ import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 
+import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
-import de.schildbach.wallet.util.TransactionUtil;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
@@ -111,7 +111,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private View loading;
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
-    private Spinner filterSpinner;
+    private TextView syncingText;
+    private TransactionsFilterSharedViewModel transactionsFilterSharedViewModel;
 
     @Nullable
     private Direction direction;
@@ -170,7 +171,12 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
         emptyView = view.findViewById(R.id.wallet_transactions_empty);
         loading = view.findViewById(R.id.loading);
-        filterSpinner = view.findViewById(R.id.history_filter);
+        syncingText = view.findViewById(R.id.syncing);
+        transactionsFilterSharedViewModel = new ViewModelProvider(requireActivity())
+                .get(TransactionsFilterSharedViewModel.class);
+        view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
+            new TransactionsFilterDialog().show(getChildFragmentManager(), null);
+        });
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -193,29 +199,24 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             }
         });
 
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(filterSpinner.getContext(), R.array.history_filter, R.layout.custom_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        filterSpinner.setAdapter(adapter);
-        filterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                switch (position) {
-                    case 0:
-                        direction = null;
-                        break;
-                    case 1:
-                        direction = Direction.RECEIVED;
-                        break;
-                    case 2:
-                        direction = Direction.SENT;
-                        break;
-                }
-                reloadTransactions();
-            }
+        LifecycleOwner lifecycleOwner = getViewLifecycleOwner();
+        transactionsFilterSharedViewModel.getOnAllTransactionsSelected().observe(lifecycleOwner, aVoid -> {
+            direction = null;
+            reloadTransactions();
+        });
+        transactionsFilterSharedViewModel.getOnReceivedTransactionsSelected().observe(lifecycleOwner, aVoid -> {
+            direction = Direction.RECEIVED;
+            reloadTransactions();
+        });
+        transactionsFilterSharedViewModel.getOnSentTransactionsSelected().observe(lifecycleOwner, aVoid -> {
+            direction = Direction.SENT;
+            reloadTransactions();
+        });
 
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
+            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
+                updateSyncState(blockchainState);
             }
         });
 
@@ -404,6 +405,32 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
             showEmptyView();
         } else {
             showTransactionList();
+        }
+    }
+
+    private void updateSyncState(BlockchainState blockchainState) {
+        if (blockchainState == null) {
+            return;
+        }
+
+        int percentage = blockchainState.getPercentageSync();
+        if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
+            //This is to prevent showing 100% when using the Rescan blockchain function.
+            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            percentage = 0;
+        }
+
+        if (blockchainState.isSynced()) {
+            syncingText.setVisibility(View.GONE);
+        } else {
+            syncingText.setVisibility(View.VISIBLE);
+            String syncing = getString(R.string.syncing);
+            SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
+            int start = syncing.length() + 1;
+            int end = str.length();
+            str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            syncingText.setText(str);
         }
     }
 

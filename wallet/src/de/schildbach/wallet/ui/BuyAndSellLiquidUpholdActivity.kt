@@ -2,6 +2,7 @@ package de.schildbach.wallet.ui
 
 import android.app.Activity
 import android.app.ProgressDialog
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
@@ -9,13 +10,12 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import com.e.liquid_integration.`interface`.CurrencySelectListner
-import com.e.liquid_integration.currency.CurrencyResponse
-import com.e.liquid_integration.currency.PayloadItem
-import com.e.liquid_integration.data.LiquidClient
-import com.e.liquid_integration.ui.LiquidBuyAndSellDashActivity
+import org.dash.wallet.integration.liquid.currency.CurrencyResponse
+import org.dash.wallet.integration.liquid.currency.PayloadItem
+import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
+import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.WalletApplication
@@ -36,6 +36,8 @@ import org.json.JSONObject
 import java.math.BigDecimal
 
 
+private const val RESULT_CODE_GO_HOME = 100
+
 class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
 
@@ -49,6 +51,16 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
     private var currentExchangeRate: de.schildbach.wallet.rates.ExchangeRate? = null
 
     private var selectedFilterCurrencyItems: PayloadItem? = null
+
+    private var rangeString = "items=0-50"
+    private var totalUpholdRange = ""
+
+
+    companion object {
+        fun createIntent(context: Context?): Intent {
+            return Intent(context, BuyAndSellLiquidUpholdActivity::class.java)
+        }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,7 +86,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
         loadingDialog = ProgressDialog(this)
         loadingDialog!!.isIndeterminate = true
         loadingDialog!!.setCancelable(false)
-        loadingDialog!!.setMessage(getString(com.e.liquid_integration.R.string.loading))
+        loadingDialog!!.setMessage(getString(org.dash.wallet.integration.liquid.R.string.loading))
 
 
         rlLiquid.setOnClickListener {
@@ -83,7 +95,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
         rlUphold.setOnClickListener {
             val wallet = WalletApplication.getInstance().wallet
-            startActivity(UpholdAccountActivity.createIntent(this, wallet))
+            startActivity(UpholdAccountActivity.createIntent(this))
         }
 
         setLoginStatus()
@@ -96,10 +108,11 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
         }
 
 
+        // for getting currency exchange rates
         val exchangeRatesViewModel = ViewModelProviders.of(this)
                 .get(ExchangeRatesViewModel::class.java)
         exchangeRatesViewModel.getRate(config?.getExchangeCurrencyCode()).observe(this,
-                Observer { exchangeRate ->
+                { exchangeRate ->
                     if (exchangeRate != null) {
                         currentExchangeRate = exchangeRate
                     }
@@ -149,12 +162,16 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
                 return true
             }
             R.id.buy_and_sell_dash_filter -> {
+                rangeString = "items=0-50"
                 getLiquidCurrencyList()
             }
         }
         return super.onOptionsItemSelected(item)
     }
 
+    /**
+     * For getting liquid account balance
+     */
     private fun getUserLiquidAccountBalance() {
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
@@ -175,7 +192,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
                 }
             })
         } else {
-            GenericUtils.showToast(this, getString(com.e.liquid_integration.R.string.internet_connected))
+            GenericUtils.showToast(this, getString(org.dash.wallet.integration.liquid.R.string.internet_connected))
         }
     }
 
@@ -195,9 +212,6 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
                     amount = cryptoArray.getJSONObject(i).getString("balance")
                 }
             }
-        //    amount = "4.0"
-            /*      amount = "4.0"
-              txtLiquidAmount.text = amount*/
 
             val dashAmount = try {
                 Coin.parseCoin(amount)
@@ -216,44 +230,15 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
             } else {
                 txtUSAmount.text = config?.exchangeCurrencyCode + " 0.00"
             }
-
-
-            //   val exchangeRateData = buyAndSellLiquidUpholdViewModel?.exchangeRateData
-
-            /*  val rate = ExchangeRate(Coin.COIN,
-                      exchangeRateData.value!!.fiat)
-  */
-
-
-            /*    walletDataProvider.getExchangeRate()
-                val fiatAmount = try {
-                    Fiat.parseFiat(currencyCode, amount)
-
-                } catch (x: Exception) {
-                    Fiat.valueOf(currencyCode, 0)
-                }
-    */
-
-            /* val base = Gson().fromJson(data, DashBalanceResponse::class.java)
-
-             if (base.success!!) {
-
-                 for (i in base.payload?.cryptoAccounts!!.indices) {
-
-                     if (base.payload.cryptoAccounts[i]!!.currency == "DASH") {
-                         llLiquidAmount.visibility = View.VISIBLE
-                         txtUSAmount.text = base.payload.cryptoAccounts[i]!!.balance
-                         amount = base.payload.cryptoAccounts[i]!!.balance
-                         break
-                     }
-                 }
-             }*/
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
     }
 
+    /**
+     * For getting uphold account balance
+     */
 
     private fun getUpholdUserBalance() {
         if (GenericUtils.isInternetConnected(this)) {
@@ -291,54 +276,68 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
             if (LiquidClient.getInstance()!!.isAuthenticated) {
                 getUserLiquidAccountBalance()
             }
+            setResult(RESULT_CODE_GO_HOME)
+            finish()
         }
     }
 
+    /**
+     * For getting liquid supported currency list
+     */
     private fun getLiquidCurrencyList() {
 
         if (GenericUtils.isInternetConnected(this)) {
 
             loadingDialog!!.show()
-            liquidClient?.getAllCurrencies(object : LiquidClient.CallbackCurrency<String> {
 
+            liquidClient?.getAllCurrencies(object : LiquidClient.Callback<CurrencyResponse> {
                 override fun onSuccess(data: CurrencyResponse) {
                     if (isFinishing) {
                         return
                     }
                     liquidCurrencyArrayList.clear()
-                    //   loadingDialog!!.hide()
                     liquidCurrencyArrayList.addAll(data.payload)
-                    getUpholdCurrencyList()
-
+                    checkAndCallApiOfUpload()
                 }
 
                 override fun onError(e: Exception?) {
                     if (isFinishing) {
                         return
                     }
-
-                    //  loadingDialog!!.hide()
-                    getUpholdCurrencyList()
+                    checkAndCallApiOfUpload()
                 }
+
             })
+
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
         }
     }
 
-
+    /**
+     * For getting uphold supported currency list
+     */
     private fun getUpholdCurrencyList() {
+
 
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
-            UpholdClient.getInstance().getUpholdCurrency(object : UpholdClient.Callback<String> {
-                override fun onSuccess(data: String?) {
-                    loadingDialog!!.hide()
-                    upholdCurrencyArrayList.clear()
+            UpholdClient.getInstance().getUpholdCurrency(rangeString, object : UpholdClient.CallbackFilter<String> {
+                override fun onSuccess(data: String?, range: String) {
+
+
+                    if (rangeString == "items=0-50") {
+                        upholdCurrencyArrayList.clear()
+                        totalUpholdRange = range
+                        rangeString = ""
+                    }
+
                     val turnsType = object : TypeToken<List<UpholdCurrencyResponse>>() {}.type
                     val turns = Gson().fromJson<List<UpholdCurrencyResponse>>(data, turnsType)
                     upholdCurrencyArrayList.addAll(turns)
-                    showCurrenciesDialog()
+                    loadingDialog!!.hide()
+                    checkAndCallApiOfUpload()
+                    //showCurrenciesDialog()
                 }
 
                 override fun onError(e: java.lang.Exception?, otpRequired: Boolean) {
@@ -352,8 +351,38 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Calling uphold pagination in all data once
+     */
+    private fun checkAndCallApiOfUpload() {
+        if (rangeString == "items=0-50") {
+            getUpholdCurrencyList()
+        } else {
+            if (upholdCurrencyArrayList.size % 50 == 0) {
+                if (totalUpholdRange.isNotEmpty() and (totalUpholdRange.contains("/"))) {
+                    val array = totalUpholdRange.split("/")
+                    if (array.size == 2) {
+                        val totalRange = array[1]
+                        val size = upholdCurrencyArrayList.size + 1
+                        rangeString = "items=${size.toString()}-$totalRange"
+                        getUpholdCurrencyList()
+                    }
+                } else {
+                    getUpholdCurrencyList()
+                }
+            } else {
+                showCurrenciesDialog()
+            }
+        }
+    }
+
+
+    /**
+     * Show dialog of currency list
+     */
+
     private fun showCurrenciesDialog() {
-        CurrencyDialog(this, liquidCurrencyArrayList, upholdCurrencyArrayList, selectedFilterCurrencyItems, object : CurrencySelectListner {
+        CurrencyDialog(this, liquidCurrencyArrayList, upholdCurrencyArrayList, selectedFilterCurrencyItems, object : CurrencySelectListener {
             override fun onCurrencySelected(isLiquidSelcted: Boolean, isUpholdSelected: Boolean, selectedFilterCurrencyItem: PayloadItem?) {
                 rlLiquid.visibility = if (isLiquidSelcted) View.VISIBLE else View.GONE
                 rlUphold.visibility = if (isUpholdSelected) View.VISIBLE else View.GONE
@@ -363,6 +392,9 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
         })
     }
 
+    /**
+     * Show selected currency
+     */
     private fun setSelectedCurrency() {
 
         if (selectedFilterCurrencyItems != null) {

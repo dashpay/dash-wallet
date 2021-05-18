@@ -25,3 +25,4 @@ out/
 gradle-wrapper.jar
 wallet/prod
 wallet/.cxx
+wallet/cpp

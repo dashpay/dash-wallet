@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Choisir un nouveau code PIN</string>
     <string name="forgot_pin_instruction_3">Connectez-vous avec votre nouveau code PIN pour accéder à votre portefeuille</string>
     <string name="forgot_pin_warning">Si vous avez perdu votre code PIN et votre phrase de récupération, vous ne pouvez plus accéder à votre portefeuille ni à vos fonds.</string>
+    <string name="forgot_pin_recover">Saisissez la phrase de récupération</string>
+    <string name="forgot_pin_passphrase_doesnt_match">La phrase de récupération ne correspond pas à ce avec quoi ce portefeuille a été créé.</string>
+
     <string name="send_coins_auto_lock_feasible">Cette transaction devrait être exécutée instantanément, sans frais supplémentaires.</string>
     <string name="send_coins_auto_lock_not_feasible">Cette transaction peut prendre plusieurs minutes à régler. Terminez instantanément pour%1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">La confirmation de cette transaction peut prendre plusieurs minutes.</string>
@@ -323,8 +326,15 @@
     <string name="payment_request_please_try_again">Veuillez réessayer</string>
     <string name="payment_request_try_again">Réessayer</string>
     <string name="payment_request_problem_title">Le paiement n\'a pas été reconnu</string>
+    <string name="payment_request_problem_message">Votre paiement n\'a pas pu être traité par le serveur, veuillez vous adresser au vendeur</string>
     <string name="payment_request_expired_title">Requête de paiement expirée</string>
     <string name="payment_request_close">Fermer</string>
     <string name="payment_request_skip">Ignorer</string>
     <string name="payment_request_paid_to">Payé à</string>
+
+    <string name="import_image_not_valid_qr_code">Le QR-code n\'est pas valide</string>
+    <string name="import_image_please_use_valid_qr_code">Veuillez utiliser un QR-code Dash valide</string>
+    <string name="import_image_no_private_key_copied">Aucune clé privée copiée</string>
+    <string name="import_image_import_valid_private_key">Copier une clé privée valide pour en importer les dashs</string>
+    <string name="import_image_invalid_private">Clé privée invalide</string>
 </resources>

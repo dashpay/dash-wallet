@@ -45,13 +45,16 @@ class OnboardingActivity : RestoreFromFileActivity() {
         @JvmStatic
         fun createIntent(context: Context): Intent {
             return Intent(context, OnboardingActivity::class.java)
-                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
     }
 
     private lateinit var viewModel: OnboardingViewModel
 
     private lateinit var walletApplication: WalletApplication
+
+    override fun onStart() {
+        super.onStart()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,6 +78,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         viewModel = ViewModelProviders.of(this).get(OnboardingViewModel::class.java)
 
         walletApplication = (application as WalletApplication)
+
+        walletApplication.configuration.autoLogoutEnabled = false// for testing purpose
+
         if (walletApplication.walletFileExists()) {
             regularFlow()
         } else {
@@ -110,12 +116,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun startMainActivity() {
-        val intent = if (walletApplication.configuration.autoLogoutEnabled) {
-            LockScreenActivity.createIntent(this)
-        } else {
-            WalletActivity.createIntent(this)
-        }
-        startActivity(intent)
+        startActivity(WalletActivity.createIntent(this))
         finish()
     }
 
