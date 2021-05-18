@@ -891,14 +891,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         peerDiscoveryList.add(dnsDiscovery);
 
         if (Constants.SUPPORTS_PLATFORM) {
-            ArrayList masternodes = new ArrayList(Arrays.asList(Constants.NETWORK_PARAMETERS.getDefaultMasternodeList()));
-
-            DapiClient client = PlatformRepo.getInstance().getPlatform().getClient();
-            client.setSimplifiedMasternodeListManager(application.getWallet().getContext().masternodeListManager, masternodes);
-            client.getDapiAddressListProvider().addBannedAddress("45.48.168.16");
-            client.getDapiAddressListProvider().addBannedAddress("71.239.154.151");
-            client.getDapiAddressListProvider().addBannedAddress("174.34.233.98");
-
+            PlatformRepo.getInstance().getPlatform().setMasternodeListManager(application.getWallet().getContext().masternodeListManager);
             PlatformRepo.getInstance().resume();
         }
 
