@@ -126,8 +126,8 @@ public final class Constants {
         public static final File EXTERNAL_STORAGE_DIR = Environment.getExternalStorageDirectory();
 
         /** Manual backups go here. */
-        public static final File EXTERNAL_WALLET_BACKUP_DIR = Environment
-                .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        public static final File EXTERNAL_WALLET_BACKUP_DIR = new File(Environment
+                .getExternalStorageDirectory(), Environment.DIRECTORY_DOWNLOADS);
 
         /** Filename of the manual key backup (old format, can only be read). */
         public static final String EXTERNAL_WALLET_KEY_BACKUP = CoinDefinition.coinName.toLowerCase()+"-wallet-keys" + FILENAME_NETWORK_SUFFIX;
