@@ -87,6 +87,7 @@ public final class Constants {
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 break;
             }
+            case "staging":
             case "_testNet3": {
                 DNS_SEED = new String[]{"testnet-seed.dashdot.io"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;

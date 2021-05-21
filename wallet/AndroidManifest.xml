@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="80087"
+    android:versionCode="80000"
     android:versionName="4.1-dashpay">
 
     <!-- normal permissions -->

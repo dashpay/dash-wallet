@@ -133,7 +133,7 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
                     description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
                 }.build())
                 .setGoogleAnalyticsParameters(DynamicLink.GoogleAnalyticsParameters.Builder(
-                        Constants.Invitation.UTM_SOURCE,
+                        applicationContext.getString(R.string.app_name),
                         Constants.Invitation.UTM_MEDIUM,
                         Constants.Invitation.UTM_CAMPAIGN
                 ).build())
