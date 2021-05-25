@@ -23,6 +23,7 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.core.text.HtmlCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import androidx.work.WorkInfo
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -185,6 +186,7 @@ class ContactSearchResultsAdapter(private val listener: Listener,
             itemView.apply {
                 contact_request_header.text = resources.getString(R.string.contacts_contact_requests_count, requestCount)
 
+                view_all_contacts.isVisible = requestCount > 3
                 view_all_contacts.setOnClickListener {
                     onViewAllRequestsListener.onViewAllRequests()
                 }
