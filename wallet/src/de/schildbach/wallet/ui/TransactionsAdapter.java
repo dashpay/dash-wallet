@@ -495,7 +495,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             //                  Received:  Received, Mining Rewards, Masternode Rewards
             //
             final DashPayProfile contact = transactionHistoryItem.dashPayProfile;
-            if (contact == null) {
+            if (contact == null || WalletUtils.isEntirelySelf(tx, wallet)) {
                 int idPrimaryStatus = TransactionUtil.getTransactionTypeName(tx, wallet);
                 primaryStatusView.setText(idPrimaryStatus);
                 icon.setImageResource(R.drawable.ic_dash_round);
