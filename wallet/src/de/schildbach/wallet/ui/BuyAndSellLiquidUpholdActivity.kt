@@ -398,7 +398,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
     private fun setSelectedCurrency() {
 
         if (selectedFilterCurrencyItems != null) {
-//            llFilterSelected.visibility = View.VISIBLE
+            llFilterSelected.visibility = View.VISIBLE
             txtSelectedFilterCurrency.text = selectedFilterCurrencyItems?.label + " (" + selectedFilterCurrencyItems?.symbol + ")"
         } else {
             llFilterSelected.visibility = View.GONE
