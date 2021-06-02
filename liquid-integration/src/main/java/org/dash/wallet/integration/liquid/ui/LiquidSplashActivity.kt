@@ -35,6 +35,7 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
+import org.slf4j.LoggerFactory
 
 
 class LiquidSplashActivity : InteractionAwareActivity() {
@@ -106,6 +107,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
                 liquidClient?.getSessionId(LiquidConstants.PUBLIC_API_KEY, object : LiquidClient.Callback<String> {
 
                     override fun onSuccess(data: String) {
+                        log.info("liquid: get session id successful")
                         if (isFinishing) {
                             return
                         }
@@ -114,6 +116,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
                     }
 
                     override fun onError(e: Exception?) {
+                        log.error("liquid: cannot obtain session id: ${e?.message}")
                         if (isFinishing) {
                             return
                         }
@@ -133,11 +136,13 @@ class LiquidSplashActivity : InteractionAwareActivity() {
      * Call api to get user liquid details
      */
     private fun getUserId() {
+        log.info("liquid: requesting user details")
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
             liquidClient?.getUserKycState(liquidClient?.storedSessionId!!, object : LiquidClient.Callback<String> {
 
                 override fun onSuccess(data: String) {
+                    log.info("liquid: get user id successful")
                     if (isFinishing) {
                         return
                     }
@@ -146,6 +151,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
                 }
 
                 override fun onError(e: Exception?) {
+                    log.error("liquid: cannot obtain user id: ${e?.message}")
                     if (isFinishing) {
                         return
                     }
@@ -184,7 +190,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
      * Open login url in webview
      */
     private fun openLoginUrl(sessionId: String) {
-
+        log.info("liquid: opening webview to log in")
         val url = "${LiquidConstants.INITIAL_URL}${sessionId}/liquid_oauth?preferred_action=follow_href&theme=light&return_url=${LiquidConstants.OAUTH_CALLBACK_URL}"
 
         val builder = CustomTabsIntent.Builder()
@@ -200,6 +206,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
         CustomTabActivityHelper.openCustomTab(this, customTabsIntent, uri
         ) { _, _ ->
+            log.info("liquid: login successful")
             val intent = Intent(Intent.ACTION_VIEW)
             intent.data = uri
             startActivity(intent)
@@ -218,6 +225,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     companion object {
         const val LOGIN_REQUEST_CODE = 102
+        val log = LoggerFactory.getLogger(LiquidSplashActivity::class.java)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

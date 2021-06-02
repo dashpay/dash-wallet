@@ -35,11 +35,14 @@ import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.json.JSONObject
+import org.slf4j.LoggerFactory
 
 
 class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     companion object {
+        val log = LoggerFactory.getLogger(LiquidBuyAndSellDashActivity::class.java)
+
         fun createIntent(context: Context?): Intent {
             return if (LiquidClient.getInstance()!!.isAuthenticated) {
                 Intent(context, LiquidBuyAndSellDashActivity::class.java)
@@ -233,6 +236,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             loadingDialog!!.show()
             liquidClient?.getUserAccountBalance(liquidClient?.storedSessionId!!, object : LiquidClient.Callback<String> {
                 override fun onSuccess(data: String) {
+                    log.info("liquid: get user balance successful")
                     if (isFinishing) {
                         return
                     }
@@ -241,6 +245,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 }
 
                 override fun onError(e: Exception?) {
+                    log.error("liquid: cannot obtain user balance: ${e?.message}")
                     if (isFinishing) {
                         return
                     }
@@ -260,6 +265,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             loadingDialog!!.show()
             liquidClient?.getUserAccountAddress(liquidClient?.storedSessionId!!, true, object : LiquidClient.Callback<String> {
                 override fun onSuccess(data: String) {
+                    log.info("liquid: get user address successful")
                     if (isFinishing) {
                         return
                     }
@@ -277,6 +283,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 }
 
                 override fun onError(e: Exception?) {
+                    log.error("liquid: cannot obtain user address: ${e?.message}")
                     if (isFinishing) {
                         return
                     }
@@ -422,12 +429,14 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         loadingDialog!!.show()
         LiquidClient.getInstance()?.revokeAccessToken(object : LiquidClient.Callback<String?> {
             override fun onSuccess(data: String?) {
+                log.info("liquid: revoke access token successful")
                 loadingDialog!!.hide()
                 LiquidClient.getInstance()?.clearStoredSessionData()
                 finish()
             }
 
             override fun onError(e: Exception?) {
+                log.error("liquid: cannot revoke access token: ${e?.message}")
                 loadingDialog!!.hide()
             }
         })
@@ -442,6 +451,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             liquidClient?.getAllCurrencies(object : LiquidClient.Callback<CurrencyResponse> {
 
                 override fun onSuccess(data: CurrencyResponse) {
+                    log.info("liquid: get all currency list successful")
                     if (isFinishing) {
                         return
                     }
@@ -469,6 +479,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 }
 
                 override fun onError(e: Exception?) {
+                    log.error("liquid: cannot obtain currency list: ${e?.message}")
                     if (isFinishing) {
                         return
                     }
