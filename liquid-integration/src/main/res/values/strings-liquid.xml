@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account" translatable="false">Link Liquid Account</string>
+    <string name="buy_dash_with_liquid_account" translatable="false">Buy Dash with credit card</string>
+    <string name="liquid_logout" translatable="false">Log Out</string>
+    <string name="liquid_logout_title" translatable="false">Log out from Liquid</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet" translatable="false">Swap Dash with other cryptocurrencies</string>
+    <string name="transfer_dash_to_and_from_account" translatable="false">Transfer Dash to and from your liquid account</string>
+
+
+
+
+
+    <string name="cryptocurrency" translatable="false">Cryptocurrency</string>
+    <string name="credit_card" translatable="false">Credit Card</string>
+
+    <string name="buy" translatable="false">Buy</string>
+    <string name="buy_dash" translatable="false">Buy Dash</string>
+    <string name="sell_dash" translatable="false">Sell Dash</string>
+    <string name="buy_sell_dash_" translatable="false">Buy &amp; Sell Dash</string>
+    <string name="button_cancel" translatable="false">Cancel</string>
+    <string name="choose_your_payment_method" translatable="false">Choose your payment method</string>
+    <string name="crypto_support" translatable="false">Crypto Support</string>
+    <string name="okay" translatable="false">Okay</string>
+    <string name="close" translatable="false">Close</string>
+    <string name="list_of_countries" translatable="false">View list of countries that are not supported</string>
+    <string name="buying_dash_not_supported" translatable="false">Buying Dash with cryptocurrency is not supported in some countries</string>
+    <string name="buying_dash_sucess_message" translatable="false">You can close this screen, your Dash will be sent to your wallet.</string>
+
+    <string name="confirm" translatable="false">Confirm</string>
+    <string name="card_fees" translatable="false">Card Fees</string>
+    <string name="conversion_rate" translatable="false">Conversion Rate</string>
+    <string name="network_fee" translatable="false">Network Fee</string>
+    <string name="total" translatable="false">Total</string>
+    <string name="connect" translatable="false">Connect</string>
+    <string name="connected" translatable="false">Connected</string>
+    <string name="buy_sell_dash" translatable="false">To buy &amp; sell Dash or create a new account</string>
+
+
+    <string name="transfer_to_liquid" translatable="false">Transfer to Liquid</string>
+    <string name="transfer_from_liquid" translatable="false">Transfer from Liquid</string>
+    <string name="disconnect" translatable="false">Disconnect</string>
+    <string name="select_crypto_currency" translatable="false">Select Crypto Currency</string>
+    <string name="select_sell_currency" translatable="false">Select Sell Currency</string>
+    <string name="select_buy_currency" translatable="false">Select Buy Currency</string>
+    <string name="select_fiat_currency" translatable="false">Select Fiat Currency</string>
+    <string name="show_payment_qr_code" translatable="false">Show Payment QR Code</string>
+    <string name="pay_with_btc_from_liquid" translatable="false">Pay with BTC from Liquid</string>
+    <string name="or" translatable="false">or</string>
+
+    <string name="internet_connected" translatable="false">Please connect to internet</string>
+    <string name="please_enter_amount" translatable="false">Please enter amount</string>
+
+    <string name="choose_what_you_receive" translatable="false">Choose what you receive</string>
+    <string name="fiat_currency" translatable="false">Fiat Currency</string>
+
+    <string name="liquid" translatable="false">Liquid</string>
+    <string name="transfer" translatable="false">Transfer</string>
+
+
+    <string name="filter_by" translatable="false">Filtered By</string>
+</resources>

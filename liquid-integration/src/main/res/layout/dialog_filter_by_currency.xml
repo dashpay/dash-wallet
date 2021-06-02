@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:orientation="vertical"
+    tools:ignore="ContentDescription,HardcodedText">
+
+    <ImageView
+        android:id="@+id/collapse_button"
+        android:layout_width="48dp"
+        android:layout_height="14dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        app:srcCompat="@drawable/ic_expand_less" />
+
+
+    <TextView
+        style="@style/MontserratRegular.MG.14"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:text="Filter By Currency"
+        android:textColor="@color/dash_black"
+        android:textSize="30sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="16dp"
+        android:background="#c7c7c7" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_filter_by_currency"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="25dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/drawable_white_corner" />
+
+</LinearLayout>

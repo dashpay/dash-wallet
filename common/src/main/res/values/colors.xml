@@ -58,5 +58,7 @@
     <color name="bg_dialog_title">@android:color/transparent</color>
     <color name="bg_shortcut">@color/colorPrimary</color>
     <color name="bg_dialog">#54000000</color>
-
+    <color name="black">#000000</color>
+    <color name="black_liquid">#171717</color>
+    <color name="grey_liquid">#9B9B9B</color>
 </resources>
