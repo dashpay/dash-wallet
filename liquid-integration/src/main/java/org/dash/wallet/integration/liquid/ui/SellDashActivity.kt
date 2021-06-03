@@ -25,9 +25,13 @@ import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
+import org.slf4j.LoggerFactory
 
 class SellDashActivity : AppCompatActivity() {
 
+    companion object {
+        private val log = LoggerFactory.getLogger(SellDashActivity::class.java)
+    }
     private lateinit var webview: WebView
     private val mJsInterfaceName = "Android"
     private var error: String? = null
@@ -42,6 +46,7 @@ class SellDashActivity : AppCompatActivity() {
 
 
     public override fun onCreate(savedInstanceState: Bundle?) {
+        log.info("liquid: starting sell dash activity")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview_quick_exchange)
         webview = findViewById(R.id.webview)
@@ -212,6 +217,7 @@ class SellDashActivity : AppCompatActivity() {
 
     private inner class MyBrowser : WebViewClient() {
         override fun onPageFinished(webview: WebView, url: String) {
+            log.info("liquid: page finished: $url")
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
             bindListener()
@@ -286,7 +292,7 @@ class SellDashActivity : AppCompatActivity() {
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    println("EventData::$eventData")
+                    log.info("EventData::$eventData")
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {
@@ -303,7 +309,7 @@ class SellDashActivity : AppCompatActivity() {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    log.error(e.message, e)
                 }
             }
         }

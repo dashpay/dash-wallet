@@ -26,9 +26,14 @@ import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
+import org.slf4j.LoggerFactory
 
 
 class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(BuyDashWithCryptoCurrencyActivity::class.java)
+    }
 
     private lateinit var webview: WebView
     private var walletAddress: String? = null
@@ -39,6 +44,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
 
 
     public override fun onCreate(savedInstanceState: Bundle?) {
+        log.info("liquid: starting buy dash with crypto currency")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview_quick_exchange)
         webview = findViewById(R.id.webview)
@@ -191,6 +197,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
     var uploadMessageAboveL: ValueCallback<Array<Uri?>?>? = null
 
     private fun openImageChooserActivity() {
+        log.info("liquid: open image chooser")
         val i = Intent(Intent.ACTION_GET_CONTENT)
         i.addCategory(Intent.CATEGORY_OPENABLE)
         i.setType("image/*")
@@ -255,6 +262,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
 
     private inner class MyBrowser : WebViewClient() {
         override fun onPageFinished(webview: WebView, url: String) {
+            log.info("liquid: page finished $url")
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
             bindListener()
@@ -304,7 +312,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    println("EventData::$eventData")
+                    log.info("EventData::$eventData")
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {
@@ -322,7 +330,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    log.warn(e.message, e)
                 }
             }
         }

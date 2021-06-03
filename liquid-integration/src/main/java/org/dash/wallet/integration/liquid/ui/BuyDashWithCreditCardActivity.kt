@@ -113,6 +113,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
     var uploadMessageAboveL: ValueCallback<Array<Uri?>?>? = null
 
     public override fun onCreate(savedInstanceState: Bundle?) {
+        log.info("liquid: starting buy dash with credit card")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview_quick_exchange)
         webview = findViewById(R.id.webview)
@@ -122,6 +123,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun loadWebView() {
 
+        log.info("liquid: loading webview")
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -181,6 +183,8 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                         "Permission Denied. Please enable from setting.",
                         Toast.LENGTH_SHORT
                 ).show()
+                log.info("liquid: camera permission was denied")
+
             }
 
             @SuppressLint("NewApi")
@@ -240,6 +244,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
 
 
     private fun openImageChooserActivity() {
+        log.info("liquid: open image chooser")
         val i = Intent(Intent.ACTION_GET_CONTENT)
         i.addCategory(Intent.CATEGORY_OPENABLE)
         i.setType("image/*")
@@ -376,6 +381,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
 
     private inner class MyBrowser : WebViewClient() {
         override fun onPageFinished(webview: WebView, url: String) {
+            log.info("liquid: page finished: $url")
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
             bindListener()
@@ -392,7 +398,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    log.debug("EventData::$eventData")
+                    log.info("EventData::$eventData")
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {

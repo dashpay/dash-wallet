@@ -66,6 +66,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     override
     fun onCreate(savedInstanceState: Bundle?) {
+        log.info("liquid: starting buy/sell dash activity")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_liquid_buy_and_sell_dash)
         this.context = this@LiquidBuyAndSellDashActivity
@@ -132,7 +133,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      */
 
     private fun showSellDashDialog() {
-
+        log.info("liquid: show buy dash dialog")
         SelectSellDashDialog(context, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 if (value == 1) {
@@ -159,6 +160,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      * Show dialog fiat or cryptocurrency selected currency
      */
     private fun showSellDashCurrencyDialog() {
+        log.info("liquid: starting sell dash currency dialog")
         if (isSelectFiatCurrency) {
 
             SellDashCryptoCurrencyDialog(context, "FiatCurrency", fiatCurrencyList, object : ValueSelectListener {
@@ -206,6 +208,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      */
 
     private fun buyDash() {
+        log.info("liquid: buy dash")
 
         SelectBuyDashDialog(context, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
@@ -232,6 +235,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      * call api to  get liquid wallet balance
      */
     private fun getUserLiquidAccountBalance() {
+        log.error("liquid: attempting to get user liquid balance")
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
             liquidClient?.getUserAccountBalance(liquidClient?.storedSessionId!!, object : LiquidClient.Callback<String> {
@@ -254,6 +258,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             })
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
+            log.error("liquid: cannot connect to internet")
         }
     }
 
@@ -261,6 +266,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      * call api to  get address
      */
     private fun getUserLiquidAccountAddress() {
+        log.error("liquid: attempting to get liquid account address")
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
             liquidClient?.getUserAccountAddress(liquidClient?.storedSessionId!!, true, object : LiquidClient.Callback<String> {
@@ -292,6 +298,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             })
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
+            log.error("liquid: cannot connect to internet")
         }
     }
 
@@ -337,9 +344,8 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            log.error("liquid: cannot show liquid balance: ${e.message}", e)
         }
-
     }
 
 
@@ -360,7 +366,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      * Show dialog for logout from liquid
      */
     private fun revokeAccessToken() {
-
+        log.error("liquid: revoking access token")
         val dialogBuilder = AlertDialog.Builder(this)
         dialogBuilder.setMessage(R.string.liquid_logout_title)
         dialogBuilder.setPositiveButton(android.R.string.ok) { dialog, button ->
@@ -385,11 +391,12 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     private fun openLogoutUrl() {
-
-
+        log.error("liquid: open logout url")
         if (appAvailable("com.quoine.liquid")) { // check liquid app installed or not
+            log.error("liquid: call logout using liquid app")
             callRevokeAccessTokenAPI()
         } else {
+            log.error("liquid: call logout through the URL")
             isClickLogoutButton = true
             val url = LiquidConstants.LOGOUT_URL
 
@@ -444,6 +451,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
 
     private fun getAllCurrencyList(isShowBuyDashDialog: Boolean) {
+        log.error("liquid: attempting to get currency list")
 
         if (GenericUtils.isInternetConnected(this)) {
 
@@ -488,6 +496,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             })
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
+            log.error("liquid: cannot connect to internet")
         }
     }
 

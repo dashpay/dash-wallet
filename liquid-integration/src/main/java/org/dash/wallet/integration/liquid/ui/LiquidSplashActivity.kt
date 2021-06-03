@@ -101,6 +101,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
      * call api for get session id
      */
     private fun authUser() {
+        log.info("liquid: authenticating user (obtaining session id)...")
         if (GenericUtils.isInternetConnected(this)) {
             if (liquidClient!!.storedSessionId!!.isEmpty()) {
                 loadingDialog!!.show()
@@ -129,6 +130,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
             }
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
+            log.error("liquid: cannot connect to internet")
         }
     }
 
@@ -162,6 +164,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
             })
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
+            log.error("liquid: cannot connect to internet")
         }
     }
 
