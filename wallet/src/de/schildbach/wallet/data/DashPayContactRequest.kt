@@ -9,6 +9,7 @@ import kotlinx.android.parcel.Parcelize
 import org.dashevo.dashpay.ContactRequest
 import org.dashevo.dpp.document.Document
 import org.dashevo.dpp.identifier.Identifier
+import org.dashevo.platform.Platform
 
 @Parcelize
 @Entity(tableName = "dashpay_contact_request", primaryKeys = ["userId", "toUserId", "accountReference"])
@@ -113,4 +114,21 @@ data class DashPayContactRequest(val userId: String,
     @IgnoredOnParcel
     val version: Int
         get() = accountReference ushr 28
+
+    fun toContactRequest(platform: Platform) : ContactRequest {
+        val builder = ContactRequest.builder(platform)
+            .from(Identifier.from(userId))
+            .to(Identifier.from(toUserId))
+            .encryptedPubKey(encryptedPublicKey, senderKeyIndex, recipientKeyIndex)
+            .accountReference(accountReference)
+
+        if (autoAcceptProof != null)
+            builder.autoAcceptProof(autoAcceptProof)
+        if (encryptedAccountLabel != null)
+            builder.encryptedAccountLabel(encryptedAccountLabel)
+
+        // there is no field for the timestamp
+
+        return builder.build()
+    }
 }
