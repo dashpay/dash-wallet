@@ -44,6 +44,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     private var liquidClient: LiquidClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        log.info("liquid: starting liquid splash activity")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.liquid_splash_screen)
         val toolbar = findViewById<View>(R.id.toolbar) as Toolbar
@@ -93,6 +94,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     override fun onDestroy() {
+        log.info("liquid: closing liquid splash activity")
         loadingDialog?.dismiss()
         super.onDestroy()
     }

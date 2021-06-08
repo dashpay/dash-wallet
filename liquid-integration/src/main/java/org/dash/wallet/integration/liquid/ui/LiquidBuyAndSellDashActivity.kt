@@ -511,6 +511,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     override fun onDestroy() {
+        log.info("liquid: closing buy/sell dash activity")
         loadingDialog?.dismiss()
         super.onDestroy()
     }

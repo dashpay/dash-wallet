@@ -380,8 +380,11 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
     }
 
     private inner class MyBrowser : WebViewClient() {
+        var lastUrl = ""
         override fun onPageFinished(webview: WebView, url: String) {
-            log.info("liquid: page finished: $url")
+            if (lastUrl != url) {
+                log.info("liquid: page finished: $url")
+            }
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
             bindListener()
@@ -398,7 +401,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    log.info("EventData::$eventData")
+                    log.debug("EventData::$eventData")
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {
@@ -418,10 +421,11 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
                         }
                         "ERROR" -> {
                             error = eventData
+                            log.error("liquid: $error")
                         }
                     }
                 } catch (e: Exception) {
-                    log.warn(e.message, e)
+                    log.error("liquid:  ${e.message}", e)
                 }
             }
         }
@@ -438,6 +442,7 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        log.info("liquid: closing buy dash with credit card")
         webview.removeJavascriptInterface(mJsInterfaceName)
         super.onDestroy()
     }

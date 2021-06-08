@@ -216,8 +216,11 @@ class SellDashActivity : AppCompatActivity() {
 
 
     private inner class MyBrowser : WebViewClient() {
+        var lastUrl = ""
         override fun onPageFinished(webview: WebView, url: String) {
-            log.info("liquid: page finished: $url")
+            if (lastUrl != url) {
+                log.info("liquid: page finished: $url")
+            }
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
             bindListener()
@@ -292,7 +295,7 @@ class SellDashActivity : AppCompatActivity() {
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    log.info("EventData::$eventData")
+                    log.debug("EventData::$eventData")
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {
@@ -306,10 +309,11 @@ class SellDashActivity : AppCompatActivity() {
                         }
                         "ERROR" -> {
                             error = eventData
+                            log.error("liquid: $error")
                         }
                     }
                 } catch (e: Exception) {
-                    log.error(e.message, e)
+                    log.error("liquid ${e.message}", e)
                 }
             }
         }
@@ -363,6 +367,7 @@ class SellDashActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        log.info("liquid: closing sell dash")
         webview.removeJavascriptInterface(mJsInterfaceName)
         super.onDestroy()
     }
