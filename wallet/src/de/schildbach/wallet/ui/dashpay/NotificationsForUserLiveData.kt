@@ -75,11 +75,11 @@ class NotificationsForUserLiveData(walletApplication: WalletApplication,
             // * invitations
             // * other
 
-            results.sortByDescending {
-                it.getDate()
-            }
+            val sortedResults = results.sortedWith(
+                compareByDescending { item: NotificationItem -> item.getDate() }.thenBy { item: NotificationItem -> item.getId() }
+            )
 
-            postValue(Resource.success(results))
+            postValue(Resource.success(sortedResults))
         }
     }
 }
