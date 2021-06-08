@@ -3,7 +3,6 @@ apply plugin: 'project-report'
 
 ext {
     archivesBaseName = 'dash-wallet'
-    androidSupportVersion = '29.0.0'
     lifecycleVersion = "2.2.0"
 }
 repositories {
@@ -136,7 +135,7 @@ if (file("../local.properties").exists()) {
 }
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 30
     android.ndkVersion '21.3.6528147'
 
     lintOptions {
@@ -145,7 +144,7 @@ android {
     }
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 29
+        targetSdkVersion 30
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
