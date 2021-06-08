@@ -304,7 +304,6 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         )
         val initializationJson = Gson().toJson(initializationConfig)
 
-        println("PARAMS:::" + initializationJson)
         executeJavascriptInWebview(
                 "window.initializeWidget(JSON.parse('$initializationJson'));"
         );

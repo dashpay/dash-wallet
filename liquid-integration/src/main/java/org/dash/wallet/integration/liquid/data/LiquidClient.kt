@@ -134,7 +134,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     fun getUserAccountBalance(sessionId: String, callback: Callback<String>) {
         try {
-            log.info("liquid: user account balance")
+            log.info("liquid: requesting user account balance")
             val token = getAuthToken("/api/v1/session/$sessionId/accounts")
 
             service.getUserAccount(sessionId, token).enqueue(object : retrofit2.Callback<String?> {
@@ -231,8 +231,8 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                 }
             })
         } catch (e: Exception) {
+            log.error("liquid: get all currencies exception:", e)
             callback.onError(e)
-            Log.v("onError....", e.toString())
         }
     }
 
@@ -282,7 +282,6 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                 .claim("nonce", System.currentTimeMillis())
                 .compact()
 
-        Log.v("JWT : - ", jwt)
         val token = "Bearer $jwt"
 
         return token

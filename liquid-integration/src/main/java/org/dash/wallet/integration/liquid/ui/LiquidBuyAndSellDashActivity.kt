@@ -357,7 +357,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         } else if (requestCode == 1) {
             if (resultCode == Activity.RESULT_OK) {
                 val txHash = data!!.getStringExtra("transaction_hash")
-                println(txHash)
+                log.info("liquid: received tx hash: $txHash")
             }
         }
     }
