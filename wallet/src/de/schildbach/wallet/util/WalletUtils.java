@@ -325,46 +325,39 @@ public class WalletUtils {
     public static Boolean isKeysStream(InputStream is) {
         BufferedReader reader = null;
 
-            try {
-                reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), Charsets.UTF_8));
-                WalletUtils.readKeys(reader, Constants.NETWORK_PARAMETERS);
-
-                return true;
-            } catch (final IOException x) {
-                return false;
-            } finally {
-                if (reader != null) {
-                    try {
-                        reader.close();
-                    } catch (final IOException x) {
-                        // swallow
-                    }
+        try {
+            reader = new BufferedReader(new InputStreamReader(is, Charsets.UTF_8));
+            WalletUtils.readKeys(reader, Constants.NETWORK_PARAMETERS);
+            return true;
+        } catch (final IOException x) {
+            return false;
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (final IOException x) {
+                    // swallow
                 }
             }
-        }
-    };
-
-    public static final FileFilter BACKUP_FILE_FILTER = new FileFilter() {
-        @Override
-        public boolean accept(final File file) {
-            InputStream is = null;
-
             try {
-                is = new FileInputStream(file);
-                return WalletProtobufSerializer.isWallet(is);
-            } catch (final IOException x) {
-                return false;
-            } finally {
-                if (is != null) {
-                    try {
-                        is.close();
-                    } catch (final IOException x) {
-                        // swallow
-                    }
-                }
+                is.reset();
+            } catch (IOException x) {
+                //swallow
             }
         }
-    };
+    }
+
+    public static Boolean isUnencryptedStream(InputStream is) {
+        try {
+            return WalletProtobufSerializer.isWallet(is);
+        } finally {
+            try {
+                is.reset();
+            } catch (IOException x) {
+                //swallow
+            }
+        }
+    }
 
     public static byte[] walletToByteArray(final Wallet wallet) {
         try {

@@ -214,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Your backup will be encrypted with the chosen password and written to external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Your wallet is protected by a spending PIN. Make sure you remember the PIN in addition to the backup password!</string>
     <string name="export_keys_dialog_button_export">Back up</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Your wallet has been backed up to <tt>%s</tt></p><p>If your device has a removable SD card, your backup <i>should</i> be on that card. Remove it and keep it at a safe place. If the card is <i>not</i> removable, you need to archive your backup to some other place than your device.</p><p><b>If the only place your backup exists is on your device, you run the risk of losing both at the same time!</b></p><p>In any case, make sure you remember your backup password. Do you want to archive your wallet now?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Your wallet has been backed up to <tt>%s</tt></p><p><b>If the only place your backup exists is on your device, you run the risk of losing both at the same time!</b></p><p>In any case, make sure you remember your backup password.</p>]]></string>
     <string name="export_keys_dialog_failure">Your wallet could not be backed up:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archive</string>
     <string name="export_keys_dialog_mail_subject">Dash Wallet backup</string>

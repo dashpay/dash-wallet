@@ -30,6 +30,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.backup.BackupWalletActivity
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
@@ -70,7 +71,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                 AUTH_REQUEST_CODE_BACKUP -> {
                     val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
                     if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
-                        BackupWalletDialogFragment.show(supportFragmentManager)
+                        //BackupWalletDialogFragment.show(supportFragmentManager)
+                        BackupWalletActivity.start(this)
                     } else {
                         ActivityCompat.requestPermissions(this, arrayOf(permission), AUTH_REQUEST_CODE_BACKUP)
                     }
@@ -171,9 +173,9 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,
                                             grantResults: IntArray) {
         if (requestCode == AUTH_REQUEST_CODE_BACKUP) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                BackupWalletDialogFragment.show(supportFragmentManager)
-
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                BackupWalletActivity.start(this)
+            }
         }
     }
 }
