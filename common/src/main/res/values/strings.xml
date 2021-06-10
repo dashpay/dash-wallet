@@ -23,4 +23,8 @@
     <string name="currency_PAX">Paxos Standard</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">Dismiss</string>
+
 </resources>

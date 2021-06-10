@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <dimen name="font_size_tiny">12sp</dimen>
-    <dimen name="font_size_small">15sp</dimen>
-    <dimen name="font_size_normal">18sp</dimen>
-    <dimen name="font_size_large">24sp</dimen>
-    <dimen name="font_size_xlarge">28sp</dimen>
-    <dimen name="font_size_huge">34sp</dimen>
-    <dimen name="symbol_size_normal">15sp</dimen>
+    <dimen name="font_size_tiny">11sp</dimen>
+    <dimen name="font_size_small">14sp</dimen>
+    <dimen name="font_size_normal">16sp</dimen>
+    <dimen name="font_size_large">20sp</dimen>
+    <dimen name="font_size_huge">30sp</dimen>
+    <dimen name="symbol_size_normal">14sp</dimen>
     <dimen name="list_entry_padding_horizontal_cram">6dp</dimen>
     <dimen name="list_entry_padding_horizontal">12dp</dimen>
+    <dimen name="list_entry_padding_horizontal_lax">18dp</dimen>
     <dimen name="list_entry_padding_vertical_cram">3dp</dimen>
     <dimen name="list_entry_padding_vertical">6dp</dimen>
+    <dimen name="list_entry_padding_vertical_lax">10dp</dimen>
     <dimen name="list_entry_padding">10dp</dimen>
     <dimen name="card_padding_horizontal">6dp</dimen>
     <dimen name="card_padding_vertical">2dp</dimen>

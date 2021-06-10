@@ -322,10 +322,8 @@ public class WalletUtils {
         }
     }
 
-    public static final FileFilter KEYS_FILE_FILTER = new FileFilter() {
-        @Override
-        public boolean accept(final File file) {
-            BufferedReader reader = null;
+    public static Boolean isKeysStream(InputStream is) {
+        BufferedReader reader = null;
 
             try {
                 reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), Charsets.UTF_8));
@@ -420,4 +418,20 @@ public class WalletUtils {
         }
     }
 
+
+    public static @androidx.annotation.Nullable
+    String uriToProvider(final Uri uri) {
+        if (uri == null || !uri.getScheme().equals("content"))
+            return null;
+        final String host = uri.getHost();
+        if ("com.google.android.apps.docs.storage".equals(host) || "com.google.android.apps.docs.storage.legacy".equals(host))
+            return "Google Drive";
+        if ("org.nextcloud.documents".equals(host))
+            return "Nextcloud";
+        if ("com.box.android.documents".equals(host))
+            return "Box";
+        if ("com.android.providers.downloads.documents".equals(host))
+            return "internal storage";
+        return null;
+    }
 }
