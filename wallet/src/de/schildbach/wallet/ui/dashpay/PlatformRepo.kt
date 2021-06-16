@@ -927,6 +927,55 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    private fun checkAndAddSentRequest(userId: String, contactRequest: ContactRequest, encryptionKey: KeyParameter? = null): Boolean {
+        val contact = EvolutionContact(userId, contactRequest.toUserId.toString())
+        try {
+            if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+                log.info("adding accepted/send request to wallet: ${contactRequest.toUserId}")
+                val contactIdentity = platform.identities.get(contactRequest.toUserId)
+                var myEncryptionKey = encryptionKey
+                if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                    val password = securityGuard.retrievePassword()
+                    // Don't bother with DeriveKeyTask here, just call deriveKey
+                    myEncryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                }
+                blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, contactRequest, myEncryptionKey!!)
+                return true
+            }
+        } catch (e: KeyCrypterException) {
+            // we can't send payments to this contact due to an invalid encryptedPublicKey
+            log.info("ContactRequest: error ${e.message}", e)
+        } catch (e: Exception) {
+            formatExceptionMessage("check and add sent requests: error", e)
+        }
+        return false
+    }
+
+    private fun checkAndAddReceivedRequest(userId: String, contactRequest: ContactRequest, encryptionKey: KeyParameter? = null): Boolean {
+        // add the sending to contact keychain if it doesn't exist
+        val contact = EvolutionContact(userId, 0, contactRequest.ownerId.toString(), contactRequest.accountReference)
+        try {
+            if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
+                log.info("adding received request: ${contactRequest.ownerId} to wallet")
+                val contactIdentity = platform.identities.get(contactRequest.ownerId)
+                var myEncryptionKey = encryptionKey
+                if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
+                    val password = securityGuard.retrievePassword()
+                    // Don't bother with DeriveKeyTask here, just call deriveKey
+                    myEncryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+                }
+                blockchainIdentity.addContactPaymentKeyChain(contactIdentity!!, contactRequest.document, myEncryptionKey!!)
+                return true
+            }
+        } catch (e: KeyCrypterException) {
+            // we can't send payments to this contact due to an invalid encryptedPublicKey
+            log.info("ContactRequest: error ${e.message}", e)
+        } catch (e: Exception) {
+            formatExceptionMessage("check and add received requests: error", e)
+        }
+        return false
+    }
+
     var counterForReport = 0;
 
     /**
@@ -990,16 +1039,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             toContactDocuments.forEach {
 
                 val contactRequest = ContactRequest(it)
+                log.info("found accepted/sent request: ${contactRequest.toUserId}")
                 val dashPayContactRequest = DashPayContactRequest.fromDocument(contactRequest)
                 if (!dashPayContactRequestDao.exists(dashPayContactRequest.userId, dashPayContactRequest.toUserId, contactRequest.accountReference)) {
-
+                    log.info("adding accepted/send request to database: ${contactRequest.toUserId}")
                     userIdList.add(dashPayContactRequest.toUserId)
                     dashPayContactRequestDao.insert(dashPayContactRequest)
 
                     // add our receiving from this contact keychain if it doesn't exist
-                    val contact = EvolutionContact(userId, dashPayContactRequest.toUserId)
+                    addedContact = addedContact || checkAndAddSentRequest(userId, contactRequest)
+                    /*val contact = EvolutionContact(userId, dashPayContactRequest.toUserId)
                     try {
                         if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
+                            log.info("adding accepted/send request to wallet: ${contactRequest.toUserId}")
                             val contactIdentity = platform.identities.get(contactRequest.toUserId)
                             if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
                                 val password = securityGuard.retrievePassword()
@@ -1012,25 +1064,31 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     } catch (e: KeyCrypterException) {
                         // we can't send payments to this contact due to an invalid encryptedPublicKey
                         log.info("ContactRequest: error ${e.message}")
-                    }
+                    }*/
                 }
             }
             updateSyncStatus(PreBlockStage.GetReceivedRequests)
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = contactRequests.get(userId, toUserId = true, afterTime = lastContactRequestTime, retrieveAll = true)
             fromContactDocuments.forEach {
-                val contactRequest = DashPayContactRequest.fromDocument(it)
-                platform.stateRepository.addValidIdentity(contactRequest.userIdentifier)
-                if (!dashPayContactRequestDao.exists(contactRequest.userId, contactRequest.toUserId, contactRequest.accountReference)) {
-
-                    userIdList.add(contactRequest.userId)
-                    dashPayContactRequestDao.insert(contactRequest)
+                val dashPayContactRequest = DashPayContactRequest.fromDocument(it)
+                val contactRequest = ContactRequest(it)
+                log.info("found received request: ${dashPayContactRequest.userId}")
+                platform.stateRepository.addValidIdentity(dashPayContactRequest.userIdentifier)
+                if (!dashPayContactRequestDao.exists(dashPayContactRequest.userId, dashPayContactRequest.toUserId, dashPayContactRequest.accountReference)) {
+                    log.info("adding received request: ${dashPayContactRequest.userId} to database")
+                    userIdList.add(dashPayContactRequest.userId)
+                    dashPayContactRequestDao.insert(dashPayContactRequest)
 
                     // add the sending to contact keychain if it doesn't exist
-                    val contact = EvolutionContact(userId, 0, contactRequest.userId, contactRequest.accountReference)
+
+                    addedContact = addedContact || checkAndAddReceivedRequest(userId, contactRequest)
+
+                    /*val contact = EvolutionContact(userId, 0, dashPayContactRequest.userId, contactRequest.accountReference)
                     try {
                         if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
-                            val contactIdentity = platform.identities.get(contactRequest.userId)
+                            log.info("adding received request: ${dashPayContactRequest.userId} to wallet")
+                            val contactIdentity = platform.identities.get(dashPayContactRequest.userId)
                             if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
                                 val password = securityGuard.retrievePassword()
                                 // Don't bother with DeriveKeyTask here, just call deriveKey
@@ -1043,6 +1101,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                         // we can't send payments to this contact due to an invalid encryptedPublicKey
                         log.info("ContactRequest: error ${e.message}")
                     }
+                     */
                 }
             }
             updateSyncStatus(PreBlockStage.GetSentRequests)
@@ -1103,9 +1162,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     }
 
     private fun updateBloomFilters() {
-        val intent = Intent(BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
-                BlockchainServiceImpl::class.java)
-        walletApplication.startService(intent)
+        if (platformSyncJob.isActive) {
+            val intent = Intent(
+                BlockchainService.ACTION_RESET_BLOOMFILTERS, null, walletApplication,
+                BlockchainServiceImpl::class.java
+            )
+            walletApplication.startService(intent)
+        }
     }
 
     /**
@@ -1205,9 +1268,17 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
             val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
             val toContactMap = HashMap<String, DashPayContactRequest>()
+            var addedContactRequests = false
             toContactDocuments!!.forEach {
                 userIdList.add(it.toUserId)
                 toContactMap[it.toUserId] = it
+
+                // check to see if wallet has this contact request's keys
+                val added = checkAndAddSentRequest(userId, it.toContactRequest(platform))
+                if (added) {
+                    log.warn("check database integrity: added sent $it to wallet since it was missing.  Transactions may also be missing")
+                    addedContactRequests = true
+                }
             }
             // Get all contact requests where toUserId == userId, the users who have added me
             val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userId)
@@ -1215,6 +1286,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             fromContactDocuments!!.forEach {
                 userIdList.add(it.userId)
                 fromContactMap[it.userId] = it
+
+                // check to see if wallet has this contact request's keys
+                val added = checkAndAddReceivedRequest(userId, it.toContactRequest(platform))
+                if (added) {
+                    log.warn("check database integrity: added received $it to wallet since it was missing")
+                    addedContactRequests = true
+                }
+            }
+
+            // If new keychains were added to the wallet, then update the bloom filters
+            if (addedContactRequests) {
+                mainHandler.post {
+                    updateBloomFilters()
+                }
             }
 
             for (user in userIdList) {
@@ -1548,5 +1633,41 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
             }
         }
+    }
+
+    // current unused
+    private suspend fun getContactRequestReport(): String {
+        val report = StringBuilder();
+        val profiles = dashPayProfileDao.loadAll()
+        val profilesById = profiles.associateBy({ it.userId }, { it })
+        report.append("Contact Requests (Sent) -----------------\n")
+        dashPayContactRequestDao.loadToOthers(blockchainIdentity.uniqueIdString)?.forEach {
+            val fromProfile = profilesById[it.userId]
+            report.append(it.userId)
+            if (fromProfile != null) {
+                report.append("(").append(fromProfile.username).append(")")
+            }
+            report.append(" -> ").append(it.toUserId)
+            val toProfile = profilesById[it.toUserId]
+            if (toProfile != null) {
+                report.append("(").append(toProfile.username).append(")")
+            }
+            report.append("\n")
+        }
+        report.append("Contact Requests (Received) -----------------\n")
+        dashPayContactRequestDao.loadFromOthers(blockchainIdentity.uniqueIdString)?.forEach {
+            val fromProfile = profilesById[it.userId]
+            report.append(it.userId)
+            if (fromProfile != null) {
+                report.append("(").append(fromProfile).append(")")
+            }
+            report.append(" -> ").append(it.toUserId)
+            val toProfile = profilesById[it.toUserId]
+            if (toProfile != null) {
+                report.append("(").append(toProfile.username).append(")")
+            }
+            report.append("\n")
+        }
+        return report.toString()
     }
 }

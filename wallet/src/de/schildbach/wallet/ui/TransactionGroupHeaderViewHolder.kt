@@ -64,7 +64,6 @@ class TransactionGroupHeaderViewHolder(inflater: LayoutInflater, parent: ViewGro
                 } else {
                     SimpleDateFormat("MMMM, yyyy", Locale.getDefault())
                 }
-                sdf.timeZone = TimeZone.getTimeZone("GMT")
 
                 val dateStr = sdf.format(date)
                 val dayStr = SimpleDateFormat("dd", Locale.getDefault()).format(date)
@@ -80,7 +79,6 @@ class TransactionGroupHeaderViewHolder(inflater: LayoutInflater, parent: ViewGro
 
         }
         val sdf = SimpleDateFormat("EEEE", Locale.getDefault())
-        sdf.timeZone = TimeZone.getTimeZone("GMT")
         this.itemView.date_weekday.text = sdf.format(date)
     }
 

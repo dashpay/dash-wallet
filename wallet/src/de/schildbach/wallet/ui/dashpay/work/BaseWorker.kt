@@ -60,7 +60,6 @@ abstract class BaseWorker(context: Context, parameters: WorkerParameters)
         if (e is StatusRuntimeException) {
             log.error("---> ${e.trailers}")
         }
-        e.printStackTrace()
         return msg
     }
 }

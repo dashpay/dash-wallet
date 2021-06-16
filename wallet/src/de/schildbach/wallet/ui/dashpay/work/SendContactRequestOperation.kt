@@ -43,6 +43,7 @@ class SendContactRequestOperation(val application: Application) {
                             val userIdOut = SendContactRequestWorker.extractUserId(workInfo.outputData)!!
                             val toUserIdOut = SendContactRequestWorker.extractToUserId(workInfo.outputData)!!
                             emit(Resource.success(Pair(userIdOut, toUserIdOut)))
+                            log.info("send contact request operation successful: $workInfo")
                         }
                         WorkInfo.State.FAILED -> {
                             val errorMessage = BaseWorker.extractError(workInfo.outputData)
@@ -55,6 +56,7 @@ class SendContactRequestOperation(val application: Application) {
                                 FirebaseCrashlytics.getInstance().recordException(exception)
                                 Resource.error(exception)
                             })
+                            log.error("send contact request operation failed: $errorMessage")
                         }
                         WorkInfo.State.CANCELLED -> {
                             log.info("send contact request operation cancelled")
