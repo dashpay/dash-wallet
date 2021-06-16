@@ -45,15 +45,15 @@ class LiquidClient private constructor(context: Context, private val encryptionK
         val t1 = System.nanoTime()
         log.info(
             String.format(
-                "liquid: Sending request %s on %s%n%s",
-                request.url(), chain.connection(), request.headers()
+                "liquid: Sending request %s on %s",
+                request.url(), chain.connection()
             )
         )
         val response = chain.proceed(request)
         val t2 = System.nanoTime()
         log.info(
             String.format(
-                "liquid: Received response for %s in %.1fms%n%s",
+                "liquid: Received response for %s in %.1fms%n   %s",
                 response.request().url(), (t2 - t1) / 1e6, response.networkResponse()
             )
         )
