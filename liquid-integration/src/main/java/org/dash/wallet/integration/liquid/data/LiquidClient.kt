@@ -19,11 +19,12 @@ package org.dash.wallet.integration.liquid.data
 import android.content.Context
 import android.content.SharedPreferences
 import android.text.TextUtils
-import android.util.Log
-import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import com.securepreferences.SecurePreferences
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
+import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.slf4j.LoggerFactory
 import retrofit2.Call
 import retrofit2.Response
@@ -38,11 +39,35 @@ class LiquidClient private constructor(context: Context, private val encryptionK
     private val service: LiquidService
     private val prefs: SharedPreferences
 
+
+    private val loggingIntercepter = Interceptor { chain ->
+        val request = chain.request()
+        val t1 = System.nanoTime()
+        log.info(
+            String.format(
+                "liquid: Sending request %s on %s%n%s",
+                request.url(), chain.connection(), request.headers()
+            )
+        )
+        val response = chain.proceed(request)
+        val t2 = System.nanoTime()
+        log.info(
+            String.format(
+                "liquid: Received response for %s in %.1fms%n%s",
+                response.request().url(), (t2 - t1) / 1e6, response.networkResponse()
+            )
+        )
+        response
+    }
+
     init {
         prefs = SecurePreferences(context, encryptionKey, LIQUID_PREFS)
+        val okClient = OkHttpClient.Builder().addInterceptor(loggingIntercepter).build()
+
         val baseUrl = LiquidConstants.CLIENT_BASE_URL
         val retrofit = Retrofit.Builder()
                 .baseUrl(baseUrl)
+                .client(okClient)
                 .addConverterFactory(ScalarsConverterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
@@ -81,6 +106,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                         if (!TextUtils.isEmpty(sessionId) && !TextUtils.isEmpty(sessionSecret)) {
                             storeSessionId(sessionId!!)
                             storeSessionSecret(sessionSecret!!)
+                            log.info("liquid: successfully obtained session id")
                             callback.onSuccess(sessionId)
                         } else {
                             callback.onError(LiquidException("Error obtaining liquid sessionId", response.message(), response.code()))

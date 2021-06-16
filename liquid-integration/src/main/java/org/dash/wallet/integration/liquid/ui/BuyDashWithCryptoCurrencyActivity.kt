@@ -310,11 +310,15 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
     }
 
     private inner class JavaScriptInterface {
+        var lastEvent = ""
         @JavascriptInterface
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    log.debug("EventData::$eventData")
+                    if (lastEvent != eventData) {
+                        log.info("liquid: EventData::$eventData")
+                        lastEvent = eventData;
+                    }
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {
@@ -347,6 +351,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
     }
 
     fun executeJavascriptInWebview(rawJavascript: String) {
+        log.info("liquid: execute script: $rawJavascript")
         runOnUiThread {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
                 webview.evaluateJavascript(rawJavascript, null);

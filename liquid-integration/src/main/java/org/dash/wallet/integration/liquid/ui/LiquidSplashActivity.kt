@@ -80,10 +80,15 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         val intentUri = intent.data
         val scheme = intentUri?.scheme
         val host = intentUri?.host
+        log.info("liquid: deep link handleIntent($action, $intentUri, $scheme, $host)")
 
         if (Intent.ACTION_VIEW == action
                 && scheme == LiquidConstants.OAUTH_CALLBACK_SCHEMA
                 && host == LiquidConstants.OAUTH_CALLBACK_HOST) {
+            log.info("liquid: action is ACTION_VIEW, so get the userId")
+            log.info("liquid: session id is valid: ${liquidClient?.storedSessionId?.isNotEmpty()}: ${liquidClient?.storedSessionId}")
+            //TODO: it is possible that liquidClient?.storedSessionId == null, and if it is
+            //TODO: getUserId() will fail and an error is reported to the user
             getUserId()
         }
     }
@@ -195,8 +200,8 @@ class LiquidSplashActivity : InteractionAwareActivity() {
      * Open login url in webview
      */
     private fun openLoginUrl(sessionId: String) {
-        log.info("liquid: opening webview to log in")
         val url = "${LiquidConstants.INITIAL_URL}${sessionId}/liquid_oauth?preferred_action=follow_href&theme=light&return_url=${LiquidConstants.OAUTH_CALLBACK_URL}"
+        log.info("liquid: opening webview to log in: $url")
 
         val builder = CustomTabsIntent.Builder()
         val toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary)
@@ -211,7 +216,8 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
         CustomTabActivityHelper.openCustomTab(this, customTabsIntent, uri
         ) { _, _ ->
-            log.info("liquid: login successful")
+            log.info("liquid: login failure because custom tabs is not available")
+            log.info("liquid: using the web browser instead for $uri")
             val intent = Intent(Intent.ACTION_VIEW)
             intent.data = uri
             startActivity(intent)

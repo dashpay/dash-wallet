@@ -396,9 +396,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             log.error("liquid: call logout using liquid app")
             callRevokeAccessTokenAPI()
         } else {
-            log.error("liquid: call logout through the URL")
             isClickLogoutButton = true
             val url = LiquidConstants.LOGOUT_URL
+            log.error("liquid: call logout through the url: $url")
 
             val builder = CustomTabsIntent.Builder()
             val toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary)
@@ -413,6 +413,8 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
             CustomTabActivityHelper.openCustomTab(this, customTabsIntent, uri
             ) { _, _ ->
+                log.info("liquid: logout failure because custom tabs is not available")
+                log.info("liquid: using the web browser instead for $uri")
                 val intent = Intent(Intent.ACTION_VIEW)
                 intent.data = uri
                 startActivity(intent)
