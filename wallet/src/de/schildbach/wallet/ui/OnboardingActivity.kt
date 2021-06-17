@@ -79,8 +79,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
         walletApplication = (application as WalletApplication)
 
-        walletApplication.configuration.autoLogoutEnabled = false// for testing purpose
-
         if (walletApplication.walletFileExists()) {
             regularFlow()
         } else {
