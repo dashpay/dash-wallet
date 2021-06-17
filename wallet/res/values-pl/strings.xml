@@ -376,4 +376,10 @@
     <string name="payment_protocol_default_error_title">Błąd płatności</string>
     <string name="payment_protocol_insufficient_funds_error_title">Niewystarczająca Ilość Środków</string>
     <string name="payment_protocol_insufficient_funds_error_message">Nie posiadasz wystarczających środków aby dokonać tej transakcji</string>
+
+
+
+    <string name="select_a_service">Wybierz usługę</string>
+    <string name="activity_buy_and_sell_dash_filter">Filtrowanie</string>
+    <string name="clear_filter">Zresetuj Filtrowanie</string>
 </resources>

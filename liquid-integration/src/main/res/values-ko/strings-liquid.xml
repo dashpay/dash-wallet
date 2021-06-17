@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">리퀴드 계정 연결</string>
+    <string name="buy_dash_with_liquid_account">신용카드로 대시 구매</string>
+    <string name="liquid_logout">로그아웃</string>
+    <string name="liquid_logout_title">리퀴드에서 로그아웃</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">대시를 다른 암호화폐와 스왑</string>
+    <string name="transfer_dash_to_and_from_account">당신의 리퀴드 계정에서/으로 대시 송금하기</string>
+
+    <string name="cryptocurrency">암호화폐</string>
+    <string name="credit_card">신용카드</string>
+
+    <string name="buy">구매</string>
+    <string name="buy_dash">대시 매수</string>
+    <string name="sell_dash">대시 매도</string>
+    <string name="buy_sell_dash_">대시 매수 &amp; 매도</string>
+    <string name="button_cancel">취소</string>
+    <string name="choose_your_payment_method">당신의 지불 방법을 선택하세요</string>
+    <string name="crypto_support">암호화폐 지원</string>
+    <string name="okay">알겠습니다</string>
+    <string name="close">닫기</string>
+    <string name="list_of_countries">지원되지 않는 국가 목록 보기</string>
+    <string name="buying_dash_not_supported">일부 국가에서는 암호화폐로 대시를 구매하는 것이 지원되지 않습니다</string>
+    <string name="buying_dash_success_message">당신의 대시가 지갑으로 송금됩니다. 이 창을 닫을 수 있습니다.</string>
+
+    <string name="confirm">승인</string>
+    <string name="card_fees">카드 수수료</string>
+    <string name="conversion_rate">환율</string>
+    <string name="network_fee">네트워크 수수료</string>
+    <string name="total">총합</string>
+    <string name="connect">연결</string>
+    <string name="connected">연결됨</string>
+    <string name="buy_sell_dash">&amp;amp; 를 구입하기 위해서는 대시를 판매하거나 새로운 계정을 생성하십시오.</string>
+
+
+    <string name="transfer_to_liquid">리퀴드로 송금하기</string>
+    <string name="transfer_from_liquid">리퀴드에서 송금받기</string>
+    <string name="disconnect">연결 해제</string>
+    <string name="select_crypto_currency">암호화폐 선택</string>
+    <string name="select_sell_currency">매도할 통화 선택</string>
+    <string name="select_buy_currency">매수할 통화 선택</string>
+    <string name="select_fiat_currency">법정 통화 선택</string>
+    <string name="show_payment_qr_code">지불 QR 코드 보기</string>
+    <string name="pay_with_btc_from_liquid">리퀴드에서 BTC로 지불하기</string>
+    <string name="or">혹은</string>
+
+    <string name="internet_connected">인터넷에 연결하십시오</string>
+    <string name="please_enter_amount">금액을 입력하십시오</string>
+
+    <string name="choose_what_you_receive">받으실 내용을 선택하십시오</string>
+    <string name="fiat_currency">법정 통화</string>
+
+    <string name="liquid">리퀴드</string>
+    <string name="transfer">송금하기</string>
+    <string name="filter_by">다음으로 필터</string>
+</resources>

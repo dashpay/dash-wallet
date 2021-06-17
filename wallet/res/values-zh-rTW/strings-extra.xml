@@ -300,14 +300,8 @@
     <string name="welcome_screen_title_3">更多控制選項</string>
     <string name="welcome_screen_subtitle_3">能夠讓您完全控制並根據您的個人需要自定義錢包</string>
 
-    <string-array name="history_filter">
-        <item>所有</item>
-        <item>己收到</item>
-        <item>發送</item>
-    </string-array>
-
     <string name="sync_status_wait">請等待同步完成</string>
-    <string name="sync_status_syncing_title">同步中</string>
+    <string name="sync_status_syncing_title">同步中%1$d</string>
     <string name="sync_status_syncing_sub_title">與達世幣區塊鏈</string>
     <string name="sync_status_unable_to_connect">無法連接</string>
     <string name="sync_status_check_connection">Check your connection</string>
@@ -334,4 +328,11 @@
     <string name="import_image_no_private_key_copied">沒有複製到私鑰</string>
     <string name="import_image_import_valid_private_key">複製一個有效的私鑰並從中導入達世幣</string>
     <string name="import_image_invalid_private">無效的私鑰</string>
+
+    <string name="syncing">同步中</string>
+    <string name="syncing_balance">正在同步餘額</string>
+
+    <string name="all_transactions">所有</string>
+    <string name="received_transactions">己收到</string>
+    <string name="sent_transactions">發送</string>
 </resources>

@@ -303,14 +303,8 @@
     <string name="welcome_screen_title_3">Περισσότερος Έλεγχος</string>
     <string name="welcome_screen_subtitle_3">Έχετε τον πλήρη έλεγχο να προσαρμόσετε το πορτοφόλι σας ανάλογα με τις ανάγκες σας</string>
 
-    <string-array name="history_filter">
-        <item>Όλα</item>
-        <item>Ελήφθησαν</item>
-        <item>Εστάλη</item>
-    </string-array>
-
     <string name="sync_status_wait">Περιμένετε να ολοκληρωθεί ο συγχρονισμός</string>
-    <string name="sync_status_syncing_title">Συγχρονισμός</string>
+    <string name="sync_status_syncing_title">Συγχρονισμός %1$d</string>
     <string name="sync_status_syncing_sub_title">Μεσώ του Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Δεν είναι δυνατή η σύνδεση</string>
     <string name="sync_status_check_connection">Ελέγξτε την σύνδεση σας</string>
@@ -337,4 +331,11 @@
     <string name="import_image_no_private_key_copied">Δεν αντιγράφηκε κανένα ιδιωτικό κλειδί</string>
     <string name="import_image_import_valid_private_key">Αντιγράψτε ένα έγκυρο ιδιωτικό κλειδί για να εισάγετε Dash από αυτό</string>
     <string name="import_image_invalid_private">Μη έγκυρο ιδιωτικό κλειδί</string>
+
+    <string name="syncing">Συγχρονισμός</string>
+    <string name="syncing_balance">Συγχρονισμός Υπολοίπου</string>
+
+    <string name="all_transactions">Όλα</string>
+    <string name="received_transactions">Ελήφθησαν</string>
+    <string name="sent_transactions">Εστάλη</string>
 </resources>

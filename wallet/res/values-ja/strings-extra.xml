@@ -302,14 +302,7 @@
     <string name="welcome_screen_title_3">コントロールの追加</string>
     <string name="welcome_screen_subtitle_3">自分のウォレットを完全に制御していて、ニーズに基づいてカスタマイズする</string>
 
-    <string-array name="history_filter">
-        <item>全て</item>
-        <item>受取済み</item>
-        <item>送信済み</item>
-    </string-array>
-
     <string name="sync_status_wait">同期が完了するまでお待ちください</string>
-    <string name="sync_status_syncing_title">同期中</string>
     <string name="sync_status_syncing_sub_title">Dashのブロックチェーンで</string>
     <string name="sync_status_unable_to_connect">接続できません</string>
     <string name="sync_status_check_connection">接続を確認してください</string>
@@ -330,4 +323,8 @@
     <string name="payment_request_skip">スキップする</string>
     <string name="payment_request_paid_to">お支払い済</string>
 
-    </resources>
+    <string name="syncing">同期中</string>
+    <string name="all_transactions">全て</string>
+    <string name="received_transactions">受取済み</string>
+    <string name="sent_transactions">送信済み</string>
+</resources>

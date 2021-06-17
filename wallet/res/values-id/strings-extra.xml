@@ -300,14 +300,7 @@
     <string name="welcome_screen_title_3">Kontrol lebih lanjut</string>
     <string name="welcome_screen_subtitle_3">Memiliki kendali penuh dan sesuaikan dompet Anda berdasarkan kebutuhan Anda</string>
 
-    <string-array name="history_filter">
-        <item>Semua</item>
-        <item>Diterima</item>
-        <item>Terkirim</item>
-    </string-array>
-
     <string name="sync_status_wait">Harap tunggu sampai sinkronisasi selesai</string>
-    <string name="sync_status_syncing_title">Menyingkronkan:</string>
     <string name="sync_status_syncing_sub_title">dengan Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Tidak dapat terhubung</string>
     <string name="sync_status_check_connection">Periksa koneksi anda</string>
@@ -334,4 +327,9 @@
     <string name="import_image_no_private_key_copied">Tidak ada kunci pribadi yang disalin</string>
     <string name="import_image_import_valid_private_key">Salin kunci pribadi yang valid untuk mengimpor Dash darinya</string>
     <string name="import_image_invalid_private">Kunci Pribadi Tidak Valid</string>
+
+    <string name="syncing">Menyingkronkan:</string>
+    <string name="all_transactions">Semua</string>
+    <string name="received_transactions">Diterima</string>
+    <string name="sent_transactions">Terkirim</string>
 </resources>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Σύνδεση Liquid Λογαριασμού</string>
+    <string name="buy_dash_with_liquid_account">Αγορά Dash με πιστωτική κάρτα</string>
+    <string name="liquid_logout">Αποσύνδεση</string>
+    <string name="liquid_logout_title">Αποσυνδεθείτε από Liquid</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Ανταλλάξτε Dash με άλλα κρυπτονομίσματα</string>
+    <string name="transfer_dash_to_and_from_account">Μεταφέρετε Dash από και προς τον Liquid λογαριασμό σας</string>
+
+    <string name="cryptocurrency">Κρυπτονόμισμα</string>
+    <string name="credit_card">Πιστωτική Κάρτα</string>
+
+    <string name="buy">Αγορά</string>
+    <string name="buy_dash">Αγορά Dash</string>
+    <string name="sell_dash">Πώληση Dash</string>
+    <string name="buy_sell_dash_">Αγορά και Πώληση Dash</string>
+    <string name="button_cancel">Ακύρωση</string>
+    <string name="choose_your_payment_method">Επιλέξτε μέθοδο πληρωμής</string>
+    <string name="crypto_support">Υποστήριξη Κρυπτονομισμάτων</string>
+    <string name="okay">Εντάξει</string>
+    <string name="close">κλείσιμο</string>
+    <string name="list_of_countries">Προβολή λίστας χωρών που δεν υποστηρίζονται</string>
+    <string name="buying_dash_not_supported">Η αγορά Dash με κρυπτονομίσματα δεν υποστηρίζεται σε ορισμένες χώρες</string>
+    <string name="buying_dash_success_message">Μπορείτε να κλείσετε αυτήν την οθόνη, τα Dash σας θα σταλούν στο πορτοφόλι σας.</string>
+
+    <string name="confirm">Επιβεβαίωση</string>
+    <string name="card_fees">Προμήθεια Κάρτας</string>
+    <string name="conversion_rate">Συναλλαγματική Ισοτιμία</string>
+    <string name="network_fee">Τέλη Δικτύου</string>
+    <string name="total">Σύνολο</string>
+    <string name="connect">Σύνδεση</string>
+    <string name="connected">Συνδέθηκε</string>
+    <string name="buy_sell_dash">Για να πουλήσετε &amp;amp; πουλήστε Dash η δημιουργήστε ένα νέο λογαριασμό</string>
+
+
+    <string name="transfer_to_liquid">Μεταφορά στο Liquid</string>
+    <string name="transfer_from_liquid">Μεταφορά από Liquid</string>
+    <string name="disconnect">Αποσύνδεση</string>
+    <string name="select_crypto_currency">Επιλέξτε Κρυπτονόμισμα</string>
+    <string name="select_sell_currency">Επιλέξτε Πώληση Κρυπτονομίσματος</string>
+    <string name="select_buy_currency">Επιλέξτε Αγορά νομίσματος</string>
+    <string name="select_fiat_currency">Επιλέξτε Fiat</string>
+    <string name="show_payment_qr_code">Εμφάνιση κωδικού QR πληρωμής</string>
+    <string name="pay_with_btc_from_liquid">Πληρώστε με BTC από το Liquid</string>
+    <string name="or">ή</string>
+
+    <string name="internet_connected">Συνδεθείτε στο Διαδίκτυο</string>
+    <string name="please_enter_amount">Παρακαλώ εισάγετε το ποσό</string>
+
+    <string name="choose_what_you_receive">Επιλέξτε τι θα λάβετε</string>
+    <string name="fiat_currency">Χρήμα</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">Μεταφορά</string>
+    <string name="filter_by">Φιλτράρισμα κατά</string>
+</resources>

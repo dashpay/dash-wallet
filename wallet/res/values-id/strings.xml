@@ -376,4 +376,8 @@
     <string name="payment_protocol_default_error_title">Kesalahan pembayaran</string>
     <string name="payment_protocol_insufficient_funds_error_title">Dana tidak mencukupi</string>
     <string name="payment_protocol_insufficient_funds_error_message">Anda tidak memiliki dana yang cukup umtuk memyelesaikan pembayaran ini</string>
-</resources>
+
+
+
+    <string name="activity_buy_and_sell_dash_filter">Menyaring</string>
+    </resources>

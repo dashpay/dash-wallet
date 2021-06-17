@@ -376,4 +376,10 @@
     <string name="payment_protocol_default_error_title">การชำระเงินผิดพลาด</string>
     <string name="payment_protocol_insufficient_funds_error_title">กองทุนไม่เพียงพอ</string>
     <string name="payment_protocol_insufficient_funds_error_message">คุณมีเงินทุนไม่เพียงพอที่จะดำเนินการทางธุรกรรมได้สำเร็จ</string>
+
+
+
+    <string name="select_a_service">เลือกบริการ</string>
+    <string name="activity_buy_and_sell_dash_filter">กรอง</string>
+    <string name="clear_filter">ล้างตัวกรอง</string>
 </resources>

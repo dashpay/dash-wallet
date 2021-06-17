@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Koppel account Liquid</string>
+    <string name="buy_dash_with_liquid_account">Koop Dash met creditcard</string>
+    <string name="liquid_logout">Log uit</string>
+    <string name="liquid_logout_title">Log uit van Liquid</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Ruil Dash met andere cryptovaluta\'s</string>
+    <string name="transfer_dash_to_and_from_account">Maak Dash over naar en van je account op Liquid</string>
+
+    <string name="cryptocurrency">Cryptovaluta</string>
+    <string name="credit_card">Credticard</string>
+
+    <string name="buy">Koop</string>
+    <string name="buy_dash">Koop Dash</string>
+    <string name="sell_dash">Verkoop Dash</string>
+    <string name="buy_sell_dash_">Koop &amp; verkoop Dash</string>
+    <string name="button_cancel">Annuleer</string>
+    <string name="choose_your_payment_method">Kies je betalingsmethode</string>
+    <string name="crypto_support">Cryptoondersteuning</string>
+    <string name="okay">Oké</string>
+    <string name="close">Sluit</string>
+    <string name="list_of_countries">Bekijk lijst met landen die niet worden ondersteund</string>
+    <string name="buying_dash_not_supported">Kopen van Dash met cryptovaluta is in sommige landen niet ondersteund</string>
+    <string name="buying_dash_success_message">Je kan dit scherm sluiten, jouw Dash wordt naar jouw portemonnee verstuurd.</string>
+
+    <string name="confirm">Bevestig</string>
+    <string name="card_fees">Transactiekosten card</string>
+    <string name="conversion_rate">Wisselkoers</string>
+    <string name="network_fee">Netwerkkosten</string>
+    <string name="total">Totaal</string>
+    <string name="connect">Verbind</string>
+    <string name="connected">Verbonden</string>
+    <string name="buy_sell_dash">Om Dash to kopen &amp; verkopen of een nieuw account aan te maken</string>
+
+
+    <string name="transfer_to_liquid">Maak over aan Liquid</string>
+    <string name="transfer_from_liquid">Maak over vanuit Liquid</string>
+    <string name="disconnect">Verbreek verbinding</string>
+    <string name="select_crypto_currency">Kies cryptovaluta</string>
+    <string name="select_sell_currency">Kies verkoopvaluta</string>
+    <string name="select_buy_currency">Kies koopvaluta</string>
+    <string name="select_fiat_currency">Kies fiatvaluta</string>
+    <string name="show_payment_qr_code">Toon QR-code betaling</string>
+    <string name="pay_with_btc_from_liquid">Betaal met BTC vanuit Liquid</string>
+    <string name="or">of</string>
+
+    <string name="internet_connected">Verbind a.u.b. met het internet</string>
+    <string name="please_enter_amount">Voer a.u.b. het bedrag in</string>
+
+    <string name="choose_what_you_receive">Kies wat je ontvangt</string>
+    <string name="fiat_currency">Fiatvaluta</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">Maak over</string>
+    <string name="filter_by">Gefilterd door</string>
+</resources>

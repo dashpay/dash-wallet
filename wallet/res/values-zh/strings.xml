@@ -376,4 +376,8 @@
     <string name="payment_protocol_default_error_title">支付错误</string>
     <string name="payment_protocol_insufficient_funds_error_title">资金不足</string>
     <string name="payment_protocol_insufficient_funds_error_message">您没有足够的资金来完成此次交易</string>
-</resources>
+
+
+
+    <string name="activity_buy_and_sell_dash_filter">过滤</string>
+    </resources>

@@ -303,14 +303,7 @@
     <string name="welcome_screen_title_3">Mais Controle</string>
     <string name="welcome_screen_subtitle_3">Tenha controle completo e customize sua carteira de acordo com suas necessidades</string>
 
-    <string-array name="history_filter">
-        <item>Todos</item>
-        <item>Recebido</item>
-        <item>Enviado</item>
-    </string-array>
-
     <string name="sync_status_wait">Por favor aguarde que a sincronização termine</string>
-    <string name="sync_status_syncing_title">Sincronizando</string>
     <string name="sync_status_syncing_sub_title">com a blockchain de Dash</string>
     <string name="sync_status_unable_to_connect">Não foi possível conectar</string>
     <string name="sync_status_check_connection">Verifique sua conexão</string>
@@ -337,4 +330,9 @@
     <string name="import_image_no_private_key_copied">Nenhuma chave privada copiada</string>
     <string name="import_image_import_valid_private_key">Copie uma chave privada para importar Dash dela</string>
     <string name="import_image_invalid_private">Chave Privada Inválida</string>
+
+    <string name="syncing">Sincronizando</string>
+    <string name="all_transactions">Todos</string>
+    <string name="received_transactions">Recebido</string>
+    <string name="sent_transactions">Enviado</string>
 </resources>
