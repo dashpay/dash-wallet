@@ -9,6 +9,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -26,6 +27,7 @@ import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
 import org.slf4j.LoggerFactory
@@ -88,7 +90,7 @@ class WidgetEvent(
         var event: String?
 )
 
-class BuyDashWithCreditCardActivity : AppCompatActivity() {
+class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
     companion object {
 
@@ -381,15 +383,21 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
     }
 
     private inner class MyBrowser : WebViewClient() {
-        var lastUrl = ""
+        var finishedLoading = false
         override fun onPageFinished(webview: WebView, url: String) {
-            if (lastUrl != url) {
-                log.info("liquid: page finished: $url")
+            if (webview.progress == 100 && !finishedLoading) {
+                log.info("liquid: page finished(${webview.progress}%): $url")
+                super.onPageFinished(webview, url)
+                webview.visibility = View.VISIBLE
+                bindListener()
+                sendInitialization()
+                finishedLoading = true
             }
-            super.onPageFinished(webview, url)
-            webview.visibility = View.VISIBLE
-            bindListener()
-            sendInitialization()
+        }
+
+        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            super.onPageStarted(view, url, favicon)
+            log.info("liquid: page started(${webview.progress}%): $url")
         }
     }
 
@@ -413,15 +421,11 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
      *  step_transition(success),
      */
     private inner class JavaScriptInterface {
-        var lastEvent = ""
         @JavascriptInterface
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    if (lastEvent != eventData) {
-                        log.info("liquid: EventData::$eventData")
-                        lastEvent = eventData;
-                    }
+                    log.info("liquid: EventData::$eventData")
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {
@@ -506,8 +510,8 @@ class BuyDashWithCreditCardActivity : AppCompatActivity() {
         if (isTransactionSuccessful) {
             log.info("liquid: onBackPressed: successful transaction was made")
             setResult(Activity.RESULT_OK)
-            //super.onBackPressed()
-            finish()
+            super.onBackPressed()
+            (application as WalletDataProvider).startHomeActivity(this)
         } else {
             log.info("liquid: onBackPressed: successful transaction was not made")
             finish()

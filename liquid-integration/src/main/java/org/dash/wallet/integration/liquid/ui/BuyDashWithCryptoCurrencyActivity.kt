@@ -24,12 +24,13 @@ import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
+import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
 import org.slf4j.LoggerFactory
 
 
-class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
+class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
 
     companion object {
         private val log = LoggerFactory.getLogger(BuyDashWithCryptoCurrencyActivity::class.java)
