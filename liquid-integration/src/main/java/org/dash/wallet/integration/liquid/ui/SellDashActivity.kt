@@ -23,11 +23,12 @@ import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
+import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
 import org.slf4j.LoggerFactory
 
-class SellDashActivity : AppCompatActivity() {
+class SellDashActivity : InteractionAwareActivity() {
 
     companion object {
         private val log = LoggerFactory.getLogger(SellDashActivity::class.java)
@@ -307,6 +308,7 @@ class SellDashActivity : AppCompatActivity() {
                             when (stepTransition.data?.newStep) {
                                 "success" -> {
                                     setResult(Activity.RESULT_OK)
+                                    log.info("liquid: sell dash transaction successful")
                                     isTransestionSuccessful = true
                                 }
                             }

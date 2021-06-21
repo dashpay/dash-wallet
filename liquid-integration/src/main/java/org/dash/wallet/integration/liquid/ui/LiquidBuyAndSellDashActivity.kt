@@ -235,7 +235,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      * call api to  get liquid wallet balance
      */
     private fun getUserLiquidAccountBalance() {
-        log.error("liquid: attempting to get user liquid balance")
+        log.info("liquid: attempting to get user liquid balance")
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
             liquidClient?.getUserAccountBalance(liquidClient?.storedSessionId!!, object : LiquidClient.Callback<String> {
@@ -351,7 +351,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        log.info("liquid: onActivityResult($requestCode, $resultCode")
         if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == Activity.RESULT_OK) {
+            log.info("liquid: activity result for user buy sell dash was OK")
             setResult(Activity.RESULT_OK)
             onBackPressed()
         } else if (requestCode == 1) {

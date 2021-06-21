@@ -328,6 +328,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
                                 "success" -> {
                                     setResult(Activity.RESULT_OK)
                                     isTransestionSuccessful = true
+                                    log.info("liquid: buy dash with crypto transaction successful")
                                 }
                             }
                         }
