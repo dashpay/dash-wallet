@@ -24,6 +24,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.send.SendCoinsInternalActivity.ACTION_SEND_FROM_WALLET_URI
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_successful_transaction.*
@@ -73,6 +74,9 @@ class TransactionResultActivity : AbstractWalletActivity() {
         super.onCreate(savedInstanceState)
 
         val txId = intent.getSerializableExtra(EXTRA_TX_ID) as Sha256Hash
+        if (intent.extras?.getBoolean(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false)!!)
+            intent.putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
+
         setContentView(R.layout.activity_successful_transaction)
 
         val transactionResultViewBinder = TransactionResultViewBinder(container)
@@ -84,7 +88,8 @@ class TransactionResultActivity : AbstractWalletActivity() {
             view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
             transaction_close_btn.setOnClickListener {
                 when {
-                    intent.action == Intent.ACTION_VIEW -> {
+                    intent.action == Intent.ACTION_VIEW ||
+                            intent.action == ACTION_SEND_FROM_WALLET_URI -> {
                         finish()
                     }
                     intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
