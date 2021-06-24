@@ -304,6 +304,7 @@
     <string name="welcome_screen_subtitle_3">Tenha controle completo e customize sua carteira de acordo com suas necessidades</string>
 
     <string name="sync_status_wait">Por favor aguarde que a sincronização termine</string>
+    <string name="sync_status_syncing_title">Sincronizando%1$d</string>
     <string name="sync_status_syncing_sub_title">com a blockchain de Dash</string>
     <string name="sync_status_unable_to_connect">Não foi possível conectar</string>
     <string name="sync_status_check_connection">Verifique sua conexão</string>
@@ -332,6 +333,8 @@
     <string name="import_image_invalid_private">Chave Privada Inválida</string>
 
     <string name="syncing">Sincronizando</string>
+    <string name="syncing_balance">Sincronizando Saldo</string>
+
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recebido</string>
     <string name="sent_transactions">Enviado</string>

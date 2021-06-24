@@ -147,7 +147,6 @@
     <string name="wallet_lock_wrong_pin">رقم سري خاطئ %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
-        <item quantity="zero">%dالمحاولات المتبقية</item>
         <item quantity="one">%dالمحاولات المتبقية</item>
         <item quantity="two">%dالمحاولات المتبقية</item>
         <item quantity="few">%dالمحاولات المتبقية</item>
@@ -156,7 +155,6 @@
     </plurals>
 
     <plurals name="minute">
-        <item quantity="zero">دقائق</item>
         <item quantity="one">دقائق</item>
         <item quantity="two">دقائق</item>
         <item quantity="few">دقائق</item>
@@ -165,7 +163,6 @@
     </plurals>
 
     <plurals name="hour">
-        <item quantity="zero">ساعات</item>
         <item quantity="one">ساعات</item>
         <item quantity="two">ساعات</item>
         <item quantity="few">ساعات</item>
@@ -316,6 +313,7 @@
     <string name="welcome_screen_subtitle_3">تمتع بالتحكم الكامل وتخصيص محفظتك بناءً على احتياجاتك</string>
 
     <string name="sync_status_wait">يرجى الانتظار حتى تكتمل المزامنة</string>
+    <string name="sync_status_syncing_title">يتم المزامنة%1$d</string>
     <string name="sync_status_syncing_sub_title">مع بلوكشين داش</string>
     <string name="sync_status_unable_to_connect">غير قادر على الاتصال</string>
     <string name="sync_status_check_connection">افحص اتصالك</string>
@@ -344,6 +342,8 @@
     <string name="import_image_invalid_private">مفتاح خاص غير صالح</string>
 
     <string name="syncing">يتم المزامنة</string>
+    <string name="syncing_balance">يتم مزامنة الرصيد ...</string>
+
     <string name="all_transactions">الكل</string>
     <string name="received_transactions">تم الاستلام</string>
     <string name="sent_transactions">أرسلت </string>
