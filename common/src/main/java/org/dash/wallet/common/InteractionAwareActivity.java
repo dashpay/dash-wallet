@@ -56,9 +56,13 @@ public class InteractionAwareActivity extends AppCompatActivity {
     }
 
     @Override
-    public void finish() {
-        unregisterReceiver(forceFinishReceiver);
-        super.finish();
+    protected void onDestroy() {
+        try {
+            unregisterReceiver(forceFinishReceiver);
+        } catch (Exception e) {
+            // already unregistered
+        }
+        super.onDestroy();
     }
 
     private final BroadcastReceiver forceFinishReceiver = new BroadcastReceiver() {
