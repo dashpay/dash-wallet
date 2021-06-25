@@ -25,13 +25,14 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import androidx.annotation.Nullable;
-import androidx.browser.customtabs.CustomTabsIntent;
-import androidx.core.content.ContextCompat;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.widget.Toolbar;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.content.ContextCompat;
 
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
@@ -74,11 +75,17 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
                 openLoginUrl();
             }
         });
+
+        handleIntent(getIntent());
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+//        handleIntent(intent);
+    }
+
+    private void handleIntent(final Intent intent) {
         Bundle extras = intent.getExtras();
         if (extras != null && extras.containsKey(UPHOLD_EXTRA_CODE)
                 && extras.containsKey(UPHOLD_EXTRA_STATE)) {
@@ -162,13 +169,14 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
 
         CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url),
                 new CustomTabActivityHelper.CustomTabFallback() {
-            @Override
-            public void openUri(Activity activity, Uri uri) {
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(Uri.parse(url));
-                startActivity(intent);
-            }
-        });
+                    @Override
+                    public void openUri(Activity activity, Uri uri) {
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setData(Uri.parse(url));
+                        startActivity(intent);
+                    }
+                });
+        finish();
     }
 
     @Override

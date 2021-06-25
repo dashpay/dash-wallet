@@ -171,7 +171,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     }
 
     private fun handleSpecifyAmount() {
-        context.startActivity(Intent(context, ReceiveActivity::class.java))
+        context.startActivity(ReceiveActivity.createIntent(context))
     }
 
     private fun handleShare() {

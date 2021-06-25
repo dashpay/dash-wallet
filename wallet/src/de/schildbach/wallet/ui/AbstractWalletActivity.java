@@ -84,10 +84,6 @@ public abstract class AbstractWalletActivity extends InteractionAwareActivity im
         }
     }
 
-    protected WalletApplication getWalletApplication() {
-        return application;
-    }
-
     @Override
     public Wallet getWallet() {
         return application.getWallet();

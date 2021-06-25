@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Ορίστε ένα νέο PIN</string>
     <string name="forgot_pin_instruction_3">Συνδεθείτε με το νέο σας PIN για να αποκτήσετε πρόσβαση στο πορτοφόλι σας</string>
     <string name="forgot_pin_warning">Αν έχετε ξεχάσει το PIN και χάσατε τη φράση ανάκτησης, δεν μπορείτε να πάρετε πίσω την πρόσβαση στο πορτοφόλι και στα χρήματα σας.</string>
+    <string name="forgot_pin_recover">Εισάγετε την φράσης ανάκτησης</string>
+    <string name="forgot_pin_passphrase_doesnt_match">Η φράση ανάκτησης δεν ταιριάζει με αυτή που δημιουργήθηκε για το συγκεκριμένο πορτοφόλι.</string>
+
     <string name="send_coins_auto_lock_feasible">Αυτή η συναλλαγή θα πρέπει να διευθετηθεί άμεσα χωρίς πρόσθετη χρέωση</string>
     <string name="send_coins_auto_lock_not_feasible">Αυτή η συναλλαγή μπορεί να διαρκέσει αρκετά λεπτά για να διευθετηθεί. Να ολοκληρωθεί άμεσα για %1$s%2$s;</string>
     <string name="send_coins_instant_send_not_feasible">Αυτή η συναλλαγή μπορεί να διαρκέσει αρκετά λεπτά για να διευθετηθεί.</string>
@@ -323,8 +326,15 @@
     <string name="payment_request_please_try_again">Παρακαλώ προσπαθήστε ξανά</string>
     <string name="payment_request_try_again">Προσπαθήστε ξανά</string>
     <string name="payment_request_problem_title">Η πληρωμή δεν αναγνωρίστηκε</string>
+    <string name="payment_request_problem_message">Δεν ήταν δυνατή η επεξεργασία της πληρωμής σας από τον διακομιστή, παρακαλώ ρωτήστε τον έμπορο</string>
     <string name="payment_request_expired_title">Το αίτημα πληρωμής Έληξε</string>
     <string name="payment_request_close">κλείσιμο</string>
     <string name="payment_request_skip">Παράλειψη</string>
     <string name="payment_request_paid_to">Πληρώθηκε σε</string>
+
+    <string name="import_image_not_valid_qr_code">Μη έγκυρος κωδικός QR</string>
+    <string name="import_image_please_use_valid_qr_code">Παρακαλώ χρησιμοποιήστε έναν έγκυρο Dash QR κωδικό </string>
+    <string name="import_image_no_private_key_copied">Δεν αντιγράφηκε κανένα ιδιωτικό κλειδί</string>
+    <string name="import_image_import_valid_private_key">Αντιγράψτε ένα έγκυρο ιδιωτικό κλειδί για να εισάγετε Dash από αυτό</string>
+    <string name="import_image_invalid_private">Μη έγκυρο ιδιωτικό κλειδί</string>
 </resources>
