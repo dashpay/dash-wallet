@@ -164,7 +164,7 @@ public class WalletTransactionsFragment extends Fragment
             @Override
             public void onChanged(BlockchainIdentityBaseData blockchainIdentityData) {
                 if (blockchainIdentityData != null) {
-                    ((InteractionAwareActivity)requireActivity()).imitateUserInteraction();
+                    ((LockScreenActivity)requireActivity()).imitateUserInteraction();
                     adapter.setBlockchainIdentityData(blockchainIdentityData);
                 }
             }

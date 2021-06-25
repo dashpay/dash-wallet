@@ -122,6 +122,10 @@ open class LockScreenActivity : AppCompatActivity() {
         setLockState(State.ENTER_PIN)
     }
 
+    open fun imitateUserInteraction() {
+        onUserInteraction()
+    }
+
     override fun onUserInteraction() {
         super.onUserInteraction()
 

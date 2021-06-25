@@ -47,6 +47,7 @@ class TransactionResultActivity : AbstractWalletActivity() {
 
     companion object {
         private const val EXTRA_TX_ID = "tx_id"
+        private const val EXTRA_USER_AUTHORIZED_RESULT_EXTRA = "user_authorized_result_extra"
         private const val EXTRA_USER_AUTHORIZED = "user_authorized"
         private const val EXTRA_PAYMENT_MEMO = "payee_name"
         private const val EXTRA_PAYEE_VERIFIED_BY = "payee_verified_by"
@@ -118,10 +119,10 @@ class TransactionResultActivity : AbstractWalletActivity() {
                         finish()
                     }
                     intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
-                        startActivity(WalletActivity.createIntent(this))
+                        startActivity(MainActivity.createIntent(this))
                     }
                     else -> {
-                        startActivity(WalletActivity.createIntent(this))
+                        startActivity(MainActivity.createIntent(this))
                     }
                 }
             }
@@ -174,16 +175,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
             check_icon.visibility = View.VISIBLE
             (check_icon.drawable as Animatable).start()
         }, 400)
-    }
-
-    override fun finish() {
-        if (isUserAuthorised) {
-            startActivity(MainActivity.createIntent(this))
-        } else {
-            startActivity(LockScreenActivity.createIntentAsNewTask(this))
-        }
-        transaction.confidence.removeEventListener(transactionResultViewBinder)
-        super.finish()
     }
 
     private fun viewOnExplorer(tx: Transaction) {

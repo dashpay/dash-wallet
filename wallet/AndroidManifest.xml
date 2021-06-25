@@ -176,9 +176,7 @@
             android:name="de.schildbach.wallet.ui.SendCoinsQrActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.Transparent" />
-            android:theme="@style/LockScreenActivity.Child.Theme" >
-        </activity>
+            android:theme="@style/LockScreenActivity.Child.Theme" />
         <activity
             android:name="de.schildbach.wallet.ui.RequestCoinsActivity"
             android:configChanges="keyboard|keyboardHidden"

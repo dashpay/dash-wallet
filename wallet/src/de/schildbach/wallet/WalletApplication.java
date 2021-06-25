@@ -111,7 +111,8 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler, WalletDataProvider {
+public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler,
+        androidx.work.Configuration.Provider, WalletDataProvider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
