@@ -22,8 +22,8 @@ import android.text.TextUtils
 import com.securepreferences.SecurePreferences
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.slf4j.LoggerFactory
 import retrofit2.Call
@@ -39,30 +39,14 @@ class LiquidClient private constructor(context: Context, private val encryptionK
     private val service: LiquidService
     private val prefs: SharedPreferences
 
-
-    private val loggingIntercepter = Interceptor { chain ->
-        val request = chain.request()
-        val t1 = System.nanoTime()
-        log.info(
-            String.format(
-                "liquid: Sending request %s on %s",
-                request.url(), chain.connection()
-            )
-        )
-        val response = chain.proceed(request)
-        val t2 = System.nanoTime()
-        log.info(
-            String.format(
-                "liquid: Received response for %s in %.1fms%n   %s",
-                response.request().url(), (t2 - t1) / 1e6, response.networkResponse()
-            )
-        )
-        response
-    }
-
     init {
         prefs = SecurePreferences(context, encryptionKey, LIQUID_PREFS)
-        val okClient = OkHttpClient.Builder().addInterceptor(loggingIntercepter).build()
+        val interceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        val okClient = OkHttpClient.Builder()
+                .addInterceptor(interceptor)
+                .build()
 
         val baseUrl = LiquidConstants.CLIENT_BASE_URL
         val retrofit = Retrofit.Builder()

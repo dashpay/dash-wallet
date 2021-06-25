@@ -24,7 +24,6 @@ import com.securepreferences.SecurePreferences;
 import com.squareup.moshi.Moshi;
 
 import org.dash.wallet.common.data.BigDecimalAdapter;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +36,7 @@ import java.util.Map;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.internal.http2.Header;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -78,33 +77,18 @@ public class UpholdClient {
 
     };
 
-    private Interceptor loggingIntercepter = new Interceptor() {
-
-        @Override
-        public okhttp3.Response intercept(Interceptor.Chain chain) throws IOException {
-            Request request = chain.request();
-
-            long t1 = System.nanoTime();
-            log.info(String.format("Sending request %s on %s",
-                    request.url(), chain.connection()));
-
-            okhttp3.Response response = chain.proceed(request);
-
-            long t2 = System.nanoTime();
-            log.info(String.format("Received response for %s in %.1fms%n  %s",
-                    response.request().url(), (t2 - t1) / 1e6d, response.networkResponse()));
-
-            return response;
-        }
-    };
-
     private UpholdClient(Context context, String prefsEncryptionKey) {
         this.encryptionKey = prefsEncryptionKey;
         this.prefs = new SecurePreferences(context, prefsEncryptionKey, UPHOLD_PREFS);
         this.accessToken = getStoredAccessToken();
 
         String baseUrl = UpholdConstants.CLIENT_BASE_URL;
-        OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).addInterceptor(loggingIntercepter).build();
+        HttpLoggingInterceptor loggingIntercepter = new HttpLoggingInterceptor();
+        loggingIntercepter.setLevel(HttpLoggingInterceptor.Level.BODY);
+        OkHttpClient okClient = new OkHttpClient.Builder()
+                .addInterceptor(headerInterceptor)
+                .addInterceptor(loggingIntercepter)
+                .build();
 
         Moshi moshi = new Moshi.Builder()
                 .add(new BigDecimalAdapter())
