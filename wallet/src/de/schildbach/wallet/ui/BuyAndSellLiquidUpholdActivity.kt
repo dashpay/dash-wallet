@@ -33,6 +33,7 @@ import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
+import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 
 
@@ -57,6 +58,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
 
     companion object {
+        val log = LoggerFactory.getLogger(BuyAndSellLiquidUpholdActivity::class.java)
         fun createIntent(context: Context?): Intent {
             return Intent(context, BuyAndSellLiquidUpholdActivity::class.java)
         }
@@ -65,6 +67,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        log.info("starting Buy and Sell Dash activity")
         setContentView(R.layout.activity_buy_and_sell_liquid_uphold)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -193,6 +196,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
             })
         } else {
             GenericUtils.showToast(this, getString(org.dash.wallet.integration.liquid.R.string.internet_connected))
+            log.error("liquid: There is no internet connection")
         }
     }
 
@@ -273,6 +277,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == Activity.RESULT_OK) {
+            log.info("liquid: activity result for user buy sell dash was OK")
             if (LiquidClient.getInstance()!!.isAuthenticated) {
                 getUserLiquidAccountBalance()
             }

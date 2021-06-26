@@ -24,11 +24,17 @@ import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
+import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
+import org.slf4j.LoggerFactory
 
 
-class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
+class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(BuyDashWithCryptoCurrencyActivity::class.java)
+    }
 
     private lateinit var webview: WebView
     private var walletAddress: String? = null
@@ -39,6 +45,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
 
 
     public override fun onCreate(savedInstanceState: Bundle?) {
+        log.info("liquid: starting buy dash with crypto currency")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview_quick_exchange)
         webview = findViewById(R.id.webview)
@@ -191,6 +198,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
     var uploadMessageAboveL: ValueCallback<Array<Uri?>?>? = null
 
     private fun openImageChooserActivity() {
+        log.info("liquid: open image chooser")
         val i = Intent(Intent.ACTION_GET_CONTENT)
         i.addCategory(Intent.CATEGORY_OPENABLE)
         i.setType("image/*")
@@ -254,7 +262,11 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
     }
 
     private inner class MyBrowser : WebViewClient() {
+        var lastUrl = ""
         override fun onPageFinished(webview: WebView, url: String) {
+            if (lastUrl != url) {
+                log.info("liquid: page finished: $url")
+            }
             super.onPageFinished(webview, url)
             webview.visibility = View.VISIBLE
             bindListener()
@@ -293,18 +305,21 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
         )
         val initializationJson = Gson().toJson(initializationConfig)
 
-        println("PARAMS:::" + initializationJson)
         executeJavascriptInWebview(
                 "window.initializeWidget(JSON.parse('$initializationJson'));"
         );
     }
 
     private inner class JavaScriptInterface {
+        var lastEvent = ""
         @JavascriptInterface
         fun handleData(eventData: String) {
             runOnUiThread {
                 try {
-                    println("EventData::$eventData")
+                    if (lastEvent != eventData) {
+                        log.info("liquid: EventData::$eventData")
+                        lastEvent = eventData;
+                    }
                     val base = Gson().fromJson(eventData, WidgetEvent::class.java)
                     when (base?.event) {
                         "step_transition" -> {
@@ -314,15 +329,17 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
                                 "success" -> {
                                     setResult(Activity.RESULT_OK)
                                     isTransestionSuccessful = true
+                                    log.info("liquid: buy dash with crypto transaction successful")
                                 }
                             }
                         }
                         "ERROR" -> {
                             error = eventData
+                            log.error("liquid: $error")
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    log.error("liquid:  ${e.message}", e)
                 }
             }
         }
@@ -336,6 +353,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
     }
 
     fun executeJavascriptInWebview(rawJavascript: String) {
+        log.info("liquid: execute script: $rawJavascript")
         runOnUiThread {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
                 webview.evaluateJavascript(rawJavascript, null);
@@ -376,6 +394,7 @@ class BuyDashWithCryptoCurrencyActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        log.info("liquid: closing buy dash with crypto currency")
         webview.removeJavascriptInterface(mJsInterfaceName)
         super.onDestroy()
     }

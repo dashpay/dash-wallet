@@ -35,6 +35,7 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
+import org.slf4j.LoggerFactory
 
 
 class LiquidSplashActivity : InteractionAwareActivity() {
@@ -43,6 +44,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     private var liquidClient: LiquidClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        log.info("liquid: starting liquid splash activity")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.liquid_splash_screen)
         val toolbar = findViewById<View>(R.id.toolbar) as Toolbar
@@ -78,10 +80,15 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         val intentUri = intent.data
         val scheme = intentUri?.scheme
         val host = intentUri?.host
+        log.info("liquid: deep link handleIntent($action, $intentUri, $scheme, $host)")
 
         if (Intent.ACTION_VIEW == action
                 && scheme == LiquidConstants.OAUTH_CALLBACK_SCHEMA
                 && host == LiquidConstants.OAUTH_CALLBACK_HOST) {
+            log.info("liquid: action is ACTION_VIEW, so get the userId")
+            log.info("liquid: session id is valid: ${liquidClient?.storedSessionId?.isNotEmpty()}: ${liquidClient?.storedSessionId}")
+            //TODO: it is possible that liquidClient?.storedSessionId == null, and if it is
+            //TODO: getUserId() will fail and an error is reported to the user
             getUserId()
         }
     }
@@ -92,6 +99,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     override fun onDestroy() {
+        log.info("liquid: closing liquid splash activity")
         loadingDialog?.dismiss()
         super.onDestroy()
     }
@@ -100,12 +108,14 @@ class LiquidSplashActivity : InteractionAwareActivity() {
      * call api for get session id
      */
     private fun authUser() {
+        log.info("liquid: authenticating user (obtaining session id)...")
         if (GenericUtils.isInternetConnected(this)) {
             if (liquidClient!!.storedSessionId!!.isEmpty()) {
                 loadingDialog!!.show()
                 liquidClient?.getSessionId(LiquidConstants.PUBLIC_API_KEY, object : LiquidClient.Callback<String> {
 
                     override fun onSuccess(data: String) {
+                        log.info("liquid: get session id successful")
                         if (isFinishing) {
                             return
                         }
@@ -114,6 +124,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
                     }
 
                     override fun onError(e: Exception?) {
+                        log.error("liquid: cannot obtain session id: ${e?.message}")
                         if (isFinishing) {
                             return
                         }
@@ -126,6 +137,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
             }
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
+            log.error("liquid: cannot connect to internet")
         }
     }
 
@@ -133,11 +145,13 @@ class LiquidSplashActivity : InteractionAwareActivity() {
      * Call api to get user liquid details
      */
     private fun getUserId() {
+        log.info("liquid: requesting user details")
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
             liquidClient?.getUserKycState(liquidClient?.storedSessionId!!, object : LiquidClient.Callback<String> {
 
                 override fun onSuccess(data: String) {
+                    log.info("liquid: get user id successful")
                     if (isFinishing) {
                         return
                     }
@@ -146,6 +160,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
                 }
 
                 override fun onError(e: Exception?) {
+                    log.error("liquid: cannot obtain user id: ${e?.message}")
                     if (isFinishing) {
                         return
                     }
@@ -156,6 +171,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
             })
         } else {
             GenericUtils.showToast(this, getString(R.string.internet_connected))
+            log.error("liquid: cannot connect to internet")
         }
     }
 
@@ -184,8 +200,8 @@ class LiquidSplashActivity : InteractionAwareActivity() {
      * Open login url in webview
      */
     private fun openLoginUrl(sessionId: String) {
-
         val url = "${LiquidConstants.INITIAL_URL}${sessionId}/liquid_oauth?preferred_action=follow_href&theme=light&return_url=${LiquidConstants.OAUTH_CALLBACK_URL}"
+        log.info("liquid: opening webview to log in: $url")
 
         val builder = CustomTabsIntent.Builder()
         val toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary)
@@ -200,6 +216,8 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
         CustomTabActivityHelper.openCustomTab(this, customTabsIntent, uri
         ) { _, _ ->
+            log.info("liquid: login failure because custom tabs is not available")
+            log.info("liquid: using the web browser instead for $uri")
             val intent = Intent(Intent.ACTION_VIEW)
             intent.data = uri
             startActivity(intent)
@@ -218,6 +236,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     companion object {
         const val LOGIN_REQUEST_CODE = 102
+        val log = LoggerFactory.getLogger(LiquidSplashActivity::class.java)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

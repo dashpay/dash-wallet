@@ -19,11 +19,12 @@ package org.dash.wallet.integration.liquid.data
 import android.content.Context
 import android.content.SharedPreferences
 import android.text.TextUtils
-import android.util.Log
-import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import com.securepreferences.SecurePreferences
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.slf4j.LoggerFactory
 import retrofit2.Call
 import retrofit2.Response
@@ -40,9 +41,18 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     init {
         prefs = SecurePreferences(context, encryptionKey, LIQUID_PREFS)
+        val interceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+        interceptor.redactHeader("Authorization")
+        val okClient = OkHttpClient.Builder()
+                .addInterceptor(interceptor)
+                .build()
+
         val baseUrl = LiquidConstants.CLIENT_BASE_URL
         val retrofit = Retrofit.Builder()
                 .baseUrl(baseUrl)
+                .client(okClient)
                 .addConverterFactory(ScalarsConverterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
@@ -71,6 +81,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     fun getSessionId(publicApiKey: String, callback: Callback<String>) {
         //force_kyc commented param will take you to kyc process without creating new user
+        log.info("liquid: requesting session id")
         service.getSessionId(publicApiKey/*,true*/).enqueue(object : retrofit2.Callback<LiquidSessionId?> {
             override fun onResponse(call: Call<LiquidSessionId?>, response: Response<LiquidSessionId?>) {
                 if (response.isSuccessful) {
@@ -80,6 +91,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                         if (!TextUtils.isEmpty(sessionId) && !TextUtils.isEmpty(sessionSecret)) {
                             storeSessionId(sessionId!!)
                             storeSessionSecret(sessionSecret!!)
+                            log.info("liquid: successfully obtained session id")
                             callback.onSuccess(sessionId)
                         } else {
                             callback.onError(LiquidException("Error obtaining liquid sessionId", response.message(), response.code()))
@@ -101,7 +113,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
     fun getUserKycState(sessionId: String, callback: Callback<String>) {
         try {
 
-
+            log.info("liquid: requesting user kyc state")
             val token = getAuthToken("/api/v1/session/$sessionId/kyc_state")
 
             service.getUserKycState(sessionId, token).enqueue(object : retrofit2.Callback<UserKycState?> {
@@ -113,10 +125,10 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                             storeUserId(userId!!)
                             callback.onSuccess(userId)
                         } else {
-                            callback.onError(LiquidException("Error obtaining liquid user id", response.message(), response.code()))
+                            callback.onError(LiquidException("Error obtaining liquid user kyc state", response.message(), response.code()))
                         }
                     } else {
-                        callback.onError(LiquidException("Error obtaining liquid user id", response.message(), response.code()))
+                        callback.onError(LiquidException("Error obtaining liquid user kyc state", response.message(), response.code()))
                     }
                 }
 
@@ -133,6 +145,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     fun getUserAccountBalance(sessionId: String, callback: Callback<String>) {
         try {
+            log.info("liquid: requesting user account balance")
             val token = getAuthToken("/api/v1/session/$sessionId/accounts")
 
             service.getUserAccount(sessionId, token).enqueue(object : retrofit2.Callback<String?> {
@@ -158,6 +171,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     fun getUserAccountAddress(sessionId: String, require_address: Boolean, callback: Callback<String>) {
         try {
+            log.info("liquid: requesting user account address")
             val token = getAuthToken("/api/v1/session/$sessionId/accounts/DASH")
 
             service.getUserAccountAddress(sessionId, require_address, token).enqueue(object : retrofit2.Callback<String?> {
@@ -166,7 +180,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                     if (response.isSuccessful) {
                         callback.onSuccess(response.body()!!)
                     } else {
-                        callback.onError(LiquidException("Error obtaining liquid user id", response.message(), response.code()))
+                        callback.onError(LiquidException("Error obtaining liquid user account address", response.message(), response.code()))
                     }
                 }
 
@@ -184,7 +198,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     fun revokeAccessToken(callback: Callback<String?>) {
         try {
-
+            log.info("liquid: revoking access token")
             val token = getAuthToken("/api/v1/session/$storedSessionId/terminate")
 
             service.terminateSession(storedSessionId!!, token).enqueue(object : retrofit2.Callback<LiquidTerminateSession?> {
@@ -212,6 +226,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
      */
     fun getAllCurrencies(callback: Callback<CurrencyResponse>) {
         try {
+            log.info("liquid: requesting all currencies")
 
             service.getAllCurrencies(LiquidConstants.PUBLIC_API_KEY).enqueue(object : retrofit2.Callback<CurrencyResponse> {
                 override fun onResponse(call: Call<CurrencyResponse>, response: Response<CurrencyResponse>) {
@@ -227,8 +242,8 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                 }
             })
         } catch (e: Exception) {
+            log.error("liquid: get all currencies exception:", e)
             callback.onError(e)
-            Log.v("onError....", e.toString())
         }
     }
 
@@ -278,7 +293,6 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                 .claim("nonce", System.currentTimeMillis())
                 .compact()
 
-        Log.v("JWT : - ", jwt)
         val token = "Bearer $jwt"
 
         return token
