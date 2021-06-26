@@ -44,6 +44,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
         val interceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
+        interceptor.redactHeader("Authorization")
         val okClient = OkHttpClient.Builder()
                 .addInterceptor(interceptor)
                 .build()
