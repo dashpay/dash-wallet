@@ -233,6 +233,6 @@ android {
     }
 }
 
-apply plugin: 'com.google.gms.google-services'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
+apply from: file("../gradle/google-services.gradle")
