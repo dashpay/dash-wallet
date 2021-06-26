@@ -511,7 +511,6 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
             log.info("liquid: onBackPressed: successful transaction was made")
             setResult(Activity.RESULT_OK)
             super.onBackPressed()
-            (application as WalletDataProvider).startHomeActivity(this)
         } else {
             log.info("liquid: onBackPressed: successful transaction was not made")
             finish()
