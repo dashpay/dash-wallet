@@ -39,7 +39,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="center_horizontal"
-            android:text="Choose your payment method"
+            android:text="@string/choose_your_payment_method"
             android:textColor="@color/dash_gray"
             android:textSize="15sp" />
 

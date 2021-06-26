@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">关联Liquid账户</string>
+    <string name="buy_dash_with_liquid_account">通过信用卡购买Dash</string>
+    <string name="liquid_logout">退出</string>
+    <string name="liquid_logout_title">从Liquid退出</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">以其他加密货币来交换Dash</string>
+    <string name="transfer_dash_to_and_from_account">将Dash从您的liquid账户转出或转入</string>
+
+    <string name="cryptocurrency">加密货币</string>
+    <string name="credit_card">信用卡</string>
+
+    <string name="buy">购买</string>
+    <string name="buy_dash">购买Dash</string>
+    <string name="sell_dash">出售Dash</string>
+    <string name="buy_sell_dash_">买 &amp; 卖 Dash</string>
+    <string name="button_cancel">取消</string>
+    <string name="choose_your_payment_method">选择您的支付方式</string>
+    <string name="crypto_support">加密货币支持</string>
+    <string name="okay">好的</string>
+    <string name="close">关闭</string>
+    <string name="list_of_countries">查看不支持的国家列表</string>
+    <string name="buying_dash_not_supported">在一些国家不支持使用加密货币购买Dash</string>
+    <string name="buying_dash_success_message">您可以关闭此窗口, 您的Dash将被发送到您的钱包.</string>
+
+    <string name="confirm">确认</string>
+    <string name="card_fees">卡的手续费</string>
+    <string name="conversion_rate">汇率</string>
+    <string name="network_fee">网络手续费</string>
+    <string name="total">总计</string>
+    <string name="connect">连接</string>
+    <string name="connected">已连接</string>
+    <string name="buy_sell_dash">购入 &amp;amp; 出售Dash或创建新账户</string>
+
+
+    <string name="transfer_to_liquid">转入Liquid</string>
+    <string name="transfer_from_liquid">从Liquid转出</string>
+    <string name="disconnect">未连接</string>
+    <string name="select_crypto_currency">选择加密货币</string>
+    <string name="select_sell_currency">选择出售货币</string>
+    <string name="select_buy_currency">选择购入货币</string>
+    <string name="select_fiat_currency">选择法币</string>
+    <string name="show_payment_qr_code">显示付款二维码</string>
+    <string name="pay_with_btc_from_liquid">从Liquid使用BTC付款</string>
+    <string name="or">或</string>
+
+    <string name="internet_connected">请连接到网络</string>
+    <string name="please_enter_amount">请输入金额</string>
+
+    <string name="choose_what_you_receive">选择您的接收</string>
+    <string name="fiat_currency">法币</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">转账</string>
+    <string name="filter_by">过滤条件</string>
+</resources>

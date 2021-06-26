@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Привязать аккаунт Liquid</string>
+    <string name="buy_dash_with_liquid_account">Купить Dash с помощью кредитной карты</string>
+    <string name="liquid_logout">Выйти</string>
+    <string name="liquid_logout_title">Выйти из Liquid</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Обменять Dash на другие криптовалюты</string>
+    <string name="transfer_dash_to_and_from_account">Внести или вывести Dash из вашего Liquid аккаунта</string>
+
+    <string name="cryptocurrency">Криптовалюта</string>
+    <string name="credit_card">Кредитная карта</string>
+
+    <string name="buy">Купить</string>
+    <string name="buy_dash">Купить Dash</string>
+    <string name="sell_dash">Продать Dash</string>
+    <string name="buy_sell_dash_">Купить &amp; Продать Dash</string>
+    <string name="button_cancel">Отмена</string>
+    <string name="choose_your_payment_method">Выберите способ оплаты</string>
+    <string name="crypto_support">Крипто Поддержка</string>
+    <string name="okay">Да</string>
+    <string name="close">Закрыть</string>
+    <string name="list_of_countries">Посмотреть список неподдерживаемых стран</string>
+    <string name="buying_dash_not_supported">Покупка Dash за криптовалюту не поддерживается в некоторых странах</string>
+    <string name="buying_dash_success_message">Этот экран можно закрыть, Dash будет отправлен на ваш кошелёк. </string>
+
+    <string name="confirm">Подтвердить</string>
+    <string name="card_fees">Комиссии карты</string>
+    <string name="conversion_rate">Обменный курс</string>
+    <string name="network_fee">Комиссия сети</string>
+    <string name="total">Всего</string>
+    <string name="connect">Подключиться</string>
+    <string name="connected">Подключено</string>
+    <string name="buy_sell_dash">Купить и продать Dash или создать новый аккаунт</string>
+
+
+    <string name="transfer_to_liquid">Перевести в Liquid</string>
+    <string name="transfer_from_liquid">Перевести из Liquid</string>
+    <string name="disconnect">Отключить</string>
+    <string name="select_crypto_currency">Выберите криптовалюту</string>
+    <string name="select_sell_currency">Выберите валюту для продажи</string>
+    <string name="select_buy_currency">Выберите валюту для покупки</string>
+    <string name="select_fiat_currency">Выберите фиатную валюту</string>
+    <string name="show_payment_qr_code">Показать QR-код для оплаты</string>
+    <string name="pay_with_btc_from_liquid">Оплатить BTC с Liquid</string>
+    <string name="or">или</string>
+
+    <string name="internet_connected">Пожалуйста, подключитесь к Интернету</string>
+    <string name="please_enter_amount">Пожалуйста, введите количество</string>
+
+    <string name="choose_what_you_receive">Выберите, что вы получите</string>
+    <string name="fiat_currency">Фиатная валюта</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">Перевести</string>
+    <string name="filter_by">Отобрано по</string>
+</resources>

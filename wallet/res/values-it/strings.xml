@@ -376,4 +376,10 @@
     <string name="payment_protocol_default_error_title">Errore di pagamento</string>
     <string name="payment_protocol_insufficient_funds_error_title">Fondi insufficenti</string>
     <string name="payment_protocol_insufficient_funds_error_message">Non hai fondi sufficienti per completare questa transazione</string>
+
+
+
+    <string name="select_a_service">Seleziona un servizio</string>
+    <string name="activity_buy_and_sell_dash_filter">Filtro</string>
+    <string name="clear_filter">Filtro pulito</string>
 </resources>

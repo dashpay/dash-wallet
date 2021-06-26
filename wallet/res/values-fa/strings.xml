@@ -376,4 +376,8 @@
     <string name="payment_protocol_default_error_title">خطا در پرداخت</string>
     <string name="payment_protocol_insufficient_funds_error_title">موجودی ناکافی</string>
     <string name="payment_protocol_insufficient_funds_error_message">موجودی‌تان برای انجام این تراکنش، کافی نیست</string>
-</resources>
+
+
+
+    <string name="activity_buy_and_sell_dash_filter">فیلتر</string>
+    </resources>

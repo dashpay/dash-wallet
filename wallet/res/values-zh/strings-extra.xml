@@ -269,9 +269,9 @@
     <string name="confirm">确认</string>
 
     <string name="advanced_security_security_level">安全级别</string>
-    <string name="auto_logout">自动登出</string>
+    <string name="auto_logout">自动退出</string>
     <string name="spending_confirmation">支出确认</string>
-    <string name="logout_after">登出后</string>
+    <string name="logout_after">退出后</string>
     <string name="immediately">立即</string>
     <string name="twenty_four_hours">24 小时</string>
     <string name="one_minute">1 分钟</string>
@@ -300,14 +300,8 @@
     <string name="welcome_screen_title_3">更多控制</string>
     <string name="welcome_screen_subtitle_3">完全控制并根据需求定制您的钱包</string>
 
-    <string-array name="history_filter">
-        <item>所有</item>
-        <item>已接收</item>
-        <item>已发送</item>
-    </string-array>
-
     <string name="sync_status_wait">请等待同步完成</string>
-    <string name="sync_status_syncing_title">正在同步</string>
+    <string name="sync_status_syncing_title">正在同步 %1$d</string>
     <string name="sync_status_syncing_sub_title">以Dash区块链</string>
     <string name="sync_status_unable_to_connect">无法连接</string>
     <string name="sync_status_check_connection">检查您的连接</string>
@@ -334,4 +328,11 @@
     <string name="import_image_no_private_key_copied">未复制私钥</string>
     <string name="import_image_import_valid_private_key">复制一个有效的私钥并将其中的Dash导入</string>
     <string name="import_image_invalid_private">无效的私钥</string>
+
+    <string name="syncing">正在同步</string>
+    <string name="syncing_balance">正在同步余额</string>
+
+    <string name="all_transactions">所有</string>
+    <string name="received_transactions">已接收</string>
+    <string name="sent_transactions">已发送</string>
 </resources>

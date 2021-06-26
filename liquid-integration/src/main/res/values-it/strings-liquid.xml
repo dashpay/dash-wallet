@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Collega account Liquid</string>
+    <string name="buy_dash_with_liquid_account">Acquista Dash con carta di credito</string>
+    <string name="liquid_logout">Disconnetti</string>
+    <string name="liquid_logout_title">Esci da Liquid</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Scambia Dash con altre criptovalute</string>
+    <string name="transfer_dash_to_and_from_account">Trasferisci Dash da e verso il tuo conto Liquid</string>
+
+    <string name="cryptocurrency">Criptovaluta</string>
+    <string name="credit_card">Carta di Credito</string>
+
+    <string name="buy">Compra</string>
+    <string name="buy_dash">Compra Dash</string>
+    <string name="sell_dash">Vendi Dash</string>
+    <string name="buy_sell_dash_">Compra &amp; Vendi Dash</string>
+    <string name="button_cancel">Annulla</string>
+    <string name="choose_your_payment_method">Scegli il tuo metodo di pagamento</string>
+    <string name="crypto_support">Supporto crittografico</string>
+    <string name="okay">Bene</string>
+    <string name="close">Chiudi</string>
+    <string name="list_of_countries">Visualizza l\'elenco dei paesi non supportati</string>
+    <string name="buying_dash_not_supported">L\'acquisto di Dash con criptovaluta non è supportato in alcuni paesi</string>
+    <string name="buying_dash_success_message">Puoi chiudere questa schermata, i tuoi Dash verranno inviati al tuo portafoglio.</string>
+
+    <string name="confirm">Confermare</string>
+    <string name="card_fees">Commissioni della carta</string>
+    <string name="conversion_rate">Tasso di Cambio</string>
+    <string name="network_fee">Commissione di Rete</string>
+    <string name="total">Totale</string>
+    <string name="connect">Connettere</string>
+    <string name="connected">Connesso</string>
+    <string name="buy_sell_dash">Per acquistare &amp;amp; vendi Dash o crea un nuovo account</string>
+
+
+    <string name="transfer_to_liquid">Trasferimento a Liquid</string>
+    <string name="transfer_from_liquid">Trasferimento da Liquid</string>
+    <string name="disconnect">Disconnesso</string>
+    <string name="select_crypto_currency">Seleziona Criptovaluta</string>
+    <string name="select_sell_currency">Seleziona Vendi Valuta</string>
+    <string name="select_buy_currency">Seleziona Acquista Valuta</string>
+    <string name="select_fiat_currency">Seleziona valuta Fiat </string>
+    <string name="show_payment_qr_code">Mostra il codice QR di pagamento</string>
+    <string name="pay_with_btc_from_liquid">Paga con BTC da Liquid</string>
+    <string name="or">oppure</string>
+
+    <string name="internet_connected">Si prega di connettersi a Internet</string>
+    <string name="please_enter_amount">Si prega di inserire l\'importo</string>
+
+    <string name="choose_what_you_receive">Scegli cosa ricevere</string>
+    <string name="fiat_currency">Valuta Fiat</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">Trasferimento</string>
+    <string name="filter_by">Filtrato per</string>
+</resources>

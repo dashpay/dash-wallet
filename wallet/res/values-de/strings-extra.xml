@@ -303,14 +303,8 @@
     <string name="welcome_screen_title_3">Mehr Kontrolle</string>
     <string name="welcome_screen_subtitle_3">Habe die volle Kontrolle über deine Wallet und passe sie an deine Bedürfnisse an</string>
 
-    <string-array name="history_filter">
-        <item>Alles</item>
-        <item>Erhalten</item>
-        <item>Gesendet</item>
-    </string-array>
-
     <string name="sync_status_wait">Bitte bis zum Ende der Synchronisierung warten</string>
-    <string name="sync_status_syncing_title">Synchronisiere</string>
+    <string name="sync_status_syncing_title">Synchronisiere %1$d</string>
     <string name="sync_status_syncing_sub_title">mit der Dash-Blockchain</string>
     <string name="sync_status_unable_to_connect">Verbindung fehlgeschlagen</string>
     <string name="sync_status_check_connection">Verbindung überprüfen</string>
@@ -337,4 +331,11 @@
     <string name="import_image_no_private_key_copied">Kein privater Schlüssel kopiert</string>
     <string name="import_image_import_valid_private_key">Kopiere einen gültigen privaten Schlüssel, um Dash von ihm zu importieren</string>
     <string name="import_image_invalid_private">Ungültiger privater Schlüssel</string>
+
+    <string name="syncing">Synchronisiere</string>
+    <string name="syncing_balance">Synchronisiere Guthaben</string>
+
+    <string name="all_transactions">Alles</string>
+    <string name="received_transactions">Erhalten</string>
+    <string name="sent_transactions">Gesendet</string>
 </resources>

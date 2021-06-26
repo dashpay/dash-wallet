@@ -303,18 +303,12 @@
     <string name="welcome_screen_title_3">Meer controle</string>
     <string name="welcome_screen_subtitle_3">Heb volledige controle en pas uw portemonnee aan op basis van uw behoeften</string>
 
-    <string-array name="history_filter">
-        <item>Alles</item>
-        <item>Ontvangen</item>
-        <item>Verzonden</item>
-    </string-array>
-
     <string name="sync_status_wait">Wacht tot de synchronisatie is voltooid</string>
-    <string name="sync_status_syncing_title">Aan het synchroniseren</string>
+    <string name="sync_status_syncing_title">Aan het synchroniseren %1$d</string>
     <string name="sync_status_syncing_sub_title">met Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Kan geen verbinding maken</string>
     <string name="sync_status_check_connection">Controleer je verbinding</string>
-    <string name="sync_status_sync_title">Sync</string>
+    <string name="sync_status_sync_title">Synchorniseer</string>
     <string name="sync_status_sync_completed">Voltooid</string>
 
     <string name="appwidget_wallet_not_ready">Stel uw portemonnee in</string>
@@ -337,4 +331,11 @@
     <string name="import_image_no_private_key_copied">persoonlijke sleutel niet gekopieerd</string>
     <string name="import_image_import_valid_private_key">Kopieer een geldige persoonlijke sleutel om de Dash er van te importeren</string>
     <string name="import_image_invalid_private">Ongeldige persoonlijke sleutel</string>
+
+    <string name="syncing">Aan het synchroniseren</string>
+    <string name="syncing_balance">Saldo aan het synchroniseren</string>
+
+    <string name="all_transactions">Alles</string>
+    <string name="received_transactions">Ontvangen</string>
+    <string name="sent_transactions">Verzonden</string>
 </resources>

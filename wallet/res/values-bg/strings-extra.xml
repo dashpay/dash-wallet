@@ -297,14 +297,7 @@
     <string name="welcome_screen_title_3">Повече контрол</string>
     <string name="welcome_screen_subtitle_3">Имате пълен контрол и персонализиране на портфейла според  нужди Ви</string>
 
-    <string-array name="history_filter">
-        <item>Всички</item>
-        <item>Получени</item>
-        <item>Изпратено</item>
-    </string-array>
-
     <string name="sync_status_wait">Моля изчакайте синхронизирането да приключи</string>
-    <string name="sync_status_syncing_title">Синхронизиране</string>
     <string name="sync_status_syncing_sub_title">с Dash блок верига</string>
     <string name="sync_status_unable_to_connect">Не може да се свърже</string>
     <string name="sync_status_check_connection">Проверете връзката</string>
@@ -324,4 +317,9 @@
     <string name="payment_request_close">Затвори</string>
     <string name="payment_request_skip">Пропусни</string>
     <string name="payment_request_paid_to">Платено na</string>
+
+    <string name="syncing">Синхронизиране</string>
+    <string name="all_transactions">Всички</string>
+    <string name="received_transactions">Получени</string>
+    <string name="sent_transactions">Изпратено</string>
 </resources>

@@ -303,14 +303,8 @@
     <string name="welcome_screen_title_3">Mas marami pang kontrol</string>
     <string name="welcome_screen_subtitle_3">Magkaroon ng kumpletong kontrol at pinasadyang pitaka base sa iyong nais</string>
 
-    <string-array name="history_filter">
-        <item>Lahat</item>
-        <item>Natanggap</item>
-        <item>Ipinadala</item>
-    </string-array>
-
     <string name="sync_status_wait">Pakihintay na mag-sync upang makumpleto</string>
-    <string name="sync_status_syncing_title">Nagsi-sync</string>
+    <string name="sync_status_syncing_title">Syncing %1$d</string>
     <string name="sync_status_syncing_sub_title">kasama ang Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Hindi maka-konekta</string>
     <string name="sync_status_check_connection">Suriin ang koneksyon</string>
@@ -337,4 +331,11 @@
     <string name="import_image_no_private_key_copied">Walang nakopya ang private key</string>
     <string name="import_image_import_valid_private_key">Kopyahin ang isang wastong private key upang mai-import ang Dash mula rito</string>
     <string name="import_image_invalid_private">Di-wastong Private Key</string>
+
+    <string name="syncing">Nagsi-sync</string>
+    <string name="syncing_balance">Syncing Balance</string>
+
+    <string name="all_transactions">Lahat</string>
+    <string name="received_transactions">Natanggap</string>
+    <string name="sent_transactions">Ipinadala</string>
 </resources>

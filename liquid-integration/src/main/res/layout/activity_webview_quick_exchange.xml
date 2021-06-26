@@ -58,7 +58,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:paddingTop="16dp"
-            android:text="@string/buying_dash_sucess_message" />
+            android:text="@string/buying_dash_success_message" />
 
     </LinearLayout>
 
