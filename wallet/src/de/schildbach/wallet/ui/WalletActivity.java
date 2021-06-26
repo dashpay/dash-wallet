@@ -75,6 +75,8 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
+import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment;
+import de.schildbach.wallet.ui.backup.RestoreFromFileHelper;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
@@ -503,8 +505,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
             return createBackupWalletPermissionDialog();
         else if (id == DIALOG_RESTORE_WALLET_PERMISSION)
             return createRestoreWalletPermissionDialog();
-        else if (id == DIALOG_RESTORE_WALLET)
-            return createRestoreWalletDialog();
+        //else if (id == DIALOG_RESTORE_WALLET)
+        //    return createRestoreWalletDialog();
         else if (id == DIALOG_TIMESKEW_ALERT)
             return createTimeskewAlertDialog(args.getLong("diff_minutes"));
         else if (id == DIALOG_VERSION_ALERT)
@@ -515,11 +517,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
             throw new IllegalArgumentException();
     }
 
-    @Override
+    /*@Override
     protected void onPrepareDialog(final int id, final Dialog dialog) {
         if (id == DIALOG_RESTORE_WALLET)
             prepareRestoreWalletDialog(dialog);
-    }
+    }*/
 
     private Dialog createBackupWalletPermissionDialog() {
         final DialogBuilder dialog = new DialogBuilder(this);
@@ -531,26 +533,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private Dialog createRestoreWalletPermissionDialog() {
         return RestoreFromFileHelper.createRestoreWalletPermissionDialog(this);
-    }
-
-    private Dialog createRestoreWalletDialog() {
-        return RestoreFromFileHelper.createRestoreWalletDialog(this, new RestoreFromFileHelper.OnRestoreWalletListener() {
-            @Override
-            public void onRestoreWallet(Wallet wallet) {
-                restoreWallet(wallet);
-                application.getConfiguration().setRestoringBackup(true);
-            }
-
-            @Override
-            public void onRetryRequest() {
-                showDialog(DIALOG_RESTORE_WALLET);
-            }
-        });
-    }
-
-    private void prepareRestoreWalletDialog(final Dialog dialog) {
-        final boolean hasCoins = wallet.getBalance(Wallet.BalanceType.ESTIMATED).signum() > 0;
-        RestoreFromFileHelper.prepareRestoreWalletDialog(this, hasCoins, dialog);
     }
 
     private void showRestoreWalletFromSeedDialog() {

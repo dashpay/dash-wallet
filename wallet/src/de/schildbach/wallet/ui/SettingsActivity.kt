@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
@@ -61,6 +60,7 @@ class SettingsActivity : BaseMenuActivity() {
             log.info("manually initiated blockchain reset")
 
             WalletApplication.getInstance().resetBlockchain()
+            WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
             startActivity(WalletActivity.createIntent(this))
         }
         dialog.setNegativeButton(R.string.button_dismiss, null)

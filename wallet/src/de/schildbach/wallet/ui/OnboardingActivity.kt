@@ -30,6 +30,7 @@ import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet_test.R
@@ -199,5 +200,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
             upgradeOrStartMainActivity()
         }
+    }
+
+    fun getWalletApplication() : WalletApplication {
+        return walletApplication
     }
 }

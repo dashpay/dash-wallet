@@ -87,5 +87,6 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
     fun changePin() {
         val newPassword = getPinAsString()
         encryptWalletLiveData.changePassword(oldPinCache!!, newPassword)
+        walletApplication.configuration.updateLastEncryptKeysTime()
     }
 }
