@@ -19,9 +19,6 @@
 
     <!-- dangerous permissions -->
     <uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> <!-- group: STORAGE -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- group: STORAGE -->
-    <!--<uses-permission android:name="android.permission.RECORD_AUDIO" />-->
 
 
     <uses-feature
@@ -63,7 +60,6 @@
         android:label="@string/app_name"
         android:largeHeap="true"
         android:theme="@style/My.Theme"
-        android:requestLegacyExternalStorage="true"
         tools:ignore="LockedOrientationActivity">
 
         <activity
