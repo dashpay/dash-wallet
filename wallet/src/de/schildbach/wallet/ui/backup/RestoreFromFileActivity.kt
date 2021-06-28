@@ -101,22 +101,7 @@ open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragm
 
     internal fun restoreWalletFromFile() {
         walletApplication.initEnvironmentIfNeeded()
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            RestoreWalletDialogFragment.showPick(supportFragmentManager)
-        } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_CODE_RESTORE_WALLET)
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == REQUEST_CODE_RESTORE_WALLET) {
-            when {
-                grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED -> restoreWalletFromFile()
-                else -> RestoreWalletDialogFragment.showPick(supportFragmentManager)//showDialog(DIALOG_RESTORE_WALLET_PERMISSION)
-            }
-        } else {
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        }
+        RestoreWalletDialogFragment.showPick(supportFragmentManager)
     }
 
     override fun onCreateDialog(id: Int): Dialog {
