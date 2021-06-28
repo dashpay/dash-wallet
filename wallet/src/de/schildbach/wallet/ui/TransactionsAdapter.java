@@ -284,7 +284,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             fiatView = (CurrencyTextView) itemView.findViewById(R.id.transaction_row_fiat);
             fiatView.setApplyMarkup(false);
             rateNotAvailableView = (TextView) itemView.findViewById(R.id.transaction_row_rate_not_available);
-            dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a", Locale.getDefault());
+            dateFormat = (SimpleDateFormat)DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT, Locale.getDefault());
+            dateFormat = new SimpleDateFormat(dateFormat.toPattern().replaceAll("\\byy\\b", "yyyy"), Locale.getDefault());
         }
 
         private void bind(final Transaction tx) {
