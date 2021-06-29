@@ -331,7 +331,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             //
             final Date time = tx.getUpdateTime();
             timeView.setText(DateUtils.formatDateTime(itemView.getContext(), time.getTime(),
-                    DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_TIME));
+                    DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_MONTH | DateUtils.FORMAT_SHOW_TIME));
 
             //
             // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
