@@ -414,7 +414,7 @@ public class SendCoinsFragment extends Fragment {
         }
 
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                activity.getIntent().getAction(), transaction, activity.isUserAuthorized());
+                activity.getIntent().getAction(), transaction, isUserAuthorized());
         startActivity(transactionResultIntent);
     }
 
