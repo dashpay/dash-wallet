@@ -187,7 +187,8 @@ open class LockScreenActivity : AppCompatActivity() {
             }
         } else {
             root_view_switcher.displayedChild = 1
-            autoLogout.maybeStartAutoLogoutTimer()
+            if (!keepUnlocked)
+                autoLogout.maybeStartAutoLogoutTimer()
         }
 
         startBlockchainService()
