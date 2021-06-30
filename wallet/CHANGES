@@ -1,4 +1,10 @@
 Dash Wallet
+v7.2.6
+* When autologout is off, then the app doesn't ask for PIN when starting (bug from 7.2.4)
+* When paying via another app, the Lock Screen does not appear (bug from 7.2.4)
+* Support Android 11
+* New interface for restoring a backup file during onboarding
+
 v7.2.5
 * Use DashJ 0.17.7 to support Dash Core 0.17
 * Enable backup/restore on Android 10*
