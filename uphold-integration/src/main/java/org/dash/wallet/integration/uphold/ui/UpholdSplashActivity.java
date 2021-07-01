@@ -21,8 +21,11 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -33,17 +36,26 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import org.dash.wallet.common.ActivityUtils;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class UpholdSplashActivity extends InteractionAwareActivity {
 
+    private static final Logger log = LoggerFactory.getLogger(UpholdSplashActivity.class);
+    public static final String FINISH_ACTION = "UpholdSplashActivity.FINISH_ACTION";
+
     public static final String UPHOLD_EXTRA_CODE = "uphold_extra_code";
     public static final String UPHOLD_EXTRA_STATE = "uphold_extra_state";
+    public static int taskId = 0;
 
     private ProgressDialog loadingDialog;
 
@@ -77,12 +89,15 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
         });
 
         handleIntent(getIntent());
+
+        IntentFilter filter = new IntentFilter(FINISH_ACTION);
+        LocalBroadcastManager.getInstance(this).registerReceiver(finishLinkReceiver, filter);
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-//        handleIntent(intent);
+        handleIntent(intent);
     }
 
     private void handleIntent(final Intent intent) {
@@ -101,9 +116,17 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
     }
 
+    private final BroadcastReceiver finishLinkReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            handleIntent(intent);
+        }
+    };
+
     @Override
     protected void onDestroy() {
         loadingDialog.dismiss();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(finishLinkReceiver);
         super.onDestroy();
     }
 
@@ -176,7 +199,7 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
                         startActivity(intent);
                     }
                 });
-        finish();
+        //finish();
     }
 
     @Override
