@@ -8,14 +8,8 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.ViewModelProviders
-import org.dash.wallet.integration.liquid.currency.CurrencyResponse
-import org.dash.wallet.integration.liquid.currency.PayloadItem
-import org.dash.wallet.integration.liquid.data.LiquidClient
-import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
-import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.WalletApplication
@@ -29,6 +23,11 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.liquid.currency.CurrencyResponse
+import org.dash.wallet.integration.liquid.currency.PayloadItem
+import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
+import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
@@ -39,7 +38,7 @@ import java.math.BigDecimal
 
 private const val RESULT_CODE_GO_HOME = 100
 
-class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
+class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
 
     private var liquidClient: LiquidClient? = null
