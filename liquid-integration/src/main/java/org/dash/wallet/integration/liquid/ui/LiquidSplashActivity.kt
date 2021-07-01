@@ -20,7 +20,10 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.app.ProgressDialog
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
@@ -29,13 +32,15 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
-import org.dash.wallet.integration.liquid.data.LiquidClient
-import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
+import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidConstants
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 
 class LiquidSplashActivity : InteractionAwareActivity() {
@@ -63,6 +68,11 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         findViewById<View>(R.id.liquid_link_account).setOnClickListener { authUser() }
 
         handleIntent(intent)
+
+        val filter = IntentFilter(FINISH_ACTION)
+        filter.addDataScheme(LiquidConstants.OAUTH_CALLBACK_SCHEMA)
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(finishLinkReceiver, filter)
     }
 
 
@@ -93,6 +103,13 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         }
     }
 
+    private val finishLinkReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            intent.action = Intent.ACTION_VIEW
+            handleIntent(intent)
+        }
+    }
+
     override fun finish() {
         super.finish()
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left)
@@ -101,6 +118,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     override fun onDestroy() {
         log.info("liquid: closing liquid splash activity")
         loadingDialog?.dismiss()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(finishLinkReceiver)
         super.onDestroy()
     }
 
@@ -236,7 +254,8 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     companion object {
         const val LOGIN_REQUEST_CODE = 102
-        val log = LoggerFactory.getLogger(LiquidSplashActivity::class.java)
+        val log: Logger = LoggerFactory.getLogger(LiquidSplashActivity::class.java)
+        const val FINISH_ACTION = "LiquidSplashActivity.FINISH_ACTION"
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
