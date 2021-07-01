@@ -31,9 +31,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ActivityUtils;
 import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,8 +64,6 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
 
         WalletApplication application = (WalletApplication) getApplication();
         wallet = application.getWallet();
-
-        log.info("taskId = "+ getTaskId() + "taskAffinity = " + ActivityUtils.getTaskAffinity(this));
 
         handleIntent(getIntent());
     }

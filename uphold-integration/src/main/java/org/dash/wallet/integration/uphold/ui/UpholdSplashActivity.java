@@ -38,19 +38,15 @@ import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import org.dash.wallet.common.ActivityUtils;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 public class UpholdSplashActivity extends InteractionAwareActivity {
 
-    private static final Logger log = LoggerFactory.getLogger(UpholdSplashActivity.class);
     public static final String FINISH_ACTION = "UpholdSplashActivity.FINISH_ACTION";
 
     public static final String UPHOLD_EXTRA_CODE = "uphold_extra_code";
