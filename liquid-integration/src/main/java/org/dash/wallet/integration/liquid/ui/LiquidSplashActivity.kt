@@ -106,7 +106,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     private val finishLinkReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             intent.action = Intent.ACTION_VIEW
-            handleIntent(intent)
+            startActivity(intent) // this will ensure that the custom tab is closed
         }
     }
 

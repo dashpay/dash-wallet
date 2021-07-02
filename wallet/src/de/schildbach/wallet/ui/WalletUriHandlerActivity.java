@@ -95,6 +95,8 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
                         upholdActivityIntent.putExtra(UpholdSplashActivity.UPHOLD_EXTRA_CODE, code);
                         upholdActivityIntent.putExtra(UpholdSplashActivity.UPHOLD_EXTRA_STATE,
                                 intentUri.getQueryParameter("state"));
+                        upholdActivityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        upholdActivityIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
                         if(isTaskRoot()) {
                             //I'm in my own task and not the main task
                             upholdActivityIntent.setAction(UpholdSplashActivity.FINISH_ACTION);

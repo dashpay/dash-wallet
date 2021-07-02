@@ -14,7 +14,8 @@ class LiquidAuthRedirectActivity : Activity() {
             data = intent.data
             action = ACTION_VIEW
         }
-
+        liquidIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        liquidIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         if (isTaskRoot) {
 
             liquidIntent.action = LiquidSplashActivity.FINISH_ACTION

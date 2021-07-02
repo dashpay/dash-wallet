@@ -115,7 +115,7 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
     private final BroadcastReceiver finishLinkReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            handleIntent(intent);
+            startActivity(intent); // this will ensure that the custom tab is closed
         }
     };
 
@@ -178,6 +178,8 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
     }
 
     private void openLoginUrl() {
+        //Intent intent = new Intent(this, CustomTabActivity.class);
+        //startActivity(intent);
         final String url = String.format(UpholdConstants.INITIAL_URL,
                 UpholdClient.getInstance().getEncryptionKey());
 
