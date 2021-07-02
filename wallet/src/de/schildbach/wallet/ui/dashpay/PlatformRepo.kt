@@ -849,10 +849,23 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         blockchainIdentityDataDao.insert(blockchainIdentityData)
     }
 
+    /**
+     * Updates the dashpay.profile in the database by making a query to Platform
+     *
+     * @param userId
+     * @return true if an update was made, false if not
+     */
     suspend fun updateDashPayProfile(userId: String): Boolean {
         var profileDocument = profiles.get(userId)
-                ?: profiles.createProfileDocument("", "", "", null, null, platform.identities.get(userId)!!)
-
+        if (profileDocument == null) {
+            val identity = platform.identities.get(userId)
+            if (identity != null) {
+                profileDocument = profiles.createProfileDocument("", "", "", null, null, identity)
+            } else {
+                // there is no existing identity, so do nothing
+                return false
+            }
+        }
         val nameDocuments = platform.names.getByOwnerId(userId)
 
         if (nameDocuments.isNotEmpty()) {
