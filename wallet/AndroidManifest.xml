@@ -236,12 +236,10 @@
         </activity>
 
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdSplashActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme"
-            android:taskAffinity="" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme"
-            android:taskAffinity="" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.LockScreenActivity"
