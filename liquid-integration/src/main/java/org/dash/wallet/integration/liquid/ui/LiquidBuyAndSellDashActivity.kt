@@ -16,6 +16,8 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -32,8 +34,11 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
+import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 
@@ -254,6 +259,20 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                         return
                     }
                     loadingDialog!!.hide()
+                    if (e is LiquidUnauthorizedException) {
+                        val viewModel =
+                            ViewModelProvider(this@LiquidBuyAndSellDashActivity)[FancyAlertDialogViewModel::class.java]
+                        viewModel.onPositiveButtonClick.observe(
+                            this@LiquidBuyAndSellDashActivity,
+                            Observer {
+                                startActivity(LiquidSplashActivity.createIntent(this@LiquidBuyAndSellDashActivity))
+                                finish()
+                            })
+                        FancyAlertDialog.newInstance(
+                            R.string.liquid_logout_title, R.string.liquid_forced_logout,
+                            R.drawable.ic_liquid_icon, android.R.string.ok, 0
+                        ).show(supportFragmentManager, "auto-logout-dialog")
+                    }
                 }
             })
         } else {

@@ -9,6 +9,8 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -22,12 +24,16 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
+import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
@@ -191,6 +197,22 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                         return
                     }
                     loadingDialog!!.hide()
+                    if (e is LiquidUnauthorizedException) {
+                        // do we need this
+                        setLoginStatus()
+                        val viewModel =
+                            ViewModelProvider(this@BuyAndSellLiquidUpholdActivity)[FancyAlertDialogViewModel::class.java]
+                        viewModel.onPositiveButtonClick.observe(
+                            this@BuyAndSellLiquidUpholdActivity,
+                            Observer {
+                                startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
+                            })
+                        FancyAlertDialog.newInstance(
+                            org.dash.wallet.integration.liquid.R.string.liquid_logout_title, org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
+                            org.dash.wallet.integration.liquid.R.drawable.ic_liquid_icon, android.R.string.ok, 0
+                        ).show(supportFragmentManager, "auto-logout-dialog")
+
+                    }
                 }
             })
         } else {

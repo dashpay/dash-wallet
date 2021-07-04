@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">Buy Dash with credit card</string>
     <string name="liquid_logout">Log Out</string>
     <string name="liquid_logout_title">Log out from Liquid</string>
+    <string name="liquid_forced_logout">The link to your Liquid account has been broken.  Please choose Link Liquid Account on the next screen.</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Swap Dash with other cryptocurrencies</string>
     <string name="transfer_dash_to_and_from_account">Transfer Dash to and from your liquid account</string>
 

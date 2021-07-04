@@ -154,7 +154,16 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                     if (response.isSuccessful) {
                         callback.onSuccess(response.body()!!)
                     } else {
-                        callback.onError(LiquidException("Error obtaining liquid user id", response.message(), response.code()))
+                        val exception = when {
+                            response.code() == 404 -> {
+                                clearStoredSessionData()
+                                LiquidUnauthorizedException("Error obtaining account balance: invalid creditials", response.message(), response.code())
+                            }
+                            else -> {
+                                LiquidException("Error obtaining liquid account balance", response.message(), response.code())
+                            }
+                        }
+                        callback.onError(exception)
                     }
                 }
 
