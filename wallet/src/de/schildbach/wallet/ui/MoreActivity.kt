@@ -27,11 +27,11 @@ import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
+import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
+import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.dash.wallet.common.UserInteractionAwareCallback
 
-private const val REQUEST_CODE_BUY_SELL = 100
 
-private const val RESULT_CODE_GO_HOME = 100
 
 class MoreActivity : GlobalFooterActivity() {
 

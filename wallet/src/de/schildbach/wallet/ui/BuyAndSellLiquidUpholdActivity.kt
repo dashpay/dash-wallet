@@ -24,6 +24,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.util.GenericUtils
@@ -41,8 +42,6 @@ import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 
-
-private const val RESULT_CODE_GO_HOME = 100
 
 class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
@@ -297,7 +296,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == Activity.RESULT_OK) {
+        if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
             log.info("liquid: activity result for user buy sell dash was OK")
             if (LiquidClient.getInstance()!!.isAuthenticated) {
                 getUserLiquidAccountBalance()

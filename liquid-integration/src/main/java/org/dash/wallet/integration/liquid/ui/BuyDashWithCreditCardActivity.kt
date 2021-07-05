@@ -27,6 +27,7 @@ import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
@@ -439,7 +440,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                         isTransactionSuccessful = true
                                         findViewById<View>(R.id.closePane).visibility = View.VISIBLE
                                         findViewById<View>(R.id.btnOkay).setOnClickListener {
-                                            setResult(Activity.RESULT_OK)
+                                            setResult(Constants.RESULT_CODE_GO_HOME)
                                             onBackPressed()
                                         }
                                     }
@@ -509,7 +510,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     override fun onBackPressed() {
         if (isTransactionSuccessful) {
             log.info("liquid: onBackPressed: successful transaction was made")
-            setResult(Activity.RESULT_OK)
+            setResult(Constants.RESULT_CODE_GO_HOME)
             super.onBackPressed()
         } else {
             log.info("liquid: onBackPressed: successful transaction was not made")

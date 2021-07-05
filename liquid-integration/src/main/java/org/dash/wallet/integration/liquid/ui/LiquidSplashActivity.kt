@@ -41,6 +41,7 @@ import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import org.dash.wallet.common.Constants
 
 
 class LiquidSplashActivity : InteractionAwareActivity() {
@@ -204,14 +205,14 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     private fun startLiquidBuyAndSellDashActivity() {
 
-        setResult(RESULT_OK)
+        //setResult(RESULT_OK)
         val intent = Intent(this, LiquidBuyAndSellDashActivity::class.java)
         val extras = getIntent().extras
         if (extras != null) {
             intent.putExtras(extras)
         }
-        startActivity(intent)
-        finish()
+        startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
+        //finish()
     }
 
     /**
@@ -253,6 +254,10 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     companion object {
+        fun createIntent(context: Context): Intent? {
+            return Intent(context, LiquidSplashActivity::class.java)
+        }
+
         const val LOGIN_REQUEST_CODE = 102
         val log: Logger = LoggerFactory.getLogger(LiquidSplashActivity::class.java)
         const val FINISH_ACTION = "LiquidSplashActivity.FINISH_ACTION"
@@ -260,8 +265,21 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == LOGIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            getUserId()
+        when {
+            requestCode == LOGIN_REQUEST_CODE && resultCode == Activity.RESULT_OK -> {
+                getUserId()
+            }
+            requestCode == Constants.USER_BUY_SELL_DASH -> {
+                when (resultCode) {
+                    Activity.RESULT_OK -> {
+                        finish()
+                    }
+                    Constants.RESULT_CODE_GO_HOME -> {
+                        setResult(Constants.RESULT_CODE_GO_HOME)
+                        finish()
+                    }
+                }
+            }
         }
     }
 }
