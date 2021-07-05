@@ -240,7 +240,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
         webview.loadUrl(LiquidConstants.BUY_WITH_CREDIT_CARD_URL)
 
         findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this).show()
+            CountrySupportDialog(this, true).show()
         }
 
     }

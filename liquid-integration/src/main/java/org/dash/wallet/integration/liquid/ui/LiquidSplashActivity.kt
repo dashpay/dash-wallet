@@ -26,22 +26,24 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
+import androidx.preference.PreferenceManager
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
+import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import org.dash.wallet.common.Constants
 
 
 class LiquidSplashActivity : InteractionAwareActivity() {
@@ -67,6 +69,9 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         loadingDialog!!.setCancelable(false)
         loadingDialog!!.setMessage(getString(R.string.loading))
         findViewById<View>(R.id.liquid_link_account).setOnClickListener { authUser() }
+        findViewById<View>(R.id.ivInfo).setOnClickListener {
+            CountrySupportDialog(this, true).show()
+        }
 
         handleIntent(intent)
 
@@ -74,6 +79,12 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         filter.addDataScheme(LiquidConstants.OAUTH_CALLBACK_SCHEMA)
 
         LocalBroadcastManager.getInstance(this).registerReceiver(finishLinkReceiver, filter)
+        
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        if (prefs.getBoolean(REMIND_UNSUPPORTED_COUNTRIES, true)) {
+            prefs.edit().putBoolean(REMIND_UNSUPPORTED_COUNTRIES, false).apply()
+            CountrySupportDialog(this, true).show()
+        }
     }
 
 
@@ -261,6 +272,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         const val LOGIN_REQUEST_CODE = 102
         val log: Logger = LoggerFactory.getLogger(LiquidSplashActivity::class.java)
         const val FINISH_ACTION = "LiquidSplashActivity.FINISH_ACTION"
+        const val REMIND_UNSUPPORTED_COUNTRIES = "LiquidSplashActivity.REMIND_UNSUPPORTED_COUNTRIES"
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

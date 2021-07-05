@@ -39,6 +39,7 @@ import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
+import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 
@@ -97,6 +98,10 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
         findViewById<LinearLayout>(R.id.sell_dash).setOnClickListener {
             showSellDashDialog()
+        }
+
+        findViewById<View>(R.id.ivInfo).setOnClickListener {
+            CountrySupportDialog(this, true).show()
         }
 
         findViewById<LinearLayout>(R.id.llTransferToLiquid).setOnClickListener {
