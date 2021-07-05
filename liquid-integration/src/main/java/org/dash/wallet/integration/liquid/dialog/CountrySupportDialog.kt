@@ -15,12 +15,6 @@ import org.dash.wallet.integration.liquid.ui.WebViewActivity
 
 class CountrySupportDialog(val contexts: Context, val isCreditCard: Boolean) : Dialog(contexts, R.style.Theme_Dialog) {
 
-
-    companion object {
-        const val PAYMENT_METHOD_EXTRA = "payment_method_extra"
-
-
-    }
     init {
         setCanceledOnTouchOutside(false)
         setCancelable(false)

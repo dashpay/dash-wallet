@@ -21,7 +21,7 @@
     <string name="credit_card_support">Credit Card Support</string>
     <string name="okay">Okay</string>
     <string name="close">Close</string>
-    <string name="list_of_countries">See a list of unsupported countries</string>
+    <string name="list_of_countries">See a list of unsupported countries.</string>
     <string name="buying_dash_not_supported_credit_cards">Buying Dash with a credit card is not supported in some countries.</string>
     <string name="buying_dash_not_supported_crypto">Buying Dash with cryptocurrency is not supported in some countries.</string>
     <string name="buying_dash_success_message">You can close this screen, your Dash will be sent to your wallet.</string>
