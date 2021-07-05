@@ -216,7 +216,16 @@ class LiquidClient private constructor(context: Context, private val encryptionK
                     if (response.isSuccessful) {
                         callback.onSuccess("")
                     } else {
-                        callback.onError(LiquidException("Error in terminate session", response.message(), response.code()))
+                        val exception = when {
+                            response.code() == 404 -> {
+                                clearStoredSessionData()
+                                LiquidUnauthorizedException("Error in terminate session: invalid creditials", response.message(), response.code())
+                            }
+                            else -> {
+                                LiquidException("Error in terminate session", response.message(), response.code())
+                            }
+                        }
+                        callback.onError(exception)
                     }
                 }
 
