@@ -107,12 +107,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
         setLoginStatus()
 
-        if (LiquidClient.getInstance()!!.isAuthenticated) {
-            getUserLiquidAccountBalance()
-        }
-        if (UpholdClient.getInstance().isAuthenticated()) {
-            getUpholdUserBalance()
-        }
+        updateBalances()
 
 
         // for getting currency exchange rates
@@ -127,9 +122,19 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     }
 
+    private fun updateBalances() {
+        if (LiquidClient.getInstance()!!.isAuthenticated) {
+            getUserLiquidAccountBalance()
+        }
+        if (UpholdClient.getInstance().isAuthenticated()) {
+            getUpholdUserBalance()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         setLoginStatus()
+        updateBalances()
     }
 
     private fun setLoginStatus() {
