@@ -21,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
@@ -239,10 +240,11 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
         webview.loadUrl(LiquidConstants.BUY_WITH_CREDIT_CARD_URL)
 
+        //don't show the (i) icon
+        findViewById<View>(R.id.ivInfo).isVisible = false
         findViewById<View>(R.id.ivInfo).setOnClickListener {
             CountrySupportDialog(this, true).show()
         }
-
     }
 
 

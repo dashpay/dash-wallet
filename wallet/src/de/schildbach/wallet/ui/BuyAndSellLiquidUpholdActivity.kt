@@ -302,7 +302,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
-            log.info("liquid: activity result for user buy sell dash was OK")
+            log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
             if (LiquidClient.getInstance()!!.isAuthenticated) {
                 getUserLiquidAccountBalance()
             }

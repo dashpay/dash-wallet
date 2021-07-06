@@ -16,6 +16,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
@@ -100,6 +101,8 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             showSellDashDialog()
         }
 
+        //don't show the (i) icon
+        findViewById<View>(R.id.ivInfo).isVisible = false
         findViewById<View>(R.id.ivInfo).setOnClickListener {
             CountrySupportDialog(this, true).show()
         }
@@ -375,9 +378,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        log.info("liquid: onActivityResult($requestCode, $resultCode")
+        log.info("liquid: onActivityResult($requestCode, $resultCode)")
         if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == Constants.RESULT_CODE_GO_HOME) {
-            log.info("liquid: activity result for user buy sell dash was OK")
+            log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
             returnHome = true
             onBackPressed()
         } else if (requestCode == 1) {
