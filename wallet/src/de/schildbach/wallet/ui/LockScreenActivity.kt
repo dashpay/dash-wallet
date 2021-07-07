@@ -82,6 +82,7 @@ open class LockScreenActivity : AppCompatActivity() {
     }
 
     private var fingerprintHelper: FingerprintHelper? = null
+    private var firstAttempt = true
     private lateinit var fingerprintCancellationSignal: CancellationSignal
     private lateinit var pinRetryController: PinRetryController
 
@@ -105,8 +106,6 @@ open class LockScreenActivity : AppCompatActivity() {
         initViewModel()
 
         setupBackupSeedReminder()
-
-        setupInitState()
     }
 
     override fun setContentView(contentViewResId: Int) {
@@ -177,6 +176,7 @@ open class LockScreenActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        setupInitState()
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
@@ -297,6 +297,12 @@ open class LockScreenActivity : AppCompatActivity() {
 
         action_scan_to_pay.isEnabled = true
 
+        if (state == State.ENTER_PIN && firstAttempt) {
+            firstAttempt = false
+            return setLockState(State.USE_FINGERPRINT)
+        }
+        initFingerprint()
+
         when (state) {
             State.ENTER_PIN, State.INVALID_PIN -> {
                 if (pinLength != PinPreviewView.DEFAULT_PIN_LENGTH) {
@@ -370,11 +376,19 @@ open class LockScreenActivity : AppCompatActivity() {
             setLockState(State.LOCKED)
             return
         }
+        firstAttempt = true
+    }
+
+    private fun initFingerprint() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            fingerprintHelper = FingerprintHelper(this)
+            if (fingerprintHelper == null) {
+                fingerprintHelper = FingerprintHelper(this)
+            }
             fingerprintHelper?.run {
                 if (init() && isFingerprintEnabled) {
-                    setLockState(State.USE_FINGERPRINT)
+                    if (::fingerprintCancellationSignal.isInitialized) {
+                        fingerprintCancellationSignal?.cancel()
+                    }
                     startFingerprintListener()
                     return
                 } else {
@@ -384,7 +398,6 @@ open class LockScreenActivity : AppCompatActivity() {
                 }
             }
         }
-//        setLockState(State.ENTER_PIN)
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
