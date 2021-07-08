@@ -297,11 +297,11 @@ open class LockScreenActivity : AppCompatActivity() {
 
         action_scan_to_pay.isEnabled = true
 
-        if (state == State.ENTER_PIN && firstAttempt) {
+        val fingerPrintEnabled = initFingerprint()
+        if (fingerPrintEnabled && state == State.ENTER_PIN && firstAttempt) {
             firstAttempt = false
             return setLockState(State.USE_FINGERPRINT)
         }
-        initFingerprint()
 
         when (state) {
             State.ENTER_PIN, State.INVALID_PIN -> {
@@ -379,25 +379,28 @@ open class LockScreenActivity : AppCompatActivity() {
         firstAttempt = true
     }
 
-    private fun initFingerprint() {
+    private fun initFingerprint(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (fingerprintHelper == null) {
                 fingerprintHelper = FingerprintHelper(this)
             }
+            var result = false
             fingerprintHelper?.run {
                 if (init() && isFingerprintEnabled) {
                     if (::fingerprintCancellationSignal.isInitialized) {
                         fingerprintCancellationSignal?.cancel()
                     }
                     startFingerprintListener()
-                    return
+                    result = true
                 } else {
                     fingerprintHelper = null
                     action_login_with_fingerprint.isEnabled = false
                     action_login_with_fingerprint.alpha = 0f
                 }
             }
+            return result
         }
+        return false
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
