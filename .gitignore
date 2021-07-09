@@ -28,3 +28,4 @@ wallet/.cxx
 wallet/cpp
 google-services.json
 output-metadata.json
+service.properties
