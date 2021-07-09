@@ -65,7 +65,9 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
 import org.dash.wallet.common.util.WalletDataProvider;
+import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -270,7 +272,12 @@ public class WalletApplication extends BaseWalletApplication implements ResetAut
         byte[] xpubExcerptHash = Sha256Hash.hash(xpub.substring(4, 15).getBytes());
         String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
 
+        UpholdConstants.CLIENT_ID = BuildConfig.UPHOLD_CLIENT_ID;
+        UpholdConstants.CLIENT_SECRET = BuildConfig.UPHOLD_CLIENT_SECRET;
+        UpholdConstants.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
         UpholdClient.init(getApplicationContext(), authenticationHash);
+
+        LiquidConstants.INSTANCE.setPUBLIC_API_KEY(BuildConfig.LIQUID_PUBLIC_API_KEY);
         LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
     }
 

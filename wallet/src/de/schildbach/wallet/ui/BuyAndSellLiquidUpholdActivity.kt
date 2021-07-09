@@ -14,29 +14,33 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.dialog.CurrencyDialog
 import de.schildbach.wallet.rates.ExchangeRatesViewModel
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.Constants
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
+import org.dash.wallet.common.Constants.USER_BUY_SELL_DASH
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import org.dash.wallet.integration.uphold.data.UpholdClient
+import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
@@ -97,7 +101,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
 
         rlLiquid.setOnClickListener {
-            startActivityForResult(LiquidBuyAndSellDashActivity.createIntent(this), Constants.USER_BUY_SELL_DASH)
+            startActivityForResult(LiquidBuyAndSellDashActivity.createIntent(this), USER_BUY_SELL_DASH)
         }
 
         rlUphold.setOnClickListener {
@@ -301,7 +305,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
+        if (requestCode == USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
             log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
             if (LiquidClient.getInstance()!!.isAuthenticated) {
                 getUserLiquidAccountBalance()
