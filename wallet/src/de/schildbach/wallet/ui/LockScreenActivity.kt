@@ -21,7 +21,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.telephony.TelephonyManager
-import android.view.*
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
+import android.view.View
+import android.view.ViewConfiguration
+import android.view.WindowManager
 import android.view.animation.AnimationUtils
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -42,6 +46,7 @@ import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.ui.DialogBuilder
+import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
 
@@ -49,8 +54,10 @@ open class LockScreenActivity : AppCompatActivity() {
 
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
+        private val log = LoggerFactory.getLogger(LockScreenActivity::class.java)
     }
 
+    private var fingerprintListening: Boolean = false
     val walletApplication: WalletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
     private val autoLogout: AutoLogout = walletApplication.autoLogout
@@ -79,6 +86,7 @@ open class LockScreenActivity : AppCompatActivity() {
         INVALID_PIN,
         LOCKED,
         USE_FINGERPRINT,
+        USE_DEFAULT // defaults to fingerprint if available and enabled
     }
 
     private var fingerprintHelper: FingerprintHelper? = null
@@ -118,7 +126,7 @@ open class LockScreenActivity : AppCompatActivity() {
     }
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
-        setLockState(State.ENTER_PIN)
+        setLockState(State.USE_DEFAULT)
     }
 
     override fun onUserInteraction() {
@@ -180,7 +188,7 @@ open class LockScreenActivity : AppCompatActivity() {
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
-            setLockState(State.ENTER_PIN)
+            setLockState(State.USE_DEFAULT)
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
                 autoLogout.stopTimer()
@@ -294,13 +302,16 @@ open class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun setLockState(state: State) {
-
+        log.info("LockState = $state")
         action_scan_to_pay.isEnabled = true
 
         val fingerPrintEnabled = initFingerprint()
-        if (fingerPrintEnabled && state == State.ENTER_PIN && firstAttempt) {
-            firstAttempt = false
-            return setLockState(State.USE_FINGERPRINT)
+        if (state == State.USE_DEFAULT) {
+            return if (fingerPrintEnabled) {
+                setLockState(State.USE_FINGERPRINT)
+            } else {
+                setLockState(State.ENTER_PIN)
+            }
         }
 
         when (state) {
@@ -364,6 +375,10 @@ open class LockScreenActivity : AppCompatActivity() {
                 action_scan_to_pay.isEnabled = false
                 numeric_keyboard.visibility = View.GONE
             }
+            State.USE_DEFAULT -> {
+                // we should never reach this since default means we use
+                // ENTER_PIN or USE_FINGERPRINT
+            }
         }
 
         if (!lockScreenDisplayed) {
@@ -381,18 +396,21 @@ open class LockScreenActivity : AppCompatActivity() {
 
     private fun initFingerprint(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            log.info("initializing finger print on Android M and above")
             if (fingerprintHelper == null) {
                 fingerprintHelper = FingerprintHelper(this)
             }
             var result = false
             fingerprintHelper?.run {
-                if (init() && isFingerprintEnabled) {
-                    if (::fingerprintCancellationSignal.isInitialized) {
-                        fingerprintCancellationSignal?.cancel()
-                    }
+                if (fingerprintListening && ::fingerprintCancellationSignal.isInitialized && !fingerprintCancellationSignal.isCanceled) {
+                    // we already initialized the fingerprint listener
+                    log.info("fingerprint already initialized")
+                    return true
+                } else if (init() && isFingerprintEnabled) {
                     startFingerprintListener()
                     result = true
                 } else {
+                    log.info("fingerprint was disabled")
                     fingerprintHelper = null
                     action_login_with_fingerprint.isEnabled = false
                     action_login_with_fingerprint.alpha = 0f
@@ -405,19 +423,26 @@ open class LockScreenActivity : AppCompatActivity() {
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private fun startFingerprintListener() {
+        log.info("start fingerprint listener")
         fingerprintCancellationSignal = CancellationSignal()
+        fingerprintListening = true
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
+                log.info("fingerprint scan successful")
+                fingerprintListening = false
                 onCorrectPin(savedPass)
             }
 
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
+                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
+                fingerprintListening = false
                 if (!canceled) {
                     if (fingerprintHelper!!.hasFingerprintKeyChanged()) {
                         showFingerprintKeyChangedDialog()
                         action_login_with_fingerprint.isEnabled = false
                     } else {
                         fingerprint_view.showError(exceededMaxAttempts)
+                        initFingerprint()
                     }
                 }
             }
