@@ -430,6 +430,7 @@ open class LockScreenActivity : AppCompatActivity() {
             override fun onSuccess(savedPass: String) {
                 log.info("fingerprint scan successful")
                 fingerprintListening = false
+                fingerprint_view.hideError()
                 onCorrectPin(savedPass)
             }
 
