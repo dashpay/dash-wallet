@@ -16,10 +16,10 @@
 
 package de.schildbach.wallet.ui.backup
 
-import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.Dialog
-import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.WindowManager
@@ -34,6 +34,7 @@ import de.schildbach.wallet.ui.AbstractPINDialogFragment
 import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment
 import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
 import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment
+import de.schildbach.wallet.ui.SET_PIN_REQUEST_CODE
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
@@ -88,7 +89,7 @@ open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragm
             UpgradeWalletDisclaimerDialog.show(supportFragmentManager)
         })
         viewModel.startActivityAction.observe(this, Observer {
-            startActivity(it)
+            startActivityForResult(it, SET_PIN_REQUEST_CODE)
         })
         viewModel.restoreWallet.observe(this, Observer {
             walletBuffer = it
@@ -133,5 +134,13 @@ open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragm
     override fun onResume() {
         window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         super.onResume()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == SET_PIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            setResult(Activity.RESULT_OK)
+            finish()
+        }
     }
 }
