@@ -16,7 +16,10 @@
 
 package de.schildbach.wallet.ui
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -90,7 +93,6 @@ open class LockScreenActivity : AppCompatActivity() {
     }
 
     private var fingerprintHelper: FingerprintHelper? = null
-    private var firstAttempt = true
     private lateinit var fingerprintCancellationSignal: CancellationSignal
     private lateinit var pinRetryController: PinRetryController
 
@@ -114,6 +116,7 @@ open class LockScreenActivity : AppCompatActivity() {
         initViewModel()
 
         setupBackupSeedReminder()
+        registerDeviceInteractiveReceiver()
     }
 
     override fun setContentView(contentViewResId: Int) {
@@ -305,7 +308,7 @@ open class LockScreenActivity : AppCompatActivity() {
         log.info("LockState = $state")
         action_scan_to_pay.isEnabled = true
 
-        val fingerPrintEnabled = initFingerprint()
+        val fingerPrintEnabled = initFingerprint(false)
         if (state == State.USE_DEFAULT) {
             return if (fingerPrintEnabled) {
                 setLockState(State.USE_FINGERPRINT)
@@ -391,10 +394,13 @@ open class LockScreenActivity : AppCompatActivity() {
             setLockState(State.LOCKED)
             return
         }
-        firstAttempt = true
     }
 
-    private fun initFingerprint(): Boolean {
+    /**
+     * @param forceInit force initialize the fingerprint listener
+     * @return true if fingerprints are initialized, false if not
+     */
+    private fun initFingerprint(forceInit: Boolean): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             log.info("initializing finger print on Android M and above")
             if (fingerprintHelper == null) {
@@ -402,7 +408,7 @@ open class LockScreenActivity : AppCompatActivity() {
             }
             var result = false
             fingerprintHelper?.run {
-                if (fingerprintListening && ::fingerprintCancellationSignal.isInitialized && !fingerprintCancellationSignal.isCanceled) {
+                if (!forceInit && fingerprintListening && ::fingerprintCancellationSignal.isInitialized && !fingerprintCancellationSignal.isCanceled) {
                     // we already initialized the fingerprint listener
                     log.info("fingerprint already initialized")
                     return true
@@ -443,7 +449,7 @@ open class LockScreenActivity : AppCompatActivity() {
                         action_login_with_fingerprint.isEnabled = false
                     } else {
                         fingerprint_view.showError(exceededMaxAttempts)
-                        initFingerprint()
+                        initFingerprint(false)
                     }
                 }
             }
@@ -461,6 +467,8 @@ open class LockScreenActivity : AppCompatActivity() {
             fingerprintCancellationSignal.cancel()
         }
         temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
+
+        unregisterReceiver(receiver)
     }
 
     private fun showFingerprintKeyChangedDialog() {
@@ -491,5 +499,20 @@ open class LockScreenActivity : AppCompatActivity() {
         if (!lockScreenDisplayed) {
             super.onBackPressed()
         }
+    }
+    val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_USER_PRESENT) {
+                // after the device is unlocked, restart the fingerprint scanner
+                initFingerprint(true)
+            }
+        }
+    }
+
+    // for Android <= 8.1 we need to reinitialize the fingerprint scanner
+    open fun registerDeviceInteractiveReceiver() {
+        val filter = IntentFilter()
+        filter.addAction(Intent.ACTION_USER_PRESENT)
+        registerReceiver(receiver, filter)
     }
 }
