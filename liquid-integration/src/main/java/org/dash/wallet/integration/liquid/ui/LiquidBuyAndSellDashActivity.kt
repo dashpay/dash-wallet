@@ -16,6 +16,9 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -32,11 +35,14 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
+import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
+import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
-
 
 class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
@@ -52,6 +58,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         }
     }
 
+    private var returnHome: Boolean = false
     private var liquidClient: LiquidClient? = null
 
     private lateinit var context: Context
@@ -92,6 +99,12 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
         findViewById<LinearLayout>(R.id.sell_dash).setOnClickListener {
             showSellDashDialog()
+        }
+
+        //don't show the (i) icon
+        findViewById<View>(R.id.ivInfo).isVisible = false
+        findViewById<View>(R.id.ivInfo).setOnClickListener {
+            CountrySupportDialog(this, true).show()
         }
 
         findViewById<LinearLayout>(R.id.llTransferToLiquid).setOnClickListener {
@@ -254,6 +267,20 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                         return
                     }
                     loadingDialog!!.hide()
+                    if (e is LiquidUnauthorizedException) {
+                        val viewModel =
+                            ViewModelProvider(this@LiquidBuyAndSellDashActivity)[FancyAlertDialogViewModel::class.java]
+                        viewModel.onPositiveButtonClick.observe(
+                            this@LiquidBuyAndSellDashActivity,
+                            Observer {
+                                startActivity(LiquidSplashActivity.createIntent(this@LiquidBuyAndSellDashActivity))
+                                finish()
+                            })
+                        FancyAlertDialog.newInstance(
+                            R.string.liquid_logout_title, R.string.liquid_forced_logout,
+                            R.drawable.ic_liquid_icon, android.R.string.ok, 0
+                        ).show(supportFragmentManager, "auto-logout-dialog")
+                    }
                 }
             })
         } else {
@@ -266,7 +293,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      * call api to  get address
      */
     private fun getUserLiquidAccountAddress() {
-        log.error("liquid: attempting to get liquid account address")
+        log.info("liquid: attempting to get liquid account address")
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
             liquidClient?.getUserAccountAddress(liquidClient?.storedSessionId!!, true, object : LiquidClient.Callback<String> {
@@ -351,10 +378,10 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        log.info("liquid: onActivityResult($requestCode, $resultCode")
-        if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == Activity.RESULT_OK) {
-            log.info("liquid: activity result for user buy sell dash was OK")
-            setResult(Activity.RESULT_OK)
+        log.info("liquid: onActivityResult($requestCode, $resultCode)")
+        if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == Constants.RESULT_CODE_GO_HOME) {
+            log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
+            returnHome = true
             onBackPressed()
         } else if (requestCode == 1) {
             if (resultCode == Activity.RESULT_OK) {
@@ -364,11 +391,20 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         }
     }
 
+    override fun onBackPressed() {
+        if (!returnHome) {
+            setResult(Activity.RESULT_OK)
+        } else {
+            setResult(Constants.RESULT_CODE_GO_HOME)
+        }
+        super.onBackPressed()
+    }
+
     /**
      * Show dialog for logout from liquid
      */
     private fun revokeAccessToken() {
-        log.error("liquid: revoking access token")
+        log.info("liquid: revoking access token")
         val dialogBuilder = AlertDialog.Builder(this)
         dialogBuilder.setMessage(R.string.liquid_logout_title)
         dialogBuilder.setPositiveButton(android.R.string.ok) { dialog, button ->
@@ -393,9 +429,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     private fun openLogoutUrl() {
-        log.error("liquid: open logout url")
+        log.info("liquid: open logout url")
         if (appAvailable("com.quoine.liquid")) { // check liquid app installed or not
-            log.error("liquid: call logout using liquid app")
+            log.info("liquid: call logout using liquid app")
             callRevokeAccessTokenAPI()
         } else {
             isClickLogoutButton = true
@@ -443,12 +479,16 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 log.info("liquid: revoke access token successful")
                 loadingDialog!!.hide()
                 LiquidClient.getInstance()?.clearStoredSessionData()
+                setResult(Activity.RESULT_OK)
                 finish()
             }
 
             override fun onError(e: Exception?) {
                 log.error("liquid: cannot revoke access token: ${e?.message}")
                 loadingDialog!!.hide()
+                if (e is LiquidUnauthorizedException) {
+                    // do nothing for now
+                }
             }
         })
     }

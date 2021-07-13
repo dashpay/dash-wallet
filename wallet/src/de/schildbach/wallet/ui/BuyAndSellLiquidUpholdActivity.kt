@@ -8,14 +8,10 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
-import org.dash.wallet.integration.liquid.currency.CurrencyResponse
-import org.dash.wallet.integration.liquid.currency.PayloadItem
-import org.dash.wallet.integration.liquid.data.LiquidClient
-import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
-import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.WalletApplication
@@ -28,7 +24,17 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
+import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.liquid.currency.CurrencyResponse
+import org.dash.wallet.integration.liquid.currency.PayloadItem
+import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
+import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
+import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
+import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
@@ -37,9 +43,7 @@ import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 
 
-private const val RESULT_CODE_GO_HOME = 100
-
-class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
+class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
 
     private var liquidClient: LiquidClient? = null
@@ -103,12 +107,7 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
         setLoginStatus()
 
-        if (LiquidClient.getInstance()!!.isAuthenticated) {
-            getUserLiquidAccountBalance()
-        }
-        if (UpholdClient.getInstance().isAuthenticated()) {
-            getUpholdUserBalance()
-        }
+        updateBalances()
 
 
         // for getting currency exchange rates
@@ -123,9 +122,19 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
     }
 
+    private fun updateBalances() {
+        if (LiquidClient.getInstance()!!.isAuthenticated) {
+            getUserLiquidAccountBalance()
+        }
+        if (UpholdClient.getInstance().isAuthenticated()) {
+            getUpholdUserBalance()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         setLoginStatus()
+        updateBalances()
     }
 
     private fun setLoginStatus() {
@@ -192,6 +201,22 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
                         return
                     }
                     loadingDialog!!.hide()
+                    if (e is LiquidUnauthorizedException) {
+                        // do we need this
+                        setLoginStatus()
+                        val viewModel =
+                            ViewModelProvider(this@BuyAndSellLiquidUpholdActivity)[FancyAlertDialogViewModel::class.java]
+                        viewModel.onPositiveButtonClick.observe(
+                            this@BuyAndSellLiquidUpholdActivity,
+                            Observer {
+                                startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
+                            })
+                        FancyAlertDialog.newInstance(
+                            org.dash.wallet.integration.liquid.R.string.liquid_logout_title, org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
+                            org.dash.wallet.integration.liquid.R.drawable.ic_liquid_icon, android.R.string.ok, 0
+                        ).show(supportFragmentManager, "auto-logout-dialog")
+
+                    }
                 }
             })
         } else {
@@ -276,8 +301,8 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == Activity.RESULT_OK) {
-            log.info("liquid: activity result for user buy sell dash was OK")
+        if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
+            log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
             if (LiquidClient.getInstance()!!.isAuthenticated) {
                 getUserLiquidAccountBalance()
             }

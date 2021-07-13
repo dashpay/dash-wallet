@@ -20,21 +20,29 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.app.ProgressDialog
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
+import androidx.preference.PreferenceManager
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
-import org.dash.wallet.integration.liquid.data.LiquidClient
-import org.dash.wallet.integration.liquid.data.LiquidConstants
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
+import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidConstants
+import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 
@@ -61,8 +69,22 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         loadingDialog!!.setCancelable(false)
         loadingDialog!!.setMessage(getString(R.string.loading))
         findViewById<View>(R.id.liquid_link_account).setOnClickListener { authUser() }
+        findViewById<View>(R.id.ivInfo).setOnClickListener {
+            CountrySupportDialog(this, true).show()
+        }
 
         handleIntent(intent)
+
+        val filter = IntentFilter(FINISH_ACTION)
+        filter.addDataScheme(LiquidConstants.OAUTH_CALLBACK_SCHEMA)
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(finishLinkReceiver, filter)
+        
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        if (prefs.getBoolean(REMIND_UNSUPPORTED_COUNTRIES, true)) {
+            prefs.edit().putBoolean(REMIND_UNSUPPORTED_COUNTRIES, false).apply()
+            CountrySupportDialog(this, true).show()
+        }
     }
 
 
@@ -93,6 +115,13 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         }
     }
 
+    private val finishLinkReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            intent.action = Intent.ACTION_VIEW
+            startActivity(intent) // this will ensure that the custom tab is closed
+        }
+    }
+
     override fun finish() {
         super.finish()
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left)
@@ -101,6 +130,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     override fun onDestroy() {
         log.info("liquid: closing liquid splash activity")
         loadingDialog?.dismiss()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(finishLinkReceiver)
         super.onDestroy()
     }
 
@@ -186,14 +216,14 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     private fun startLiquidBuyAndSellDashActivity() {
 
-        setResult(RESULT_OK)
+        //setResult(RESULT_OK)
         val intent = Intent(this, LiquidBuyAndSellDashActivity::class.java)
         val extras = getIntent().extras
         if (extras != null) {
             intent.putExtras(extras)
         }
-        startActivity(intent)
-        finish()
+        startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
+        //finish()
     }
 
     /**
@@ -235,14 +265,33 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     companion object {
+        fun createIntent(context: Context): Intent? {
+            return Intent(context, LiquidSplashActivity::class.java)
+        }
+
         const val LOGIN_REQUEST_CODE = 102
-        val log = LoggerFactory.getLogger(LiquidSplashActivity::class.java)
+        val log: Logger = LoggerFactory.getLogger(LiquidSplashActivity::class.java)
+        const val FINISH_ACTION = "LiquidSplashActivity.FINISH_ACTION"
+        const val REMIND_UNSUPPORTED_COUNTRIES = "LiquidSplashActivity.REMIND_UNSUPPORTED_COUNTRIES"
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == LOGIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            getUserId()
+        when {
+            requestCode == LOGIN_REQUEST_CODE && resultCode == Activity.RESULT_OK -> {
+                getUserId()
+            }
+            requestCode == Constants.USER_BUY_SELL_DASH -> {
+                when (resultCode) {
+                    Activity.RESULT_OK -> {
+                        finish()
+                    }
+                    Constants.RESULT_CODE_GO_HOME -> {
+                        setResult(Constants.RESULT_CODE_GO_HOME)
+                        finish()
+                    }
+                }
+            }
         }
     }
 }

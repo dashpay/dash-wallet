@@ -236,12 +236,10 @@
         </activity>
 
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdSplashActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme"
-            android:taskAffinity="" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme"
-            android:taskAffinity="" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.LockScreenActivity"
@@ -364,9 +362,16 @@
         <activity
             android:name="org.dash.wallet.integration.liquid.ui.LiquidSplashActivity"
             android:launchMode="singleTop"
+            android:theme="@style/My.Theme.ChildActivity"/>
+
+        <activity
+            android:name="org.dash.wallet.integration.liquid.ui.LiquidAuthRedirectActivity"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
             android:theme="@style/My.Theme.ChildActivity">
 
-            <intent-filter android:label="@string/send_coins_activity_title">
+            <intent-filter android:label="@string/liquid">
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />

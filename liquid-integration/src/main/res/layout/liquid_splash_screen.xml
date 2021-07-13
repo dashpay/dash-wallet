@@ -6,10 +6,28 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <include
-        layout="@layout/app_bar_general"
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/colorPrimary"
+        android:gravity="center"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+        <ImageView
+            android:id="@+id/ivInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:textSize="14sp"
+            app:srcCompat="@drawable/ic_information" />
+    </androidx.appcompat.widget.Toolbar>
 
     <RelativeLayout
         android:layout_width="match_parent"
