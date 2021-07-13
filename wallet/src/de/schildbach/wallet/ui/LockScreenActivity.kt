@@ -468,7 +468,11 @@ open class LockScreenActivity : AppCompatActivity() {
         }
         temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
 
-        unregisterReceiver(receiver)
+        try {
+            unregisterReceiver(receiver)
+        } catch (x: IllegalArgumentException) {
+            //swallow this exception on a reset wallet
+        }
     }
 
     private fun showFingerprintKeyChangedDialog() {
