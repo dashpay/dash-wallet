@@ -68,6 +68,7 @@ class PaymentProtocolFragment : Fragment() {
         }
     }
 
+    private var userAuthorizedDuring = false
     private lateinit var paymentProtocolModel: PaymentProtocolViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -211,6 +212,7 @@ class PaymentProtocolFragment : Fragment() {
                     view_flipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
+                    userAuthorizedDuring = true
                     paymentProtocolModel.commitAndBroadcast(it.data!!.first)
                 }
                 Status.ERROR -> {
@@ -330,6 +332,6 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun isUserAuthorized(): Boolean {
-        return (activity as SendCoinsActivity).isUserAuthorized
+        return (activity as SendCoinsActivity).isUserAuthorized || userAuthorizedDuring
     }
 }
