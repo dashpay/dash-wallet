@@ -292,7 +292,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             nameDocuments.map { getIdentityForName(it) }
         }
 
-        var profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
+        val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
             val profileDocuments = profiles.getList(userIds)
             profileDocuments.associateBy({ it.ownerId }, { it })
         } else {
@@ -630,7 +630,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
                 cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
-            val cftx = CreditFundingTransaction(platform.params, cftxData!!.toByteArray())
+            val cftx = CreditFundingTransaction(platform.params, cftxData!!.transaction)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
             cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
 
