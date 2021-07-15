@@ -42,6 +42,7 @@ dependencies {
     implementation 'org.dashj.platform:platform-core:0.20-SNAPSHOT'
     implementation 'org.dashj.platform:dpp:0.20-SNAPSHOT'
     implementation 'org.dashj.platform:dapi-client:0.20-SNAPSHOT'
+    implementation 'org.dashj:dashj-merk:0.20-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:0.18"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
@@ -229,6 +230,9 @@ android {
         devNet {
             res.srcDirs = ["devNet/res"]
         }
+        schnapps {
+            res.srcDirs = ["devNet/res"]
+        }
         evonet {
             res.srcDirs = ["evonet/res"]
         }
@@ -253,6 +257,9 @@ android {
         }
         devNet {
             applicationId = "hashengineering.darkcoin.wallet.devnet"
+        }
+        schnapps {
+            applicationId = "org.dash.dashpay.schnapps"
         }
         evonet {
             applicationId = "hashengineering.darkcoin.wallet.evonet"
