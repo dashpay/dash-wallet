@@ -57,7 +57,7 @@ import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.common.util.GenericUtils;
-import org.dashevo.dashpay.BlockchainIdentity;
+import org.dashj.platform.dashpay.BlockchainIdentity;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
