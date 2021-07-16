@@ -18,8 +18,7 @@ package de.schildbach.wallet.ui
 
 import android.app.AlertDialog
 import android.app.Dialog
-import android.content.Context
-import android.content.DialogInterface
+import android.content.*
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -35,7 +34,7 @@ import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -44,6 +43,7 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
+import org.dash.wallet.common.InteractionAwareActivity
 
 open class CheckPinDialog : DialogFragment() {
 
@@ -76,8 +76,8 @@ open class CheckPinDialog : DialogFragment() {
 
     private lateinit var state: State
 
-    private val positiveButton by lazy { view!!.findViewById<Button>(R.id.positive_button) }
-    private val negativeButton by lazy { view!!.findViewById<Button>(R.id.negative_button) }
+    private val positiveButton by lazy { requireView().findViewById<Button>(R.id.positive_button) }
+    private val negativeButton by lazy { requireView().findViewById<Button>(R.id.negative_button) }
 
     protected lateinit var viewModel: CheckPinViewModel
     protected lateinit var sharedModel: CheckPinSharedModel
@@ -97,7 +97,8 @@ open class CheckPinDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
-
+        val filter = IntentFilter(InteractionAwareActivity.FORCE_FINISH_ACTION)
+        requireActivity().registerReceiver(forceDismissReceiver, filter)
         return dialog
     }
 
@@ -167,13 +168,13 @@ open class CheckPinDialog : DialogFragment() {
         and actions
      */
     protected open fun initViewModel() {
-        viewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
+        viewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
         viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.ERROR -> {
                     pinRetryController.failedAttempt(it.data!!)
                     if (pinRetryController.isLocked) {
-                        showLockedAlert(context!!)
+                        showLockedAlert(requireContext())
                         dismiss()
                         return@Observer
                     }
@@ -193,7 +194,7 @@ open class CheckPinDialog : DialogFragment() {
         if (pinRetryController.isLocked) {
             return
         }
-        val requestCode = arguments!!.getInt(ARG_REQUEST_CODE)
+        val requestCode = requireArguments().getInt(ARG_REQUEST_CODE)
         sharedModel.onCorrectPinCallback.value = Pair(requestCode, pin)
         pinRetryController.clearPinFailPrefs()
         dismiss()
@@ -215,7 +216,7 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
-        sharedModel = ViewModelProviders.of(activity)[CheckPinSharedModel::class.java]
+        sharedModel = ViewModelProvider(activity)[CheckPinSharedModel::class.java]
     }
 
     protected fun setState(newState: State) {
@@ -258,6 +259,7 @@ open class CheckPinDialog : DialogFragment() {
         if (::fingerprintCancellationSignal.isInitialized) {
             fingerprintCancellationSignal.cancel()
         }
+        requireActivity().unregisterReceiver(forceDismissReceiver)
         super.onDismiss(dialog)
     }
 
@@ -319,5 +321,12 @@ open class CheckPinDialog : DialogFragment() {
         dialogBuilder.setMessage(pinRetryController.getWalletTemporaryLockedMessage(context))
         dialogBuilder.setPositiveButton(android.R.string.ok, null)
         dialogBuilder.show()
+    }
+
+    private val forceDismissReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            sharedModel.onCancelCallback.call()
+            dismissAllowingStateLoss()
+        }
     }
 }
