@@ -231,7 +231,7 @@ android {
             res.srcDirs = ["devNet/res"]
         }
         schnapps {
-            res.srcDirs = ["devNet/res"]
+            res.srcDirs = ["schnapps/res"]
         }
         evonet {
             res.srcDirs = ["evonet/res"]
