@@ -40,7 +40,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.ui.FancyAlertDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,11 +49,8 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
-import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
-import de.schildbach.wallet.ui.dashpay.PlatformRepo;
-import de.schildbach.wallet.ui.invite.InviteAlreadyClaimedDialog;
-import de.schildbach.wallet.ui.invite.InvitesHandler;
+import de.schildbach.wallet.ui.invite.InviteHandler;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
@@ -204,7 +200,7 @@ public class WalletTransactionsFragment extends Fragment
                 activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
             } else {
                 // handle errors from using an invite
-                InvitesHandler handler = new InvitesHandler(activity);
+                InviteHandler handler = new InviteHandler(activity);
                 if (handler.handleError(blockchainIdentityData)) {
                     adapter.setBlockchainIdentityData(null);
                 } else {

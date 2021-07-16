@@ -83,6 +83,9 @@ public class Configuration {
     private static final String PREFS_DEV_MODE = "developer_mode";
     private static final String PREFS_INVITER = "inviter";
     private static final String PREFS_INVITER_CONTACT_REQUEST_SENT_INFO = "inviter_contact_request_sent_info";
+    private static final String PREFS_ONBOARDING_INVITE = "inviter_onboarding_invite";
+    private static final String PREFS_ONBOARDING_INVITE_USERNAME = "inviter_onboarding_invite_username";
+    private static final String PREFS_ONBOARDING_INVITE_PROCESSING = "inviter_onboarding_invite_processing";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
@@ -461,6 +464,7 @@ public class Configuration {
     public Boolean getAcceptedUploadPolicy(String service) {
         return prefs.getBoolean(PREFS_UPLOAD_POLICY + service, false);
     }
+
     public void setAcceptedUploadPolicy(String service, Boolean accepted) {
         prefs.edit().putBoolean(PREFS_UPLOAD_POLICY + service, accepted).apply();
     }
@@ -468,6 +472,7 @@ public class Configuration {
     public Boolean getDeveloperMode() {
         return BuildConfig.DEBUG || prefs.getBoolean(PREFS_DEV_MODE, false);
     }
+
     public void setDeveloperMode(boolean activate) {
         prefs.edit().putBoolean(PREFS_DEV_MODE, activate).apply();
     }
@@ -486,5 +491,31 @@ public class Configuration {
 
     public void setInviterContactRequestSentInfoShown(Boolean shown) {
         prefs.edit().putBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, shown).apply();
+    }
+
+    public boolean getOnboardingInviteProcessing() {
+        return getOnboardingInvite() != null && prefs.getBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true);
+    }
+
+    public void setOnboardingInviteProcessingDone() {
+        prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, false).apply();
+    }
+
+    public Uri getOnboardingInvite() {
+        String invite = prefs.getString(PREFS_ONBOARDING_INVITE, null);
+        return invite != null ? Uri.parse(invite) : null;
+    }
+
+    public void setOnboardingInvite(final Uri onboardingInvite) {
+        prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true).apply();
+        prefs.edit().putString(PREFS_ONBOARDING_INVITE, onboardingInvite.toString()).apply();
+    }
+
+    public String getOnboardingInviteUsername() {
+        return prefs.getString(PREFS_ONBOARDING_INVITE_USERNAME, null);
+    }
+
+    public void setOnboardingInviteUsername(final String username) {
+        prefs.edit().putString(PREFS_ONBOARDING_INVITE_USERNAME, username).apply();
     }
 }

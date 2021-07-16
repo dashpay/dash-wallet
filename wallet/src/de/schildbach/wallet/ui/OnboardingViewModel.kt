@@ -21,6 +21,9 @@ import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
@@ -36,12 +39,21 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
-    fun createNewWallet() {
+    val platformRepo by lazy {
+        PlatformRepo.getInstance()
+    }
+
+    fun createNewWallet(onboardingInvite: InvitationLinkData?) {
         walletApplication.initEnvironmentIfNeeded()
         val wallet = Wallet(Constants.NETWORK_PARAMETERS)
         log.info("successfully created new wallet")
         walletApplication.wallet = wallet
         walletApplication.configuration.armBackupSeedReminder()
-        startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
+
+        if (onboardingInvite != null) {
+            startActivityAction.call(AcceptInviteActivity.createIntent(getApplication(), onboardingInvite, true))
+        } else {
+            startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
+        }
     }
 }

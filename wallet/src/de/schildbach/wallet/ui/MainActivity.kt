@@ -16,6 +16,7 @@ import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
 import android.view.MenuItem
+import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
@@ -28,20 +29,18 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECENT
 import de.schildbach.wallet.ui.RestoreFromFileHelper.OnRestoreWalletListener
-import de.schildbach.wallet.ui.dashpay.ContactSearchResultsAdapter
-import de.schildbach.wallet.ui.dashpay.ContactsFragment
+import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
-import de.schildbach.wallet.ui.dashpay.CreateIdentityService
-import de.schildbach.wallet.ui.dashpay.UpgradeToEvolutionFragment
+import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
-import de.schildbach.wallet.ui.invite.InvitesHandler
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
@@ -90,10 +89,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private var fingerprintHelper: FingerprintHelper? = null
     private var retryCreationIfInProgress = true
 
-    private val inviteHandler by lazy {
-        InvitesHandler(this)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -103,6 +98,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         setContentView(R.layout.activity_main)
 
         initViewModel()
+        handleCreateFromInvite()
 
         if (savedInstanceState == null) {
             checkAlerts()
@@ -120,6 +116,22 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         setupBottomNavigation()
     }
 
+    private fun handleCreateFromInvite() {
+        if (!config.hasBeenUsed() && config.onboardingInviteProcessing) {
+            if (config.isRestoringBackup) {
+                restoring_wallet_cover.visibility = View.VISIBLE
+            } else {
+                handleOnboardingInvite(true)
+            }
+        }
+    }
+
+    private fun handleOnboardingInvite(silentMode: Boolean) {
+        val invite = InvitationLinkData(config.onboardingInvite, false)
+        startActivity(InviteHandlerActivity.createIntent(this@MainActivity, invite, silentMode))
+        config.setOnboardingInviteProcessingDone()
+    }
+
     fun initViewModel() {
         viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
         viewModel.isAbleToCreateIdentityLiveData.observe(this, Observer {
@@ -132,11 +144,16 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
-                    if (!it.usingInvite) {
-                        startService(CreateIdentityService.createIntentForRetry(this, false))
-                    } else {
+                    if (it.usingInvite) {
                         startService(CreateIdentityService.createIntentForRetryFromInvite(this, false))
+                    } else {
+                        startService(CreateIdentityService.createIntentForRetry(this, false))
                     }
+                }
+                if (config.isRestoringBackup && config.onboardingInviteProcessing) {
+                    config.setOnboardingInviteProcessingDone()
+                    InviteHandler.showUsernameAlreadyDialog(this)
+                    restoring_wallet_cover.visibility = View.GONE
                 }
             }
         })
@@ -150,11 +167,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         viewModel.showCreateUsernameEvent.observe(this, {
             startActivity(Intent(this, CreateUsernameActivity::class.java))
         })
-        if (walletApplication.configuration.developerMode) {
-            viewModel.inviteData.observe(this, {
-                inviteHandler.handle(it)
-            })
-        }
         viewModel.sendContactRequestState.observe(this, Observer {
             config.inviter?.also { initInvitationUserId ->
                 if (!config.inviterContactRequestSentInfoShown) {
@@ -164,6 +176,14 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                             config.inviterContactRequestSentInfoShown = true
                         }
                     }
+                }
+            }
+        })
+        viewModel.blockchainStateData.observe(this, {
+            it?.apply {
+                if (isSynced() && config.onboardingInviteProcessing) {
+                    restoring_wallet_cover.visibility = View.GONE
+                    handleOnboardingInvite(false)
                 }
             }
         })
@@ -441,9 +461,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
             }.parse()
 
-        } else if (Intent.ACTION_VIEW == action) {
-
-            viewModel.handleInvite(intent)
         }
     }
 

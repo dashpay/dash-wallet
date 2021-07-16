@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="80088"
-    android:versionName="4.3-dashpay">
+    android:versionCode="80093"
+    android:versionName="4.4-dashpay">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -77,6 +77,26 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
+<!--            <intent-filter android:autoVerify="true"-->
+<!--                tools:targetApi="m">-->
+
+<!--                <action android:name="android.intent.action.VIEW" />-->
+
+<!--                <category android:name="android.intent.category.DEFAULT" />-->
+<!--                <category android:name="android.intent.category.BROWSABLE" />-->
+
+<!--                <data-->
+<!--                    android:host="invitations.dashpay.io"-->
+<!--                    android:path="/applink"-->
+<!--                    android:scheme="http" />-->
+
+<!--                <data-->
+<!--                    android:host="invitations.dashpay.io"-->
+<!--                    android:path="/applink"-->
+<!--                    android:scheme="https" />-->
+
+<!--            </intent-filter>-->
+
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
@@ -116,25 +136,25 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
-            <intent-filter android:autoVerify="true"
-                tools:targetApi="m">
+<!--            <intent-filter android:autoVerify="true"-->
+<!--                tools:targetApi="m">-->
 
-                <action android:name="android.intent.action.VIEW" />
+<!--                <action android:name="android.intent.action.VIEW" />-->
 
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+<!--                <category android:name="android.intent.category.DEFAULT" />-->
+<!--                <category android:name="android.intent.category.BROWSABLE" />-->
 
-                <data
-                    android:host="invitations.dashpay.io"
-                    android:path="/applink"
-                    android:scheme="http" />
+<!--                <data-->
+<!--                    android:host="invitations.dashpay.io"-->
+<!--                    android:path="/applink"-->
+<!--                    android:scheme="http" />-->
 
-                <data
-                    android:host="invitations.dashpay.io"
-                    android:path="/applink"
-                    android:scheme="https" />
+<!--                <data-->
+<!--                    android:host="invitations.dashpay.io"-->
+<!--                    android:path="/applink"-->
+<!--                    android:scheme="https" />-->
 
-            </intent-filter>
+<!--            </intent-filter>-->
 
         </activity-alias>
 
@@ -242,6 +262,33 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+
+        </activity>
+
+        <activity
+            android:name="de.schildbach.wallet.ui.InviteHandlerActivity"
+            android:label=""
+            android:theme="@style/My.Theme.Transparent">
+
+            <intent-filter android:autoVerify="true"
+                tools:targetApi="m">
+
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="invitations.dashpay.io"
+                    android:path="/applink"
+                    android:scheme="http" />
+
+                <data
+                    android:host="invitations.dashpay.io"
+                    android:path="/applink"
+                    android:scheme="https" />
+
             </intent-filter>
 
         </activity>
@@ -392,6 +439,11 @@
             android:name="de.schildbach.wallet.ui.dashpay.CropImageActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.invite.OnboardFromInvite"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:screenOrientation="portrait" />
 
         <provider
             android:name="de.schildbach.wallet.data.AddressBookProvider"

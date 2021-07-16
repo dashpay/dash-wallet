@@ -24,6 +24,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet_test.R
@@ -33,10 +34,12 @@ class AcceptInviteActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_INVITE = "extra_invite"
+        private const val EXTRA_FROM_ONBOARDING = "extra_from_onboarding"
 
-        fun createIntent(context: Context, invite: InvitationLinkData): Intent {
+        fun createIntent(context: Context, invite: InvitationLinkData, fromOnboarding: Boolean): Intent {
             return Intent(context, AcceptInviteActivity::class.java).apply {
                 putExtra(EXTRA_INVITE, invite)
+                putExtra(EXTRA_FROM_ONBOARDING, fromOnboarding)
             }
         }
     }
@@ -53,7 +56,14 @@ class AcceptInviteActivity : AppCompatActivity() {
                 viewpager.setCurrentItem(viewpager.currentItem + 1, true)
             } else {
                 val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
-                startActivity(CreateUsernameActivity.createIntentFromInvite(this, invite))
+                val fromOnboarding = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
+                val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(this, invite, fromOnboarding)
+
+                if (fromOnboarding) {
+                    startActivity(OnboardFromInvite.createIntent(this, OnboardFromInvite.Mode.STEP_1, createUsernameActivityIntent))
+                } else {
+                    startActivity(createUsernameActivityIntent)
+                }
                 finish()
             }
         }

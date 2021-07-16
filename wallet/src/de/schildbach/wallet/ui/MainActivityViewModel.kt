@@ -1,23 +1,16 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.liveData
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
-import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
 class MainActivityViewModel(application: Application) : BaseProfileViewModel(application) {
@@ -36,36 +29,6 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
     }
 
     val inviteHistory = AppDatabase.getAppDatabase().invitationsDaoAsync().loadAll()
-
-    val inviteData = MutableLiveData<Resource<InvitationLinkData>>()
-
-    fun handleInvite(intent: Intent) {
-        FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
-            val link = it?.link
-            if (link != null && InvitationLinkData.isValid(link)) {
-                log.debug("received invite $link")
-                val invite = InvitationLinkData(link, false)
-
-                inviteData.value = Resource.loading()
-                viewModelScope.launch(Dispatchers.IO) {
-                    try {
-                        invite.validation = platformRepo.validateInvitation(invite)
-
-                        if (hasIdentity) {
-                            // we have an identity, so cancel this invite
-                            inviteData.postValue(Resource.canceled(invite))
-                        } else {
-                            inviteData.postValue(Resource.success(invite))
-                        }
-                    } catch (e: Exception) {
-                        inviteData.postValue(Resource.error(e, invite))
-                    }
-                }
-            } else {
-                log.debug("invalid invite ignored")
-            }
-        }
-    }
 
     val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()
     val blockchainState: BlockchainState?

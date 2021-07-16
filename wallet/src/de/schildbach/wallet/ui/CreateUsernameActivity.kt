@@ -43,6 +43,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
+import de.schildbach.wallet.ui.invite.OnboardFromInvite
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
@@ -89,6 +90,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
         private const val EXTRA_USERNAME = "extra_username"
         private const val EXTRA_INVITE = "extra_invite"
+        private const val EXTRA_FROM_ONBOARDING = "extra_from_onboarding"
 
         @JvmStatic
         fun createIntent(context: Context, username: String? = null): Intent {
@@ -106,10 +108,11 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         }
 
         @JvmStatic
-        fun createIntentFromInvite(context: Context, invite: InvitationLinkData): Intent {
+        fun createIntentFromInvite(context: Context, invite: InvitationLinkData, fromOnboarding: Boolean): Intent {
             return Intent(context, CreateUsernameActivity::class.java).apply {
                 action = ACTION_FROM_INVITE
                 putExtra(EXTRA_INVITE, invite)
+                putExtra(EXTRA_FROM_ONBOARDING, fromOnboarding)
             }
         }
 
@@ -267,16 +270,25 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             startService(CreateIdentityService.createIntentFromInviteForNewUsername(this, username))
             finish()
         } else {
-            AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(this, Observer {
-                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
-                    finish()
-                } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
-                    completeUsername = it.username ?: ""
-                    showCompleteState()
-                }
-            })
-            showProcessingState()
-            startService(CreateIdentityService.createIntentFromInvite(this, username, invite))
+            val fromOnboarding = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
+            if (fromOnboarding) {
+                walletApplication.configuration.onboardingInviteUsername = username
+                val goNextIntent = SetPinActivity.createIntent(application, R.string.set_pin_create_new_wallet, false, null, true)
+                startActivity(OnboardFromInvite.createIntent(this, OnboardFromInvite.Mode.STEP_2, goNextIntent))
+                finish()
+                return
+            } else {
+                AppDatabase.getAppDatabase().blockchainIdentityDataDaoAsync().loadBase().observe(this, Observer {
+                    if (it?.creationStateErrorMessage != null && !reuseTransaction) {
+                        finish()
+                    } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
+                        completeUsername = it.username ?: ""
+                        showCompleteState()
+                    }
+                })
+                showProcessingState()
+                startService(CreateIdentityService.createIntentFromInvite(this, username, invite))
+            }
         }
         showProcessingState()
     }

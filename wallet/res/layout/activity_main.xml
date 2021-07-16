@@ -26,9 +26,9 @@
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/fragment_container"
+            android:name="de.schildbach.wallet.ui.WalletFragment"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:name="de.schildbach.wallet.ui.WalletFragment"
             android:tag="wallet_fragment"
             app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
             app:layout_constraintLeft_toLeftOf="parent"
@@ -36,5 +36,12 @@
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <de.schildbach.wallet.ui.widget.PleaseWaitRestoringWalletView
+        android:id="@+id/restoring_wallet_cover"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/dash_lighter_gray"
+        android:visibility="gone" />
 
 </de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>
