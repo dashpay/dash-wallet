@@ -343,6 +343,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayProfile, toContact, fromContact))
         }
 
+        // TODO: this is only needed when Proofs don't sort results
+        // This was added in v0.20
+        usernameSearchResults.sortBy { it.username }
+
         return usernameSearchResults
     }
 
