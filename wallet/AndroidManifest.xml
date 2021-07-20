@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
     android:installLocation="internalOnly"
-    android:versionCode="80093"
+    android:versionCode="80094"
     android:versionName="4.4-dashpay">
 
     <!-- normal permissions -->
@@ -77,26 +77,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
-<!--            <intent-filter android:autoVerify="true"-->
-<!--                tools:targetApi="m">-->
-
-<!--                <action android:name="android.intent.action.VIEW" />-->
-
-<!--                <category android:name="android.intent.category.DEFAULT" />-->
-<!--                <category android:name="android.intent.category.BROWSABLE" />-->
-
-<!--                <data-->
-<!--                    android:host="invitations.dashpay.io"-->
-<!--                    android:path="/applink"-->
-<!--                    android:scheme="http" />-->
-
-<!--                <data-->
-<!--                    android:host="invitations.dashpay.io"-->
-<!--                    android:path="/applink"-->
-<!--                    android:scheme="https" />-->
-
-<!--            </intent-filter>-->
-
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
@@ -135,26 +115,6 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-
-<!--            <intent-filter android:autoVerify="true"-->
-<!--                tools:targetApi="m">-->
-
-<!--                <action android:name="android.intent.action.VIEW" />-->
-
-<!--                <category android:name="android.intent.category.DEFAULT" />-->
-<!--                <category android:name="android.intent.category.BROWSABLE" />-->
-
-<!--                <data-->
-<!--                    android:host="invitations.dashpay.io"-->
-<!--                    android:path="/applink"-->
-<!--                    android:scheme="http" />-->
-
-<!--                <data-->
-<!--                    android:host="invitations.dashpay.io"-->
-<!--                    android:path="/applink"-->
-<!--                    android:scheme="https" />-->
-
-<!--            </intent-filter>-->
 
         </activity-alias>
 
