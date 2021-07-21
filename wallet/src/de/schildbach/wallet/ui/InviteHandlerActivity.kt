@@ -75,6 +75,9 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun initViewModel() {
+        viewModel.blockchainIdentityData.observe(this, {
+            // dummy observer, just to force viewModel.blockchainIdentityData to be loaded
+        })
         viewModel.inviteData.observe(this, {
             inviteHandler.handle(it, externalSilentMode)
         })
