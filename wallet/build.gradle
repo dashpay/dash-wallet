@@ -43,6 +43,7 @@ dependencies {
     implementation 'org.dashj.platform:dpp:0.20-SNAPSHOT'
     implementation 'org.dashj.platform:dapi-client:0.20-SNAPSHOT'
     implementation 'org.dashj:dashj-merk:0.20-SNAPSHOT'
+    implementation 'org.dashj.android:dashj-merk:0.20-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:0.18"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
@@ -156,7 +157,7 @@ android {
         disable 'MissingTranslation'
     }
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 29
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
