@@ -6,10 +6,10 @@ import androidx.room.Ignore
 import kotlinx.android.parcel.IgnoredOnParcel
 import org.bitcoinj.core.Base58
 import kotlinx.android.parcel.Parcelize
-import org.dashevo.dashpay.ContactRequest
-import org.dashevo.dpp.document.Document
-import org.dashevo.dpp.identifier.Identifier
-import org.dashevo.platform.Platform
+import org.dashj.platform.dashpay.ContactRequest
+import org.dashj.platform.dpp.document.Document
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.sdk.platform.Platform
 
 @Parcelize
 @Entity(tableName = "dashpay_contact_request", primaryKeys = ["userId", "toUserId", "accountReference"])

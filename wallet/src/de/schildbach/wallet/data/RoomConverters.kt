@@ -22,9 +22,9 @@ import androidx.room.TypeConverter
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
-import org.dashevo.dashpay.BlockchainIdentity
-import org.dashevo.dpp.identity.Identity
-import org.dashevo.dpp.identity.IdentityPublicKey
+import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dpp.identity.Identity
+import org.dashj.platform.dpp.identity.IdentityPublicKey
 import java.util.*
 import kotlin.collections.ArrayList
 

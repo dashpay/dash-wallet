@@ -22,10 +22,10 @@ import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import kotlinx.android.parcel.IgnoredOnParcel
 import kotlinx.android.parcel.Parcelize
-import org.dashevo.dashpay.Profile
-import org.dashevo.dpp.document.Document
-import org.dashevo.dpp.identifier.Identifier
-import org.dashevo.dpp.util.HashUtils
+import org.dashj.platform.dashpay.Profile
+import org.dashj.platform.dpp.document.Document
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.util.HashUtils
 
 @Parcelize
 @Entity(tableName = "dashpay_profile")

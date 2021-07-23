@@ -24,9 +24,9 @@ import com.google.firebase.dynamiclinks.ShortDynamicLink
 import kotlinx.android.parcel.IgnoredOnParcel
 import kotlinx.android.parcel.Parcelize
 import org.bitcoinj.core.Sha256Hash
-import org.dashevo.dpp.document.Document
-import org.dashevo.dpp.identifier.Identifier
-import org.dashevo.dpp.util.HashUtils
+import org.dashj.platform.dpp.document.Document
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.util.HashUtils
 
 /**
  * Contains the status of an invitation

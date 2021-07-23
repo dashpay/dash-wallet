@@ -32,7 +32,7 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.util.Util
 import com.google.common.base.Stopwatch
 import org.bitcoinj.core.Sha256Hash
-import org.dashevo.dpp.toBase64
+import org.dashj.platform.dpp.toBase64
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.math.BigInteger

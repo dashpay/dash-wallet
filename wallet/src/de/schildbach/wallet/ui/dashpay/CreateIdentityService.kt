@@ -32,9 +32,9 @@ import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dashevo.dapiclient.model.GrpcExceptionInfo
-import org.dashevo.dashpay.BlockchainIdentity
-import org.dashevo.dpp.identity.Identity
+import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
+import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dpp.identity.Identity
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.concurrent.TimeUnit

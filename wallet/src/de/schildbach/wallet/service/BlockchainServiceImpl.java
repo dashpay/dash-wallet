@@ -84,7 +84,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dashevo.dapiclient.DapiClient;
+import org.dashj.platform.dapiclient.DapiClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

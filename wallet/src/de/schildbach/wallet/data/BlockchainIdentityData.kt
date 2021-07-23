@@ -24,9 +24,9 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.Wallet
-import org.dashevo.dashpay.BlockchainIdentity
-import org.dashevo.dpp.identity.Identity
-import org.dashevo.dpp.identity.IdentityPublicKey
+import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dpp.identity.Identity
+import org.dashj.platform.dpp.identity.IdentityPublicKey
 
 @Entity(tableName = "blockchain_identity")
 data class BlockchainIdentityData(var creationState: CreationState = CreationState.NONE,
