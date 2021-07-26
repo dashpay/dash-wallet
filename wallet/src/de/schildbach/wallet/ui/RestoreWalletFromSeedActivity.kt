@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -134,7 +135,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             }
         })
         viewModel.startActivityAction.observe(this, Observer {
-            startActivity(it)
+            startActivityForResult(it, SET_PIN_REQUEST_CODE)
         })
     }
 
@@ -154,6 +155,14 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             setMessage(errorMessage)
             setPositiveButton(R.string.button_ok, null)
             show()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == SET_PIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            setResult(Activity.RESULT_OK)
+            finish()
         }
     }
 }

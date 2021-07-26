@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -395,6 +396,7 @@ class SetPinActivity : InteractionAwareActivity() {
             }
         })
         viewModel.startNextActivity.observe(this, Observer {
+            setResult(Activity.RESULT_OK)
             if (it) {
                 startVerifySeedActivity()
             } else {
