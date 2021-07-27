@@ -129,8 +129,8 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 def props = new Properties()
-if (file("../local.properties").exists()) {
-    file("../local.properties").withInputStream { props.load(it) }
+if (file("../service.properties").exists()) {
+    file("../service.properties").withInputStream { props.load(it) }
 }
 
 android {
@@ -199,12 +199,45 @@ android {
         }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
+            def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID")
+            def upholdClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET")
+            def liquidClientId = props.getProperty("LIQUID_PUBLIC_API_KEY")
+            if (upholdClientId == null) {
+                upholdClientId = "\"UPHOLD_CLIENT_ID\""
+            }
+            if (upholdClientSecret == null) {
+                upholdClientSecret = "\"UPHOLD_CLIENT_SECRET\""
+            }
+            if (liquidClientId == null) {
+                liquidClientId = "\"LIQUID_PUBLIC_API_KEY\""
+            }
+            buildConfigField("String", "UPHOLD_CLIENT_ID", upholdClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", upholdClientSecret)
+            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
+            def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
+            def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
+            def liquidClientId = props.getProperty("LIQUID_PUBLIC_API_KEY_SANDBOX")
+            if (imgurClientId == null) {
+                imgurClientId = "\"UPHOLD_CLIENT_ID\""
+            }
+            if (imgurClientSecret == null) {
+                imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
+            }
+            if (liquidClientId == null) {
+                liquidClientId = "\"LIQUID_PUBLIC_API_KEY\""
+            }
+            buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
+            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
         }
         devNet {
             applicationId = "hashengineering.darkcoin.wallet.devnet"
+            buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
+            buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
+            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
         }
     }
 

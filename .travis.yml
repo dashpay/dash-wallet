@@ -74,13 +74,13 @@ notifications:
   email: false
 
 script:
-- openssl aes-256-cbc -K $encrypted_f761570c4ae9_key -iv $encrypted_f761570c4ae9_iv -in .deploy/google-services.json.enc -out wallet/google-services.json -d
-- ./gradlew test
-- ./gradlew assemble_testNet3Debug
-- rm -rf .gradle/4.4
-- openssl aes-256-cbc -K $encrypted_1615d4cf65a2_key -iv $encrypted_1615d4cf65a2_iv -in .deploy/UpholdConstants.enc -out uphold-integration/src/main/java/org/dash/wallet/integration/uphold/data/UpholdConstants.java -d
-- ./gradlew assembleProdDebug
-- ./gradlew assembleProdRelease
+  - openssl aes-256-cbc -K $encrypted_5c8f4d70d644_key -iv $encrypted_5c8f4d70d644_iv -in .deploy/service.properties.enc -out service.properties -d
+  - openssl aes-256-cbc -K $encrypted_f761570c4ae9_key -iv $encrypted_f761570c4ae9_iv -in .deploy/google-services.json.enc -out wallet/google-services.json -d
+  - ./gradlew test
+  - ./gradlew assemble_testNet3Debug
+  - rm -rf .gradle/4.4
+  - ./gradlew assembleProdDebug
+  - ./gradlew assembleProdRelease
 
 before_deploy:
   - openssl aes-256-cbc -K $encrypted_945ec88d7d8f_key -iv $encrypted_945ec88d7d8f_iv -in .deploy/id_rsa.enc -out .deploy/id_rsa -d
