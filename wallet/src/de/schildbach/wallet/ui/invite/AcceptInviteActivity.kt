@@ -24,7 +24,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet_test.R
@@ -60,7 +59,7 @@ class AcceptInviteActivity : AppCompatActivity() {
                 val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(this, invite, fromOnboarding)
 
                 if (fromOnboarding) {
-                    startActivity(OnboardFromInvite.createIntent(this, OnboardFromInvite.Mode.STEP_1, createUsernameActivityIntent))
+                    startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_1, createUsernameActivityIntent))
                 } else {
                     startActivity(createUsernameActivityIntent)
                 }

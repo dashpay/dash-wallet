@@ -29,7 +29,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.invite.OnboardFromInvite
+import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -462,7 +462,7 @@ class SetPinActivity : InteractionAwareActivity() {
         val onboardingInvite = intent.getBooleanExtra(EXTRA_ONBOARDING_INVITE, false)
         val verifySeedActivityIntent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
         if (onboardingInvite) {
-            startActivityNewTask(OnboardFromInvite.createIntent(this, OnboardFromInvite.Mode.STEP_3, verifySeedActivityIntent))
+            startActivityNewTask(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))
         } else {
             startActivityNewTask(verifySeedActivityIntent)
         }

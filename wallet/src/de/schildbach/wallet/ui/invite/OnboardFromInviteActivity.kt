@@ -28,14 +28,14 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_accept_invite.continue_button
 import kotlinx.android.synthetic.main.activity_onboard_from_invite.*
 
-class OnboardFromInvite : AppCompatActivity() {
+class OnboardFromInviteActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_MODE = "extra_mode"
         private const val EXTRA_GO_NEXT = "extra_go_next"
 
         fun createIntent(context: Context, mode: Mode, goNextIntent: Intent): Intent {
-            return Intent(context, OnboardFromInvite::class.java).apply {
+            return Intent(context, OnboardFromInviteActivity::class.java).apply {
                 putExtra(EXTRA_MODE, mode.ordinal)
                 putExtra(EXTRA_GO_NEXT, goNextIntent)
             }
@@ -102,10 +102,10 @@ class OnboardFromInvite : AppCompatActivity() {
     private fun activate(view: TextView, active: Boolean) {
         view.run {
             if (active) {
-                setTextColor(ContextCompat.getColor(this@OnboardFromInvite, R.color.dash_black))
+                setTextColor(ContextCompat.getColor(this@OnboardFromInviteActivity, R.color.dash_black))
                 setTypeface(null, Typeface.BOLD)
             } else {
-                setTextColor(ContextCompat.getColor(this@OnboardFromInvite, R.color.dash_gray))
+                setTextColor(ContextCompat.getColor(this@OnboardFromInviteActivity, R.color.dash_gray))
                 setTypeface(null, Typeface.NORMAL)
             }
         }

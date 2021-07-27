@@ -43,7 +43,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
-import de.schildbach.wallet.ui.invite.OnboardFromInvite
+import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_create_username.*
@@ -274,7 +274,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             if (fromOnboarding) {
                 walletApplication.configuration.onboardingInviteUsername = username
                 val goNextIntent = SetPinActivity.createIntent(application, R.string.set_pin_create_new_wallet, false, null, true)
-                startActivity(OnboardFromInvite.createIntent(this, OnboardFromInvite.Mode.STEP_2, goNextIntent))
+                startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_2, goNextIntent))
                 finish()
                 return
             } else {

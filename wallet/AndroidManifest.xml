@@ -401,7 +401,7 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.invite.OnboardFromInvite"
+            android:name="de.schildbach.wallet.ui.invite.OnboardFromInviteActivity"
             android:theme="@style/My.Theme.ChildActivity"
             android:screenOrientation="portrait" />
 
