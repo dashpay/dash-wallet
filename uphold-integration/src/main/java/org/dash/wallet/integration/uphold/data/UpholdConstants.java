@@ -1,7 +1,5 @@
 package org.dash.wallet.integration.uphold.data;
 
-import java.net.IDN;
-
 public class UpholdConstants {
 
     public static String CLIENT_ID = "";
