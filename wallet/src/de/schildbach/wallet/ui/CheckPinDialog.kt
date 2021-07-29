@@ -18,8 +18,7 @@ package de.schildbach.wallet.ui
 
 import android.app.AlertDialog
 import android.app.Dialog
-import android.content.Context
-import android.content.DialogInterface
+import android.content.*
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -35,7 +34,7 @@ import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -44,12 +43,15 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
+import org.dash.wallet.common.InteractionAwareActivity
+import org.slf4j.LoggerFactory
 
 open class CheckPinDialog : DialogFragment() {
 
     companion object {
 
         internal val FRAGMENT_TAG = CheckPinDialog::class.java.simpleName
+        private val log = LoggerFactory.getLogger(CheckPinDialog::class.java)
 
         internal const val ARG_REQUEST_CODE = "arg_request_code"
         internal const val ARG_PIN_ONLY = "arg_pin_only"
@@ -76,11 +78,12 @@ open class CheckPinDialog : DialogFragment() {
 
     private lateinit var state: State
 
-    private val positiveButton by lazy { view!!.findViewById<Button>(R.id.positive_button) }
-    private val negativeButton by lazy { view!!.findViewById<Button>(R.id.negative_button) }
+    private val positiveButton by lazy { requireView().findViewById<Button>(R.id.positive_button) }
+    private val negativeButton by lazy { requireView().findViewById<Button>(R.id.negative_button) }
 
     protected lateinit var viewModel: CheckPinViewModel
     protected lateinit var sharedModel: CheckPinSharedModel
+    protected lateinit var lockScreenViewModel: LockScreenViewModel
 
     protected val pinRetryController = PinRetryController.getInstance()
     protected var fingerprintHelper: FingerprintHelper? = null
@@ -97,7 +100,6 @@ open class CheckPinDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
-
         return dialog
     }
 
@@ -167,13 +169,13 @@ open class CheckPinDialog : DialogFragment() {
         and actions
      */
     protected open fun initViewModel() {
-        viewModel = ViewModelProviders.of(this).get(CheckPinViewModel::class.java)
+        viewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
         viewModel.checkPinLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.ERROR -> {
                     pinRetryController.failedAttempt(it.data!!)
                     if (pinRetryController.isLocked) {
-                        showLockedAlert(context!!)
+                        showLockedAlert(requireContext())
                         dismiss()
                         return@Observer
                     }
@@ -193,7 +195,7 @@ open class CheckPinDialog : DialogFragment() {
         if (pinRetryController.isLocked) {
             return
         }
-        val requestCode = arguments!!.getInt(ARG_REQUEST_CODE)
+        val requestCode = requireArguments().getInt(ARG_REQUEST_CODE)
         sharedModel.onCorrectPinCallback.value = Pair(requestCode, pin)
         pinRetryController.clearPinFailPrefs()
         dismiss()
@@ -215,7 +217,13 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
-        sharedModel = ViewModelProviders.of(activity)[CheckPinSharedModel::class.java]
+        sharedModel = ViewModelProvider(activity)[CheckPinSharedModel::class.java]
+        lockScreenViewModel = ViewModelProvider(activity)[LockScreenViewModel::class.java]
+        log.info("viewModel = $lockScreenViewModel")
+        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner) {
+            sharedModel.onCancelCallback.call()
+            dismiss()
+        }
     }
 
     protected fun setState(newState: State) {
@@ -263,6 +271,7 @@ open class CheckPinDialog : DialogFragment() {
 
     private fun initFingerprint() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            log.info("fingerprint setup for Android M and above")
             fingerprintHelper = FingerprintHelper(activity)
             fingerprintHelper?.run {
                 if (init()) {
@@ -291,19 +300,26 @@ open class CheckPinDialog : DialogFragment() {
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private fun startFingerprintListener() {
+        log.info("start fingerprint listener")
         fingerprintCancellationSignal = CancellationSignal()
+        fingerprintCancellationSignal.setOnCancelListener {
+            log.info("fingerprint cancellation signal listener triggered")
+        }
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
+                log.info("fingerprint scan successful")
                 onFingerprintSuccess(savedPass)
             }
 
             override fun onFailure(message: String, canceled: Boolean, exceededMaxAttempts: Boolean) {
+                log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
                 if (!canceled) {
                     fingerprint_view.showError(exceededMaxAttempts)
                 }
             }
 
             override fun onHelp(helpCode: Int, helpString: String) {
+                log.info("fingerprint help (helpCode: $helpCode, helpString: $helpString")
                 fingerprint_view.showError(false)
             }
         })

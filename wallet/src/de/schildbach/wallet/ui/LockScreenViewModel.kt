@@ -19,10 +19,11 @@ package de.schildbach.wallet.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import de.schildbach.wallet.WalletApplication
+import org.dash.wallet.common.data.SingleLiveEvent
 
 class LockScreenViewModel(application: Application) : AndroidViewModel(application) {
 
     private val walletApplication = application as WalletApplication
 
-
+    val activatingLockScreen = SingleLiveEvent<Void>()
 }
