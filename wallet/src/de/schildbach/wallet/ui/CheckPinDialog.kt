@@ -100,7 +100,6 @@ open class CheckPinDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
-        val filter = IntentFilter(InteractionAwareActivity.FORCE_FINISH_ACTION)
         return dialog
     }
 
