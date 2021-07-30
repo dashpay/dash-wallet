@@ -345,8 +345,8 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             for (i in 0 until cryptoArray.length()) {
                 val currency = cryptoArray.getJSONObject(i).getString("currency")
                 if (currency == "DASH") {
-                    findViewById<LinearLayout>(R.id.llLiquidAmount).visibility = View.VISIBLE
-                    findViewById<TextView>(R.id.txtLiquidAmount).setText(cryptoArray.getJSONObject(i).getString("balance"))
+                    findViewById<LinearLayout>(R.id.liquid_balance_container).visibility = View.VISIBLE
+                    findViewById<TextView>(R.id.liquid_balance).setText(cryptoArray.getJSONObject(i).getString("balance"))
                     amount = cryptoArray.getJSONObject(i).getString("balance")
                 }
             }
@@ -367,7 +367,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 val localValue = exchangeRate.coinToFiat(dashAmount)
                 val fiatFormat = MonetaryFormat().noCode().minDecimals(2).optionalDecimals()
 
-                findViewById<TextView>(R.id.txtUSAmount).setText(defaultCurrency + " " + if (dashAmount.isZero) "0.00" else fiatFormat.format(localValue))
+                findViewById<TextView>(R.id.liquid_fiat_amount).setText(defaultCurrency + " " + if (dashAmount.isZero) "0.00" else fiatFormat.format(localValue))
 
             }
         } catch (e: Exception) {

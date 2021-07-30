@@ -57,7 +57,7 @@
                     android:layout_marginEnd="20dp">
 
                     <TextView
-                        android:id="@+id/txtLiquidConnected"
+                        android:id="@+id/liquid_connected"
                         style="@style/MontserratRegular"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -76,7 +76,7 @@
                         android:id="@+id/imgLiquid"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_below="@+id/txtLiquidConnected"
+                        android:layout_below="@+id/liquid_connected"
                         android:layout_marginLeft="10dp"
                         android:layout_marginTop="20dp"
                         android:orientation="horizontal">
@@ -98,7 +98,7 @@
 
 
                     <LinearLayout
-                        android:id="@+id/llLiquidAmount"
+                        android:id="@+id/liquid_balance_container"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_below="@+id/imgLiquid"
@@ -117,7 +117,7 @@
                             android:tint="@color/colorPrimary" />
 
                         <TextView
-                            android:id="@+id/txtLiquidAmount"
+                            android:id="@+id/liquid_balance"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
@@ -128,7 +128,7 @@
                             android:textSize="18sp" />
 
                         <TextView
-                            android:id="@+id/txtUSAmount"
+                            android:id="@+id/liquid_fiat_amount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
