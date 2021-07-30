@@ -31,5 +31,6 @@
 
     <!-- Generic Buttons -->
     <string name="button_dismiss">Dismiss</string>
+    <string name="network_unavailable_return">Return to Wallet</string>
 
 </resources>
