@@ -214,8 +214,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     fun setNetworkState(online: Boolean) {
         isNetworkOnline = online
         network_status_container.isVisible = !online
-        liquid_balance_inaccurate.isVisible = !online
-        uphold_balance_inaccurate.isVisible = !online
         liquid_container.isEnabled = online
         uphold_container.isEnabled = online
         if (online) {
@@ -255,10 +253,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             liquid_connected.text = getString(connectedStringId)
             liquid_connected.setCompoundDrawablesWithIntrinsicBounds(connectedDrawable, null, null, null)
             liquid_balance_container.visibility = View.VISIBLE
+            liquid_balance_inaccurate.isVisible = !online
         } else {
-            liquid_connect.visibility = if (online) View.VISIBLE else View.GONE
+            liquid_connect.visibility = View.VISIBLE//if (online) View.VISIBLE else View.GONE
             liquid_connected.visibility = View.GONE
             liquid_balance_container.visibility = View.GONE
+            liquid_balance_inaccurate.isVisible = false
         }
 
         if (UpholdClient.getInstance().isAuthenticated) {
@@ -267,10 +267,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             uphold_connected.text = getString(connectedStringId)
             uphold_connected.setCompoundDrawablesWithIntrinsicBounds(connectedDrawable, null, null, null)
             uphold_balance_container.visibility = View.VISIBLE
+            uphold_balance_inaccurate.isVisible = !online
         } else {
-            uphold_connect.visibility = if (online) View.VISIBLE else View.GONE
+            uphold_connect.visibility = View.VISIBLE//if (online) View.VISIBLE else View.GONE
             uphold_connected.visibility = View.GONE
             uphold_balance_container.visibility = View.GONE
+            uphold_balance_inaccurate.isVisible = false
         }
 
     }
@@ -377,9 +379,9 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 R.string.fiat_balance_with_currency, config.exchangeCurrencyCode,
                 if (dashAmount.isZero) "0.00" else fiatFormat.format(localValue)
             )
-        } else {
+        } /*else {
             liquid_fiat_amount.text = getString(R.string.zero_fiat_balance_with_currency, config.exchangeCurrencyCode)
-        }
+        }*/
     }
 
     /**
@@ -421,7 +423,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         uphold_balance.setAmount(amount)
         loadingDialog!!.hide()
 
-        uphold_balance_container.visibility = View.VISIBLE
+        //uphold_balance_container.visibility = View.VISIBLE
 
         if (currentExchangeRate != null) {
             val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)

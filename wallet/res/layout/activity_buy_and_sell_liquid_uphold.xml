@@ -148,7 +148,7 @@
                         android:id="@+id/liquid_balance_inaccurate"
                         android:layout_width="wrap_content"
                         android:layout_height="48dp"
-                        android:layout_marginTop="13dp"
+                        android:layout_marginTop="8dp"
                         android:layout_marginStart="10dp"
                         android:layout_marginEnd="10dp"
                         android:layout_alignParentStart="true"
@@ -254,16 +254,17 @@
 
 
                     </LinearLayout>
-                    <include layout="@layout/inaccurate_balance"
+
+                    <include
                         android:id="@+id/uphold_balance_inaccurate"
+                        layout="@layout/inaccurate_balance"
                         android:layout_width="wrap_content"
                         android:layout_height="48dp"
-                        android:layout_marginTop="13dp"
-                        android:layout_marginStart="10dp"
-                        android:layout_marginEnd="10dp"
-                        android:layout_alignParentStart="true"
                         android:layout_below="@+id/uphold_balance_container"
-                        />
+                        android:layout_alignParentStart="true"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginEnd="10dp" />
                 </RelativeLayout>
 
                 <FrameLayout
