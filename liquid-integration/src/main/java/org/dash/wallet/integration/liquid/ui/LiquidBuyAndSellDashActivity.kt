@@ -9,8 +9,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
-import android.view.View
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
@@ -45,12 +43,13 @@ import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
 import org.dash.wallet.integration.liquid.databinding.ActivityLiquidBuyAndSellDashBinding
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.json.JSONObject
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     companion object {
-        val log = LoggerFactory.getLogger(LiquidBuyAndSellDashActivity::class.java)
+        val log: Logger = LoggerFactory.getLogger(LiquidBuyAndSellDashActivity::class.java)
 
         fun createIntent(context: Context?): Intent {
             return if (LiquidClient.getInstance()!!.isAuthenticated) {
@@ -144,7 +143,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         viewBinding.networkStatusContainer.isVisible = false
 
         if (LiquidClient.getInstance()!!.isAuthenticated) {
-            //getUserLiquidAccountBalance()
             viewModel.updateLiquidBalance()
         }
     }
@@ -345,51 +343,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     /**
-     * call api to  get liquid wallet balance
-     */
-    private fun getUserLiquidAccountBalance() {
-        log.info("liquid: attempting to get user liquid balance")
-        if (GenericUtils.isInternetConnected(this)) {
-            loadingDialog!!.show()
-            liquidClient?.getUserAccountBalance(liquidClient?.storedSessionId!!, object : LiquidClient.Callback<String> {
-                override fun onSuccess(data: String) {
-                    log.info("liquid: get user balance successful")
-                    if (isFinishing) {
-                        return
-                    }
-                    loadingDialog!!.hide()
-                    showDashLiquidBalance(data)
-                }
-
-                override fun onError(e: Exception?) {
-                    log.error("liquid: cannot obtain user balance: ${e?.message}")
-                    if (isFinishing) {
-                        return
-                    }
-                    loadingDialog!!.hide()
-                    if (e is LiquidUnauthorizedException) {
-                        val viewModel =
-                            ViewModelProvider(this@LiquidBuyAndSellDashActivity)[FancyAlertDialogViewModel::class.java]
-                        viewModel.onPositiveButtonClick.observe(
-                            this@LiquidBuyAndSellDashActivity,
-                            Observer {
-                                startActivity(LiquidSplashActivity.createIntent(this@LiquidBuyAndSellDashActivity))
-                                finish()
-                            })
-                        FancyAlertDialog.newInstance(
-                            R.string.liquid_logout_title, R.string.liquid_forced_logout,
-                            R.drawable.ic_liquid_icon, android.R.string.ok, 0
-                        ).show(supportFragmentManager, "auto-logout-dialog")
-                    }
-                }
-            })
-        } else {
-            GenericUtils.showToast(this, getString(R.string.internet_connected))
-            log.error("liquid: cannot connect to internet")
-        }
-    }
-
-    /**
      * call api to  get address
      */
     private fun getUserLiquidAccountAddress() {
@@ -474,49 +427,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         }
     }
 
-    private fun showDashLiquidBalanceOld(data: String) {
-
-        try {
-
-            var amount: String? = null
-
-            val jsonObject = JSONObject(data)
-            val cryptoArray = jsonObject.getJSONObject("payload").getJSONArray("crypto_accounts")
-
-            for (i in 0 until cryptoArray.length()) {
-                val currency = cryptoArray.getJSONObject(i).getString("currency")
-                if (currency == "DASH") {
-                    findViewById<LinearLayout>(R.id.liquid_balance_container).visibility = View.VISIBLE
-                    findViewById<TextView>(R.id.liquid_balance).setText(cryptoArray.getJSONObject(i).getString("balance"))
-                    amount = cryptoArray.getJSONObject(i).getString("balance")
-                }
-            }
-
-
-            if (currentExchangeRate != null) {
-                //amount = "4.0"
-                val walletDataProvider = application as WalletDataProvider
-                val defaultCurrency = walletDataProvider.defaultCurrencyCode()
-
-                val dashAmount = try {
-                    Coin.parseCoin(amount)
-                } catch (x: Exception) {
-                    Coin.ZERO
-                }
-
-                val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-                val localValue = exchangeRate.coinToFiat(dashAmount)
-                val fiatFormat = MonetaryFormat().noCode().minDecimals(2).optionalDecimals()
-
-                findViewById<TextView>(R.id.liquid_fiat_amount).setText(defaultCurrency + " " + if (dashAmount.isZero) "0.00" else fiatFormat.format(localValue))
-
-            }
-        } catch (e: Exception) {
-            log.error("liquid: cannot show liquid balance: ${e.message}", e)
-        }
-    }
-
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         log.info("liquid: onActivityResult($requestCode, $resultCode)")
@@ -559,14 +469,12 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     private fun appAvailable(packageName: String): Boolean {
         val pm: PackageManager = packageManager
-        val installed: Boolean
-        installed = try {
+        return try {
             pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
             true
         } catch (e: PackageManager.NameNotFoundException) {
             false
         }
-        return installed
     }
 
     private fun openLogoutUrl() {

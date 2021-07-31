@@ -460,15 +460,6 @@ public class Configuration {
         prefs.edit().putLong(PREFS_KEY_LAST_BLOCKCHAIN_RESET, System.currentTimeMillis()).apply();
     }
 
-    @NonNull
-    public String getLastLiquidBalance() {
-        return prefs.getString(PREFS_KEY_LAST_LIQUID_BALANCE, "0.00");
-    }
-
-    public void setLastLiquidBalance(String balance) {
-        prefs.edit().putString(PREFS_KEY_LAST_LIQUID_BALANCE, balance).apply();
-    }
-
     public void setLastUpholdBalance(String balance) {
         prefs.edit().putString(PREFS_KEY_LAST_UPHOLD_BALANCE, balance).apply();
     }

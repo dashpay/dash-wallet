@@ -81,14 +81,6 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
     private fun getConnectivityMarshmallowManagerCallback(): ConnectivityManager.NetworkCallback {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
-                /*override fun onCapabilitiesChanged(network: Network?, networkCapabilities: NetworkCapabilities?) {
-                    networkCapabilities?.let { capabilities ->
-                        if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
-                            postValue(true)
-                        }
-                    }
-                }*/
-
                 override fun onAvailable(network: Network) {
                     postValue(true)
                 }

@@ -35,6 +35,7 @@ import kotlin.coroutines.suspendCoroutine
 
 class BuyAndSellViewModel(application: Application) : AndroidViewModel(application) {
 
+    //TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
 
     fun updateUpholdBalance() {
