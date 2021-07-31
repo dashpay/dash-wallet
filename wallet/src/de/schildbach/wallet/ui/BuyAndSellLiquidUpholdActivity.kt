@@ -121,14 +121,19 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         updateBalances()
 
         liquid_container.setOnClickListener {
-            startActivityForResult(LiquidBuyAndSellDashActivity.createIntent(this), USER_BUY_SELL_DASH)
+            startActivityForResult(
+                LiquidBuyAndSellDashActivity.createIntent(this),
+                USER_BUY_SELL_DASH
+            )
         }
 
         uphold_container.setOnClickListener {
             startActivity(UpholdAccountActivity.createIntent(this))
         }
 
-        supportFragmentManager.beginTransaction().replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance()).commitNow()
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
+            .commitNow()
         network_status_container.isVisible = false
     }
 
@@ -195,8 +200,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                         startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
                                     })
                                 FancyAlertDialog.newInstance(
-                                    org.dash.wallet.integration.liquid.R.string.liquid_logout_title, org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
-                                    org.dash.wallet.integration.liquid.R.drawable.ic_liquid_icon, android.R.string.ok, 0
+                                    org.dash.wallet.integration.liquid.R.string.liquid_logout_title,
+                                    org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
+                                    org.dash.wallet.integration.liquid.R.drawable.ic_liquid_icon,
+                                    android.R.string.ok,
+                                    0
                                 ).show(supportFragmentManager, "auto-logout-dialog")
                             }
                             showLiquidBalance(liquidViewModel.lastLiquidBalance)
@@ -247,12 +255,18 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     private fun setLoginStatus(online: Boolean) {
 
         val connectedStringId = if (online) R.string.connected else R.string.disconnected
-        val connectedDrawable = resources.getDrawable(if (online) R.drawable.drawable_green_round else R.drawable.drawable_orange_round)
+        val connectedDrawable =
+            resources.getDrawable(if (online) R.drawable.drawable_green_round else R.drawable.drawable_orange_round)
         if (LiquidClient.getInstance()!!.isAuthenticated) {
             liquid_connect.visibility = View.GONE
             liquid_connected.visibility = View.VISIBLE
             liquid_connected.text = getString(connectedStringId)
-            liquid_connected.setCompoundDrawablesWithIntrinsicBounds(connectedDrawable, null, null, null)
+            liquid_connected.setCompoundDrawablesWithIntrinsicBounds(
+                connectedDrawable,
+                null,
+                null,
+                null
+            )
             liquid_balance_container.visibility = View.VISIBLE
             liquid_balance_inaccurate.isVisible = !online
         } else {
@@ -266,7 +280,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             uphold_connect.visibility = View.GONE
             uphold_connected.visibility = View.VISIBLE
             uphold_connected.text = getString(connectedStringId)
-            uphold_connected.setCompoundDrawablesWithIntrinsicBounds(connectedDrawable, null, null, null)
+            uphold_connected.setCompoundDrawablesWithIntrinsicBounds(
+                connectedDrawable,
+                null,
+                null,
+                null
+            )
             uphold_balance_container.visibility = View.VISIBLE
             uphold_balance_inaccurate.isVisible = !online
         } else {
@@ -297,49 +316,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    /**
-     * For getting liquid account balance
-     */
-    private fun getUserLiquidAccountBalance() {
-        if (GenericUtils.isInternetConnected(this)) {
-            loadingDialog!!.show()
-            liquidClient?.getUserAccountBalance(liquidClient?.storedSessionId!!, object : LiquidClient.Callback<String> {
-                override fun onSuccess(data: String) {
-                    if (isFinishing) {
-                        return
-                    }
-                    loadingDialog!!.hide()
-                    showDashLiquidBalance(data)
-                }
-
-                override fun onError(e: Exception?) {
-                    if (isFinishing) {
-                        return
-                    }
-                    loadingDialog!!.hide()
-                    if (e is LiquidUnauthorizedException) {
-                        // do we need this
-                        setLoginStatus(isNetworkOnline)
-                        val viewModel =
-                            ViewModelProvider(this@BuyAndSellLiquidUpholdActivity)[FancyAlertDialogViewModel::class.java]
-                        viewModel.onPositiveButtonClick.observe(
-                            this@BuyAndSellLiquidUpholdActivity,
-                            Observer {
-                                startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
-                            })
-                        FancyAlertDialog.newInstance(
-                            org.dash.wallet.integration.liquid.R.string.liquid_logout_title, org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
-                            org.dash.wallet.integration.liquid.R.drawable.ic_liquid_icon, android.R.string.ok, 0
-                        ).show(supportFragmentManager, "auto-logout-dialog")
-                    }
-                }
-            })
-        } else {
-            log.error("liquid: There is no internet connection")
-            showLiquidBalance(liquidViewModel.lastLiquidBalance)
-        }
-    }
-
+    //TODO: Can these next two functions be refactored into the liquid module?
     private fun showDashLiquidBalance(data: String) {
 
         try {
@@ -380,42 +357,10 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 R.string.fiat_balance_with_currency, config.exchangeCurrencyCode,
                 if (dashAmount.isZero) "0.00" else fiatFormat.format(localValue)
             )
-        } /*else {
-            liquid_fiat_amount.text = getString(R.string.zero_fiat_balance_with_currency, config.exchangeCurrencyCode)
-        }*/
-    }
-
-    /**
-     * For getting uphold account balance
-     */
-
-    private fun getUpholdUserBalance() {
-        if (GenericUtils.isInternetConnected(this)) {
-            //    loadingDialog!!.show()
-            UpholdClient.getInstance().getDashBalance(object : UpholdClient.Callback<BigDecimal> {
-                override fun onSuccess(data: BigDecimal) {
-                    if (isFinishing) {
-                        return
-                    }
-                    val balance = data.toString()
-                    config.lastUpholdBalance = balance
-
-                    showUpholdBalance(balance)
-                }
-
-                override fun onError(e: java.lang.Exception, otpRequired: Boolean) {
-                    if (isFinishing) {
-                        return
-                    }
-                    loadingDialog!!.hide()
-                }
-            })
-        } else {
-            log.error("liquid: There is no internet connection")
-            showUpholdBalance(config.lastUpholdBalance)
         }
     }
 
+    // TODO: can this be refactored into the uphold module>?
     private fun showUpholdBalance(balance: String) {
         val monetaryFormat = MonetaryFormat().noCode().minDecimals(8)
         uphold_balance.setFormat(monetaryFormat)
@@ -423,8 +368,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         val amount = Coin.parseCoin(balance)
         uphold_balance.setAmount(amount)
         loadingDialog!!.hide()
-
-        //uphold_balance_container.visibility = View.VISIBLE
 
         if (currentExchangeRate != null) {
             val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
@@ -435,8 +378,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 R.string.fiat_balance_with_currency, config.exchangeCurrencyCode,
                 if (amount.isZero) "0.00" else fiatFormat.format(localValue)
             )
-        } else {
-            uphold_fiat_amount.text = getString(R.string.zero_fiat_balance_with_currency, config.exchangeCurrencyCode)
         }
     }
 
@@ -493,30 +434,31 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
-            UpholdClient.getInstance().getUpholdCurrency(rangeString, object : UpholdClient.CallbackFilter<String> {
-                override fun onSuccess(data: String?, range: String) {
+            UpholdClient.getInstance()
+                .getUpholdCurrency(rangeString, object : UpholdClient.CallbackFilter<String> {
+                    override fun onSuccess(data: String?, range: String) {
 
 
-                    if (rangeString == "items=0-50") {
-                        upholdCurrencyArrayList.clear()
-                        totalUpholdRange = range
-                        rangeString = ""
+                        if (rangeString == "items=0-50") {
+                            upholdCurrencyArrayList.clear()
+                            totalUpholdRange = range
+                            rangeString = ""
+                        }
+
+                        val turnsType = object : TypeToken<List<UpholdCurrencyResponse>>() {}.type
+                        val turns = Gson().fromJson<List<UpholdCurrencyResponse>>(data, turnsType)
+                        upholdCurrencyArrayList.addAll(turns)
+                        loadingDialog!!.hide()
+                        checkAndCallApiOfUpload()
+                        //showCurrenciesDialog()
                     }
 
-                    val turnsType = object : TypeToken<List<UpholdCurrencyResponse>>() {}.type
-                    val turns = Gson().fromJson<List<UpholdCurrencyResponse>>(data, turnsType)
-                    upholdCurrencyArrayList.addAll(turns)
-                    loadingDialog!!.hide()
-                    checkAndCallApiOfUpload()
-                    //showCurrenciesDialog()
+                    override fun onError(e: java.lang.Exception?, otpRequired: Boolean) {
+                        loadingDialog!!.hide()
+                        showCurrenciesDialog()
+                    }
                 }
-
-                override fun onError(e: java.lang.Exception?, otpRequired: Boolean) {
-                    loadingDialog!!.hide()
-                    showCurrenciesDialog()
-                }
-            }
-            )
+                )
         } else {
             log.error("liquid: There is no internet connection")
         }
@@ -553,14 +495,23 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
      */
 
     private fun showCurrenciesDialog() {
-        CurrencyDialog(this, liquidCurrencyArrayList, upholdCurrencyArrayList, selectedFilterCurrencyItems, object : CurrencySelectListener {
-            override fun onCurrencySelected(isLiquidSelcted: Boolean, isUpholdSelected: Boolean, selectedFilterCurrencyItem: PayloadItem?) {
-                liquid_container.visibility = if (isLiquidSelcted) View.VISIBLE else View.GONE
-                uphold_container.visibility = if (isUpholdSelected) View.VISIBLE else View.GONE
-                selectedFilterCurrencyItems = selectedFilterCurrencyItem
-                setSelectedCurrency()
-            }
-        })
+        CurrencyDialog(
+            this,
+            liquidCurrencyArrayList,
+            upholdCurrencyArrayList,
+            selectedFilterCurrencyItems,
+            object : CurrencySelectListener {
+                override fun onCurrencySelected(
+                    isLiquidSelcted: Boolean,
+                    isUpholdSelected: Boolean,
+                    selectedFilterCurrencyItem: PayloadItem?
+                ) {
+                    liquid_container.visibility = if (isLiquidSelcted) View.VISIBLE else View.GONE
+                    uphold_container.visibility = if (isUpholdSelected) View.VISIBLE else View.GONE
+                    selectedFilterCurrencyItems = selectedFilterCurrencyItem
+                    setSelectedCurrency()
+                }
+            })
     }
 
     /**
@@ -570,11 +521,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
         if (selectedFilterCurrencyItems != null) {
             llFilterSelected.visibility = View.VISIBLE
-            txtSelectedFilterCurrency.text = selectedFilterCurrencyItems?.label + " (" + selectedFilterCurrencyItems?.symbol + ")"
+            txtSelectedFilterCurrency.text =
+                selectedFilterCurrencyItems?.label + " (" + selectedFilterCurrencyItems?.symbol + ")"
         } else {
             llFilterSelected.visibility = View.GONE
         }
-
 
         imgRemoveCurrency.setOnClickListener {
             selectedFilterCurrencyItems = null
