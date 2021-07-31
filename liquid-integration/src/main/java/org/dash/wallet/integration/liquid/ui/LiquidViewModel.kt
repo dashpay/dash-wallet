@@ -1,3 +1,20 @@
+/*
+ * Copyright 2020 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package org.dash.wallet.integration.liquid.ui
 
 import android.app.Application
@@ -26,7 +43,8 @@ class LiquidViewModel(application: Application) : ConnectivityViewModel(applicat
 
     var lastLiquidBalance: String
         get() = prefs.getString(Configuration.PREFS_KEY_LAST_LIQUID_BALANCE, "0.00")!!
-        set(value) = prefs.edit().putString(Configuration.PREFS_KEY_LAST_LIQUID_BALANCE, value).apply()
+        set(value) = prefs.edit().putString(Configuration.PREFS_KEY_LAST_LIQUID_BALANCE, value)
+            .apply()
 
     private val liquidClient = LiquidClient.getInstance()!!
 
@@ -34,15 +52,17 @@ class LiquidViewModel(application: Application) : ConnectivityViewModel(applicat
         liveData {
             emit(Resource.loading())
             val result = suspendCoroutine<Resource<String>> { continuation ->
-                liquidClient.getUserAccountBalance(liquidClient.storedSessionId!!, object : LiquidClient.Callback<String> {
-                    override fun onSuccess(data: String) {
-                        continuation.resumeWith(Result.success(Resource.success(data)))
-                    }
+                liquidClient.getUserAccountBalance(
+                    liquidClient.storedSessionId!!,
+                    object : LiquidClient.Callback<String> {
+                        override fun onSuccess(data: String) {
+                            continuation.resumeWith(Result.success(Resource.success(data)))
+                        }
 
-                    override fun onError(e: Exception?) {
-                        continuation.resumeWith(Result.success(Resource.error(e!!)))
-                    }
-                })
+                        override fun onError(e: Exception?) {
+                            continuation.resumeWith(Result.success(Resource.error(e!!)))
+                        }
+                    })
             }
             emit(result)
         }
