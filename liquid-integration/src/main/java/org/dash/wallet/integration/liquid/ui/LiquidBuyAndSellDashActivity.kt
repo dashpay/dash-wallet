@@ -35,11 +35,14 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
+import org.dash.wallet.integration.liquid.databinding.ActivityLiquidBuyAndSellDashBinding
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
@@ -60,6 +63,8 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     private var returnHome: Boolean = false
     private var liquidClient: LiquidClient? = null
+    private lateinit var viewModel: LiquidViewModel
+    private lateinit var viewBinding: ActivityLiquidBuyAndSellDashBinding
 
     private lateinit var context: Context
     private var loadingDialog: ProgressDialog? = null
@@ -75,7 +80,9 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     fun onCreate(savedInstanceState: Bundle?) {
         log.info("liquid: starting buy/sell dash activity")
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_liquid_buy_and_sell_dash)
+        viewBinding = ActivityLiquidBuyAndSellDashBinding.inflate(layoutInflater)
+        setContentView(viewBinding.root)
+
         this.context = this@LiquidBuyAndSellDashActivity
         liquidClient = LiquidClient.getInstance()
 
@@ -87,58 +94,151 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
         }
-        setTitle(getString(R.string.buy_sell_dash_))
+        title = getString(R.string.buy_sell_dash_)
 
         loadingDialog = ProgressDialog(this)
         loadingDialog!!.isIndeterminate = true
         loadingDialog!!.setCancelable(false)
         loadingDialog!!.setMessage(getString(R.string.loading))
 
-        findViewById<LinearLayout>(R.id.llDisconnect).setOnClickListener { openLogOutUrl() }
-        findViewById<LinearLayout>(R.id.buy_dash).setOnClickListener { buyDash() }
+        viewBinding.apply {
+            disconnectButton.setOnClickListener { openLogOutUrl() }
+            buyDash.setOnClickListener { buyDash() }
 
-        findViewById<LinearLayout>(R.id.sell_dash).setOnClickListener {
-            showSellDashDialog()
+            sellDash.setOnClickListener {
+                showSellDashDialog()
+            }
+
+            //don't show the (i) icon
+            ivInfo.apply {
+                isVisible = false
+                setOnClickListener {
+                    CountrySupportDialog(this@LiquidBuyAndSellDashActivity, true).show()
+                }
+            }
+
+            llTransferToLiquid.setOnClickListener {
+
+                // Commented code for future to use for this flow required this activity
+                /* val intent = Intent()
+                 intent.setClassName(this, "de.schildbach.wallet.ui.LiquidDashToDashTransferActivity")
+                 intent.putExtra("extra_title", getString(R.string.liquid))
+                 intent.putExtra("extra_message", "Enter the amount to transfer")
+                 intent.putExtra("extra_max_amount", "17")
+                 startActivityForResult(intent, 101)*/
+                getUserLiquidAccountAddress()
+                    /*val walletDataProvider = application as WalletDataProvider
+                val address = Address.fromBase58(MainNetParams.get(), "yTgh4Z1RrMXbJrbkbS7Lgk8NEZERJigMsy")
+                val amount = Coin.CENT
+                walletDataProvider.startSendCoinsForResult(this, 1234, address, amount)*/
+            }
+
         }
 
-        //don't show the (i) icon
-        findViewById<View>(R.id.ivInfo).isVisible = false
-        findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this, true).show()
-        }
+        initViewModel()
 
-        findViewById<LinearLayout>(R.id.llTransferToLiquid).setOnClickListener {
-
-            // Commented code for future to use for this flow required this activity
-            /* val intent = Intent()
-             intent.setClassName(this, "de.schildbach.wallet.ui.LiquidDashToDashTransferActivity")
-             intent.putExtra("extra_title", getString(R.string.liquid))
-             intent.putExtra("extra_message", "Enter the amount to transfer")
-             intent.putExtra("extra_max_amount", "17")
-             startActivityForResult(intent, 101)*/
-            getUserLiquidAccountAddress()
-            /*val walletDataProvider = application as WalletDataProvider
-            val address = Address.fromBase58(MainNetParams.get(), "yTgh4Z1RrMXbJrbkbS7Lgk8NEZERJigMsy")
-            val amount = Coin.CENT
-            walletDataProvider.startSendCoinsForResult(this, 1234, address, amount)*/
-        }
-
+        supportFragmentManager.beginTransaction().replace(
+            R.id.network_status_container,
+            NetworkUnavailableFragment.newInstance()
+        ).commitNow()
+        viewBinding.networkStatusContainer.isVisible = false
 
         if (LiquidClient.getInstance()!!.isAuthenticated) {
-            getUserLiquidAccountBalance()
+            //getUserLiquidAccountBalance()
+            viewModel.updateLiquidBalance()
+        }
+    }
+
+    fun initViewModel() {
+        viewModel = ViewModelProvider(this)[LiquidViewModel::class.java]
+        viewModel.connectivityLiveData.observe(this) { isConnected ->
+            if (isConnected != null) {
+                setConnectivityState(isConnected)
+            }
+        }
+        viewModel.liquidBalanceLiveData.observe(this) {
+            if (it != null) {
+                when (it.status) {
+                    Status.LOADING -> {
+                        loadingDialog!!.show()
+                        showLiquidBalance(viewModel.lastLiquidBalance)
+                    }
+                    Status.SUCCESS -> {
+                        log.info("liquid: get user balance successful")
+                        if (!isFinishing) {
+                            loadingDialog!!.hide()
+                            showDashLiquidBalance(it.data!!)
+                        }
+                    }
+                    Status.ERROR -> {
+                        log.error("liquid: cannot obtain user balance: ${it.exception?.message}")
+                        if (!isFinishing) {
+                            loadingDialog!!.hide()
+                            showLiquidBalance(viewModel.lastLiquidBalance)
+                        }
+                        if (it.exception is LiquidUnauthorizedException) {
+                            val viewModel =
+                                ViewModelProvider(this@LiquidBuyAndSellDashActivity)[FancyAlertDialogViewModel::class.java]
+                            viewModel.onPositiveButtonClick.observe(
+                                this@LiquidBuyAndSellDashActivity,
+                                Observer {
+                                    startActivity(LiquidSplashActivity.createIntent(this@LiquidBuyAndSellDashActivity))
+                                    finish()
+                                })
+                            FancyAlertDialog.newInstance(
+                                R.string.liquid_logout_title, R.string.liquid_forced_logout,
+                                R.drawable.ic_liquid_icon, android.R.string.ok, 0
+                            ).show(supportFragmentManager, "auto-logout-dialog")
+                        }
+                    }
+                    Status.CANCELED -> {
+                        if (!isFinishing) {
+                            loadingDialog!!.hide()
+                            showLiquidBalance(viewModel.lastLiquidBalance)
+                        }
+                    }
+                }
+            }
         }
 
 
+        // Exchange Rates
         val walletDataProvider = application as WalletDataProvider
         val defaultCurrency = walletDataProvider.defaultCurrencyCode()
-
         walletDataProvider.getExchangeRate(defaultCurrency).observe(this,
-                { exchangeRate ->
-                    if (exchangeRate != null) {
-                        currentExchangeRate = exchangeRate
-                    }
-                })
+            { exchangeRate ->
+                if (exchangeRate != null) {
+                    currentExchangeRate = exchangeRate
+                }
+            })
+    }
 
+    fun setConnectivityState(isConnected: Boolean) {
+        viewBinding.apply {
+            liquidContainer.isEnabled = false // disable ripple
+            networkStatusContainer.isVisible = !isConnected
+            liquidButtonsRow1.isVisible = isConnected
+            liquidButtonsRow2.isVisible = isConnected
+            disconnectButton.isVisible = isConnected
+            liquidBalanceInaccurate.root.isVisible = !isConnected
+        }
+        setLoginStatus(isConnected)
+    }
+
+    private fun setLoginStatus(isConnected: Boolean) {
+
+        val connectedStringId = if (isConnected) R.string.connected else R.string.disconnected
+        val connectedDrawable = resources.getDrawable(if (isConnected) R.drawable.drawable_green_round else R.drawable.drawable_orange_round)
+
+        viewBinding.apply {
+            liquidConnected.text = getString(connectedStringId)
+            liquidConnected.setCompoundDrawablesWithIntrinsicBounds(
+                connectedDrawable,
+                null,
+                null,
+                null
+            )
+        }
     }
 
     /**
@@ -332,8 +432,49 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     /**
      * Show iiquid wallet balance
      */
-
     private fun showDashLiquidBalance(data: String) {
+
+        try {
+            val jsonObject = JSONObject(data)
+            val cryptoArray = jsonObject.getJSONObject("payload").getJSONArray("crypto_accounts")
+            var amount = "0.00"
+
+            for (i in 0 until cryptoArray.length()) {
+                val currency = cryptoArray.getJSONObject(i).getString("currency")
+                if (currency == "DASH") {
+                    amount = cryptoArray.getJSONObject(i).getString("balance")
+                    viewModel.lastLiquidBalance = amount
+                }
+            }
+
+            showLiquidBalance(amount)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+    }
+
+    private fun showLiquidBalance(amount: String) {
+        viewBinding.liquidBalance.text = amount
+        val dashAmount = try {
+            Coin.parseCoin(amount)
+        } catch (x: Exception) {
+            Coin.ZERO
+        }
+
+        if (currentExchangeRate != null) {
+            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
+            val localValue = exchangeRate.coinToFiat(dashAmount)
+            val fiatFormat = MonetaryFormat().noCode().minDecimals(2).optionalDecimals()
+
+            viewBinding.liquidFiatAmount.text = getString(
+                R.string.fiat_balance_with_currency, viewModel.defaultCurrency,
+                fiatFormat.format(localValue)
+            )
+        }
+    }
+
+    private fun showDashLiquidBalanceOld(data: String) {
 
         try {
 
@@ -463,6 +604,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     override fun onResume() {
         super.onResume()
+        viewModel.updateLiquidBalance()
         if (isClickLogoutButton) {
             isClickLogoutButton = false
             callRevokeAccessTokenAPI()

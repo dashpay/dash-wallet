@@ -39,7 +39,7 @@
         <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_above="@+id/llDisconnect">
+            android:layout_above="@+id/disconnect_button">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -48,8 +48,8 @@
                 android:orientation="vertical">
 
                 <RelativeLayout
-                    android:id="@+id/liquid"
-                    style="@style/DashButton.White"
+                    android:id="@+id/liquid_container"
+                    style="@style/DashButton.White.NoDisabled"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="20dp"
@@ -85,14 +85,14 @@
                             android:layout_width="30dp"
                             android:layout_height="50dp"
                             android:contentDescription="@string/pay_with_btc_from_liquid"
-                            android:src="@drawable/ic_liquid_icon" />
+                            app:srcCompat="@drawable/ic_liquid_icon" />
 
                         <ImageView
                             android:layout_width="wrap_content"
                             android:layout_height="50dp"
                             android:layout_marginStart="10dp"
                             android:contentDescription="@string/pay_with_btc_from_liquid"
-                            android:src="@drawable/ic_liquid_text_icon" />
+                            app:srcCompat="@drawable/ic_liquid_text_icon" />
 
                     </LinearLayout>
 
@@ -113,8 +113,8 @@
                             android:layout_height="20dp"
                             android:layout_gravity="center"
                             android:layout_marginTop="4dp"
-                            android:src="@drawable/ic_dash_d_white_bottom"
-                            android:tint="@color/colorPrimary" />
+                            app:srcCompat="@drawable/ic_dash_d_white_bottom"
+                            app:tint="@color/colorPrimary" />
 
                         <TextView
                             android:id="@+id/liquid_balance"
@@ -139,10 +139,29 @@
                             android:textSize="15sp" />
 
                     </LinearLayout>
+                    <include layout="@layout/inaccurate_balance"
+                        android:id="@+id/liquid_balance_inaccurate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="10dp"
+                        android:layout_marginBottom="15dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_below="@+id/liquid_balance_container"
+                        />
                 </RelativeLayout>
 
+                <FrameLayout
+                    android:id="@+id/network_status_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    tools:ignore="UselessLeaf"
+                    android:visibility="gone"/>
 
                 <LinearLayout
+                    android:id="@+id/liquid_buttons_row1"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="20dp"
@@ -227,6 +246,7 @@
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/liquid_buttons_row2"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="20dp"
@@ -302,7 +322,7 @@
         </androidx.core.widget.NestedScrollView>
 
         <LinearLayout
-            android:id="@+id/llDisconnect"
+            android:id="@+id/disconnect_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
