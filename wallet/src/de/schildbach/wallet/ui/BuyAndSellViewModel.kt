@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.schildbach.wallet.ui
 
 import android.app.Application
@@ -9,25 +25,15 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.BlockchainState
 import kotlinx.coroutines.Dispatchers
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import java.math.BigDecimal
 import kotlin.coroutines.suspendCoroutine
 
+/**
+ * @author Eric Britten
+ */
 
 class BuyAndSellViewModel(application: Application) : AndroidViewModel(application) {
-
-    val blockChainStateLiveData = AppDatabase.getAppDatabase().blockchainStateDao().load()
-
-    val networkOnlineLiveData = Transformations.switchMap(blockChainStateLiveData) {
-        liveData(Dispatchers.IO) {
-            if (it != null) {
-                emit(it.impediments.contains(BlockchainState.Impediment.NETWORK))
-            } else {
-                emit(false)
-            }
-        }
-    }
 
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
 
@@ -54,31 +60,4 @@ class BuyAndSellViewModel(application: Application) : AndroidViewModel(applicati
             emit(result)
         }
     }
-
-    private val triggerLiquidBalanceUpdate = MutableLiveData<Unit>()
-
-    fun updateLiquidBalance() {
-        triggerLiquidBalanceUpdate.value = Unit
-    }
-
-    private val liquidClient = LiquidClient.getInstance()!!
-
-    val liquidBalanceLiveData = Transformations.switchMap(triggerLiquidBalanceUpdate) {
-        liveData {
-            emit(Resource.loading())
-            val result = suspendCoroutine<Resource<String>> { continuation ->
-                liquidClient.getUserAccountBalance(liquidClient.storedSessionId!!, object : LiquidClient.Callback<String> {
-                    override fun onSuccess(data: String) {
-                        continuation.resumeWith(Result.success(Resource.success(data)))
-                    }
-
-                    override fun onError(e: Exception?) {
-                        continuation.resumeWith(Result.success(Resource.error(e!!)))
-                    }
-                })
-            }
-            emit(result)
-        }
-    }
-
 }

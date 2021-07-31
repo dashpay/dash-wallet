@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package de.schildbach.wallet.ui
 
 import android.app.ProgressDialog
@@ -11,7 +27,6 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProviders
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.Constants
@@ -38,6 +53,7 @@ import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
+import org.dash.wallet.integration.liquid.ui.LiquidViewModel
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
@@ -46,9 +62,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 
-
 class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
-
 
     private var liquidClient: LiquidClient? = null
     private var loadingDialog: ProgressDialog? = null
@@ -63,6 +77,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     private var rangeString = "items=0-50"
     private var totalUpholdRange = ""
     private lateinit var viewModel: BuyAndSellViewModel
+    private lateinit var liquidViewModel: LiquidViewModel
     private var isNetworkOnline: Boolean = true
 
     companion object {
@@ -102,10 +117,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         //do we need this here?
         setLoginStatus(isNetworkOnline)
 
-
         initViewModel()
         updateBalances()
-
 
         liquid_container.setOnClickListener {
             startActivityForResult(LiquidBuyAndSellDashActivity.createIntent(this), USER_BUY_SELL_DASH)
@@ -121,14 +134,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     fun initViewModel() {
         viewModel = ViewModelProvider(this)[BuyAndSellViewModel::class.java]
-//        viewModel.blockChainStateLiveData.observe(this) {
-//            if (it != null) {
-//                setNetworkState(!it.impediments.contains(BlockchainState.Impediment.NETWORK))
-//            }
-//        }
-        viewModel.networkOnlineLiveData.observe(this) {
-            if (it != null) {
-                setNetworkState(!it)
+        liquidViewModel = ViewModelProvider(this)[LiquidViewModel::class.java]
+
+        liquidViewModel.connectivityLiveData.observe(this) { isConnected ->
+            if (isConnected != null) {
+                setNetworkState(isConnected)
             }
         }
 
@@ -159,7 +169,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             }
         }
 
-        viewModel.liquidBalanceLiveData.observe(this) {
+        liquidViewModel.liquidBalanceLiveData.observe(this) {
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
@@ -189,11 +199,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                     org.dash.wallet.integration.liquid.R.drawable.ic_liquid_icon, android.R.string.ok, 0
                                 ).show(supportFragmentManager, "auto-logout-dialog")
                             }
-                            showLiquidBalance(config.lastLiquidBalance)
+                            showLiquidBalance(liquidViewModel.lastLiquidBalance)
                         }
                     }
                     Status.CANCELED -> {
-                        showLiquidBalance(config.lastLiquidBalance)
+                        showLiquidBalance(liquidViewModel.lastLiquidBalance)
                     }
                 }
             }
@@ -205,7 +215,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             { exchangeRate ->
                 if (exchangeRate != null) {
                     currentExchangeRate = exchangeRate
-                    showLiquidBalance(config.lastLiquidBalance)
+                    showLiquidBalance(liquidViewModel.lastLiquidBalance)
                     showUpholdBalance(config.lastUpholdBalance)
                 }
             })
@@ -216,24 +226,15 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         network_status_container.isVisible = !online
         liquid_container.isEnabled = online
         uphold_container.isEnabled = online
-        if (online) {
-            // set
-
-
-        } else {
-
-        }
         setLoginStatus(online)
     }
 
     private fun updateBalances() {
         if (LiquidClient.getInstance()!!.isAuthenticated) {
-            //getUserLiquidAccountBalance()
-            viewModel.updateLiquidBalance()
+            liquidViewModel.updateLiquidBalance()
         }
         if (UpholdClient.getInstance().isAuthenticated) {
             viewModel.updateUpholdBalance()
-            //getUpholdUserBalance()
         }
     }
 
@@ -335,7 +336,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             })
         } else {
             log.error("liquid: There is no internet connection")
-            showLiquidBalance(config.lastLiquidBalance)
+            showLiquidBalance(liquidViewModel.lastLiquidBalance)
         }
     }
 
@@ -351,7 +352,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 if (currency == "DASH") {
                     liquid_balance_container.visibility = View.VISIBLE
                     amount = cryptoArray.getJSONObject(i).getString("balance")
-                    config.lastLiquidBalance = amount
+                    liquidViewModel.lastLiquidBalance = amount
                 }
             }
 
@@ -444,8 +445,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         if (requestCode == USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
             log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
             if (LiquidClient.getInstance()!!.isAuthenticated) {
-                //getUserLiquidAccountBalance()
-                viewModel.updateLiquidBalance()
+                liquidViewModel.updateLiquidBalance()
             }
             setResult(RESULT_CODE_GO_HOME)
             finish()
