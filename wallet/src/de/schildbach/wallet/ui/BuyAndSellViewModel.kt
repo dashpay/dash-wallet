@@ -9,7 +9,6 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.BlockchainState
 import kotlinx.coroutines.Dispatchers
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import java.math.BigDecimal
@@ -48,7 +47,7 @@ class BuyAndSellViewModel(application: Application) : AndroidViewModel(applicati
                     }
 
                     override fun onError(e: java.lang.Exception, otpRequired: Boolean) {
-                        continuation.resumeWith(Result.failure(e))
+                        continuation.resumeWith(Result.success(Resource.error(e!!)))
                     }
                 })
             }
@@ -74,7 +73,7 @@ class BuyAndSellViewModel(application: Application) : AndroidViewModel(applicati
                     }
 
                     override fun onError(e: Exception?) {
-                        continuation.resumeWith(Result.failure(e!!))
+                        continuation.resumeWith(Result.success(Resource.error(e!!)))
                     }
                 })
             }
