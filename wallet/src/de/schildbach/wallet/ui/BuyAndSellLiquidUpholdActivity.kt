@@ -151,11 +151,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                        loadingDialog!!.show()
+                        //TODO: start progress bar
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            loadingDialog!!.hide()
+                            //TODO: hide progress bar
                             val balance = it.data.toString()
                             config.lastUpholdBalance = balance
                             showUpholdBalance(balance)
@@ -163,11 +163,16 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
-                            loadingDialog!!.hide()
+                            //TODO: error progress bar
+
+                            //TODO: if the exception is UnknownHostException and isNetworkOnline is true
+                            // then there is a problem contacting the server and we don't have
+                            // error handling for it
                             showUpholdBalance(config.lastUpholdBalance)
                         }
                     }
                     Status.CANCELED -> {
+                        //TODO: stop progress bar
                         showUpholdBalance(config.lastUpholdBalance)
                     }
                 }
@@ -178,17 +183,17 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                        loadingDialog!!.show()
+                        //TODO: start progress bar
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            loadingDialog!!.hide()
+                            //TODO: finish progress bar
                             showDashLiquidBalance(it.data!!)
                         }
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
-                            loadingDialog!!.hide()
+                            //TODO: error progress bar
                             if (it.exception is LiquidUnauthorizedException) {
                                 // do we need this
                                 setLoginStatus(isNetworkOnline)
@@ -207,10 +212,14 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                     0
                                 ).show(supportFragmentManager, "auto-logout-dialog")
                             }
+                            //TODO: if the exception is UnknownHostException and isNetworkOnline is true
+                            // then there is a problem contacting the server and we don't have
+                            // error handling for it
                             showLiquidBalance(liquidViewModel.lastLiquidBalance)
                         }
                     }
                     Status.CANCELED -> {
+                        //TODO: stop progress bar
                         showLiquidBalance(liquidViewModel.lastLiquidBalance)
                     }
                 }
@@ -230,11 +239,14 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     }
 
     fun setNetworkState(online: Boolean) {
-        isNetworkOnline = online
         network_status_container.isVisible = !online
         liquid_container.isEnabled = online
         uphold_container.isEnabled = online
         setLoginStatus(online)
+        if (!isNetworkOnline && online) {
+            updateBalances()
+        }
+        isNetworkOnline = online
     }
 
     private fun updateBalances() {
@@ -289,7 +301,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             uphold_balance_container.visibility = View.VISIBLE
             uphold_balance_inaccurate.isVisible = !online
         } else {
-            uphold_connect.visibility = View.VISIBLE//if (online) View.VISIBLE else View.GONE
+            uphold_connect.visibility = View.VISIBLE
             uphold_connected.visibility = View.GONE
             uphold_balance_container.visibility = View.GONE
             uphold_balance_inaccurate.isVisible = false
@@ -367,7 +379,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         uphold_balance.setApplyMarkup(false)
         val amount = Coin.parseCoin(balance)
         uphold_balance.setAmount(amount)
-        loadingDialog!!.hide()
 
         if (currentExchangeRate != null) {
             val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
