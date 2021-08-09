@@ -43,7 +43,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.InteractionAwareActivity
 
-class DashPayUserActivity : InteractionAwareActivity(),
+class DashPayUserActivity : LockScreenActivity(),
         NotificationsAdapter.OnItemClickListener,
         ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
 

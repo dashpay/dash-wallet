@@ -24,13 +24,14 @@ import android.view.MenuItem
 import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.util.canAffordIdentityCreation
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.slf4j.LoggerFactory
 
-class InviteFriendActivity : InteractionAwareActivity() {
+class InviteFriendActivity : LockScreenActivity() {
 
     companion object {
         private val log = LoggerFactory.getLogger(InviteFriendActivity::class.java)

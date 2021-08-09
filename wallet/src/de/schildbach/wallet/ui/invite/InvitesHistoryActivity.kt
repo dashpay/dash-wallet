@@ -25,12 +25,13 @@ import android.view.View
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.data.Invitation
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
-class InvitesHistoryActivity : InteractionAwareActivity() {
+class InvitesHistoryActivity : LockScreenActivity() {
 
     companion object {
         private val log = LoggerFactory.getLogger(InvitesHistoryActivity::class.java)
