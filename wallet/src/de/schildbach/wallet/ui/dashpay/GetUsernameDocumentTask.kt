@@ -18,8 +18,8 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.os.Handler
 import android.os.Looper
-import org.dashevo.platform.Platform
-import org.dashevo.dpp.document.Document
+import org.dashj.platform.sdk.platform.Platform
+import org.dashj.platform.dpp.document.Document
 
 abstract class GetUsernameDocumentTask(private val backgroundHandler: Handler) {
 

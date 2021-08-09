@@ -22,7 +22,7 @@ import kotlinx.android.synthetic.main.transaction_details_dialog.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dashevo.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 
 /**

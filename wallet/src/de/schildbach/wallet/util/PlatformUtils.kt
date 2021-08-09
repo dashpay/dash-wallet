@@ -18,7 +18,7 @@
 package de.schildbach.wallet.util
 
 import org.bitcoinj.core.Sha256Hash
-import org.dashevo.dpp.util.HashUtils
+import org.dashj.platform.dpp.util.HashUtils
 import java.lang.IllegalArgumentException
 import java.math.BigInteger
 import java.util.*

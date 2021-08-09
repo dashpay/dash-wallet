@@ -35,7 +35,7 @@ import kotlinx.android.synthetic.main.activity_successful_transaction.*
 import kotlinx.android.synthetic.main.transaction_result_content.*
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dashevo.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 
 /**

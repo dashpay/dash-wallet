@@ -35,6 +35,7 @@ import org.bitcoinj.params.EvoNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.MobileDevNetParams;
 import org.bitcoinj.params.PalinkaDevNetParams;
+import org.bitcoinj.params.SchnappsDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -107,6 +108,19 @@ public final class Constants {
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-palinka";
+                WALLET_NAME_CURRENCY_CODE = "tdash";
+                SUPPORTS_PLATFORM = true;
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                break;
+            }
+            case "schnapps": {
+                // Schnapps Devnet
+                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
+                NETWORK_PARAMETERS = SchnappsDevNetParams.get();
+                DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
+                IS_PROD_BUILD = false;
+                FILENAME_NETWORK_SUFFIX = "-schnapps";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);

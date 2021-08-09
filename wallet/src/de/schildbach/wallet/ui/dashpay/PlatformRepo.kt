@@ -47,20 +47,20 @@ import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dashevo.dapiclient.model.GrpcExceptionInfo
-import org.dashevo.dashpay.*
-import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
-import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
-import org.dashevo.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_UNIQUE
-import org.dashevo.dpp.document.Document
-import org.dashevo.dpp.errors.InvalidIdentityAssetLockProofError
-import org.dashevo.dpp.identifier.Identifier
-import org.dashevo.dpp.identity.Identity
-import org.dashevo.dpp.identity.IdentityPublicKey
-import org.dashevo.dpp.toHexString
-import org.dashevo.platform.Names
-import org.dashevo.platform.Platform
-import org.dashevo.platform.multicall.MulticallQuery
+import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
+import org.dashj.platform.dashpay.*
+import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
+import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
+import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_UNIQUE
+import org.dashj.platform.dpp.document.Document
+import org.dashj.platform.dpp.errors.InvalidIdentityAssetLockProofError
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.identity.Identity
+import org.dashj.platform.dpp.identity.IdentityPublicKey
+import org.dashj.platform.dpp.toHexString
+import org.dashj.platform.sdk.platform.Names
+import org.dashj.platform.sdk.platform.Platform
+import org.dashj.platform.sdk.platform.multicall.MulticallQuery
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.TimeoutException
@@ -292,7 +292,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             nameDocuments.map { getIdentityForName(it) }
         }
 
-        var profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
+        val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
             val profileDocuments = profiles.getList(userIds)
             profileDocuments.associateBy({ it.ownerId }, { it })
         } else {
@@ -342,6 +342,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             usernameSearchResults.add(UsernameSearchResult(nameDoc.data["normalizedLabel"] as String,
                     dashPayProfile, toContact, fromContact))
         }
+
+        // TODO: this is only needed when Proofs don't sort results
+        // This was added in v0.20
+        usernameSearchResults.sortBy { it.username }
 
         return usernameSearchResults
     }
@@ -630,7 +634,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
                 cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
-            val cftx = CreditFundingTransaction(platform.params, cftxData!!.toByteArray())
+            val cftx = CreditFundingTransaction(platform.params, cftxData!!.transaction)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
             cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
 
@@ -1580,7 +1584,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         if (tx == null)
             tx = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
         if (tx != null) {
-            val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.toByteArray())
+            val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.transaction)
             val identity = platform.identities.get(cfTx.creditBurnIdentityIdentifier.toStringBase58())
             if (identity == null) {
                 // determine if the invite has enough credits
