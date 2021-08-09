@@ -25,6 +25,8 @@ import android.content.res.Resources;
 import android.net.Uri;
 import android.text.format.DateUtils;
 
+import androidx.annotation.NonNull;
+
 import com.google.common.base.Strings;
 
 import org.bitcoinj.core.Coin;
@@ -82,6 +84,9 @@ public class Configuration {
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
     public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
+
+    public static final String PREFS_KEY_LAST_LIQUID_BALANCE = "last_liquid_balance";
+    public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
@@ -455,4 +460,12 @@ public class Configuration {
         prefs.edit().putLong(PREFS_KEY_LAST_BLOCKCHAIN_RESET, System.currentTimeMillis()).apply();
     }
 
+    public void setLastUpholdBalance(String balance) {
+        prefs.edit().putString(PREFS_KEY_LAST_UPHOLD_BALANCE, balance).apply();
+    }
+
+    @NonNull
+    public String getLastUpholdBalance() {
+        return prefs.getString(PREFS_KEY_LAST_UPHOLD_BALANCE, "0.00");
+    }
 }

@@ -35,8 +35,6 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 
 class MoreActivity : GlobalFooterActivity() {
 
-    private var blockchainState: BlockchainState? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -58,16 +56,8 @@ class MoreActivity : GlobalFooterActivity() {
 
         setTitle(R.string.more_title)
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, Observer {
-            blockchainState = it
-        })
-
         buy_and_sell.setOnClickListener {
-            if (blockchainState != null && blockchainState?.replaying!!) {
-                showBlockchainSyncingMessage()
-            } else {
-                startBuyAndSellActivity()
-            }
+            startBuyAndSellActivity()
         }
         security.setOnClickListener {
             startActivity(Intent(this, SecurityActivity::class.java))
