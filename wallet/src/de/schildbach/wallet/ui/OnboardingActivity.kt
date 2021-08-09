@@ -30,6 +30,7 @@ import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet_test.R
@@ -42,10 +43,20 @@ private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {
+
+        private const val EXTRA_INVITE = "extra_invite"
+
         @JvmStatic
         fun createIntent(context: Context): Intent {
             return Intent(context, OnboardingActivity::class.java)
                     .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
+
+        fun createIntent(context: Context, invite: InvitationLinkData): Intent {
+            return Intent(context, OnboardingActivity::class.java).apply {
+                putExtra(EXTRA_INVITE, invite)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
         }
     }
 
@@ -71,8 +82,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
         setContentView(R.layout.activity_onboarding)
         slogan.setPadding(slogan.paddingLeft, slogan.paddingTop, slogan.paddingRight, getStatusBarHeightPx())
-
-        viewModel = ViewModelProvider(this).get(OnboardingViewModel::class.java)
 
         walletApplication = (application as WalletApplication)
         if (walletApplication.walletFileExists()) {
@@ -131,19 +140,25 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun initView() {
         create_new_wallet.setOnClickListener {
-            viewModel.createNewWallet()
+            val onboardingInvite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
+            viewModel.createNewWallet(onboardingInvite)
         }
         recovery_wallet.setOnClickListener {
-            walletApplication.initEnvironmentIfNeeded()
-            startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
+            restoreWalletFromSeed()
         }
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
         }
     }
 
+    private fun restoreWalletFromSeed() {
+        walletApplication.initEnvironmentIfNeeded()
+        startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
+    }
+
     @SuppressLint("StringFormatInvalid")
     private fun initViewModel() {
+        viewModel = ViewModelProvider(this).get(OnboardingViewModel::class.java)
         viewModel.showToastAction.observe(this, Observer {
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
         })

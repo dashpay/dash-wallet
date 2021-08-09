@@ -29,6 +29,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -80,15 +81,18 @@ class SetPinActivity : InteractionAwareActivity() {
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
         private const val CHANGE_PIN = "change_pin"
+        private const val EXTRA_ONBOARDING_INVITE = "onboarding_invite"
 
         @JvmOverloads
         @JvmStatic
         fun createIntent(context: Context, titleResId: Int,
-                         changePin: Boolean = false, pin: String? = null): Intent {
+                         changePin: Boolean = false, pin: String? = null,
+                         onboardingInvite: Boolean = false): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
             intent.putExtra(CHANGE_PIN, changePin)
             intent.putExtra(EXTRA_PASSWORD, pin)
+            intent.putExtra(EXTRA_ONBOARDING_INVITE, onboardingInvite)
             return intent
         }
 
@@ -455,8 +459,13 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun startVerifySeedActivity() {
-        val intent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
-        startActivityNewTask(intent)
+        val onboardingInvite = intent.getBooleanExtra(EXTRA_ONBOARDING_INVITE, false)
+        val verifySeedActivityIntent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
+        if (onboardingInvite) {
+            startActivityNewTask(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))
+        } else {
+            startActivityNewTask(verifySeedActivityIntent)
+        }
     }
 
     private fun goHome() {

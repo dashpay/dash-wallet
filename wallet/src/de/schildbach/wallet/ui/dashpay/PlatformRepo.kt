@@ -79,13 +79,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
         const val UPDATE_TIMER_DELAY = 15000L // 15 seconds
 
-        private lateinit var platformRepoInstance: PlatformRepo
-
-        @JvmStatic
-        fun initPlatformRepo(walletApplication: WalletApplication) {
-            platformRepoInstance = PlatformRepo(walletApplication)
-            platformRepoInstance.initGlobal()
-        }
+        private val platformRepoInstance = PlatformRepo(WalletApplication.getInstance())
 
         @JvmStatic
         fun getInstance(): PlatformRepo {

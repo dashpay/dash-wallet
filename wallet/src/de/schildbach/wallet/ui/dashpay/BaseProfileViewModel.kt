@@ -26,7 +26,9 @@ import de.schildbach.wallet.data.BlockchainIdentityBaseData
 open class BaseProfileViewModel(application: Application) : AndroidViewModel(application) {
 
     val walletApplication = application as WalletApplication
-    val platformRepo = PlatformRepo.getInstance()
+    val platformRepo by lazy {
+        PlatformRepo.getInstance()
+    }
 
     // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
     // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
