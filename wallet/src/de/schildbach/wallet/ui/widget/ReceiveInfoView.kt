@@ -42,7 +42,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.Configuration
-import org.dashevo.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.BlockchainIdentity
 import org.slf4j.LoggerFactory
 
 

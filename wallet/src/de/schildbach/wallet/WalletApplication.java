@@ -285,7 +285,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     private void initPlatform() {
-        PlatformRepo.initPlatformRepo(this);
+        PlatformRepo.getInstance().initGlobal();
     }
 
     @TargetApi(Build.VERSION_CODES.O)

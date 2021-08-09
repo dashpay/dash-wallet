@@ -415,6 +415,18 @@
     <string name="invitation_accept_continue">Continue</string>
     <string name="invitation_contact_request_sent_message">A contact request has been sent to %s since they invited you.</string>
 
+    <string name="onboard_from_invite_title">Let\'s Get Started</string>
+    <string name="onboard_from_invite_subtitle">Welcome to DashPay</string>
+    <string name="onboard_from_invite_step1">Step 1</string>
+    <string name="onboard_from_invite_step2">Step 2</string>
+    <string name="onboard_from_invite_step3">Step 3</string>
+    <string name="onboard_from_invite_step1_title">Choose Your Username</string>
+    <string name="onboard_from_invite_step2_title">Set Your PIN</string>
+    <string name="onboard_from_invite_step3_title">Secure Your Wallet</string>
+
+    <string name="restore_wallet_please_wait">Please Wait</string>
+    <string name="restore_wallet_restoring">Your wallet is being restored</string>
+
     <string name="username_being_created">Your username %s is being created on the Dash Network</string>
     <string name="processing_let_me_know">Let me know when it\'s done</string>
     <string name="processing_home_title">Upgrading to Evolution</string>

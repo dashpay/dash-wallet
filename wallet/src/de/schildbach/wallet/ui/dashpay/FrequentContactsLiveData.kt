@@ -9,7 +9,7 @@ import de.schildbach.wallet.livedata.Status
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.dashevo.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.BlockchainIdentity
 import java.util.*
 
 class FrequentContactsLiveData(walletApplication: WalletApplication, platformRepo: PlatformRepo, val scope: CoroutineScope)

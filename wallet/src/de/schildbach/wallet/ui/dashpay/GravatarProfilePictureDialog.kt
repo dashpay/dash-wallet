@@ -18,7 +18,7 @@ package de.schildbach.wallet.ui.dashpay
 
 import android.view.View
 import de.schildbach.wallet_test.R
-import org.dashevo.dpp.toHexString
+import org.dashj.platform.dpp.toHexString
 import java.security.MessageDigest
 import java.util.regex.Matcher
 import java.util.regex.Pattern

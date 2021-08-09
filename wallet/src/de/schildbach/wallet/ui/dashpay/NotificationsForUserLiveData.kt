@@ -23,7 +23,7 @@ import de.schildbach.wallet.livedata.Resource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.dashevo.dpp.identifier.Identifier
+import org.dashj.platform.dpp.identifier.Identifier
 
 class NotificationsForUserLiveData(walletApplication: WalletApplication,
                                    platformRepo: PlatformRepo,
