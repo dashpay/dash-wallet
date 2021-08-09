@@ -139,8 +139,12 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun initModel() {
-        paymentProtocolModel = ViewModelProviders.of(this).get(PaymentProtocolViewModel::class.java)
-        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner, Observer {})
+        paymentProtocolModel = ViewModelProvider(this)[PaymentProtocolViewModel::class.java]
+        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner) {
+            if (paymentProtocolModel.finalPaymentIntent != null && it != null) {
+                displayRequest(paymentProtocolModel.finalPaymentIntent!!, null)
+            }
+        }
         paymentProtocolModel.basePaymentIntent.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.LOADING -> {
