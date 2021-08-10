@@ -113,7 +113,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                     handleScan(v)
                 }
                 shortcuts_pane.buySellButton -> {
-                    startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
+                    startActivity(UpholdAccountActivity.createIntent(requireContext()))
                 }
                 shortcuts_pane.payToAddressButton -> {
                     handlePaste()

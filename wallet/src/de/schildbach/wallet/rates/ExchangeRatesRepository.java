@@ -55,8 +55,9 @@ public class ExchangeRatesRepository {
         }
 
         exchangeRatesClients.push(DashRatesSecondFallback.getInstance());
-        exchangeRatesClients.push(DashRatesFirstFallback.getInstance());
-        exchangeRatesClients.push(DashRatesClient.getInstance());
+        //These sources do not return valid data (TODO: Remove these or replace these?)
+        //exchangeRatesClients.push(DashRatesFirstFallback.getInstance());
+        //exchangeRatesClients.push(DashRatesClient.getInstance());
         exchangeRatesClients.push(DashRetailClient.getInstance());
     }
 

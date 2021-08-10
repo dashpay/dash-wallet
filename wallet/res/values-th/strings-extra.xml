@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">ตั้งเลขรหัสผ่านใหม่</string>
     <string name="forgot_pin_instruction_3">เข้าสู่ระบบด้วยเลขรหัสผ่านใหม่ของคุณเพื่อการเข้าถึงกระเป๋าสตางค์ของคุณ</string>
     <string name="forgot_pin_warning">หากคุณลืมเลขรหัสผ่านของคุณ และวลีรหัสผ่านการกู้คืนสูญหาย คุณจะไม่สามารถเข้าถึงกระเป๋าสตางค์และกองทุนเงินสะสมของคุณได้อีกต่อไป</string>
+    <string name="forgot_pin_recover">ป้อนวลีการกู้คืน</string>
+    <string name="forgot_pin_passphrase_doesnt_match">วลีการกู้คืนไม่ตรงกับสิ่งที่กระเป๋าสตางค์นี้ถูกตั้งค่าไว้</string>
+
     <string name="send_coins_auto_lock_feasible">ธุรกรรมนี้ชำระทันทีโดยไม่มีค่าธรรมเนียมเพิ่มเติม</string>
     <string name="send_coins_auto_lock_not_feasible">ธุรกรรมนี้อาจจะใช้เวลาในการชำระหลายนาที  ทำให้เสร็จสมบูรณ์ทันทีสำหรับ%1$s%2$s หรือไม่?</string>
     <string name="send_coins_instant_send_not_feasible">ธุรกรรมนี้อาจใช้เวลาหลายนาทีในการชำระ</string>
@@ -320,8 +323,15 @@
     <string name="payment_request_please_try_again">โปรดลองใหม่อีกครั้ง</string>
     <string name="payment_request_try_again">ลองอีกครั้ง</string>
     <string name="payment_request_problem_title">การชำระเงินไม่ได้รับการยอมรับ</string>
+    <string name="payment_request_problem_message">เซิร์ฟเวอร์การชำระเงินของคุณไม่สามารถดำเนินการโดยเซิร์ฟเวอร์นี้ได้ โปรดสอบถามกับทางร้านค้า</string>
     <string name="payment_request_expired_title">คำขอชำระเงินหมดอายุ</string>
     <string name="payment_request_close">ปิด</string>
     <string name="payment_request_skip">ข้าม</string>
     <string name="payment_request_paid_to">จ่ายให้</string>
+
+    <string name="import_image_not_valid_qr_code">ไม่ใช่รหัส QR ที่ถูกต้อง</string>
+    <string name="import_image_please_use_valid_qr_code">โปรดใช้รหัส QR ของ Dash ที่ถูกต้อง</string>
+    <string name="import_image_no_private_key_copied">ไม่มีการคัดลอกคีย์ส่วนตัว</string>
+    <string name="import_image_import_valid_private_key">คัดลอกคีย์ส่วนตัวที่ถูกต้องเพื่อนำเข้า Dash</string>
+    <string name="import_image_invalid_private">คีย์ส่วนตัวไม่ถูกต้อง</string>
 </resources>

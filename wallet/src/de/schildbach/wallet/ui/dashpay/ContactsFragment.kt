@@ -345,7 +345,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     }
 
     private fun imitateUserInteraction() {
-        (requireActivity() as InteractionAwareActivity).imitateUserInteraction()
+        (requireActivity() as LockScreenActivity).imitateUserInteraction()
     }
 
     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {

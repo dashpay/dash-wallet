@@ -39,7 +39,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends InteractionAwareActivity implements AbstractPINDialogFragment.WalletProvider {
+public abstract class AbstractWalletActivity extends LockScreenActivity implements AbstractPINDialogFragment.WalletProvider {
 
     private WalletApplication application;
 
@@ -82,10 +82,6 @@ public abstract class AbstractWalletActivity extends InteractionAwareActivity im
                 actionBar.setDisplayShowHomeEnabled(true);
             }
         }
-    }
-
-    protected WalletApplication getWalletApplication() {
-        return application;
     }
 
     @Override

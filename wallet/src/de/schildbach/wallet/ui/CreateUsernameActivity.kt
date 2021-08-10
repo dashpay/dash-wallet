@@ -52,7 +52,7 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
-class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
+class CreateUsernameActivity : LockScreenActivity(), TextWatcher {
 
     private val regularTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_regular) }
     private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_medium) }
@@ -71,7 +71,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
     //    val viewModel by lazy {
 //        ViewModelProvider(this).get(InviteFriendViewModel::class.java)
 //    }
-    private lateinit var walletApplication: WalletApplication
+    //private lateinit var walletApplication: WalletApplication
 
     private var reuseTransaction: Boolean = false
     private var useInvite: Boolean = false
@@ -143,7 +143,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
         processing_identity_dismiss_btn.setOnClickListener { finish() }
 
         initViewModel()
-        walletApplication = application as WalletApplication
+        //walletApplication = application as WalletApplication
 
         when (intent?.action) {
             ACTION_DISPLAY_COMPLETE -> {

@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Задайте новый PIN-код</string>
     <string name="forgot_pin_instruction_3">Войдите в кошелёк, используя новый PIN-код</string>
     <string name="forgot_pin_warning">Если Вы забыли PIN-код и потеряли фразу восстановления, Вы не сможете получить доступ к кошельку и средствам. </string>
+    <string name="forgot_pin_recover">Введите фразу восстановления</string>
+    <string name="forgot_pin_passphrase_doesnt_match">Эта фраза восстановления не совпадает с заданной при создании этого кошелька.</string>
+
     <string name="send_coins_auto_lock_feasible">Эту транзакция будет подтверждена немедленно без дополнительной комиссии</string>
     <string name="send_coins_auto_lock_not_feasible">Подтверждение может занять несколько минут. Провести мгновенно за %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Подтверждение может занять несколько минут.</string>
@@ -329,8 +332,15 @@
     <string name="payment_request_please_try_again">Попробуйте еще раз</string>
     <string name="payment_request_try_again">Попробуйте ещё раз</string>
     <string name="payment_request_problem_title">Платёж не был подтверждён</string>
+    <string name="payment_request_problem_message">Ваш платёж не может быть обработан сервером. Пожалуйста, свяжитесь с продавцом</string>
     <string name="payment_request_expired_title">Запрос на оплату истёк</string>
     <string name="payment_request_close">Закрыть</string>
     <string name="payment_request_skip">Пропустить</string>
     <string name="payment_request_paid_to">Оплатить</string>
+
+    <string name="import_image_not_valid_qr_code">Недействительный QR-код</string>
+    <string name="import_image_please_use_valid_qr_code">Пожалуйста, используйте корректный QR-код Dash</string>
+    <string name="import_image_no_private_key_copied">Приватный ключ не скопирован</string>
+    <string name="import_image_import_valid_private_key">Скопируйте действующий приватный ключ, чтобы с его помощью импортировать Dash</string>
+    <string name="import_image_invalid_private">Неверный приватный ключ</string>
 </resources>

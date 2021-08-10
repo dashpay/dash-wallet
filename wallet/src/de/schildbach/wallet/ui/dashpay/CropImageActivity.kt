@@ -31,6 +31,7 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_crop_image.*
 import kotlinx.coroutines.CoroutineScope
@@ -40,7 +41,7 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
-class CropImageActivity : InteractionAwareActivity() {
+class CropImageActivity : LockScreenActivity() {
 
     companion object {
 

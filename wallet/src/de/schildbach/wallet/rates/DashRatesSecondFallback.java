@@ -55,6 +55,7 @@ public class DashRatesSecondFallback implements ExchangeRatesClient {
             if (!excludedRates.contains(rate.getCode())) {
                 if (VES_CURRENCY_CODE.equalsIgnoreCase(rate.getCode()) && dashVesPrice != null
                         && dashVesPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    dashVesPrice = dashBtcRate.multiply(dashVesPrice);
                     exchangeRates.add(new ExchangeRate(rate.getCode(), dashVesPrice.toPlainString()));
                     continue;
                 }

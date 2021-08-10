@@ -331,4 +331,10 @@
     <string name="payment_request_close">Kapat</string>
     <string name="payment_request_skip">Atla</string>
     <string name="payment_request_paid_to">Ödeme yap</string>
+
+    <string name="import_image_not_valid_qr_code">Geçerli bir QR kodu değil</string>
+    <string name="import_image_please_use_valid_qr_code">Lütfen geçerli bir Dash QR Kodu kullanın</string>
+    <string name="import_image_no_private_key_copied">Kopyalanan bir özel anahtar yok</string>
+    <string name="import_image_import_valid_private_key">Dash\'i içe aktarmak için geçerli bir özel anahtar kopyalayın</string>
+    <string name="import_image_invalid_private">Geçersiz Özel Anahtar</string>
 </resources>

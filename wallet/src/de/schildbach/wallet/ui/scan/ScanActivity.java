@@ -172,6 +172,7 @@ public final class ScanActivity extends AbstractWalletActivity
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
+        getIntent().putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true);
         setContentView(R.layout.scan_activity);
         contentView = findViewById(android.R.id.content);
         scannerView = (ScannerView) findViewById(R.id.scan_activity_mask);

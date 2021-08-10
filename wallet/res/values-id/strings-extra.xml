@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">Siapkan PIN baru</string>
     <string name="forgot_pin_instruction_3">Masuk dengan PIN baru Anda untuk mengakses dompet Anda</string>
     <string name="forgot_pin_warning">Jika Anda lupa PIN dan kehilangan frasa pemulihan, Anda tidak bisa mendapatkan kembali akses ke dompet dan dana Anda.</string>
+    <string name="forgot_pin_recover">Masukkan Frasa pemulihan</string>
+    <string name="forgot_pin_passphrase_doesnt_match">Frasa pemulihan tidak cocok dengan apa yang telah disiapkan untuk dompet ini.</string>
+
     <string name="send_coins_auto_lock_feasible">Transaksi ini harus diselesaikan secara instan tanpa biaya tambahan</string>
     <string name="send_coins_auto_lock_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan. Selesaikan instan untuk %1$s%2$s?</string>
     <string name="send_coins_instant_send_not_feasible">Transaksi ini mungkin perlu beberapa menit untuk diselesaikan.</string>
@@ -320,8 +323,15 @@
     <string name="payment_request_please_try_again">Silakan coba lagi</string>
     <string name="payment_request_try_again">Coba lagi</string>
     <string name="payment_request_problem_title">Pembayaran tidak diakui</string>
+    <string name="payment_request_problem_message">Pembayaran Anda tidak dapat diproses oleh server, harap tanyakan kepada pedagang</string>
     <string name="payment_request_expired_title">Permintaan pembayaran kedaluwarsa</string>
     <string name="payment_request_close">Tutup</string>
     <string name="payment_request_skip">Lewati</string>
     <string name="payment_request_paid_to">Dibayarkan kepada</string>
+
+    <string name="import_image_not_valid_qr_code">Bukan Kode QR yang valid</string>
+    <string name="import_image_please_use_valid_qr_code">Harap gunakan Kode QR Dash yang valid</string>
+    <string name="import_image_no_private_key_copied">Tidak ada kunci pribadi yang disalin</string>
+    <string name="import_image_import_valid_private_key">Salin kunci pribadi yang valid untuk mengimpor Dash darinya</string>
+    <string name="import_image_invalid_private">Kunci Pribadi Tidak Valid</string>
 </resources>
