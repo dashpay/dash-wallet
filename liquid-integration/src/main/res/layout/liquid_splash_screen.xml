@@ -41,10 +41,11 @@
             android:layout_height="50dp"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="60dp"
-            android:src="@drawable/ic_liquid_big" />
+            app:srcCompat="@drawable/ic_liquid_big" />
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/liquid_text"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@+id/liquid_logo"
             android:layout_marginLeft="30dp"
@@ -60,7 +61,7 @@
                 android:drawablePadding="15dp"
                 android:text="@string/buy_dash_with_liquid_account"
                 android:textColor="@color/primary_status"
-                android:textSize="16dp" />
+                android:textSize="16sp" />
 
             <TextView
                 style="@style/MontserratRegular"
@@ -71,7 +72,7 @@
                 android:drawablePadding="15dp"
                 android:text="@string/transfer_dash_from_your_liquid_account_to_this_wallet"
                 android:textColor="@color/primary_status"
-                android:textSize="16dp"
+                android:textSize="16sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
 
@@ -84,11 +85,20 @@
                 android:drawablePadding="15dp"
                 android:text="@string/transfer_dash_to_and_from_account"
                 android:textColor="@color/primary_status"
-                android:textSize="16dp"
+                android:textSize="16sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
 
+            <FrameLayout
+                android:id="@+id/network_status_container"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_gravity="center_horizontal"
+                tools:ignore="UselessLeaf"
+                android:visibility="gone"/>
         </LinearLayout>
+
 
 
         <Button

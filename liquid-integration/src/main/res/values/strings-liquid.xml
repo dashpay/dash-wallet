@@ -33,6 +33,7 @@
     <string name="total">Total</string>
     <string name="connect">Connect</string>
     <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
     <string name="buy_sell_dash">To buy &amp; sell Dash or create a new account</string>
 
 
