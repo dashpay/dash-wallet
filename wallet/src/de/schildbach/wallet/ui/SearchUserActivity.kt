@@ -59,7 +59,7 @@ import kotlinx.android.synthetic.main.user_search_empty_result.*
 import kotlinx.android.synthetic.main.user_search_loading.*
 import org.dash.wallet.common.InteractionAwareActivity
 
-class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewHolder.OnItemClickListener,
+class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.OnItemClickListener,
         ContactViewHolder.OnContactRequestButtonClickListener {
 
     companion object {
@@ -74,7 +74,6 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
     }
 
     private lateinit var dashPayViewModel: DashPayViewModel
-    private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
     private lateinit var searchUserRunnable: Runnable
     private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter(this)
@@ -90,7 +89,6 @@ class SearchUserActivity : InteractionAwareActivity(), TextWatcher, ContactViewH
         }
 
         setContentView(R.layout.activity_search_dashpay_profile_root)
-        walletApplication = application as WalletApplication
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)

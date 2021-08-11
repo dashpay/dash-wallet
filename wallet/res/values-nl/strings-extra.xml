@@ -331,4 +331,10 @@
     <string name="payment_request_close">Sluiten</string>
     <string name="payment_request_skip">Overslaan</string>
     <string name="payment_request_paid_to">Betaald aan</string>
+
+    <string name="import_image_not_valid_qr_code">Ongeldige QR-code</string>
+    <string name="import_image_please_use_valid_qr_code">Gebruik een geldige QR-code</string>
+    <string name="import_image_no_private_key_copied">persoonlijke sleutel niet gekopieerd</string>
+    <string name="import_image_import_valid_private_key">Kopieer een geldige persoonlijke sleutel om de Dash er van te importeren</string>
+    <string name="import_image_invalid_private">Ongeldige persoonlijke sleutel</string>
 </resources>

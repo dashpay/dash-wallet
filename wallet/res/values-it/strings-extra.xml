@@ -331,4 +331,10 @@
     <string name="payment_request_close">Chiudi</string>
     <string name="payment_request_skip">Salta</string>
     <string name="payment_request_paid_to">Pagato a</string>
+
+    <string name="import_image_not_valid_qr_code">Codice QR non valido</string>
+    <string name="import_image_please_use_valid_qr_code">Utilizza un codice QR Dash valido</string>
+    <string name="import_image_no_private_key_copied">Nessuna chiave privata copiata</string>
+    <string name="import_image_import_valid_private_key">Copia una chiave privata valida per importare Dash </string>
+    <string name="import_image_invalid_private">Chiave privata non valida</string>
 </resources>

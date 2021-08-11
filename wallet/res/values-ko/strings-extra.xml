@@ -90,6 +90,9 @@
     <string name="forgot_pin_instruction_2">새 PIN 설정하기</string>
     <string name="forgot_pin_instruction_3">새로운 PIN으로 로그인하셔서 당신의 지갑에 접근하세요</string>
     <string name="forgot_pin_warning">당신의 PIN과 복원 문구를 잊어버리시면 당신의 지갑과 자금에 접근할 수 없게 됩니다.</string>
+    <string name="forgot_pin_recover">복구 문구를 입력하세요</string>
+    <string name="forgot_pin_passphrase_doesnt_match">이 복구 문구는 지갑이 설정된 문구와 일치하지 않습니다.</string>
+
     <string name="send_coins_auto_lock_feasible">이 거래는 추가 수수료 없이 곧바로 완료됩니다.</string>
     <string name="send_coins_auto_lock_not_feasible">이 거래가 처리되는 데에는 수 분이 걸릴 수 있습니다. 즉시 처리하는 데에는 %1$s%2$s가 필요합니다.</string>
     <string name="send_coins_instant_send_not_feasible">이 거래가 처리되는 데에는 수 분이 걸릴 수 있습니다. </string>
@@ -320,8 +323,15 @@
     <string name="payment_request_please_try_again">다시 시도하세요</string>
     <string name="payment_request_try_again">다시 시도하세요</string>
     <string name="payment_request_problem_title">지불이 인식되지 않았습니다</string>
+    <string name="payment_request_problem_message">서버가 귀하의 지불을 처리하지 못했습니다. 판매자에게 문의해주십시오.</string>
     <string name="payment_request_expired_title">지불 요청이 만료되었습니다</string>
     <string name="payment_request_close">닫기</string>
     <string name="payment_request_skip">건너뛰기</string>
     <string name="payment_request_paid_to">다음에 지불하였습니다</string>
+
+    <string name="import_image_not_valid_qr_code">유효한 QR 코드가 아닙니다</string>
+    <string name="import_image_please_use_valid_qr_code">유효한 대시 QR 코드를 사용해주십시오</string>
+    <string name="import_image_no_private_key_copied">복사된 개인 키가 없습니다</string>
+    <string name="import_image_import_valid_private_key">대시를 가져올 유효한 개인 키를 복사해주십시오</string>
+    <string name="import_image_invalid_private">유효하지 않은 개인 키</string>
 </resources>

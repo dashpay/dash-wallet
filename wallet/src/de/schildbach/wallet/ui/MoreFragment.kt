@@ -145,7 +145,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         // track the status of broadcast changes to our profile
         editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
             if (state != null) {
-                (requireActivity() as InteractionAwareActivity).imitateUserInteraction()
+                (requireActivity() as LockScreenActivity).imitateUserInteraction()
                 when (state.status) {
                     Status.SUCCESS -> {
                         edit_update_switcher.apply {
@@ -252,7 +252,6 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     }
 
     private fun startBuyAndSellActivity() {
-        val wallet = WalletApplication.getInstance().wallet
-        startActivity(UpholdAccountActivity.createIntent(requireContext(), wallet))
+        startActivity(UpholdAccountActivity.createIntent(requireContext()))
     }
 }

@@ -36,6 +36,7 @@ import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
@@ -48,7 +49,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.max
 
-class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
+class NotificationsActivity : LockScreenActivity(), TextWatcher,
         NotificationsAdapter.OnItemClickListener, ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
 
     companion object {
@@ -69,7 +70,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     }
 
     private lateinit var dashPayViewModel: DashPayViewModel
-    private lateinit var walletApplication: WalletApplication
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var notificationsAdapter: NotificationsAdapter
@@ -81,7 +81,6 @@ class NotificationsActivity : InteractionAwareActivity(), TextWatcher,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        walletApplication = application as WalletApplication
         lastSeenNotificationTime = walletApplication.configuration.lastSeenNotificationTime
 
         notificationsAdapter = NotificationsAdapter(this, walletApplication.wallet,

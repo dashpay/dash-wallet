@@ -63,7 +63,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             configuration.hideBalance = hideBalanceOnLaunch
         }
 
-        val checkPinSharedModel: CheckPinSharedModel = ViewModelProvider(this).get(CheckPinSharedModel::class.java)
+        val checkPinSharedModel: CheckPinSharedModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
         checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (requestCode, pin) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_BACKUP -> {
@@ -90,7 +90,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             }
         })
 
-        val decryptSeedSharedModel: DecryptSeedSharedModel = ViewModelProvider(this).get(DecryptSeedSharedModel::class.java)
+        val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProvider(this)[DecryptSeedSharedModel::class.java]
         decryptSeedSharedModel.onDecryptSeedCallback.observe(this, Observer<Pair<Int?, DeterministicSeed?>> { (requestCode, seed) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {

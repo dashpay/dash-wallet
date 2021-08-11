@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/dash_deep_blue"
+    android:fitsSystemWindows="true"
     android:orientation="vertical">
 
     <include
@@ -11,80 +13,81 @@
         android:layout_height="wrap_content" />
 
     <RelativeLayout
-        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/bg_less_bright"
+        android:orientation="vertical"
         tools:ignore="MissingDefaultResource">
 
         <ImageView
             android:id="@+id/uphold_logo"
-            android:layout_centerHorizontal="true"
             android:layout_width="wrap_content"
             android:layout_height="141dp"
+            android:layout_centerHorizontal="true"
             android:layout_marginTop="60dp"
             android:layout_marginBottom="36dp"
-            android:src="@drawable/uphold_logo"/>
+            android:src="@drawable/uphold_logo" />
 
         <LinearLayout
             android:id="@+id/uphold_buy_dash_text"
-            android:gravity="bottom"
-            android:layout_below="@id/uphold_logo"
-            android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_below="@id/uphold_logo"
             android:layout_centerHorizontal="true"
-            android:layout_marginBottom="24dp">
+            android:layout_marginBottom="24dp"
+            android:gravity="bottom"
+            android:orientation="horizontal">
 
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_buy_dash"
+                android:layout_marginEnd="12dp"
                 android:layout_marginRight="12dp"
-                android:layout_marginEnd="12dp"/>
+                android:src="@drawable/ic_buy_dash" />
 
             <TextView
+                style="@style/MontserratMedium.DB.14"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/uphold_buy_dash_with_uphold"
-                style="@style/MontserratMedium.DB.14"/>
+                android:text="@string/uphold_buy_dash_with_uphold" />
 
         </LinearLayout>
 
         <LinearLayout
-            android:gravity="bottom"
-            android:layout_below="@id/uphold_buy_dash_text"
-            android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_below="@id/uphold_buy_dash_text"
             android:layout_alignStart="@id/uphold_buy_dash_text"
             android:layout_alignLeft="@id/uphold_buy_dash_text"
             android:layout_marginBottom="24dp"
-            android:paddingRight="16dp"
-            android:paddingEnd="16dp">
+            android:gravity="bottom"
+            android:orientation="horizontal"
+            android:paddingEnd="16dp"
+            android:paddingRight="16dp">
 
             <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_transfer"
+                android:layout_marginEnd="12dp"
                 android:layout_marginRight="12dp"
-                android:layout_marginEnd="12dp"/>
+                android:src="@drawable/ic_transfer" />
 
             <TextView
+                style="@style/MontserratMedium.DB.14"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/uphold_transfer_to_this_wallet"
-                style="@style/MontserratMedium.DB.14"/>
+                android:text="@string/uphold_transfer_to_this_wallet" />
 
         </LinearLayout>
 
         <Button
             android:id="@+id/uphold_link_account"
             style="@style/DashButton.Blue"
-            android:layout_alignParentBottom="true"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/uphold_link_account"
-            android:layout_margin="16dp" />
+            android:layout_alignParentBottom="true"
+            android:layout_margin="16dp"
+            android:text="@string/uphold_link_account" />
 
     </RelativeLayout>
 
