@@ -59,6 +59,7 @@ open class CheckPinDialog : DialogFragment() {
         @JvmStatic
         fun show(activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
             val checkPinDialog = CheckPinDialog()
+
             if (PinRetryController.getInstance().isLocked) {
                 checkPinDialog.showLockedAlert(activity)
             } else {
