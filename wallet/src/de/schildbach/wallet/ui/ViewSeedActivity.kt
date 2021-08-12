@@ -46,7 +46,7 @@ class ViewSeedActivity : BaseMenuActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //setContentView(R.layout.activity_verify_seed)
+        super.setSecuredActivity(true)
 
         seed = if (intent.extras?.containsKey(EXTRA_SEED)!!) {
             intent.extras!!.getStringArray(EXTRA_SEED)!!
