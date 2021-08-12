@@ -80,13 +80,12 @@ class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.
     private var query = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             with(window) {
                 requestFeature(Window.FEATURE_CONTENT_TRANSITIONS)
             }
         }
+        super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_search_dashpay_profile_root)
 
