@@ -17,9 +17,11 @@
 package de.schildbach.wallet.ui.invite
 
 import android.app.Activity
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.InvitationLinkData
@@ -27,37 +29,93 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Resource.Companion.error
 import de.schildbach.wallet.livedata.Resource.Companion.loading
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.MainActivity
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.getInstance
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
+import org.slf4j.LoggerFactory
 
 class InviteHandler(val activity: AppCompatActivity) {
 
     private lateinit var inviteLoadingDialog: FancyAlertDialog
 
     companion object {
+        private val log = LoggerFactory.getLogger(InviteHandler::class.java)
 
         fun showUsernameAlreadyDialog(activity: AppCompatActivity) {
             val inviteErrorDialog = FancyAlertDialog.newInstance(
-                    R.string.invitation_username_already_found_title,
-                    R.string.invitation_username_already_found_message,
-                    R.drawable.ic_invalid_invite, R.string.okay, 0)
+                R.string.invitation_username_already_found_title,
+                R.string.invitation_username_already_found_message,
+                R.drawable.ic_invalid_invite, R.string.okay, 0
+            )
             inviteErrorDialog.show(activity.supportFragmentManager, null)
             handleDialogResult(activity)
         }
 
+        private fun handleDialogButtonClick(activity: AppCompatActivity) {
+            activity.setResult(Activity.RESULT_CANCELED)
+            val walletApplication = WalletApplication.getInstance()
+            if (walletApplication.wallet == null) {
+                startOnboarding(activity, walletApplication)
+            } else {
+                startMainActivity(activity, walletApplication)
+            }
+            activity.finish()
+        }
+
+        private fun startMainActivity(
+            activity: AppCompatActivity,
+            walletApplication: WalletApplication
+        ) {
+            val intent = MainActivity.createIntent(activity)
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            if (walletApplication.isMainActivityCreated) {
+                LocalBroadcastManager.getInstance(activity)
+                    .sendBroadcast(Intent(MainActivity.ACTIVATE_ACTION))
+            } else {
+                activity.startActivity(intent)
+            }
+        }
+
+        private fun startOnboarding(
+            activity: AppCompatActivity,
+            walletApplication: WalletApplication
+        ) {
+            val intent = OnboardingActivity.createIntent(activity)
+            if (walletApplication.isOnboardingActivityCreated) {
+                LocalBroadcastManager.getInstance(activity)
+                    .sendBroadcast(Intent(OnboardingActivity.ACTIVATE_ACTION))
+            } else {
+                activity.startActivity(intent)
+            }
+        }
+
+        private fun startOnboarding(
+            activity: AppCompatActivity,
+            walletApplication: WalletApplication,
+            invite: InvitationLinkData
+        ) {
+            val intent = OnboardingActivity.createIntent(activity, invite)
+            if (walletApplication.isOnboardingActivityCreated) {
+                intent.action = OnboardingActivity.ACTIVATE_ACTION
+                LocalBroadcastManager.getInstance(activity)
+                    .sendBroadcast(intent)
+            } else {
+                activity.startActivity(intent)
+            }
+        }
+
         private fun handleDialogResult(activity: AppCompatActivity) {
-            val errorDialogViewModel = ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
+            val errorDialogViewModel =
+                ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
             errorDialogViewModel.onPositiveButtonClick.observe(activity, Observer {
-                activity.setResult(Activity.RESULT_CANCELED)
-                activity.finish()
+                handleDialogButtonClick(activity)
             })
             errorDialogViewModel.onNegativeButtonClick.observe(activity, Observer {
-                activity.setResult(Activity.RESULT_CANCELED)
-                activity.finish()
+                handleDialogButtonClick(activity)
             })
         }
     }
@@ -66,43 +124,71 @@ class InviteHandler(val activity: AppCompatActivity) {
         if (!silentMode && inviteResource.status != Status.LOADING) {
             inviteLoadingDialog.dismissAllowingStateLoss()
         }
+        val walletApplication = (activity.application as WalletApplication)
         when (inviteResource.status) {
             Status.LOADING -> {
+                log.info("loading...")
                 if (!silentMode) {
                     showInviteLoadingProgress()
                 }
             }
             Status.ERROR -> {
                 val displayName = inviteResource.data!!.displayName
+                log.info("error processing invite from $displayName")
                 showInvalidInviteDialog(displayName)
             }
             Status.CANCELED -> {
+                log.info("error processing invite since we have a username already")
                 showUsernameAlreadyDialog(activity)
             }
             Status.SUCCESS -> {
+                log.info("invite has been validated successfully")
                 val invite = inviteResource.data!!
                 if (invite.isValid) {
                     activity.setResult(Activity.RESULT_OK)
-                    val walletApplication = (activity.application as WalletApplication)
                     when {
                         silentMode -> {
-                            activity.startService(CreateIdentityService.createIntentFromInvite(activity, walletApplication.configuration.onboardingInviteUsername, invite))
+                            activity.startService(
+                                CreateIdentityService.createIntentFromInvite(
+                                    activity,
+                                    walletApplication.configuration.onboardingInviteUsername,
+                                    invite
+                                )
+                            )
                         }
                         walletApplication.wallet != null -> {
-                            activity.startActivity(AcceptInviteActivity.createIntent(activity, invite, false))
+                            //TODO: this is in a new task and bypasses the Lock Screen
+                            activity.startActivity(
+                                AcceptInviteActivity.createIntent(
+                                    activity,
+                                    invite,
+                                    false
+                                )
+                            )
                         }
                         else -> {
                             if (invite.isValid) {
                                 walletApplication.configuration.onboardingInvite = invite.link
-                                activity.startActivity(OnboardingActivity.createIntent(activity, invite))
+                                startOnboarding(activity, walletApplication, invite)
                             } else {
-                                activity.startActivity(OnboardingActivity.createIntent(activity))
+                                // TODO: is this ever executed?
+                                startOnboarding(activity, walletApplication)
                             }
                         }
                     }
                     activity.finish()
                 } else {
+                    log.info("invite has been used previously")
+                    //TODO: does this ever get executed?
                     showInviteAlreadyClaimedDialog(invite)
+                    val fancyAlertDialogViewModel =
+                        ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
+                    fancyAlertDialogViewModel.onPositiveButtonClick.observe(activity) {
+                        if (walletApplication.wallet == null) {
+                            startOnboarding(activity, walletApplication)
+                            activity.finish()
+                        }
+                    }
                 }
             }
         }
@@ -111,7 +197,13 @@ class InviteHandler(val activity: AppCompatActivity) {
     private fun showInvalidInviteDialog(displayName: String) {
         val title = activity.getString(R.string.invitation_invalid_invite_title)
         val message = activity.getString(R.string.invitation_invalid_invite_message, displayName)
-        val inviteErrorDialog = FancyAlertDialog.newInstance(title, message, R.drawable.ic_invalid_invite, R.string.okay, 0)
+        val inviteErrorDialog = FancyAlertDialog.newInstance(
+            title,
+            message,
+            R.drawable.ic_invalid_invite,
+            R.string.okay,
+            0
+        )
         inviteErrorDialog.show(activity.supportFragmentManager, null)
         handleDialogResult(activity)
     }
@@ -126,12 +218,16 @@ class InviteHandler(val activity: AppCompatActivity) {
         if (::inviteLoadingDialog.isInitialized && inviteLoadingDialog.isAdded) {
             inviteLoadingDialog.dismissAllowingStateLoss()
         }
-        inviteLoadingDialog = FancyAlertDialog.newProgress(R.string.invitation_verifying_progress_title, 0)
+        inviteLoadingDialog =
+            FancyAlertDialog.newProgress(R.string.invitation_verifying_progress_title, 0)
         inviteLoadingDialog.show(activity.supportFragmentManager, null)
     }
 
     private fun showInsuffientFundsDialog() {
-        val dialog = FancyAlertDialog.newProgress(R.string.invitation_invalid_invite_title, R.string.dashpay_insuffient_credits)
+        val dialog = FancyAlertDialog.newProgress(
+            R.string.invitation_invalid_invite_title,
+            R.string.dashpay_insuffient_credits
+        )
         dialog.show(activity.supportFragmentManager, null)
     }
 

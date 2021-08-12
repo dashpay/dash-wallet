@@ -2,6 +2,7 @@ package de.schildbach.wallet.ui
 
 import android.Manifest
 import android.app.Dialog
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -26,6 +27,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -75,6 +77,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         const val DIALOG_LOW_STORAGE_ALERT = 5
 
         const val EXTRA_RESET_BLOCKCHAIN = "reset_blockchain"
+        const val ACTIVATE_ACTION = "MainActivity.activate.action"
 
         fun createIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java)
@@ -88,6 +91,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private val config: Configuration by lazy { walletApplication.configuration }
     private var fingerprintHelper: FingerprintHelper? = null
     private var retryCreationIfInProgress = true
+    private var activateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            //intent!!.action = Intent.ACTION_MAIN
+            startActivity(createIntent(context!!))
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,6 +123,18 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         initFingerprintHelper()
         setupBottomNavigation()
+
+        val intentFilter = IntentFilter(ACTIVATE_ACTION)
+        LocalBroadcastManager.getInstance(this).registerReceiver(activateReceiver, intentFilter)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(activateReceiver)
+        } catch (e: IllegalStateException) {
+            log.error("failure to unregister receiver", e)
+        }
     }
 
     private fun handleCreateFromInvite() {

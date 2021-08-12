@@ -17,8 +17,10 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.os.Bundle
@@ -29,6 +31,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -45,6 +48,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     companion object {
 
         private const val EXTRA_INVITE = "extra_invite"
+        const val ACTIVATE_ACTION = "OnboardingActivity.activate.action"
 
         @JvmStatic
         fun createIntent(context: Context): Intent {
@@ -54,7 +58,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         fun createIntent(context: Context, invite: InvitationLinkData): Intent {
             return Intent(context, OnboardingActivity::class.java).apply {
                 putExtra(EXTRA_INVITE, invite)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                //flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
         }
     }
@@ -65,6 +69,16 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     override fun onStart() {
         super.onStart()
+    }
+
+    private var activateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent != null) {
+                startActivity(createIntent(context!!, intent.getParcelableExtra(EXTRA_INVITE)!!))
+            } else {
+                startActivity(createIntent(context!!))
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,7 +98,12 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
 
         setContentView(R.layout.activity_onboarding)
-        slogan.setPadding(slogan.paddingLeft, slogan.paddingTop, slogan.paddingRight, getStatusBarHeightPx())
+        slogan.setPadding(
+            slogan.paddingLeft,
+            slogan.paddingTop,
+            slogan.paddingRight,
+            getStatusBarHeightPx()
+        )
 
         walletApplication = (application as WalletApplication)
         if (walletApplication.walletFileExists()) {
@@ -101,14 +120,28 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 }
             }
         }
+
+        val intentFilter = IntentFilter(ACTIVATE_ACTION)
+        LocalBroadcastManager.getInstance(this).registerReceiver(activateReceiver, intentFilter)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(activateReceiver)
+        } catch (e: IllegalStateException) {
+            AbstractWalletActivity.log.error("failure to unregister receiver", e)
+        }
     }
 
     private fun regularFlow() {
         if (walletApplication.configuration.v7TutorialCompleted) {
             upgradeOrStartMainActivity()
         } else {
-            startActivityForResult(Intent(this, WelcomeActivity::class.java),
-                    REGULAR_FLOW_TUTORIAL_REQUEST_CODE)
+            startActivityForResult(
+                Intent(this, WelcomeActivity::class.java),
+                REGULAR_FLOW_TUTORIAL_REQUEST_CODE
+            )
             overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
         }
     }

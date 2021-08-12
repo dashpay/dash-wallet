@@ -35,6 +35,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
@@ -94,12 +95,9 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
-import de.schildbach.wallet.ui.ImportSharedImageActivity;
-import de.schildbach.wallet.ui.LockScreenActivity;
+import de.schildbach.wallet.ui.MainActivity;
 import de.schildbach.wallet.ui.OnboardingActivity;
-import de.schildbach.wallet.ui.ShortcutComponentActivity;
 import de.schildbach.wallet.ui.TransactionsAdapter;
-import de.schildbach.wallet.ui.WalletUriHandlerActivity;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
@@ -118,6 +116,8 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     private ActivityManager activityManager;
 
     private boolean basicWalletInitalizationFinished = false;
+    private boolean mainActivityCreated = false;
+    private boolean onboardingActivityCreated = false;
 
     private Intent blockchainServiceIntent;
 
@@ -166,6 +166,15 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
             }
 
             @Override
+            public void onActivityCreated(@NonNull Activity activity, Bundle savedInstanceState) {
+                if (activity instanceof MainActivity) {
+                    mainActivityCreated = true;
+                } else if (activity instanceof OnboardingActivity) {
+                    onboardingActivityCreated = true;
+                }
+            }
+
+            @Override
             protected void onStartedAny(boolean isTheFirstOne) {
                 super.onStartedAny(isTheFirstOne);
                 // force restart if the app was updated
@@ -180,6 +189,15 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
                 autoLogout.setAppWentBackground(true);
                 if (config.getAutoLogoutEnabled() && config.getAutoLogoutMinutes() == 0) {
                     sendBroadcast(new Intent(InteractionAwareActivity.FORCE_FINISH_ACTION));
+                }
+            }
+
+            @Override
+            public void onActivityDestroyed(@NonNull Activity activity) {
+                if (activity instanceof MainActivity) {
+                    mainActivityCreated = false;
+                } else if (activity instanceof OnboardingActivity) {
+                    onboardingActivityCreated = false;
                 }
             }
         });
@@ -663,6 +681,9 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public boolean isLowRamDevice() {
+        if (activityManager == null)
+            return false;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
             return activityManager.isLowRamDevice();
         else
@@ -830,5 +851,13 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         return new androidx.work.Configuration.Builder()
                 .setMinimumLoggingLevel(Log.VERBOSE)
                 .build();
+    }
+
+    public boolean isMainActivityCreated() {
+        return mainActivityCreated;
+    }
+
+    public boolean isOnboardingActivityCreated() {
+        return onboardingActivityCreated;
     }
 }

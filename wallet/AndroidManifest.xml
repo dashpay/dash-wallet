@@ -235,6 +235,8 @@
         <activity
             android:name="de.schildbach.wallet.ui.InviteHandlerActivity"
             android:label=""
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
             android:theme="@style/My.Theme.Transparent">
 
             <intent-filter android:autoVerify="true"
