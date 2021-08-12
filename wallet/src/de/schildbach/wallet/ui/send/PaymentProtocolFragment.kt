@@ -24,7 +24,7 @@ import android.view.animation.AnimationUtils
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
@@ -80,7 +80,7 @@ class PaymentProtocolFragment : Fragment() {
         view_flipper.inAnimation = AnimationUtils.loadAnimation(context, android.R.anim.fade_in)
 
         val closeActivityOnClickListener = View.OnClickListener {
-            activity!!.finish()
+            requireActivity().finish()
         }
         close_button.setOnClickListener(closeActivityOnClickListener)
         error_view.setOnCloseClickListener(closeActivityOnClickListener)
@@ -98,11 +98,11 @@ class PaymentProtocolFragment : Fragment() {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
             val amount = paymentProtocolModel.finalPaymentIntent!!.amount
             if (amount.isLessThan(thresholdAmount)) {
-                CheckPinDialog.show(activity!!, 0, false)
+                CheckPinDialog.show(requireActivity(), 0, false)
             } else {
-                CheckPinDialog.show(activity!!, 0, true)
+                CheckPinDialog.show(requireActivity(), 0, true)
             }
-            val checkPinSharedModel = ViewModelProviders.of(activity!!)[CheckPinSharedModel::class.java]
+            val checkPinSharedModel = ViewModelProvider(requireActivity())[CheckPinSharedModel::class.java]
             checkPinSharedModel.onCorrectPinCallback.observe(viewLifecycleOwner, Observer<Pair<Int?, String?>> { (_, _) ->
                 confirmWhenAuthorizedAndNoException()
             })
@@ -133,14 +133,18 @@ class PaymentProtocolFragment : Fragment() {
         initModel()
 
         if (savedInstanceState == null) {
-            val paymentIntent = arguments!!.getParcelable<PaymentIntent>(ARGS_PAYMENT_INTENT)
+            val paymentIntent = requireArguments().getParcelable<PaymentIntent>(ARGS_PAYMENT_INTENT)
             paymentProtocolModel.basePaymentIntent.value = Resource.success(paymentIntent)
         }
     }
 
     private fun initModel() {
-        paymentProtocolModel = ViewModelProviders.of(this).get(PaymentProtocolViewModel::class.java)
-        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner, Observer {})
+        paymentProtocolModel = ViewModelProvider(this)[PaymentProtocolViewModel::class.java]
+        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner) {
+            if (paymentProtocolModel.finalPaymentIntent != null && it != null) {
+                displayRequest(paymentProtocolModel.finalPaymentIntent!!, null)
+            }
+        }
         paymentProtocolModel.basePaymentIntent.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.LOADING -> {
@@ -170,7 +174,7 @@ class PaymentProtocolFragment : Fragment() {
                     }
                 }
                 Status.ERROR -> {
-                    InputParser.dialog(activity, { _, _ -> activity!!.finish() }, 0, it.message!!)
+                    InputParser.dialog(activity, { _, _ -> requireActivity().finish() }, 0, it.message!!)
                 }
             }
         })
@@ -256,7 +260,7 @@ class PaymentProtocolFragment : Fragment() {
     private fun showTransactionResult(transaction: Transaction) {
         val paymentMemo = paymentProtocolModel.finalPaymentIntent!!.memo
         val payeeVerifiedBy = paymentProtocolModel.finalPaymentIntent!!.payeeVerifiedBy
-        activity!!.run {
+        requireActivity().run {
             val transactionResultIntent = TransactionResultActivity.createIntent(
                     this, intent.action, transaction, isUserAuthorized(), paymentMemo, payeeVerifiedBy)
             startActivity(transactionResultIntent)
@@ -278,7 +282,7 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun showInsufficientMoneyDialog() {
-        val dialogBuilder = AlertDialog.Builder(context!!)
+        val dialogBuilder = AlertDialog.Builder(requireContext())
         dialogBuilder.setTitle(R.string.payment_protocol_insufficient_funds_error_title)
         dialogBuilder.setMessage(R.string.payment_protocol_insufficient_funds_error_message)
         dialogBuilder.setPositiveButton(android.R.string.ok, null)
@@ -286,7 +290,7 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun showErrorDialog(exception: Exception) {
-        val dialogBuilder = AlertDialog.Builder(context!!)
+        val dialogBuilder = AlertDialog.Builder(requireContext())
         dialogBuilder.setTitle(R.string.payment_protocol_default_error_title)
         if (exception.message != null) {
             dialogBuilder.setMessage(exception.message)
