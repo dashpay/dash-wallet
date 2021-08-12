@@ -100,7 +100,6 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         viewModel.saveTag(tag_edit.text.toString())
 
         super.shareInvitation(shareImage, viewModel.shortDynamicLinkData)
-        finishActivity()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

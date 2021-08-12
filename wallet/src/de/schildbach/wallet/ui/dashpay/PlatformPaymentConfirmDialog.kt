@@ -40,13 +40,15 @@ class PlatformPaymentConfirmDialog : BaseBottomSheetDialogFragment() {
         private const val ARG_TITLE = "arg_title"
         private const val ARG_MESSAGE = "arg_message"
         private const val ARG_AMOUNT = "arg_amount"
+        private const val ARG_ISINVITE = "arg_isinvite"
 
         @JvmStatic
-        fun createDialog(title: String, messageHtml: String, amount: Long? = null): DialogFragment {
+        fun createDialog(title: String, messageHtml: String, amount: Long? = null, isInvite: Boolean = false): DialogFragment {
             val dialog = PlatformPaymentConfirmDialog()
             dialog.arguments = Bundle().apply {
                 putString(ARG_TITLE, title)
                 putString(ARG_MESSAGE, messageHtml)
+                putBoolean(ARG_ISINVITE, isInvite)
                 if (amount != null) {
                     putLong(ARG_AMOUNT, amount)
                 }
@@ -80,6 +82,9 @@ class PlatformPaymentConfirmDialog : BaseBottomSheetDialogFragment() {
         val amountSpecified = requireArguments().containsKey(ARG_AMOUNT)
         fee_container.visibility = if (amountSpecified) View.VISIBLE else View.GONE
         no_fee_placeholder.visibility = if (amountSpecified) View.GONE else View.VISIBLE
+        if (requireArguments().getBoolean(ARG_ISINVITE)) {
+            confirm.text = getString(R.string.invitation_confirm_button_text)
+        }
 
         agree_check.setOnCheckedChangeListener { _, isChecked ->
             confirm.isEnabled = isChecked
