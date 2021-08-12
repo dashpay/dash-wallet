@@ -52,7 +52,7 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
-class CreateUsernameActivity : LockScreenActivity(), TextWatcher {
+class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
     private val regularTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_regular) }
     private val mediumTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_medium) }
@@ -71,7 +71,7 @@ class CreateUsernameActivity : LockScreenActivity(), TextWatcher {
     //    val viewModel by lazy {
 //        ViewModelProvider(this).get(InviteFriendViewModel::class.java)
 //    }
-    //private lateinit var walletApplication: WalletApplication
+    private lateinit var walletApplication: WalletApplication
 
     private var reuseTransaction: Boolean = false
     private var useInvite: Boolean = false
@@ -143,7 +143,7 @@ class CreateUsernameActivity : LockScreenActivity(), TextWatcher {
         processing_identity_dismiss_btn.setOnClickListener { finish() }
 
         initViewModel()
-        //walletApplication = application as WalletApplication
+        walletApplication = application as WalletApplication
 
         when (intent?.action) {
             ACTION_DISPLAY_COMPLETE -> {
@@ -429,7 +429,7 @@ class CreateUsernameActivity : LockScreenActivity(), TextWatcher {
         val username = "<b>“${username.text}”</b>"
         val dialogMessage = getString(R.string.new_account_confirm_message, username)
         val dialogTitle = getString(R.string.dashpay_upgrade_fee)
-        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee)
+        val dialog = PlatformPaymentConfirmDialog.createDialog(dialogTitle, dialogMessage, upgradeFee, invite != null)
         dialog.show(supportFragmentManager, "NewAccountConfirmDialog")
     }
 
