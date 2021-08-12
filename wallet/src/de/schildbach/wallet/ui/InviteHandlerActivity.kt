@@ -36,11 +36,7 @@ class InviteHandlerActivity : AppCompatActivity() {
         private const val EXTRA_SILENT_MODE = "extra_silent_mode"
 
         @JvmStatic
-        fun createIntent(
-            context: Context,
-            invite: InvitationLinkData,
-            silentMode: Boolean
-        ): Intent {
+        fun createIntent(context: Context, invite: InvitationLinkData, silentMode: Boolean): Intent {
             return Intent(context, InviteHandlerActivity::class.java).apply {
                 putExtra(EXTRA_INVITE, invite)
                 putExtra(EXTRA_SILENT_MODE, silentMode)
