@@ -21,6 +21,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.invite.InviteHandler
 import org.slf4j.LoggerFactory
@@ -35,7 +36,11 @@ class InviteHandlerActivity : AppCompatActivity() {
         private const val EXTRA_SILENT_MODE = "extra_silent_mode"
 
         @JvmStatic
-        fun createIntent(context: Context, invite: InvitationLinkData, silentMode: Boolean): Intent {
+        fun createIntent(
+            context: Context,
+            invite: InvitationLinkData,
+            silentMode: Boolean
+        ): Intent {
             return Intent(context, InviteHandlerActivity::class.java).apply {
                 putExtra(EXTRA_INVITE, invite)
                 putExtra(EXTRA_SILENT_MODE, silentMode)
@@ -61,12 +66,23 @@ class InviteHandlerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (onboardingInProgress()) {
+            finish()
+            return
+        }
+
         initViewModel()
         if (externalInvite != null) {
             viewModel.handleInvite(externalInvite)
         } else {
             viewModel.handleInvite(intent)
         }
+    }
+
+    private fun onboardingInProgress(): Boolean {
+        val walletApplication = application as WalletApplication
+        return walletApplication.wallet != null && !walletApplication.configuration.hasBeenUsed()
     }
 
     override fun onNewIntent(intent: Intent?) {
