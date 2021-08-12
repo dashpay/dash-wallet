@@ -92,8 +92,12 @@ class InviteHandler(val activity: AppCompatActivity) {
                             activity.startActivity(AcceptInviteActivity.createIntent(activity, invite, false))
                         }
                         else -> {
-                            walletApplication.configuration.onboardingInvite = invite.link
-                            activity.startActivity(OnboardingActivity.createIntent(activity, invite))
+                            if (invite.isValid) {
+                                walletApplication.configuration.onboardingInvite = invite.link
+                                activity.startActivity(OnboardingActivity.createIntent(activity, invite))
+                            } else {
+                                activity.startActivity(OnboardingActivity.createIntent(activity))
+                            }
                         }
                     }
                     activity.finish()

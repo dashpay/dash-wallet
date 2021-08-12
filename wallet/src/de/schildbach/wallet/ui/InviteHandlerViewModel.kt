@@ -54,8 +54,7 @@ class InviteHandlerViewModel(application: Application) : BaseProfileViewModel(ap
         inviteData.value = Resource.loading()
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // don't validate onboarding invites (they will be validated afterwards)
-                invite.validation = (walletApplication.wallet == null) || platformRepo.validateInvitation(invite)
+                invite.validation = platformRepo.validateInvitation(invite)
 
                 if (hasIdentity) {
                     // we have an identity, so cancel this invite
