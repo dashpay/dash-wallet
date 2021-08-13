@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.invite
 
 import android.app.Activity
+import android.app.ActivityManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -66,6 +67,7 @@ class InviteHandler(val activity: AppCompatActivity) {
         if (!silentMode && inviteResource.status != Status.LOADING) {
             inviteLoadingDialog.dismissAllowingStateLoss()
         }
+
         when (inviteResource.status) {
             Status.LOADING -> {
                 if (!silentMode) {
@@ -82,6 +84,7 @@ class InviteHandler(val activity: AppCompatActivity) {
             Status.SUCCESS -> {
                 val invite = inviteResource.data!!
                 if (invite.isValid) {
+                    val mainTask = getMainTask()
                     activity.setResult(Activity.RESULT_OK)
                     val walletApplication = (activity.application as WalletApplication)
                     when {
@@ -89,14 +92,14 @@ class InviteHandler(val activity: AppCompatActivity) {
                             activity.startService(CreateIdentityService.createIntentFromInvite(activity, walletApplication.configuration.onboardingInviteUsername, invite))
                         }
                         walletApplication.wallet != null -> {
-                            activity.startActivity(AcceptInviteActivity.createIntent(activity, invite, false))
+                            mainTask.startActivity(activity.applicationContext, AcceptInviteActivity.createIntent(activity, invite, false), null)
                         }
                         else -> {
                             if (invite.isValid) {
                                 walletApplication.configuration.onboardingInvite = invite.link
-                                activity.startActivity(OnboardingActivity.createIntent(activity, invite))
+                                mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity, invite), null)
                             } else {
-                                activity.startActivity(OnboardingActivity.createIntent(activity))
+                                mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity), null)
                             }
                         }
                     }
@@ -106,6 +109,11 @@ class InviteHandler(val activity: AppCompatActivity) {
                 }
             }
         }
+    }
+
+    private fun getMainTask(): ActivityManager.AppTask {
+        val activityManager = activity.getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
+        return activityManager.appTasks.last()
     }
 
     private fun showInvalidInviteDialog(displayName: String) {
