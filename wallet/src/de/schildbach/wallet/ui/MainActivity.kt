@@ -193,6 +193,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 if (!config.inviterContactRequestSentInfoShown) {
                     it?.get(initInvitationUserId)?.apply {
                         if (status == Status.SUCCESS) {
+                            log.info("showing successfully sent contact request dialog")
                             showInviteSendContactRequestDialog(initInvitationUserId)
                             config.inviterContactRequestSentInfoShown = true
                         }
