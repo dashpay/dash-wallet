@@ -28,6 +28,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Resource.Companion.error
 import de.schildbach.wallet.livedata.Resource.Companion.loading
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.MainActivity
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.getInstance
@@ -43,22 +44,39 @@ class InviteHandler(val activity: AppCompatActivity) {
 
         fun showUsernameAlreadyDialog(activity: AppCompatActivity) {
             val inviteErrorDialog = FancyAlertDialog.newInstance(
-                    R.string.invitation_username_already_found_title,
-                    R.string.invitation_username_already_found_message,
-                    R.drawable.ic_invalid_invite, R.string.okay, 0)
+                R.string.invitation_username_already_found_title,
+                R.string.invitation_username_already_found_message,
+                R.drawable.ic_invalid_invite, R.string.okay, 0
+            )
             inviteErrorDialog.show(activity.supportFragmentManager, null)
             handleDialogResult(activity)
         }
 
+        private fun getMainTask(activity: AppCompatActivity): ActivityManager.AppTask {
+            val activityManager = activity.getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
+            return activityManager.appTasks.last()
+        }
+
+        private fun handleDialogButtonClick(activity: AppCompatActivity) {
+            activity.setResult(Activity.RESULT_CANCELED)
+            val walletApplication = WalletApplication.getInstance()
+            val mainTask = getMainTask(activity)
+            if (walletApplication.wallet == null) {
+                mainTask.startActivity(activity.applicationContext, MainActivity.createIntent(activity), null)
+            } else {
+                mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity), null)
+            }
+            activity.finish()
+        }
+
         private fun handleDialogResult(activity: AppCompatActivity) {
-            val errorDialogViewModel = ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
+            val errorDialogViewModel =
+                ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
             errorDialogViewModel.onPositiveButtonClick.observe(activity, Observer {
-                activity.setResult(Activity.RESULT_CANCELED)
-                activity.finish()
+                handleDialogButtonClick(activity)
             })
             errorDialogViewModel.onNegativeButtonClick.observe(activity, Observer {
-                activity.setResult(Activity.RESULT_CANCELED)
-                activity.finish()
+                handleDialogButtonClick(activity)
             })
         }
     }
@@ -112,8 +130,7 @@ class InviteHandler(val activity: AppCompatActivity) {
     }
 
     private fun getMainTask(): ActivityManager.AppTask {
-        val activityManager = activity.getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
-        return activityManager.appTasks.last()
+        return getMainTask(activity)
     }
 
     private fun showInvalidInviteDialog(displayName: String) {
