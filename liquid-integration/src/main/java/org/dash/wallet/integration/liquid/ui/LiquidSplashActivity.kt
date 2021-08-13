@@ -26,6 +26,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.preference.PreferenceManager
 import android.view.MenuItem
 import android.view.View
@@ -282,6 +283,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
             intent.data = uri
             startActivity(intent)
         }
+        super.turnOffAutoLogout()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -295,7 +297,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     companion object {
-        fun createIntent(context: Context): Intent? {
+        fun createIntent(context: Context): Intent {
             return Intent(context, LiquidSplashActivity::class.java)
         }
 
@@ -323,5 +325,10 @@ class LiquidSplashActivity : InteractionAwareActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        super.turnOnAutoLogout()
     }
 }

@@ -40,7 +40,7 @@ public class InteractionAwareActivity extends AppCompatActivity {
     @Override
     public void onUserInteraction() {
         super.onUserInteraction();
-        ((ResetAutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
+        ((AutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
     }
 
     @Override
@@ -63,6 +63,14 @@ public class InteractionAwareActivity extends AppCompatActivity {
             // already unregistered
         }
         super.onDestroy();
+    }
+
+    protected void turnOffAutoLogout() {
+        ((AutoLogoutTimerHandler) getApplication()).stopAutoLogoutTimer();
+    }
+
+    protected void turnOnAutoLogout() {
+        ((AutoLogoutTimerHandler) getApplication()).startAutoLogoutTimer();
     }
 
     private final BroadcastReceiver forceFinishReceiver = new BroadcastReceiver() {

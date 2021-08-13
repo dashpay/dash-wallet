@@ -22,7 +22,6 @@ class WebViewActivity : InteractionAwareActivity() {
     }
 
     private fun initUI() {
-
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         val actionBar = supportActionBar
@@ -32,15 +31,12 @@ class WebViewActivity : InteractionAwareActivity() {
         }
         setTitle(intent.getStringExtra("title"))
         webView.loadUrl(intent.getStringExtra("url"))
-
     }
-
 
     override fun onPause() {
         super.onPause()
         webView.onPause()
     }
-
 
     override fun onResume() {
         super.onResume()

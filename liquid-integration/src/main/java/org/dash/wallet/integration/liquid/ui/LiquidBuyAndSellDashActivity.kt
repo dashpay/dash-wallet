@@ -507,11 +507,12 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 startActivity(intent)
             }
         }
-
+        super.turnOffAutoLogout()
     }
 
     override fun onResume() {
         super.onResume()
+        super.turnOnAutoLogout()
         viewModel.updateLiquidBalance()
         if (isClickLogoutButton) {
             isClickLogoutButton = false

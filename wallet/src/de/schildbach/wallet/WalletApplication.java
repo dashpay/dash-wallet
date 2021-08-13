@@ -63,7 +63,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
+import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.util.WalletDataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -104,7 +104,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends BaseWalletApplication implements ResetAutoLogoutTimerHandler, WalletDataProvider {
+public class WalletApplication extends BaseWalletApplication implements AutoLogoutTimerHandler, WalletDataProvider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
@@ -795,6 +795,16 @@ public class WalletApplication extends BaseWalletApplication implements ResetAut
     @Override
     public void resetAutoLogoutTimer() {
         autoLogout.resetTimerIfActive();
+    }
+
+    @Override
+    public void startAutoLogoutTimer() {
+        autoLogout.startTimer();
+    }
+
+    @Override
+    public void stopAutoLogoutTimer() {
+        autoLogout.stopTimer();
     }
 
     @NotNull
