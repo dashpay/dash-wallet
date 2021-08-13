@@ -35,12 +35,14 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.getInstance
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
+import org.slf4j.LoggerFactory
 
 class InviteHandler(val activity: AppCompatActivity) {
 
     private lateinit var inviteLoadingDialog: FancyAlertDialog
 
     companion object {
+        protected val log = LoggerFactory.getLogger(InviteHandler::class.java)
 
         fun showUsernameAlreadyDialog(activity: AppCompatActivity) {
             val inviteErrorDialog = FancyAlertDialog.newInstance(
@@ -107,16 +109,20 @@ class InviteHandler(val activity: AppCompatActivity) {
                     val walletApplication = (activity.application as WalletApplication)
                     when {
                         silentMode -> {
+                            log.info("the invite is valid, starting silently: ${invite.link}")
                             activity.startService(CreateIdentityService.createIntentFromInvite(activity, walletApplication.configuration.onboardingInviteUsername, invite))
                         }
                         walletApplication.wallet != null -> {
+                            log.info("the invite is valid, starting AcceptInviteActivity with invite: ${invite.link}")
                             mainTask.startActivity(activity.applicationContext, AcceptInviteActivity.createIntent(activity, invite, false), null)
                         }
                         else -> {
                             if (invite.isValid) {
+                                log.info("the invite is valid, starting Onboarding with invite: ${invite.link}")
                                 walletApplication.configuration.onboardingInvite = invite.link
                                 mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity, invite), null)
                             } else {
+                                log.info("the invite is valid, starting Onboarding without invite")
                                 mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity), null)
                             }
                         }
