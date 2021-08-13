@@ -392,6 +392,7 @@ class EditProfileActivity : BaseMenuActivity() {
     private fun choosePicture() {
         if (editProfileViewModel.createTmpPictureFile()) {
             val pickPhoto = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            keepUnlocked = true
             startActivityForResult(pickPhoto, REQUEST_CODE_URI)
         } else {
             Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
@@ -400,6 +401,7 @@ class EditProfileActivity : BaseMenuActivity() {
 
     private fun takePicture() {
         if (editProfileViewModel.createTmpPictureFile()) {
+            //keepUnlocked = true
             dispatchTakePictureIntent()
         } else {
             Toast.makeText(this, "Unable to create temporary file", Toast.LENGTH_LONG).show()
@@ -426,26 +428,30 @@ class EditProfileActivity : BaseMenuActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
             REQUEST_CODE_IMAGE -> {
+                //keepUnlocked = false
                 if (resultCode == RESULT_OK) {
                     // picture saved in editProfileViewModel.profilePictureTmpFile
                     editProfileViewModel.onTmpPictureReadyForEditEvent.call(editProfileViewModel.tmpPictureFile)
                 }
             }
-            REQUEST_CODE_URI -> if (resultCode == RESULT_OK && data != null) {
-                val selectedImage: Uri? = data.data
-                if (selectedImage != null) {
-                    @Suppress("DEPRECATION")
-                    val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
-                    val cursor: Cursor? = contentResolver.query(selectedImage,
+            REQUEST_CODE_URI -> {
+                keepUnlocked = false
+                if (resultCode == RESULT_OK && data != null) {
+                    val selectedImage: Uri? = data.data
+                    if (selectedImage != null) {
+                        @Suppress("DEPRECATION")
+                        val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
+                        val cursor: Cursor? = contentResolver.query(selectedImage,
                             filePathColumn, null, null, null)
-                    if (cursor != null) {
-                        cursor.moveToFirst()
-                        val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
-                        val picturePath: String? = cursor.getString(columnIndex)
-                        if (picturePath != null) {
-                            editProfileViewModel.saveAsProfilePictureTmp(picturePath)
-                        } else {
-                            saveImageWithAuthority(selectedImage)
+                        if (cursor != null) {
+                            cursor.moveToFirst()
+                            val columnIndex: Int = cursor.getColumnIndex(filePathColumn[0])
+                            val picturePath: String? = cursor.getString(columnIndex)
+                            if (picturePath != null) {
+                                editProfileViewModel.saveAsProfilePictureTmp(picturePath)
+                            } else {
+                                saveImageWithAuthority(selectedImage)
+                            }
                         }
                     }
                 }
