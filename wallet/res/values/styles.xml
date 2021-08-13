@@ -108,4 +108,8 @@
         <item name="colorControlActivated">@color/dash_blue</item>
     </style>
 
+    <style name="WarningRedBackground">
+        <item name="primary_color">@color/warning_red</item>
+        <item name="secondary_color">@color/warning_outline</item>
+    </style>
 </resources>

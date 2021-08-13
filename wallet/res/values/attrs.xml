@@ -42,4 +42,9 @@
         <attr name="src" format="reference" />
         <attr name="text" format="reference" />
     </declare-styleable>
+
+    <declare-styleable name="VectorColors">
+        <attr name="primary_color" format="color" />
+        <attr name="secondary_color" format="color" />
+    </declare-styleable>
 </resources>

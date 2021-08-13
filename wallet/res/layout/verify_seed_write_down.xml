@@ -30,6 +30,50 @@
         app:layout_constraintTop_toBottomOf="@+id/verify_seed_title"
         tools:text="network   stand   grid   bundle   need   eight   blast   topic   depth   right   desk   faith" />
 
+    <!--    <ImageView-->
+    <!--        android:layout_width="30dp"-->
+    <!--        android:layout_height="30dp"-->
+    <!--        android:layout_marginTop="40dp"-->
+    <!--        android:src="@drawable/ic_exclamation_circle"-->
+    <!--        app:layout_constraintTop_toBottomOf="@id/recovery_seed"-->
+    <!--        app:layout_constraintStart_toStartOf="parent"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"/>-->
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="65dp"
+        android:layout_margin="16dp"
+        android:background="@drawable/rounded_outlined_background"
+        android:theme="@style/WarningRedBackground"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/recovery_seed"
+        tools:theme="@style/WarningRedBackground">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/MontserratSemiBold"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="@string/history_title"
+                android:textColor="@color/black_text"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/wallet_transactions_fragment_empty_text"
+                android:textSize="@dimen/font_size_small"
+                android:textColor="@color/dash_black"
+                app:fontFamily="@font/montserrat" />
+        </LinearLayout>
+    </FrameLayout>
+
     <de.schildbach.wallet.ui.widget.MontserratCheckBox
         android:id="@+id/written_down_checkbox"
         android:layout_width="wrap_content"
