@@ -319,8 +319,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             createTimeskewAlertDialog(args.getLong("diff_minutes"))
         } else if (id == DIALOG_VERSION_ALERT) {
             createVersionAlertDialog()
-        } else if (id == DIALOG_LOW_STORAGE_ALERT) {
-            createLowStorageAlertDialog()
         } else throw java.lang.IllegalArgumentException()
     }
 
@@ -369,15 +367,16 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         showRestoreWalletFromSeedDialog();
     }
 
-    private fun createLowStorageAlertDialog(): Dialog? {
-        val dialog = DialogBuilder.warn(this, R.string.wallet_low_storage_dialog_title)
-        dialog.setMessage(R.string.wallet_low_storage_dialog_msg)
-        dialog.setPositiveButton(R.string.wallet_low_storage_dialog_button_apps) { dialog, id ->
-            startActivity(Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS))
-            finish()
-        }
-        dialog.setNegativeButton(R.string.button_dismiss, null)
-        return dialog.create()
+    private fun showLowStorageAlertDialog() {
+        DialogBuilder.warn(this, R.string.wallet_low_storage_dialog_title)
+            .setMessage(R.string.wallet_low_storage_dialog_msg)
+            .setPositiveButton(R.string.wallet_low_storage_dialog_button_apps) { _, _ ->
+                startActivity(Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS))
+                finish()
+            }
+            .setNegativeButton(R.string.button_dismiss, null)
+            .create()
+            .show()
     }
 
     private fun createTimeskewAlertDialog(diffMinutes: Long): Dialog? {
@@ -609,7 +608,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun checkLowStorageAlert() {
         val stickyIntent = registerReceiver(null, IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW))
-        if (stickyIntent != null) showDialog(DIALOG_LOW_STORAGE_ALERT)
+        if (stickyIntent != null) {
+            showLowStorageAlertDialog()
+        }
     }
 
     /**
