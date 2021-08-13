@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle

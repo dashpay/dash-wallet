@@ -67,8 +67,6 @@ class InviteHandler(val activity: AppCompatActivity) {
         if (!silentMode && inviteResource.status != Status.LOADING) {
             inviteLoadingDialog.dismissAllowingStateLoss()
         }
-        val activityManager = activity.getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
-        val mainTask = activityManager.appTasks[1]
 
         when (inviteResource.status) {
             Status.LOADING -> {
@@ -86,6 +84,7 @@ class InviteHandler(val activity: AppCompatActivity) {
             Status.SUCCESS -> {
                 val invite = inviteResource.data!!
                 if (invite.isValid) {
+                    val mainTask = getMainTask()
                     activity.setResult(Activity.RESULT_OK)
                     val walletApplication = (activity.application as WalletApplication)
                     when {
@@ -110,6 +109,11 @@ class InviteHandler(val activity: AppCompatActivity) {
                 }
             }
         }
+    }
+
+    private fun getMainTask(): ActivityManager.AppTask {
+        val activityManager = activity.getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
+        return activityManager.appTasks.last()
     }
 
     private fun showInvalidInviteDialog(displayName: String) {
