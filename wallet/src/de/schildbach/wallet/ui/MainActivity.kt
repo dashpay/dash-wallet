@@ -91,9 +91,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private val config: Configuration by lazy { walletApplication.configuration }
     private var fingerprintHelper: FingerprintHelper? = null
     private var retryCreationIfInProgress = true
-    private var activateReceiver = object : BroadcastReceiver() {
+    private val activateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            //intent!!.action = Intent.ACTION_MAIN
             startActivity(createIntent(context!!))
         }
     }
