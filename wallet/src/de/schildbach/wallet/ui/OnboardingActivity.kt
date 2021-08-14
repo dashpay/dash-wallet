@@ -54,7 +54,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         fun createIntent(context: Context, invite: InvitationLinkData): Intent {
             return Intent(context, OnboardingActivity::class.java).apply {
                 putExtra(EXTRA_INVITE, invite)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
         }
     }
