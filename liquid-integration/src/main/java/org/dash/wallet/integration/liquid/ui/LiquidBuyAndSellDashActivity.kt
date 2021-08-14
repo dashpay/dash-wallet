@@ -273,26 +273,23 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private fun showSellDashCurrencyDialog() {
         log.info("liquid: starting sell dash currency dialog")
         if (isSelectFiatCurrency) {
-
             SellDashCryptoCurrencyDialog(context, "FiatCurrency", fiatCurrencyList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
+                    super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
                     val intent = Intent(context, SellDashActivity::class.java)
                     intent.putExtra("CurrencySelected", fiatCurrencyList[value].ccyCode)
                     intent.putExtra("CurrencyType", "FIAT")
                     startActivity(intent)
-
                 }
             })
-
         } else {
-
             SellDashCryptoCurrencyDialog(context, "CryptoCurrency", cryptoCurrencyArrayList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
+                    super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
                     val intent = Intent(context, SellDashActivity::class.java)
                     intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].ccyCode)
                     intent.putExtra("CurrencyType", "CRYPTO")
                     startActivity(intent)
-
                 }
             })
         }
