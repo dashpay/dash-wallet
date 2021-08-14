@@ -317,18 +317,16 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     /**
      * Show dialog for buy dash option to select credit card and cryptocurrency
      */
-
     private fun buyDash() {
         log.info("liquid: buy dash")
 
         SelectBuyDashDialog(context, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 if (value == 1) {
-
+                    super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
                     val intent = Intent(context, BuyDashWithCreditCardActivity::class.java)
                     intent.putExtra("Amount", "5")
                     startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
-
                 } else if (value == 2) {
                     if (cryptoCurrencyArrayList.size > 0) {
                         showCurrencyDialog()
@@ -336,9 +334,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                         getAllCurrencyList(true)
                     }
                 }
-
             }
-
         })
     }
 
@@ -598,6 +594,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private fun showCurrencyDialog() {
         BuyDashCryptoCurrencyDialog(this, cryptoCurrencyArrayList, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
+                super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
                 val intent = Intent(context, BuyDashWithCryptoCurrencyActivity::class.java)
                 intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].ccyCode)
                 startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
