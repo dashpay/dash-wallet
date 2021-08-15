@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,8 +31,8 @@ import kotlinx.android.synthetic.main.verify_seed_write_down.*
 class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment() {
 
     private val recoverySeedTextView by lazy { recovery_seed }
-    private val confirmCheckBox by lazy { written_down_checkbox }
     private val confirmButton by lazy { confirm_written_down_btn }
+    private val explanationBtn by lazy { explanation_btn }
 
     companion object {
         fun newInstance(seed: Array<String>): VerifySeedWriteDownFragment {
@@ -49,7 +50,7 @@ class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.verify_backup_wallet)
+        view.findViewById<Toolbar>(R.id.toolbar).title = getString(R.string.view_seed_title)
 
         arguments?.getStringArray("seed")?.let { seed ->
             val sb = StringBuilder(12)
@@ -58,14 +59,14 @@ class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment
             }
             recoverySeedTextView.text = sb.toString().trim()
         }
-        confirmCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            confirmButton.isEnabled = isChecked
-        }
         confirmButton.setOnClickListener {
             if (context is VerifySeedActions) {
                 (context as VerifySeedActions).onVerifyWriteDown()
             }
         }
-    }
 
+        explanationBtn.setOnClickListener {
+            Log.i("RECOVERY", "explanationBtn explanationBtn")
+        }
+    }
 }

@@ -24,6 +24,7 @@
     <!-- added for transaction status -->
     <color name="secondary_status">#E78010</color>
     <color name="primary_status">#4A4A4A</color>
+    <color name="warning_red">#E85C4A</color>
 
     <color name="strong_blue">#1c75bc</color>
     <color name="strong_blue_bis">#295290</color>
@@ -36,7 +37,6 @@
     <color name="medium_gray">#ff4a4a4a</color>
     <color name="gray_900">#0C0C0D</color>
     <color name="black_text">#ff171717</color>
-    <color name="warning_outline">#FED7D2</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
@@ -64,5 +64,4 @@
     <color name="black_liquid">#171717</color>
     <color name="grey_liquid">#9B9B9B</color>
     <color name="warning_yellow">#FFFAF0</color>
-    <color name="warning_red">#FFEFED</color>
 </resources>
