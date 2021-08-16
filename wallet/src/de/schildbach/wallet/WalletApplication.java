@@ -663,6 +663,9 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public boolean isLowRamDevice() {
+        if (activityManager == null)
+            return false;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
             return activityManager.isLowRamDevice();
         else
