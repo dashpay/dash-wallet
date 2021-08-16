@@ -261,6 +261,11 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                     val deleteResponse = uploadProfilePictureCall!!.execute()
                     if (!deleteResponse.isSuccessful) {
                         profilePictureUploadLiveData.postValue(Resource.error(deleteResponse.message()))
+                        // if we cannot delete it, the cause is probably because the IMGUR_CLIENT_* values
+                        // are not specified
+                        // for now, clear the delete hash to allow the next upload operation to succeed
+                        log.info("imgur: attempt to delete last image failed: check IMGUR_CLIENT_* values")
+                        config.imgurDeleteHash = ""
                         return@launch
                     } else {
                         log.info("imgur: delete successful ($imgurDeleteUrl)")
