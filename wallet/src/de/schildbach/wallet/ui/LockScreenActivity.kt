@@ -85,7 +85,9 @@ open class LockScreenActivity : AppCompatActivity() {
     private lateinit var fingerprintCancellationSignal: CancellationSignal
     private lateinit var pinRetryController: PinRetryController
 
-    protected var keepUnlocked: Boolean = false
+    private val keepUnlocked by lazy {
+        intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,7 +96,6 @@ open class LockScreenActivity : AppCompatActivity() {
             finish()
             return
         }
-        keepUnlocked = intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
 
         super.setContentView(R.layout.activity_lock_screen_root)
         setupKeyboardBottomMargin()
