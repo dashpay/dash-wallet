@@ -367,6 +367,7 @@
     <string name="register">Register</string>
 
     <string name="new_account_confirm_button_text">Confirm &amp; Pay</string>
+    <string name="invitation_confirm_button_text">Confirm</string>
     <string name="new_account_confirm_accept">I Accept</string>
     <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
     <string name="new_account_confirm_message">You have chose %s as your username. Username cannot be changed once it is registered.</string>
