@@ -182,6 +182,18 @@
         <item name="android:textSize">15sp</item>
     </style>
 
+    <style name="MontserratRegular.G900">
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="MontserratRegular.G900.13">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.15">
+        <item name="android:textSize">15sp</item>
+    </style>
+
     <style name="MontserratMedium">
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>
@@ -314,6 +326,14 @@
     </style>
 
     <style name="MontserratSemiBold.WR.13">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="MontserratSemiBold.G900">
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="MontserratSemiBold.G900.13">
         <item name="android:textSize">13sp</item>
     </style>
 

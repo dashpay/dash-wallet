@@ -66,7 +66,7 @@ class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment
         }
 
         explanationBtn.setOnClickListener {
-            Log.i("RECOVERY", "explanationBtn explanationBtn")
+            VerifySeedWarningDialog().show(parentFragmentManager, "verify_seed_warning")
         }
     }
 }
