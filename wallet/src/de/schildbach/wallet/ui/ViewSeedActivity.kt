@@ -63,6 +63,10 @@ class ViewSeedActivity : BaseMenuActivity() {
            finish()
         }
 
+        explanation_btn.setOnClickListener {
+            VerifySeedWarningDialog().show(supportFragmentManager, "verify_seed_warning")
+        }
+
         setTitle(R.string.view_seed_title)
     }
 
