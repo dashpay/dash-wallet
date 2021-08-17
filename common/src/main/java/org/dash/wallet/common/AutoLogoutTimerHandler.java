@@ -16,7 +16,9 @@
 
 package org.dash.wallet.common;
 
-public interface ResetAutoLogoutTimerHandler {
+public interface AutoLogoutTimerHandler {
 
     void resetAutoLogoutTimer();
+    void stopAutoLogoutTimer();
+    void startAutoLogoutTimer();
 }

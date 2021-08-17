@@ -4,7 +4,6 @@ package org.dash.wallet.integration.liquid.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
-import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -17,16 +16,11 @@ import android.view.MenuItem
 import android.view.View
 import android.webkit.*
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
-import org.dash.wallet.integration.liquid.data.LiquidClient
-import org.dash.wallet.integration.liquid.data.LiquidConstants
-import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
-import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import org.dash.wallet.common.Constants
@@ -36,7 +30,11 @@ import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.NetworkUnavailableFragmentViewModel
 import org.dash.wallet.integration.liquid.R
+import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.databinding.ActivityWebviewQuickExchangeBinding
+import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
+import org.dash.wallet.integration.liquid.model.WidgetResponse
 import org.slf4j.LoggerFactory
 
 
