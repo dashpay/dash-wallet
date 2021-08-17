@@ -27,6 +27,7 @@ import android.text.TextUtils
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
@@ -100,6 +101,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 }
             }
         }
+
+
     }
 
     private fun regularFlow() {
@@ -143,6 +146,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         recovery_wallet.setOnClickListener {
             restoreWalletFromSeed()
         }
+        // hide restore wallet from file if an invite is being used
+        // remove this line after backup file recovery supports invites
+        restore_wallet.isVisible = !intent.hasExtra(EXTRA_INVITE)
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
         }
