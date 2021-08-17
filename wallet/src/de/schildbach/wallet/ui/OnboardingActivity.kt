@@ -34,6 +34,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
@@ -148,7 +149,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
         // hide restore wallet from file if an invite is being used
         // remove this line after backup file recovery supports invites
-        restore_wallet.isVisible = !intent.hasExtra(EXTRA_INVITE)
+        restore_wallet.isVisible = !intent.hasExtra(EXTRA_INVITE) ||
+                walletApplication.configuration.developerMode || BuildConfig.DEBUG
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
         }
