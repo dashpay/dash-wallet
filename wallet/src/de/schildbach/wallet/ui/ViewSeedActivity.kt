@@ -64,6 +64,10 @@ class ViewSeedActivity : BaseMenuActivity() {
         }
 
         setTitle(R.string.view_seed_title)
+
+        lockScreenViewModel.activatingLockScreen.observe(this) {
+            finish()
+        }
     }
 
     override fun onBackPressed() {

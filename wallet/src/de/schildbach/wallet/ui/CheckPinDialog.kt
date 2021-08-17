@@ -59,6 +59,7 @@ open class CheckPinDialog : DialogFragment() {
         @JvmStatic
         fun show(activity: FragmentActivity, requestCode: Int = 0, pinOnly: Boolean = false) {
             val checkPinDialog = CheckPinDialog()
+
             if (PinRetryController.getInstance().isLocked) {
                 checkPinDialog.showLockedAlert(activity)
             } else {
@@ -216,14 +217,17 @@ open class CheckPinDialog : DialogFragment() {
         } ?: throw IllegalStateException("Invalid Activity")
     }
 
-    protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
-        sharedModel = ViewModelProvider(activity)[CheckPinSharedModel::class.java]
+    protected fun initLockScreenViewModel(activity: FragmentActivity) {
         lockScreenViewModel = ViewModelProvider(activity)[LockScreenViewModel::class.java]
-        log.info("viewModel = $lockScreenViewModel")
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner) {
             sharedModel.onCancelCallback.call()
             dismiss()
         }
+    }
+
+    protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
+        sharedModel = ViewModelProvider(activity)[CheckPinSharedModel::class.java]
+        initLockScreenViewModel(activity)
     }
 
     protected fun setState(newState: State) {
