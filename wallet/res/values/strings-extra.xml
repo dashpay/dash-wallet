@@ -206,7 +206,7 @@
     <string name="verify_it_is_important">It\'s important</string>
     <string name="verify_it_is_important_subtitle">We are about to show you the secret key to your wallet.</string>
     <string name="verify_info_text_1">This recovery phrase is your access to the funds in this wallet.</string>
-    <string name="verify_info_text_2">We do not store this recovery phrase.</string>
+    <string name="verify_info_text_2">We do NOT store this recovery phrase.</string>
     <string name="verify_info_text_3">You will need this recovery phrase to access your funds if this device is lost, damaged or if Dash Wallet ever is accidentally uninstalled from this device.</string>
     <string name="verify_skip">Skip</string>
     <string name="verify_secure_now_btn">Secure now</string>
@@ -216,6 +216,15 @@
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
+    <string name="verify_no_screenshot_title">Do not take a screenshot</string>
+    <string name="verify_no_screenshot_message">Instead, write the recovery phrase in a secure place.</string>
+    <string name="verify_why_no_screenshot">Why I should not take a screenshot?</string>
+    <string name="verify_warning_title">Warning</string>
+    <string name="verify_warning_message">This recovery phrase is your access to the funds in your wallet.</string>
+    <string name="verify_warning_screenshots_title">Do NOT take screenshots</string>
+    <string name="verify_warning_screenshots_message">Screenshots are visible to other apps and devices.</string>
+    <string name="verify_warning_do_not_show">Do NOT let anyone see your recovery phrase.</string>
+    <string name="verify_warning_do_not_type">Never type your recovery phrase into password managers or elsewhere.</string>
     <string name="view_seed_done">Done</string>
     <string name="view_seed_title">Recovery Phrase</string>
     <string name="transaction_result_view_on_explorer">View in Block Explorer</string>

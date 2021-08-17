@@ -28,10 +28,8 @@ import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
-import android.view.WindowManager
 import android.view.animation.AnimationUtils
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
@@ -48,12 +46,13 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
+import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
 
-open class LockScreenActivity : AppCompatActivity() {
+open class LockScreenActivity : SecureActivity() {
 
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
@@ -488,16 +487,6 @@ open class LockScreenActivity : AppCompatActivity() {
 
     private val shouldShowBackupReminder = configuration.remindBackupSeed
             && configuration.lastBackupSeedReminderMoreThan24hAgo()
-
-    override fun onPause() {
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        super.onPause()
-    }
-
-    override fun onResume() {
-        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        super.onResume()
-    }
 
     override fun onBackPressed() {
         if (!lockScreenDisplayed) {

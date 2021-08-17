@@ -24,6 +24,7 @@
     <!-- added for transaction status -->
     <color name="secondary_status">#E78010</color>
     <color name="primary_status">#4A4A4A</color>
+    <color name="warning_red">#E85C4A</color>
 
     <color name="strong_blue">#1c75bc</color>
     <color name="strong_blue_bis">#295290</color>
@@ -34,6 +35,7 @@
     <color name="menu_gray">#FFC9C9C9</color>
     <color name="gray">#FF979797</color>
     <color name="medium_gray">#ff4a4a4a</color>
+    <color name="gray_900">#0C0C0D</color>
     <color name="black_text">#ff171717</color>
 
     <!-- foreground -->

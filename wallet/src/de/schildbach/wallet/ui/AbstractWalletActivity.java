@@ -88,16 +88,4 @@ public abstract class AbstractWalletActivity extends GlobalFooterActivity implem
     public void onWalletUpgradeComplete(String password) {
 
     }
-
-    @Override
-    protected void onPause() {
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        super.onPause();
-    }
-
-    @Override
-    protected void onResume() {
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        super.onResume();
-    }
 }

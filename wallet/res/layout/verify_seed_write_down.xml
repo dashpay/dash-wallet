@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/linearLayout2"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_less_bright"
-    android:gravity="center_horizontal">
+    android:gravity="center_horizontal"
+    tools:context="de.schildbach.wallet.ui.VerifySeedWriteDownFragment">
 
     <include
         android:id="@+id/verify_appbar"
@@ -14,47 +16,50 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/verify_seed_title"
-        style="@style/VerifySeedTitle"
-        android:layout_marginTop="16dp"
-        android:text="@string/verify_seed_title"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/verify_appbar" />
-
-    <TextView
         android:id="@+id/recovery_seed"
         style="@style/VerifySeedTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/verify_seed_title"
+        app:layout_constraintTop_toBottomOf="@+id/verify_appbar"
         tools:text="network   stand   grid   bundle   need   eight   blast   topic   depth   right   desk   faith" />
 
-    <de.schildbach.wallet.ui.widget.MontserratCheckBox
-        android:id="@+id/written_down_checkbox"
-        android:layout_width="wrap_content"
+    <include
+        android:id="@+id/screenshot_warning"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="26dp"
-        android:button="@drawable/round_checkbox"
-        android:paddingStart="6dp"
-        android:paddingLeft="6dp"
-        android:text="@string/verify_seed_write_down_confirmation"
-        app:layout_constraintBottom_toTopOf="@+id/confirm_written_down_btn"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginTop="10dp"
+        layout="@layout/screenshot_warning_widget"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/recovery_seed" />
+
+    <FrameLayout
+        android:id="@+id/explanation_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="9dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:paddingVertical="10dp"
+        app:layout_constraintBottom_toTopOf="@id/confirm_written_down_btn">
+
+        <TextView
+            style="@style/MontserratSemiBold.B.14"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/verify_why_no_screenshot"
+            android:textAlignment="center" />
+    </FrameLayout>
 
     <Button
         android:id="@+id/confirm_written_down_btn"
-        style="@style/NewMontserratButton.Primary"
+        style="@style/NewMontserratButton.Primary.SemiBold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
         android:layout_margin="16dp"
-        android:layout_marginBottom="20dp"
-        android:enabled="false"
-        android:maxLines="2"
-        android:text="@string/verify_continue"
-        app:layout_constraintBottom_toBottomOf="parent"
-        tools:layout_editor_absoluteX="16dp" />
-
+        android:text="@string/view_seed_done"
+        android:textSize="15sp"
+        app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>
