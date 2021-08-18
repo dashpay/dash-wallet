@@ -63,7 +63,8 @@ class InviteHandler(val activity: AppCompatActivity) {
             activity.setResult(Activity.RESULT_CANCELED)
             val walletApplication = WalletApplication.getInstance()
             val mainTask = getMainTask(activity)
-            if (walletApplication.wallet == null) {
+            if (walletApplication.wallet != null) {
+                // if wallet exists, go to the Home Screen
                 mainTask.startActivity(activity.applicationContext, MainActivity.createIntent(activity), null)
             } else {
                 mainTask.startActivity(activity.applicationContext, OnboardingActivity.createIntent(activity), null)
