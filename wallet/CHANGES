@@ -1,4 +1,12 @@
 Dash Wallet
+v7.2.4
+* Simplify synchronization status UI
+* Fix resume crash
+* Patch Strandhogg vulnerabilities
+* Fix exchange rate related crashes
+* Update translations
+* Add maven central for dependencies
+
 v7.2.3
 * Add import private key from shared image
 * use DashJ 0.17.6

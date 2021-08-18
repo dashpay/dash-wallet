@@ -26,7 +26,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.AppBarLayout
@@ -58,10 +57,8 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
     private lateinit var mainActivityViewModel: MainActivityViewModel
 
     private var clipboardManager: ClipboardManager? = null
-    private var syncComplete = false
 
     private val walletApplication by lazy { WalletApplication.getInstance() }
-    private val wallet by lazy { walletApplication.wallet }
     private val config by lazy { walletApplication.configuration }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -145,38 +142,12 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
     @SuppressLint("SetTextI18n")
     private fun updateSyncState(blockchainState: BlockchainState) {
-        var percentage: Int = blockchainState.percentageSync
-        if (blockchainState.replaying && blockchainState.percentageSync == 100) {
-            //This is to prevent showing 100% when using the Rescan blockchain function.
-            //The first few broadcasted blockchainStates are with percentage sync at 100%
-            percentage = 0
-        }
-        val syncProgressView = sync_status_progress
         if (blockchainState.syncFailed()) {
-            updateSyncPaneVisibility(R.id.sync_status_pane, true)
-            sync_progress_pane.visibility = View.GONE
             sync_error_pane.visibility = View.VISIBLE
             return
         }
+
         updateSyncPaneVisibility(R.id.sync_error_pane, false)
-        updateSyncPaneVisibility(R.id.sync_progress_pane, true)
-        val syncStatusTitle = sync_status_title
-        val syncStatusMessage = sync_status_message
-        syncProgressView.progress = percentage
-        val syncPercentageView = sync_status_percentage
-        syncPercentageView.text = "$percentage%"
-        syncComplete = blockchainState.isSynced()
-        if (syncComplete) {
-            syncPercentageView.setTextColor(ContextCompat.getColor(requireContext(), R.color.success_green))
-            syncStatusTitle.setText(R.string.sync_status_sync_title)
-            syncStatusMessage.setText(R.string.sync_status_sync_completed)
-            updateSyncPaneVisibility(R.id.sync_status_pane, false)
-        } else {
-            syncPercentageView.setTextColor(ContextCompat.getColor(requireContext(), R.color.dash_gray))
-            updateSyncPaneVisibility(R.id.sync_status_pane, true)
-            syncStatusTitle.setText(R.string.sync_status_syncing_title)
-            syncStatusMessage.setText(R.string.sync_status_syncing_sub_title)
-        }
     }
 
     private fun handleVerifySeed() {
