@@ -60,6 +60,7 @@ class AboutActivity : BaseMenuActivity(), SensorEventListener {
 
         setTitle(R.string.about_title)
         app_version_name.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
+        app_version_code.text = getString(R.string.about_version_extra, BuildConfig.VERSION_CODE, BuildConfig.FLAVOR)
         library_version_name.text = getString(R.string.about_credits_bitcoinj_title,
                 VersionMessage.BITCOINJ_VERSION)
 
