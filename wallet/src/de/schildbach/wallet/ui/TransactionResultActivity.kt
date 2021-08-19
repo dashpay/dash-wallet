@@ -108,25 +108,6 @@ class TransactionResultActivity : AbstractWalletActivity() {
         val blockchainIdentity: BlockchainIdentity? = PlatformRepo.getInstance().getBlockchainIdentity()
 
         val tx = WalletApplication.getInstance().wallet.getTransaction(txId)
-        if (tx != null) {
-            val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
-            val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-            transactionResultViewBinder.bind(tx, payeeName, payeeVerifiedBy)
-            view_on_explorer.setOnClickListener { viewOnExplorer(tx) }
-            transaction_close_btn.setOnClickListener {
-                when {
-                    intent.action == Intent.ACTION_VIEW -> {
-                        finish()
-                    }
-                    intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
-                        startActivity(MainActivity.createIntent(this))
-                    }
-                    else -> {
-                        startActivity(MainActivity.createIntent(this))
-                    }
-                }
-            }
-        }
 
         var profile: DashPayProfile?
         var userId: String? = null
@@ -165,8 +146,11 @@ class TransactionResultActivity : AbstractWalletActivity() {
                     startActivity(DashPayUserActivity.createIntent(this@TransactionResultActivity,
                             userData!!, userData != null))
                 }
+                intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
+                    startActivity(MainActivity.createIntent(this))
+                }
                 else -> {
-                    super.finish()
+                    startActivity(MainActivity.createIntent(this))
                 }
             }
         }
