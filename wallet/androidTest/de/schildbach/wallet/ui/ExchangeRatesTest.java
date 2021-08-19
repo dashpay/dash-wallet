@@ -22,6 +22,7 @@ import androidx.test.runner.AndroidJUnit4;
 import android.view.KeyEvent;
 import android.widget.EditText;
 
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,6 +37,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 
 @RunWith(AndroidJUnit4.class)
+@Ignore
 public class ExchangeRatesTest {
 
     @Rule
