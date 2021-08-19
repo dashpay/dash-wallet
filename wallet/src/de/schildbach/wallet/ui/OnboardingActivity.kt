@@ -149,8 +149,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
         // hide restore wallet from file if an invite is being used
         // remove this line after backup file recovery supports invites
-        restore_wallet.isVisible = !intent.hasExtra(EXTRA_INVITE) ||
-                walletApplication.configuration.developerMode || BuildConfig.DEBUG
+        restore_wallet.isVisible = !intent.hasExtra(EXTRA_INVITE) || BuildConfig.DEBUG
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
         }
