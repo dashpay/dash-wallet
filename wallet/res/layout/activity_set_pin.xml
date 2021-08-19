@@ -4,6 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
+    android:background="@color/dash_deep_blue"
+    android:fitsSystemWindows="true"
     android:orientation="vertical">
 
     <include
@@ -15,6 +17,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:background="@color/dash_lighter_gray"
         android:gravity="center_vertical"
         android:orientation="vertical">
 
@@ -77,6 +80,7 @@
         android:id="@+id/numeric_keyboard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/dash_lighter_gray"
         android:padding="16dp"
         android:stretchColumns="*" />
 
