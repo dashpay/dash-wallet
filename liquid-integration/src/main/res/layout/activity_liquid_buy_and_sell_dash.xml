@@ -212,7 +212,6 @@
                         android:clipToPadding="false"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:visibility="invisible"
                         tools:visibility="visible">
 
 
