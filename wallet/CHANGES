@@ -1,4 +1,14 @@
 Dash Wallet
+
+v7.3.2
+* Dismiss the last PIN Entry Dialog upon Autologout  (bug from 7.2.4)
+* Prevent screenshots on Recovery Phrase Screens
+* Add information dialog about Recovery Phrase
+* Add network unavailable error handling for Liquid Screens
+* Use live exchange rates on BIP70 payment request flows
+* Disable autologout timer when linking Uphold/Liquid accounts
+* Use DashJ 0.17.8 which supports BIP69
+
 v7.3.1
 * Fix Uphold logout instructions
 * Dismiss PIN Entry Dialogs upon Autologout  (bug from 7.2.4)
