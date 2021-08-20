@@ -17,14 +17,15 @@
 package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_accept_invite.*
+import de.schildbach.wallet_test.databinding.FragmentAcceptInviteBinding
 
-class AcceptInviteFragment : Fragment(R.layout.fragment_accept_invite) {
+class AcceptInviteFragment : Fragment() {
 
     companion object {
         private const val ARG_TITLE = "title"
@@ -46,12 +47,28 @@ class AcceptInviteFragment : Fragment(R.layout.fragment_accept_invite) {
         }
     }
 
+    private var _binding: FragmentAcceptInviteBinding? = null
+    private val binding get() = _binding!!
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentAcceptInviteBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        title.text = getString(requireArguments().getInt(ARG_TITLE))
-        message.text = getString(requireArguments().getInt(ARG_SUBTITLE))
-        image.setImageResource(requireArguments().getInt(ARG_IMAGE))
+        binding.title.text = getString(requireArguments().getInt(ARG_TITLE))
+        binding.message.text = getString(requireArguments().getInt(ARG_SUBTITLE))
+        binding.image.setImageResource(requireArguments().getInt(ARG_IMAGE))
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 }

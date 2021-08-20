@@ -14,7 +14,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <include layout="@layout/contacts_list_layout" />
+        <include
+            android:id="@+id/contact_list"
+            layout="@layout/contacts_list_layout" />
 
     </FrameLayout>
 
