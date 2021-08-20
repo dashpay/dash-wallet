@@ -379,10 +379,11 @@ public final class Constants {
         String CALLING_ACTIVITY = "calling_activity";
 
         interface Invites {
+            String ERROR_USERNAME_TAKEN = "invite_username_already_found";
             String INVITE_CONTACTS = "invite_from_contacts";
             String CREATE_MORE = "invite_create_from_more_menu";
+            String INVITE_FRIEND = "invite_friend";
             String ERROR_CREATE = "invite_error_creating";
-            String ERROR_USERNAME_TAKEN = "username_already_found";
             String ERROR_ALREADY_CLAIMED = "invite_already_claimed";
             String ERROR_INVALID = "invite_invalid";
             String ERROR_INSUFFICIENT_FUNDS = "invite_insufficient_funds";

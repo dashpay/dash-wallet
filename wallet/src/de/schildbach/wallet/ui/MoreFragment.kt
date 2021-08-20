@@ -25,6 +25,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
@@ -88,7 +89,10 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
                 if (it == null || it.isEmpty()) {
                     InviteFriendActivity.startOrError(requireActivity())
                 } else {
-                    startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                    val intent = InvitesHistoryActivity.createIntent(requireContext()).apply {
+                        putExtra(Constants.Events.CALLING_ACTIVITY, "more")
+                    }
+                    startActivity(intent)
                 }
             })
         }

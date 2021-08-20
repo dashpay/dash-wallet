@@ -54,6 +54,7 @@ class InviteFriendFragment(private val startedByHistory: Boolean)
 
         walletApplication = requireActivity().application as WalletApplication
         create_invitation_button.setOnClickListener {
+            viewModel.logEvent(Constants.Events.Invites.INVITE_FRIEND)
             showConfirmationDialog()
         }
 
