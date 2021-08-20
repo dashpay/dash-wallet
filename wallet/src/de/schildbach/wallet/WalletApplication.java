@@ -91,6 +91,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import dagger.hilt.android.AndroidEntryPoint;
+import dagger.hilt.android.HiltAndroidApp;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
@@ -112,7 +113,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-@AndroidEntryPoint
+@HiltAndroidApp
 public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler,
         androidx.work.Configuration.Provider, WalletDataProvider {
     private static WalletApplication instance;

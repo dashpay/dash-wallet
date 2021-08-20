@@ -1,6 +1,7 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion 29
@@ -29,14 +30,17 @@ android {
 }
 
 dependencies {
-    def nav_version = "2.3.0"
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.appcompat:appcompat:1.2.0'
     api 'androidx.browser:browser:1.3.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
 
-    //Retrofit + OkHttp
+    implementation platform("com.google.firebase:firebase-bom:$firebaseVersion")
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+    implementation 'com.google.firebase:firebase-crashlytics-ktx'
+
+    // Retrofit + OkHttp
     api "com.squareup.okhttp3:okhttp:$ok_http_version"
     api "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
     api 'com.squareup.moshi:moshi:1.11.0'
@@ -44,12 +48,16 @@ dependencies {
     api 'com.squareup.retrofit2:converter-moshi:2.6.4'
     api 'com.squareup.retrofit2:converter-scalars:2.6.4'
 
-    //Android Arch
+    // Android Arch
     api 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    api 'androidx.room:room-runtime:2.2.5'
-    annotationProcessor 'androidx.room:room-compiler:2.2.5'
-    //Material Components
+    api "androidx.room:room-runtime:$roomVersion"
+    kapt "androidx.room:room-compiler:$roomVersion"
+
+    // Material Components
     api 'com.google.android.material:material:1.2.1'
+
+    // DI
+    implementation 'javax.inject:javax.inject:1'
 
     testImplementation 'junit:junit:4.13'
     androidTestImplementation('androidx.test.espresso:espresso-core:3.3.0', {

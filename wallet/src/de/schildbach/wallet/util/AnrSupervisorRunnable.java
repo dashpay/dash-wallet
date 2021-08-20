@@ -24,8 +24,7 @@ package de.schildbach.wallet.util;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
-
+import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +78,8 @@ public class AnrSupervisorRunnable implements Runnable {
                         AnrException e = new AnrException(
                                 this.mHandler.getLooper().getThread());
 
-                        FirebaseCrashlytics.getInstance().recordException(e);
+                        // TODO: check DI options or propagate up
+                        new FirebaseAnalyticsServiceImpl().logError(e, null);
 
                         e.logProcessMap();
 

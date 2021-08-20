@@ -1,17 +1,24 @@
 package de.schildbach.wallet.ui.dashpay.work
 
 import android.content.Context
+import androidx.hilt.work.HiltWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.google.firebase.crashlytics.FirebaseCrashlytics
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.services.AnalyticsService
+import javax.inject.Inject
 
-class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
-    : BaseWorker(context, parameters) {
+@HiltWorker
+class SendContactRequestWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted parameters: WorkerParameters
+) : BaseWorker(context, parameters) {
 
     companion object {
         const val KEY_PASSWORD = "SendContactRequestWorker.PASSWORD"
@@ -27,6 +34,8 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
         }
     }
 
+    @Inject
+    lateinit var analytics: AnalyticsService
     private val platformRepo = PlatformRepo.getInstance()
 
     override suspend fun doWorkWithBaseProgress(): Result {
@@ -39,8 +48,7 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
         try {
             encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
-            FirebaseCrashlytics.getInstance().log("Contact Request: failed to derive encryption key")
-            FirebaseCrashlytics.getInstance().recordException(ex)
+            analytics.logError(ex, "Contact Request: failed to derive encryption key")
             val msg = formatExceptionMessage("derive encryption key", ex)
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
         }
@@ -52,8 +60,7 @@ class SendContactRequestWorker(context: Context, parameters: WorkerParameters)
                     KEY_TO_USER_ID to sendContactRequestResult.toUserId
             ))
         } catch (ex: Exception) {
-            FirebaseCrashlytics.getInstance().log("Contact Request: failed to send contact request")
-            FirebaseCrashlytics.getInstance().recordException(ex)
+            analytics.logError(ex, "Contact Request: failed to send contact request")
             Result.failure(workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("send contact request", ex)))
         }

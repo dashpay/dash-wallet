@@ -22,14 +22,12 @@ import android.os.Environment
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.Invitation
-import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
@@ -149,8 +147,7 @@ open class InvitationFragmentViewModel @Inject constructor(
         try {
             encryptionKey = wallet.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
-            FirebaseCrashlytics.getInstance().log("create invitation link: failed to derive encryption key")
-            FirebaseCrashlytics.getInstance().recordException(ex)
+            analytics.logError(ex, "create invitation link: failed to derive encryption key")
             emit("")
         }
 

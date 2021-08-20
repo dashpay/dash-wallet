@@ -32,7 +32,7 @@ import kotlinx.android.synthetic.main.fragment_invites_history.*
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
-class InvitesHistoryFragment(private val caller: String) : //.//
+class InvitesHistoryFragment(private val caller: String) :
     Fragment(R.layout.fragment_invites_history), InvitesAdapter.OnItemClickListener {
 
     companion object {

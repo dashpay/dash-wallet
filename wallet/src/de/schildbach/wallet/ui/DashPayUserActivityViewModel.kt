@@ -22,6 +22,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -32,10 +33,16 @@ import de.schildbach.wallet.ui.dashpay.TransactionsLiveData
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.lang.Exception
+import javax.inject.Inject
 
-class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class DashPayUserActivityViewModel @Inject constructor(
+    application: Application,
+    private val analytics: AnalyticsService
+) : AndroidViewModel(application) {
 
     companion object {
         val log = LoggerFactory.getLogger(DashPayUserActivityViewModel::class.java)
@@ -61,7 +68,9 @@ class DashPayUserActivityViewModel(application: Application) : AndroidViewModel(
     }
 
     val sendContactRequestState by lazy {
-        SendContactRequestOperation.operationStatus(application, userData.dashPayProfile.userId)
+        SendContactRequestOperation.operationStatus(
+            application, userData.dashPayProfile.userId, analytics
+        )
     }
 
     fun sendContactRequest() {

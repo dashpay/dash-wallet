@@ -18,20 +18,23 @@ package de.schildbach.wallet.ui.send
 import android.app.Application
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.liveData
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.crashlytics.FirebaseCrashlytics
-import de.schildbach.wallet.data.DashPayProfile
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.SendRequest
+import org.dash.wallet.common.services.AnalyticsService
+import javax.inject.Inject
 
-class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(application) {
+@HiltViewModel
+class SendCoinsViewModel @Inject constructor(
+    application: Application,
+    private val analytics: AnalyticsService
+) : SendCoinsBaseViewModel(application) {
 
     enum class State {
         INPUT,  // asks for confirmation
@@ -76,8 +79,7 @@ class SendCoinsViewModel(application: Application) : SendCoinsBaseViewModel(appl
             val userData = platformRepo.searchUsernames(username, true).firstOrNull()
             emit(Resource.success(userData))
         } catch (ex: Exception) {
-            FirebaseCrashlytics.getInstance().log("Failed to load user")
-            FirebaseCrashlytics.getInstance().recordException(ex)
+            analytics.logError(ex, "Failed to load user")
             emit(Resource.error(ex, null))
         }
     }

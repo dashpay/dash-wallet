@@ -50,6 +50,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.common.api.ApiException
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
 import com.google.api.services.drive.Drive
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.livedata.Status
@@ -68,6 +69,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
 
+@AndroidEntryPoint
 class EditProfileActivity : BaseMenuActivity() {
 
     companion object {

@@ -29,6 +29,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -40,6 +41,7 @@ import org.dash.wallet.common.ui.DialogBuilder
 
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 
+@AndroidEntryPoint
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {

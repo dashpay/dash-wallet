@@ -17,34 +17,31 @@
 package org.dash.wallet.common.services
 
 import android.os.Bundle
-import android.util.Log
 import com.google.firebase.analytics.ktx.analytics
-//import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
 import javax.inject.Inject
 
 
 interface AnalyticsService {
     fun logEvent(event: String, params: Bundle)
-//    fun logError(error: Throwable, details: String? = null)
+    fun logError(error: Throwable, details: String? = null)
 }
 
 class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
     private val firebaseAnalytics = Firebase.analytics
-//    private val crashlytics = FirebaseCrashlytics.getInstance()
+    private val crashlytics = Firebase.crashlytics
 
     override fun logEvent(event: String, params: Bundle) {
-        Log.i("EVENTS", "logEvent: $event")
         try {
             firebaseAnalytics.logEvent(event, params)
         } catch (ex: Exception) {
-//            logError(ex)
-            Log.i("EVENTS", ex.message ?: "null ex")
+            logError(ex)
         }
     }
 
-//    override fun logError(error: Throwable, details: String?) {
-//        details?.let { crashlytics.log(details) }
-//        crashlytics.recordException(error)
-//    }
+    override fun logError(error: Throwable, details: String?) {
+        details?.let { crashlytics.log(details) }
+        crashlytics.recordException(error)
+    }
 }

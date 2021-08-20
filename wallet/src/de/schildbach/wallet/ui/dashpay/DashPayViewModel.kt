@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 import android.app.Application
 import androidx.core.os.bundleOf
 import androidx.lifecycle.*
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
@@ -115,8 +114,7 @@ open class DashPayViewModel @Inject constructor(
                 }
                 emit(Resource.success(result))
             } catch (ex: Exception) {
-                FirebaseCrashlytics.getInstance().log("Failed to search user")
-                FirebaseCrashlytics.getInstance().recordException(ex)
+                analytics.logError(ex, "Failed to search user")
                 emit(Resource.error(formatExceptionMessage("search usernames", ex), null))
             }
         }
