@@ -138,6 +138,14 @@ open class LockScreenActivity : AppCompatActivity() {
         autoLogout.resetTimerIfActive()
     }
 
+    protected open fun turnOffAutoLogout() {
+        autoLogout.stopTimer()
+    }
+
+    protected open fun turnOnAutoLogout() {
+        autoLogout.startTimer()
+    }
+
     private fun setupBackupSeedReminder() {
         val hasBalance = walletApplication.wallet.getBalance(BalanceType.ESTIMATED).isPositive
         if (hasBalance && configuration.lastBackupSeedTime == 0L) {
