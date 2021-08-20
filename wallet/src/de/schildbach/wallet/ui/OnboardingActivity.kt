@@ -27,12 +27,14 @@ import android.text.TextUtils
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
@@ -100,6 +102,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 }
             }
         }
+
+
     }
 
     private fun regularFlow() {
@@ -143,6 +147,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         recovery_wallet.setOnClickListener {
             restoreWalletFromSeed()
         }
+        // hide restore wallet from file if an invite is being used
+        // remove this line after backup file recovery supports invites
+        restore_wallet.isVisible = !intent.hasExtra(EXTRA_INVITE) || BuildConfig.DEBUG
         restore_wallet.setOnClickListener {
             restoreWalletFromFile()
         }

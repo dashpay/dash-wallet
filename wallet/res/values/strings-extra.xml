@@ -275,7 +275,8 @@
     <string name="about_copyright">Copyright © 2020 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
-    <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_version_name">DashPay %s</string>
+    <string name="about_version_extra">code: %d / flavor: %s</string>
 
     <string name="block">Block</string>
     <string name="time">Time</string>

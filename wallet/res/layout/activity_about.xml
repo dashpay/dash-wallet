@@ -34,7 +34,19 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/dash_logo"
-        tools:text="Dash Wallet v7.0.0-redesign" />
+        tools:text="DashPay v8.0.0" />
+
+    <TextView
+        android:id="@+id/app_version_code"
+        style="@style/MontserratMedium"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/black"
+        android:textSize="11sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/app_version_name"
+        tools:text="80000" />
 
     <TextView
         android:id="@+id/library_version_name"
@@ -49,8 +61,8 @@
         android:textSize="12sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/app_version_name"
-        tools:text="DashJ 17.0.0" />
+        app:layout_constraintTop_toBottomOf="@+id/app_version_code"
+        tools:text="DashJ 0.18.0" />
 
     <TextView
         android:id="@+id/fork_disclaimer"
