@@ -40,11 +40,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
+import org.dash.wallet.common.services.AnalyticsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
@@ -57,6 +61,7 @@ import kotlin.Unit;
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class WalletTransactionsFragment extends Fragment
         implements TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
 
@@ -85,6 +90,8 @@ public class WalletTransactionsFragment extends Fragment
 
     private WalletTransactionsFragmentViewModel viewModel;
     private MainActivityViewModel mainActivityViewModel;
+    @Inject
+    public AnalyticsService analytics;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -200,7 +207,7 @@ public class WalletTransactionsFragment extends Fragment
                 activity.startService(CreateIdentityService.createIntentForRetry(activity, false));
             } else {
                 // handle errors from using an invite
-                InviteHandler handler = new InviteHandler(activity);
+                InviteHandler handler = new InviteHandler(activity, analytics);
                 if (handler.handleError(blockchainIdentityData)) {
                     adapter.setBlockchainIdentityData(null);
                 } else {

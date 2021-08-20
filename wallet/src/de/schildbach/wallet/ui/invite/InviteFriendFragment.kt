@@ -19,8 +19,11 @@ package de.schildbach.wallet.ui.invite
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
@@ -30,7 +33,9 @@ import kotlinx.android.synthetic.main.fragment_invite_friend.*
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.FancyAlertDialog
 
-class InviteFriendFragment(val startedByHistory: Boolean) : Fragment(R.layout.fragment_invite_friend) {
+@AndroidEntryPoint
+class InviteFriendFragment(private val startedByHistory: Boolean)
+    : Fragment(R.layout.fragment_invite_friend) {
 
     companion object {
         fun newInstance(startedFromHistory: Boolean) = InviteFriendFragment(startedFromHistory)
@@ -38,9 +43,7 @@ class InviteFriendFragment(val startedByHistory: Boolean) : Fragment(R.layout.fr
 
     private lateinit var walletApplication: WalletApplication
 
-    val viewModel by lazy {
-        ViewModelProvider(requireActivity()).get(InvitationFragmentViewModel::class.java)
-    }
+    private val viewModel: InvitationFragmentViewModel by activityViewModels()
 
     private lateinit var loadingDialog: FancyAlertDialog
 
@@ -88,6 +91,7 @@ class InviteFriendFragment(val startedByHistory: Boolean) : Fragment(R.layout.fr
                             R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
                             R.string.okay, 0)
                     errorDialog.show(childFragmentManager, null)
+                    viewModel.logEvent(Constants.Events.Invites.ERROR_CREATE)
                 }
             }
         })

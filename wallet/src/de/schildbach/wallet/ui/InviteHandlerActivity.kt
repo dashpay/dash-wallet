@@ -19,13 +19,17 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.invite.InviteHandler
+import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class InviteHandlerActivity : AppCompatActivity() {
 
     private val log = LoggerFactory.getLogger(InviteHandlerActivity::class.java)
@@ -44,12 +48,12 @@ class InviteHandlerActivity : AppCompatActivity() {
         }
     }
 
-    val viewModel by lazy {
-        ViewModelProvider(this).get(InviteHandlerViewModel::class.java)
-    }
+    private val viewModel: InviteHandlerViewModel by viewModels()
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     private val inviteHandler by lazy {
-        InviteHandler(this)
+        InviteHandler(this, analytics)
     }
 
     private val externalInvite by lazy {

@@ -20,13 +20,16 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Environment
 import android.view.View
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.Invitation
+import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.work.SendInviteOperation
 import de.schildbach.wallet.ui.dashpay.work.SendInviteStatusLiveData
@@ -37,13 +40,18 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import javax.inject.Inject
 
-open class InvitationFragmentViewModel(application: Application) : BaseProfileViewModel(application) {
-
+@HiltViewModel
+open class InvitationFragmentViewModel @Inject constructor(
+    application: Application,
+    private val analytics: AnalyticsService
+) : BaseProfileViewModel(application) {
     private val log = LoggerFactory.getLogger(InvitationFragmentViewModel::class.java)
 
     private val pubkeyHash = walletApplication.wallet.currentAuthenticationKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING).pubKeyHash
@@ -102,6 +110,10 @@ open class InvitationFragmentViewModel(application: Application) : BaseProfileVi
         viewModelScope.launch {
             invitationDao.insert(invitation)
         }
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, bundleOf())
     }
 
     val identityIdLiveData = MutableLiveData<String>()

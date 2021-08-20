@@ -17,9 +17,25 @@
 package de.schildbach.wallet.ui.invite
 
 import android.app.Application
+import androidx.core.os.bundleOf
 import androidx.lifecycle.AndroidViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.SingleLiveEvent
+import org.dash.wallet.common.services.AnalyticsService
+import javax.inject.Inject
 
-class InvitesHistoryFilterViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class InvitesHistoryFilterViewModel @Inject constructor(
+    application: Application,
+    private val analytics: AnalyticsService
+) : AndroidViewModel(application) {
     val filterBy = SingleLiveEvent<InvitesHistoryViewModel.Filter>()
+
+    fun setFilter(value: InvitesHistoryViewModel.Filter) {
+        if (filterBy.value != value) {
+            filterBy.postValue(value)
+            analytics.logEvent(Constants.Events.Invites.HISTORY_FILTER, bundleOf("option" to value.name))
+        }
+    }
 }

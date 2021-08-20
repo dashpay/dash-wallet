@@ -21,16 +21,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
-import android.view.View
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
-import de.schildbach.wallet.data.Invitation
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
+@AndroidEntryPoint
 class InvitesHistoryActivity : LockScreenActivity() {
 
     companion object {
@@ -46,8 +43,9 @@ class InvitesHistoryActivity : LockScreenActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fragment_holder)
 
+        val caller = intent.getStringExtra(Constants.Events.CALLING_ACTIVITY) ?: ""
         supportFragmentManager.beginTransaction()
-                .replace(R.id.container, InvitesHistoryFragment.newInstance())
+                .replace(R.id.container, InvitesHistoryFragment.newInstance(caller))
                 .commitNow()
     }
 

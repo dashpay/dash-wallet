@@ -32,6 +32,7 @@ import android.view.animation.AnimationUtils
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants.USERNAME_MAX_LENGTH
 import de.schildbach.wallet.Constants.USERNAME_MIN_LENGTH
@@ -52,6 +53,7 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.InteractionAwareActivity
 import org.slf4j.LoggerFactory
 
+@AndroidEntryPoint
 class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
 
     private val regularTypeFace by lazy { ResourcesCompat.getFont(this, R.font.montserrat_regular) }

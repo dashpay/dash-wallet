@@ -32,6 +32,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
 import de.schildbach.wallet.data.PaymentIntent
@@ -47,6 +48,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 
+@AndroidEntryPoint
 class PaymentsPayFragment : Fragment(),
         OnContactItemClickListener {
 

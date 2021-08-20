@@ -17,14 +17,22 @@
 package de.schildbach.wallet.ui.invite
 
 import android.app.Application
+import androidx.core.os.bundleOf
 import androidx.lifecycle.MediatorLiveData
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
+import org.dash.wallet.common.services.AnalyticsService
+import javax.inject.Inject
 
-class CreateInviteViewModel(application: Application) : BaseProfileViewModel(application) {
+@HiltViewModel
+class CreateInviteViewModel @Inject constructor(
+    application: Application,
+    private val analytics: AnalyticsService
+) : BaseProfileViewModel(application) {
 
     val blockchainStateData = AppDatabase.getAppDatabase().blockchainStateDao().load()
     val blockchainState: BlockchainState?
@@ -68,6 +76,10 @@ class CreateInviteViewModel(application: Application) : BaseProfileViewModel(app
         addSource(invitationsLiveData) {
             value = combineLatestInviteActionData()
         }
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, bundleOf())
     }
 
     private fun combineLatestInviteActionData(): Boolean {

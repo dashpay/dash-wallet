@@ -28,15 +28,16 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
-import androidx.lifecycle.Observer
+import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
-import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.*
@@ -45,19 +46,14 @@ import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.contacts_empty_state_layout.*
-import kotlinx.android.synthetic.main.contacts_list_layout.*
-import kotlinx.android.synthetic.main.contacts_list_layout.icon
-import kotlinx.android.synthetic.main.contacts_list_layout.search
-import kotlinx.android.synthetic.main.invite_friend_hint_view.*
-import kotlinx.android.synthetic.main.network_unavailable.*
-import kotlinx.android.synthetic.main.no_contacts_results.*
+import de.schildbach.wallet_test.databinding.FragmentContactsRootBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.InteractionAwareActivity
-import kotlin.jvm.Throws
+import org.dash.wallet.common.services.AnalyticsService
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), TextWatcher,
         ContactSearchResultsAdapter.Listener,
         ContactViewHolder.OnItemClickListener {
@@ -83,6 +79,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     override val navigationItemId = R.id.contacts
 
+    private lateinit var binding: FragmentContactsRootBinding
     private lateinit var dashPayViewModel: DashPayViewModel
     private var searchHandler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
@@ -99,6 +96,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding = FragmentContactsRootBinding.bind(view)
 
         if (requireActivity() is ContactSearchResultsAdapter.OnViewAllRequestsListener) {
             val viewAllRequestsListener = requireActivity() as ContactSearchResultsAdapter.OnViewAllRequestsListener
@@ -108,80 +106,86 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                     "ContactSearchResultsAdapter.Listener")
         }
 
-        contacts_rv.layoutManager = LinearLayoutManager(requireContext())
-        contacts_rv.adapter = this.contactsAdapter
-        this.contactsAdapter.itemClickListener = this
+        binding.contactList.apply {
+            contactsRv.layoutManager = LinearLayoutManager(requireContext())
+            contactsRv.adapter = contactsAdapter
+            contactsAdapter.itemClickListener = this@ContactsFragment
 
-        initViewModel()
+            initViewModel()
 
-        when (mode) {
-            MODE_VIEW_REQUESTS -> {
-                search.visibility = View.GONE
-                icon.visibility = View.GONE
-                setupActionBarWithTitle(R.string.contact_requests_title)
-            }
-            MODE_SEARCH_CONTACTS -> {
-                // search should be available for all other modes
-                search.addTextChangedListener(this)
-                search.visibility = View.VISIBLE
-                icon.visibility = View.VISIBLE
-                setupActionBarWithTitle(R.string.contacts_title)
-            }
-            MODE_SELECT_CONTACT -> {
-                search.addTextChangedListener(this)
-                search.visibility = View.VISIBLE
-                icon.visibility = View.VISIBLE
-                setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
-                forceHideBottomNav = true
-            }
-        }
-
-        search_for_user.setOnClickListener {
-            onSearchUser()
-        }
-
-        search_for_user_suggestions.setOnClickListener {
-            onSearchUser()
-        }
-        searchContacts()
-
-        // Developer Mode Feature
-        // Hide the invite UI
-        if (!WalletApplication.getInstance().configuration.developerMode) {
-            invite_friend_hint.visibility = View.GONE
-        }
-
-        invite_friend_hint.setOnClickListener {
-            dashPayViewModel.inviteHistory.observeOnce(requireActivity(), Observer {
-                if (it == null || it.isEmpty()) {
-                    InviteFriendActivity.startOrError(requireActivity())
-                } else {
-                    startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+            when (mode) {
+                MODE_VIEW_REQUESTS -> {
+                    search.visibility = View.GONE
+                    icon.visibility = View.GONE
+                    setupActionBarWithTitle(R.string.contact_requests_title)
                 }
-            })
-        }
+                MODE_SEARCH_CONTACTS -> {
+                    // search should be available for all other modes
+                    search.addTextChangedListener(this@ContactsFragment)
+                    search.visibility = View.VISIBLE
+                    icon.visibility = View.VISIBLE
+                    setupActionBarWithTitle(R.string.contacts_title)
+                }
+                MODE_SELECT_CONTACT -> {
+                    search.addTextChangedListener(this@ContactsFragment)
+                    search.visibility = View.VISIBLE
+                    icon.visibility = View.VISIBLE
+                    setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
+                    forceHideBottomNav = true
+                }
+            }
 
-        network_error_subtitle.setText(R.string.network_error_contact_suggestions)
+            emptyStatePane.searchForUser.setOnClickListener {
+                onSearchUser()
+            }
+
+            searchContacts()
+
+            // Developer Mode Feature
+            // Hide the invite UI
+            if (!WalletApplication.getInstance().configuration.developerMode) {
+                emptyStatePane.inviteHintLayout.inviteFriendHint.visibility = View.GONE
+            }
+            emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
+                dashPayViewModel.inviteHistory.observeOnce(requireActivity()) {
+                    if (it == null || it.isEmpty()) {
+                        InviteFriendActivity.startOrError(requireActivity())
+                    } else {
+                        dashPayViewModel.logEvent(Constants.Events.Invites.INVITE_CONTACTS)
+                        startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                    }
+                }
+            }
+
+            networkErrorLayout.networkErrorSubtitle.setText(R.string.network_error_contact_suggestions)
+        }
     }
 
+    @Inject
+    lateinit var analytics: AnalyticsService
+
     private fun showEmptyPane() {
-        suggestions_search_no_result.visibility = View.VISIBLE
+        binding.contactList.suggestionsSearchNoResult.isVisible = true
     }
 
     private fun initViewModel() {
         dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
-        dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner, Observer {
+        dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner) {
             imitateUserInteraction()
             if (Status.SUCCESS == it.status) {
                 if (initialSearch && query.isEmpty() && (mode != MODE_VIEW_REQUESTS)) {
                     if (it.data == null || it.data.isEmpty() || it.data.find { u -> u.requestReceived } == null) {
-                        empty_state_pane.visibility = View.VISIBLE
-                        search.visibility = View.GONE
-                        icon.visibility = View.GONE
+                        binding.contactList.apply {
+                            emptyStatePane.root.isVisible = true
+                            search.isVisible = false
+                            icon.isVisible = false
+                        }
                     } else {
-                        search.visibility = View.VISIBLE
-                        icon.visibility = View.VISIBLE
-                        empty_state_pane.visibility = View.GONE
+                        binding.contactList.apply {
+                            search.isVisible = true
+                            icon.isVisible = true
+                            emptyStatePane.root.isVisible = false
+                        }
                     }
                     initialSearch = false
                 }
@@ -189,35 +193,35 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                     processResults(it.data)
                 }
             }
-        })
+        }
 
-        dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner, Observer {
+        dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
             imitateUserInteraction()
             contactsAdapter.sendContactRequestWorkStateMap = it
-        })
-        dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner, Observer<Resource<Boolean>> {
+        }
+        dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner) {
             if (it?.data != null && it.data) {
                 searchContacts()
             }
-        })
-        dashPayViewModel.searchUsernamesLiveData.observe(viewLifecycleOwner, Observer {
+        }
+        dashPayViewModel.searchUsernamesLiveData.observe(viewLifecycleOwner) {
             if (it.data != null && it.data.isNotEmpty()) {
                 showSuggestedUsers(it.data)
             } else {
                 showSuggestedUsers(null)
             }
-        })
-        dashPayViewModel.blockchainStateData.observe(viewLifecycleOwner, Observer {
+        }
+        dashPayViewModel.blockchainStateData.observe(viewLifecycleOwner) {
             it?.apply {
                 val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
                 updateNetworkErrorVisibility(networkError)
                 contactsAdapter.networkAvailable = !networkError
             }
-        })
+        }
     }
 
     private fun updateNetworkErrorVisibility(networkError: Boolean) {
-        network_error_container.visibility = if (networkError) View.VISIBLE else View.GONE
+        binding.contactList.networkErrorContainer.isVisible = networkError
     }
 
     private fun showSuggestedUsers(users: List<UsernameSearchResult>?) {
@@ -237,20 +241,19 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             }
         }
 
-
         contactsAdapter.results = results
     }
 
     private fun showEmptySuggestions() {
-        suggestions_search_no_result.visibility = View.VISIBLE
+        binding.contactList.suggestionsSearchNoResult.isVisible = true
         KeyboardUtil.hideKeyboard(requireContext(), requireView())
-        val searchUsersBtn = suggestions_search_no_result.findViewById<View>(R.id.search_for_user_suggestions)
+        val searchUsersBtn = binding.contactList.suggestionsSearchNoResult.findViewById<View>(R.id.search_for_user_suggestions)
         searchUsersBtn.setOnClickListener {
             onSearchUser()
         }
         val text = getString(R.string.suggestions_empty_result_part_1) +
                 " \"<b>$query</b>\" " + getString(R.string.suggestions_empty_result_part_2)
-        val noResultsLabel = suggestions_search_no_result.findViewById<TextView>(R.id.no_results_label)
+        val noResultsLabel = binding.contactList.suggestionsSearchNoResult.findViewById<TextView>(R.id.no_results_label)
         noResultsLabel.text = HtmlCompat.fromHtml(text, HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 
@@ -320,7 +323,8 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     }
 
     private fun searchContacts() {
-        suggestions_search_no_result.visibility = View.GONE
+        binding.contactList.suggestionsSearchNoResult.isVisible = false
+
         if (this::searchContactsRunnable.isInitialized) {
             searchHandler.removeCallbacks(searchContactsRunnable)
         }
