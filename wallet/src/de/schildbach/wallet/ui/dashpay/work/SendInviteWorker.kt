@@ -86,6 +86,7 @@ class SendInviteWorker @AssistedInject constructor(
 
         val encryptionKey: KeyParameter
         val wallet = WalletApplication.getInstance().wallet!!
+        org.bitcoinj.core.Context.propagate(wallet.context)
         try {
             encryptionKey = wallet.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {

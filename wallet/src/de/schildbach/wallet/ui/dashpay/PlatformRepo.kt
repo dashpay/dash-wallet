@@ -47,6 +47,7 @@ import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.*
 import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
@@ -1441,10 +1442,16 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val blockchainIdentityKeyChain = walletApplication.wallet.blockchainIdentityKeyChain
                 ?: return null
         val fundingKey = blockchainIdentityKeyChain.watchingKey
-        val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
-        return if (identityBytes != null) {
-            platform.dpp.identity.createFromBuffer(identityBytes.toByteArray())
-        } else null
+        return try {
+            val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
+            if (identityBytes != null) {
+                platform.dpp.identity.createFromBuffer(identityBytes.toByteArray())
+            } else {
+                null
+            }
+        } catch (e: MaxRetriesReachedException) {
+            null
+        }
     }
 
     fun loadProfileByUserId(userId: String): LiveData<DashPayProfile?> {
