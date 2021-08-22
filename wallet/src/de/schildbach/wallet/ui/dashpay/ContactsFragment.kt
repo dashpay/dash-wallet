@@ -79,7 +79,9 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     override val navigationItemId = R.id.contacts
 
-    private lateinit var binding: FragmentContactsRootBinding
+    private var _binding: FragmentContactsRootBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var dashPayViewModel: DashPayViewModel
     private var searchHandler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
@@ -96,7 +98,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding = FragmentContactsRootBinding.bind(view)
+        _binding = FragmentContactsRootBinding.bind(view)
 
         if (requireActivity() is ContactSearchResultsAdapter.OnViewAllRequestsListener) {
             val viewAllRequestsListener = requireActivity() as ContactSearchResultsAdapter.OnViewAllRequestsListener
@@ -413,4 +415,8 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         }.parse()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 }
