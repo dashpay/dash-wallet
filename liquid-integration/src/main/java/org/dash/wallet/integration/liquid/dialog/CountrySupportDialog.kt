@@ -9,11 +9,14 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.os.bundleOf
+import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.ui.WebViewActivity
 
 class CountrySupportDialog(val contexts: Context, val isCreditCard: Boolean) : Dialog(contexts, R.style.Theme_Dialog) {
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     init {
         setCanceledOnTouchOutside(false)
@@ -32,6 +35,7 @@ class CountrySupportDialog(val contexts: Context, val isCreditCard: Boolean) : D
 
         findViewById<TextView>(R.id.txtCountrySupported).setOnClickListener {
             dismiss()
+            analytics.logEvent(LiquidConstants.Events.SUPPORTED_COUNTRIES, bundleOf())
             val intent = Intent(contexts, WebViewActivity::class.java)
             intent.putExtra("url", LiquidConstants.COUNTRY_NOT_SUPPORTED)
             intent.putExtra("title", "Liquid")

@@ -20,8 +20,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
+import androidx.core.os.bundleOf
 import androidx.lifecycle.Observer
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
@@ -30,10 +32,12 @@ import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.dash.wallet.common.UserInteractionAwareCallback
-
+import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl
 
 
 class MoreActivity : GlobalFooterActivity() {
+
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,6 +86,7 @@ class MoreActivity : GlobalFooterActivity() {
     }
 
     private fun startBuyAndSellActivity() {
+        analytics.logEvent(Constants.Events.Liquid.BUY_SELL_MORE, bundleOf())
         startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(this), REQUEST_CODE_BUY_SELL);
     }
 

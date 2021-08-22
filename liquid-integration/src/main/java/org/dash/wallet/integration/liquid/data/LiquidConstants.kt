@@ -15,4 +15,11 @@ object LiquidConstants {
     const val COUNTRY_NOT_SUPPORTED = " https://help.liquid.com/en/articles/2272984-can-i-use-liquid-in-my-country"
 
     const val BUY_WITH_CREDIT_CARD_URL = "https://plugin.partners.liquid.com"//"https://sandbox-demo.partners.liquid.com"//https://plugin.partners.liquid.com
+
+    object Events {
+        const val DISCONNECT = "liquid_disconnect"
+        const val SUPPORTED_COUNTRIES = "liquid_see_supported_countries"
+        const val BUY_DASH = "liquid_buy_dash"
+        const val BUY_CREDIT_CARD = "liquid_buy_with_credit_card"
+    }
 }
