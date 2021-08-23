@@ -30,6 +30,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -59,7 +60,7 @@ class OnboardingViewModel @Inject constructor(
         walletApplication.configuration.armBackupSeedReminder()
 
         if (onboardingInvite != null) {
-            analytics.logEvent(Constants.Events.Invites.NEW_WALLET, bundleOf())
+            analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, bundleOf())
             startActivityAction.call(AcceptInviteActivity.createIntent(getApplication(), onboardingInvite, true))
         } else {
             startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))

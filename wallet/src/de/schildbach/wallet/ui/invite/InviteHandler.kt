@@ -35,6 +35,7 @@ import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.getInstance
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.slf4j.LoggerFactory
@@ -138,7 +139,7 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
         val inviteErrorDialog = FancyAlertDialog.newInstance(title, message, R.drawable.ic_invalid_invite, R.string.okay, 0)
         inviteErrorDialog.show(activity.supportFragmentManager, null)
         handleDialogResult(activity)
-        analytics.logEvent(Constants.Events.Invites.ERROR_INVALID, bundleOf())
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_INVALID, bundleOf())
     }
 
     fun showUsernameAlreadyDialog() {
@@ -149,14 +150,14 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
         )
         inviteErrorDialog.show(activity.supportFragmentManager, null)
         handleDialogResult(activity)
-        analytics.logEvent(Constants.Events.Invites.ERROR_USERNAME_TAKEN, bundleOf())
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_USERNAME_TAKEN, bundleOf())
     }
 
     private fun showInviteAlreadyClaimedDialog(invite: InvitationLinkData) {
         val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, invite)
         inviteAlreadyClaimedDialog.show(activity.supportFragmentManager, null)
         handleDialogResult(activity)
-        analytics.logEvent(Constants.Events.Invites.ERROR_ALREADY_CLAIMED, bundleOf())
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_ALREADY_CLAIMED, bundleOf())
     }
 
     private fun showInviteLoadingProgress() {
@@ -170,7 +171,7 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
     private fun showInsufficientFundsDialog() {
         val dialog = FancyAlertDialog.newProgress(R.string.invitation_invalid_invite_title, R.string.dashpay_insuffient_credits)
         dialog.show(activity.supportFragmentManager, null)
-        analytics.logEvent(Constants.Events.Invites.ERROR_INSUFFICIENT_FUNDS, bundleOf())
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_INSUFFICIENT_FUNDS, bundleOf())
     }
 
     /**

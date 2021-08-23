@@ -25,6 +25,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
@@ -43,7 +44,7 @@ class InvitesHistoryActivity : LockScreenActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fragment_holder)
 
-        val caller = intent.getStringExtra(Constants.Events.CALLING_ACTIVITY) ?: ""
+        val caller = intent.getStringExtra(AnalyticsConstants.CALLING_ACTIVITY) ?: ""
         supportFragmentManager.beginTransaction()
                 .replace(R.id.container, InvitesHistoryFragment.newInstance(caller))
                 .commitNow()

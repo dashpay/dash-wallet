@@ -51,6 +51,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -153,7 +154,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                     if (it == null || it.isEmpty()) {
                         InviteFriendActivity.startOrError(requireActivity())
                     } else {
-                        dashPayViewModel.logEvent(Constants.Events.Invites.INVITE_CONTACTS)
+                        dashPayViewModel.logEvent(AnalyticsConstants.Invites.INVITE_CONTACTS)
                         startActivity(InvitesHistoryActivity.createIntent(requireContext()))
                     }
                 }

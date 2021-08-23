@@ -28,6 +28,7 @@ import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_created.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 
 class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_created) {
@@ -56,18 +57,18 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         appCompatActivity.setSupportActionBar(toolbar)
 
         preview_button.setOnClickListener {
-            viewModel.logEvent(Constants.Events.Invites.CREATED_PREVIEW)
+            viewModel.logEvent(AnalyticsConstants.Invites.CREATED_PREVIEW)
             showPreviewDialog()
         }
         copy_invitation_link.setOnClickListener {
-            viewModel.logEvent(Constants.Events.Invites.CREATED_COPY_LINK)
+            viewModel.logEvent(AnalyticsConstants.Invites.CREATED_COPY_LINK)
             copyInvitationLink()
         }
         send_button.setOnClickListener {
             shareInvitation(false)
         }
         maybe_later_button.setOnClickListener {
-            viewModel.logEvent(Constants.Events.Invites.CREATED_LATER)
+            viewModel.logEvent(AnalyticsConstants.Invites.CREATED_LATER)
             finishActivity()
         }
 
@@ -101,10 +102,10 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
     private fun shareInvitation(shareImage: Boolean) {
         // save memo to the database
         viewModel.saveTag(tag_edit.text.toString())
-        viewModel.logEvent(Constants.Events.Invites.CREATED_SEND)
+        viewModel.logEvent(AnalyticsConstants.Invites.CREATED_SEND)
 
         if (!tag_edit.text.isNullOrBlank()) {
-            viewModel.logEvent(Constants.Events.Invites.CREATED_TAG)
+            viewModel.logEvent(AnalyticsConstants.Invites.CREATED_TAG)
         }
 
         super.shareInvitation(shareImage, viewModel.shortDynamicLinkData)

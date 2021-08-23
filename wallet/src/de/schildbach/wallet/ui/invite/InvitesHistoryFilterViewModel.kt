@@ -23,6 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.SingleLiveEvent
 import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,7 +36,7 @@ class InvitesHistoryFilterViewModel @Inject constructor(
     fun setFilter(value: InvitesHistoryViewModel.Filter) {
         if (filterBy.value != value) {
             filterBy.postValue(value)
-            analytics.logEvent(Constants.Events.Invites.HISTORY_FILTER, bundleOf("option" to value.name))
+            analytics.logEvent(AnalyticsConstants.Invites.HISTORY_FILTER, bundleOf("option" to value.name))
         }
     }
 }

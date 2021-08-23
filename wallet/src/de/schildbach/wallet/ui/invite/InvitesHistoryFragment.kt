@@ -29,6 +29,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_invites_history.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
@@ -117,8 +118,8 @@ class InvitesHistoryFragment(private val caller: String) :
             }
             InvitesAdapter.INVITE_CREATE -> {
                 createInviteViewModel.logEvent(when(caller) {
-                    "more" -> Constants.Events.Invites.CREATE_MORE
-                    else -> Constants.Events.Invites.CREATE_HISTORY
+                    "more" -> AnalyticsConstants.Invites.CREATE_MORE
+                    else -> AnalyticsConstants.Invites.CREATE_HISTORY
                 })
                 InviteFriendActivity.startOrError(requireActivity(), startedByHistory = true)
             }

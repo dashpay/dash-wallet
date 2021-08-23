@@ -374,32 +374,4 @@ public final class Constants {
         String UTM_CAMPAIGN = "DashPay Alpha Program";
         String UTM_MEDIUM = "email";
     }
-
-    public interface Events {
-        String CALLING_ACTIVITY = "calling_activity";
-
-        interface Invites {
-            String ERROR_USERNAME_TAKEN = "invite_username_already_found";
-            String INVITE_CONTACTS = "invite_from_contacts";
-            String CREATE_MORE = "invite_create_from_more_menu";
-            String INVITE_FRIEND = "invite_friend";
-            String ERROR_CREATE = "invite_error_creating";
-            String ERROR_ALREADY_CLAIMED = "invite_already_claimed";
-            String ERROR_INVALID = "invite_invalid";
-            String ERROR_INSUFFICIENT_FUNDS = "invite_insufficient_funds";
-            String CREATED_COPY_LINK = "invite_created_copy_link";
-            String DETAILS_COPY_LINK = "invite_details_copy_link";
-            String CREATED_SEND = "invite_created_send";
-            String DETAILS_SEND_AGAIN = "invite_details_send_again";
-            String CREATED_LATER = "invite_created_maybe_later";
-            String CREATED_TAG = "invite_created_send_with_tag";
-            String DETAILS_TAG = "invite_details_send_again_with_tag";
-            String CREATED_PREVIEW = "invite_created_preview";
-            String DETAILS_PREVIEW = "invite_details_preview";
-            String CREATE_HISTORY = "invite_create_from_history";
-            String HISTORY_FILTER = "invite_history_filter";
-            String DETAILS = "invite_details";
-            String NEW_WALLET = "invite_new_wallet";
-        }
-    }
 }

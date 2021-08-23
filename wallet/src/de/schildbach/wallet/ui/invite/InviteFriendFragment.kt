@@ -31,6 +31,7 @@ import de.schildbach.wallet.ui.setupActionBarWithTitle
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_invite_friend.*
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 
 @AndroidEntryPoint
@@ -54,7 +55,7 @@ class InviteFriendFragment(private val startedByHistory: Boolean)
 
         walletApplication = requireActivity().application as WalletApplication
         create_invitation_button.setOnClickListener {
-            viewModel.logEvent(Constants.Events.Invites.INVITE_FRIEND)
+            viewModel.logEvent(AnalyticsConstants.Invites.INVITE_FRIEND)
             showConfirmationDialog()
         }
 
@@ -92,7 +93,7 @@ class InviteFriendFragment(private val startedByHistory: Boolean)
                             R.string.invitation_creating_error_message, R.drawable.ic_error_creating_invitation,
                             R.string.okay, 0)
                     errorDialog.show(childFragmentManager, null)
-                    viewModel.logEvent(Constants.Events.Invites.ERROR_CREATE)
+                    viewModel.logEvent(AnalyticsConstants.Invites.ERROR_CREATE)
                 }
             }
         })

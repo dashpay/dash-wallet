@@ -38,6 +38,7 @@ import kotlinx.android.synthetic.main.fragment_invite_details.copy_invitation_li
 import kotlinx.android.synthetic.main.fragment_invite_details.preview_button
 import kotlinx.android.synthetic.main.fragment_invite_details.send_button
 import kotlinx.android.synthetic.main.fragment_invite_details.tag_edit
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 
 @AndroidEntryPoint
@@ -78,11 +79,11 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         }
 
         preview_button.setOnClickListener {
-            viewModel.logEvent(Constants.Events.Invites.DETAILS_PREVIEW)
+            viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_PREVIEW)
             showPreviewDialog()
         }
         copy_invitation_link.setOnClickListener {
-            viewModel.logEvent(Constants.Events.Invites.DETAILS_COPY_LINK)
+            viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_COPY_LINK)
             copyInvitationLink()
         }
         send_button.setOnClickListener {
@@ -146,7 +147,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             setupInvitationPreviewTemplate(it!!)
         }
         viewModel.updateInvitedUserProfile()
-        viewModel.logEvent(Constants.Events.Invites.DETAILS)
+        viewModel.logEvent(AnalyticsConstants.Invites.DETAILS)
     }
 
     private fun getTagHint() =
@@ -193,10 +194,10 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     private fun shareInvitation(shareImage: Boolean) {
         // save memo to the database
         viewModel.saveTag(tag_edit.text.toString())
-        viewModel.logEvent(Constants.Events.Invites.DETAILS_SEND_AGAIN)
+        viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_SEND_AGAIN)
 
         if (!tag_edit.text.isNullOrBlank()) {
-            viewModel.logEvent(Constants.Events.Invites.DETAILS_TAG)
+            viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_TAG)
         }
 
         super.shareInvitation(shareImage, viewModel.invitation.shortDynamicLink)
