@@ -71,7 +71,13 @@ import static de.schildbach.wallet.util.DateExtensionsKt.getDateAtHourZero;
 /**
  * @author Andreas Schildbach
  */
-public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements TransactionsHeaderViewHolder.OnFilterListener {
+public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    public enum Filter {
+        ALL,
+        INCOMING,
+        OUTGOING
+    }
 
     private static final String PREFS_FILE_NAME = TransactionsAdapter.class.getSimpleName() + ".prefs";
     private static final String PREFS_KEY_HIDE_HELLO_CARD = "hide_hello_card";
@@ -101,7 +107,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     private final int colorValuePositve, colorValueNegative;
     private final int colorError;
 
-    private static final int VIEW_TYPE_HEADER = 0;
     private static final int VIEW_TYPE_TRANSACTION = 1;
     private static final int VIEW_TYPE_PROCESSING_IDENTITY = 2;
     private static final int VIEW_TYPE_JOIN_DASHPAY = 3;
@@ -113,7 +118,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     //Temporary field while IdentityCreationTx (or whatever we call it) is not integrated yet.
     private BlockchainIdentityBaseData blockchainIdentityData;
 
-    private TransactionsHeaderViewHolder.Filter filter = TransactionsHeaderViewHolder.Filter.ALL;
+    private Filter filter = Filter.ALL;
     private boolean canJoinDashPay;
     private final int JOIN_DASHPAY_ITEM_ID = "JOIN_DASHPAY".hashCode();
 
@@ -194,7 +199,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     @Override
     public int getItemCount() {
         int transactionGroups = transactionsByDate.keySet().size();
-        int count = filteredTransactions.size() + transactionGroups + 1;
+        int count = filteredTransactions.size() + transactionGroups;
 
         if (shouldShowHelloCard()) {
             count += 1;
@@ -206,14 +211,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     private int getNonTransactionItemsBeforePosition(int position) {
-        if (position == 0) {
-            return 0;
-        }
-        if (position == 1) {
-            return 1;
-        }
-
-        int nonTxItemsBeforePosition = 1;
+        int nonTxItemsBeforePosition = 0;
         int viewType = getItemViewType(position);
         if (viewType == VIEW_TYPE_TRANSACTION || viewType == VIEW_TYPE_TRANSACTION_GROUP_HEADER) {
             if (shouldShowJoinDashPay() || shouldShowHelloCard()) {
@@ -242,8 +240,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 return blockchainIdentityData.getId();
             case VIEW_TYPE_JOIN_DASHPAY:
                 return JOIN_DASHPAY_ITEM_ID;
-            case VIEW_TYPE_HEADER:
-                return VIEW_TYPE_HEADER;
             case VIEW_TYPE_TRANSACTION_GROUP_HEADER:
                 return position;
             case VIEW_TYPE_TRANSACTION:
@@ -262,10 +258,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     @Override
     public int getItemViewType(final int position) {
         if (position == 0) {
-            return VIEW_TYPE_HEADER;
-        }
-
-        if (position == 1) {
             if (shouldShowHelloCard()) {
                 return VIEW_TYPE_PROCESSING_IDENTITY;
             } else if (shouldShowJoinDashPay()) {
@@ -286,8 +278,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             return new ProcessingIdentityViewHolder(inflater.inflate(R.layout.identity_creation_state, parent, false));
         } else if (viewType == VIEW_TYPE_TRANSACTION) {
             return new TransactionViewHolder(inflater.inflate(R.layout.transaction_row, parent, false));
-        } else if (viewType == VIEW_TYPE_HEADER) {
-            return new TransactionsHeaderViewHolder(inflater, parent, this);
         } else if (viewType == VIEW_TYPE_JOIN_DASHPAY) {
             return new JoinDashPayViewHolder(inflater, parent);
         } else if (viewType == VIEW_TYPE_TRANSACTION_GROUP_HEADER) {
@@ -351,8 +341,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     }
                 }
             });
-        } else if (holder instanceof TransactionsHeaderViewHolder) {
-            ((TransactionsHeaderViewHolder) holder).showEmptyState(filteredTransactions.size() == 0);
         } else if (holder instanceof JoinDashPayViewHolder) {
             ((JoinDashPayViewHolder) holder).bind(v -> {
                 if (onClickListener != null) {
@@ -611,8 +599,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         return context.getSharedPreferences(PREFS_FILE_NAME, Context.MODE_PRIVATE);
     }
 
-    @Override
-    public void onFilter(@NotNull TransactionsHeaderViewHolder.Filter filter) {
+    public void filter(@NotNull Filter filter) {
         this.filter = filter;
         filter();
     }
@@ -622,7 +609,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         transactionsByDate.clear();
         transactionGroupHeaderIndexes.clear();
 
-        int txGroupHeaderIndex = 1;
+        int txGroupHeaderIndex = 0;
         final List<TransactionHistoryItem> resultTransactions = new ArrayList<>();
 
         int headersCount = 0;
@@ -631,9 +618,9 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             boolean sent = tx.getValue(wallet).signum() < 0;
             boolean isInternal = tx.getPurpose() == Transaction.Purpose.KEY_ROTATION;
 
-            if ((filter == TransactionsHeaderViewHolder.Filter.INCOMING && !sent && !isInternal)
-                    || filter == TransactionsHeaderViewHolder.Filter.ALL
-                    || (filter == TransactionsHeaderViewHolder.Filter.OUTGOING && sent && !isInternal)) {
+            if ((filter == Filter.INCOMING && !sent && !isInternal)
+                    || filter == Filter.ALL
+                    || (filter == Filter.OUTGOING && sent && !isInternal)) {
 
                 Date txDate = transactionHistoryItem.transaction.getUpdateTime();
                 Date txDateCopy = getDateAtHourZero(txDate);
