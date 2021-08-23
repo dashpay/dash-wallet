@@ -35,6 +35,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.BuildConfig
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
 
@@ -108,6 +109,10 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             configuration.enableFingerprint = fingerprintHelper.isFingerprintEnabled
         } else {
             fingerprint_auth_group.visibility = GONE
+        }
+
+        if (BuildConfig.DEBUG) {
+            backup_wallet.visibility = VISIBLE
         }
 
         backup_wallet.setOnClickListener {
