@@ -24,30 +24,6 @@
             android:paddingTop="10dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/backup_wallet"
-                style="@style/MenuRow.Internal">
-
-                <ImageView
-                    android:id="@+id/backup_arrow"
-                    style="@style/MenuRowArrow"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_row_arrow" />
-
-                <TextView
-                    style="@style/MontserratMedium.MenuRowTitle.Internal"
-                    android:layout_width="0dp"
-                    android:text="@string/activity_security_backup_wallet"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toStartOf="@id/backup_arrow"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    tools:text="This is a very long text to illustrate how it looks like on 2 lines." />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <androidx.constraintlayout.widget.ConstraintLayout
                 style="@style/MenuRow.Internal"
                 android:id="@+id/view_recovery_phrase">
 
@@ -160,6 +136,32 @@
                     app:srcCompat="@drawable/ic_menu_row_arrow" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/backup_wallet"
+                style="@style/MenuRow.Internal"
+                android:visibility="gone"
+                android:onClick="backupWallet">
+
+                <ImageView
+                    android:id="@+id/backup_arrow"
+                    style="@style/MenuRowArrow"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:srcCompat="@drawable/ic_menu_row_arrow" />
+
+                <TextView
+                    style="@style/MontserratMedium.MenuRowTitle.Internal"
+                    android:layout_width="0dp"
+                    android:text="@string/activity_security_backup_wallet"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/backup_arrow"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/reset_wallet"
