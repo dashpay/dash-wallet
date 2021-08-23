@@ -30,7 +30,8 @@ import javax.inject.Inject
 @HiltWorker
 class UpdateProfileWorker @AssistedInject constructor(
     @Assisted context: Context,
-    @Assisted parameters: WorkerParameters)
+    @Assisted parameters: WorkerParameters,
+    val analytics: AnalyticsService)
     : BaseWorker(context, parameters) {
 
     companion object {
@@ -48,8 +49,6 @@ class UpdateProfileWorker @AssistedInject constructor(
     }
 
     private val platformRepo = PlatformRepo.getInstance()
-    @Inject
-    lateinit var analytics: AnalyticsService
 
     override suspend fun doWorkWithBaseProgress(): Result {
         val displayName = inputData.getString(KEY_DISPLAY_NAME) ?: ""

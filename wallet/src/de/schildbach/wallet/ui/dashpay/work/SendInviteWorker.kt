@@ -40,6 +40,8 @@ import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.security.InvalidKeyException
+import java.util.*
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -51,7 +53,8 @@ private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
 @HiltWorker
 class SendInviteWorker @AssistedInject constructor(
     @Assisted context: Context,
-    @Assisted parameters: WorkerParameters)
+    @Assisted parameters: WorkerParameters,
+    val analytics: AnalyticsService)
     : BaseWorker(context, parameters) {
 
     companion object {
@@ -76,8 +79,6 @@ class SendInviteWorker @AssistedInject constructor(
             get() = data.getString(KEY_SHORT_DYNAMIC_LINK)!!
     }
 
-    @Inject
-    lateinit var analytics: AnalyticsService
     private val platformRepo = PlatformRepo.getInstance()
 
     override suspend fun doWorkWithBaseProgress(): Result {

@@ -17,7 +17,8 @@ import javax.inject.Inject
 @HiltWorker
 class SendContactRequestWorker @AssistedInject constructor(
     @Assisted context: Context,
-    @Assisted parameters: WorkerParameters
+    @Assisted parameters: WorkerParameters,
+    val analytics: AnalyticsService
 ) : BaseWorker(context, parameters) {
 
     companion object {
@@ -34,8 +35,6 @@ class SendContactRequestWorker @AssistedInject constructor(
         }
     }
 
-    @Inject
-    lateinit var analytics: AnalyticsService
     private val platformRepo = PlatformRepo.getInstance()
 
     override suspend fun doWorkWithBaseProgress(): Result {

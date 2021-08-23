@@ -44,6 +44,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
@@ -83,6 +84,8 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.android.LogcatAppender;
@@ -90,7 +93,6 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
-import dagger.hilt.android.AndroidEntryPoint;
 import dagger.hilt.android.HiltAndroidApp;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
@@ -142,6 +144,9 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     public boolean myPackageReplaced = false;
 
     private AutoLogout autoLogout;
+
+    @Inject
+    HiltWorkerFactory workerFactory;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -834,6 +839,7 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     @Override
     public androidx.work.Configuration getWorkManagerConfiguration() {
         return new androidx.work.Configuration.Builder()
+                .setWorkerFactory(workerFactory)
                 .setMinimumLoggingLevel(Log.VERBOSE)
                 .build();
     }
