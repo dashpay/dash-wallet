@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.LayerDrawable
@@ -42,6 +43,9 @@ import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
 import org.dash.wallet.common.ui.DialogBuilder
 
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
+const val SET_PIN_REQUEST_CODE = 1
+private const val RESTORE_PHRASE_REQUEST_CODE = 2
+private const val RESTORE_FILE_REQUEST_CODE = 3
 
 class OnboardingActivity : RestoreFromFileActivity() {
 
@@ -159,7 +163,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun restoreWalletFromSeed() {
         walletApplication.initEnvironmentIfNeeded()
-        startActivity(Intent(this, RestoreWalletFromSeedActivity::class.java))
+        startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
     }
 
     @SuppressLint("StringFormatInvalid")
@@ -182,7 +186,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             dialog.show()
         })
         viewModel.startActivityAction.observe(this, Observer {
-            startActivity(it)
+            startActivityForResult(it, SET_PIN_REQUEST_CODE)
         })
     }
 
@@ -218,6 +222,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
             upgradeOrStartMainActivity()
+        } else if ((requestCode == SET_PIN_REQUEST_CODE || requestCode == RESTORE_PHRASE_REQUEST_CODE) && resultCode == Activity.RESULT_OK) {
+            finish()
         }
     }
 

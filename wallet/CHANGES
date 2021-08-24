@@ -1,4 +1,11 @@
 Dash Wallet
+v7.3.1
+* Fix Uphold logout instructions
+* Dismiss PIN Entry Dialogs upon Autologout  (bug from 7.2.4)
+* Fix issue with onboarding (bug from 7.2.4)
+
+v7.3.0
+* Add Liquid Exchange Integration (supports Buy Dash with Credit Card)
 
 v7.2.7
 * When paying via another app with BIP70, the Lock Screen does not appear (bug from 7.2.4)

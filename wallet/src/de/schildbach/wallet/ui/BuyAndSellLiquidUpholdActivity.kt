@@ -14,17 +14,19 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.dialog.CurrencyDialog
 import de.schildbach.wallet.rates.ExchangeRatesViewModel
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.Constants
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
+import org.dash.wallet.common.Constants.USER_BUY_SELL_DASH
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.util.GenericUtils
@@ -99,7 +101,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
         rlLiquid.isEnabled = isProdBuild
         rlLiquid.setOnClickListener {
-            startActivityForResult(LiquidBuyAndSellDashActivity.createIntent(this), Constants.USER_BUY_SELL_DASH)
+            startActivityForResult(LiquidBuyAndSellDashActivity.createIntent(this), USER_BUY_SELL_DASH)
         }
 
         rlUphold.isEnabled = isProdBuild
@@ -304,7 +306,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == Constants.USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
+        if (requestCode == USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
             log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
             if (LiquidClient.getInstance()!!.isAuthenticated) {
                 getUserLiquidAccountBalance()
