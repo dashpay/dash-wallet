@@ -1,19 +1,13 @@
 ext {
-    useGoogleServices = rootProject.file("google-services").exists()
+    useGoogleServices = file(projectDir.path + "/google-services.json").exists()
 }
 
 if (ext.useGoogleServices) {
-    if (!file("google-services.json").exists()) {
-        afterEvaluate {
-            copy {
-                from rootProject.file("google-services/google-services.json")
-                into projectDir
-            }
-        }
-    }
-
+    println "google-services.json was found"
     apply plugin: 'com.google.gms.google-services'
     //TODO: add other plugins here such as:
     //apply plugin: 'com.google.firebase.appdistribution'
     //apply plugin: 'com.google.firebase.crashlytics'
+} else {
+    println "google-services.json was not found"
 }
