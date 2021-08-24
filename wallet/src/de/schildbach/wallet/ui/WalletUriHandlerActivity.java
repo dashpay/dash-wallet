@@ -18,6 +18,8 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -25,11 +27,14 @@ import android.net.Uri;
 import android.os.Bundle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.DialogBuilder;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -49,10 +54,13 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
     private static final int REQUEST_CODE_SEND_FROM_WALLET_URI = 1;
 
     private Wallet wallet;
+    private static final Logger log = LoggerFactory.getLogger(WalletUriHandlerActivity.class);
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
 
         WalletApplication application = (WalletApplication) getApplication();
         wallet = application.getWallet();
@@ -87,7 +95,15 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
                         upholdActivityIntent.putExtra(UpholdSplashActivity.UPHOLD_EXTRA_CODE, code);
                         upholdActivityIntent.putExtra(UpholdSplashActivity.UPHOLD_EXTRA_STATE,
                                 intentUri.getQueryParameter("state"));
-                        startActivity(upholdActivityIntent);
+                        upholdActivityIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        upholdActivityIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        if(isTaskRoot()) {
+                            //I'm in my own task and not the main task
+                            upholdActivityIntent.setAction(UpholdSplashActivity.FINISH_ACTION);
+                            LocalBroadcastManager.getInstance(this).sendBroadcast(upholdActivityIntent);
+                        } else {
+                            startActivity(upholdActivityIntent);
+                        }
                     }
                 }
                 finish();

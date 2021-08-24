@@ -21,12 +21,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integration.liquid.R
@@ -238,10 +240,11 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
         webview.loadUrl(LiquidConstants.BUY_WITH_CREDIT_CARD_URL)
 
+        //don't show the (i) icon
+        findViewById<View>(R.id.ivInfo).isVisible = false
         findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this).show()
+            CountrySupportDialog(this, true).show()
         }
-
     }
 
 
@@ -439,7 +442,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                         isTransactionSuccessful = true
                                         findViewById<View>(R.id.closePane).visibility = View.VISIBLE
                                         findViewById<View>(R.id.btnOkay).setOnClickListener {
-                                            setResult(Activity.RESULT_OK)
+                                            setResult(Constants.RESULT_CODE_GO_HOME)
                                             onBackPressed()
                                         }
                                     }
@@ -509,7 +512,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     override fun onBackPressed() {
         if (isTransactionSuccessful) {
             log.info("liquid: onBackPressed: successful transaction was made")
-            setResult(Activity.RESULT_OK)
+            setResult(Constants.RESULT_CODE_GO_HOME)
             super.onBackPressed()
         } else {
             log.info("liquid: onBackPressed: successful transaction was not made")

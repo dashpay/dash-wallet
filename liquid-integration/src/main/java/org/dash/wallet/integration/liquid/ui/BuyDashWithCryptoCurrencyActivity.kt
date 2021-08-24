@@ -87,7 +87,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
 
 
         findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this).show()
+            CountrySupportDialog(this, false).show()
         }
         webview.webViewClient = MyBrowser()
         webview.settings.javaScriptEnabled = true

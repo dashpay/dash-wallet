@@ -1,4 +1,9 @@
 Dash Wallet
+
+v7.2.7
+* When paying via another app with BIP70, the Lock Screen does not appear (bug from 7.2.4)
+* Lock Screen accepts fingerprints where previously it only accepted the fingerprint once time (bug from 7.2.4)
+
 v7.2.6
 * When autologout is off, then the app doesn't ask for PIN when starting (bug from 7.2.4)
 * When paying via another app, the Lock Screen does not appear (bug from 7.2.4)
