@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">เชื่อมต่อบัญชีสภาพคล่อง</string>
+    <string name="buy_dash_with_liquid_account">ซื้อ Dash ด้วยบัตรเครดิต</string>
+    <string name="liquid_logout">ออกจากระบบ</string>
+    <string name="liquid_logout_title">ออกจากบัญชีสภาพคล่อง</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Swap Dash กับคริปโตเคอเรนซีอื่น ๆ</string>
+    <string name="transfer_dash_to_and_from_account">โอนไปยังและจากบัญชีสภาพคล่องของคุณ</string>
+
+    <string name="cryptocurrency">คริปโตเคอเรนซี</string>
+    <string name="credit_card">บัตรเครดิต</string>
+
+    <string name="buy">ซื้อ</string>
+    <string name="buy_dash">ซื้อ Dash </string>
+    <string name="sell_dash">ขาย Dash</string>
+    <string name="buy_sell_dash_">ซื้อ &amp; ขาย Dash</string>
+    <string name="button_cancel">ยกเลิก</string>
+    <string name="choose_your_payment_method">เลือกวิธีการชำระเงิน</string>
+    <string name="crypto_support">สนับสนุนคริปโต</string>
+    <string name="okay">ตกลง</string>
+    <string name="close">ปิด</string>
+    <string name="list_of_countries">ดูรายชื่อประเทศที่ไม่รองรับ</string>
+    <string name="buying_dash_not_supported">การซื้อ Dash ด้วยคริปโตเคอเรนซีไม่รองรับในบางประเทศ</string>
+    <string name="buying_dash_success_message">คุณสามารถปิดหน้าจอนี้ Dash ของคุณจะถูกส่งไปยังกระเป๋าเงินของคุณ</string>
+
+    <string name="confirm">ยืนยัน</string>
+    <string name="card_fees">ค่าธรรมเนียมบัตร</string>
+    <string name="conversion_rate">อัตราการแปลง</string>
+    <string name="network_fee">ค่าธรรมเนียมเครือข่าย</string>
+    <string name="total">ทั้งหมด</string>
+    <string name="connect">เชื่อมต่อ</string>
+    <string name="connected">เชื่อมต่อแล้ว</string>
+    <string name="buy_sell_dash">ซื้อ &amp;amp; ขาย Dash หรือสร้างบัญชีใหม่</string>
+
+
+    <string name="transfer_to_liquid">โอนไปยังบัญชีสภาพคล่อง</string>
+    <string name="transfer_from_liquid">โอนจากบัญชีสภาพคล่อง</string>
+    <string name="disconnect">ไม่เชื่อมต่อ</string>
+    <string name="select_crypto_currency">เลือกสกุลเงินคริปโต</string>
+    <string name="select_sell_currency">เลือกขายสกุลเงิน</string>
+    <string name="select_buy_currency">เลือกซื้อสกุลเงิน</string>
+    <string name="select_fiat_currency">เลือกสกุลเงินเฟียต</string>
+    <string name="show_payment_qr_code">แสดงโค้ด QR การชำระเงิน</string>
+    <string name="pay_with_btc_from_liquid">ชำระด้วย BTC จากสภาพคล่อง</string>
+    <string name="or">หรือ</string>
+
+    <string name="internet_connected">กรุณาเชื่อมต่อกับอินเทอร์เน็ต</string>
+    <string name="please_enter_amount">กรุณาระบุจำนวนเงิน</string>
+
+    <string name="choose_what_you_receive">เลือกสิ่งที่คุณได้รับ</string>
+    <string name="fiat_currency">สกุลเงินเฟียต</string>
+
+    <string name="liquid">สภาพคล่อง</string>
+    <string name="transfer">โอน</string>
+    <string name="filter_by">กรองโดย</string>
+</resources>

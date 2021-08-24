@@ -376,4 +376,8 @@
     <string name="payment_protocol_default_error_title">Giao dịch bị lỗi</string>
     <string name="payment_protocol_insufficient_funds_error_title">Không đủ tiền</string>
     <string name="payment_protocol_insufficient_funds_error_message">Bạn không có đủ kinh phí để hoàn tất giao dịch này</string>
-</resources>
+
+
+
+    <string name="activity_buy_and_sell_dash_filter">Lọc</string>
+    </resources>

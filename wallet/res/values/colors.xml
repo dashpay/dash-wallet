@@ -4,6 +4,7 @@
     <!-- password strength -->
     <color name="fg_password_strength_weak">#ff0000</color>
     <color name="fg_password_strength_fair">#c06000</color>
+    <color name="fg_password_strength_good">#666666</color>
     <color name="fg_password_strength_strong">#00a000</color>
 
     <!-- scanner -->
@@ -13,4 +14,7 @@
     <color name="scan_result_view">#b0000000</color>
     <color name="scan_result_dots">#c099cc00</color>
 
+    <color name="black">#000000</color>
+    <color name="black_liquid">#171717</color>
+    <color name="grey_liquid">#9B9B9B</color>
 </resources>

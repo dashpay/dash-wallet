@@ -43,3 +43,10 @@ lang_map = sl_SI:sl, zh_TW:zh-rTW
 source_file = uphold-integration/src/main/res/values/strings-uphold.xml
 source_lang = en
 type = ANDROID
+
+[dash-mobile-wallets.strings-liquid]
+file_filter = liquid-integration/src/main/res/values-<lang>/strings-liquid.xml
+lang_map = sl_SI:sl, zh_TW:zh-rTW
+source_file = liquid-integration/src/main/res/values/strings-liquid.xml
+source_lang = en
+type = ANDROID

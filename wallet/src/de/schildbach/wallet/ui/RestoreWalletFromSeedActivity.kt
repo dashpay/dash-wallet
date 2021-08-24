@@ -29,6 +29,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_forgot_pin.*
 import kotlinx.android.synthetic.main.activity_recover_wallet_from_seed.*

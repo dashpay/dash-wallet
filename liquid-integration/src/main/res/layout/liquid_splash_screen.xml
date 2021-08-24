@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <include
+        layout="@layout/app_bar_general"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        tools:ignore="MissingDefaultResource">
+
+        <ImageView
+            android:id="@+id/liquid_logo"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="60dp"
+            android:src="@drawable/ic_liquid_big" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/liquid_logo"
+            android:layout_marginLeft="30dp"
+            android:layout_marginTop="50dp"
+            android:layout_marginRight="30dp"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/ic_creditcard_splash"
+                android:drawablePadding="15dp"
+                android:text="@string/buy_dash_with_liquid_account"
+                android:textColor="@color/primary_status"
+                android:textSize="16dp" />
+
+            <TextView
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:drawableLeft="@drawable/ic_crypto_splash"
+                android:drawablePadding="15dp"
+                android:text="@string/transfer_dash_from_your_liquid_account_to_this_wallet"
+                android:textColor="@color/primary_status"
+                android:textSize="16dp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <TextView
+                style="@style/MontserratRegular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:drawableLeft="@drawable/ic_transfer_liquid"
+                android:drawablePadding="15dp"
+                android:text="@string/transfer_dash_to_and_from_account"
+                android:textColor="@color/primary_status"
+                android:textSize="16dp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+
+        <Button
+            android:id="@+id/liquid_link_account"
+            style="@style/DashButton.Blue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_margin="16dp"
+            android:text="@string/link_liquid_account" />
+
+    </RelativeLayout>
+
+</LinearLayout>

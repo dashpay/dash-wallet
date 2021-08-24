@@ -191,7 +191,7 @@ open class LockScreenActivity : AppCompatActivity() {
         super.onStart()
         autoLogout.setOnLogoutListener(onLogoutListener)
 
-        if (!keepUnlocked && (autoLogout.keepLockedUntilPinEntered || configuration.autoLogoutEnabled && autoLogout.shouldLogout())) {
+        if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
             setLockState(State.ENTER_PIN)
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
@@ -199,7 +199,8 @@ open class LockScreenActivity : AppCompatActivity() {
             }
         } else {
             root_view_switcher.displayedChild = 1
-            autoLogout.maybeStartAutoLogoutTimer()
+            if (!keepUnlocked)
+                autoLogout.maybeStartAutoLogoutTimer()
         }
 
         startBlockchainService()

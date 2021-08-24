@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/buy_and_sell_dash_filter"
+        android:icon="@drawable/ic_filter"
+        android:title="@string/activity_buy_and_sell_dash_filter"
+        android:titleCondensed="@string/button_set_as_default"
+        android:visible="false"
+        app:showAsAction="always|withText" />
+
+</menu>

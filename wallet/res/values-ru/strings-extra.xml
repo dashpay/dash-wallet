@@ -309,14 +309,8 @@
     <string name="welcome_screen_title_3">Больше контроля</string>
     <string name="welcome_screen_subtitle_3">Полный контроль и настройки кошелька для Ваших нужд</string>
 
-    <string-array name="history_filter">
-        <item>Все</item>
-        <item>Получено</item>
-        <item>Отправлено</item>
-    </string-array>
-
     <string name="sync_status_wait">Пожалуйста, подождите завершения синхронизации</string>
-    <string name="sync_status_syncing_title">Синхронизация</string>
+    <string name="sync_status_syncing_title">Синхронизация %1$d</string>
     <string name="sync_status_syncing_sub_title">с Dash блокчейн</string>
     <string name="sync_status_unable_to_connect">Не удалось подключиться</string>
     <string name="sync_status_check_connection">Проверьте ваше интернет-соединение</string>
@@ -343,4 +337,11 @@
     <string name="import_image_no_private_key_copied">Приватный ключ не скопирован</string>
     <string name="import_image_import_valid_private_key">Скопируйте действующий приватный ключ, чтобы с его помощью импортировать Dash</string>
     <string name="import_image_invalid_private">Неверный приватный ключ</string>
+
+    <string name="syncing">Синхронизация</string>
+    <string name="syncing_balance">Синхронизация баланса</string>
+
+    <string name="all_transactions">Все</string>
+    <string name="received_transactions">Получено</string>
+    <string name="sent_transactions">Отправлено</string>
 </resources>

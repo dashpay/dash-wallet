@@ -32,6 +32,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
 import de.schildbach.wallet.ui.preference.PinRetryController
 import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet_test.BuildConfig
@@ -88,6 +89,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         slogan.setPadding(slogan.paddingLeft, slogan.paddingTop, slogan.paddingRight, getStatusBarHeightPx())
 
         walletApplication = (application as WalletApplication)
+
         if (walletApplication.walletFileExists()) {
             regularFlow()
         } else {
@@ -217,5 +219,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
         if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
             upgradeOrStartMainActivity()
         }
+    }
+
+    fun getWalletApplication() : WalletApplication {
+        return walletApplication
     }
 }

@@ -1,22 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView android:layout_width="match_parent"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:scrollbars="none"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        style="@style/DialogContainer">
+        android:layout_marginLeft="@dimen/list_entry_padding_horizontal_lax"
+        android:layout_marginRight="@dimen/list_entry_padding_horizontal_lax"
+        android:orientation="vertical">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
-            android:text="@string/backup_wallet_dialog_message"
-            style="@style/MontserratRegular.DB.12"/>
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
+            android:text="@string/backup_wallet_dialog_message" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -24,7 +26,7 @@
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:divider="@drawable/divider_field"
             android:orientation="horizontal"
-            android:showDividers="middle" >
+            android:showDividers="middle">
 
             <EditText
                 android:id="@+id/backup_wallet_dialog_password"
@@ -33,19 +35,15 @@
                 android:layout_weight="3"
                 android:hint="@string/import_export_keys_dialog_password"
                 android:inputType="textPassword"
-                android:singleLine="true"
-                android:layout_marginRight="-2dp"
-                android:layout_marginLeft="-2dp"
-                style="@style/MontserratSemiBold.DB.14"/>
+                android:singleLine="true" />
 
             <TextView
                 android:id="@+id/backup_wallet_dialog_password_strength"
                 android:layout_width="0px"
                 android:layout_height="wrap_content"
                 android:layout_weight="2"
-                style="@style/MontserratSemiBold"
+                android:textStyle="bold"
                 android:visibility="invisible" />
-
         </LinearLayout>
 
         <LinearLayout
@@ -53,8 +51,7 @@
             android:layout_height="wrap_content"
             android:divider="@drawable/divider_field"
             android:orientation="horizontal"
-            android:showDividers="middle"
-            android:layout_marginBottom="14dp">
+            android:showDividers="middle">
 
             <EditText
                 android:id="@+id/backup_wallet_dialog_password_again"
@@ -63,10 +60,7 @@
                 android:layout_weight="3"
                 android:hint="@string/backup_wallet_dialog_password_again"
                 android:inputType="textPassword"
-                android:singleLine="true"
-                android:layout_marginRight="-2dp"
-                android:layout_marginLeft="-2dp"
-                style="@style/MontserratSemiBold.DB.14"/>
+                android:singleLine="true" />
 
             <TextView
                 android:id="@+id/backup_wallet_dialog_password_mismatch"
@@ -75,27 +69,27 @@
                 android:layout_weight="2"
                 android:text="@string/backup_wallet_dialog_password_mismatch"
                 android:textColor="@color/fg_error"
-                style="@style/MontserratSemiBold"
+                android:textStyle="bold"
                 android:visibility="invisible" />
         </LinearLayout>
 
-        <de.schildbach.wallet.ui.widget.MontserratCheckBox
+        <CheckBox
             android:id="@+id/backup_wallet_dialog_show"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="14dp"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical"
             android:checked="false"
-            android:text="@string/import_export_keys_dialog_show"
-            style="@style/CheckBox"/>
+            android:text="@string/import_export_keys_dialog_show" />
 
         <TextView
             android:id="@+id/backup_wallet_dialog_warning_encrypted"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/list_entry_padding_vertical_lax"
+            android:layout_marginTop="@dimen/list_entry_padding_vertical_lax"
             android:text="@string/backup_wallet_dialog_warning_encrypted"
             android:textColor="@color/fg_less_significant"
-            style="@style/MontserratMedium.DB.12"/>
-
+            android:textSize="@dimen/font_size_small" />
     </LinearLayout>
-
 </ScrollView>

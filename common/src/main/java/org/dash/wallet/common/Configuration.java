@@ -72,6 +72,11 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
     private static final String PREFS_KEY_LAST_BACKUP_SEED_TIME = "last_backup_seed_time";
+    private static final String PREFS_KEY_LAST_RESTORE = "last_restore";
+    private static final String PREFS_KEY_LAST_ENCRYPT_KEYS = "last_encrypt_keys";
+    private static final String PREFS_KEY_LAST_BLOCKCHAIN_RESET = "last_blockchain_reset";
+    private static final String PREFS_KEY_LAST_BLUETOOTH_ADDRESS = "last_bluetooth_address";
+
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
@@ -261,6 +266,14 @@ public class Configuration {
 
     public boolean getRemindBackupSeed() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
+    }
+
+    public long getLastRestoreTime() {
+        return prefs.getLong(PREFS_KEY_LAST_RESTORE, 0);
+    }
+
+    public void updateLastRestoreTime() {
+        prefs.edit().putLong(PREFS_KEY_LAST_RESTORE, System.currentTimeMillis()).apply();
     }
 
     public boolean lastBackupSeedReminderMoreThan24hAgo() {
@@ -518,4 +531,21 @@ public class Configuration {
     public void setOnboardingInviteUsername(final String username) {
         prefs.edit().putString(PREFS_ONBOARDING_INVITE_USERNAME, username).apply();
     }
+
+    public long getLastEncryptKeysTime() {
+        return prefs.getLong(PREFS_KEY_LAST_ENCRYPT_KEYS, 0);
+    }
+
+    public void updateLastEncryptKeysTime() {
+        prefs.edit().putLong(PREFS_KEY_LAST_ENCRYPT_KEYS, System.currentTimeMillis()).apply();
+    }
+
+    public long getLastBlockchainResetTime() {
+        return prefs.getLong(PREFS_KEY_LAST_BLOCKCHAIN_RESET, 0);
+    }
+
+    public void updateLastBlockchainResetTime() {
+        prefs.edit().putLong(PREFS_KEY_LAST_BLOCKCHAIN_RESET, System.currentTimeMillis()).apply();
+    }
+
 }
