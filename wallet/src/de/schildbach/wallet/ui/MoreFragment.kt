@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
-import android.view.MenuItem
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
@@ -28,7 +27,6 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.dashpay.BottomNavFragment
@@ -45,13 +43,9 @@ import kotlinx.android.synthetic.main.update_profile_error.*
 import kotlinx.android.synthetic.main.update_profile_error.error_try_again
 import kotlinx.android.synthetic.main.update_profile_error.view.*
 import kotlinx.android.synthetic.main.update_profile_network_unavailable.*
-import org.dash.wallet.common.InteractionAwareActivity
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
+import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.slf4j.LoggerFactory
-
-private const val REQUEST_CODE_BUY_SELL = 100
-
-private const val RESULT_CODE_GO_HOME = 100
 
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
