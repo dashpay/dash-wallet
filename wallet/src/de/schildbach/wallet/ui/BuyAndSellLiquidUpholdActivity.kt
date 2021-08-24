@@ -91,11 +91,14 @@ class BuyAndSellLiquidUpholdActivity : AppCompatActivity() {
         loadingDialog!!.setCancelable(false)
         loadingDialog!!.setMessage(getString(org.dash.wallet.integration.liquid.R.string.loading))
 
+        val isProdBuild = de.schildbach.wallet.Constants.IS_PROD_BUILD
 
+        rlLiquid.isEnabled = isProdBuild
         rlLiquid.setOnClickListener {
             startActivityForResult(LiquidBuyAndSellDashActivity.createIntent(this), Constants.USER_BUY_SELL_DASH)
         }
 
+        rlUphold.isEnabled = isProdBuild
         rlUphold.setOnClickListener {
             val wallet = WalletApplication.getInstance().wallet
             startActivity(UpholdAccountActivity.createIntent(this))
