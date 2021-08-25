@@ -189,15 +189,12 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
                 .setToolbarColor(toolbarColor).build();
 
         CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url),
-                new CustomTabActivityHelper.CustomTabFallback() {
-                    @Override
-                    public void openUri(Activity activity, Uri uri) {
-                        Intent intent = new Intent(Intent.ACTION_VIEW);
-                        intent.setData(Uri.parse(url));
-                        startActivity(intent);
-                    }
+                (activity, uri) -> {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setData(Uri.parse(url));
+                    startActivity(intent);
                 });
-        //finish();
+        super.turnOffAutoLogout();
     }
 
     @Override
@@ -209,5 +206,11 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        super.turnOnAutoLogout();
     }
 }

@@ -80,7 +80,7 @@ class PaymentProtocolFragment : Fragment() {
         view_flipper.inAnimation = AnimationUtils.loadAnimation(context, android.R.anim.fade_in)
 
         val closeActivityOnClickListener = View.OnClickListener {
-            activity!!.finish()
+            requireActivity().finish()
         }
         close_button.setOnClickListener(closeActivityOnClickListener)
         error_view.setOnCloseClickListener(closeActivityOnClickListener)
@@ -139,8 +139,12 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun initModel() {
-        paymentProtocolModel = ViewModelProvider(this).get(PaymentProtocolViewModel::class.java)
-        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner, Observer {})
+        paymentProtocolModel = ViewModelProvider(this)[PaymentProtocolViewModel::class.java]
+        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner) {
+            if (paymentProtocolModel.finalPaymentIntent != null && it != null) {
+                displayRequest(paymentProtocolModel.finalPaymentIntent!!, null)
+            }
+        }
         paymentProtocolModel.basePaymentIntent.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.LOADING -> {

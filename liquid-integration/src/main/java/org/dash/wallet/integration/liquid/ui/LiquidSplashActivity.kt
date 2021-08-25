@@ -26,6 +26,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.preference.PreferenceManager
 import android.view.MenuItem
 import android.view.View
@@ -33,14 +34,18 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
+import androidx.lifecycle.ViewModelProvider
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
+import org.dash.wallet.integration.liquid.databinding.LiquidSplashScreenBinding
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -50,11 +55,14 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
     private var loadingDialog: ProgressDialog? = null
     private var liquidClient: LiquidClient? = null
+    private lateinit var viewModel: LiquidViewModel
+    private lateinit var viewBinding: LiquidSplashScreenBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         log.info("liquid: starting liquid splash activity")
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.liquid_splash_screen)
+        viewBinding = LiquidSplashScreenBinding.inflate(layoutInflater)
+        setContentView(viewBinding.root)
         val toolbar = findViewById<View>(R.id.toolbar) as Toolbar
         setSupportActionBar(toolbar)
         liquidClient = LiquidClient.getInstance()
@@ -68,9 +76,12 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         loadingDialog!!.isIndeterminate = true
         loadingDialog!!.setCancelable(false)
         loadingDialog!!.setMessage(getString(R.string.loading))
-        findViewById<View>(R.id.liquid_link_account).setOnClickListener { authUser() }
-        findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this, true).show()
+
+        viewBinding.apply {
+            liquidLinkAccount.setOnClickListener { authUser() }
+            ivInfo.setOnClickListener {
+                CountrySupportDialog(this@LiquidSplashActivity, true).show()
+            }
         }
 
         handleIntent(intent)
@@ -85,8 +96,31 @@ class LiquidSplashActivity : InteractionAwareActivity() {
             prefs.edit().putBoolean(REMIND_UNSUPPORTED_COUNTRIES, false).apply()
             CountrySupportDialog(this, true).show()
         }
+
+        supportFragmentManager.beginTransaction().replace(
+            R.id.network_status_container,
+            NetworkUnavailableFragment.newInstance()
+        ).commitNow()
+        viewBinding.networkStatusContainer.isVisible = false
+
+        initViewModel()
     }
 
+    fun initViewModel() {
+        viewModel = ViewModelProvider(this)[LiquidViewModel::class.java]
+        viewModel.connectivityLiveData.observe(this) { isConnected ->
+            if (isConnected != null) {
+                setConnectionStatus(isConnected)
+            }
+        }
+    }
+
+    fun setConnectionStatus(isConnected: Boolean) {
+        viewBinding.apply {
+            networkStatusContainer.isVisible = !isConnected
+            liquidLinkAccount.isEnabled = isConnected
+        }
+    }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
@@ -215,15 +249,12 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     private fun startLiquidBuyAndSellDashActivity() {
-
-        //setResult(RESULT_OK)
         val intent = Intent(this, LiquidBuyAndSellDashActivity::class.java)
         val extras = getIntent().extras
         if (extras != null) {
             intent.putExtras(extras)
         }
         startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
-        //finish()
     }
 
     /**
@@ -252,6 +283,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
             intent.data = uri
             startActivity(intent)
         }
+        super.turnOffAutoLogout()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -265,7 +297,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     companion object {
-        fun createIntent(context: Context): Intent? {
+        fun createIntent(context: Context): Intent {
             return Intent(context, LiquidSplashActivity::class.java)
         }
 
@@ -293,5 +325,10 @@ class LiquidSplashActivity : InteractionAwareActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        super.turnOnAutoLogout()
     }
 }

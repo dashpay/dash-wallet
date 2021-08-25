@@ -489,6 +489,11 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+    <style name="DashButton.White.Bordered" parent="DashButton.Blue">
+        <item name="android:textColor">@drawable/white_button_bordered_text</item>
+        <item name="android:background">@drawable/white_button_bordered_background</item>
+    </style>
+
     <style name="DashButton.Transparent" parent="DashButton.Blue">
         <item name="android:background">@drawable/transparent_button_background</item>
     </style>
@@ -505,6 +510,11 @@
     <style name="DashButton.White" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/white_button_text</item>
         <item name="android:background">@drawable/white_button_background</item>
+    </style>
+
+    <style name="DashButton.White.NoDisabled" parent="DashButton.Blue">
+        <item name="android:textColor">@drawable/white_button_text</item>
+        <item name="android:background">@drawable/white_button_background_no_disabled</item>
     </style>
 
     <style name="DashButton.Gray" parent="DashButton.Blue">

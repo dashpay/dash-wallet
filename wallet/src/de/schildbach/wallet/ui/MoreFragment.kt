@@ -73,10 +73,6 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
         setupActionBarWithTitle(R.string.more_title)
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer {
-            blockchainState = it
-        })
-
         invite.visibility = View.GONE
         invite.setOnClickListener {
             // use observeOnce to avoid the history screen being recreated
@@ -134,6 +130,10 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
         editProfileViewModel = ViewModelProvider(this)[EditProfileViewModel::class.java]
         createInviteViewModel = ViewModelProvider(this)[CreateInviteViewModel::class.java]
+
+        mainActivityViewModel.blockchainStateData.observe(viewLifecycleOwner, Observer {
+            blockchainState = it
+        })
 
         // observe our profile
         editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer { dashPayProfile ->

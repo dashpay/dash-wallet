@@ -4,7 +4,6 @@ package org.dash.wallet.integration.liquid.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
-import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -17,21 +16,25 @@ import android.view.MenuItem
 import android.view.View
 import android.webkit.*
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import org.dash.wallet.integration.liquid.data.LiquidClient
-import org.dash.wallet.integration.liquid.data.LiquidConstants
-import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
-import org.dash.wallet.integration.liquid.model.WidgetResponse
+import androidx.lifecycle.ViewModelProvider
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.ui.ConnectivityViewModel
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.ui.NetworkUnavailableFragmentViewModel
 import org.dash.wallet.integration.liquid.R
+import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidConstants
+import org.dash.wallet.integration.liquid.databinding.ActivityWebviewQuickExchangeBinding
+import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
+import org.dash.wallet.integration.liquid.model.WidgetResponse
 import org.slf4j.LoggerFactory
 
 
@@ -103,13 +106,16 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
             return Intent(context, BuyDashWithCreditCardActivity::class.java)
         }
     }
-
+    private lateinit var viewBinding: ActivityWebviewQuickExchangeBinding
+    private lateinit var viewModel: ConnectivityViewModel
+    private lateinit var networkUnavailableViewModel: NetworkUnavailableFragmentViewModel
     private val mJsInterfaceName = "Android"
     private var error: String? = null
     private lateinit var webview: WebView
     private var walletAddress: String? = null
     private var userAmount: String? = null
     private var isTransactionSuccessful = false
+    private var lostConnection = false
 
     private var mPermissionRequest: PermissionRequest? = null
     val FILE_CHOOSER_RESULT_CODE = 1
@@ -119,9 +125,42 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     public override fun onCreate(savedInstanceState: Bundle?) {
         log.info("liquid: starting buy dash with credit card")
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_webview_quick_exchange)
-        webview = findViewById(R.id.webview)
+
+        viewBinding = ActivityWebviewQuickExchangeBinding.inflate(layoutInflater)
+        setContentView(viewBinding.root)
+
+        webview = viewBinding.webview
         loadWebView()
+
+        supportFragmentManager.beginTransaction().replace(
+            R.id.network_unavailable_container,
+            NetworkUnavailableFragment.newInstance(R.string.network_unavailable_check_connection, R.string.network_unavailable_return)
+        ).commitNow()
+
+        initViewModel()
+    }
+
+    fun initViewModel() {
+        viewModel = ViewModelProvider(this)[ConnectivityViewModel::class.java]
+        viewModel.connectivityLiveData.observe(this) { isConnected ->
+            if (isConnected != null) {
+                setConnectedState(isConnected)
+            }
+        }
+        networkUnavailableViewModel = ViewModelProvider(this)[NetworkUnavailableFragmentViewModel::class.java]
+        networkUnavailableViewModel.clickButton.observe(this) {
+            onBackPressed()
+        }
+
+    }
+
+    fun setConnectedState(isConnected: Boolean) {
+        if (isConnected && !lostConnection) {
+            viewBinding.viewSwitcher.displayedChild = 0
+        } else {
+            lostConnection = true
+            viewBinding.viewSwitcher.displayedChild = 1
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")

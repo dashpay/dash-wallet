@@ -30,12 +30,24 @@
 
     </androidx.appcompat.widget.Toolbar>
 
-    <WebView
-        android:id="@+id/webview"
+    <ViewSwitcher
+        android:id="@+id/view_switcher"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        tools:visibility="visible" />
+        android:layout_height="match_parent"
+        android:animateFirstView="false"
+        android:measureAllChildren="true">
+
+            <WebView
+                android:id="@+id/webview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:visibility="visible" />
+            <FrameLayout
+                android:id="@+id/network_unavailable_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                />
+    </ViewSwitcher>
 
     <LinearLayout
         android:id="@+id/closePane"
@@ -61,5 +73,6 @@
             android:text="@string/buying_dash_success_message" />
 
     </LinearLayout>
+
 
 </LinearLayout>

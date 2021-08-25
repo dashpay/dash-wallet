@@ -200,7 +200,6 @@
             android:name="de.schildbach.wallet.ui.send.SweepWalletActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:label="@string/sweep_wallet_activity_title"
-            android:launchMode="singleTask"
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="adjustResize" />
 

@@ -64,7 +64,7 @@ open class LockScreenActivity : AppCompatActivity() {
     private val configuration = walletApplication.configuration
     private val autoLogout: AutoLogout = walletApplication.autoLogout
 
-    private lateinit var viewModel: LockScreenViewModel
+    protected lateinit var lockScreenViewModel: LockScreenViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
     private var pinLength = configuration.pinLength
@@ -127,7 +127,7 @@ open class LockScreenActivity : AppCompatActivity() {
     }
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
-        viewModel.activatingLockScreen.call()
+        lockScreenViewModel.activatingLockScreen.call()
         setLockState(State.USE_DEFAULT)
     }
 
@@ -202,7 +202,7 @@ open class LockScreenActivity : AppCompatActivity() {
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
-            viewModel.activatingLockScreen.call()
+            lockScreenViewModel.activatingLockScreen.call()
             setLockState(State.USE_DEFAULT)
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
@@ -269,7 +269,7 @@ open class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun initViewModel() {
-        viewModel = ViewModelProvider(this)[LockScreenViewModel::class.java]
+        lockScreenViewModel = ViewModelProvider(this)[LockScreenViewModel::class.java]
         checkPinViewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
         checkPinViewModel.checkPinLiveData.observe(this, Observer {
             when (it.status) {
