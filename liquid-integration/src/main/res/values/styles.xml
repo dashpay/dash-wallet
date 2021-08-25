@@ -3,7 +3,7 @@
     <style name="LiquidCard">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">70dp</item>
-        <item name="android:background">@drawable/selectable_round_corners</item>
+        <item name="android:background">@drawable/liquid_card_background</item>
     </style>
 
     <style name="BuyIcon">
