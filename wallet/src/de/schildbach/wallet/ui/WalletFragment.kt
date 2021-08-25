@@ -44,7 +44,6 @@ import kotlinx.android.synthetic.main.sync_status_pane.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 
 class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
@@ -110,7 +109,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                     handleScan(v)
                 }
                 shortcuts_pane.buySellButton -> {
-                    startActivity(UpholdAccountActivity.createIntent(requireContext()))
+                    startActivity(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()));
                 }
                 shortcuts_pane.payToAddressButton -> {
                     handlePaste()

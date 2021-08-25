@@ -416,6 +416,7 @@
             android:name="org.dash.wallet.integration.liquid.ui.BuyDashWithCreditCardActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
+
         <activity
             android:name="org.dash.wallet.integration.liquid.ui.BuyDashWithCryptoCurrencyActivity"
             android:screenOrientation="portrait"
@@ -426,16 +427,15 @@
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
-
         <activity
             android:name="org.dash.wallet.integration.liquid.ui.WebViewActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
-
         <activity
             android:name="org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity"
             android:theme="@style/LockScreenActivity.Child.Theme" />
+
         <activity
             android:name="org.dash.wallet.integration.liquid.ui.LiquidSplashActivity"
             android:launchMode="singleTop"
