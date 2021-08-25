@@ -23,7 +23,6 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
@@ -35,7 +34,6 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
-import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.fragment_updating_profile.*
@@ -57,7 +55,6 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     private lateinit var createInviteViewModel: CreateInviteViewModel
     private val walletApplication = WalletApplication.getInstance()
     private var showInviteSection = false
-    private var lastInviteCount = -1
 
     companion object {
         const val PROFILE_VIEW = 0
@@ -86,11 +83,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             })
         }
         buy_and_sell.setOnClickListener {
-            if (blockchainState != null && blockchainState?.replaying!!) {
-                requireActivity().showBlockchainSyncingMessage()
-            } else {
-                startBuyAndSellActivity()
-            }
+            startBuyAndSellActivity()
         }
         security.setOnClickListener {
             startActivity(Intent(requireContext(), SecurityActivity::class.java))
