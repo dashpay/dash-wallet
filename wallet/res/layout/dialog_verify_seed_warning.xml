@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="18dp"
+    tools:context="de.schildbach.wallet.ui.VerifySeedWarningDialog">
+
+    <ImageButton
+        android:id="@+id/collapse_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_margin="10dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        app:srcCompat="@drawable/ic_popup_close"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/title"
+        style="@style/MontserratBold.Heading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:text="@string/verify_warning_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textView"
+        style="@style/MontserratRegular.G900.15"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="25dp"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:lineSpacingExtra="6dp"
+        android:text="@string/verify_warning_message"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/title" />
+
+    <ImageView
+        android:id="@+id/info_icon_1"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="32dp"
+        android:padding="7dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textView"
+        app:srcCompat="@drawable/ic_camera_frame" />
+
+    <TextView
+        android:id="@+id/info_text_1_title"
+        style="@style/MontserratSemiBold.G900.13"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="50dp"
+        android:text="@string/verify_warning_screenshots_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/info_icon_1"
+        app:layout_constraintTop_toTopOf="@id/info_icon_1" />
+
+    <TextView
+        android:id="@+id/info_text_1"
+        style="@style/MontserratRegular.G900.13"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="50dp"
+        android:lineSpacingExtra="4dp"
+        android:text="@string/verify_warning_screenshots_message"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/info_icon_1"
+        app:layout_constraintTop_toBottomOf="@id/info_text_1_title" />
+
+    <ImageView
+        android:id="@+id/info_icon_2"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="20dp"
+        android:padding="7dp"
+        app:layout_constraintStart_toStartOf="@+id/info_icon_1"
+        app:layout_constraintTop_toBottomOf="@id/info_text_1"
+        app:srcCompat="@drawable/ic_eyes" />
+
+    <TextView
+        android:id="@+id/info_text_2"
+        style="@style/MontserratRegular.G900.13"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="50dp"
+        android:lineSpacingExtra="4dp"
+        android:minHeight="50dp"
+        android:text="@string/verify_warning_do_not_show"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/info_icon_2"
+        app:layout_constraintTop_toTopOf="@+id/info_icon_2" />
+
+    <ImageView
+        android:id="@+id/info_icon_3"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="14dp"
+        android:padding="11dp"
+        app:layout_constraintStart_toStartOf="@+id/info_icon_2"
+        app:layout_constraintTop_toBottomOf="@id/info_text_2"
+        app:srcCompat="@drawable/ic_pencil_slash" />
+
+    <TextView
+        android:id="@+id/info_text_3"
+        style="@style/MontserratRegular.G900.13"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="50dp"
+        android:lineSpacingExtra="4dp"
+        android:minHeight="50dp"
+        android:text="@string/verify_warning_do_not_type"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/info_icon_3"
+        app:layout_constraintTop_toTopOf="@+id/info_icon_3" />
+</androidx.constraintlayout.widget.ConstraintLayout>

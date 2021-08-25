@@ -94,18 +94,6 @@ public abstract class AbstractWalletActivity extends LockScreenActivity implemen
 
     }
 
-    @Override
-    protected void onPause() {
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        super.onPause();
-    }
-
-    @Override
-    protected void onResume() {
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        super.onResume();
-    }
-
     public void onStart() {
         super.onStart();
         sSupervisor.start();

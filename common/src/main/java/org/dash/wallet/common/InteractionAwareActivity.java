@@ -24,9 +24,8 @@ import android.os.Bundle;
 import android.view.WindowManager;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class InteractionAwareActivity extends AppCompatActivity {
+public class InteractionAwareActivity extends SecureActivity {
 
     public static final String FORCE_FINISH_ACTION = "InteractionAwareActivity.FORCE_FINISH_ACTION";
 

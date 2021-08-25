@@ -38,12 +38,13 @@ import de.schildbach.wallet.ui.SET_PIN_REQUEST_CODE
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.DialogBuilder
 
 
 @Suppress("DEPRECATION")
 @SuppressLint("Registered")
-open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragment.WalletProvider {
+open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment.WalletProvider {
 
     companion object {
         const val DIALOG_RESTORE_WALLET_PERMISSION = 1
@@ -125,16 +126,6 @@ open class RestoreFromFileActivity : AppCompatActivity(), AbstractPINDialogFragm
 
     override fun onWalletUpgradeComplete(password: String) {
         viewModel.restoreWalletFromFile(walletBuffer, password)
-    }
-
-    override fun onPause() {
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        super.onPause()
-    }
-
-    override fun onResume() {
-        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        super.onResume()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

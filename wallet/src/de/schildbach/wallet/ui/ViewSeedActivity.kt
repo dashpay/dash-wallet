@@ -46,7 +46,7 @@ class ViewSeedActivity : BaseMenuActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //setContentView(R.layout.activity_verify_seed)
+        super.setSecuredActivity(true)
 
         seed = if (intent.extras?.containsKey(EXTRA_SEED)!!) {
             intent.extras!!.getStringArray(EXTRA_SEED)!!
@@ -61,6 +61,10 @@ class ViewSeedActivity : BaseMenuActivity() {
 
         confirm_btn.setOnClickListener {
            finish()
+        }
+
+        explanation_btn.setOnClickListener {
+            VerifySeedWarningDialog().show(supportFragmentManager, "verify_seed_warning")
         }
 
         setTitle(R.string.view_seed_title)
