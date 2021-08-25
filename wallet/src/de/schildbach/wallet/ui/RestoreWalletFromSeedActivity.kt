@@ -62,7 +62,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        super.setSecuredActivity(true)
         setContentView(R.layout.activity_recover_wallet_from_seed)
 
         setSupportActionBar(toolbar)

@@ -120,9 +120,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         initViewModel()
         updateBalances()
 
-        val isProdBuild = de.schildbach.wallet.Constants.IS_PROD_BUILD
-
-        liquid_container.isEnabled = isProdBuild
         liquid_container.setOnClickListener {
             startActivityForResult(
                 LiquidBuyAndSellDashActivity.createIntent(this),
@@ -130,7 +127,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             )
         }
 
-        uphold_container.isEnabled = isProdBuild
         uphold_container.setOnClickListener {
             startActivity(UpholdAccountActivity.createIntent(this))
         }
@@ -242,10 +238,10 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             })
     }
 
-    fun setNetworkState(online: Boolean) {
+    private fun setNetworkState(online: Boolean) {
         network_status_container.isVisible = !online
-        liquid_container.isEnabled = online
-        uphold_container.isEnabled = online
+        liquid_container.isEnabled = online && Constants.IS_PROD_BUILD
+        uphold_container.isEnabled = online && Constants.IS_PROD_BUILD
         setLoginStatus(online)
         if (!isNetworkOnline && online) {
             updateBalances()

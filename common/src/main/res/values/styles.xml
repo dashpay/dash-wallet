@@ -170,8 +170,28 @@
         <item name="android:textSize">12sp</item>
     </style>
 
+    <style name="MontserratRegular.MG.13">
+        <item name="android:textSize">13sp</item>
+    </style>
+
     <style name="MontserratRegular.MG.14">
         <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="MontserratRegular.MG.15">
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900">
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="MontserratRegular.G900.13">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.15">
+        <item name="android:textSize">15sp</item>
     </style>
 
     <style name="MontserratMedium">
@@ -208,6 +228,10 @@
 
     <style name="NewMontserratButton.Primary" parent="MontserratButton">
         <item name="android:background">@drawable/primary_button</item>
+    </style>
+
+    <style name="NewMontserratButton.Primary.SemiBold" parent="NewMontserratButton.Primary">
+        <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
 
     <style name="NewMontserratButton.Secondary" parent="MontserratButton">
@@ -295,6 +319,31 @@
 
     <style name="MontserratSemiBold.MG.14">
         <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="MontserratSemiBold.WR">
+        <item name="android:textColor">@color/warning_red</item>
+    </style>
+
+    <style name="MontserratSemiBold.WR.13">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="MontserratSemiBold.G900">
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="MontserratSemiBold.G900.13">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="MontserratBold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="MontserratBold.Heading">
+        <item name="android:textSize">28sp</item>
+        <item name="android:textColor">@color/gray_900</item>
     </style>
 
     <style name="NavigationTheme" parent="My.Theme">
@@ -544,6 +593,13 @@
     <style name="TitleTextView.Secondary" parent="android:Widget.TextView">
         <item name="android:fontFamily">@font/montserrat</item>
         <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="DescriptionTextView" parent="android:Widget.TextView">
+        <item name="android:fontFamily">@font/montserrat_regular</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:lineSpacingExtra">4dp</item>
     </style>
 
     <style name="ProgressBar.Horizontal" parent="Base.Widget.AppCompat.ProgressBar.Horizontal">
