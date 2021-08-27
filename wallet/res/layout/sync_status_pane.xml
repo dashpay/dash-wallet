@@ -6,65 +6,6 @@
     android:layout_height="wrap_content">
 
     <RelativeLayout
-        android:id="@+id/sync_progress_pane"
-        style="@style/DashButton.White"
-        android:layout_width="match_parent"
-        android:layout_height="80dp">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="16dp"
-            android:layout_marginLeft="16dp"
-            android:gravity="center_vertical"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/sync_status_title"
-                style="@style/TitleTextView.Primary"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/sync_status_syncing_title" />
-
-            <TextView
-                android:id="@+id/sync_status_message"
-                style="@style/TitleTextView.Secondary"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/sync_status_syncing_sub_title"
-                android:textColor="@color/dash_gray" />
-
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/sync_status_percentage"
-            android:layout_width="64dp"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentRight="false"
-            android:layout_centerInParent="true"
-            android:layout_marginEnd="16dp"
-            android:layout_marginRight="16dp"
-            android:fontFamily="@font/montserrat_regular"
-            android:gravity="right"
-            android:text="0%"
-            android:textColor="@color/dash_blue"
-            android:textSize="24sp" />
-
-        <ProgressBar
-            android:id="@+id/sync_status_progress"
-            style="@style/ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:indeterminate="false"
-            android:progress="0"
-            android:visibility="visible" />
-
-    </RelativeLayout>
-
-    <RelativeLayout
         android:id="@+id/sync_error_pane"
         style="@style/Panel.Red"
         android:layout_width="match_parent"

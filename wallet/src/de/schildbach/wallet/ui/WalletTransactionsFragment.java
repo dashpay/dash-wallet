@@ -25,9 +25,12 @@ import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -39,7 +42,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.InteractionAwareActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +51,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainIdentityBaseData;
 import de.schildbach.wallet.data.BlockchainIdentityData;
+import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService;
 import de.schildbach.wallet.ui.invite.InviteHandler;
 import de.schildbach.wallet_test.R;
@@ -70,6 +73,7 @@ public class WalletTransactionsFragment extends Fragment
     private View loading;
     private RecyclerView recyclerView;
     private TransactionsAdapter adapter;
+    private TextView syncingText;
 
     private final Handler handler = new Handler();
 
@@ -117,6 +121,11 @@ public class WalletTransactionsFragment extends Fragment
         super.onViewCreated(view, savedInstanceState);
 
         loading = view.findViewById(R.id.loading);
+
+        syncingText = view.findViewById(R.id.syncing);
+        view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
+            new TransactionsFilterDialog().show(getChildFragmentManager(), null);
+        });
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -168,6 +177,49 @@ public class WalletTransactionsFragment extends Fragment
         mainActivityViewModel.isAbleToCreateIdentityLiveData().observe(getViewLifecycleOwner(), canJoinDashPay -> {
             adapter.setCanJoinDashPay(canJoinDashPay);
         });
+        mainActivityViewModel.getBlockchainStateData().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
+
+            public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
+                updateSyncState(blockchainState);
+            }
+        });
+        TransactionsFilterSharedViewModel transactionsFilterSharedViewModel = new ViewModelProvider(requireActivity())
+                .get(TransactionsFilterSharedViewModel.class);
+        transactionsFilterSharedViewModel.getOnAllTransactionsSelected().observe(getViewLifecycleOwner(), aVoid -> {
+            adapter.filter(TransactionsAdapter.Filter.ALL);
+        });
+        transactionsFilterSharedViewModel.getOnReceivedTransactionsSelected().observe(getViewLifecycleOwner(), aVoid -> {
+            adapter.filter(TransactionsAdapter.Filter.INCOMING);
+        });
+        transactionsFilterSharedViewModel.getOnSentTransactionsSelected().observe(getViewLifecycleOwner(), aVoid -> {
+            adapter.filter(TransactionsAdapter.Filter.OUTGOING);
+        });
+    }
+
+    private void updateSyncState(BlockchainState blockchainState) {
+        if (blockchainState == null) {
+            return;
+        }
+
+        int percentage = blockchainState.getPercentageSync();
+        if (blockchainState.getReplaying() && blockchainState.getPercentageSync() == 100) {
+            //This is to prevent showing 100% when using the Rescan blockchain function.
+            //The first few broadcasted blockchainStates are with percentage sync at 100%
+            percentage = 0;
+        }
+
+        if (blockchainState.isSynced()) {
+            syncingText.setVisibility(View.GONE);
+        } else {
+            syncingText.setVisibility(View.VISIBLE);
+            String syncing = getString(R.string.syncing);
+            SpannableStringBuilder str = new SpannableStringBuilder(syncing + " " + percentage + "%");
+            int start = syncing.length() + 1;
+            int end = str.length();
+            str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            syncingText.setText(str);
+        }
     }
 
     @Override
