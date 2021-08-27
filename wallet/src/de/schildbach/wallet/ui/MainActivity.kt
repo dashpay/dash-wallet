@@ -15,7 +15,6 @@ import android.os.Handler
 import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
-import android.util.Log
 import android.view.MenuItem
 import android.view.WindowManager
 import androidx.activity.viewModels
@@ -195,7 +194,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         viewModel.blockchainStateData.observe(this) {
             it?.apply {
-                Log.i("INVITES", "${it.percentageSync}")
                 if (isSynced() && config.onboardingInviteProcessing) {
                     binding.restoringWalletCover.isVisible = false
                     handleOnboardingInvite(false)
