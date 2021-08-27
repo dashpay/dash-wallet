@@ -27,7 +27,7 @@ import androidx.fragment.app.FragmentPagerAdapter
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_accept_invite.*
+import de.schildbach.wallet_test.databinding.ActivityAcceptInviteBinding
 
 class AcceptInviteActivity : AppCompatActivity() {
 
@@ -43,16 +43,20 @@ class AcceptInviteActivity : AppCompatActivity() {
         }
     }
 
+    private lateinit var binding: ActivityAcceptInviteBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_accept_invite)
 
-        viewpager.adapter = WelcomePagerAdapter(supportFragmentManager, 0)
-        page_indicator.setViewPager(viewpager)
+        binding = ActivityAcceptInviteBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        continue_button.setOnClickListener {
-            if (viewpager.currentItem < 2) {
-                viewpager.setCurrentItem(viewpager.currentItem + 1, true)
+        binding.viewpager.adapter = WelcomePagerAdapter(supportFragmentManager, 0)
+        binding.pageIndicator.setViewPager(binding.viewpager)
+
+        binding.continueButton.setOnClickListener {
+            if (binding.viewpager.currentItem < 2) {
+                binding.viewpager.setCurrentItem(binding.viewpager.currentItem + 1, true)
             } else {
                 val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
                 val fromOnboarding = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)

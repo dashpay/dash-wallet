@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
@@ -44,9 +45,7 @@ class InviteHandlerActivity : AppCompatActivity() {
         }
     }
 
-    val viewModel by lazy {
-        ViewModelProvider(this).get(InviteHandlerViewModel::class.java)
-    }
+    val viewModel: InviteHandlerViewModel by viewModels()
 
     private val inviteHandler by lazy {
         InviteHandler(this)

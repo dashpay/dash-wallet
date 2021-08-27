@@ -61,12 +61,12 @@ class TransactionDetailsDialogFragment : DialogFragment() {
         if (blockchainIdentity != null) {
             userId = blockchainIdentity.getContactForTransaction(tx!!)
             if (userId != null) {
-                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(viewLifecycleOwner, Observer {
+                AppDatabase.getAppDatabase().dashPayProfileDaoAsync().loadByUserIdDistinct(userId).observe(viewLifecycleOwner) {
                     if (it != null) {
                         profile = it
                         finishInitialization(profile)
                     }
-                })
+                }
             }
         }
 
