@@ -19,15 +19,17 @@ package de.schildbach.wallet.ui.widget
 import android.content.Context
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.animation.Animation
 import android.view.animation.LinearInterpolator
 import android.view.animation.RotateAnimation
 import android.widget.LinearLayout
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.please_wait_restoring_wallet_view.view.*
+import de.schildbach.wallet_test.databinding.PleaseWaitRestoringWalletViewBinding
 
 
 class PleaseWaitRestoringWalletView(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
+    private var binding = PleaseWaitRestoringWalletViewBinding
+        .inflate(LayoutInflater.from(context), this)
 
     private val rotateAnimation = RotateAnimation(0f, 360f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply {
         duration = 2000
@@ -36,18 +38,18 @@ class PleaseWaitRestoringWalletView(context: Context, attrs: AttributeSet) : Lin
     }
 
     init {
-        inflate(context, R.layout.please_wait_restoring_wallet_view, this)
         orientation = VERTICAL
         gravity = Gravity.CENTER_VERTICAL
+        isClickable = true
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        please_wait_arrows.startAnimation(rotateAnimation)
+        binding.pleaseWaitArrows.startAnimation(rotateAnimation)
     }
 
     override fun onDetachedFromWindow() {
-        please_wait_arrows.clearAnimation()
+        binding.pleaseWaitArrows.clearAnimation()
         super.onDetachedFromWindow()
     }
 }
