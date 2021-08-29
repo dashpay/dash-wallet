@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Your wallet was reset!\nIt will take some time to recover.</string>
+    <string name="toast_start_storage_provider_selector_failed">No suitable cloud storage provider is installed.\nYou need something like \"Nextcloud\" or \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Use at your own risk. Read the &lt;u&gt;safety notes&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">You need to back up your wallet!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d hours behind</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Restore</string>
     <string name="restore_wallet_dialog_success">Wallet was restored.</string>
     <string name="restore_wallet_dialog_success_replay">Your wallet was successfully restored. Its balance will be determined next. This will take some time.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Warning: Your wallet is protected by a spending PIN. Make sure you still remember it before you receive to this wallet.</string>
     <string name="import_keys_dialog_failure">Wallet could not be restored:\n\n%s\n\nBad password?</string>
     <string name="backup_wallet_permission_dialog_title">Write permission missing</string>
     <string name="backup_wallet_permission_dialog_message">In order to backup your wallet to external storage, you need to grant write permission.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Your backup will be encrypted with the chosen password and written to external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Your wallet is protected by a spending PIN. Make sure you remember the PIN in addition to the backup password!</string>
     <string name="export_keys_dialog_button_export">Back up</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Your wallet has been backed up to <tt>%s</tt></p><p>If your device has a removable SD card, your backup <i>should</i> be on that card. Remove it and keep it at a safe place. If the card is <i>not</i> removable, you need to archive your backup to some other place than your device.</p><p><b>If the only place your backup exists is on your device, you run the risk of losing both at the same time!</b></p><p>In any case, make sure you remember your backup password. Do you want to archive your wallet now?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Your wallet has been backed up to <tt>%s</tt></p><p><b>If the only place your backup exists is on your device, you run the risk of losing both at the same time!</b></p><p>In any case, make sure you remember your backup password.</p>]]></string>
     <string name="export_keys_dialog_failure">Your wallet could not be backed up:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archive</string>
     <string name="export_keys_dialog_mail_subject">Dash Wallet backup</string>
@@ -376,4 +378,10 @@
     <string name="payment_protocol_default_error_title">Payment error</string>
     <string name="payment_protocol_insufficient_funds_error_title">Insufficient Funds</string>
     <string name="payment_protocol_insufficient_funds_error_message">You do not have sufficient funds to complete this transaction</string>
+
+
+
+    <string name="select_a_service">Select a Service</string>
+    <string name="activity_buy_and_sell_dash_filter">Filter</string>
+    <string name="clear_filter">Clear Filter</string>
 </resources>

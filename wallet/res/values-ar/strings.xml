@@ -377,4 +377,10 @@
     <string name="payment_protocol_default_error_title">خطأ في الدفع</string>
     <string name="payment_protocol_insufficient_funds_error_title">رصيد غير كاف</string>
     <string name="payment_protocol_insufficient_funds_error_message">ليس لديك رصيد كافي لإتمام هذه المعاملة</string>
+
+
+
+    <string name="select_a_service">اختر خدمة</string>
+    <string name="activity_buy_and_sell_dash_filter">منقي</string>
+    <string name="clear_filter">ازل فلتر البحث</string>
 </resources>

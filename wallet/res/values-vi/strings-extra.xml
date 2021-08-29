@@ -297,14 +297,7 @@
     <string name="welcome_screen_title_3">Kiểm soát nhiều hơn</string>
     <string name="welcome_screen_subtitle_3">Bạn có toàn quyền kiểm soát và tuỳ chỉnh ví dựa trên nhu cầu của mình</string>
 
-    <string-array name="history_filter">
-        <item>Tất cả</item>
-        <item>Đã nhận</item>
-        <item>Đã gửi</item>
-    </string-array>
-
     <string name="sync_status_wait">Vui lòng đợi quá trình đồng bộ hoàn thành</string>
-    <string name="sync_status_syncing_title">Đang đồng bộ</string>
     <string name="sync_status_syncing_sub_title">với blockchain của Dash</string>
     <string name="sync_status_unable_to_connect">Không thể kết nối</string>
     <string name="sync_status_check_connection">Kiểm tra kết nối của bạn</string>
@@ -324,4 +317,9 @@
     <string name="payment_request_close">Đóng</string>
     <string name="payment_request_skip">Bỏ qua</string>
     <string name="payment_request_paid_to">Được trả cho</string>
+
+    <string name="syncing">Đang đồng bộ</string>
+    <string name="all_transactions">Tất cả</string>
+    <string name="received_transactions">Đã nhận</string>
+    <string name="sent_transactions">Đã gửi</string>
 </resources>

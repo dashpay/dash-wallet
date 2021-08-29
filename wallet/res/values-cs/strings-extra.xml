@@ -309,14 +309,7 @@
     <string name="welcome_screen_title_3">Více možností</string>
     <string name="welcome_screen_subtitle_3">Měj naprostou kontrolu a přizpůsob si svojí peněženku</string>
 
-    <string-array name="history_filter">
-        <item>Vše</item>
-        <item>Přijato</item>
-        <item>Odesláno</item>
-    </string-array>
-
     <string name="sync_status_wait">Počkejte na dokončení synchronizace</string>
-    <string name="sync_status_syncing_title">Synchronizace</string>
     <string name="sync_status_syncing_sub_title">s Dash blockchainem</string>
     <string name="sync_status_unable_to_connect">Nelze se připojit</string>
     <string name="sync_status_check_connection">Zkontrolujte vaše připojení</string>
@@ -343,4 +336,9 @@
     <string name="import_image_no_private_key_copied">Nebyl zkopírován žádný privátní klíč</string>
     <string name="import_image_import_valid_private_key">Pro importování Dash zkopírujte platný privátní klíč  </string>
     <string name="import_image_invalid_private">Neplatný privátní klíč</string>
+
+    <string name="syncing">Synchronizace</string>
+    <string name="all_transactions">Vše</string>
+    <string name="received_transactions">Přijato</string>
+    <string name="sent_transactions">Odesláno</string>
 </resources>

@@ -68,6 +68,7 @@ class PaymentProtocolFragment : Fragment() {
         }
     }
 
+    private var userAuthorizedDuring = false
     private lateinit var paymentProtocolModel: PaymentProtocolViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -79,7 +80,7 @@ class PaymentProtocolFragment : Fragment() {
         view_flipper.inAnimation = AnimationUtils.loadAnimation(context, android.R.anim.fade_in)
 
         val closeActivityOnClickListener = View.OnClickListener {
-            activity!!.finish()
+            requireActivity().finish()
         }
         close_button.setOnClickListener(closeActivityOnClickListener)
         error_view.setOnCloseClickListener(closeActivityOnClickListener)
@@ -138,8 +139,12 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun initModel() {
-        paymentProtocolModel = ViewModelProvider(this).get(PaymentProtocolViewModel::class.java)
-        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner, Observer {})
+        paymentProtocolModel = ViewModelProvider(this)[PaymentProtocolViewModel::class.java]
+        paymentProtocolModel.exchangeRateData.observe(viewLifecycleOwner) {
+            if (paymentProtocolModel.finalPaymentIntent != null && it != null) {
+                displayRequest(paymentProtocolModel.finalPaymentIntent!!, null)
+            }
+        }
         paymentProtocolModel.basePaymentIntent.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.LOADING -> {
@@ -217,6 +222,7 @@ class PaymentProtocolFragment : Fragment() {
                     view_flipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
+                    userAuthorizedDuring = true
                     paymentProtocolModel.commitAndBroadcast(it.data!!.first)
                 }
                 Status.ERROR -> {
@@ -339,6 +345,6 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun isUserAuthorized(): Boolean {
-        return (activity as SendCoinsActivity).isUserAuthorized
+        return (activity as SendCoinsActivity).isUserAuthorized || userAuthorizedDuring
     }
 }

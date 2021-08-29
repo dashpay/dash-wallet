@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rlTop"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
+    android:background="@color/bg_less_bright"
+    android:orientation="vertical">
+
+    <include
+        layout="@layout/app_bar_general"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/llFilterSelected">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/message"
+                    style="@style/MontserratMedium.PageTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="28dp"
+                    android:gravity="center_horizontal"
+                    android:text="@string/select_a_service"
+                    android:textColor="@color/dash_black" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="15dp"
+                    android:text="@string/buy_sell_dash"
+                    android:textColor="@color/dash_gray"
+                    android:textSize="12sp" />
+
+                <RelativeLayout
+                    android:id="@+id/liquid_container"
+                    style="@style/DashButton.White.NoDisabled"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="30dp"
+                    android:layout_marginEnd="20dp"
+                    android:paddingBottom="25dp">
+
+                    <TextView
+                        android:id="@+id/liquid_connected"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_marginTop="5dp"
+                        android:layout_marginEnd="10dp"
+                        android:drawablePadding="5dp"
+                        android:text="@string/connected"
+                        android:textAllCaps="true"
+                        android:textColor="@color/dash_gray"
+                        android:textSize="12sp"
+                        android:visibility="gone"
+                        app:drawableStartCompat="@drawable/drawable_green_round"
+                        tools:visibility="visible"/>
+
+                    <ImageView
+                        android:id="@+id/imgLiquid"
+                        android:layout_width="wrap_content"
+                        android:layout_height="50dp"
+                        android:layout_below="@+id/liquid_connected"
+                        android:layout_alignParentStart="true"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="20dp"
+                        android:contentDescription="@string/app_name"
+                        app:srcCompat="@drawable/ic_liquid_logo" />
+
+                    <TextView
+                        android:id="@+id/liquid_connect"
+                        style="@style/MontserratRegular"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginEnd="10dp"
+                        android:gravity="center"
+                        android:text="@string/connect"
+                        android:textColor="@color/dash_gray"
+                        android:textSize="12sp"
+                        app:drawableRightCompat="@drawable/ic_forward" />
+
+
+                    <LinearLayout
+                        android:id="@+id/liquid_balance_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@+id/imgLiquid"
+                        android:layout_marginStart="10dp"
+                        android:orientation="horizontal"
+                        android:visibility="gone"
+                        tools:visibility="visible" >
+
+                        <ImageView
+                            android:layout_width="15dp"
+                            android:layout_height="15dp"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="4dp"
+                            app:srcCompat="@drawable/ic_dash_d_white_bottom"
+                            app:tint="@color/colorPrimary" />
+
+                        <TextView
+                            android:id="@+id/liquid_balance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginStart="5dp"
+                            android:layout_marginTop="2dp"
+                            android:text="0.00"
+                            android:textColor="@color/dash_black"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/liquid_fiat_amount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginStart="15dp"
+                            android:layout_marginTop="2dp"
+                            android:textColor="@color/dash_gray"
+                            android:textSize="12sp"
+                            tools:text="USD 0.00"/>
+
+                    </LinearLayout>
+
+                    <include layout="@layout/inaccurate_balance"
+                        android:id="@+id/liquid_balance_inaccurate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="10dp"
+                        android:layout_alignParentStart="true"
+                        android:layout_below="@+id/liquid_balance_container"
+                        />
+
+                </RelativeLayout>
+
+
+                <RelativeLayout
+                    android:id="@+id/uphold_container"
+                    style="@style/DashButton.White.NoDisabled"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="20dp"
+                    android:paddingBottom="25dp">
+
+                    <TextView
+                        android:id="@+id/uphold_connected"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_marginTop="5dp"
+                        android:layout_marginEnd="10dp"
+                        android:drawablePadding="5dp"
+                        android:text="@string/connected"
+                        android:textAllCaps="true"
+                        android:textColor="@color/dash_gray"
+                        android:textSize="12sp"
+                        android:visibility="gone"
+                        tools:visibility="visible"
+                        app:drawableStartCompat="@drawable/drawable_green_round" />
+
+                    <ImageView
+                        android:id="@+id/imgUphold"
+                        android:layout_width="125dp"
+                        android:layout_height="50dp"
+                        android:layout_below="@+id/uphold_connected"
+                        android:layout_alignParentStart="true"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="20dp"
+                        android:contentDescription="@string/app_name"
+                        android:src="@drawable/uphold_new_logo" />
+
+                    <TextView
+                        android:id="@+id/uphold_connect"
+                        style="@style/MontserratRegular"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginEnd="10dp"
+                        android:gravity="center"
+                        android:text="@string/connect"
+                        android:textColor="@color/dash_gray"
+                        android:textSize="12sp"
+                        app:drawableRightCompat="@drawable/ic_forward" />
+
+
+                    <LinearLayout
+                        android:id="@+id/uphold_balance_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@+id/imgUphold"
+                        android:layout_marginStart="10dp"
+                        android:orientation="horizontal"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <ImageView
+                            android:layout_width="15dp"
+                            android:layout_height="15dp"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="4dp"
+                            app:srcCompat="@drawable/ic_dash_d_white_bottom"
+                            app:tint="@color/colorPrimary" />
+
+                        <org.dash.wallet.common.ui.CurrencyTextView
+                            android:id="@+id/uphold_balance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginStart="5dp"
+                            android:layout_marginTop="2dp"
+                            android:text="0.00"
+                            android:textColor="@color/dash_black"
+                            tools:text="0.00"
+                            android:textSize="16sp" />
+
+                        <org.dash.wallet.common.ui.CurrencyTextView
+                            android:id="@+id/uphold_fiat_amount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginStart="15dp"
+                            android:layout_marginTop="2dp"
+                            tools:text="USD 0.00"
+                            android:includeFontPadding="false"
+                            android:textColor="@color/dash_gray"
+                            android:textSize="12sp" />
+
+
+                    </LinearLayout>
+
+                    <include
+                        android:id="@+id/uphold_balance_inaccurate"
+                        layout="@layout/inaccurate_balance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:layout_below="@+id/uphold_balance_container"
+                        android:layout_alignParentStart="true"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginEnd="10dp" />
+                </RelativeLayout>
+
+                <FrameLayout
+                    android:id="@+id/network_status_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    tools:ignore="UselessLeaf"
+                    android:visibility="gone"/>
+
+            </LinearLayout>
+        </ScrollView>
+
+
+        <LinearLayout
+            android:id="@+id/llFilterSelected"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:background="@color/white"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="30dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/MontserratRegular"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="@string/filter_by"
+                    android:textColor="@color/dash_gray"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    android:background="@drawable/drawable_filter_background"
+                    android:orientation="horizontal"
+                    android:padding="8dp">
+
+                    <TextView
+                        android:id="@+id/txtSelectedFilterCurrency"
+                        style="@style/MontserratRegular"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:textColor="#008DE4"
+                        android:textSize="14sp" />
+
+                    <ImageButton
+                        android:id="@+id/imgRemoveCurrency"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:background="@android:color/transparent"
+                        android:paddingLeft="10dp"
+                        android:paddingRight="10dp"
+                        app:srcCompat="@drawable/ic_x" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </RelativeLayout>
+</LinearLayout>

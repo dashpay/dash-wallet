@@ -24,9 +24,8 @@ import android.os.Bundle;
 import android.view.WindowManager;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class InteractionAwareActivity extends AppCompatActivity {
+public class InteractionAwareActivity extends SecureActivity {
 
     public static final String FORCE_FINISH_ACTION = "InteractionAwareActivity.FORCE_FINISH_ACTION";
 
@@ -40,7 +39,7 @@ public class InteractionAwareActivity extends AppCompatActivity {
     @Override
     public void onUserInteraction() {
         super.onUserInteraction();
-        ((ResetAutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
+        ((AutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
     }
 
     @Override
@@ -60,9 +59,21 @@ public class InteractionAwareActivity extends AppCompatActivity {
     }
 
     @Override
-    public void finish() {
-        unregisterReceiver(forceFinishReceiver);
-        super.finish();
+    protected void onDestroy() {
+        try {
+            unregisterReceiver(forceFinishReceiver);
+        } catch (Exception e) {
+            // already unregistered
+        }
+        super.onDestroy();
+    }
+
+    protected void turnOffAutoLogout() {
+        ((AutoLogoutTimerHandler) getApplication()).stopAutoLogoutTimer();
+    }
+
+    protected void turnOnAutoLogout() {
+        ((AutoLogoutTimerHandler) getApplication()).startAutoLogoutTimer();
     }
 
     private final BroadcastReceiver forceFinishReceiver = new BroadcastReceiver() {

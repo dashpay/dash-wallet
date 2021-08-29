@@ -309,14 +309,8 @@
     <string name="welcome_screen_title_3">Więcej Kontroli</string>
     <string name="welcome_screen_subtitle_3">Miej pełną kontrolę oraz dostosuj swój portfel w zależności od potrzeb</string>
 
-    <string-array name="history_filter">
-        <item>Całość</item>
-        <item>Otrzymane</item>
-        <item>Wysłane</item>
-    </string-array>
-
     <string name="sync_status_wait">Proszę poczekaj aż synchronizacja się zakończy</string>
-    <string name="sync_status_syncing_title">Synchronizowanie</string>
+    <string name="sync_status_syncing_title">Synchronizowanie %1$d</string>
     <string name="sync_status_syncing_sub_title">z łańcuchem bloków Dash</string>
     <string name="sync_status_unable_to_connect">Połączenie jest niemożliwe</string>
     <string name="sync_status_check_connection">Sprawdź swoje połączenie</string>
@@ -343,4 +337,11 @@
     <string name="import_image_no_private_key_copied">Klucz prywatny nie został skopiowany</string>
     <string name="import_image_import_valid_private_key">Skopiuj ważny klucz prywatny, aby importować z niego Dash</string>
     <string name="import_image_invalid_private">Niewłaściwy Klucz Prywatny</string>
+
+    <string name="syncing">Synchronizowanie</string>
+    <string name="syncing_balance">Synchronizowanie bilansu</string>
+
+    <string name="all_transactions">Całość</string>
+    <string name="received_transactions">Otrzymano</string>
+    <string name="sent_transactions">Wysłano</string>
 </resources>

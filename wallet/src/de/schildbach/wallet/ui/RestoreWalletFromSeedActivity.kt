@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -29,6 +30,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_forgot_pin.*
 import kotlinx.android.synthetic.main.activity_recover_wallet_from_seed.*
@@ -60,7 +62,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        super.setSecuredActivity(true)
         setContentView(R.layout.activity_recover_wallet_from_seed)
 
         setSupportActionBar(toolbar)
@@ -136,7 +138,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             }
         })
         viewModel.startActivityAction.observe(this, Observer {
-            startActivity(it)
+            startActivityForResult(it, SET_PIN_REQUEST_CODE)
         })
     }
 
@@ -156,6 +158,14 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             setMessage(errorMessage)
             setPositiveButton(R.string.button_ok, null)
             show()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == SET_PIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            setResult(Activity.RESULT_OK)
+            finish()
         }
     }
 }

@@ -23,11 +23,9 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
-import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.dashpay.BottomNavFragment
@@ -36,7 +34,6 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
-import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.fragment_updating_profile.*
@@ -44,8 +41,8 @@ import kotlinx.android.synthetic.main.update_profile_error.*
 import kotlinx.android.synthetic.main.update_profile_error.error_try_again
 import kotlinx.android.synthetic.main.update_profile_error.view.*
 import kotlinx.android.synthetic.main.update_profile_network_unavailable.*
-import org.dash.wallet.common.InteractionAwareActivity
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
+import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
+import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.slf4j.LoggerFactory
 
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
@@ -58,7 +55,6 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     private lateinit var createInviteViewModel: CreateInviteViewModel
     private val walletApplication = WalletApplication.getInstance()
     private var showInviteSection = false
-    private var lastInviteCount = -1
 
     companion object {
         const val PROFILE_VIEW = 0
@@ -74,10 +70,6 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
         setupActionBarWithTitle(R.string.more_title)
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(viewLifecycleOwner, Observer {
-            blockchainState = it
-        })
-
         invite.visibility = View.GONE
         invite.setOnClickListener {
             // use observeOnce to avoid the history screen being recreated
@@ -91,11 +83,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             })
         }
         buy_and_sell.setOnClickListener {
-            if (blockchainState != null && blockchainState?.replaying!!) {
-                requireActivity().showBlockchainSyncingMessage()
-            } else {
-                startBuyAndSellActivity()
-            }
+            startBuyAndSellActivity()
         }
         security.setOnClickListener {
             startActivity(Intent(requireContext(), SecurityActivity::class.java))
@@ -135,6 +123,10 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
         editProfileViewModel = ViewModelProvider(this)[EditProfileViewModel::class.java]
         createInviteViewModel = ViewModelProvider(this)[CreateInviteViewModel::class.java]
+
+        mainActivityViewModel.blockchainStateData.observe(viewLifecycleOwner, Observer {
+            blockchainState = it
+        })
 
         // observe our profile
         editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer { dashPayProfile ->
@@ -252,6 +244,13 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     }
 
     private fun startBuyAndSellActivity() {
-        startActivity(UpholdAccountActivity.createIntent(requireContext()))
+        startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()), REQUEST_CODE_BUY_SELL);
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == RESULT_CODE_GO_HOME) {
+            requireActivity().onBackPressed()
+        }
     }
 }

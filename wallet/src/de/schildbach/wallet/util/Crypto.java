@@ -16,15 +16,18 @@
 
 package de.schildbach.wallet.util;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
+import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bouncycastle.crypto.BufferedBlockCipher;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.DataLengthException;
@@ -277,6 +280,35 @@ public class Crypto {
         System.arraycopy(arrayB, 0, result, arrayA.length, arrayB.length);
 
         return result;
+    }
+
+    public static Boolean isEncryptedStream(InputStream is) {
+        final char[] buf = new char[OPENSSL_MAGIC_TEXT.length()];
+        Reader in = null;
+
+        try {
+            in = new InputStreamReader(is, Charsets.UTF_8);
+            if (in.read(buf) == -1)
+                return false;
+            final String str = new String(buf);
+            if (!str.toString().equals(OPENSSL_MAGIC_TEXT))
+                return false;
+            return true;
+        } catch (final IOException x) {
+            return false;
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (final IOException x2) {
+                }
+            }
+            try {
+                is.reset();
+            } catch (IOException x) {
+                //swallow
+            }
+        }
     }
 
     public final static FileFilter OPENSSL_FILE_FILTER = new FileFilter() {

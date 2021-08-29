@@ -48,12 +48,12 @@ import de.schildbach.wallet.integration.android.BitcoinIntegration;
 public class SampleActivity extends Activity {
     private static final long AMOUNT = 500000;
     private static final String[] DONATION_ADDRESSES_MAINNET = {
-            "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv",  //Hash Engineering donation DASH address
-            "Xdeh9YTLNtci5zSL4DDayRSVTLf299n9jv"
+            "XmCwQUBbu9oHnqR7w7L8C1tiTRXCQZgWo1",  //Hash Engineering donation DASH address
+            "XmCwQUBbu9oHnqR7w7L8C1tiTRXCQZgWo1"
     };
     private static final String[] DONATION_ADDRESSES_TESTNET = {
-            "yd8Q7MwTDe9yJdeMx1YSSYS4wdxQ2HDqTg",   // http://test.faucet.masternode.io/
-            "ye5F5rfx44YqvqCpVvi1SfFS4dvqaqyuDr"    // https://test.faucet.dashninja.pl/
+            "yP8A3cbdxRtLRduy5mXDsBnJtMzHWs6ZXr",   // https://testnet-faucet.dash.org/
+            "yP8A3cbdxRtLRduy5mXDsBnJtMzHWs6ZXr"    // https://testnet-faucet.dash.org/
     };
     private static final String MEMO = "Sample donation";
     private static final String WALLET_URI_SCHEME = "dashwallet";
@@ -155,8 +155,8 @@ public class SampleActivity extends Activity {
                 .scheme(WALLET_URI_SCHEME)
                 .authority("")
                 .appendQueryParameter("pay", donationAddresses()[0])
-                .appendQueryParameter("amount", "0.123")
-                .appendQueryParameter("req-IS", "1")
+                .appendQueryParameter("amount", "0.001")
+                //.appendQueryParameter("req-IS", "1")
                 .appendQueryParameter("sender", getAppName())
                 .build();
         sendInterAppCommunicationRequest(requestUri, REQUEST_PAYMENT);
