@@ -1,23 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<androidx.fragment.app.FragmentContainerView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/exchange_rates_fragment"
+    android:name="de.schildbach.wallet.ui.ExchangeRatesFragment"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="@color/dash_lighter_gray"
-    android:orientation="vertical">
-
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/colorPrimary"
-        app:popupTheme="@style/My.PopupOverlay"
-        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
-
-    <fragment
-        android:id="@+id/exchange_rates_fragment"
-        android:name="de.schildbach.wallet.ui.ExchangeRatesFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-</LinearLayout>
+    android:layout_height="match_parent"
+    android:background="@color/dash_white"
+    android:orientation="vertical"/>

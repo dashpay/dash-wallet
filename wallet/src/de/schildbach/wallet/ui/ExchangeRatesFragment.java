@@ -24,6 +24,8 @@ import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.common.base.Strings;
 
 import org.dash.wallet.common.Configuration;
@@ -39,18 +41,26 @@ import de.schildbach.wallet_test.R;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 
+import androidx.annotation.IntegerRes;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
+
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.content.res.TypedArray;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
+
 import androidx.fragment.app.Fragment;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -59,17 +69,23 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.SearchView.OnQueryTextListener;
+
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * @author Andreas Schildbach
  */
-public final class ExchangeRatesFragment extends Fragment implements OnSharedPreferenceChangeListener {
+public final class ExchangeRatesFragment extends Fragment implements OnSharedPreferenceChangeListener, TextWatcher {
     private AbstractBindServiceActivity activity;
     private WalletApplication application;
     private Configuration config;
@@ -83,7 +99,7 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     private RecyclerView recyclerView;
     private ExchangeRatesAdapter adapter;
     private ExchangeRatesViewModel exchangeRatesViewModel;
-
+    private EditText searchView;
     private String query = null;
 
     private static final int ID_BALANCE_LOADER = 0;
@@ -160,10 +176,11 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         loading = view.findViewById(R.id.exchange_rates_loading);
         emptySearchView = view.findViewById(R.id.exchange_rates_empty_search);
         loadingErrorView = view.findViewById(R.id.exchange_rates_loading_error);
-
         recyclerView = view.findViewById(R.id.exchange_rates_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setAdapter(adapter);
+        searchView = view.findViewById(R.id.search_exchange_rate_btn);
+        searchView.addTextChangedListener(this);
         return view;
     }
 
@@ -190,42 +207,6 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         //loaderManager.destroyLoader(ID_RATE_LOADER);
 
         super.onDestroy();
-    }
-
-    @Override
-    public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
-        inflater.inflate(R.menu.exchange_rates_fragment_options, menu);
-
-        final SearchView searchView = (SearchView) menu.findItem(R.id.exchange_rates_options_search).getActionView();
-        searchView.setOnQueryTextListener(new OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextChange(final String newText) {
-                query = Strings.emptyToNull(newText.trim());
-                exchangeRatesViewModel.searchRates(query).observe(ExchangeRatesFragment.this,
-                        new Observer<List<de.schildbach.wallet.rates.ExchangeRate>>() {
-                    @Override
-                    public void onChanged(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
-                        updateView(exchangeRates);
-                    }
-                });
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextSubmit(final String query) {
-                searchView.clearFocus();
-
-                return true;
-            }
-        });
-
-        // Workaround for not being able to style the SearchView
-        final int id = searchView.getContext().getResources().getIdentifier("android:id/search_src_text", null, null);
-        final View searchInput = searchView.findViewById(id);
-        if (searchInput instanceof EditText)
-            ((EditText) searchInput).setTextColor(Color.WHITE);
-
-        super.onCreateOptionsMenu(menu, inflater);
     }
 
     @Override
@@ -283,6 +264,29 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         }
     };
 
+    @Override
+    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+    }
+
+    @Override
+    public void onTextChanged(CharSequence s, int start, int before, int count) {
+        final String input = s.toString();
+        query = Strings.emptyToNull(input.trim());
+        exchangeRatesViewModel.searchRates(query).observe(ExchangeRatesFragment.this,
+                new Observer<List<de.schildbach.wallet.rates.ExchangeRate>>() {
+                    @Override
+                    public void onChanged(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
+                        updateView(exchangeRates);
+                    }
+                });
+    }
+
+    @Override
+    public void afterTextChanged(Editable s) {
+        searchView.clearFocus();
+    }
+
     private final class ExchangeRatesAdapter extends RecyclerView.Adapter<ExchangeRateViewHolder> {
         private final LayoutInflater inflater = LayoutInflater.from(activity);
 
@@ -295,6 +299,8 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         private Coin balance = null;
         @Nullable
         private BlockchainState blockchainState = null;
+        @Nullable
+        private String defaultCurrencyFlag = null;
 
         private ExchangeRatesAdapter() {
             setHasStableIds(true);
@@ -382,11 +388,22 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
                     }
                 }
             });
+
+            Glide.with(getActivity()).load(getFlagFromCurrencyCode(exchangeRate.getCurrencyCode())).apply(RequestOptions.circleCropTransform()).into(holder.currencyFlag);
+            holder.itemSeparator.setVisibility(position == getItemCount() - 1 ? View.GONE : View.VISIBLE);
         }
 
         void setExchangeRates(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
             this.exchangeRates = exchangeRates;
             notifyDataSetChanged();
+        }
+    }
+
+    private Integer getFlagFromCurrencyCode(String currencyCode) {
+        if (currencyCode.equalsIgnoreCase("try")) return R.drawable.turk;    //we can't use 'try' as the recource name for turkish flag as try is a reserved keyword in java. A workaround is to use rename the turkish flag resource
+        else {
+            final int resourceId = getResources().getIdentifier(currencyCode.toLowerCase(Locale.ROOT), "drawable", getActivity().getPackageName());
+            return resourceId == 0 ? R.drawable.usd : resourceId;
         }
     }
 
@@ -396,6 +413,8 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         private final TextView currencyName;
         private final CurrencyTextView price;
         private final CheckBox defaultCurrencyCheckbox;
+        private final ImageView currencyFlag;
+        private final View itemSeparator;
 
         ExchangeRateViewHolder(final View itemView) {
             super(itemView);
@@ -403,6 +422,8 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
             currencyName = itemView.findViewById(R.id.local_currency_name);
             price = itemView.findViewById(R.id.price);
             defaultCurrencyCheckbox = itemView.findViewById(R.id.checkbox);
+            currencyFlag = itemView.findViewById(R.id.local_currency_flag);
+            itemSeparator = itemView.findViewById(R.id.item_divider);
         }
 
     }
