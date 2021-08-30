@@ -5,7 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:ignore="ContentDescription">
+    tools:ignore="ContentDescription"
+    tools:context="de.schildbach.wallet.ui.invite.InviteFilterSelectionDialog">
 
     <ImageView
         android:id="@+id/collapse_button"

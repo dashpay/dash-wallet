@@ -20,18 +20,17 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelStoreOwner
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dialog_invite_filter.*
+import de.schildbach.wallet_test.databinding.DialogInviteFilterBinding
 
-class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) : BaseBottomSheetDialogFragment() {
+@AndroidEntryPoint
+class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) :
+    BaseBottomSheetDialogFragment() {
 
     companion object {
 
@@ -41,51 +40,45 @@ class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) : Base
         }
     }
 
-    private lateinit var sharedViewModel: InvitesHistoryFilterViewModel
+    private var _binding: DialogInviteFilterBinding? = null
+    private val binding get() = _binding!!
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_invite_filter, container, false)
+    private val sharedViewModel: InvitesHistoryFilterViewModel by viewModels({ owner })
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = DialogInviteFilterBinding.inflate(inflater)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val array = view.context.resources.getStringArray(R.array.invite_filter);
-        firstItem.text = array[0]
-        secondItem.text = array[1]
-        thirdItem.text = array[2]
-        // take care of actions here
-        view.apply {
-            first.setOnClickListener {
-                sharedViewModel.filterBy.call(InvitesHistoryViewModel.Filter.ALL)
-                dismiss()
-            }
-            second.setOnClickListener {
-                sharedViewModel.filterBy.call(InvitesHistoryViewModel.Filter.PENDING)
-                dismiss()
-            }
-            third.setOnClickListener {
-                sharedViewModel.filterBy.call(InvitesHistoryViewModel.Filter.CLAIMED)
-                dismiss()
-            }
-        }
+        val array = view.context.resources.getStringArray(R.array.invite_filter)
+        binding.firstItem.text = array[0]
+        binding.secondItem.text = array[1]
+        binding.thirdItem.text = array[2]
 
-        dialog?.setOnShowListener { dialog ->
-            // apply wrap_content height
-            val d = dialog as BottomSheetDialog
-            val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            val coordinatorLayout = bottomSheet!!.parent as CoordinatorLayout
-            val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-            bottomSheetBehavior.peekHeight = bottomSheet.height
-            coordinatorLayout.parent.requestLayout()
+        // take care of actions here
+        binding.first.setOnClickListener {
+            sharedViewModel.setFilter(InvitesHistoryViewModel.Filter.ALL)
+            dismiss()
+        }
+        binding.second.setOnClickListener {
+            sharedViewModel.setFilter(InvitesHistoryViewModel.Filter.PENDING)
+            dismiss()
+        }
+        binding.third.setOnClickListener {
+            sharedViewModel.setFilter(InvitesHistoryViewModel.Filter.CLAIMED)
+            dismiss()
         }
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        sharedViewModel = activity?.run {
-            ViewModelProvider(owner)[InvitesHistoryFilterViewModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
-        println("vm-dialog-filter: $sharedViewModel")
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

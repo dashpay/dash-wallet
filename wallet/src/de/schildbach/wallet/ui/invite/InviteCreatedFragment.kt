@@ -23,11 +23,12 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_created.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 
 class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_created) {
@@ -56,15 +57,18 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         appCompatActivity.setSupportActionBar(toolbar)
 
         preview_button.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Invites.CREATED_PREVIEW)
             showPreviewDialog()
         }
         copy_invitation_link.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Invites.CREATED_COPY_LINK)
             copyInvitationLink()
         }
         send_button.setOnClickListener {
             shareInvitation(false)
         }
         maybe_later_button.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Invites.CREATED_LATER)
             finishActivity()
         }
 
@@ -85,19 +89,24 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
         val identityId = requireArguments().getString(ARG_IDENTITY_ID)!!
         viewModel.identityIdLiveData.value = identityId
 
-        viewModel.invitationLiveData.observe(viewLifecycleOwner, Observer {
+        viewModel.invitationLiveData.observe(viewLifecycleOwner) {
             tag_edit.setText(it.memo)
-        })
+        }
 
-        viewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
+        viewModel.dashPayProfileData.observe(viewLifecycleOwner) {
             profile_picture_envelope.avatarProfile = it
             setupInvitationPreviewTemplate(it!!)
-        })
+        }
     }
 
     private fun shareInvitation(shareImage: Boolean) {
         // save memo to the database
         viewModel.saveTag(tag_edit.text.toString())
+        viewModel.logEvent(AnalyticsConstants.Invites.CREATED_SEND)
+
+        if (!tag_edit.text.isNullOrBlank()) {
+            viewModel.logEvent(AnalyticsConstants.Invites.CREATED_TAG)
+        }
 
         super.shareInvitation(shareImage, viewModel.shortDynamicLinkData)
     }

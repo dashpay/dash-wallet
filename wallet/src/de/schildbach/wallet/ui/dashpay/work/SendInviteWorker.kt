@@ -17,13 +17,15 @@ package de.schildbach.wallet.ui.dashpay.work
 
 import android.content.Context
 import android.net.Uri
+import androidx.hilt.work.HiltWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.dynamiclinks.DynamicLink
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import com.google.firebase.dynamiclinks.ShortDynamicLink
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
@@ -34,16 +36,25 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.security.InvalidKeyException
+import java.util.*
+import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
 
-class SendInviteWorker(context: Context, parameters: WorkerParameters)
+
+@HiltWorker
+class SendInviteWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted parameters: WorkerParameters,
+    val analytics: AnalyticsService)
     : BaseWorker(context, parameters) {
 
     companion object {
@@ -80,8 +91,7 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
         try {
             encryptionKey = wallet.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
-            FirebaseCrashlytics.getInstance().log("Send Invite: failed to derive encryption key")
-            FirebaseCrashlytics.getInstance().recordException(ex)
+            analytics.logError(ex, "Send Invite: failed to derive encryption key")
             val msg = formatExceptionMessage("derive encryption key", ex)
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
         }
@@ -104,8 +114,7 @@ class SendInviteWorker(context: Context, parameters: WorkerParameters)
                     KEY_SHORT_DYNAMIC_LINK to shortDynamicLink.shortLink.toString()
             ))
         } catch (ex: Exception) {
-            FirebaseCrashlytics.getInstance().log("Send Invite: failed to send contact request")
-            FirebaseCrashlytics.getInstance().recordException(ex)
+            analytics.logError(ex, "Send Invite: failed to send contact request")
             Result.failure(workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("send invite", ex)))
         }

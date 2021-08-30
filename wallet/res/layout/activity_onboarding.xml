@@ -7,7 +7,7 @@
     android:background="@android:color/transparent"
     android:orientation="vertical"
     android:fitsSystemWindows="true"
-    tools:context="de.schildbach.wallet.ui.InviteHandlerActivity">
+    tools:context="de.schildbach.wallet.ui.OnboardingActivity">
 
     <FrameLayout
         android:layout_width="match_parent"

@@ -27,6 +27,7 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.common.collect.ImmutableList
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.data.InvitationLinkData
@@ -53,10 +54,13 @@ import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.CurrencyInfo
+import org.dash.wallet.common.services.AnalyticsService
 import org.dash.wallet.common.ui.DialogBuilder
 import java.io.IOException
 import java.util.*
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPermissionsResultCallback,
         UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener,
         EncryptNewKeyChainDialogFragment.OnNewKeyChainEncryptedListener,
@@ -83,6 +87,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private lateinit var viewModel: MainActivityViewModel
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
@@ -153,7 +159,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
                 if (config.isRestoringBackup && config.onboardingInviteProcessing) {
                     config.setOnboardingInviteProcessingDone()
-                    InviteHandler.showUsernameAlreadyDialog(this)
+                    InviteHandler(this, analytics).showUsernameAlreadyDialog()
                     restoring_wallet_cover.visibility = View.GONE
                 }
             }

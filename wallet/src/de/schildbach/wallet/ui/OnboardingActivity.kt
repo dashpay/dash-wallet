@@ -31,6 +31,7 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
@@ -47,6 +48,7 @@ const val SET_PIN_REQUEST_CODE = 1
 private const val RESTORE_PHRASE_REQUEST_CODE = 2
 private const val RESTORE_FILE_REQUEST_CODE = 3
 
+@AndroidEntryPoint
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {

@@ -18,7 +18,9 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import android.content.Intent
+import androidx.core.os.bundleOf
 import androidx.lifecycle.AndroidViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
@@ -27,9 +29,16 @@ import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class OnboardingViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class OnboardingViewModel @Inject constructor(
+    application: Application,
+    private val analytics: AnalyticsService
+) : AndroidViewModel(application) {
 
     private val log = LoggerFactory.getLogger(OnboardingViewModel::class.java)
 
@@ -51,6 +60,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         walletApplication.configuration.armBackupSeedReminder()
 
         if (onboardingInvite != null) {
+            analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, bundleOf())
             startActivityAction.call(AcceptInviteActivity.createIntent(getApplication(), onboardingInvite, true))
         } else {
             startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))

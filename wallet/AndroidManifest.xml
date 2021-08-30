@@ -498,6 +498,13 @@
                 android:resource="@xml/file_provider" />
         </provider>
 
+        <provider
+            android:name="androidx.work.impl.WorkManagerInitializer"
+            android:authorities="${applicationId}.workmanager-init"
+            android:enabled="false"
+            android:exported="false"
+            tools:replace="android:authorities" />
+
         <receiver
             android:name="de.schildbach.wallet.WalletBalanceWidgetProvider"
             android:label="@string/appwidget_wallet_balance_title">

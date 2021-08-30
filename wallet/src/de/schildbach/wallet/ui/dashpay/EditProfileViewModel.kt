@@ -29,6 +29,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.api.services.drive.Drive
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
@@ -45,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.*
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
@@ -55,13 +57,16 @@ import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.util.*
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 
-
-class EditProfileViewModel(application: Application) : BaseProfileViewModel(application) {
+@HiltViewModel
+class EditProfileViewModel @Inject constructor(
+    application: Application,
+    private val analytics: AnalyticsService
+) : BaseProfileViewModel(application) {
 
     enum class ProfilePictureStorageService {
         GOOGLE_DRIVE, IMGUR
@@ -278,8 +283,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                         log.info("imgur: delete canceled ($imgurDeleteUrl)")
                     }
                     if (!canceled) {
-                        FirebaseCrashlytics.getInstance().log("Failed to delete profile picture: ImgUr")
-                        FirebaseCrashlytics.getInstance().recordException(e)
+                        analytics.logError(e, "Failed to delete profile picture: ImgUr")
                         profilePictureUploadLiveData.postValue(Resource.error(e))
                         log.error("imgur: delete failed ($imgurDeleteUrl): ${e.message}")
                     }
@@ -318,13 +322,11 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                     } else {
                         log.error("imgur: upload failed: response invalid")
                         profilePictureUploadLiveData.postValue(Resource.error(response.message()))
-                        FirebaseCrashlytics.getInstance().log("Failed to upload profile picture: ImgUr")
-                        FirebaseCrashlytics.getInstance().recordException(Exception(response.message()))
+                        analytics.logError(Exception(response.message()), "Failed to upload profile picture: ImgUr")
                     }
                 } else {
                     log.error("imgur: upload failed (${response.code()}): ${response.message()}")
-                    FirebaseCrashlytics.getInstance().log("Failed to upload profile picture: ImgUr")
-                    FirebaseCrashlytics.getInstance().recordException(Exception(response.message()))
+                    analytics.logError(Exception(response.message()), "Failed to upload profile picture: ImgUr")
                     profilePictureUploadLiveData.postValue(Resource.error(response.message()))
                 }
             } catch (e: Exception) {
@@ -336,8 +338,7 @@ class EditProfileViewModel(application: Application) : BaseProfileViewModel(appl
                 if (!canceled) {
                     profilePictureUploadLiveData.postValue(Resource.error(e))
                     log.error("imgur: upload failed: ${e.message}", e)
-                    FirebaseCrashlytics.getInstance().log("Failed to upload profile picture: ImgUr")
-                    FirebaseCrashlytics.getInstance().recordException(e)
+                    analytics.logError(e, "Failed to upload profile picture: ImgUr")
                 }
             }
         }

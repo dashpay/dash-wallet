@@ -23,6 +23,8 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
@@ -41,10 +43,14 @@ import kotlinx.android.synthetic.main.update_profile_error.*
 import kotlinx.android.synthetic.main.update_profile_error.error_try_again
 import kotlinx.android.synthetic.main.update_profile_error.view.*
 import kotlinx.android.synthetic.main.update_profile_network_unavailable.*
+import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.slf4j.LoggerFactory
 
+@AndroidEntryPoint
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
     override val navigationItemId = R.id.more
@@ -78,7 +84,10 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
                 if (it == null || it.isEmpty()) {
                     InviteFriendActivity.startOrError(requireActivity())
                 } else {
-                    startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                    val intent = InvitesHistoryActivity.createIntent(requireContext()).apply {
+                        putExtra(AnalyticsConstants.CALLING_ACTIVITY, "more")
+                    }
+                    startActivity(intent)
                 }
             })
         }

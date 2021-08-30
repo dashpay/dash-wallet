@@ -4,9 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    app:viewToHideWhenSoftKeyboardIsOpen="@id/network_error_root">
+    app:viewToHideWhenSoftKeyboardIsOpen="@id/network_error_root"
+    tools:context="de.schildbach.wallet.ui.dashpay.ContactsFragment">
 
-    <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/root"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -22,7 +23,9 @@
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent">
 
-            <include layout="@layout/network_unavailable" />
+            <include
+                android:id="@+id/network_error_layout"
+                layout="@layout/network_unavailable" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

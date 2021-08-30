@@ -25,6 +25,7 @@ import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
@@ -41,8 +42,8 @@ import kotlinx.android.synthetic.main.contact_request_view.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.InteractionAwareActivity
 
+@AndroidEntryPoint
 class DashPayUserActivity : LockScreenActivity(),
         NotificationsAdapter.OnItemClickListener,
         ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {

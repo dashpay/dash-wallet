@@ -18,12 +18,17 @@ package de.schildbach.wallet.ui.invite
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.SingleLiveEvent
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class InvitesHistoryViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class InvitesHistoryViewModel @Inject constructor(
+    application: Application
+) : AndroidViewModel(application) {
     companion object {
         val log = LoggerFactory.getLogger(InvitesHistoryViewModel::class.java)
     }
