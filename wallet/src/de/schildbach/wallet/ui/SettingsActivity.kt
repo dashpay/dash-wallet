@@ -59,6 +59,7 @@ class SettingsActivity : BaseMenuActivity() {
             log.info("manually initiated blockchain reset")
 
             WalletApplication.getInstance().resetBlockchain()
+            WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
             val intent = MainActivity.createIntent(this)
             intent.putExtra(MainActivity.EXTRA_RESET_BLOCKCHAIN, true)
             startActivity(intent)

@@ -303,14 +303,8 @@
     <string name="welcome_screen_title_3">Daha Fazla Kontrol</string>
     <string name="welcome_screen_subtitle_3">Tam kontrol sahibi olun ve cüzdanınızı ihtiyacınıza göre özelleştirin</string>
 
-    <string-array name="history_filter">
-        <item>Hepsi</item>
-        <item>Alınan</item>
-        <item>Gönderilen</item>
-    </string-array>
-
     <string name="sync_status_wait">Lütfen senkronizasyonun tamamlanmasını bekleyin</string>
-    <string name="sync_status_syncing_title">Senkronize ediliyor</string>
+    <string name="sync_status_syncing_title">Senkronize ediliyor %1$d</string>
     <string name="sync_status_syncing_sub_title">Dash blok zinciri ile</string>
     <string name="sync_status_unable_to_connect">Bağlanılamıyor</string>
     <string name="sync_status_check_connection">Bağlantınızı kontrol edin</string>
@@ -337,4 +331,11 @@
     <string name="import_image_no_private_key_copied">Kopyalanan bir özel anahtar yok</string>
     <string name="import_image_import_valid_private_key">Dash\'i içe aktarmak için geçerli bir özel anahtar kopyalayın</string>
     <string name="import_image_invalid_private">Geçersiz Özel Anahtar</string>
+
+    <string name="syncing">Senkronize ediliyor</string>
+    <string name="syncing_balance">Bakiye senkronize ediliyor</string>
+
+    <string name="all_transactions">Hepsi</string>
+    <string name="received_transactions">Alınan</string>
+    <string name="sent_transactions">Gönderilen</string>
 </resources>

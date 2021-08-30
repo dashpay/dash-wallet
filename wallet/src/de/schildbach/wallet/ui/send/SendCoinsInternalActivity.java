@@ -20,8 +20,10 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.nfc.NfcAdapter;
+import android.os.Bundle;
 
 import de.schildbach.wallet.data.PaymentIntent;
+import de.schildbach.wallet.ui.LockScreenActivity;
 
 public class SendCoinsInternalActivity extends SendCoinsActivity {
 
@@ -68,4 +70,9 @@ public class SendCoinsInternalActivity extends SendCoinsActivity {
         return getIntent().getBooleanExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
     }
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getIntent().putExtra(LockScreenActivity.INTENT_EXTRA_KEEP_UNLOCKED, false);
+    }
 }

@@ -34,8 +34,9 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
+import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
+import de.schildbach.wallet.ui.backup.RestoreFromFileHelper
 import de.schildbach.wallet.ui.PaymentsFragment.Companion.ACTIVE_TAB_RECENT
-import de.schildbach.wallet.ui.RestoreFromFileHelper.OnRestoreWalletListener
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
@@ -320,19 +321,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             createBackupWalletPermissionDialog()
         } else if (id == DIALOG_RESTORE_WALLET_PERMISSION) {
             createRestoreWalletPermissionDialog()
-        } else if (id == DIALOG_RESTORE_WALLET) {
-            createRestoreWalletDialog()
         } else if (id == DIALOG_TIMESKEW_ALERT) {
             createTimeskewAlertDialog(args.getLong("diff_minutes"))
         } else if (id == DIALOG_VERSION_ALERT) {
             createVersionAlertDialog()
         } else throw java.lang.IllegalArgumentException()
-    }
-
-    override fun onPrepareDialog(id: Int, dialog: Dialog?) {
-        if (id == DIALOG_RESTORE_WALLET) {
-            prepareRestoreWalletDialog(dialog!!)
-        }
     }
 
     private fun createBackupWalletPermissionDialog(): Dialog? {
@@ -345,25 +338,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun createRestoreWalletPermissionDialog(): Dialog? {
         return RestoreFromFileHelper.createRestoreWalletPermissionDialog(this)
-    }
-
-    private fun createRestoreWalletDialog(): Dialog? {
-        return RestoreFromFileHelper.createRestoreWalletDialog(this, object : OnRestoreWalletListener {
-            override fun onRestoreWallet(wallet: Wallet) {
-                restoreWallet(wallet)
-                config.isRestoringBackup = true
-                config.disableNotifications()
-            }
-
-            override fun onRetryRequest() {
-                showDialog(MainActivity.DIALOG_RESTORE_WALLET)
-            }
-        })
-    }
-
-    private fun prepareRestoreWalletDialog(dialog: Dialog) {
-        val hasCoins = wallet.getBalance(Wallet.BalanceType.ESTIMATED).signum() > 0
-        RestoreFromFileHelper.prepareRestoreWalletDialog(this, hasCoins, dialog)
     }
 
     private fun showRestoreWalletFromSeedDialog() {
@@ -455,7 +429,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
             @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             val ndefMessage = intent
-                    .getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)[0] as NdefMessage
+                .getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)!![0] as NdefMessage
             val input = Nfc.extractMimePayload(Constants.MIMETYPE_TRANSACTION, ndefMessage)
             object : BinaryInputParser(inputType, input) {
                 override fun handlePaymentIntent(paymentIntent: PaymentIntent) {

@@ -38,6 +38,47 @@
             android:background="@color/dash_white"
             app:layout_constraintTop_toBottomOf="@id/label" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="15dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/rounded_background"
+            android:orientation="horizontal"
+            android:theme="@style/ScreenshotWarningBackground"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/input" >
+
+            <ImageView
+                app:srcCompat="@drawable/ic_camera_frame"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_margin="13dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="10dp"
+                android:layout_marginEnd="10dp"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/MontserratSemiBold.WR.13"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:text="@string/verify_no_screenshot_title" />
+
+                <TextView
+                    style="@style/DescriptionTextView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/verify_warning_screenshots_message" />
+            </LinearLayout>
+        </LinearLayout>
+
         <Button
             style="@style/DashButton.Blue"
             android:id="@+id/submit"

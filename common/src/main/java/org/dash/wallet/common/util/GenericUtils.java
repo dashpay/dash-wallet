@@ -27,6 +27,9 @@ import androidx.core.content.res.ResourcesCompat;
 
 import org.dash.wallet.common.R;
 
+import android.net.ConnectivityManager;
+import android.widget.Toast;
+
 import java.util.Currency;
 
 /**
@@ -73,4 +76,15 @@ public class GenericUtils {
 
         return builder;
     }
+
+    public static boolean isInternetConnected(Context context) {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        return cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected();
+    }
+
+    public static void showToast(Context context, String messages) {
+        Toast.makeText(context, messages, Toast.LENGTH_LONG).show();
+    }
+
 }

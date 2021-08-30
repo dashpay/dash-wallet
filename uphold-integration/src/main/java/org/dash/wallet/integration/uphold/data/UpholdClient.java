@@ -24,7 +24,6 @@ import com.securepreferences.SecurePreferences;
 import com.squareup.moshi.Moshi;
 
 import org.dash.wallet.common.data.BigDecimalAdapter;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +36,7 @@ import java.util.Map;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.Retrofit;
@@ -77,32 +77,18 @@ public class UpholdClient {
 
     };
 
-    private Interceptor loggingIntercepter = new Interceptor() {
-
-        @Override public okhttp3.Response intercept(Interceptor.Chain chain) throws IOException {
-            Request request = chain.request();
-
-            long t1 = System.nanoTime();
-            log.info(String.format("Sending request %s on %s%n%s",
-                    request.url(), chain.connection(), request.headers()));
-
-            okhttp3.Response response = chain.proceed(request);
-
-            long t2 = System.nanoTime();
-            log.info(String.format("Received response for %s in %.1fms%n%s",
-                    response.request().url(), (t2 - t1) / 1e6d, response.networkResponse()));
-
-            return response;
-        }
-    };
-
     private UpholdClient(Context context, String prefsEncryptionKey) {
         this.encryptionKey = prefsEncryptionKey;
         this.prefs = new SecurePreferences(context, prefsEncryptionKey, UPHOLD_PREFS);
         this.accessToken = getStoredAccessToken();
 
         String baseUrl = UpholdConstants.CLIENT_BASE_URL;
-        OkHttpClient okClient = new OkHttpClient.Builder().addInterceptor(headerInterceptor).addInterceptor(loggingIntercepter).build();
+        HttpLoggingInterceptor loggingIntercepter = new HttpLoggingInterceptor();
+        loggingIntercepter.setLevel(HttpLoggingInterceptor.Level.BODY);
+        OkHttpClient okClient = new OkHttpClient.Builder()
+                .addInterceptor(headerInterceptor)
+                .addInterceptor(loggingIntercepter)
+                .build();
 
         Moshi moshi = new Moshi.Builder()
                 .add(new BigDecimalAdapter())
@@ -266,7 +252,7 @@ public class UpholdClient {
 
     private UpholdCard getDashCard(List<UpholdCard> cards) {
         for (UpholdCard card : cards) {
-            if(card.getCurrency().equalsIgnoreCase("dash")) {
+            if (card.getCurrency().equalsIgnoreCase("dash")) {
                 return card;
             }
         }
@@ -283,9 +269,9 @@ public class UpholdClient {
             @Override
             public void onError(Exception e, boolean otpRequired) {
                 log.error("Error loading Dash balance: " + e.getMessage());
-                if(e instanceof UpholdException) {
-                    UpholdException ue = (UpholdException)e;
-                    if(ue.getCode() == 401) {
+                if (e instanceof UpholdException) {
+                    UpholdException ue = (UpholdException) e;
+                    if (ue.getCode() == 401) {
                         //we don't have the correct access token, let's logout
                         accessToken = null;
                         storeAccessToken();
@@ -385,7 +371,43 @@ public class UpholdClient {
 
     public interface Callback<T> {
         void onSuccess(T data);
+
         void onError(Exception e, boolean otpRequired);
     }
 
+    public interface CallbackFilter<T> {
+        void onSuccess(T data, String length);
+
+        void onError(Exception e, boolean otpRequired);
+    }
+
+    public void getUpholdCurrency(String rangeString, final CallbackFilter<String> callback) {
+
+        service.getUpholdCurrency(rangeString, UpholdConstants.UPHOLD_CURRENCY_LIST).enqueue(new retrofit2.Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                System.out.println("Response::" + response);
+                String length = "";
+                if (rangeString == "items=0-50") {
+
+                    length = response.headers().get("content-range");
+                }
+
+                System.out.println("ContentLength::" + length);
+
+
+                if (response.isSuccessful()) {
+                    callback.onSuccess(response.body(), length);
+                } else {
+                    log.error("Error obtaining Uphold access token " + response.message() + " code: " + response.code());
+                    callback.onError(new UpholdException("Error obtaining Uphold access token", response.message(), response.code()), false);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                callback.onError(new Exception(t), false);
+            }
+        });
+    }
 }

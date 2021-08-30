@@ -210,6 +210,19 @@ public class CrashReporter {
         report.append("Time of seed backup: "
                 + (lastBackupSeedTime > 0 ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none")
                 + "\n");
+        final long lastRestoreTime = configuration.getLastRestoreTime();
+        calendar.setTimeInMillis(lastRestoreTime);
+        report.append("Time of last restore: ").append(lastRestoreTime > 0 ? String.format(Locale.US, "%tF %tT %tZ",
+                calendar, calendar, calendar) : "none").append("\n");
+        final long lastEncryptKeysTime = configuration.getLastEncryptKeysTime();
+        calendar.setTimeInMillis(lastEncryptKeysTime);
+        report.append("Time of last encrypt keys: ").append(lastEncryptKeysTime > 0 ? String.format(Locale.US, "%tF " +
+                "%tT %tZ", calendar, calendar, calendar) :
+                "none").append("\n");
+        final long lastBlockchainResetTime = configuration.getLastBlockchainResetTime();
+        calendar.setTimeInMillis(lastBlockchainResetTime);
+        report.append("Time of last blockchain reset: ").append(lastBlockchainResetTime > 0
+                ? String.format(Locale.US, "%tF %tT %tZ", calendar, calendar, calendar) : "none").append("\n");
         report.append("Network: " + Constants.NETWORK_PARAMETERS.getId() + "\n");
         final Wallet wallet = application.getWallet();
         report.append("Encrypted: " + wallet.isEncrypted() + "\n");

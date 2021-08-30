@@ -376,4 +376,10 @@
     <string name="payment_protocol_default_error_title">지불 오류</string>
     <string name="payment_protocol_insufficient_funds_error_title">잔액 부족</string>
     <string name="payment_protocol_insufficient_funds_error_message">이 거래를 완료하기 위해 필요한 자금이 충분하지 않습니다</string>
+
+
+
+    <string name="select_a_service">서비스를 선택하십시오</string>
+    <string name="activity_buy_and_sell_dash_filter">필터</string>
+    <string name="clear_filter">필터 초기화</string>
 </resources>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Pripojiť likvidný účet</string>
+    <string name="buy_dash_with_liquid_account">Kúpiť si Dash kreditnou kartou</string>
+    <string name="liquid_logout">Odhlásiť</string>
+    <string name="liquid_logout_title">Odhlásiť sa z likvidného účtu</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Zameniť Dash za iné kryptomeny</string>
+    <string name="transfer_dash_to_and_from_account">Preveďte Dash na a zo svojho likvidného účtu</string>
+
+    <string name="cryptocurrency">Kryptomena</string>
+    <string name="credit_card">Kreditná karta</string>
+
+    <string name="buy">Kúpiť</string>
+    <string name="buy_dash">Kúpiť Dash</string>
+    <string name="sell_dash">Predať Dash</string>
+    <string name="buy_sell_dash_">Kúpiť a predať Dash</string>
+    <string name="button_cancel">Zrušiť</string>
+    <string name="choose_your_payment_method">Vyberte si spôsob platby</string>
+    <string name="crypto_support">Krypto podpora</string>
+    <string name="okay">Dobre</string>
+    <string name="close">Zatvoriť</string>
+    <string name="list_of_countries">Zobraziť zoznam nepodporovaných krajín</string>
+    <string name="buying_dash_not_supported">Nákup Dash pomocou kryptomeny nie je v niektorých krajinách podporovaný</string>
+    <string name="buying_dash_success_message">Túto obrazovku môžete zavrieť, Dash sa odošle do vašej peňaženky.</string>
+
+    <string name="confirm">Potvrdiť</string>
+    <string name="card_fees">Kartové poplatky</string>
+    <string name="conversion_rate">Konverzný kurz</string>
+    <string name="network_fee">Sieťový poplatok </string>
+    <string name="total">Celkovo</string>
+    <string name="connect">Pripojiť</string>
+    <string name="connected">Pripojené</string>
+    <string name="buy_sell_dash">Kúpiť a predať Dash alebo vytvoriť nový účet</string>
+
+
+    <string name="transfer_to_liquid">Previesť na likvidný účet</string>
+    <string name="transfer_from_liquid">Previesť z likvidného účtu</string>
+    <string name="disconnect">Udpojiť</string>
+    <string name="select_crypto_currency">Vyberte kryptomenu</string>
+    <string name="select_sell_currency">Vyberte predať menu</string>
+    <string name="select_buy_currency">Vyberte kúpiť menu</string>
+    <string name="select_fiat_currency">Vyberte klasickú menu</string>
+    <string name="show_payment_qr_code">Zobraziť QR kód platby</string>
+    <string name="pay_with_btc_from_liquid">Plaťte s BTC z likvidného účtu</string>
+    <string name="or">alebo</string>
+
+    <string name="internet_connected">Pripojte sa k internetu</string>
+    <string name="please_enter_amount">Zadajte sumu</string>
+
+    <string name="choose_what_you_receive">Vyberte si, koľko chcete dostať</string>
+    <string name="fiat_currency">Klasická mena</string>
+
+    <string name="liquid">Likvidný účet</string>
+    <string name="transfer">Presun</string>
+    <string name="filter_by">Filtrované podľa</string>
+</resources>

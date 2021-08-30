@@ -520,7 +520,7 @@ public class SendCoinsFragment extends Fragment {
             dashPayViewModel.sendContactRequest(viewModel.getUserData().getDashPayProfile().getUserId());
         }
         Intent transactionResultIntent = TransactionResultActivity.createIntent(activity,
-                activity.getIntent().getAction(), transaction, activity.isUserAuthorized(),
+                activity.getIntent().getAction(), transaction, isUserAuthorized(),
                 viewModel.getUserData());
         startActivity(transactionResultIntent);
     }

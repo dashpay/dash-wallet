@@ -36,7 +36,6 @@ import androidx.core.content.ContextCompat;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
@@ -134,6 +133,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        super.turnOnAutoLogout();
         loadUserBalance();
     }
 
@@ -191,14 +191,12 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
                     .setToolbarColor(toolbarColor).build();
 
             CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url),
-                    new CustomTabActivityHelper.CustomTabFallback() {
-                        @Override
-                        public void openUri(Activity activity, Uri uri) {
-                            Intent intent = new Intent(Intent.ACTION_VIEW);
-                            intent.setData(Uri.parse(url));
-                            startActivity(intent);
-                        }
+                    (activity, uri) -> {
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setData(Uri.parse(url));
+                        startActivity(intent);
                     });
+            super.turnOffAutoLogout();
         } else {
             showErrorAlert(-1);
         }
@@ -280,15 +278,12 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
                 .setToolbarColor(toolbarColor).build();
 
         CustomTabActivityHelper.openCustomTab(UpholdAccountActivity.this, customTabsIntent, Uri.parse(url),
-                new CustomTabActivityHelper.CustomTabFallback() {
-                    @Override
-                    public void openUri(Activity activity, Uri uri) {
-                        Intent intent = new Intent(Intent.ACTION_VIEW);
-                        intent.setData(Uri.parse(url));
-                        startActivity(intent);
-                    }
+                (activity, uri) -> {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setData(Uri.parse(url));
+                    startActivity(intent);
                 });
-
+        super.turnOffAutoLogout();
     }
 
     private void openLogOutUrl() {

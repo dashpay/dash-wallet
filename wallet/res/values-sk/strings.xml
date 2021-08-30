@@ -376,4 +376,10 @@
     <string name="payment_protocol_default_error_title">Chyba platby</string>
     <string name="payment_protocol_insufficient_funds_error_title">Nedostatok prostriedkov</string>
     <string name="payment_protocol_insufficient_funds_error_message">Na dokončenie tejto transakcie nemáte dostatok prostriedkov </string>
+
+
+
+    <string name="select_a_service">Vyberte službu</string>
+    <string name="activity_buy_and_sell_dash_filter">Filter platieb</string>
+    <string name="clear_filter">Zrušiť filter</string>
 </resources>

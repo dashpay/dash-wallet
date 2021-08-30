@@ -300,14 +300,8 @@
     <string name="welcome_screen_title_3">ควบคุมมากขึ้น</string>
     <string name="welcome_screen_subtitle_3">มีการควบคุมที่สมบูรณ์และกำหนดกระเป๋าสตางค์ของคุณตามความต้องการของคุณ</string>
 
-    <string-array name="history_filter">
-        <item>ทั้งหมด</item>
-        <item>ได้รับ</item>
-        <item>ส่ง</item>
-    </string-array>
-
     <string name="sync_status_wait">โปรดรอจนกว่าการซิงค์จะเสร็จสมบูรณ์</string>
-    <string name="sync_status_syncing_title">กำลังซิงค์</string>
+    <string name="sync_status_syncing_title">กำลังซิงค์ %1$d</string>
     <string name="sync_status_syncing_sub_title">กับ Dash Blockchain</string>
     <string name="sync_status_unable_to_connect">ไม่สามารถเชื่อมต่อ</string>
     <string name="sync_status_check_connection">ตรวจสอบการเชื่อมต่อ</string>
@@ -334,4 +328,11 @@
     <string name="import_image_no_private_key_copied">ไม่มีการคัดลอกคีย์ส่วนตัว</string>
     <string name="import_image_import_valid_private_key">คัดลอกคีย์ส่วนตัวที่ถูกต้องเพื่อนำเข้า Dash</string>
     <string name="import_image_invalid_private">คีย์ส่วนตัวไม่ถูกต้อง</string>
+
+    <string name="syncing">กำลังซิงค์</string>
+    <string name="syncing_balance">กำลังซิงค์ยอดคงเหลือ</string>
+
+    <string name="all_transactions">ทั้งหมด</string>
+    <string name="received_transactions">ได้รับ</string>
+    <string name="sent_transactions">ส่ง</string>
 </resources>

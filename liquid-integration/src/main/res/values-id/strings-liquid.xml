@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Tautkan Akun Liquid</string>
+    <string name="buy_dash_with_liquid_account">Beli Dash dengan kartu kredit</string>
+    <string name="liquid_logout">Keluar</string>
+    <string name="liquid_logout_title">Keluar dari Liquid</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Tukar Dash dengan cryptocurrency lainnya</string>
+    <string name="transfer_dash_to_and_from_account">Transfer Dash ke dan dari akun liquid Anda</string>
+
+    <string name="cryptocurrency">Cryptocurrency</string>
+    <string name="credit_card">Kartu Kredit</string>
+
+    <string name="buy">Beli</string>
+    <string name="buy_dash">Beli Dash</string>
+    <string name="sell_dash">Jual Dash</string>
+    <string name="buy_sell_dash_">Beli &amp; Jual Dash</string>
+    <string name="button_cancel">Batal</string>
+    <string name="choose_your_payment_method">Pilih metode pembayaran Anda</string>
+    <string name="crypto_support">Dukungan Crypto</string>
+    <string name="okay">Oke</string>
+    <string name="close">Tutup</string>
+    <string name="list_of_countries">Lihat daftar negara yang tidak didukung</string>
+    <string name="buying_dash_not_supported">Membeli Dash dengan cryptocurrency tidak didukung di beberapa negara</string>
+    <string name="buying_dash_success_message">Anda dapat menutup layar ini, Dash Anda akan dikirim ke dompet Anda.</string>
+
+    <string name="confirm">Memastikan</string>
+    <string name="card_fees">Biaya Kartu</string>
+    <string name="conversion_rate">Tingkat konversi</string>
+    <string name="network_fee">Biaya Jaringan</string>
+    <string name="total">Total</string>
+    <string name="connect">hubungkan</string>
+    <string name="connected">Terhubung</string>
+    <string name="buy_sell_dash">Untuk membeli &amp;amp; jual Dash atau buat akun baru</string>
+
+
+    <string name="transfer_to_liquid">Transfer ke Liquid</string>
+    <string name="transfer_from_liquid">Transfer dari Liquid</string>
+    <string name="disconnect">Terputus</string>
+    <string name="select_crypto_currency">Pilih Crypto Currency</string>
+    <string name="select_sell_currency">Pilih Jual Mata Uang</string>
+    <string name="select_buy_currency">Pilih Beli Mata Uang</string>
+    <string name="select_fiat_currency">Pilih Mata Uang Fiat</string>
+    <string name="show_payment_qr_code">Tampilkan Kode QR Pembayaran</string>
+    <string name="pay_with_btc_from_liquid">Bayar dengan BTC dari Liquid</string>
+    <string name="or">atau</string>
+
+    <string name="internet_connected">Silakan sambungkan ke internet</string>
+    <string name="please_enter_amount">Silakan masukkan jumlah</string>
+
+    <string name="choose_what_you_receive">Pilih apa yang Anda terima</string>
+    <string name="fiat_currency">Mata Uang Fiat</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">Transfer</string>
+    <string name="filter_by">Difilter oleh</string>
+</resources>

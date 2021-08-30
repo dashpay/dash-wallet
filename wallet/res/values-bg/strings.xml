@@ -376,4 +376,8 @@
     <string name="payment_protocol_default_error_title">Грешка при плащане</string>
     <string name="payment_protocol_insufficient_funds_error_title">Недостатъчни средства</string>
     <string name="payment_protocol_insufficient_funds_error_message">Нямате достатъчно средства за да извършите тази транзакция</string>
-</resources>
+
+
+
+    <string name="activity_buy_and_sell_dash_filter">Филтър</string>
+    </resources>

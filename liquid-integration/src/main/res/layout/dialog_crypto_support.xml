@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/LiquidCard"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:layout_margin="20dp"
+    android:orientation="vertical">
+
+    <ImageView
+        android:id="@+id/icon"
+        android:layout_width="55dp"
+        android:layout_height="55dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="54dp"
+        app:srcCompat="@drawable/ic_creditcard" />
+
+    <TextView
+        android:id="@+id/payment_support"
+        style="@style/MontserratSemiBold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="31dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginStart="10dp"
+        android:text="@string/crypto_support"
+        android:textColor="@color/dash_black"
+        android:textSize="18sp" />
+
+    <TextView
+        style="@style/MontserratRegular"
+        android:id="@+id/buying_not_supported"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:gravity="center"
+        android:text="@string/buying_dash_not_supported_credit_cards"
+        android:textColor="@color/dash_gray"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/txtCountrySupported"
+        style="@style/MontserratMedium"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginEnd="20dp"
+        android:layout_marginStart="20dp"
+        android:gravity="center"
+        android:text="@string/list_of_countries"
+        android:textColor="@color/colorPrimary"
+        android:textSize="16sp" />
+
+    <Button
+        android:id="@+id/btnOkay"
+        style="@style/NewMontserratButton.Primary"
+        android:textSize="16sp"
+        android:layout_width="150dp"
+        android:layout_height="44dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="26dp"
+        android:text="@string/okay" />
+
+
+
+
+</LinearLayout>
