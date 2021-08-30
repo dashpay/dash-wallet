@@ -403,7 +403,7 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         if (currencyCode.equalsIgnoreCase("try")) return R.drawable.turk;    //we can't use 'try' as the recource name for turkish flag as try is a reserved keyword in java. A workaround is to use rename the turkish flag resource
         else {
             final int resourceId = getResources().getIdentifier(currencyCode.toLowerCase(Locale.ROOT), "drawable", getActivity().getPackageName());
-            return resourceId == 0 ? R.drawable.usd : resourceId;
+            return resourceId == 0 ? R.drawable.ic_default_flag : resourceId;
         }
     }
 
