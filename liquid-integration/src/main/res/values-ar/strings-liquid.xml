@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">ربط حساب Liquid</string>
+    <string name="buy_dash_with_liquid_account">شراء داش ببطاقة الائتمان</string>
+    <string name="liquid_logout">تسجيل الخروج</string>
+    <string name="liquid_logout_title">تسجيل الخروج من Liquid</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">استبدل داش بعملات مشفرة أخرى</string>
+    <string name="transfer_dash_to_and_from_account">قم بتحويل داش من وإلى حساب liquid </string>
+
+    <string name="cryptocurrency">عملة مشفرة</string>
+    <string name="credit_card">بطاقة إئتمان</string>
+
+    <string name="buy">شراء</string>
+    <string name="buy_dash">شراء داش</string>
+    <string name="sell_dash">بيع داش</string>
+    <string name="buy_sell_dash_">شراء &amp; بيع داش</string>
+    <string name="button_cancel">إلغاء</string>
+    <string name="choose_your_payment_method">اختر طريقتك في الدفع</string>
+    <string name="crypto_support">دعم التشفير</string>
+    <string name="okay">اوك</string>
+    <string name="close">اغلاق</string>
+    <string name="list_of_countries">اعرض قائمة البلدان غير المدعومة</string>
+    <string name="buying_dash_not_supported">شراء داش بالعملات المشفرة غير مدعوم في بعض البلدان</string>
+    <string name="buying_dash_success_message">يمكنك إغلاق هذه الشاشة ، سيتم إرسال داش الخاص بك إلى محفظتك.</string>
+
+    <string name="confirm">تأكيد</string>
+    <string name="card_fees">رسوم البطاقة</string>
+    <string name="conversion_rate">معدل التحويل</string>
+    <string name="network_fee">رسوم الشبكة</string>
+    <string name="total">المجموع</string>
+    <string name="connect">اتصال</string>
+    <string name="connected">تم الاتصال</string>
+    <string name="buy_sell_dash">لشراء &amp;amp; بيع داش أو إنشاء حساب جديد</string>
+
+
+    <string name="transfer_to_liquid">تحويل إلى Liquid</string>
+    <string name="transfer_from_liquid">تحويل من Liquid</string>
+    <string name="disconnect">قطع الاتصال</string>
+    <string name="select_crypto_currency">اختر عملة مشفرة</string>
+    <string name="select_sell_currency">اختر بيع العملة المشفرة</string>
+    <string name="select_buy_currency">اختر شراء العملة المشفرة</string>
+    <string name="select_fiat_currency">حدد عملة ورقية</string>
+    <string name="show_payment_qr_code">إظهار رمز الاستجابة السريعة للدفع</string>
+    <string name="pay_with_btc_from_liquid">ادفع باستخدام BTC من Liquid</string>
+    <string name="or">او</string>
+
+    <string name="internet_connected">الرجاء الاتصال بالإنترنت</string>
+    <string name="please_enter_amount">الرجاء إدخال المبلغ</string>
+
+    <string name="choose_what_you_receive">اختر ما تحصل عليه</string>
+    <string name="fiat_currency">عملة ورقية</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">نقل</string>
+    <string name="filter_by">تم التصفية بواسطة</string>
+</resources>

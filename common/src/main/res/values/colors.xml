@@ -30,6 +30,7 @@
     <!-- added for transaction status -->
     <color name="secondary_status">#E78010</color>
     <color name="primary_status">#4A4A4A</color>
+    <color name="warning_red">#E85C4A</color>
 
     <color name="light_blue_38pct">#61A6D7F5</color>
     <color name="light_blue">#A6D7F5</color>
@@ -43,6 +44,7 @@
     <color name="gray">#FF979797</color>
     <color name="medium_gray">#ff4a4a4a</color>
     <color name="dark_text">#3c3c3c</color>
+    <color name="gray_900">#0C0C0D</color>
     <color name="black_text">#ff171717</color>
 
     <!-- foreground -->
@@ -67,5 +69,8 @@
     <color name="bg_dialog_title">@android:color/transparent</color>
     <color name="bg_shortcut">@color/colorPrimary</color>
     <color name="bg_dialog">#54000000</color>
-
+    <color name="black">#000000</color>
+    <color name="black_liquid">#171717</color>
+    <color name="grey_liquid">#9B9B9B</color>
+    <color name="warning_yellow">#FFFAF0</color>
 </resources>

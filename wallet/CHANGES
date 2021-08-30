@@ -1,4 +1,32 @@
 Dash Wallet
+
+v7.3.2
+* Dismiss the last PIN Entry Dialog upon Autologout  (bug from 7.2.4)
+* Prevent screenshots on Recovery Phrase Screens
+* Add information dialog about Recovery Phrase
+* Add network unavailable error handling for Liquid Screens
+* Use live exchange rates on BIP70 payment request flows
+* Disable autologout timer when linking Uphold/Liquid accounts
+* Use DashJ 0.17.8 which supports BIP69
+
+v7.3.1
+* Fix Uphold logout instructions
+* Dismiss PIN Entry Dialogs upon Autologout  (bug from 7.2.4)
+* Fix issue with onboarding (bug from 7.2.4)
+
+v7.3.0
+* Add Liquid Exchange Integration (supports Buy Dash with Credit Card)
+
+v7.2.7
+* When paying via another app with BIP70, the Lock Screen does not appear (bug from 7.2.4)
+* Lock Screen accepts fingerprints where previously it only accepted the fingerprint once time (bug from 7.2.4)
+
+v7.2.6
+* When autologout is off, then the app doesn't ask for PIN when starting (bug from 7.2.4)
+* When paying via another app, the Lock Screen does not appear (bug from 7.2.4)
+* Support Android 11
+* New interface for restoring a backup file during onboarding
+
 v7.2.5
 * Use DashJ 0.17.7 to support Dash Core 0.17
 * Enable backup/restore on Android 10*

@@ -45,7 +45,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.multidex.MultiDexApplication;
+
+import org.dash.wallet.integration.liquid.data.LiquidClient;
 import androidx.work.WorkManager;
 
 import com.google.common.base.Stopwatch;
@@ -65,9 +66,11 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.ResetAutoLogoutTimerHandler;
+import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.util.WalletDataProvider;
+import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,7 +114,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletApplication extends MultiDexApplication implements ResetAutoLogoutTimerHandler,
+public class WalletApplication extends BaseWalletApplication implements AutoLogoutTimerHandler,
         androidx.work.Configuration.Provider, WalletDataProvider {
     private static WalletApplication instance;
     private Configuration config;
@@ -281,7 +284,13 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
         byte[] xpubExcerptHash = Sha256Hash.hash(xpub.substring(4, 15).getBytes());
         String authenticationHash = Sha256Hash.wrap(xpubExcerptHash).toString();
 
+        UpholdConstants.CLIENT_ID = BuildConfig.UPHOLD_CLIENT_ID;
+        UpholdConstants.CLIENT_SECRET = BuildConfig.UPHOLD_CLIENT_SECRET;
+        UpholdConstants.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
         UpholdClient.init(getApplicationContext(), authenticationHash);
+
+        LiquidConstants.INSTANCE.setPUBLIC_API_KEY(BuildConfig.LIQUID_PUBLIC_API_KEY);
+        LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
     }
 
     private void initPlatform() {
@@ -423,6 +432,11 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     }
 
     public Wallet getWallet() {
+        return wallet;
+    }
+
+    @Override
+    public Wallet getWalletData() {
         return wallet;
     }
 
@@ -813,6 +827,16 @@ public class WalletApplication extends MultiDexApplication implements ResetAutoL
     @Override
     public void resetAutoLogoutTimer() {
         autoLogout.resetTimerIfActive();
+    }
+
+    @Override
+    public void startAutoLogoutTimer() {
+        autoLogout.startTimer();
+    }
+
+    @Override
+    public void stopAutoLogoutTimer() {
+        autoLogout.stopTimer();
     }
 
     @NotNull

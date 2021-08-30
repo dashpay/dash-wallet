@@ -30,7 +30,7 @@ import de.schildbach.wallet_test.R
 class VerifySeedItIsImportantFragment : VerifySeedBaseFragment() {
 
     private val showRecoveryPhraseBtn: Button by lazy {
-        view!!.findViewById<Button>(R.id.verify_show_recovery_phrase_button)
+        requireView().findViewById<Button>(R.id.verify_show_recovery_phrase_button)
     }
 
     companion object {
@@ -51,5 +51,4 @@ class VerifySeedItIsImportantFragment : VerifySeedBaseFragment() {
             (activity as VerifySeedActions).showRecoveryPhrase()
         }
     }
-
 }

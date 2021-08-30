@@ -7,6 +7,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
+import kotlinx.android.synthetic.main.fragment_enter_pin.*
 import org.bitcoinj.wallet.DeterministicSeed
 
 /**
@@ -48,7 +49,7 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
     }
 
     override fun initViewModel() {
-        viewModel = ViewModelProvider(this).get(DecryptSeedViewModel::class.java)
+        viewModel = ViewModelProvider(this)[DecryptSeedViewModel::class.java]
         (viewModel as DecryptSeedViewModel).decryptSeedLiveData.observe(viewLifecycleOwner, Observer {
             when (it.status) {
                 Status.ERROR -> {
@@ -85,6 +86,7 @@ class DecryptSeedWithPinDialog : CheckPinDialog() {
 
     override fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
         sharedModel = ViewModelProvider(activity)[DecryptSeedSharedModel::class.java]
+        initLockScreenViewModel(activity)
     }
 
     override fun onFingerprintSuccess(savedPass : String) {

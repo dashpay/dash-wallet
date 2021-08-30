@@ -115,6 +115,8 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     override fun startSeedVerification() {
         currentFragment = VerificationStep.ViewImportantInfo
         replaceFragment(VerifySeedItIsImportantFragment.newInstance())
+        supportFragmentManager.executePendingTransactions()
+        super.setSecuredActivity(false)
     }
 
     override fun skipSeedVerification() {
@@ -122,12 +124,14 @@ class VerifySeedActivity : InteractionAwareActivity(), VerifySeedActions {
     }
 
     override fun showRecoveryPhrase() {
+        super.setSecuredActivity(true)
         currentFragment = VerificationStep.ShowRecoveryPhrase
         val verifySeedWriteDownFragment = VerifySeedWriteDownFragment.newInstance(seed)
         replaceFragment(verifySeedWriteDownFragment)
     }
 
     override fun onVerifyWriteDown() {
+        super.setSecuredActivity(true)
         currentFragment = VerificationStep.VerifyRecoveryPhrase
         supportFragmentManager.beginTransaction().replace(R.id.container,
                 VerifySeedConfirmFragment.newInstance(seed)).commit()

@@ -376,4 +376,10 @@
     <string name="payment_protocol_default_error_title">Fout in de betaling</string>
     <string name="payment_protocol_insufficient_funds_error_title">Onvoldoende fondsen</string>
     <string name="payment_protocol_insufficient_funds_error_message">U heeft onvoldoende saldo om deze transactie te voltooien</string>
+
+
+
+    <string name="select_a_service">Kies een dienst</string>
+    <string name="activity_buy_and_sell_dash_filter">Filteren</string>
+    <string name="clear_filter">Maak filter leeg</string>
 </resources>

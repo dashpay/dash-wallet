@@ -11,6 +11,7 @@ This project contains several sub-projects:
  * __market__:
      App description and promo material for the Google Play app store.
  * __integration-android__:
+ 
      A tiny library for integrating Dash payments into your own Android app
      (e.g. donations, in-app purchases).
  * __sample-integration-android__:

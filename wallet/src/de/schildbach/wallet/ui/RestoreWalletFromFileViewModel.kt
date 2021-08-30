@@ -18,7 +18,9 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
@@ -36,6 +38,13 @@ class RestoreWalletFromFileViewModel(application: Application) : AndroidViewMode
     internal val showUpgradeWalletAction = SingleLiveEvent<Wallet>()
     internal val showUpgradeDisclaimerAction = SingleLiveEvent<Wallet>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
+
+    val backupUri = MutableLiveData<Uri>()
+    val displayName = MutableLiveData<String>()
+    val showSuccessDialog = SingleLiveEvent<Boolean>()
+    val showFailureDialog = SingleLiveEvent<String>()
+    val restoreWallet = SingleLiveEvent<Wallet>()
+    val retryRequest = SingleLiveEvent<Void>()
 
     fun restoreWalletFromFile(wallet: Wallet, password: String?) {
         if (!wallet.hasKeyChain(Constants.BIP44_PATH) && wallet.isEncrypted) {

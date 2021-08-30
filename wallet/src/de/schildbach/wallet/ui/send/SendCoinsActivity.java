@@ -35,6 +35,7 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
+import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 
@@ -47,6 +48,7 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getIntent().putExtra(LockScreenActivity.INTENT_EXTRA_KEEP_UNLOCKED, true);
 
         SendCoinsActivityViewModel viewModel = ViewModelProviders.of(this).get(SendCoinsActivityViewModel.class);
         viewModel.getBasePaymentIntent().observe(this, new Observer<Resource<PaymentIntent>>() {

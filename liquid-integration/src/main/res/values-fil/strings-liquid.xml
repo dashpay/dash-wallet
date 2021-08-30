@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">Link Liquid Account</string>
+    <string name="buy_dash_with_liquid_account">Bumili ng Dash gamit ang credit card</string>
+    <string name="liquid_logout">Mag-log out</string>
+    <string name="liquid_logout_title">Mag-log out mula sa Liquid</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Ipagpalit ang Dash sa iba pang mga cryptocurrency</string>
+    <string name="transfer_dash_to_and_from_account">Ilipat ang Dash papunta at mula sa iyong Liquid account</string>
+
+    <string name="cryptocurrency">Cryptocurrency</string>
+    <string name="credit_card">Credit Card</string>
+
+    <string name="buy">Bumili</string>
+    <string name="buy_dash">Bumili ng Dash</string>
+    <string name="sell_dash">Ibenta ang Dash</string>
+    <string name="buy_sell_dash_">Bumili at magbenta ng Dash</string>
+    <string name="button_cancel">Kanselahin</string>
+    <string name="choose_your_payment_method">Piliin ang iyong paraan ng pagbabayad</string>
+    <string name="crypto_support">Suporta ng Crypto</string>
+    <string name="okay">Okay</string>
+    <string name="close">Sarado</string>
+    <string name="list_of_countries">Tingnan ang listahan ng mga bansa na hindi suportado</string>
+    <string name="buying_dash_not_supported">Ang pagbili ng Dash gamit ang cryptocurrency ay hindi suportado sa ilang mga bansa</string>
+    <string name="buying_dash_success_message">Maaari mong isara ang screen na ito, ipapadala ang iyong Dash sa iyong wallet.</string>
+
+    <string name="confirm">Kumpirmahin</string>
+    <string name="card_fees">Bayad sa Card</string>
+    <string name="conversion_rate">Rate ng conversion</string>
+    <string name="network_fee">Bayad sa Network</string>
+    <string name="total">Kabuuan</string>
+    <string name="connect">kumonekta</string>
+    <string name="connected">Konektado</string>
+    <string name="buy_sell_dash">Upang bumili ng &amp; ibenta ang Dash o lumikha ng isang bagong account</string>
+
+
+    <string name="transfer_to_liquid">Lumipat sa Liquid</string>
+    <string name="transfer_from_liquid">Paglipat mula sa Liquid</string>
+    <string name="disconnect">Idiskonekta</string>
+    <string name="select_crypto_currency">Pumili ng Crypto Currency</string>
+    <string name="select_sell_currency">Piliin ang Magbenta ng Pera</string>
+    <string name="select_buy_currency">Piliin ang Bumili ng Pera</string>
+    <string name="select_fiat_currency">Piliin ang Pera sa Fiat</string>
+    <string name="show_payment_qr_code">Ipakita ang Payment QR Code</string>
+    <string name="pay_with_btc_from_liquid">Magbayad gamit ang BTC mula sa Liquid</string>
+    <string name="or">o</string>
+
+    <string name="internet_connected">Mangyaring kumonekta sa internet</string>
+    <string name="please_enter_amount">Mangyaring itala ang halaga</string>
+
+    <string name="choose_what_you_receive">Piliin kung ano ang natanggap mo</string>
+    <string name="fiat_currency">Pera sa Fiat</string>
+
+    <string name="liquid">Liquid</string>
+    <string name="transfer">Ipadala</string>
+    <string name="filter_by">Nasala ni</string>
+</resources>
