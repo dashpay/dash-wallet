@@ -47,6 +47,7 @@ class AcceptInviteActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         binding = ActivityAcceptInviteBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

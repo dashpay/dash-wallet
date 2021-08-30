@@ -155,7 +155,7 @@ class CreateIdentityService : LifecycleService() {
 
     private var workInProgress = false
 
-    private val createIdentityexceptionHandler = CoroutineExceptionHandler { _, exception ->
+    private val createIdentityExceptionHandler = CoroutineExceptionHandler { _, exception ->
         log.error(exception.message, exception)
         analytics.logError(exception, "Failed to create Identity")
 
@@ -243,7 +243,7 @@ class CreateIdentityService : LifecycleService() {
 
     private fun handleCreateIdentityAction(username: String?, retryWithNewUserName: Boolean = false) {
         workInProgress = true
-        serviceScope.launch(createIdentityexceptionHandler) {
+        serviceScope.launch(createIdentityExceptionHandler) {
             createIdentity(username, retryWithNewUserName)
             workInProgress = false
             stopSelf()
@@ -408,7 +408,7 @@ class CreateIdentityService : LifecycleService() {
 
     private fun handleCreateIdentityFromInvitationAction(username: String?, invite: InvitationLinkData?) {
         workInProgress = true
-        serviceScope.launch(createIdentityexceptionHandler) {
+        serviceScope.launch(createIdentityExceptionHandler) {
             createIdentityFromInvitation(username, invite)
             workInProgress = false
             stopSelf()
@@ -637,7 +637,7 @@ class CreateIdentityService : LifecycleService() {
 
     private fun handleRestoreIdentityAction(identity: ByteArray) {
         workInProgress = true
-        serviceScope.launch(createIdentityexceptionHandler) {
+        serviceScope.launch(createIdentityExceptionHandler) {
             restoreIdentity(identity)
             workInProgress = false
             stopSelf()

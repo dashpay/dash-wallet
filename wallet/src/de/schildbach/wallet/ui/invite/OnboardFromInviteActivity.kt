@@ -25,8 +25,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_accept_invite.continue_button
-import kotlinx.android.synthetic.main.activity_onboard_from_invite.*
+import de.schildbach.wallet_test.databinding.ActivityOnboardFromInviteBinding
 
 class OnboardFromInviteActivity : AppCompatActivity() {
 
@@ -48,6 +47,8 @@ class OnboardFromInviteActivity : AppCompatActivity() {
         STEP_3
     }
 
+    private lateinit var binding: ActivityOnboardFromInviteBinding
+
     private val goNextIntent by lazy {
         intent.getParcelableExtra<Intent>(EXTRA_GO_NEXT)
     }
@@ -57,43 +58,50 @@ class OnboardFromInviteActivity : AppCompatActivity() {
             field = value
             when (value) {
                 Mode.STEP_1 -> {
-                    activate(title1, true)
-                    activate(title2, false)
-                    activate(title3, false)
-                    step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
-                    step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
-                    step3.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
-                    icon2.setImageResource(R.drawable.ic_onboard_from_invite_2_disabled)
-                    icon3.setImageResource(R.drawable.ic_onboard_from_invite_3_disabled)
+                    binding.apply {
+                        activate(title1, true)
+                        activate(title2, false)
+                        activate(title3, false)
+                        step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
+                        step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
+                        step3.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
+                        icon2.setImageResource(R.drawable.ic_onboard_from_invite_2_disabled)
+                        icon3.setImageResource(R.drawable.ic_onboard_from_invite_3_disabled)
+                    }
                 }
                 Mode.STEP_2 -> {
-                    activate(title1, true)
-                    activate(title2, true)
-                    activate(title3, false)
-                    step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
-                    step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
-                    step3.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
-                    icon2.setImageResource(R.drawable.ic_onboard_from_invite_2)
-                    icon3.setImageResource(R.drawable.ic_onboard_from_invite_3_disabled)
+                    binding.apply {
+                        activate(title1, true)
+                        activate(title2, true)
+                        activate(title3, false)
+                        step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
+                        step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
+                        step3.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
+                        icon2.setImageResource(R.drawable.ic_onboard_from_invite_2)
+                        icon3.setImageResource(R.drawable.ic_onboard_from_invite_3_disabled)
+                    }
                 }
                 Mode.STEP_3 -> {
-                    activate(title1, true)
-                    activate(title2, true)
-                    activate(title3, true)
-                    step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
-                    step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
-                    step3.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
-                    icon2.setImageResource(R.drawable.ic_onboard_from_invite_2)
-                    icon3.setImageResource(R.drawable.ic_onboard_from_invite_3)
+                    binding.apply {
+                        activate(title1, true)
+                        activate(title2, true)
+                        activate(title3, true)
+                        step1.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
+                        step2.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_onboard_from_invite_check, 0)
+                        step3.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0)
+                        icon2.setImageResource(R.drawable.ic_onboard_from_invite_2)
+                        icon3.setImageResource(R.drawable.ic_onboard_from_invite_3)
+                    }
                 }
             }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_onboard_from_invite)
+        binding = ActivityOnboardFromInviteBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        continue_button.setOnClickListener {
+        binding.continueButton.setOnClickListener {
             startActivity(goNextIntent)
         }
         mode = Mode.values()[intent.getIntExtra(EXTRA_MODE, 0)]

@@ -16,16 +16,16 @@ import android.os.LocaleList
 import android.provider.Settings
 import android.telephony.TelephonyManager
 import android.view.MenuItem
-import android.view.View
 import android.view.WindowManager
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
@@ -48,7 +48,8 @@ import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet.util.Nfc
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_main.*
+import de.schildbach.wallet_test.databinding.ActivityMainBinding
+import kotlinx.coroutines.launch
 import okhttp3.HttpUrl
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.Wallet
@@ -86,7 +87,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    private lateinit var viewModel: MainActivityViewModel
+    private val viewModel: MainActivityViewModel by viewModels()
+    private lateinit var binding: ActivityMainBinding
     @Inject
     lateinit var analytics: AnalyticsService
 
@@ -102,7 +104,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
             window.statusBarColor = ContextCompat.getColor(this, R.color.colorPrimary)
         }
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         initViewModel()
         handleCreateFromInvite()
@@ -126,7 +129,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private fun handleCreateFromInvite() {
         if (!config.hasBeenUsed() && config.onboardingInviteProcessing) {
             if (config.isRestoringBackup) {
-                restoring_wallet_cover.visibility = View.VISIBLE
+                binding.restoringWalletCover.isVisible = true
             } else {
                 handleOnboardingInvite(true)
             }
@@ -140,14 +143,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     fun initViewModel() {
-        viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
-        viewModel.isAbleToCreateIdentityLiveData.observe(this, Observer {
+        viewModel.isAbleToCreateIdentityLiveData.observe(this) {
             // empty observer just to trigger data loading
             // viewModel is shared with some fragments keeping the observer active
             // inside the parent Activity will avoid recreation of relatively complex
             // isAbleToCreateIdentityData LiveData
-        })
-        viewModel.blockchainIdentityData.observe(this, Observer {
+        }
+        viewModel.blockchainIdentityData.observe(this) {
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
@@ -160,21 +162,31 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 if (config.isRestoringBackup && config.onboardingInviteProcessing) {
                     config.setOnboardingInviteProcessingDone()
                     InviteHandler(this, analytics).showUsernameAlreadyDialog()
-                    restoring_wallet_cover.visibility = View.GONE
+                    binding.restoringWalletCover.isVisible = false
                 }
             }
-        })
-        viewModel.goBackAndStartActivityEvent.observe(this, Observer {
+        }
+
+        viewModel.platformRepo.onIdentityResolved = { identity ->
+            if (identity == null && config.isRestoringBackup && config.onboardingInviteProcessing) {
+                lifecycleScope.launch {
+                    handleOnboardingInvite(false)
+                    binding.restoringWalletCover.isVisible = false
+                }
+            }
+        }
+
+        viewModel.goBackAndStartActivityEvent.observe(this) {
             goBack(true)
             //Delay added to prevent fragment being removed and activity being launched "at the same time"
             Handler().postDelayed({
                 startActivity(Intent(this, it))
             }, 500)
-        })
-        viewModel.showCreateUsernameEvent.observe(this, {
+        }
+        viewModel.showCreateUsernameEvent.observe(this) {
             startActivity(Intent(this, CreateUsernameActivity::class.java))
-        })
-        viewModel.sendContactRequestState.observe(this, Observer {
+        }
+        viewModel.sendContactRequestState.observe(this) {
             config.inviter?.also { initInvitationUserId ->
                 if (!config.inviterContactRequestSentInfoShown) {
                     it?.get(initInvitationUserId)?.apply {
@@ -186,22 +198,22 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     }
                 }
             }
-        })
-        viewModel.blockchainStateData.observe(this, {
+        }
+        viewModel.blockchainStateData.observe(this) {
             it?.apply {
                 if (isSynced() && config.onboardingInviteProcessing) {
-                    restoring_wallet_cover.visibility = View.GONE
+                    binding.restoringWalletCover.isVisible = false
                     handleOnboardingInvite(false)
                 }
             }
-        })
+        }
     }
 
     private fun showInviteSendContactRequestDialog(initInvitationUserId: String) {
-        viewModel.platformRepo.loadProfileByUserId(initInvitationUserId).observe(this@MainActivity, Observer {
+        viewModel.platformRepo.loadProfileByUserId(initInvitationUserId).observe(this@MainActivity) {
             val dialog = InviteSendContactRequestDialog.newInstance(this@MainActivity, it!!)
             dialog.show(supportFragmentManager, null)
-        })
+        }
     }
 
     override fun onResume() {
@@ -227,15 +239,15 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun setupBottomNavigation() {
-        bottom_navigation.itemIconTintList = null
+        binding.bottomNavigation.itemIconTintList = null
         supportFragmentManager.addOnBackStackChangedListener {
             if (supportFragmentManager.backStackEntryCount == 0) {
-                bottom_navigation.selectedItemId = R.id.home
+                binding.bottomNavigation.selectedItemId = R.id.home
             }
         }
-        bottom_navigation.setOnNavigationItemSelectedListener { item ->
+        binding.bottomNavigation.setOnNavigationItemSelectedListener { item ->
             when (item.itemId) {
-                bottom_navigation.selectedItemId -> {
+                binding.bottomNavigation.selectedItemId -> {
                     if (item.itemId == R.id.payments) {
                         goBack()
                     }
@@ -760,5 +772,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         supportFragmentManager.fragments.forEach {
             it.onActivityResult(requestCode, resultCode, data)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.platformRepo.onIdentityResolved = null
     }
 }

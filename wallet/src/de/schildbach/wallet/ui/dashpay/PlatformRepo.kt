@@ -88,6 +88,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    var onIdentityResolved: ((Identity?) -> Unit)? = {}
+
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
 
@@ -1405,6 +1407,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 log.info("PreDownloadBlocks: checking for existing associated identity")
 
                 val identity = getIdentityFromPublicKeyId()
+                onIdentityResolved?.invoke(identity)
+
                 if (identity != null) {
                     log.info("PreDownloadBlocks: initiate recovery of existing identity ${identity.id.toString()}")
                     ContextCompat.startForegroundService(walletApplication, createIntentForRestore(walletApplication, identity.id.toBuffer()))
