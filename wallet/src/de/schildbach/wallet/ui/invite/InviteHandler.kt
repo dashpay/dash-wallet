@@ -19,8 +19,9 @@ package de.schildbach.wallet.ui.invite
 import android.app.Activity
 import android.app.ActivityManager
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
+import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModelProvider
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.InvitationLinkData
@@ -33,26 +34,18 @@ import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.getInstance
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.slf4j.LoggerFactory
 
-class InviteHandler(val activity: AppCompatActivity) {
+class InviteHandler(val activity: AppCompatActivity, private val analytics: AnalyticsService) {
 
     private lateinit var inviteLoadingDialog: FancyAlertDialog
 
     companion object {
         protected val log = LoggerFactory.getLogger(InviteHandler::class.java)
-
-        fun showUsernameAlreadyDialog(activity: AppCompatActivity) {
-            val inviteErrorDialog = FancyAlertDialog.newInstance(
-                R.string.invitation_username_already_found_title,
-                R.string.invitation_username_already_found_message,
-                R.drawable.ic_invalid_invite, R.string.okay, 0
-            )
-            inviteErrorDialog.show(activity.supportFragmentManager, null)
-            handleDialogResult(activity)
-        }
 
         private fun getMainTask(activity: AppCompatActivity): ActivityManager.AppTask {
             val activityManager = activity.getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
@@ -75,12 +68,12 @@ class InviteHandler(val activity: AppCompatActivity) {
         private fun handleDialogResult(activity: AppCompatActivity) {
             val errorDialogViewModel =
                 ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
-            errorDialogViewModel.onPositiveButtonClick.observe(activity, Observer {
+            errorDialogViewModel.onPositiveButtonClick.observe(activity) {
                 handleDialogButtonClick(activity)
-            })
-            errorDialogViewModel.onNegativeButtonClick.observe(activity, Observer {
+            }
+            errorDialogViewModel.onNegativeButtonClick.observe(activity) {
                 handleDialogButtonClick(activity)
-            })
+            }
         }
     }
 
@@ -100,7 +93,7 @@ class InviteHandler(val activity: AppCompatActivity) {
                 showInvalidInviteDialog(displayName)
             }
             Status.CANCELED -> {
-                showUsernameAlreadyDialog(activity)
+                showUsernameAlreadyDialog()
             }
             Status.SUCCESS -> {
                 val invite = inviteResource.data!!
@@ -146,12 +139,25 @@ class InviteHandler(val activity: AppCompatActivity) {
         val inviteErrorDialog = FancyAlertDialog.newInstance(title, message, R.drawable.ic_invalid_invite, R.string.okay, 0)
         inviteErrorDialog.show(activity.supportFragmentManager, null)
         handleDialogResult(activity)
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_INVALID, bundleOf())
+    }
+
+    fun showUsernameAlreadyDialog() {
+        val inviteErrorDialog = FancyAlertDialog.newInstance(
+            R.string.invitation_username_already_found_title,
+            R.string.invitation_username_already_found_message,
+            R.drawable.ic_invalid_invite, R.string.okay, 0
+        )
+        inviteErrorDialog.show(activity.supportFragmentManager, null)
+        handleDialogResult(activity)
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_USERNAME_TAKEN, bundleOf())
     }
 
     private fun showInviteAlreadyClaimedDialog(invite: InvitationLinkData) {
         val inviteAlreadyClaimedDialog = InviteAlreadyClaimedDialog.newInstance(activity, invite)
         inviteAlreadyClaimedDialog.show(activity.supportFragmentManager, null)
         handleDialogResult(activity)
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_ALREADY_CLAIMED, bundleOf())
     }
 
     private fun showInviteLoadingProgress() {
@@ -162,9 +168,10 @@ class InviteHandler(val activity: AppCompatActivity) {
         inviteLoadingDialog.show(activity.supportFragmentManager, null)
     }
 
-    private fun showInsuffientFundsDialog() {
+    private fun showInsufficientFundsDialog() {
         val dialog = FancyAlertDialog.newProgress(R.string.invitation_invalid_invite_title, R.string.dashpay_insuffient_credits)
         dialog.show(activity.supportFragmentManager, null)
+        analytics.logEvent(AnalyticsConstants.Invites.ERROR_INSUFFICIENT_FUNDS, bundleOf())
     }
 
     /**
@@ -190,7 +197,7 @@ class InviteHandler(val activity: AppCompatActivity) {
                     return true
                 }
                 errorMessage.contains("InsuffientFundsError") -> {
-                    showInsuffientFundsDialog()
+                    showInsufficientFundsDialog()
                     // now erase the blockchain data
                     getInstance().clearBlockchainData()
                     return true

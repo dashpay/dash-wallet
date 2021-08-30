@@ -16,40 +16,32 @@
 
 package de.schildbach.wallet.ui.invite
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ShareCompat
-import androidx.core.content.FileProvider
-import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.data.Invitation
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.util.KeyboardUtil
-import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet.util.WalletUtils
-import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
 import kotlinx.android.synthetic.main.fragment_invite_details.*
+import kotlinx.android.synthetic.main.fragment_invite_details.copy_invitation_link
+import kotlinx.android.synthetic.main.fragment_invite_details.preview_button
+import kotlinx.android.synthetic.main.fragment_invite_details.send_button
+import kotlinx.android.synthetic.main.fragment_invite_details.tag_edit
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 
-
+@AndroidEntryPoint
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
 
     companion object {
@@ -87,9 +79,11 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         }
 
         preview_button.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_PREVIEW)
             showPreviewDialog()
         }
         copy_invitation_link.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_COPY_LINK)
             copyInvitationLink()
         }
         send_button.setOnClickListener {
@@ -131,7 +125,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         inviteIndex = requireArguments().getInt(ARG_INVITE_INDEX)
         viewModel.identityIdLiveData.value = identityId
 
-        viewModel.invitationLiveData.observe(viewLifecycleOwner, Observer {
+        viewModel.invitationLiveData.observe(viewLifecycleOwner) {
             if (it.memo.isNotEmpty()) {
                 tag_edit.setText(it.memo)
                 memo.text = it.memo
@@ -147,12 +141,13 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             } else {
                 showPending(it)
             }
-        })
+        }
 
-        viewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer {
+        viewModel.dashPayProfileData.observe(viewLifecycleOwner) {
             setupInvitationPreviewTemplate(it!!)
-        })
+        }
         viewModel.updateInvitedUserProfile()
+        viewModel.logEvent(AnalyticsConstants.Invites.DETAILS)
     }
 
     private fun getTagHint() =
@@ -170,7 +165,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
     }
 
     private fun showClaimed() {
-        viewModel.invitedUserProfile.observe(viewLifecycleOwner, Observer {
+        viewModel.invitedUserProfile.observe(viewLifecycleOwner) {
             if (it != null) {
                 icon.setImageResource(R.drawable.ic_claimed_invite)
                 claimed_view.isVisible = true
@@ -193,12 +188,17 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 profile_button.isVisible = false
                 claimed_view.isVisible = true
             }
-        })
+        }
     }
 
     private fun shareInvitation(shareImage: Boolean) {
         // save memo to the database
         viewModel.saveTag(tag_edit.text.toString())
+        viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_SEND_AGAIN)
+
+        if (!tag_edit.text.isNullOrBlank()) {
+            viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_TAG)
+        }
 
         super.shareInvitation(shareImage, viewModel.invitation.shortDynamicLink)
     }

@@ -22,6 +22,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.fragment.app.FragmentActivity
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.LockScreenActivity
@@ -31,6 +32,7 @@ import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.slf4j.LoggerFactory
 
+@AndroidEntryPoint
 class InviteFriendActivity : LockScreenActivity() {
 
     companion object {

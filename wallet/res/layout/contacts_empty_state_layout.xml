@@ -71,6 +71,7 @@
     </LinearLayout>
 
     <include
+        android:id="@+id/invite_hint_layout"
         layout="@layout/invite_friend_hint_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

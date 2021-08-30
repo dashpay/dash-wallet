@@ -8,7 +8,7 @@ import android.os.HandlerThread
 import android.os.PowerManager
 import android.os.Process
 import androidx.lifecycle.LifecycleService
-import com.google.firebase.crashlytics.FirebaseCrashlytics
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -32,17 +32,19 @@ import org.bitcoinj.evolution.CreditFundingTransaction
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.services.AnalyticsService
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.identity.Identity
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-
+@AndroidEntryPoint
 class CreateIdentityService : LifecycleService() {
 
     companion object {
@@ -148,12 +150,15 @@ class CreateIdentityService : LifecycleService() {
     lateinit var blockchainIdentity: BlockchainIdentity
     lateinit var blockchainIdentityData: BlockchainIdentityData
 
+    @Inject
+    lateinit var analytics: AnalyticsService
+
     private var workInProgress = false
 
     private val createIdentityExceptionHandler = CoroutineExceptionHandler { _, exception ->
         log.error(exception.message, exception)
-        FirebaseCrashlytics.getInstance().log("Failed to create Identity")
-        FirebaseCrashlytics.getInstance().recordException(exception)
+        analytics.logError(exception, "Failed to create Identity")
+
         GlobalScope.launch {
             var isInvite = false
             if (this@CreateIdentityService::blockchainIdentityData.isInitialized) {

@@ -7,7 +7,8 @@
     android:layout_height="wrap_content"
     android:layout_margin="16dp"
     android:background="?attr/selectableItemBackground"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.dashpay.ContactsFragment">
 
     <TextView
         android:layout_width="match_parent"

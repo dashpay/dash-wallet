@@ -97,5 +97,4 @@ class AcceptInviteActivity : AppCompatActivity() {
             return 3
         }
     }
-
 }

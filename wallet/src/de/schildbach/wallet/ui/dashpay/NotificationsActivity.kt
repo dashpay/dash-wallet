@@ -30,6 +30,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
@@ -49,6 +50,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.max
 
+@AndroidEntryPoint
 class NotificationsActivity : LockScreenActivity(), TextWatcher,
         NotificationsAdapter.OnItemClickListener, ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
 

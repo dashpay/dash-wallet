@@ -22,27 +22,29 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_invites_history.*
-import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
 
-class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), InvitesAdapter.OnItemClickListener {
+@AndroidEntryPoint
+class InvitesHistoryFragment(private val caller: String) :
+    Fragment(R.layout.fragment_invites_history), InvitesAdapter.OnItemClickListener {
 
     companion object {
         private val log = LoggerFactory.getLogger(InvitesHistoryFragment::class.java)
 
-        fun newInstance() = InvitesHistoryFragment()
+        fun newInstance(caller: String = "") = InvitesHistoryFragment(caller)
     }
 
-    private lateinit var invitesHistoryViewModel: InvitesHistoryViewModel
-    private lateinit var filterViewModel: InvitesHistoryFilterViewModel
-    private lateinit var createInviteViewModel: CreateInviteViewModel
+    private val invitesHistoryViewModel: InvitesHistoryViewModel by viewModels()
+    private val filterViewModel: InvitesHistoryFilterViewModel by viewModels()
+    private val createInviteViewModel: CreateInviteViewModel by viewModels()
 
     private lateinit var invitesAdapter: InvitesAdapter
 
@@ -72,33 +74,30 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
     }
 
     private fun initViewModel() {
-        invitesHistoryViewModel = ViewModelProvider(this)[InvitesHistoryViewModel::class.java]
-        invitesHistoryViewModel.filterClick.observe(this, Observer {
+        invitesHistoryViewModel.filterClick.observe(this) {
             InviteFilterSelectionDialog.createDialog(this)
-                    .show(requireActivity().supportFragmentManager, "inviteFilterDialog")
-        })
+                .show(requireActivity().supportFragmentManager, "inviteFilterDialog")
+        }
 
-        filterViewModel = ViewModelProvider(this)[InvitesHistoryFilterViewModel::class.java]
-        filterViewModel.filterBy.observe(this, Observer {
+        filterViewModel.filterBy.observe(this) {
             invitesAdapter.onFilter(it)
-        })
+        }
 
-        createInviteViewModel = ViewModelProvider(this)[CreateInviteViewModel::class.java]
-        createInviteViewModel.isAbleToCreateInviteLiveData.observe(requireActivity(), Observer {
+        createInviteViewModel.isAbleToCreateInviteLiveData.observe(requireActivity()) {
             if (it != null) {
                 invitesAdapter.showCreateInvite(it)
             }
-        })
+        }
     }
 
     private fun initHistoryView() {
-        invitesHistoryViewModel.invitationHistory.observe(requireActivity(), Observer {
+        invitesHistoryViewModel.invitationHistory.observe(requireActivity()) {
             var inviteNumber = 1
             if (it != null) {
                 invitesAdapter.history = it.sortedBy { invite -> invite.sentAt }
-                        .map { invite -> InvitationItem(InvitesAdapter.INVITE, invite, inviteNumber++) }
+                    .map { invite -> InvitationItem(InvitesAdapter.INVITE, invite, inviteNumber++) }
             }
-        })
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -118,13 +117,21 @@ class InvitesHistoryFragment : Fragment(R.layout.fragment_invites_history), Invi
 
             }
             InvitesAdapter.INVITE_CREATE -> {
+                createInviteViewModel.logEvent(when(caller) {
+                    "more" -> AnalyticsConstants.Invites.CREATE_MORE
+                    else -> AnalyticsConstants.Invites.CREATE_HISTORY
+                })
                 InviteFriendActivity.startOrError(requireActivity(), startedByHistory = true)
             }
             else -> {
                 log.info("showing invitation for ${invitationItem.invitation!!.userId}")
-                startActivity(InviteFriendActivity.createIntentExistingInvite(requireActivity(),
+                startActivity(
+                    InviteFriendActivity.createIntentExistingInvite(
+                        requireActivity(),
                         invitationItem.invitation.userId,
-                        invitationItem.uniqueIndex))
+                        invitationItem.uniqueIndex
+                    )
+                )
             }
         }
     }

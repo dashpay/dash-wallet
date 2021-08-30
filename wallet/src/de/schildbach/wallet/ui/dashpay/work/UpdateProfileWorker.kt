@@ -2,31 +2,36 @@ package de.schildbach.wallet.ui.dashpay.work
 
 import android.content.Context
 import android.provider.Settings
+import androidx.hilt.work.HiltWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.google.android.gms.auth.GoogleAuthException
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.tasks.Tasks
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAuthIOException
 import com.google.api.services.drive.Drive
-import com.google.firebase.crashlytics.FirebaseCrashlytics
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.security.SecurityGuard
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
-import java.io.File
+import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
-import java.util.concurrent.Executors
+import javax.inject.Inject
 
-class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
+@HiltWorker
+class UpdateProfileWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted parameters: WorkerParameters,
+    val analytics: AnalyticsService)
     : BaseWorker(context, parameters) {
 
     companion object {
@@ -66,8 +71,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             when (ex) {
                 is GeneralSecurityException,
                 is IOException -> {
-                    FirebaseCrashlytics.getInstance().log("Failed to create/update profile: retrieve password")
-                    FirebaseCrashlytics.getInstance().recordException(ex)
+                    analytics.logError(ex, "Failed to create/update profile: retrieve password")
                     return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.PASSWORD.name))
                 }
                 else -> throw ex
@@ -108,8 +112,7 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
                     KEY_USER_ID to profileRequestResult.userId
             ))
         } catch (ex: Exception) {
-            FirebaseCrashlytics.getInstance().log("Failed to create/update profile: broadcast state transition")
-            FirebaseCrashlytics.getInstance().recordException(ex)
+            analytics.logError(ex, "Failed to create/update profile: broadcast state transition")
             formatExceptionMessage("create/update profile", ex)
             Result.failure(workDataOf(
                     KEY_ERROR_MESSAGE to UpdateProfileError.BROADCAST.name))
@@ -129,8 +132,8 @@ class UpdateProfileWorker(context: Context, parameters: WorkerParameters)
             val secureId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             return GoogleDriveService.uploadImage(drive!!, uploadedAvatarFilename, encryptedBackup, secureId)
         } catch (t: Throwable) {
-            FirebaseCrashlytics.getInstance().log("Failed to upload to Google Drive")
-            FirebaseCrashlytics.getInstance().recordException(t)
+            analytics.logError(t, "Failed to upload to Google Drive")
+
             //log.error("failed to save channels backup on google drive", t)
             if (t is GoogleAuthIOException || t is GoogleAuthException) {
                 //BackupHelper.GoogleDrive.disableGDriveBackup(context)

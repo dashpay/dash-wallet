@@ -1,7 +1,14 @@
 buildscript {
-    ext.kotlin_version = '1.4.31'
-    ext.ok_http_version = '3.12.12'
-    ext.dashjVersion = "0.18-SNAPSHOT"
+    ext {
+        kotlin_version = '1.4.31'
+        ok_http_version = '3.12.12'
+        dashjVersion = '0.18-SNAPSHOT'
+        hiltVersion = '2.38.1'
+        firebaseVersion = '26.1.1'
+        roomVersion = '2.3.0'
+        glideVersion = '4.11.0'
+    }
+
     repositories {
         google()
         mavenCentral()
@@ -14,6 +21,7 @@ buildscript {
         classpath 'com.google.gms:google-services:4.3.5'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.google.firebase:firebase-crashlytics-gradle:2.5.1' // Crashlytics
+        classpath "com.google.dagger:hilt-android-gradle-plugin:$hiltVersion"
     }
 }
 

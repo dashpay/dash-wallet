@@ -6,9 +6,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.switchMap
 import androidx.work.*
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
+import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
 
 class SendContactRequestOperation(val application: Application) {
@@ -22,7 +22,11 @@ class SendContactRequestOperation(val application: Application) {
 
         fun uniqueWorkName(toUserId: String) = WORK_NAME + toUserId
 
-        fun operationStatus(application: Application, toUserId: String): LiveData<Resource<Pair<String, String>>> {
+        fun operationStatus(
+            application: Application,
+            toUserId: String,
+            analytics: AnalyticsService
+        ): LiveData<Resource<Pair<String, String>>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
             return workManager.getWorkInfosForUniqueWorkLiveData(uniqueWorkName(toUserId)).switchMap {
                 return@switchMap liveData {
@@ -33,7 +37,7 @@ class SendContactRequestOperation(val application: Application) {
 
                     if (it.size > 1) {
                         val e = RuntimeException("there should never be more than one unique work ${uniqueWorkName(toUserId)}")
-                        FirebaseCrashlytics.getInstance().recordException(e)
+                        analytics.logError(e)
                         throw e
                     }
 
@@ -49,11 +53,11 @@ class SendContactRequestOperation(val application: Application) {
                             val errorMessage = BaseWorker.extractError(workInfo.outputData)
                             emit(if (errorMessage != null) {
                                 val exception = SendContactRequestOperationException(errorMessage)
-                                FirebaseCrashlytics.getInstance().recordException(exception)
+                                analytics.logError(exception)
                                 Resource.error(errorMessage, null)
                             } else {
                                 val exception = SendContactRequestOperationException("Unknown error")
-                                FirebaseCrashlytics.getInstance().recordException(exception)
+                                analytics.logError(exception)
                                 Resource.error(exception)
                             })
                             log.error("send contact request operation failed: $errorMessage")
