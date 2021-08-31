@@ -41,16 +41,12 @@ import de.schildbach.wallet_test.R;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 
-import androidx.annotation.IntegerRes;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
-import android.content.res.TypedArray;
-import android.graphics.Color;
-import android.graphics.Typeface;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -62,23 +58,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 
-import androidx.appcompat.widget.SearchView;
-import androidx.appcompat.widget.SearchView.OnQueryTextListener;
-
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.ViewAnimator;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -400,11 +389,8 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     }
 
     private Integer getFlagFromCurrencyCode(String currencyCode) {
-        if (currencyCode.equalsIgnoreCase("try")) return R.drawable.turk;    //we can't use 'try' as the recource name for turkish flag as try is a reserved keyword in java. A workaround is to use rename the turkish flag resource
-        else {
-            final int resourceId = getResources().getIdentifier(currencyCode.toLowerCase(Locale.ROOT), "drawable", getActivity().getPackageName());
-            return resourceId == 0 ? R.drawable.ic_default_flag : resourceId;
-        }
+        final int resourceId = getResources().getIdentifier("currency_code_" + currencyCode.toLowerCase(Locale.ROOT), "drawable", getActivity().getPackageName());
+        return resourceId == 0 ? R.drawable.ic_default_flag : resourceId;
     }
 
     private final class ExchangeRateViewHolder extends RecyclerView.ViewHolder {
