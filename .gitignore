@@ -27,6 +27,7 @@ wallet/prod
 wallet/.cxx
 wallet/cpp
 vendor/
+fastlane/report.xml
 google-services.json
 output-metadata.json
 service.properties
