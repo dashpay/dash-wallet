@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.common.services
+package org.dash.wallet.common.services.analytics
 
 import android.os.Bundle
 import com.google.firebase.analytics.ktx.analytics
