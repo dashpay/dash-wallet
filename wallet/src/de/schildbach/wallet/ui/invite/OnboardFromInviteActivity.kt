@@ -103,6 +103,10 @@ class OnboardFromInviteActivity : AppCompatActivity() {
 
         binding.continueButton.setOnClickListener {
             startActivity(goNextIntent)
+            if (mode == Mode.STEP_3) {
+                // the wallet has been created, there is no going back
+                finish()
+            }
         }
         mode = Mode.values()[intent.getIntExtra(EXTRA_MODE, 0)]
     }
@@ -120,7 +124,6 @@ class OnboardFromInviteActivity : AppCompatActivity() {
     }
 
     override fun finish() {
-        setResult(Activity.RESULT_OK)
         super.finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
