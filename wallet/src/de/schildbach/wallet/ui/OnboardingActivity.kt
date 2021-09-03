@@ -188,7 +188,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             dialog.show()
         })
         viewModel.startActivityAction.observe(this, Observer {
-            startActivityForResult(it, SET_PIN_REQUEST_CODE)
+            startActivity(it)
         })
     }
 
@@ -224,8 +224,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
             upgradeOrStartMainActivity()
-        } else if ((requestCode == SET_PIN_REQUEST_CODE || requestCode == RESTORE_PHRASE_REQUEST_CODE) && resultCode == Activity.RESULT_OK) {
-            finish()
         }
     }
 

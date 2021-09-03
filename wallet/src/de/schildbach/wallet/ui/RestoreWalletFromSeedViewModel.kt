@@ -49,7 +49,7 @@ class RestoreWalletFromSeedViewModel(application: Application) : AndroidViewMode
             walletApplication.configuration.isRestoringBackup = true
             walletApplication.configuration.disableNotifications()
             walletApplication.resetBlockchainState()
-            startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet))
+            startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_restore_wallet, onboarding = true))
         }
     }
 

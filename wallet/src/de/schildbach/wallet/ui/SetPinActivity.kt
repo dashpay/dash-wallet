@@ -82,17 +82,20 @@ class SetPinActivity : InteractionAwareActivity() {
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
         private const val CHANGE_PIN = "change_pin"
+        private const val EXTRA_ONBOARDING = "onboarding"
         private const val EXTRA_ONBOARDING_INVITE = "onboarding_invite"
 
         @JvmOverloads
         @JvmStatic
         fun createIntent(context: Context, titleResId: Int,
                          changePin: Boolean = false, pin: String? = null,
+                         onboarding: Boolean = false,
                          onboardingInvite: Boolean = false): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
             intent.putExtra(CHANGE_PIN, changePin)
             intent.putExtra(EXTRA_PASSWORD, pin)
+            intent.putExtra(EXTRA_ONBOARDING, onboarding || onboardingInvite)
             intent.putExtra(EXTRA_ONBOARDING_INVITE, onboardingInvite)
             return intent
         }
@@ -406,7 +409,6 @@ class SetPinActivity : InteractionAwareActivity() {
             }
         })
         viewModel.startNextActivity.observe(this, Observer {
-            setResult(Activity.RESULT_OK)
             if (it) {
                 startVerifySeedActivity()
             } else {
@@ -458,16 +460,18 @@ class SetPinActivity : InteractionAwareActivity() {
         val verifySeedActivityIntent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
         if (onboardingInvite) {
             startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))
-            setResult(Activity.RESULT_CANCELED);
-            finishAffinity()
         } else {
             startActivity(verifySeedActivityIntent)
-            finish()
         }
+        finishAffinity()
     }
 
     private fun goHome() {
         startActivity(MainActivity.createIntent(this))
-        finish()
+        if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
+            finishAffinity()
+        } else {
+            finish()
+        }
     }
 }

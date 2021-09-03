@@ -55,7 +55,7 @@ class RestoreWalletFromFileViewModel(application: Application) : AndroidViewMode
             log.info("successfully restored wallet from file")
             walletApplication.resetBlockchainState()
             startActivityAction.call(SetPinActivity.createIntent(getApplication(),
-                    R.string.set_pin_restore_wallet, false, password))
+                    R.string.set_pin_restore_wallet, false, password, onboarding = true))
         }
     }
 }

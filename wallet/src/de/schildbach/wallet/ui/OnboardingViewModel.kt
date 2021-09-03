@@ -63,7 +63,7 @@ class OnboardingViewModel @Inject constructor(
             analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, bundleOf())
             startActivityAction.call(AcceptInviteActivity.createIntent(getApplication(), onboardingInvite, true))
         } else {
-            startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
+            startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet, onboarding = true))
         }
     }
 }

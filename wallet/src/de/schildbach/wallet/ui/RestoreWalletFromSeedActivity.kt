@@ -124,7 +124,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
         viewModel.recoverPinLiveData.observe(this, Observer {
             when (it.status) {
                 Status.SUCCESS -> {
-                    startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, it.data))
+                    startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, it.data, onboarding = true))
                 }
                 Status.LOADING -> {
                     // ignore
@@ -138,7 +138,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             }
         })
         viewModel.startActivityAction.observe(this, Observer {
-            startActivityForResult(it, SET_PIN_REQUEST_CODE)
+            startActivity(it)
         })
     }
 
@@ -161,11 +161,11 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == SET_PIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            setResult(Activity.RESULT_OK)
-            finish()
-        }
-    }
+//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+//        super.onActivityResult(requestCode, resultCode, data)
+//        if (requestCode == SET_PIN_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+//            setResult(Activity.RESULT_OK)
+//            finish()
+//        }
+//    }
 }

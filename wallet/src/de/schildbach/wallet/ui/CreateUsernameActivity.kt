@@ -275,7 +275,7 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
             val fromOnboarding = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
             if (fromOnboarding) {
                 walletApplication.configuration.onboardingInviteUsername = username
-                val goNextIntent = SetPinActivity.createIntent(application, R.string.set_pin_create_new_wallet, false, null, true)
+                val goNextIntent = SetPinActivity.createIntent(application, R.string.set_pin_create_new_wallet, false, null, onboardingInvite =true)
                 startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_2, goNextIntent))
                 finish()
                 return
