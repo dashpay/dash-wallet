@@ -18,16 +18,20 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.core.os.bundleOf
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.activity_settings.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
 
 class SettingsActivity : BaseMenuActivity() {
 
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun getLayoutId(): Int {
         return R.layout.activity_settings
@@ -38,9 +42,11 @@ class SettingsActivity : BaseMenuActivity() {
 
         setTitle(R.string.settings_title)
         about.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Settings.ABOUT, bundleOf())
             startActivity(Intent(this, AboutActivity::class.java))
         }
         local_currency.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, bundleOf())
             startActivity(Intent(this, ExchangeRatesActivity::class.java))
         }
         rescan_blockchain.setOnClickListener { resetBlockchain() }
@@ -58,12 +64,15 @@ class SettingsActivity : BaseMenuActivity() {
         dialog.setMessage(R.string.preferences_initiate_reset_dialog_message)
         dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { dialog, which ->
             log.info("manually initiated blockchain reset")
+            analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, bundleOf())
 
             WalletApplication.getInstance().resetBlockchain()
             WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
             startActivity(WalletActivity.createIntent(this))
         }
-        dialog.setNegativeButton(R.string.button_dismiss, null)
+        dialog.setNegativeButton(R.string.button_dismiss) { _, _ ->
+            analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
+        }
         dialog.show()
     }
 
