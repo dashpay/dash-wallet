@@ -120,8 +120,8 @@ jobs:
       
     - name: Decrypt secrets
       run: |
-        openssl aes-256-cbc -K "${{ secrets.encrypted_f761570c4ae9_key }}" -iv "${{ secrets.encrypted_f761570c4ae9_iv }}" -in .deploy/google-services.json.enc -out wallet/google-services.json -d
-        gpg -d --passphrase "${{ secrets.SERVICES_PROPERTIES_KEY }}" --batch .deploy/service.properties.gpg > service.properties
+        gpg -d --passphrase "${{ secrets.GOOGLE_SERVICES_KEY }}" --batch .deploy/google-services.json.gpg > wallet/google-services.json
+        gpg -d --passphrase "${{ secrets.SERVICE_PROPERTIES_KEY }}" --batch .deploy/service.properties.gpg > service.properties
         gpg -d --passphrase "${{ secrets.APP_DISTRIBUTION_KEY }}" --batch .deploy/app-distribution-key.json.gpg > .deploy/app-distribution-key.json
         gpg -d --passphrase "${{ secrets.KEYSTORE_KEY }}" --batch .deploy/keystore.jks.gpg > .deploy/keystore.jks
     
