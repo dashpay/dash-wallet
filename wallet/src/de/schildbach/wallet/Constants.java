@@ -282,15 +282,4 @@ public final class Constants {
 
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
-
-    public interface Events {
-        String CALLING_ACTIVITY = "calling_activity";
-
-        interface Liquid {
-            String BUY_SELL_HOME = "liquid_buy_sell_home_screen";
-            String BUY_SELL_MORE = "liquid_buy_sell_more_screen";
-            String ENTER_CONNECTED = "liquid_enter_connected";
-            String ENTER_DISCONNECTED = "liquid_enter_disconnected";
-        }
-    }
 }

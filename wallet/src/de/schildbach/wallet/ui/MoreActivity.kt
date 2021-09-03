@@ -32,7 +32,8 @@ import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.dash.wallet.common.UserInteractionAwareCallback
-import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 
 class MoreActivity : GlobalFooterActivity() {
@@ -86,7 +87,7 @@ class MoreActivity : GlobalFooterActivity() {
     }
 
     private fun startBuyAndSellActivity() {
-        analytics.logEvent(Constants.Events.Liquid.BUY_SELL_MORE, bundleOf())
+        analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_MORE, bundleOf())
         startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(this), REQUEST_CODE_BUY_SELL);
     }
 

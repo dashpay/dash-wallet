@@ -35,7 +35,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Status
-import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -310,7 +311,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     private fun openLogOutUrl() {
-        analytics.logEvent(LiquidConstants.Events.DISCONNECT, bundleOf())
+        analytics.logEvent(AnalyticsConstants.Liquid.DISCONNECT, bundleOf())
         //revoke access to the token
         revokeAccessToken()
     }
@@ -320,13 +321,13 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      */
     private fun buyDash() {
         log.info("liquid: buy dash")
-        analytics.logEvent(LiquidConstants.Events.BUY_DASH, bundleOf())
+        analytics.logEvent(AnalyticsConstants.Liquid.BUY_DASH, bundleOf())
 
         SelectBuyDashDialog(context, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 if (value == 1) {
                     super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
-                    analytics.logEvent(LiquidConstants.Events.BUY_CREDIT_CARD, bundleOf())
+                    analytics.logEvent(AnalyticsConstants.Liquid.BUY_CREDIT_CARD, bundleOf())
 
                     val intent = Intent(context, BuyDashWithCreditCardActivity::class.java)
                     intent.putExtra("Amount", "5")

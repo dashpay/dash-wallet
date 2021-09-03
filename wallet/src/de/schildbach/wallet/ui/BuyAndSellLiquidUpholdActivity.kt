@@ -43,7 +43,8 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.dash.wallet.common.Constants.USER_BUY_SELL_DASH
 import org.dash.wallet.common.data.Status
-import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -125,9 +126,9 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
         liquid_container.setOnClickListener {
             analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
-                Constants.Events.Liquid.ENTER_CONNECTED
+                AnalyticsConstants.Liquid.ENTER_CONNECTED
             } else {
-                Constants.Events.Liquid.ENTER_DISCONNECTED
+                AnalyticsConstants.Liquid.ENTER_DISCONNECTED
             }, bundleOf())
 
             startActivityForResult(

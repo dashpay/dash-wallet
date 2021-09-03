@@ -19,6 +19,7 @@ import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import com.google.gson.Gson
@@ -26,6 +27,8 @@ import com.google.gson.annotations.SerializedName
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.NetworkUnavailableFragmentViewModel
@@ -549,6 +552,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     }
 
     override fun onBackPressed() {
+        FirebaseAnalyticsServiceImpl.getInstance().logEvent(AnalyticsConstants.Liquid.WIDGET_QUOTE_CLOSE, bundleOf())
         if (isTransactionSuccessful) {
             log.info("liquid: onBackPressed: successful transaction was made")
             setResult(Constants.RESULT_CODE_GO_HOME)
