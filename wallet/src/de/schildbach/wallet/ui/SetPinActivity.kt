@@ -458,10 +458,12 @@ class SetPinActivity : InteractionAwareActivity() {
         val verifySeedActivityIntent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
         if (onboardingInvite) {
             startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))
+            setResult(Activity.RESULT_CANCELED);
+            finishAffinity()
         } else {
             startActivity(verifySeedActivityIntent)
+            finish()
         }
-        finish()
     }
 
     private fun goHome() {
