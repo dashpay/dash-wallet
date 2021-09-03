@@ -185,7 +185,7 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
                 (errorMessage.contains("IdentityAssetLockTransactionOutPointAlreadyExistsError")) -> {
                     showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
                     // now erase the blockchain data
-                    getInstance().clearBlockchainData()
+                    getInstance().clearBlockchainIdentityData()
                     return true
                 }
 
@@ -193,13 +193,13 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
                     handle(loading(blockchainIdentityData.invite, 0))
                     handle(error(errorMessage, blockchainIdentityData.invite))
                     // now erase the blockchain data
-                    getInstance().clearBlockchainData()
+                    getInstance().clearBlockchainIdentityData()
                     return true
                 }
                 errorMessage.contains("InsuffientFundsError") -> {
                     showInsufficientFundsDialog()
                     // now erase the blockchain data
-                    getInstance().clearBlockchainData()
+                    getInstance().clearBlockchainIdentityData()
                     return true
                 }
             }
