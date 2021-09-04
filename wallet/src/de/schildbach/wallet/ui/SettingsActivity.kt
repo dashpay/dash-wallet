@@ -21,7 +21,6 @@ import android.os.Bundle
 import androidx.core.os.bundleOf
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.activity_settings.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
@@ -60,9 +59,11 @@ class SettingsActivity : BaseMenuActivity() {
 
     private fun resetBlockchain() {
         val dialog = DialogBuilder(this)
+        var isFinished = false
         dialog.setTitle(R.string.preferences_initiate_reset_title)
         dialog.setMessage(R.string.preferences_initiate_reset_dialog_message)
-        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { dialog, which ->
+        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { _, _ ->
+            isFinished = true
             log.info("manually initiated blockchain reset")
             analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, bundleOf())
 
@@ -70,10 +71,12 @@ class SettingsActivity : BaseMenuActivity() {
             WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
             startActivity(WalletActivity.createIntent(this))
         }
-        dialog.setNegativeButton(R.string.button_dismiss) { _, _ ->
-            analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
+        dialog.setNegativeButton(R.string.button_dismiss, null)
+        dialog.setOnDismissListener {
+            if (!isFinished) {
+                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
+            }
         }
         dialog.show()
     }
-
 }
