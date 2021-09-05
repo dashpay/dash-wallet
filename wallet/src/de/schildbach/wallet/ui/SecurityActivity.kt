@@ -82,6 +82,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                     if (pin != null) {
                         EnableFingerprintDialog.show(pin, FINGERPRINT_ENABLED_REQUEST_CODE,
                                 supportFragmentManager)
+                        // TODO: move to FINGERPRINT_ENABLED_REQUEST_CODE case when the bug
+                        // TODO: that's preventing it from getting called is resolved
                         analytics.logEvent(AnalyticsConstants.Security.FINGERPRINT_ON, bundleOf())
                     }
                 }

@@ -54,16 +54,16 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
     }
 
     private val onBiometricLimitSeekBarChangeListener = object : OnSeekBarChangeListener {
-        override fun onStopTrackingTouch(seekBar: SeekBar?) { }
+        override fun onStopTrackingTouch(seekBar: SeekBar?) {
+            val value = biometricProgressToLimitValue(biometric_limit_seekbar.progress)
+            analytics.logEvent(
+                AnalyticsConstants.Security.SPENDING_CONFIRMATION_LIMIT,
+                bundleOf("limit_value" to value)
+            )
+        }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-            configuration.biometricLimit = when(biometric_limit_seekbar.progress) {
-                0 -> 0f
-                1 -> 0.1f
-                2 -> 0.5f
-                3 -> 1f
-                else -> 5f
-            }
+            configuration.biometricLimit = biometricProgressToLimitValue(biometric_limit_seekbar.progress)
             updateView()
         }
     }
@@ -231,6 +231,16 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
             2 -> 5
             3 -> 60
             else -> TimeUnit.HOURS.toMinutes(24).toInt()
+        }
+    }
+
+    private fun biometricProgressToLimitValue(progress: Int): Float {
+        return when(progress) {
+            0 -> 0f
+            1 -> 0.1f
+            2 -> 0.5f
+            3 -> 1f
+            else -> 5f
         }
     }
 }
