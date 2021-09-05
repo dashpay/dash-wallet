@@ -23,8 +23,11 @@ import android.view.View
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.os.bundleOf
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_advanced_security.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import java.util.concurrent.TimeUnit
 
 
@@ -33,20 +36,23 @@ enum class SecurityLevel {
 }
 
 class AdvancedSecurityActivity : BaseMenuActivity() {
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+
     private val onAutoLogoutSeekBarListener = object : OnSeekBarChangeListener {
-        override fun onStopTrackingTouch(seekBar: SeekBar?) { }
+        override fun onStopTrackingTouch(seekBar: SeekBar?) {
+            val value = autoLogoutProgressToTimeValue(auto_logout_seekbar.progress)
+            analytics.logEvent(
+                AnalyticsConstants.Security.AUTO_LOGOUT_TIMER_VALUE,
+                bundleOf("timer_value" to value)
+            )
+        }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-            configuration.autoLogoutMinutes = when(auto_logout_seekbar.progress) {
-                0 -> 0
-                1 -> 1
-                2 -> 5
-                3 -> 60
-                else -> TimeUnit.HOURS.toMinutes(24).toInt()
-            }
+            configuration.autoLogoutMinutes = autoLogoutProgressToTimeValue(auto_logout_seekbar.progress)
             updateView()
         }
     }
+
     private val onBiometricLimitSeekBarChangeListener = object : OnSeekBarChangeListener {
         override fun onStopTrackingTouch(seekBar: SeekBar?) { }
         override fun onStartTrackingTouch(seekBar: SeekBar?) { }
@@ -78,11 +84,27 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         auto_logout_switch.setOnCheckedChangeListener { _, enabled ->
             configuration.autoLogoutEnabled = enabled
             updateView()
+
+            analytics.logEvent(
+                if (enabled) {
+                    AnalyticsConstants.Security.AUTO_LOGOUT_ON
+                } else {
+                    AnalyticsConstants.Security.AUTO_LOGOUT_OFF
+                }, bundleOf()
+            )
         }
 
         spending_confirmation_switch.setOnCheckedChangeListener { _, enabled ->
             configuration.spendingConfirmationEnabled = enabled
             updateView()
+
+            analytics.logEvent(
+                if (enabled) {
+                    AnalyticsConstants.Security.SPENDING_CONFIRMATION_ON
+                } else {
+                    AnalyticsConstants.Security.SPENDING_CONFIRMATION_OFF
+                }, bundleOf()
+            )
         }
 
         auto_logout_seekbar.setOnSeekBarChangeListener(onAutoLogoutSeekBarListener)
@@ -200,5 +222,15 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         configuration.spendingConfirmationEnabled = true
         configuration.biometricLimit = .5f
         updateView()
+    }
+
+    private fun autoLogoutProgressToTimeValue(progress: Int): Int {
+        return when(progress) {
+            0 -> 0
+            1 -> 1
+            2 -> 5
+            3 -> 60
+            else -> TimeUnit.HOURS.toMinutes(24).toInt()
+        }
     }
 }
