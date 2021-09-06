@@ -18,11 +18,15 @@ package de.schildbach.wallet.ui
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.core.os.bundleOf
 import de.schildbach.wallet.ui.send.SweepWalletActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_tools.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 class ToolsActivity : BaseMenuActivity() {
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun getLayoutId(): Int {
         return R.layout.activity_tools
@@ -33,14 +37,16 @@ class ToolsActivity : BaseMenuActivity() {
 
         setTitle(R.string.tools_title)
         address_book.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, bundleOf())
             startActivity(Intent(this, AddressBookActivity::class.java))
         }
         import_keys.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, bundleOf())
             startActivity(Intent(this, SweepWalletActivity::class.java))
         }
         network_monitor.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, bundleOf())
             startActivity(Intent(this, NetworkMonitorActivity::class.java))
         }
     }
-
 }
