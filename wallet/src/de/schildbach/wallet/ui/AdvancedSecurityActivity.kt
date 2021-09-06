@@ -82,29 +82,32 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         dashSymbol = ImageSpan(drawableDash, ImageSpan.ALIGN_BASELINE)
 
         auto_logout_switch.setOnCheckedChangeListener { _, enabled ->
+            if (configuration.autoLogoutEnabled != enabled) {
+                analytics.logEvent(
+                    if (enabled) {
+                        AnalyticsConstants.Security.AUTO_LOGOUT_ON
+                    } else {
+                        AnalyticsConstants.Security.AUTO_LOGOUT_OFF
+                    }, bundleOf()
+                )
+            }
             configuration.autoLogoutEnabled = enabled
             updateView()
-
-            analytics.logEvent(
-                if (enabled) {
-                    AnalyticsConstants.Security.AUTO_LOGOUT_ON
-                } else {
-                    AnalyticsConstants.Security.AUTO_LOGOUT_OFF
-                }, bundleOf()
-            )
         }
 
         spending_confirmation_switch.setOnCheckedChangeListener { _, enabled ->
+            if (configuration.spendingConfirmationEnabled != enabled) {
+                analytics.logEvent(
+                    if (enabled) {
+                        AnalyticsConstants.Security.SPENDING_CONFIRMATION_ON
+                    } else {
+                        AnalyticsConstants.Security.SPENDING_CONFIRMATION_OFF
+                    }, bundleOf()
+                )
+            }
+
             configuration.spendingConfirmationEnabled = enabled
             updateView()
-
-            analytics.logEvent(
-                if (enabled) {
-                    AnalyticsConstants.Security.SPENDING_CONFIRMATION_ON
-                } else {
-                    AnalyticsConstants.Security.SPENDING_CONFIRMATION_OFF
-                }, bundleOf()
-            )
         }
 
         auto_logout_seekbar.setOnSeekBarChangeListener(onAutoLogoutSeekBarListener)
@@ -222,6 +225,7 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         configuration.spendingConfirmationEnabled = true
         configuration.biometricLimit = .5f
         updateView()
+        analytics.logEvent(AnalyticsConstants.Security.RESET_TO_DEFAULT, bundleOf())
     }
 
     private fun autoLogoutProgressToTimeValue(progress: Int): Int {
