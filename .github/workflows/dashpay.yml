@@ -14,7 +14,7 @@ jobs:
     steps:
     - name: Get build number from run id
       env:
-          run_num: ${{ github.run_number }}
+          run_num: ${{ github.run_id }}
       run: |
           echo "build_number=$((80000+$run_num))" >> $GITHUB_ENV
     
@@ -78,4 +78,4 @@ jobs:
       
     - name: Build and Firebase Distribution
       if: github.event_name == 'push'
-      run: bundle exec fastlane build_distribute flavor:"staging" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}" comment:"Up to date DashPay build" app_id:"1:1039839682638:android:bbcfa8c9939ee993ea631f" test_group:"temp-test-group"
+      run: bundle exec fastlane build_distribute flavor:"staging" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}" comment:"Up to date DashPay build" app_id:"1:1039839682638:android:bbcfa8c9939ee993ea631f" test_group:"qa"
