@@ -12,6 +12,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.webkit.*
@@ -37,6 +38,7 @@ import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.databinding.ActivityWebviewQuickExchangeBinding
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
+import org.dash.wallet.integration.liquid.model.UIEvent
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import org.slf4j.LoggerFactory
 
@@ -109,10 +111,12 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
             return Intent(context, BuyDashWithCreditCardActivity::class.java)
         }
     }
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private lateinit var viewBinding: ActivityWebviewQuickExchangeBinding
     private lateinit var viewModel: ConnectivityViewModel
     private lateinit var networkUnavailableViewModel: NetworkUnavailableFragmentViewModel
     private val mJsInterfaceName = "Android"
+    private var widgetState: String = ""
     private var error: String? = null
     private lateinit var webview: WebView
     private var walletAddress: String? = null
@@ -442,6 +446,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
+            widgetState = "quote_view"
             log.info("liquid: page started(${webview.progress}%): $url")
         }
     }
@@ -514,6 +519,12 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                         // liquid: EventData::{"event":"ui_event","data":{"ui_event":"button_clicked","value":"next","target":"quote_view_next"}}
                         "ui-event" -> {
                             onUserInteraction()
+                            val uiEvent = Gson().fromJson(eventData, UIEvent::class.java)
+
+                            if (uiEvent.data?.target == "quote_view_next") {
+                                widgetState = "payment_details"
+                                analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_QUOTE_BUY, bundleOf())
+                            }
                         }
                         // liquid: EventData::{"event":"transaction_created","data":{"transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","session_id":"e108dded-d956-4df1-9f52-0a2f9c15da1e","status":"INPUT_REQUIRED","payout_settlement":{"settlement_instruction_id":"83276097-3ad7-4108-87ea-a155b6a4a7f2","transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","currency":"DASH","direction":"PAYOUT","method":"BLOCKCHAIN_TRANSFER","quantity":"0.063290","status":"READY","expires":{"unix_ms":1624108640242,"iso8601":"2021-06-19T13:17:20.242Z","ttl_ms":20000},"input_parameters":{"wallet_address":"XiHmLtFFZW5FgY5N4gmN52tcGnbDLormHf"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/83276097-3ad7-4108-87ea-a155b6a4a7f2"}}},"quote":{"quote_id":"01F8J6PV99CXAN5NMGNQH60STN","status":"DEALABLE"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/transaction/09b6e166-c994-4bfa-a838-a4332e8e906c"}}}}
                         "transaction-created" -> {
@@ -552,7 +563,8 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     }
 
     override fun onBackPressed() {
-        FirebaseAnalyticsServiceImpl.getInstance().logEvent(AnalyticsConstants.Liquid.WIDGET_QUOTE_CLOSE, bundleOf())
+        // TODO: log another event name if user closes from the processing screen
+        analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_QUOTE_CLOSE, bundleOf())
         if (isTransactionSuccessful) {
             log.info("liquid: onBackPressed: successful transaction was made")
             setResult(Constants.RESULT_CODE_GO_HOME)
