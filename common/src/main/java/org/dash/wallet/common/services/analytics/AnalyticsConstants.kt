@@ -37,4 +37,15 @@ object AnalyticsConstants {
         const val SPENDING_CONFIRMATION_LIMIT = "adv_security_spending_confirmation_limit"
         const val RESET_TO_DEFAULT = "adv_security_reset_to_default"
     }
+
+    object Settings {
+        const val ADDRESS_BOOK = "tools_address_book"
+        const val IMPORT_PRIVATE_KEY = "tools_import_private_key"
+        const val NETWORK_MONITORING = "tools_network_monitoring"
+        const val LOCAL_CURRENCY = "settings_local_currency"
+        const val RESCAN_BLOCKCHAIN_RESET = "settings_rescan_blockchain_reset"
+        const val RESCAN_BLOCKCHAIN_DISMISS = "settings_rescan_blockchain_dismiss"
+        const val ABOUT = "settings_about"
+        const val ABOUT_SUPPORT = "settings_about_contact_support"
+    }
 }
