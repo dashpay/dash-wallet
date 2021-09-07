@@ -13,10 +13,8 @@ jobs:
 
     steps:
     - name: Get build number from run id
-      env:
-          run_num: ${{ github.run_id }}
       run: |
-          echo "build_number=$((80000+$run_num))" >> $GITHUB_ENV
+          echo "build_number=$((80000))" >> $GITHUB_ENV
     
     - uses: actions/checkout@v2
     - name: set up JDK 8
