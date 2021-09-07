@@ -41,6 +41,7 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
+import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
@@ -81,9 +82,17 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         const val DIALOG_LOW_STORAGE_ALERT = 5
 
         const val EXTRA_RESET_BLOCKCHAIN = "reset_blockchain"
+        private const val EXTRA_INVITE = "extra_invite"
 
         fun createIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java)
+        }
+
+        fun createIntent(context: Context, invite: InvitationLinkData): Intent {
+            return Intent(context, MainActivity::class.java).apply {
+                putExtra(EXTRA_INVITE, invite)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
         }
     }
 
@@ -193,7 +202,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                         if (status == Status.SUCCESS) {
                             log.info("showing successfully sent contact request dialog")
                             showInviteSendContactRequestDialog(initInvitationUserId)
-                            config.inviterContactRequestSentInfoShown = true
                         }
                     }
                 }
@@ -434,6 +442,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             goBack(true)
             recreate()
             return
+        }
+        if (intent.hasExtra(EXTRA_INVITE)) {
+            val invite = intent.extras!!.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
+            val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
+            startActivity(acceptInviteIntent)
         }
         val action = intent.action
         if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
