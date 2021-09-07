@@ -26,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardFromInviteBinding
+import org.dash.wallet.common.data.OnboardingState
 
 class OnboardFromInviteActivity : AppCompatActivity() {
 
@@ -109,6 +110,12 @@ class OnboardFromInviteActivity : AppCompatActivity() {
             }
         }
         mode = Mode.values()[intent.getIntExtra(EXTRA_MODE, 0)]
+        OnboardingState.add()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        OnboardingState.remove()
     }
 
     private fun activate(view: TextView, active: Boolean) {

@@ -41,6 +41,7 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
+import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.ui.DialogBuilder
 
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
@@ -95,6 +96,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
         slogan.setPadding(slogan.paddingLeft, slogan.paddingTop, slogan.paddingRight, getStatusBarHeightPx())
 
         walletApplication = (application as WalletApplication)
+        OnboardingState.init(walletApplication.configuration)
+        OnboardingState.clear()
 
         if (walletApplication.walletFileExists()) {
             regularFlow()

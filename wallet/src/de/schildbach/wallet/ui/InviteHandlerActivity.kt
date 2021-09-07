@@ -25,6 +25,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.invite.InviteHandler
+import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -68,7 +69,8 @@ class InviteHandlerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         if (onboardingInProgress()) {
-            finish()
+            log.info("ignoring invite since onboarding is in progress")
+            inviteHandler.showInviteWhileOnboardingInProgressDialog()
             return
         }
 
@@ -82,7 +84,8 @@ class InviteHandlerActivity : AppCompatActivity() {
 
     private fun onboardingInProgress(): Boolean {
         val walletApplication = application as WalletApplication
-        return walletApplication.wallet != null && !walletApplication.configuration.hasBeenUsed()
+        OnboardingState.init(walletApplication.configuration)
+        return walletApplication.wallet != null && OnboardingState.isOnboarding()
     }
 
     override fun onNewIntent(intent: Intent?) {

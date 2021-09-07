@@ -36,6 +36,7 @@ import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.data.OnboardingState
 
 class SetPinActivity : InteractionAwareActivity() {
 
@@ -143,6 +144,16 @@ class SetPinActivity : InteractionAwareActivity() {
             }
         } else {
             seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
+        }
+        if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
+            OnboardingState.add()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
+            OnboardingState.remove()
         }
     }
 
@@ -457,6 +468,7 @@ class SetPinActivity : InteractionAwareActivity() {
 
     private fun startVerifySeedActivity() {
         val onboardingInvite = intent.getBooleanExtra(EXTRA_ONBOARDING_INVITE, false)
+        val onboarding = onboardingInvite || intent.getBooleanExtra(EXTRA_ONBOARDING, false)
         val verifySeedActivityIntent = VerifySeedActivity.createIntent(this, seed.toTypedArray())
         if (onboardingInvite) {
             startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))

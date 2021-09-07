@@ -28,6 +28,7 @@ import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityAcceptInviteBinding
+import org.dash.wallet.common.data.OnboardingState
 
 class AcceptInviteActivity : AppCompatActivity() {
 
@@ -54,12 +55,17 @@ class AcceptInviteActivity : AppCompatActivity() {
         binding.viewpager.adapter = WelcomePagerAdapter(supportFragmentManager, 0)
         binding.pageIndicator.setViewPager(binding.viewpager)
 
+        val fromOnboarding = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
+        if (fromOnboarding) {
+            OnboardingState.add()
+        }
+
         binding.continueButton.setOnClickListener {
             if (binding.viewpager.currentItem < 2) {
                 binding.viewpager.setCurrentItem(binding.viewpager.currentItem + 1, true)
             } else {
                 val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
-                val fromOnboarding = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
+
                 val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(this, invite, fromOnboarding)
 
                 if (fromOnboarding) {
@@ -69,6 +75,13 @@ class AcceptInviteActivity : AppCompatActivity() {
                 }
                 finish()
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)) {
+            OnboardingState.remove()
         }
     }
 

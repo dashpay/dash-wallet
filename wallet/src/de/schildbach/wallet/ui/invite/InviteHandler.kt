@@ -21,7 +21,6 @@ import android.app.ActivityManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModelProvider
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainIdentityBaseData
 import de.schildbach.wallet.data.InvitationLinkData
@@ -45,7 +44,7 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
     private lateinit var inviteLoadingDialog: FancyAlertDialog
 
     companion object {
-        protected val log = LoggerFactory.getLogger(InviteHandler::class.java)
+        private val log = LoggerFactory.getLogger(InviteHandler::class.java)
 
         private fun getMainTask(activity: AppCompatActivity): ActivityManager.AppTask {
             val activityManager = activity.getSystemService(AppCompatActivity.ACTIVITY_SERVICE) as ActivityManager
@@ -65,6 +64,13 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
             activity.finish()
         }
 
+        private fun handleMoveToFront(activity: AppCompatActivity) {
+            activity.setResult(Activity.RESULT_CANCELED)
+            val mainTask = getMainTask(activity)
+            mainTask.moveToFront()
+            activity.finish()
+        }
+
         private fun handleDialogResult(activity: AppCompatActivity) {
             val errorDialogViewModel =
                 ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
@@ -73,6 +79,17 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
             }
             errorDialogViewModel.onNegativeButtonClick.observe(activity) {
                 handleDialogButtonClick(activity)
+            }
+        }
+
+        private fun handleDialogResult(activity: AppCompatActivity, onClick : (AppCompatActivity) -> Unit) {
+            val errorDialogViewModel =
+                ViewModelProvider(activity)[FancyAlertDialogViewModel::class.java]
+            errorDialogViewModel.onPositiveButtonClick.observe(activity) {
+                onClick(activity)
+            }
+            errorDialogViewModel.onNegativeButtonClick.observe(activity) {
+                onClick(activity)
             }
         }
     }
@@ -158,6 +175,18 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
         inviteAlreadyClaimedDialog.show(activity.supportFragmentManager, null)
         handleDialogResult(activity)
         analytics.logEvent(AnalyticsConstants.Invites.ERROR_ALREADY_CLAIMED, bundleOf())
+    }
+
+    fun showInviteWhileOnboardingInProgressDialog() {
+        val inviteErrorDialog = FancyAlertDialog.newInstance(
+            R.string.invitation_onboarding_has_began_error_title,
+            R.string.invitation_onboarding_has_began_error,
+            R.drawable.ic_invalid_invite, R.string.okay, 0
+        )
+        inviteErrorDialog.show(activity.supportFragmentManager, null)
+        handleDialogResult(activity) {
+            handleMoveToFront(activity)
+        }
     }
 
     private fun showInviteLoadingProgress() {
