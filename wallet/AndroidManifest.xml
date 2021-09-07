@@ -2,9 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="de.schildbach.wallet_test"
-    android:installLocation="internalOnly"
-    android:versionCode="80108"
-    android:versionName="5.0-dashpay">
+    android:installLocation="internalOnly">
 
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
