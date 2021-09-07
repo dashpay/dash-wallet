@@ -23,6 +23,7 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.CompoundButton
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.os.bundleOf
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
@@ -33,11 +34,14 @@ import kotlinx.android.synthetic.main.activity_security.*
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.BuildConfig
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletProvider {
 
     private lateinit var fingerprintHelper: FingerprintHelper
     private lateinit var checkPinSharedModel: CheckPinSharedModel
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     companion object {
         private const val AUTH_REQUEST_CODE_BACKUP = 1
@@ -59,6 +63,13 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         hideBalanceOnLaunch.isChecked = configuration.hideBalance
         hideBalanceOnLaunch.setOnCheckedChangeListener { _, hideBalanceOnLaunch ->
             configuration.hideBalance = hideBalanceOnLaunch
+            analytics.logEvent(
+                if (hideBalanceOnLaunch) {
+                    AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON
+                } else {
+                    AnalyticsConstants.Security.AUTOHIDE_BALANCE_OFF
+                }, bundleOf()
+            )
         }
 
         val checkPinSharedModel: CheckPinSharedModel = ViewModelProvider(this)[CheckPinSharedModel::class.java]
@@ -71,6 +82,9 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                     if (pin != null) {
                         EnableFingerprintDialog.show(pin, FINGERPRINT_ENABLED_REQUEST_CODE,
                                 supportFragmentManager)
+                        // TODO: move to FINGERPRINT_ENABLED_REQUEST_CODE case when the bug
+                        // TODO: that's preventing it from getting called is resolved
+                        analytics.logEvent(AnalyticsConstants.Security.FINGERPRINT_ON, bundleOf())
                     }
                 }
                 FINGERPRINT_ENABLED_REQUEST_CODE -> {
@@ -78,19 +92,20 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
                     configuration.enableFingerprint = fingerprintHelper.isFingerprintEnabled
                 }
                 AUTH_REQUEST_CODE_ADVANCED_SECURITY -> {
+                    analytics.logEvent(AnalyticsConstants.Security.ADVANCED_SECURITY, bundleOf())
                     startActivity(Intent(this, AdvancedSecurityActivity::class.java))
                 }
             }
         })
 
         val decryptSeedSharedModel : DecryptSeedSharedModel = ViewModelProvider(this)[DecryptSeedSharedModel::class.java]
-        decryptSeedSharedModel.onDecryptSeedCallback.observe(this, Observer<Pair<Int?, DeterministicSeed?>> { (requestCode, seed) ->
+        decryptSeedSharedModel.onDecryptSeedCallback.observe(this) { (requestCode, seed) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_VIEW_RECOVERYPHRASE -> {
                     startViewSeedActivity(seed)
                 }
             }
-        })
+        }
 
         //Fingerprint group and switch setup
         fingerprintHelper = FingerprintHelper(this)
@@ -113,6 +128,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
             CheckPinDialog.show(this, ENABLE_FINGERPRINT_REQUEST_CODE)
             updateFingerprintSwitchSilently(false)
         } else {
+            analytics.logEvent(AnalyticsConstants.Security.FINGERPRINT_OFF, bundleOf())
             fingerprintHelper.clear()
             configuration.enableFingerprint = false
         }
@@ -133,6 +149,7 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     fun changePin(view: View) {
+        analytics.logEvent(AnalyticsConstants.Security.CHANGE_PIN, bundleOf())
         startActivity(SetPinActivity.createIntent(this, R.string.wallet_options_encrypt_keys_change, true))
     }
 
@@ -154,8 +171,9 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
     }
 
     private fun startViewSeedActivity(seed : DeterministicSeed?) {
+        analytics.logEvent(AnalyticsConstants.Security.VIEW_RECOVERY_PHRASE, bundleOf())
         val mnemonicCode = seed!!.mnemonicCode
-        var seedArray = mnemonicCode!!.toTypedArray()
+        val seedArray = mnemonicCode!!.toTypedArray()
         val intent = ViewSeedActivity.createIntent(this, seedArray)
         startActivity(intent)
     }
