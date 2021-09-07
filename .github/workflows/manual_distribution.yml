@@ -70,7 +70,7 @@ jobs:
           
     - name: Get build number from run id
       env:
-          run_num: ${{ github.run_id }}
+          run_num: ${{ github.run_number }}
       run: |
           echo "build_number=$(($base_build_number+$run_num))" >> $GITHUB_ENV
     
