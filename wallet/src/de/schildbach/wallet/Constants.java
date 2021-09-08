@@ -63,8 +63,7 @@ public final class Constants {
 
     static {
         switch (BuildConfig.FLAVOR) {
-            case "prod":
-            case "beta": {
+            case "prod": {
                 DNS_SEED = new String[]{"dnsseed.dash.org", "dnsseed.dashdot.io"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
                 NETWORK_PARAMETERS = MainNetParams.get();

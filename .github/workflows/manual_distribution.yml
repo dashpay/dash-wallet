@@ -28,9 +28,6 @@ jobs:
         key: "${{ github.event.inputs.flavor }}"
         map: |
           {
-            "beta": {
-              "firebase_app_id": "1:1039839682638:android:3cb62fcbd8b7d447"
-            },
             "prod": {
               "firebase_app_id": "1:1039839682638:android:989eecd6db36de6a"
             },

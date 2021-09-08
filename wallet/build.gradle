@@ -190,18 +190,12 @@ android {
         _testNet3 {
             res.srcDirs = ["testNet3/res"]
         }
-        beta {
-            res.srcDirs = ["beta/res"]
-        }
         devNet {
             res.srcDirs = ["devNet/res"]
         }
     }
     flavorDimensions "default"
     productFlavors {
-        beta {
-            applicationId = "hashengineering.dash.wallet.beta"
-        }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
             def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID")
