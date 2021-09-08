@@ -24,6 +24,8 @@ import kotlinx.android.synthetic.main.activity_more.*
 import kotlinx.android.synthetic.main.activity_settings.*
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
+import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
+
 
 class SettingsActivity : BaseMenuActivity() {
 
@@ -41,7 +43,9 @@ class SettingsActivity : BaseMenuActivity() {
             startActivity(Intent(this, AboutActivity::class.java))
         }
         local_currency.setOnClickListener {
-            startActivity(Intent(this, ExchangeRatesActivity::class.java))
+            val intent = Intent(this, ExchangeRatesActivity::class.java)
+            intent.putExtra(ARG_SHOW_AS_DIALOG, false)
+            startActivity(intent)
         }
         rescan_blockchain.setOnClickListener { resetBlockchain() }
     }
