@@ -81,22 +81,6 @@ public final class Constants {
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 break;
             }
-            case "devNet": {
-                DNS_SEED = new String[]{
-                        "devnet-maithai.thephez.com",
-                        "54.187.113.35", "54.200.201.200", "34.216.233.163",
-                        "34.221.188.185", "54.189.63.67", "52.40.117.135",
-                        "54.187.111.107", "34.212.68.164", "18.237.142.23",
-                        "54.202.73.177"
-                };
-                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = DevNetParams.get("maithai", "yMtULrhoxd8vRZrsnFobWgRTidtjg2Rnjm", 20001, DNS_SEED);
-                IS_PROD_BUILD = false;
-                FILENAME_NETWORK_SUFFIX = "-devnet";
-                WALLET_NAME_CURRENCY_CODE = "tdash";
-                break;
-
-            }
             default: {
                 throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
             }

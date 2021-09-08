@@ -37,9 +37,6 @@ jobs:
             "staging": {
               "firebase_app_id": "1:1039839682638:android:bbcfa8c9939ee993ea631f"
             },
-            "devNet": {
-              "firebase_app_id": "1:1039839682638:android:67503b93d496d1db"
-            },
             "schnapps": {
               "firebase_app_id": "1:1039839682638:android:12d2ad31cc39093cea631f"
             },
