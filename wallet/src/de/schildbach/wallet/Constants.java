@@ -76,8 +76,7 @@ public final class Constants {
 
     static {
         switch (BuildConfig.FLAVOR) {
-            case "prod":
-            case "beta": {
+            case "prod": {
                 DNS_SEED = new String[]{"dnsseed.dash.org", "dnsseed.dashdot.io"};
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH;
                 NETWORK_PARAMETERS = MainNetParams.get();
@@ -101,19 +100,6 @@ public final class Constants {
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 break;
             }
-            case "devNet": {
-                // Palinka Devnet
-                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = PalinkaDevNetParams.get();
-                DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
-                IS_PROD_BUILD = false;
-                FILENAME_NETWORK_SUFFIX = "-palinka";
-                WALLET_NAME_CURRENCY_CODE = "tdash";
-                SUPPORTS_PLATFORM = true;
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                break;
-            }
             case "schnapps": {
                 // Schnapps Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
@@ -121,30 +107,6 @@ public final class Constants {
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-schnapps";
-                WALLET_NAME_CURRENCY_CODE = "tdash";
-                SUPPORTS_PLATFORM = true;
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                break;
-            }
-            case "evonet": {
-                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = EvoNetParams.get();
-                DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
-                IS_PROD_BUILD = false;
-                FILENAME_NETWORK_SUFFIX = "-evonet";
-                WALLET_NAME_CURRENCY_CODE = "tdash";
-                SUPPORTS_PLATFORM = true;
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-                SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                break;
-            }
-            case "mobile": {
-                BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = MobileDevNetParams.get();
-                DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
-                IS_PROD_BUILD = false;
-                FILENAME_NETWORK_SUFFIX = "-mobile";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);

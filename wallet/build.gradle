@@ -247,28 +247,12 @@ android {
         staging {
             res.srcDirs = ["staging/res"]
         }
-        beta {
-            res.srcDirs = ["beta/res"]
-        }
-        devNet {
-            res.srcDirs = ["devNet/res"]
-        }
         schnapps {
             res.srcDirs = ["schnapps/res"]
-        }
-        evonet {
-            res.srcDirs = ["evonet/res"]
-        }
-        mobile {
-            res.srcDirs = ["mobile/res"]
-            resources.srcDirs = ["mobile/resources"]
         }
     }
     flavorDimensions "default"
     productFlavors {
-        beta {
-            applicationId = "hashengineering.dash.wallet.beta"
-        }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
             def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID")
@@ -308,20 +292,8 @@ android {
         staging {
             applicationId = "org.dash.dashpay.testnet"
         }
-        devNet {
-            applicationId = "hashengineering.darkcoin.wallet.devnet"
-            buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
-            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
-        }
         schnapps {
             applicationId = "org.dash.dashpay.schnapps"
-        }
-        evonet {
-            applicationId = "hashengineering.darkcoin.wallet.evonet"
-        }
-        mobile {
-            applicationId = "hashengineering.darkcoin.wallet.mobile"
         }
     }
 
