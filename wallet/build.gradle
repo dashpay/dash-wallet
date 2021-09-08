@@ -291,7 +291,6 @@ android {
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
-            applicationId = "hashengineering.darkcoin.wallet_test"
             def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
             def liquidClientId = props.getProperty("LIQUID_PUBLIC_API_KEY_SANDBOX")
