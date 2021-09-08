@@ -40,9 +40,6 @@ jobs:
             "schnapps": {
               "firebase_app_id": "1:1039839682638:android:12d2ad31cc39093cea631f"
             },
-            "evonet": {
-              "firebase_app_id": "1:1039839682638:android:b6feebc0a2eab038ea631f"
-            },
             "mobile": {
               "firebase_app_id": "1:1039839682638:android:00c0428ce4b131d2ea631f"
             }
