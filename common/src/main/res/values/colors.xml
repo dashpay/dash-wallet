@@ -69,4 +69,6 @@
     <color name="gray_white">#C4C8CC</color>
     <color name="close_btn_dark_gray">#5D5F61</color>
     <color name="search_light_gray">#6D7885</color>
+    <color name="gray_300">#99A2AD</color>
+
 </resources>
