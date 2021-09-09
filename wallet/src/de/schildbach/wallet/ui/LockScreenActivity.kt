@@ -98,6 +98,8 @@ open class LockScreenActivity : SecureActivity() {
         intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
+    protected var isLocked: Boolean = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -127,6 +129,7 @@ open class LockScreenActivity : SecureActivity() {
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
         lockScreenViewModel.activatingLockScreen.call()
+        isLocked = true
         setLockState(State.USE_DEFAULT)
     }
 
@@ -307,6 +310,8 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.keepLockedUntilPinEntered = false
         autoLogout.deviceWasLocked = false
         autoLogout.maybeStartAutoLogoutTimer()
+        isLocked = false
+        onUnlocked()
         if (shouldShowBackupReminder) {
             val intent = VerifySeedActivity.createIntent(this, pin)
             configuration.resetBackupSeedReminderTimer()
@@ -316,6 +321,10 @@ open class LockScreenActivity : SecureActivity() {
         } else {
             root_view_switcher.displayedChild = 1
         }
+    }
+
+    protected open fun onUnlocked() {
+
     }
 
     private fun setLockState(state: State) {

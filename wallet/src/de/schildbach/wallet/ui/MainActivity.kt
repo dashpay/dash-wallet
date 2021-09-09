@@ -106,6 +106,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private val config: Configuration by lazy { walletApplication.configuration }
     private var fingerprintHelper: FingerprintHelper? = null
     private var retryCreationIfInProgress = true
+    private var pendingInvite: InvitationLinkData? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -438,6 +439,18 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         UnlockWalletDialogFragment.show(supportFragmentManager)
     }
 
+    private fun handleInvite(invite: InvitationLinkData) {
+        val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
+        startActivity(acceptInviteIntent)
+    }
+
+    override fun onUnlocked() {
+        if (pendingInvite != null) {
+            handleInvite(pendingInvite!!)
+            pendingInvite = null // clear the invite
+        }
+    }
+
     private fun handleIntent(intent: Intent) {
         if (intent.hasExtra(EXTRA_RESET_BLOCKCHAIN)) {
             goBack(true)
@@ -446,8 +459,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         if (intent.hasExtra(EXTRA_INVITE)) {
             val invite = intent.extras!!.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
-            val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
-            startActivity(acceptInviteIntent)
+            if (!isLocked) {
+                handleInvite(invite)
+            } else {
+                pendingInvite = invite
+            }
         }
         val action = intent.action
         if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
