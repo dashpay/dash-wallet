@@ -1,0 +1,63 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+platform :android do
+  desc "Runs tests"
+  lane :test do |options|
+    flavor=options[:flavor].capitalize
+	type=options[:type].capitalize
+    gradle(task: "test#{flavor}#{type}UnitTest")
+  end
+  
+  desc "Build and distribute with Firebase"
+  lane :build_distribute do |options|
+	build(options)
+    distribute(options)
+  end
+
+  desc "Build apk"
+  lane :build do |options|
+	flavor=options[:flavor].capitalize
+	type=options[:type].capitalize
+	store_pass=options[:store_pass]
+	version_code=options[:version_code]
+    gradle(
+	  task: "clean assemble#{flavor}#{type}",
+	  properties: {
+		"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/keystore.jks",
+		"android.injected.signing.store.password" => store_pass,
+		"android.injected.signing.key.alias" => "dash_wallet",
+		"android.injected.signing.key.password" => store_pass,
+		"versionCode" => version_code.to_i,
+	  },
+	  print_command: false
+	)
+  end
+  
+  desc "Submit apk to Firebase Distribution"
+  lane :distribute do |options|
+    app_id=options[:app_id]
+	group=options[:test_group]
+	comment=options[:comment]
+	firebase_app_distribution(
+		app: app_id, 
+		service_credentials_file: "#{ENV['PWD']}/.deploy/app-distribution-key.json",
+		release_notes: comment,
+		groups: group
+	)
+  end
+end
