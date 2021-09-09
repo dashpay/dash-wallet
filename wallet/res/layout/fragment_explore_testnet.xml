@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_explore"
+    tools:context="de.schildbach.wallet.ui.explore.ExploreTestNetFragment">
+
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/explore_wallet"
+        app:layout_constraintBottom_toTopOf="@id/explore_subtitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/explore_title"
+        style="@style/MontserratBold.White.34"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="28dp"
+        android:layout_marginTop="17dp"
+        android:layout_marginBottom="4dp"
+        android:text="@string/explore_dash"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toTopOf="@id/explore_subtitle" />
+
+    <TextView
+        android:id="@+id/explore_subtitle"
+        style="@style/MontserratMedium.BodyText.White"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="28dp"
+        android:layout_marginBottom="27dp"
+        android:lineSpacingExtra="3sp"
+        android:text="@string/explore_test_subtitle"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toTopOf="@id/bottom_content" />
+
+    <LinearLayout
+        android:id="@+id/bottom_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="-8dp"
+        android:background="@drawable/rounded_background"
+        android:orientation="vertical"
+        android:paddingHorizontal="15dp"
+        android:paddingTop="25dp"
+        android:paddingBottom="35dp"
+        android:theme="@style/ExploreBottomContentBackground"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <TextView
+            style="@style/MontserratBold.G900.20"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/explore_test_dash_title" />
+
+        <TextView
+            style="@style/MontserratRegular.G900.14"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:lineSpacingExtra="3sp"
+            android:text="@string/explore_test_dash_text_1" />
+
+        <TextView
+            style="@style/MontserratRegular.G900.14"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="13dp"
+            android:lineSpacingExtra="3sp"
+            android:text="@string/explore_test_dash_text_2" />
+
+        <Button
+            android:id="@+id/get_dash_btn"
+            style="@style/NewMontserratButton.Primary.SemiBold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/explore_get_test_dash"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -359,6 +359,8 @@ public final class Constants {
 
     public static boolean IS_TESTNET_BUILD = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_TESTNET);
 
+    public static final String TESTNET_FAUCET_URL = "https://testnet-faucet.dash.org/";
+
     public interface Invitation {
 
         /*** MIME type used for sharing invitations*/

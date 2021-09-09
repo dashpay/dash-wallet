@@ -32,7 +32,6 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
@@ -52,6 +51,8 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.observeOnDestroy
+import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -80,9 +81,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     override val navigationItemId = R.id.contacts
 
-    private var _binding: FragmentContactsRootBinding? = null
-    private val binding get() = _binding!!
-
+    private val binding by viewBinding(FragmentContactsRootBinding::bind)
     private lateinit var dashPayViewModel: DashPayViewModel
     private var searchHandler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
@@ -99,7 +98,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        _binding = FragmentContactsRootBinding.bind(view)
 
         if (requireActivity() is ContactSearchResultsAdapter.OnViewAllRequestsListener) {
             val viewAllRequestsListener = requireActivity() as ContactSearchResultsAdapter.OnViewAllRequestsListener
@@ -112,6 +110,9 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         binding.contactList.apply {
             contactsRv.layoutManager = LinearLayoutManager(requireContext())
             contactsRv.adapter = contactsAdapter
+            viewLifecycleOwner.observeOnDestroy {
+                contactsRv.adapter = null
+            }
             contactsAdapter.itemClickListener = this@ContactsFragment
 
             initViewModel()
@@ -414,10 +415,5 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                 // ignore
             }
         }.parse()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }

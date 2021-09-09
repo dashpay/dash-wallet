@@ -7,7 +7,6 @@ apply plugin: 'dagger.hilt.android.plugin'
 
 ext {
     archivesBaseName = 'dash-wallet'
-    lifecycleVersion = "2.2.0"
 }
 repositories {
     mavenLocal()
@@ -39,7 +38,7 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android:flexbox:1.1.0'
     implementation 'androidx.preference:preference:1.1.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'org.dashj.platform:dashpay:0.20-SNAPSHOT'
@@ -113,9 +112,9 @@ dependencies {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
 
-    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+
     implementation 'com.jakewharton:process-phoenix:2.0.0'
 
     // DI
