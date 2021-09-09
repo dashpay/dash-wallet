@@ -190,6 +190,10 @@
         <item name="android:textSize">13sp</item>
     </style>
 
+    <style name="MontserratRegular.G900.14">
+        <item name="android:textSize">14sp</item>
+    </style>
+
     <style name="MontserratRegular.G900.15">
         <item name="android:textSize">15sp</item>
     </style>
@@ -218,6 +222,10 @@
         <item name="android:textSize">14sp</item>
     </style>
 
+    <style name="MontserratMedium.BodyText.White">
+        <item name="android:textColor">@color/dash_white</item>
+    </style>
+
     <style name="MontserratButton" parent="Widget.AppCompat.Button.Borderless">
         <item name="fontFamily">@font/montserrat_medium</item>
         <item name="android:textColor">@color/main_button</item>
@@ -228,6 +236,7 @@
 
     <style name="NewMontserratButton.Primary" parent="MontserratButton">
         <item name="android:background">@drawable/primary_button</item>
+        <item name="android:textSize">15sp</item>
     </style>
 
     <style name="NewMontserratButton.Primary.SemiBold" parent="NewMontserratButton.Primary">
@@ -344,6 +353,22 @@
     <style name="MontserratBold.Heading">
         <item name="android:textSize">28sp</item>
         <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="MontserratBold.G900">
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="MontserratBold.G900.20">
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="MontserratBold.White">
+        <item name="android:textColor">@color/dash_white</item>
+    </style>
+
+    <style name="MontserratBold.White.34">
+        <item name="android:textSize">34sp</item>
     </style>
 
     <style name="NavigationTheme" parent="My.Theme">

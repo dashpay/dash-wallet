@@ -42,6 +42,7 @@ import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CO
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
+import de.schildbach.wallet.ui.explore.ExploreTestNetFragment
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
@@ -265,7 +266,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 R.id.bottom_home -> goBack(true)
                 R.id.contacts -> showContacts()
                 R.id.payments -> showPayments()
-                R.id.discover -> return@setOnNavigationItemSelectedListener false
+                R.id.discover -> showExplore()
                 R.id.more -> showMore()
             }
             true
@@ -321,6 +322,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         } else {
             replaceFragment(UpgradeToEvolutionFragment.newInstance())
         }
+    }
+
+    private fun showExplore() {
+        val exploreFragment = ExploreTestNetFragment.newInstance()
+        replaceFragment(exploreFragment)
     }
 
     private fun showPayments(activeTab: Int = ACTIVE_TAB_RECENT) {
