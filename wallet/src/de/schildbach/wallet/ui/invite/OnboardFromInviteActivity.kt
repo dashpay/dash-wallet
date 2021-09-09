@@ -134,4 +134,13 @@ class OnboardFromInviteActivity : AppCompatActivity() {
         super.finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
+
+    override fun onBackPressed() {
+        if (mode == Mode.STEP_3) {
+            startActivity(goNextIntent)
+            finish()
+        } else {
+            super.onBackPressed()
+        }
+    }
 }
