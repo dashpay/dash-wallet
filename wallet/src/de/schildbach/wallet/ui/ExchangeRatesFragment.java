@@ -17,98 +17,99 @@
 
 package de.schildbach.wallet.ui;
 
-import javax.annotation.Nullable;
+import static android.view.View.VISIBLE;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.utils.ExchangeRate;
-import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.CurrencyTextView;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.Group;
+import androidx.fragment.app.DialogFragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
+import androidx.loader.app.LoaderManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.common.base.Strings;
 
+import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 
-import de.schildbach.wallet.AppDatabase;
-import de.schildbach.wallet.Constants;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.WalletBalanceWidgetProvider;
-import de.schildbach.wallet.data.BlockchainState;
+import de.schildbach.wallet.adapter.BaseFilterAdapter;
+import de.schildbach.wallet.adapter.ExchangeRatesAdapter;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
-
-import android.annotation.SuppressLint;
-import android.app.Activity;
-
-import androidx.annotation.NonNull;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProviders;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
-import android.graphics.Color;
-import android.os.Bundle;
-import androidx.fragment.app.Fragment;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.Loader;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.EditText;
-import androidx.appcompat.widget.SearchView;
-import androidx.appcompat.widget.SearchView.OnQueryTextListener;
-import android.widget.TextView;
-import android.widget.ViewAnimator;
-
-import java.util.List;
 
 /**
  * @author Andreas Schildbach
  */
-public final class ExchangeRatesFragment extends Fragment implements OnSharedPreferenceChangeListener {
+public final class ExchangeRatesFragment extends DialogFragment implements OnSharedPreferenceChangeListener, TextWatcher, View.OnClickListener, BaseFilterAdapter.ResetViewListener {
     private AbstractBindServiceActivity activity;
     private WalletApplication application;
     private Configuration config;
     private Wallet wallet;
-    private LoaderManager loaderManager;
-
     private View loading;
     private View loadingErrorView;
     private View emptySearchView;
-    private ViewAnimator viewGroup;
     private RecyclerView recyclerView;
     private ExchangeRatesAdapter adapter;
     private ExchangeRatesViewModel exchangeRatesViewModel;
-
+    private EditText searchView;
     private String query = null;
-
-    private static final int ID_BALANCE_LOADER = 0;
-    private static final int ID_RATE_LOADER = 1;
-    private static final int ID_BLOCKCHAIN_STATE_LOADER = 2;
+    private TextView closeSearchView;
+    private ImageView closeIconView, backPressView, closeViewBtn;
+    private ConstraintLayout viewContainer;
+    private Group settingsGroup, sendPaymentGroup;
+    public static final String ARG_SHOW_AS_DIALOG = "ARG_SHOW_AS_DIALOG";
+    private boolean showAsDialog;
 
     @Override
-    public void onAttach(final Activity activity) {
-        super.onAttach(activity);
-
-        this.activity = (AbstractBindServiceActivity) activity;
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        this.activity = (AbstractBindServiceActivity) context;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();
         this.wallet = application.getWallet();
-        this.loaderManager = getLoaderManager();
+    }
+
+    public static ExchangeRatesFragment newInstance(boolean showAsDialog) {
+        ExchangeRatesFragment fragment = new ExchangeRatesFragment();
+        Bundle args = new Bundle();
+        args.putBoolean(ARG_SHOW_AS_DIALOG, showAsDialog);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    public static ExchangeRatesFragment newInstance() {
+        return newInstance(true);
     }
 
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        showAsDialog = getActivity().getIntent().getBooleanExtra(ARG_SHOW_AS_DIALOG, false);
         setRetainInstance(true);
-        setHasOptionsMenu(true);
-
-        adapter = new ExchangeRatesAdapter();
+        adapter = new ExchangeRatesAdapter(activity, config, wallet, new ArrayList<>(), this);
         adapter.setRateBase(config.getBtcBase());
         adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
     }
@@ -116,13 +117,19 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     @Override
     public void onViewCreated(@NonNull View view, @androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        if (showAsDialog){
+            setViewPaddingAndBackground();
+            sendPaymentGroup.setVisibility(VISIBLE);
+        } else {
+            settingsGroup.setVisibility(VISIBLE);
+        }
 
         exchangeRatesViewModel = ViewModelProviders.of(this)
                 .get(ExchangeRatesViewModel.class);
         exchangeRatesViewModel.isLoading().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
             @Override
             public void onChanged(Boolean isLoading) {
-                loading.setVisibility(Boolean.TRUE.equals(isLoading) ? View.VISIBLE : View.GONE);
+                loading.setVisibility(Boolean.TRUE.equals(isLoading) ? VISIBLE : View.GONE);
             }
         });
         exchangeRatesViewModel.hasError().observe(getViewLifecycleOwner(), new Observer<Boolean>() {
@@ -137,95 +144,59 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
                 new Observer<List<de.schildbach.wallet.rates.ExchangeRate>>() {
                     @Override
                     public void onChanged(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
+                        adapter.setItems(exchangeRates);
                         updateView(exchangeRates);
                     }
                 });
         config.registerOnSharedPreferenceChangeListener(this);
-
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(),
-                new Observer<de.schildbach.wallet.data.BlockchainState>() {
-                    @Override
-                    public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
-                        adapter.setBlockchainState(blockchainState);
-                    }
-                });
     }
 
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
-            final Bundle savedInstanceState) {
+                             final Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.exchange_rates_fragment, container, false);
-        viewGroup = (ViewAnimator) view.findViewById(R.id.exchange_rates_list_group);
-
+        viewContainer = view.findViewById(R.id.view_container);
         loading = view.findViewById(R.id.exchange_rates_loading);
         emptySearchView = view.findViewById(R.id.exchange_rates_empty_search);
         loadingErrorView = view.findViewById(R.id.exchange_rates_loading_error);
-
         recyclerView = view.findViewById(R.id.exchange_rates_list);
+        searchView = view.findViewById(R.id.search_exchange_rate_btn);
+        settingsGroup = view.findViewById(R.id.settings_header_group);
+        sendPaymentGroup = view.findViewById(R.id.send_payment_header_group);
+        closeSearchView = view.findViewById(R.id.search_close_btn);
+        closeIconView = view.findViewById(R.id.close_icon);
+        backPressView = view.findViewById(R.id.white_back_press_btn);
+        closeViewBtn = view.findViewById(R.id.close_exchange_rate_btn);
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
+        recyclerView.setHasFixedSize(true);
         recyclerView.setAdapter(adapter);
+        searchView.addTextChangedListener(this);
+        closeSearchView.setOnClickListener(this);
+        closeIconView.setOnClickListener(this);
+        backPressView.setOnClickListener(this);
+        closeViewBtn.setOnClickListener(this);
+        updateCloseButton();
         return view;
+    }
+
+    private void updateCloseButton() {
+        final boolean hasText = !TextUtils.isEmpty(searchView.getText());
+        // Should we show the close button? It is not shown if there's no focus,
+        // field is not iconified by default and there is no text in it.
+        closeSearchView.setVisibility(hasText ? View.VISIBLE : View.GONE);
+        closeIconView.setVisibility(hasText ? View.VISIBLE : View.GONE);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-
         exchangeRatesViewModel.getRates();
-        loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
-    }
-
-    @Override
-    public void onPause() {
-        loaderManager.destroyLoader(ID_BALANCE_LOADER);
-        loaderManager.destroyLoader(ID_BLOCKCHAIN_STATE_LOADER);
-
-        super.onPause();
     }
 
     @Override
     public void onDestroy() {
         config.unregisterOnSharedPreferenceChangeListener(this);
-
-        //loaderManager.destroyLoader(ID_RATE_LOADER);
-
         super.onDestroy();
-    }
-
-    @Override
-    public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
-        inflater.inflate(R.menu.exchange_rates_fragment_options, menu);
-
-        final SearchView searchView = (SearchView) menu.findItem(R.id.exchange_rates_options_search).getActionView();
-        searchView.setOnQueryTextListener(new OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextChange(final String newText) {
-                query = Strings.emptyToNull(newText.trim());
-                exchangeRatesViewModel.searchRates(query).observe(ExchangeRatesFragment.this,
-                        new Observer<List<de.schildbach.wallet.rates.ExchangeRate>>() {
-                    @Override
-                    public void onChanged(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
-                        updateView(exchangeRates);
-                    }
-                });
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextSubmit(final String query) {
-                searchView.clearFocus();
-
-                return true;
-            }
-        });
-
-        // Workaround for not being able to style the SearchView
-        final int id = searchView.getContext().getResources().getIdentifier("android:id/search_src_text", null, null);
-        final View searchInput = searchView.findViewById(id);
-        if (searchInput instanceof EditText)
-            ((EditText) searchInput).setTextColor(Color.WHITE);
-
-        super.onCreateOptionsMenu(menu, inflater);
     }
 
     @Override
@@ -242,21 +213,15 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         emptySearchView.setVisibility(View.GONE);
         recyclerView.setVisibility(View.GONE);
 
-        view.setVisibility(View.VISIBLE);
+        view.setVisibility(VISIBLE);
     }
 
     private void updateView(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
-        adapter.setExchangeRates(exchangeRates);
+        Collections.sort(exchangeRates, new ExchangeRateComparator());
+        adapter.notifyDataSetChanged();
 
-        if (adapter.getItemCount() == 0 && query == null) {
+        if (adapter.getItemCount() == 0) {
             showOnly(loadingErrorView);
-        } else if (adapter.getItemCount() == 0 && query != null) {
-            viewGroup.getHandler().post(new Runnable() {
-                @Override
-                public void run() {
-                    showOnly(emptySearchView);
-                }
-            });
         } else {
             showOnly(recyclerView);
         }
@@ -267,143 +232,72 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
         }
     }
 
-    private final LoaderManager.LoaderCallbacks<Coin> balanceLoaderCallbacks = new LoaderManager.LoaderCallbacks<Coin>() {
-        @Override
-        public Loader<Coin> onCreateLoader(final int id, final Bundle args) {
-            return new WalletBalanceLoader(activity, wallet);
-        }
-
-        @Override
-        public void onLoadFinished(final Loader<Coin> loader, final Coin balance) {
-            adapter.setBalance(balance);
-        }
-
-        @Override
-        public void onLoaderReset(final Loader<Coin> loader) {
-        }
-    };
-
-    private final class ExchangeRatesAdapter extends RecyclerView.Adapter<ExchangeRateViewHolder> {
-        private final LayoutInflater inflater = LayoutInflater.from(activity);
-
-        //private Cursor cursor = null;
-        private List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates;
-        private Coin rateBase = Coin.COIN;
-        @Nullable
-        private String defaultCurrency = null;
-        @Nullable
-        private Coin balance = null;
-        @Nullable
-        private BlockchainState blockchainState = null;
-
-        private ExchangeRatesAdapter() {
-            setHasStableIds(true);
-        }
-
-        public void setDefaultCurrency(final String defaultCurrency) {
-            this.defaultCurrency = defaultCurrency;
-            notifyDataSetChanged();
-        }
-
-        public void setRateBase(final Coin rateBase) {
-            this.rateBase = rateBase;
-            notifyDataSetChanged();
-        }
-
-        public void setBalance(final Coin balance) {
-            this.balance = balance;
-            notifyDataSetChanged();
-        }
-
-        public void setBlockchainState(final BlockchainState blockchainState) {
-            //TODO: What's the relation between exchange rates and the blockchain state?
-            this.blockchainState = blockchainState;
-            notifyDataSetChanged();
-        }
-
-        public int getDefaultCurrencyPosition() {
-            if (exchangeRates == null || defaultCurrency == null) {
-                return RecyclerView.NO_POSITION;
-            }
-
-            int i = 0;
-            for (de.schildbach.wallet.rates.ExchangeRate rate : exchangeRates) {
-                if (rate.getCurrencyCode().equalsIgnoreCase(defaultCurrency)) {
-                    return i;
-                }
-                i++;
-            }
-
-            return RecyclerView.NO_POSITION;
-        }
-
-        @Override
-        public int getItemCount() {
-            return exchangeRates != null ? exchangeRates.size() : 0;
-        }
-
-        @Override
-        public long getItemId(final int position) {
-            return exchangeRates.get(position).getCurrencyCode().hashCode();
-        }
-
-        @Override
-        public ExchangeRateViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
-            return new ExchangeRateViewHolder(inflater.inflate(R.layout.exchange_rate_row, parent, false));
-        }
-
-        @SuppressLint("SetTextI18n")
-        @Override
-        public void onBindViewHolder(final ExchangeRateViewHolder holder, final int position) {
-            final de.schildbach.wallet.rates.ExchangeRate exchangeRate = exchangeRates.get(position);
-
-            //TODO: Try to remove it from here (?) Maybe cache the creation in exchangeRate?
-            ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(
-                    Coin.COIN, exchangeRate.getFiat());
-
-            final boolean isDefaultCurrency = exchangeRate.getCurrencyCode().equals(defaultCurrency);
-
-            holder.defaultCurrencyCheckbox.setOnCheckedChangeListener(null);
-            holder.defaultCurrencyCheckbox.setChecked(isDefaultCurrency);
-
-            holder.currencyCode.setText(exchangeRate.getCurrencyCode());
-            holder.currencyName.setText(exchangeRate.getCurrencyName(getActivity()));
-            holder.price.setFormat(!rateBase.isLessThan(Coin.COIN) ? Constants.LOCAL_FORMAT.minDecimals(2)
-                    : Constants.LOCAL_FORMAT.minDecimals(4));
-            holder.price.setAmount(rate.coinToFiat(rateBase));
-
-            holder.defaultCurrencyCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    if (isChecked) {
-                        setDefaultCurrency(exchangeRate.getCurrencyCode());
-                        config.setExchangeCurrencyCode(exchangeRate.getCurrencyCode());
-                        WalletBalanceWidgetProvider.updateWidgets(activity, wallet);
-                    }
-                }
-            });
-        }
-
-        void setExchangeRates(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
-            this.exchangeRates = exchangeRates;
-            notifyDataSetChanged();
+    @Override
+    public void setViewState() {
+        if (adapter.getItemCount() == 0 && query == null) {
+            showOnly(loadingErrorView);
+        } else if (adapter.getItemCount() == 0 && query != null) {
+            showOnly(emptySearchView);
+        } else {
+            showOnly(recyclerView);
         }
     }
 
-    private final class ExchangeRateViewHolder extends RecyclerView.ViewHolder {
+    public class ExchangeRateComparator implements Comparator<de.schildbach.wallet.rates.ExchangeRate> {
 
-        private final TextView currencyCode;
-        private final TextView currencyName;
-        private final CurrencyTextView price;
-        private final CheckBox defaultCurrencyCheckbox;
-
-        ExchangeRateViewHolder(final View itemView) {
-            super(itemView);
-            currencyCode = itemView.findViewById(R.id.local_currency_code);
-            currencyName = itemView.findViewById(R.id.local_currency_name);
-            price = itemView.findViewById(R.id.price);
-            defaultCurrencyCheckbox = itemView.findViewById(R.id.checkbox);
+        @Override
+        public int compare(de.schildbach.wallet.rates.ExchangeRate o1, de.schildbach.wallet.rates.ExchangeRate o2) {
+            return o1.getCurrencyName(getActivity()).compareToIgnoreCase(o2.getCurrencyName(getActivity()));
         }
+    }
 
+    @Override
+    public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+    @Override
+    public void onTextChanged(CharSequence s, int start, int before, int count) {
+        query = Strings.emptyToNull(s.toString().trim());
+        updateCloseButton();
+        adapter.getFilter().filter(s);
+    }
+
+    @Override
+    public void afterTextChanged(Editable s) { }
+
+    @Override
+    public void onClick(View v) {
+        final InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        switch(v.getId()) {
+            case R.id.close_icon:
+                searchView.setText("");
+                searchView.requestFocus();
+
+                if (imm.isActive()) {
+                    imm.showSoftInput(v, 0);
+                }
+
+                break;
+            case R.id.search_close_btn:
+                searchView.setText("");
+                searchView.clearFocus();
+                if (imm.isActive()) {
+                    imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                }
+                break;
+            case R.id.close_exchange_rate_btn:
+            case R.id.white_back_press_btn:
+                getActivity().finish();
+                break;
+            default: break;
+        }
+    }
+
+    private void setViewPaddingAndBackground() {
+        int paddingTopDp = 16;
+        float scale = getResources().getDisplayMetrics().density;
+        int sizeInDp = (int)(paddingTopDp * scale);
+        viewContainer.setPadding(0,sizeInDp,0,0);
+        viewContainer.setBackgroundResource(R.drawable.background_dialog);
     }
 }
