@@ -39,7 +39,7 @@ jobs:
             },
             "schnapps": {
               "firebase_app_id": "1:1039839682638:android:12d2ad31cc39093cea631f"
-            },
+            }
           }
             
     - name: Map branch to build number offset
