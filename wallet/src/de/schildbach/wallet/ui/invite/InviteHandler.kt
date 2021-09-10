@@ -124,7 +124,7 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
                             activity.startService(CreateIdentityService.createIntentFromInvite(activity, walletApplication.configuration.onboardingInviteUsername, invite))
                         }
                         walletApplication.wallet != null -> {
-                            log.info("the invite is valid, starting AcceptInviteActivity with invite: ${invite.link}")
+                            log.info("the invite is valid, starting MainActivity with invite: ${invite.link}")
                             mainTask.startActivity(activity.applicationContext, MainActivity.createIntent(activity, invite), null)
                         }
                         else -> {
