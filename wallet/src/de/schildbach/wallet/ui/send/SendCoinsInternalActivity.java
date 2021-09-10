@@ -69,10 +69,4 @@ public class SendCoinsInternalActivity extends SendCoinsActivity {
         }
         return getIntent().getBooleanExtra(INTENT_EXTRA_USER_AUTHORIZED, false);
     }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        getIntent().putExtra(LockScreenActivity.INTENT_EXTRA_KEEP_UNLOCKED, false);
-    }
 }
