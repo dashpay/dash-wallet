@@ -28,9 +28,6 @@ jobs:
         key: "${{ github.event.inputs.flavor }}"
         map: |
           {
-            "beta": {
-              "firebase_app_id": "1:1039839682638:android:3cb62fcbd8b7d447"
-            },
             "prod": {
               "firebase_app_id": "1:1039839682638:android:989eecd6db36de6a"
             },
@@ -40,17 +37,8 @@ jobs:
             "staging": {
               "firebase_app_id": "1:1039839682638:android:bbcfa8c9939ee993ea631f"
             },
-            "devNet": {
-              "firebase_app_id": "1:1039839682638:android:67503b93d496d1db"
-            },
             "schnapps": {
               "firebase_app_id": "1:1039839682638:android:12d2ad31cc39093cea631f"
-            },
-            "evonet": {
-              "firebase_app_id": "1:1039839682638:android:b6feebc0a2eab038ea631f"
-            },
-            "mobile": {
-              "firebase_app_id": "1:1039839682638:android:00c0428ce4b131d2ea631f"
             }
           }
             
