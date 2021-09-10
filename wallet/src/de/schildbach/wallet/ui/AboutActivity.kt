@@ -21,15 +21,19 @@ import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
+import androidx.core.os.bundleOf
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_about.*
 import org.bitcoinj.core.VersionMessage
 import org.dash.wallet.common.UserInteractionAwareCallback
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 
 class AboutActivity : BaseMenuActivity() {
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun getLayoutId(): Int {
         return R.layout.activity_about
@@ -49,7 +53,10 @@ class AboutActivity : BaseMenuActivity() {
             startActivity(i)
         }
         review_and_rate.setOnClickListener { openReviewAppIntent() }
-        contact_support.setOnClickListener { handleReportIssue() }
+        contact_support.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT, bundleOf())
+            handleReportIssue()
+        }
     }
 
     override fun finish() {
