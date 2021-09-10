@@ -226,15 +226,15 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
-    <style name="NewMontserratButton.Primary" parent="MontserratButton">
+    <style name="Button.Primary" parent="MontserratButton">
         <item name="android:background">@drawable/primary_button</item>
     </style>
 
-    <style name="NewMontserratButton.Primary.SemiBold" parent="NewMontserratButton.Primary">
+    <style name="Button.Primary.SemiBold" parent="Button.Primary">
         <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
 
-    <style name="NewMontserratButton.Secondary" parent="MontserratButton">
+    <style name="Button.Secondary" parent="MontserratButton">
         <item name="android:textColor">@color/secondary_button</item>
         <item name="android:background">@drawable/secondary_button</item>
     </style>
@@ -614,4 +614,25 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+    <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Headline4.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="Headline4.Bold.White">
+        <item name="android:textColor">@color/dash_white</item>
+    </style>
+
+    <style name="Body2" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Body2.White">
+        <item name="android:textColor">@color/dash_white</item>
+    </style>
 </resources>

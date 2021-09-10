@@ -258,6 +258,8 @@
     <string name="menu_rescan_blockchain">Rescan Blockchain</string>
     <string name="menu_contact_support_title">Contact Support</string>
     <string name="menu_contact_support_subtitle">Report an issue</string>
+    <string name="menu_explore_title">Explore</string>
+    <string name="menu_explore_subtitle">Shop with DASH at over 155,000 merchants</string>
 
     <string name="tools_address_book">Address Book</string>
     <string name="tools_import_private_key">Import Private Key</string>
@@ -343,6 +345,14 @@
     <string name="import_image_no_private_key_copied">No private key copied</string>
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
+
+    <!-- Explore screen -->
+    <string name="explore_dash">Explore Dash</string>
+    <string name="explore_subtitle">Easily shop with your DASH at over 155,000 locations and online merchants</string>
+    <string name="explore_merchants_title">Where to Spend?</string>
+    <string name="explore_merchants_subtitle">Find merchants who accept Dash as payment.</string>
+    <string name="explore_atms_title">ATMs</string>
+    <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
 
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>

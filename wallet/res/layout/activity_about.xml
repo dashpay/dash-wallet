@@ -118,7 +118,7 @@
 
     <Button
         android:id="@+id/review_and_rate"
-        style="@style/NewMontserratButton.Primary"
+        style="@style/Button.Primary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/about_button_margin"
