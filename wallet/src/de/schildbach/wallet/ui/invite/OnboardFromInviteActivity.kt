@@ -26,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardFromInviteBinding
+import org.dash.wallet.common.data.OnboardingState
 
 class OnboardFromInviteActivity : AppCompatActivity() {
 
@@ -103,8 +104,18 @@ class OnboardFromInviteActivity : AppCompatActivity() {
 
         binding.continueButton.setOnClickListener {
             startActivity(goNextIntent)
+            if (mode == Mode.STEP_3) {
+                // the wallet has been created, there is no going back
+                finish()
+            }
         }
         mode = Mode.values()[intent.getIntExtra(EXTRA_MODE, 0)]
+        OnboardingState.add()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        OnboardingState.remove()
     }
 
     private fun activate(view: TextView, active: Boolean) {
@@ -120,8 +131,16 @@ class OnboardFromInviteActivity : AppCompatActivity() {
     }
 
     override fun finish() {
-        setResult(Activity.RESULT_OK)
         super.finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
+    override fun onBackPressed() {
+        if (mode == Mode.STEP_3) {
+            startActivity(goNextIntent)
+            finish()
+        } else {
+            super.onBackPressed()
+        }
     }
 }

@@ -1627,7 +1627,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
     }
 
-    fun clearBlockchainData() {
+    fun clearBlockchainIdentityData() {
         GlobalScope.launch(Dispatchers.IO) {
             blockchainIdentityDataDao.clear()
         }

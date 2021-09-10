@@ -41,6 +41,7 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
+import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.ui.DialogBuilder
 
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
@@ -95,6 +96,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
         slogan.setPadding(slogan.paddingLeft, slogan.paddingTop, slogan.paddingRight, getStatusBarHeightPx())
 
         walletApplication = (application as WalletApplication)
+        OnboardingState.init(walletApplication.configuration)
+        OnboardingState.clear()
 
         if (walletApplication.walletFileExists()) {
             regularFlow()
@@ -188,7 +191,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             dialog.show()
         })
         viewModel.startActivityAction.observe(this, Observer {
-            startActivityForResult(it, SET_PIN_REQUEST_CODE)
+            startActivity(it)
         })
     }
 
@@ -224,8 +227,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REGULAR_FLOW_TUTORIAL_REQUEST_CODE) {
             upgradeOrStartMainActivity()
-        } else if ((requestCode == SET_PIN_REQUEST_CODE || requestCode == RESTORE_PHRASE_REQUEST_CODE) && resultCode == Activity.RESULT_OK) {
-            finish()
         }
     }
 

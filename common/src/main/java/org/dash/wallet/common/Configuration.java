@@ -90,6 +90,7 @@ public class Configuration {
     private static final String PREFS_DEV_MODE = "developer_mode";
     private static final String PREFS_INVITER = "inviter";
     private static final String PREFS_INVITER_CONTACT_REQUEST_SENT_INFO = "inviter_contact_request_sent_info";
+    private static final String PREFS_ONBOARDING_STAGE = "onboarding_state";
     private static final String PREFS_ONBOARDING_INVITE = "inviter_onboarding_invite";
     private static final String PREFS_ONBOARDING_INVITE_USERNAME = "inviter_onboarding_invite_username";
     private static final String PREFS_ONBOARDING_INVITE_PROCESSING = "inviter_onboarding_invite_processing";
@@ -517,6 +518,14 @@ public class Configuration {
 
     public void setOnboardingInviteProcessingDone() {
         prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, false).apply();
+    }
+
+    public int getOnboardingStage() {
+        return prefs.getInt(PREFS_ONBOARDING_STAGE, 0);
+    }
+
+    public void setOnboardingStage(final int onboardingStage) {
+        prefs.edit().putInt(PREFS_ONBOARDING_STAGE, onboardingStage).apply();
     }
 
     public Uri getOnboardingInvite() {

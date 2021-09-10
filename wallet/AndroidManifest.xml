@@ -59,12 +59,12 @@
         android:label="@string/app_name"
         android:largeHeap="true"
         android:theme="@style/My.Theme"
+        android:taskAffinity=""
         tools:ignore="LockedOrientationActivity">
 
         <activity
             android:name="de.schildbach.wallet.ui.OnboardingActivity"
             android:screenOrientation="portrait"
-            android:taskAffinity=""
             android:theme="@style/SplashActivity.Theme">
 
             <intent-filter>
@@ -95,7 +95,6 @@
             android:configChanges="keyboard|keyboardHidden"
             android:exported="true"
             android:label="@string/app_name_short"
-            android:taskAffinity=""
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme"
             android:windowSoftInputMode="stateAlwaysHidden" />
@@ -125,7 +124,6 @@
             android:name="de.schildbach.wallet.ui.send.SendCoinsActivity"
             android:label="@string/pay_title"
             android:screenOrientation="portrait"
-            android:taskAffinity=""
             android:theme="@style/My.Theme.ChildActivity"
             tools:ignore="LockedOrientationActivity">
             <intent-filter android:label="@string/send_coins_activity_title">
@@ -206,7 +204,6 @@
             android:label="@string/app_name"
             android:noHistory="true"
             android:excludeFromRecents="true"
-            android:taskAffinity=""
             android:theme="@style/My.Theme.Transparent">
 
             <intent-filter>
@@ -223,7 +220,6 @@
         <activity
             android:name="de.schildbach.wallet.ui.InviteHandlerActivity"
             android:label=""
-            android:taskAffinity=""
             android:excludeFromRecents="true"
             android:theme="@style/My.Theme.Transparent">
 
@@ -254,7 +250,6 @@
             android:excludeFromRecents="true"
             android:label="@string/app_name"
             android:noHistory="true"
-            android:taskAffinity=""
             android:theme="@style/My.Theme.Transparent">
 
             <intent-filter android:label="@string/sweep_wallet_activity_title">
@@ -441,7 +436,6 @@
 
         <activity
             android:name="org.dash.wallet.integration.liquid.ui.LiquidAuthRedirectActivity"
-            android:taskAffinity=""
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:theme="@style/LockScreenActivity.Child.Theme">
