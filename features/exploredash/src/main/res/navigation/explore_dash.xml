@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/explore_dash"
+    app:startDestination="@id/exploreFragment">
+
+
+    <fragment
+        android:id="@+id/exploreFragment"
+        android:name="org.dash.wallet.features.exploredash.ExploreFragment"
+        android:label="fragment_explore"
+        tools:layout="@layout/fragment_explore">
+
+<!--        <action-->
+<!--            android:id="@+id/calendarMain_to_events"-->
+<!--            app:destination="@id/calendarEventFragment"-->
+<!--            app:enterAnim="@anim/slide_up"-->
+<!--            app:exitAnim="@anim/nudge_up"-->
+<!--            app:popExitAnim="@anim/slide_down"-->
+<!--            app:popEnterAnim="@anim/nudge_down"/>-->
+
+<!--        <action-->
+<!--            android:id="@+id/calendarMain_to_personalEvent"-->
+<!--            app:destination="@id/calendarPersonalEventFragment"-->
+<!--            app:enterAnim="@anim/slide_up"-->
+<!--            app:exitAnim="@anim/nudge_up"-->
+<!--            app:popExitAnim="@anim/slide_down"-->
+<!--            app:popEnterAnim="@anim/nudge_down"/>-->
+    </fragment>
+
+<!--    <fragment-->
+<!--        android:id="@+id/calendarEventFragment"-->
+<!--        android:name="ru.jamsoft.masters.featurecalendar.ui.event.CalendarEventFragment"-->
+<!--        android:label="fragment_calendar_event"-->
+<!--        tools:layout="@layout/fragment_calendar_event">-->
+
+<!--        <argument-->
+<!--            android:name="eventId"-->
+<!--            app:argType="string" />-->
+
+<!--        <argument-->
+<!--            android:name="isRequest"-->
+<!--            app:argType="boolean"-->
+<!--            android:defaultValue="false"/>-->
+
+<!--        <argument-->
+<!--            android:name="isOwnEvent"-->
+<!--            app:argType="boolean"-->
+<!--            android:defaultValue="false"/>-->
+
+<!--        <deepLink app:uri="android-app://ru.jamsoft.masters/calendar/event_card/{eventId}"/>-->
+<!--    </fragment>-->
+
+<!--    <fragment-->
+<!--        android:id="@+id/calendarPersonalEventFragment"-->
+<!--        android:name="ru.jamsoft.masters.featurecalendar.ui.personal.CalendarPersonalEventFragment"-->
+<!--        android:label="fragment_calendar_personal_event"-->
+<!--        tools:layout="@layout/fragment_calendar_personal_event">-->
+
+<!--        <argument-->
+<!--            android:name="breakId"-->
+<!--            app:argType="string" />-->
+<!--    </fragment>-->
+
+<!--    <include app:graph="@navigation/workplace_select" />-->
+</navigation>

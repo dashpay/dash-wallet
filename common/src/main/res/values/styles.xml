@@ -614,6 +614,29 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+    <style name="WhiteBackground">
+        <item name="primaryColor">@android:color/white</item>
+        <item name="secondaryColor">@android:color/white</item>
+    </style>
+
+    <style name="ScreenshotWarningBackground" parent="WhiteBackground">
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="VerifySeedTextViewBackground" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="ExploreTestBottomContentBackground" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="ExploreBottomContentBackground">
+        <item name="primaryColor">@color/bg_explore_bottom</item>
+        <item name="secondaryColor">@color/bg_explore_bottom</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>

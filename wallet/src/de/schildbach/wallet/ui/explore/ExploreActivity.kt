@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.features.exploredash.ExploreFragment
 
 class ExploreActivity : BaseMenuActivity() {
     override fun getLayoutId(): Int {
@@ -12,13 +13,13 @@ class ExploreActivity : BaseMenuActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        replaceFragment(ExploreFragment.newInstance())
+//        replaceFragment(ExploreFragment.newInstance())
     }
 
-    private fun replaceFragment(fragment: Fragment) {
-        val enter = R.anim.slide_in_right
-        val exit =  R.anim.slide_out_left
-        supportFragmentManager.beginTransaction().setCustomAnimations(enter,
-            exit).replace(R.id.container, fragment).commit()
-    }
+//    private fun replaceFragment(fragment: Fragment) {
+//        val enter = R.anim.slide_in_right
+//        val exit =  R.anim.slide_out_left
+//        supportFragmentManager.beginTransaction().setCustomAnimations(enter,
+//            exit).replace(R.id.container, fragment).commit()
+//    }
 }

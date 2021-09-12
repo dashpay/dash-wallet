@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dark_blue"
-    tools:context="de.schildbach.wallet.ui.explore.ExploreFragment">
+    tools:context="org.dash.wallet.features.exploredash.ExploreFragment">
 
     <ImageView
         android:layout_width="wrap_content"
@@ -25,9 +25,11 @@
         android:layout_marginHorizontal="28dp"
         android:layout_marginTop="17dp"
         android:layout_marginBottom="4dp"
-        android:text="@string/explore_dash"
+        android:text="explore dash"
         android:textAlignment="center"
         app:layout_constraintBottom_toTopOf="@id/explore_subtitle" />
+
+    <!--    @string/explore_dash-->
 
     <TextView
         android:id="@+id/explore_subtitle"
@@ -37,9 +39,10 @@
         android:layout_marginHorizontal="28dp"
         android:layout_marginBottom="27dp"
         android:lineSpacingExtra="3sp"
-        android:text="@string/explore_subtitle"
+        android:text="explore subtitle"
         android:textAlignment="center"
         app:layout_constraintBottom_toTopOf="@id/bottom_content" />
+<!--    android:text="@string/explore_subtitle"-->
 
     <LinearLayout
         android:id="@+id/bottom_content"
@@ -69,24 +72,28 @@
                 <ImageView
                     android:id="@+id/merchants_icon"
                     style="@style/MenuRowIcon"
+                    android:src="@drawable/ic_fancy_dialog_sample_icon"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_buy_sell_dash" />
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
                     android:id="@+id/merchants_title"
                     style="@style/MontserratMedium.MenuRowTitle"
-                    android:text="@string/explore_merchants_title"
+                    android:text="explore merchants title"
                     app:layout_constraintStart_toEndOf="@+id/merchants_icon"
                     app:layout_constraintTop_toTopOf="@+id/merchants_icon" />
+
+<!--                explore_merchants_title-->
 
                 <TextView
                     android:id="@+id/merchants_subtitle"
                     style="@style/MontserratRegular.MenuRowSubTitle"
-                    android:text="@string/explore_merchants_subtitle"
+                    android:text="explore merchants subtitle"
                     app:layout_constraintStart_toStartOf="@+id/merchants_title"
                     app:layout_constraintTop_toBottomOf="@+id/merchants_title" />
+
+<!--                explore_merchants_subtitle-->
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>
 
@@ -105,24 +112,27 @@
                 <ImageView
                     android:id="@+id/buy_dash_icon"
                     style="@style/MenuRowIcon"
+                    android:src="@drawable/ic_fancy_dialog_sample_icon"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:srcCompat="@drawable/ic_menu_buy_sell_dash" />
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
                     android:id="@+id/buy_dash_title"
                     style="@style/MontserratMedium.MenuRowTitle"
-                    android:text="@string/explore_atms_title"
+                    android:text="explore atms title"
                     app:layout_constraintStart_toEndOf="@+id/buy_dash_icon"
                     app:layout_constraintTop_toTopOf="@+id/buy_dash_icon" />
+<!--                explore_atms_title-->
 
                 <TextView
                     android:id="@+id/buy_dash_subtitle"
                     style="@style/MontserratRegular.MenuRowSubTitle"
-                    android:text="@string/explore_atms_subtitle"
+                    android:text="explore atms subtitle"
                     app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
                     app:layout_constraintTop_toBottomOf="@+id/buy_dash_title" />
+
+<!--                explore_atms_subtitle-->
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>
     </LinearLayout>
