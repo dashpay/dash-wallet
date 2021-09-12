@@ -31,8 +31,6 @@ object AnalyticsConstants {
         const val ENTER_DISCONNECTED = "liquid_enter_disconnected"
         const val WIDGET_QUOTE_CLOSE = "liquid_quote_screen_close"
         const val WIDGET_QUOTE_BUY = "liquid_quote_screen_buy_with_visa"
-
-        // TODO
         const val WIDGET_PROCESSING_DURATION = "liquid_processing_duration"
         const val WIDGET_PROCESSING_CLOSE_OVERLAY = "liquid_processing_close_overlay"
         const val WIDGET_PROCESSING_CLOSE_TOP_LEFT = "liquid_processing_close_top_left"
