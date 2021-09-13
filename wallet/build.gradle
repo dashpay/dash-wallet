@@ -190,18 +190,9 @@ android {
         _testNet3 {
             res.srcDirs = ["testNet3/res"]
         }
-        beta {
-            res.srcDirs = ["beta/res"]
-        }
-        devNet {
-            res.srcDirs = ["devNet/res"]
-        }
     }
     flavorDimensions "default"
     productFlavors {
-        beta {
-            applicationId = "hashengineering.dash.wallet.beta"
-        }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
             def upholdClientId = props.getProperty("UPHOLD_CLIENT_ID")
@@ -237,12 +228,6 @@ android {
             buildConfigField("String", "UPHOLD_CLIENT_ID", imgurClientId)
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", imgurClientSecret)
             buildConfigField("String", "LIQUID_PUBLIC_API_KEY", liquidClientId)
-        }
-        devNet {
-            applicationId = "hashengineering.darkcoin.wallet.devnet"
-            buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
-            buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
-            buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
         }
     }
 
