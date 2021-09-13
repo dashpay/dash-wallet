@@ -346,14 +346,6 @@
     <string name="import_image_import_valid_private_key">Copy a valid private key to import Dash from it</string>
     <string name="import_image_invalid_private">Invalid Private Key</string>
 
-    <!-- Explore screen -->
-    <string name="explore_dash">Explore Dash</string>
-    <string name="explore_subtitle">Easily shop with your DASH at over 155,000 locations and online merchants</string>
-    <string name="explore_merchants_title">Where to Spend?</string>
-    <string name="explore_merchants_subtitle">Find merchants who accept Dash as payment.</string>
-    <string name="explore_atms_title">ATMs</string>
-    <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
-
     <string name="syncing">Syncing</string>
     <string name="syncing_balance">Syncing Balance</string>
 
