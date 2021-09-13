@@ -80,9 +80,11 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
             new StringInputParser(input, true) {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
-                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, false, true);
+                    boolean quickScan = isQuickScan();
+                    // if this is a quick scan, keepUnlock = true for SendCoinsInternalActivity
+                    SendCoinsInternalActivity.start(SendCoinsQrActivity.this, getIntent().getAction(), paymentIntent, false, quickScan);
 
-                    if (isQuickScan()) {
+                    if (quickScan) {
                         SendCoinsQrActivity.this.finish();
                     }
                 }
