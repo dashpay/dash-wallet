@@ -41,26 +41,12 @@ jobs:
               "firebase_app_id": "1:1039839682638:android:12d2ad31cc39093cea631f"
             }
           }
-            
-    - name: Map branch to build number offset
-      uses: kanga333/variable-mapper@master
-      with:
-        key: "${{ github.ref }}"
-        map: |
-          {
-            "refs/heads/master": {
-              "base_build_number": "70000"
-            },
-            "refs/heads/dashpay": {
-              "base_build_number": "80000"
-            }
-          }
           
     - name: Get build number from run id
       env:
           run_num: ${{ github.run_number }}
       run: |
-          echo "build_number=$(($base_build_number+$run_num))" >> $GITHUB_ENV
+          echo "build_number=$((70000+$run_num))" >> $GITHUB_ENV
     
     - uses: actions/checkout@v2    
     - name: set up JDK 8
