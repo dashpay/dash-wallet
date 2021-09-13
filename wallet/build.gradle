@@ -61,7 +61,7 @@ dependencies {
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.tbuonomo.andrui:viewpagerdotsindicator:4.1.2'
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.3.5'
+    implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
 
     def room_version = "2.3.0"
     implementation "androidx.room:room-ktx:$room_version"
