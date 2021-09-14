@@ -46,7 +46,7 @@
 
     <Button
         android:id="@+id/verify_skip_button"
-        style="@style/NewMontserratButton.Secondary"
+        style="@style/Button.Secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -61,7 +61,7 @@
 
     <Button
         android:id="@+id/verify_secure_now_button"
-        style="@style/NewMontserratButton.Primary"
+        style="@style/Button.Primary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"

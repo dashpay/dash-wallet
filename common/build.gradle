@@ -62,16 +62,17 @@ dependencies {
     api 'com.squareup.retrofit2:converter-gson:2.6.1'
 
     //Android Arch
+    implementation "androidx.core:core-ktx:1.5.0"
     api 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    api 'androidx.room:room-runtime:2.2.5'
-    annotationProcessor 'androidx.room:room-compiler:2.2.5'
+    implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycleVersion"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
+    api "androidx.room:room-runtime:$roomVersion"
+    annotationProcessor "androidx.room:room-compiler:$roomVersion"
 
     testImplementation 'junit:junit:4.13.1'
     androidTestImplementation('androidx.test.espresso:espresso-core:3.3.0', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    implementation "androidx.core:core-ktx:1.5.0"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 repositories {
