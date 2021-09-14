@@ -20,6 +20,23 @@ package org.dash.wallet.common.services.analytics
 object AnalyticsConstants {
     const val CALLING_ACTIVITY = "calling_activity"
 
+    object Liquid {
+        const val BUY_SELL_HOME = "liquid_buy_sell_home_screen"
+        const val BUY_SELL_MORE = "liquid_buy_sell_more_screen"
+        const val ENTER_CONNECTED = "liquid_enter_connected"
+        const val ENTER_DISCONNECTED = "liquid_enter_disconnected"
+        const val DISCONNECT = "liquid_disconnect"
+        const val SUPPORTED_COUNTRIES = "liquid_country_support_info"
+        const val BUY_DASH = "liquid_buy_dash"
+        const val BUY_CREDIT_CARD = "liquid_buy_with_credit_card"
+        const val WIDGET_QUOTE_CLOSE = "liquid_quote_screen_close"
+        const val WIDGET_QUOTE_BUY = "liquid_quote_screen_buy_with_visa"
+        const val WIDGET_PROCESSING_DURATION = "liquid_processing_duration"
+        const val WIDGET_PROCESSING_CLOSE_TOP_LEFT = "liquid_processing_close_top_left"
+        // TODO NMA-1014
+        const val WIDGET_PROCESSING_CLOSE_OVERLAY = "liquid_processing_close_overlay"
+    }
+
     object Security {
         const val VIEW_RECOVERY_PHRASE = "security_view_recovery_phrase"
         const val CHANGE_PIN = "security_change_pin"

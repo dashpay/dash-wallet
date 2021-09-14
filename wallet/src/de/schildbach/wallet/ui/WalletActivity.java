@@ -62,6 +62,8 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.UserInteractionAwareCallback;
 import org.dash.wallet.common.data.CurrencyInfo;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.ui.DialogBuilder;
 
 import java.io.IOException;
@@ -126,6 +128,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private boolean showBackupWalletDialog = false;
     private de.schildbach.wallet.data.BlockchainState blockchainState;
+
+    private final FirebaseAnalyticsServiceImpl analytics =
+            FirebaseAnalyticsServiceImpl.Companion.getInstance();
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -828,6 +833,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
+        analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_HOME, Bundle.EMPTY);
         startActivity(BuyAndSellLiquidUpholdActivity.Companion.createIntent(this));
     }
 

@@ -19,6 +19,7 @@ import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import com.google.gson.Gson
@@ -26,6 +27,8 @@ import com.google.gson.annotations.SerializedName
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.NetworkUnavailableFragmentViewModel
@@ -34,8 +37,10 @@ import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.databinding.ActivityWebviewQuickExchangeBinding
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
+import org.dash.wallet.integration.liquid.model.UIEvent
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import org.slf4j.LoggerFactory
+import kotlin.math.pow
 
 
 data class SettlementParameter(
@@ -106,6 +111,11 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
             return Intent(context, BuyDashWithCreditCardActivity::class.java)
         }
     }
+    // Used for Firebase events
+    private var widgetState: String = ""
+    private var processingStartTime = 0L
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+
     private lateinit var viewBinding: ActivityWebviewQuickExchangeBinding
     private lateinit var viewModel: ConnectivityViewModel
     private lateinit var networkUnavailableViewModel: NetworkUnavailableFragmentViewModel
@@ -412,10 +422,10 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
         );
     }
 
-    fun executeJavascriptInWebview(rawJavascript: String) {
+    private fun executeJavascriptInWebview(rawJavascript: String) {
         log.info("liquid: execute script: $rawJavascript")
         runOnUiThread {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 webview.evaluateJavascript(rawJavascript, null);
             } else {
                 val javaScriptFunctionCall = "(function() { $rawJavascript })()";
@@ -439,6 +449,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
+            widgetState = "quote_view"
             log.info("liquid: page started(${webview.progress}%): $url")
         }
     }
@@ -477,6 +488,8 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                 "success" -> {
                                     log.info("liquid: buy dash transaction successful")
                                     onUserInteraction()
+                                    logProcessingDuration("success")
+
                                     if (!isTransactionSuccessful) {
                                         isTransactionSuccessful = true
                                         findViewById<View>(R.id.closePane).visibility = View.VISIBLE
@@ -489,6 +502,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                 // liquid: EventData::{"event":"step_transition","data":{"new_step":"failure","old_step":"funding","formPercent":0,"meta":[{"severity":"FATAL","code":"3ds_failure","message":"Card 3DS failure.","context":"funding","trigger":"3ds-result"}]}}
                                 "failure" -> {
                                     onUserInteraction()
+                                    logProcessingDuration("failure")
                                 }
                                 // liquid: EventData::{"event":"step_transition","data":{"new_step":"loading","old_step":"failure","formPercent":0,"meta":{"transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","session_id":"e108dded-d956-4df1-9f52-0a2f9c15da1e","outcome_category":"EXTERNAL_REJECT","outcome_reason":"CARD_ISSUER_DECLINED_TRANSACTION","status":"VOID","funding_settlement":{"settlement_instruction_id":"339a667b-7ba6-4d18-b9aa-57f51eaba714","transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","currency":"USD","direction":"FUNDING","method":"CARD_PAYMENT","quantity":"12.00","status":"VOID","expires":{"unix_ms":1624108642767,"iso8601":"2021-06-19T13:17:22.767Z","ttl_ms":20000},"input_parameters":{"card_token":"tok_uzi7ofvao4sunl6dlwxgwotnty","card_last4":"3660","card_network":"visa"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/339a667b-7ba6-4d18-b9aa-57f51eaba714"},"capture_iframe":{"href":"https://partners.liquid.com/api/v1/method/card/339a667b-7ba6-4d18-b9aa-57f51eaba714"}}},"payout_settlement":{"settlement_instruction_id":"83276097-3ad7-4108-87ea-a155b6a4a7f2","transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","currency":"DASH","direction":"PAYOUT","method":"BLOCKCHAIN_TRANSFER","quantity":"0.063290","status":"READY","expires":{"unix_ms":1624108640242,"iso8601":"2021-06-19T13:17:20.242Z","ttl_ms":20000},"input_parameters":{"wallet_address":"XiHmLtFFZW5FgY5N4gmN52tcGnbDLormHf"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/83276097-3ad7-4108-87ea-a155b6a4a7f2"}}},"quote":{"quote_id":"01F8J6PV99CXAN5NMGNQH60STN","status":"DEALABLE"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/transaction/09b6e166-c994-4bfa-a838-a4332e8e906c"}}}}}
                                 "loading" -> {
@@ -497,6 +511,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                 // liquid: EventData::{"event":"step_transition","data":{"new_step":"outcome","old_step":"loading","formPercent":0,"meta":{"transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","session_id":"e108dded-d956-4df1-9f52-0a2f9c15da1e","outcome_category":"EXTERNAL_REJECT","outcome_reason":"CARD_ISSUER_DECLINED_TRANSACTION","status":"VOID","funding_settlement":{"settlement_instruction_id":"339a667b-7ba6-4d18-b9aa-57f51eaba714","transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","currency":"USD","direction":"FUNDING","method":"CARD_PAYMENT","quantity":"12.00","status":"VOID","expires":{"unix_ms":1624108642767,"iso8601":"2021-06-19T13:17:22.767Z","ttl_ms":20000},"input_parameters":{"card_token":"tok_uzi7ofvao4sunl6dlwxgwotnty","card_last4":"3660","card_network":"visa"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/339a667b-7ba6-4d18-b9aa-57f51eaba714"},"capture_iframe":{"href":"https://partners.liquid.com/api/v1/method/card/339a667b-7ba6-4d18-b9aa-57f51eaba714"}}},"payout_settlement":{"settlement_instruction_id":"83276097-3ad7-4108-87ea-a155b6a4a7f2","transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","currency":"DASH","direction":"PAYOUT","method":"BLOCKCHAIN_TRANSFER","quantity":"0.063290","status":"READY","expires":{"unix_ms":1624108640242,"iso8601":"2021-06-19T13:17:20.242Z","ttl_ms":20000},"input_parameters":{"wallet_address":"XiHmLtFFZW5FgY5N4gmN52tcGnbDLormHf"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/83276097-3ad7-4108-87ea-a155b6a4a7f2"}}},"quote":{"quote_id":"01F8J6PV99CXAN5NMGNQH60STN","status":"DEALABLE"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/transaction/09b6e166-c994-4bfa-a838-a4332e8e906c"}}}}}
                                 "outcome" -> {
                                     onUserInteraction()
+                                    processingStartTime = 0L
                                 }
                                 // liquid: EventData::{"event":"step_transition","data":{"new_step":"funding","old_step":"quoting","formPercent":71,"meta":{"transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","session_id":"e108dded-d956-4df1-9f52-0a2f9c15da1e","status":"INPUT_REQUIRED","payout_settlement":{"settlement_instruction_id":"83276097-3ad7-4108-87ea-a155b6a4a7f2","transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","currency":"DASH","direction":"PAYOUT","method":"BLOCKCHAIN_TRANSFER","quantity":"0.063290","status":"READY","expires":{"unix_ms":1624108640242,"iso8601":"2021-06-19T13:17:20.242Z","ttl_ms":20000},"input_parameters":{"wallet_address":"XiHmLtFFZW5FgY5N4gmN52tcGnbDLormHf"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/83276097-3ad7-4108-87ea-a155b6a4a7f2"}}},"quote":{"quote_id":"01F8J6PV99CXAN5NMGNQH60STN","status":"DEALABLE"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/transaction/09b6e166-c994-4bfa-a838-a4332e8e906c"}}}}}
                                 "funding" -> {
@@ -504,16 +519,24 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                 }
                                 // liquid: EventData::{"event":"step_transition","data":{"new_step":"verifying","old_step":"funding","formPercent":85,"meta":{"transaction_id":"5b573089-1089-4b81-b626-41f2bae4fcbb","session_id":"3936771f-d3b9-4b0f-9334-1948282d362e","status":"INPUT_REQUIRED","funding_settlement":{"settlement_instruction_id":"951359e1-f5f7-4ae4-be3e-52fc22a28344","transaction_id":"5b573089-1089-4b81-b626-41f2bae4fcbb","currency":"USD","direction":"FUNDING","method":"CARD_PAYMENT","quantity":"11.90","status":"READY","expires":{"unix_ms":1624047426828,"iso8601":"2021-06-18T20:17:06.828Z","ttl_ms":20000},"input_parameters":{"card_token":"tok_7rzjqrhaxzqexit3zqcqqiofuy","card_network":"visa","card_last4":"6887"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/951359e1-f5f7-4ae4-be3e-52fc22a28344"},"capture_iframe":{"href":"https://partners.liquid.com/api/v1/method/card/951359e1-f5f7-4ae4-be3e-52fc22a28344"}}},"payout_settlement":{"settlement_instruction_id":"17954a9f-672d-4e7e-993d-499bdfd6d71c","transaction_id":"5b573089-1089-4b81-b626-41f2bae4fcbb","currency":"DASH","direction":"PAYOUT","method":"BLOCKCHAIN_TRANSFER","quantity":"0.0640","status":"READY","expires":{"unix_ms":1624047424897,"iso8601":"2021-06-18T20:17:04.897Z","ttl_ms":20000},"input_parameters":{"wallet_address":"XbVUUvtUUunEY971YoXUbrkejtkU7oXfHA"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/17954a9f-672d-4e7e-993d-499bdfd6d71c"}}},"quote":{"quote_id":"01F8GCAP78H5KNJTGV9V3C32B7","status":"DEALABLE"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/transaction/5b573089-1089-4b81-b626-41f2bae4fcbb"}}}}}
                                 "verifying" -> {
+                                    processingStartTime = System.nanoTime()
+                                    widgetState = "verifying"
                                     onUserInteraction()
                                 }
                             }
                         }
                         // liquid: EventData::{"event":"ui_event","data":{"ui_event":"button_clicked","value":"next","target":"quote_view_next"}}
-                        "ui-event" -> {
+                        "ui_event" -> {
                             onUserInteraction()
+                            val uiEvent = Gson().fromJson(eventData, UIEvent::class.java)
+                            
+                            if (uiEvent.data?.target == "quote_view_next") {
+                                widgetState = "payment_details"
+                                analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_QUOTE_BUY, bundleOf())
+                            }
                         }
                         // liquid: EventData::{"event":"transaction_created","data":{"transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","session_id":"e108dded-d956-4df1-9f52-0a2f9c15da1e","status":"INPUT_REQUIRED","payout_settlement":{"settlement_instruction_id":"83276097-3ad7-4108-87ea-a155b6a4a7f2","transaction_id":"09b6e166-c994-4bfa-a838-a4332e8e906c","currency":"DASH","direction":"PAYOUT","method":"BLOCKCHAIN_TRANSFER","quantity":"0.063290","status":"READY","expires":{"unix_ms":1624108640242,"iso8601":"2021-06-19T13:17:20.242Z","ttl_ms":20000},"input_parameters":{"wallet_address":"XiHmLtFFZW5FgY5N4gmN52tcGnbDLormHf"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/settlement/83276097-3ad7-4108-87ea-a155b6a4a7f2"}}},"quote":{"quote_id":"01F8J6PV99CXAN5NMGNQH60STN","status":"DEALABLE"},"_links":{"status":{"method":"get","href":"https://partners.liquid.com/api/v1/transaction/09b6e166-c994-4bfa-a838-a4332e8e906c"}}}}
-                        "transaction-created" -> {
+                        "transaction_created" -> {
                             onUserInteraction()
                         }
                         // liquid: EventData::{"event":"suggested_size","data":{"backgroundHeight":416,"overflowHeight":551}}
@@ -523,10 +546,12 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                         "ERROR" -> {
                             error = eventData
                             log.error("liquid: $error")
+                            logProcessingDuration("error")
                         }
                     }
                 } catch (e: Exception) {
                     log.error("liquid:  ${e.message}", e)
+                    logProcessingDuration("error")
                 }
             }
         }
@@ -542,6 +567,18 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    private fun logProcessingDuration(outcome: String) {
+        if (processingStartTime > 0) {
+            val end = System.nanoTime()
+            val duration = ((end - processingStartTime) / 10f.pow(9)).toInt()
+            val durationStr = "${duration / 60}m ${duration % 60}s"
+            analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_PROCESSING_DURATION,
+                bundleOf("duration" to durationStr, "outcome" to outcome))
+        }
+
+        processingStartTime = 0
+    }
+
     override fun onDestroy() {
         log.info("liquid: closing buy dash with credit card")
         webview.removeJavascriptInterface(mJsInterfaceName)
@@ -549,6 +586,14 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     }
 
     override fun onBackPressed() {
+        when (widgetState) {
+            "quote_view" -> analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_QUOTE_CLOSE, bundleOf())
+            "verifying" -> analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_PROCESSING_CLOSE_TOP_LEFT, bundleOf())
+            else -> {}
+        }
+
+        logProcessingDuration("close")
+
         if (isTransactionSuccessful) {
             log.info("liquid: onBackPressed: successful transaction was made")
             setResult(Constants.RESULT_CODE_GO_HOME)
