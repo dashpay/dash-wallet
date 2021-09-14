@@ -637,6 +637,12 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
+    <style name="CardViewRaised" parent="Base.CardView">
+        <item name="android:background">@color/dash_white</item>
+        <item name="cardCornerRadius">10dp</item>
+        <item name="cardElevation">5dp</item>
+    </style>
+
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
@@ -650,6 +656,15 @@
         <item name="android:textColor">@color/dash_white</item>
     </style>
 
+    <style name="Body1" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Body1.SemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
     <style name="Body2" parent="TextAppearance.MaterialComponents.Body2">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
@@ -657,5 +672,19 @@
 
     <style name="Body2.White">
         <item name="android:textColor">@color/dash_white</item>
+    </style>
+
+    <style name="Subtitle2" parent="TextAppearance.MaterialComponents.Subtitle2">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Caption" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Caption.SteelGray">
+        <item name="android:textColor">@color/steel_gray</item>
     </style>
 </resources>

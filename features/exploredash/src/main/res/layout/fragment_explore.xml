@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dark_blue"
+    android:background="@color/bg_explore"
     tools:context="org.dash.wallet.features.exploredash.ExploreFragment">
 
     <include
@@ -17,12 +26,13 @@
 
     <ImageView
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/explore_hand"
-        app:layout_constraintBottom_toTopOf="@id/explore_subtitle"
+        android:layout_height="0dp"
+        android:maxHeight="260dp"
+        android:src="@drawable/explore_image"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/title_bar"
+        app:layout_constraintBottom_toTopOf="@id/explore_subtitle" />
 
     <TextView
         android:id="@+id/explore_title"
@@ -55,84 +65,133 @@
         android:layout_marginBottom="-8dp"
         android:background="@drawable/rounded_background"
         android:orientation="vertical"
-        android:paddingHorizontal="15dp"
-        android:paddingTop="25dp"
-        android:paddingBottom="35dp"
+        android:paddingTop="15dp"
         android:theme="@style/ExploreBottomContentBackground"
-        app:layout_constraintHeight_percent="0.4"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintHeight_percent="0.42">
 
         <androidx.cardview.widget.CardView
-            android:id="@+id/merchants_btn"
+            style="@style/CardViewRaised"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:background="@color/dash_white">
+            android:layout_marginHorizontal="15dp"
+            android:layout_marginBottom="35dp">
 
-            <androidx.constraintlayout.widget.ConstraintLayout
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="12dp">
+                android:layout_height="match_parent"
+                android:orientation="vertical">
 
-                <ImageView
-                    android:id="@+id/merchants_icon"
-                    style="@style/MenuRowIcon"
-                    android:src="@drawable/ic_fancy_dialog_sample_icon"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/merchants_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="21dp"
+                    android:paddingBottom="12dp"
+                    android:paddingEnd="15dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
 
-                <TextView
-                    android:id="@+id/merchants_title"
-                    style="@style/MontserratMedium.MenuRowTitle"
-                    android:text="@string/explore_merchants_title"
-                    app:layout_constraintStart_toEndOf="@+id/merchants_icon"
-                    app:layout_constraintTop_toTopOf="@+id/merchants_icon" />
+                    <ImageView
+                        android:id="@+id/merchants_icon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:src="@drawable/ic_map"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginStart="1dp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/merchants_title"
+                        app:layout_constraintTop_toTopOf="parent" />
 
-                <TextView
-                    android:id="@+id/merchants_subtitle"
-                    style="@style/MontserratRegular.MenuRowSubTitle"
-                    android:text="@string/explore_merchants_subtitle"
-                    app:layout_constraintStart_toStartOf="@+id/merchants_title"
-                    app:layout_constraintTop_toBottomOf="@+id/merchants_title" />
-            </androidx.constraintlayout.widget.ConstraintLayout>
-        </androidx.cardview.widget.CardView>
+                    <TextView
+                        android:id="@+id/merchants_title"
+                        style="@style/Subtitle2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="59dp"
+                        android:text="@string/explore_merchants_title"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent" />
 
-        <androidx.cardview.widget.CardView
-            android:id="@+id/atms_btn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="12dp"
-            android:background="@color/dash_white">
+                    <TextView
+                        android:id="@+id/merchants_subtitle"
+                        style="@style/Caption.SteelGray"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:lineSpacingExtra="2sp"
+                        android:text="@string/explore_merchants_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/merchants_title"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/merchants_title" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="12dp">
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="59dp"
+                    android:background="@color/divider_color" />
 
-                <ImageView
-                    android:id="@+id/buy_dash_icon"
-                    style="@style/MenuRowIcon"
-                    android:src="@drawable/ic_fancy_dialog_sample_icon"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/atms_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="22dp"
+                    android:paddingEnd="15dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
 
-                <TextView
-                    android:id="@+id/buy_dash_title"
-                    style="@style/MontserratMedium.MenuRowTitle"
-                    android:text="@string/explore_atms_title"
-                    app:layout_constraintStart_toEndOf="@+id/buy_dash_icon"
-                    app:layout_constraintTop_toTopOf="@+id/buy_dash_icon" />
+                    <ImageView
+                        android:id="@+id/atms_icon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:src="@drawable/ic_cash"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/atms_title" />
 
-                <TextView
-                    android:id="@+id/buy_dash_subtitle"
-                    style="@style/MontserratRegular.MenuRowSubTitle"
-                    android:text="@string/explore_atms_subtitle"
-                    app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
-                    app:layout_constraintTop_toBottomOf="@+id/buy_dash_title" />
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:id="@+id/atms_title"
+                        style="@style/Subtitle2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="59dp"
+                        android:text="@string/explore_atms_title"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent" />
+
+                    <TextView
+                        android:id="@+id/atms_subtitle"
+                        style="@style/Caption.SteelGray"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:lineSpacingExtra="2sp"
+                        android:text="@string/explore_atms_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/atms_title"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/atms_title" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </LinearLayout>
         </androidx.cardview.widget.CardView>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+<!--    <ScrollView-->
+<!--        android:id="@+id/screenshot"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent">-->
+
+<!--        <ImageView-->
+<!--            android:layout_width="365dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_marginTop="150dp"-->
+<!--            android:alpha="0.5"-->
+<!--            android:src="@drawable/explore" />-->
+<!--    </ScrollView>-->
+</FrameLayout>
