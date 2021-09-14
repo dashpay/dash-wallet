@@ -26,6 +26,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
+import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
+
 
 class SettingsActivity : BaseMenuActivity() {
 
@@ -46,7 +48,9 @@ class SettingsActivity : BaseMenuActivity() {
         }
         local_currency.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, bundleOf())
-            startActivity(Intent(this, ExchangeRatesActivity::class.java))
+            val intent = Intent(this, ExchangeRatesActivity::class.java)
+            intent.putExtra(ARG_SHOW_AS_DIALOG, false)
+            startActivity(intent)
         }
         rescan_blockchain.setOnClickListener { resetBlockchain() }
     }
