@@ -198,14 +198,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
             @Override
             public void onClick(View v) {
                 if (v == shortcutsPane.getSecureNowButton()) {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SECURE_WALLET, Bundle.EMPTY);
                     handleBackupWalletToSeed();
                 } else if (v == shortcutsPane.getScanToPayButton()) {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SCAN_TO_PAY, Bundle.EMPTY);
                     handleScan(v);
                 } else if (v == shortcutsPane.getBuySellButton()) {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL, Bundle.EMPTY);
                     startUpholdActivity();
                 } else if (v == shortcutsPane.getPayToAddressButton()) {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS, Bundle.EMPTY);
                     handlePaste();
                 } else if (v == shortcutsPane.getReceiveButton()) {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE, Bundle.EMPTY);
                     startActivity(PaymentsActivity.createIntent(WalletActivity.this, PaymentsActivity.ACTIVE_TAB_RECEIVE));
                 } else if (v == shortcutsPane.getImportPrivateKey()) {
                     SweepWalletActivity.start(WalletActivity.this, true);

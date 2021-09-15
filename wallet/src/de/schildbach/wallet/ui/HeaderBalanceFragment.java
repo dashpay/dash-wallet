@@ -39,6 +39,8 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
 
@@ -59,6 +61,8 @@ public final class HeaderBalanceFragment extends Fragment {
     private Configuration config;
     private Wallet wallet;
     private LoaderManager loaderManager;
+    private final FirebaseAnalyticsServiceImpl analytics
+            = FirebaseAnalyticsServiceImpl.Companion.getInstance();
 
     private Boolean hideBalance;
     private View showBalanceButton;
@@ -187,12 +191,14 @@ public final class HeaderBalanceFragment extends Fragment {
             hideShowBalanceHint.setText(R.string.home_balance_show_hint);
             balances.setVisibility(View.INVISIBLE);
             showBalanceButton.setVisibility(View.VISIBLE);
+            analytics.logEvent(AnalyticsConstants.Home.SHOW_BALANCE, Bundle.EMPTY);
             return;
         }
         balances.setVisibility(View.VISIBLE);
         caption.setText(R.string.home_available_balance);
         hideShowBalanceHint.setText(R.string.home_balance_hide_hint);
         showBalanceButton.setVisibility(View.GONE);
+        analytics.logEvent(AnalyticsConstants.Home.HIDE_BALANCE, Bundle.EMPTY);
 
         if (!isAdded()) {
             return;

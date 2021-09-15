@@ -22,15 +22,19 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_transactions_filter.view.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 class TransactionsFilterDialog : BaseBottomSheetDialogFragment() {
 
     private lateinit var sharedViewModel: TransactionsFilterSharedViewModel
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_transactions_filter, container, false)
@@ -43,14 +47,23 @@ class TransactionsFilterDialog : BaseBottomSheetDialogFragment() {
         view.apply {
             all_transactions.setOnClickListener {
                 sharedViewModel.onAllTransactionsSelected.call()
+                analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
+                    "filter_value" to "all_transactions"
+                ))
                 dismiss()
             }
             received_transactions.setOnClickListener {
                 sharedViewModel.onReceivedTransactionsSelected.call()
+                analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
+                    "filter_value" to "received_transactions"
+                ))
                 dismiss()
             }
             sent_transactions.setOnClickListener {
                 sharedViewModel.onSentTransactionsSelected.call()
+                analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
+                    "filter_value" to "sent_transactions"
+                ))
                 dismiss()
             }
         }
