@@ -20,24 +20,22 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
-import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dialog_transactions_filter.view.*
+import androidx.fragment.app.activityViewModels
+import de.schildbach.wallet_test.databinding.DialogTransactionsFilterBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 class TransactionsFilterDialog : BaseBottomSheetDialogFragment() {
 
-    private lateinit var sharedViewModel: TransactionsFilterSharedViewModel
+    private val sharedViewModel: TransactionsFilterSharedViewModel by activityViewModels()
+    private lateinit var binding: DialogTransactionsFilterBinding
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_transactions_filter, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        super.onCreate(savedInstanceState)
+        binding = DialogTransactionsFilterBinding.inflate(layoutInflater)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -45,21 +43,21 @@ class TransactionsFilterDialog : BaseBottomSheetDialogFragment() {
 
         // take care of actions here
         view.apply {
-            all_transactions.setOnClickListener {
+            binding.allTransactions.setOnClickListener {
                 sharedViewModel.onAllTransactionsSelected.call()
                 analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
                     "filter_value" to "all_transactions"
                 ))
                 dismiss()
             }
-            received_transactions.setOnClickListener {
+            binding.receivedTransactions.setOnClickListener {
                 sharedViewModel.onReceivedTransactionsSelected.call()
                 analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
                     "filter_value" to "received_transactions"
                 ))
                 dismiss()
             }
-            sent_transactions.setOnClickListener {
+            binding.sentTransactions.setOnClickListener {
                 sharedViewModel.onSentTransactionsSelected.call()
                 analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_FILTER, bundleOf(
                     "filter_value" to "sent_transactions"
@@ -67,22 +65,5 @@ class TransactionsFilterDialog : BaseBottomSheetDialogFragment() {
                 dismiss()
             }
         }
-
-        dialog?.setOnShowListener { dialog ->
-            // apply wrap_content height
-            val d = dialog as BottomSheetDialog
-            val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            val coordinatorLayout = bottomSheet!!.parent as CoordinatorLayout
-            val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-            bottomSheetBehavior.peekHeight = bottomSheet.height
-            coordinatorLayout.parent.requestLayout()
-        }
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        sharedViewModel = activity?.run {
-            ViewModelProvider(this)[TransactionsFilterSharedViewModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
     }
 }
