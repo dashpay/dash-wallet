@@ -138,6 +138,13 @@ public final class HeaderBalanceFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 hideBalance = !hideBalance;
+
+                if (hideBalance) {
+                    analytics.logEvent(AnalyticsConstants.Home.HIDE_BALANCE, Bundle.EMPTY);
+                } else {
+                    analytics.logEvent(AnalyticsConstants.Home.SHOW_BALANCE, Bundle.EMPTY);
+                }
+
                 updateView();
             }
         });
@@ -191,14 +198,12 @@ public final class HeaderBalanceFragment extends Fragment {
             hideShowBalanceHint.setText(R.string.home_balance_show_hint);
             balances.setVisibility(View.INVISIBLE);
             showBalanceButton.setVisibility(View.VISIBLE);
-            analytics.logEvent(AnalyticsConstants.Home.SHOW_BALANCE, Bundle.EMPTY);
             return;
         }
         balances.setVisibility(View.VISIBLE);
         caption.setText(R.string.home_available_balance);
         hideShowBalanceHint.setText(R.string.home_balance_hide_hint);
         showBalanceButton.setVisibility(View.GONE);
-        analytics.logEvent(AnalyticsConstants.Home.HIDE_BALANCE, Bundle.EMPTY);
 
         if (!isAdded()) {
             return;

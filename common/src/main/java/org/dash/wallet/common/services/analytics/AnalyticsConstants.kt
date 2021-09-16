@@ -72,10 +72,10 @@ object AnalyticsConstants {
         const val SHORTCUT_SEND_TO_ADDRESS = "shortcut_send_to_address"
         const val SHORTCUT_RECEIVE = "shortcut_receive"
         const val SHORTCUT_BUY_AND_SELL = "shortcut_buy_and_sell_dash"
-        const val HIDE_BALANCE = "hide_balance"
-        const val SHOW_BALANCE = "show_balance"
-        const val TRANSACTION_DETAILS = "transaction_details"
-        const val TRANSACTION_FILTER = "transaction_filter"
-        const val SEND_RECEIVE_BUTTON = "send_receive_button"
+        const val HIDE_BALANCE = "home_hide_balance"
+        const val SHOW_BALANCE = "home_show_balance"
+        const val TRANSACTION_DETAILS = "home_transaction_details"
+        const val TRANSACTION_FILTER = "home_transaction_filter"
+        const val SEND_RECEIVE_BUTTON = "home_send_receive_button"
     }
 }
