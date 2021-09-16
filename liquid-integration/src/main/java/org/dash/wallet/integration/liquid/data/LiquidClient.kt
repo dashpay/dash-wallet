@@ -41,7 +41,7 @@ class LiquidClient private constructor(context: Context, private val encryptionK
 
     init {
         prefs = SecurePreferences(context, encryptionKey, LIQUID_PREFS)
-        val interceptor = HttpLoggingInterceptor().apply {
+        val interceptor = HttpLoggingInterceptor { message: String? -> log.info(message) }.apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         interceptor.redactHeader("Authorization")

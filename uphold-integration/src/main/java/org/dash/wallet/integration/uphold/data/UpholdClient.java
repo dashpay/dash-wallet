@@ -83,8 +83,9 @@ public class UpholdClient {
         this.accessToken = getStoredAccessToken();
 
         String baseUrl = UpholdConstants.CLIENT_BASE_URL;
-        HttpLoggingInterceptor loggingIntercepter = new HttpLoggingInterceptor();
+        HttpLoggingInterceptor loggingIntercepter = new HttpLoggingInterceptor(message -> log.info(message));
         loggingIntercepter.setLevel(HttpLoggingInterceptor.Level.BODY);
+        loggingIntercepter.redactHeader("Authorization")
         OkHttpClient okClient = new OkHttpClient.Builder()
                 .addInterceptor(headerInterceptor)
                 .addInterceptor(loggingIntercepter)
