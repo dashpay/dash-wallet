@@ -14,6 +14,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -34,6 +35,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -64,6 +67,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private var liquidClient: LiquidClient? = null
     private lateinit var viewModel: LiquidViewModel
     private lateinit var viewBinding: ActivityLiquidBuyAndSellDashBinding
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     private lateinit var context: Context
     private var loadingDialog: ProgressDialog? = null
@@ -307,6 +311,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     private fun openLogOutUrl() {
+        analytics.logEvent(AnalyticsConstants.Liquid.DISCONNECT, bundleOf())
         //revoke access to the token
         revokeAccessToken()
     }
@@ -316,11 +321,14 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      */
     private fun buyDash() {
         log.info("liquid: buy dash")
+        analytics.logEvent(AnalyticsConstants.Liquid.BUY_DASH, bundleOf())
 
         SelectBuyDashDialog(context, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 if (value == 1) {
                     super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
+                    analytics.logEvent(AnalyticsConstants.Liquid.BUY_CREDIT_CARD, bundleOf())
+
                     val intent = Intent(context, BuyDashWithCreditCardActivity::class.java)
                     intent.putExtra("Amount", "5")
                     startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
