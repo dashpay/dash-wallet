@@ -26,6 +26,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.ui.explore.ExploreActivity
 import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
@@ -77,7 +78,9 @@ class MoreActivity : GlobalFooterActivity() {
             val dialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                     WalletApplication.getInstance()).show()
             dialog.window!!.callback = UserInteractionAwareCallback(dialog.window!!.callback, this)
-
+        }
+        explore.setOnClickListener {
+            startActivity(Intent(this, ExploreActivity::class.java))
         }
     }
 
