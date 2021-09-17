@@ -1,5 +1,22 @@
+/*
+ * Copyright 2021 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.dash.wallet.common.services.analytics
 
+// Event names should be <= 40 chars
 object AnalyticsConstants {
     const val CALLING_ACTIVITY = "calling_activity"
 
@@ -25,5 +42,27 @@ object AnalyticsConstants {
         const val HISTORY_FILTER = "invite_history_filter"
         const val DETAILS = "invite_details"
         const val NEW_WALLET = "invite_new_wallet"
+    }
+
+    object UsersContacts {
+        const val SEARCH_CONTACTS = "contacts_search"
+        const val SEARCH_DASH_NETWORK = "contacts_search_dash_network"
+        const val SEARCH_USER_ICON = "contacts_search_user_icon"
+        const val SEND_REQUEST = "contacts_send_request"
+        const val ACCEPT_REQUEST = "contacts_accept_request"
+        const val HOME_SCREEN_NOTIFICATIONS = "home_screen_notifications" //TODO ??
+        const val NOTIFICATION_ACCEPT_REQUEST = "notification_accept_contact_request" //TODO ??
+        const val NOTIFICATION_CONTACT_DETAILS = "notification_contact_details" //TODO ??
+        const val PROFILE_EDIT_MORE = "profile_edit_from_more"
+        const val PROFILE_CHANGE_NAME = "profile_change_display_name"
+        const val PROFILE_DISPLAY_NAME_LENGTH = "profile_display_name_text_length"
+        const val PROFILE_CHANGE_ABOUT_ME = "profile_change_about_me"
+        const val PROFILE_ABOUT_ME_LENGTH = "profile_about_me_text_length"
+        const val PROFILE_CHANGE_PICTURE_GRAVATAR = "profile_change_picture_gravatar"
+        const val PROFILE_CHANGE_PICTURE_PUBLIC_URL = "profile_change_picture_public_url"
+        const val PROFILE_CHANGE_PICTURE_CAMERA = "profile_change_picture_camera_photo"
+        const val PROFILE_CHANGE_PICTURE_GALLERY = "profile_change_picture_gallery"
+        const val TAB_SEND_TO_CONTACT = "send_tab_send_to_contact" //TODO ??
+        const val SHORTCUT_SEND_TO_CONTACT = "shortcut_send_to_contact" //TODO ??
     }
 }
