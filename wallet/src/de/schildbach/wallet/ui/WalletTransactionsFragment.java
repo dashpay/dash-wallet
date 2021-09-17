@@ -62,6 +62,8 @@ import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,6 +128,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     private static final int SHOW_QR_THRESHOLD_BYTES = 2500;
     private static final Logger log = LoggerFactory.getLogger(WalletTransactionsFragment.class);
+    private static final FirebaseAnalyticsServiceImpl analytics =
+            FirebaseAnalyticsServiceImpl.Companion.getInstance();
 
     private final ContentObserver addressBookObserver = new ContentObserver(handler) {
         @Override
@@ -386,6 +390,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
                 TransactionDetailsDialogFragment.newInstance(tx.getTxId());
         transactionDetailsDialogFragment.show(getChildFragmentManager(), null);
+        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS, Bundle.EMPTY);
     }
 
     @Override

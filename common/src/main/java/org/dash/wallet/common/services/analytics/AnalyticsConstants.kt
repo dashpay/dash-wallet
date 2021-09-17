@@ -65,4 +65,17 @@ object AnalyticsConstants {
         const val ABOUT = "settings_about"
         const val ABOUT_SUPPORT = "settings_about_contact_support"
     }
+
+    object Home {
+        const val SHORTCUT_SECURE_WALLET = "shortcut_secure_wallet"
+        const val SHORTCUT_SCAN_TO_PAY = "shortcut_scan_to_pay"
+        const val SHORTCUT_SEND_TO_ADDRESS = "shortcut_send_to_address"
+        const val SHORTCUT_RECEIVE = "shortcut_receive"
+        const val SHORTCUT_BUY_AND_SELL = "shortcut_buy_and_sell_dash"
+        const val HIDE_BALANCE = "home_hide_balance"
+        const val SHOW_BALANCE = "home_show_balance"
+        const val TRANSACTION_DETAILS = "home_transaction_details"
+        const val TRANSACTION_FILTER = "home_transaction_filter"
+        const val SEND_RECEIVE_BUTTON = "home_send_receive_button"
+    }
 }
