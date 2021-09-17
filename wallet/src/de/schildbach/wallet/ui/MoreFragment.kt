@@ -240,7 +240,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     }
 
     private fun showHideInviteSection() {
-        if (walletApplication.configuration.developerMode && showInviteSection) {
+        if (showInviteSection) {
             invite.visibility = View.VISIBLE
         } else {
             invite.visibility = View.GONE

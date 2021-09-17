@@ -475,13 +475,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     suspend fun getNotificationCount(date: Long): Int {
         var count = 0
-        // Developer Mode Feature
-        if (walletApplication.configuration.developerMode && shouldShowAlert()) {
-            val alert = userAlertDao.load(date)
-            if (alert != null) {
-                count++
-            }
+        if (!platformRepoInstance.isUsernameRegistered()) {
+            return 0
         }
+
+        val alert = userAlertDao.load(date)
+        if (alert != null) {
+            count++
+        }
+
         val results = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
         if (results.status == Status.SUCCESS) {
             val list = results.data ?: return 0
@@ -489,6 +491,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             log.info("New contacts at ${Date(date)} = $count - getNotificationCount")
         }
         return count
+    }
+
+    private fun isUsernameRegistered(): Boolean {
+        return this::blockchainIdentity.isInitialized
     }
 
     /**

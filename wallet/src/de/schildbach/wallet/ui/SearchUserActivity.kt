@@ -152,12 +152,6 @@ class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.
             search.setText(initQuery)
         }
 
-        //Developer Mode Feature
-        if (!walletApplication.configuration.developerMode) {
-            invite_friend_hint_view_dashpay_profile_1.visibility = View.GONE
-            invite_friend_hint_view_empty_result.visibility = View.GONE //this line doesn't hide the invite Layout item
-        }
-
         invite_friend_hint_view_dashpay_profile_1.setOnClickListener {
             startInviteFlow()
         }

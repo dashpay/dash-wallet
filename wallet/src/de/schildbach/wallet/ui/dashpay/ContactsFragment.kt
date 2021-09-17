@@ -32,7 +32,6 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -147,9 +146,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
             // Developer Mode Feature
             // Hide the invite UI
-            if (!WalletApplication.getInstance().configuration.developerMode) {
-                emptyStatePane.inviteHintLayout.inviteFriendHint.visibility = View.GONE
-            }
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
                 dashPayViewModel.inviteHistory.observeOnce(requireActivity()) {
                     if (it == null || it.isEmpty()) {
