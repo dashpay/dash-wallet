@@ -20,6 +20,7 @@ import android.os.Bundle
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
+import org.dash.wallet.common.BuildConfig
 
 interface AnalyticsService {
     fun logEvent(event: String, params: Bundle)
@@ -31,6 +32,10 @@ class FirebaseAnalyticsServiceImpl: AnalyticsService {
     private val crashlytics = Firebase.crashlytics
 
     override fun logEvent(event: String, params: Bundle) {
+        if (BuildConfig.DEBUG) {
+            return
+        }
+
         try {
             firebaseAnalytics.logEvent(event, params)
         } catch (ex: Exception) {
@@ -39,6 +44,10 @@ class FirebaseAnalyticsServiceImpl: AnalyticsService {
     }
 
     override fun logError(error: Throwable, details: String?) {
+        if (BuildConfig.DEBUG) {
+            return
+        }
+
         details?.let { crashlytics.log(details) }
         crashlytics.recordException(error)
     }

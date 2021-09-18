@@ -6,7 +6,8 @@
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
     android:background="@color/bg_less_bright"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.PaymentsActivity">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
