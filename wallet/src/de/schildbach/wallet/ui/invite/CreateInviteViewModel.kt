@@ -25,7 +25,7 @@ import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
-import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @HiltViewModel

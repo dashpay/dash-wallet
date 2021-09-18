@@ -32,7 +32,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 

@@ -57,7 +57,7 @@ import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.CurrencyInfo
-import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.DialogBuilder
 import java.io.IOException
 import java.util.*

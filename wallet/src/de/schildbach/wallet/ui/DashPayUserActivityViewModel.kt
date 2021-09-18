@@ -33,7 +33,7 @@ import de.schildbach.wallet.ui.dashpay.TransactionsLiveData
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.lang.Exception
 import javax.inject.Inject

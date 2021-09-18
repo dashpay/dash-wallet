@@ -29,8 +29,8 @@ import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet_test.R
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.services.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 

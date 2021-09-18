@@ -23,7 +23,7 @@ import androidx.lifecycle.switchMap
 import androidx.work.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.security.SecurityGuard
-import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
 class SendInviteOperation(val application: Application) {

@@ -20,8 +20,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.common.services.AnalyticsService
-import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 @Module
 @InstallIn(SingletonComponent::class)

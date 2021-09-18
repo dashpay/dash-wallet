@@ -19,7 +19,7 @@ import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.security.SecurityGuard
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
