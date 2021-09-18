@@ -479,9 +479,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             return 0
         }
 
-        val alert = userAlertDao.load(date)
-        if (alert != null) {
-            count++
+        if (shouldShowAlert()) {
+            val alert = userAlertDao.load(date)
+            if (alert != null) {
+                count++
+            }
         }
 
         val results = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
