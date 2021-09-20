@@ -55,8 +55,7 @@ public class GenericUtils {
     }
 
     /**
-     * Funtion which returns a concatenation of the currency code and symbol based on the default
-     * Locale of the device
+     * Funtion which returns a concatenation of the currency code of the device's Locale
      * @return
      */
     public static String getCurrentCountryCurrencySymbol() {
@@ -70,8 +69,7 @@ public class GenericUtils {
         Locale defaultLocale = new Locale(deviceLocaleLanguage, countryCode);
 
         Currency defaultCurrency = Currency.getInstance(defaultLocale);
-        return defaultCurrency.getSymbol().equalsIgnoreCase(defaultCurrency.getCurrencyCode()) ?
-                defaultCurrency.getSymbol() : defaultCurrency.getCurrencyCode().concat(" ").concat(defaultCurrency.getSymbol());
+        return defaultCurrency.getCurrencyCode();
     }
 
     /**
