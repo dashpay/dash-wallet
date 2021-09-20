@@ -177,8 +177,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     private fun loadWebView() {
 
         log.info("liquid: loading webview")
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
+        setSupportActionBar(viewBinding.toolbar)
 
         val actionBar = supportActionBar
         actionBar?.apply {
@@ -290,8 +289,8 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
         webview.loadUrl(LiquidConstants.BUY_WITH_CREDIT_CARD_URL)
 
         //don't show the (i) icon
-        findViewById<View>(R.id.ivInfo).isVisible = false
-        findViewById<View>(R.id.ivInfo).setOnClickListener {
+        viewBinding.ivInfo.isVisible = false
+        viewBinding.ivInfo.setOnClickListener {
             CountrySupportDialog(this, true).show()
         }
     }
@@ -492,8 +491,8 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
                                     if (!isTransactionSuccessful) {
                                         isTransactionSuccessful = true
-                                        findViewById<View>(R.id.closePane).visibility = View.VISIBLE
-                                        findViewById<View>(R.id.btnOkay).setOnClickListener {
+                                        viewBinding.closePane.visibility = View.VISIBLE
+                                        viewBinding.btnOkay.setOnClickListener {
                                             setResult(Constants.RESULT_CODE_GO_HOME)
                                             onBackPressed()
                                         }
