@@ -47,6 +47,7 @@ import kotlinx.android.synthetic.main.fragment_payments_pay.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 @AndroidEntryPoint
 class PaymentsPayFragment : Fragment(),
@@ -142,6 +143,7 @@ class PaymentsPayFragment : Fragment(),
 
     private fun handleSelectContact() {
         if (requireActivity() is OnSelectContactToPayListener) {
+            dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.TAB_SEND_TO_CONTACT)
             (requireActivity() as OnSelectContactToPayListener).selectContactToPay()
         }
     }

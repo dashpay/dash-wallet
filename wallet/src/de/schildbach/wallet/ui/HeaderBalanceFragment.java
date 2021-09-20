@@ -43,6 +43,7 @@ import org.dash.wallet.common.util.GenericUtils;
 
 import javax.annotation.Nullable;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -54,6 +55,7 @@ import de.schildbach.wallet.ui.dashpay.NotificationsActivity;
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay;
 import de.schildbach.wallet_test.R;
 
+@AndroidEntryPoint
 public final class HeaderBalanceFragment extends Fragment implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private WalletApplication application;

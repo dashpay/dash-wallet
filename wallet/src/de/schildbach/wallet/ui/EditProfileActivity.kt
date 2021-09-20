@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 import android.Manifest
 import android.app.Activity
 import android.content.ClipData
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -35,12 +34,11 @@ import android.text.TextWatcher
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
@@ -84,9 +82,9 @@ class EditProfileActivity : BaseMenuActivity() {
 
     }
 
-    private lateinit var editProfileViewModel: EditProfileViewModel
-    private lateinit var selectProfilePictureSharedViewModel: SelectProfilePictureSharedViewModel
-    private lateinit var externalUrlSharedViewModel: ExternalUrlProfilePictureViewModel
+    private val editProfileViewModel: EditProfileViewModel by viewModels()
+    private val selectProfilePictureSharedViewModel: SelectProfilePictureSharedViewModel by viewModels()
+    private val externalUrlSharedViewModel: ExternalUrlProfilePictureViewModel by viewModels()
 
     private var isEditing: Boolean = false
     private var defaultAvatar: TextDrawable? = null
@@ -175,32 +173,36 @@ class EditProfileActivity : BaseMenuActivity() {
             selectImage()
         }
 
-        selectProfilePictureSharedViewModel.onFromGravatarCallback.observe(this, Observer<Void> {
+        selectProfilePictureSharedViewModel.onFromGravatarCallback.observe(this) {
             imitateUserInteraction()
             externalUrlSharedViewModel.shouldCrop = false
+            editProfileViewModel.pictureSource = "gravatar"
             pictureFromGravatar()
-        })
+        }
 
-        selectProfilePictureSharedViewModel.onFromUrlCallback.observe(this, Observer<Void> {
+        selectProfilePictureSharedViewModel.onFromUrlCallback.observe(this) {
             imitateUserInteraction()
             externalUrlSharedViewModel.shouldCrop = true
+            editProfileViewModel.pictureSource = "public_url"
             pictureFromUrl()
-        })
+        }
 
-        selectProfilePictureSharedViewModel.onTakePictureCallback.observe(this, Observer<Void> {
+        selectProfilePictureSharedViewModel.onTakePictureCallback.observe(this) {
             imitateUserInteraction()
+            editProfileViewModel.pictureSource = "camera"
             takePictureWithPermission()
-        })
+        }
 
-        selectProfilePictureSharedViewModel.onChoosePictureCallback.observe(this, Observer<Void> {
+        selectProfilePictureSharedViewModel.onChoosePictureCallback.observe(this) {
             imitateUserInteraction()
+            editProfileViewModel.pictureSource = "gallery"
             choosePictureWithPermission()
-        })
+        }
 
-        editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this, Observer {
+        editProfileViewModel.onTmpPictureReadyForEditEvent.observe(this) {
             imitateUserInteraction()
             cropProfilePicture()
-        })
+        }
     }
 
     private fun pictureFromGravatar() {
@@ -222,20 +224,16 @@ class EditProfileActivity : BaseMenuActivity() {
     }
 
     private fun initViewModel() {
-        editProfileViewModel = ViewModelProvider(this).get(EditProfileViewModel::class.java)
-        selectProfilePictureSharedViewModel = ViewModelProvider(this).get(SelectProfilePictureSharedViewModel::class.java)
-        externalUrlSharedViewModel = ViewModelProvider(this).get(ExternalUrlProfilePictureViewModel::class.java)
-
         // first ensure that we have a registered username
-        editProfileViewModel.dashPayProfileData.observe(this, Observer { dashPayProfile ->
+        editProfileViewModel.dashPayProfileData.observe(this) { dashPayProfile ->
             if (dashPayProfile != null) {
                 showProfileInfo(dashPayProfile)
             } else {
                 finish()
             }
-        })
+        }
 
-        externalUrlSharedViewModel.validUrlChosenEvent.observe(this, Observer {
+        externalUrlSharedViewModel.validUrlChosenEvent.observe(this) {
             if (it != null) {
                 editProfileViewModel.avatarHash = externalUrlSharedViewModel.avatarHash
                 editProfileViewModel.avatarFingerprint = externalUrlSharedViewModel.avatarFingerprint
@@ -246,9 +244,9 @@ class EditProfileActivity : BaseMenuActivity() {
                 ProfilePictureDisplay.displayDefault(dashpayUserAvatar, username)
             }
             profilePictureChanged = true
-        })
+        }
 
-        editProfileViewModel.profilePictureUploadLiveData.observe(this, Observer {
+        editProfileViewModel.profilePictureUploadLiveData.observe(this) {
             imitateUserInteraction()
             when (it.status) {
                 Status.LOADING -> {
@@ -278,20 +276,20 @@ class EditProfileActivity : BaseMenuActivity() {
                     // ignore
                 }
             }
-        })
-        editProfileViewModel.uploadDialogAcceptLiveData.observe(this, Observer { accepted ->
+        }
+        editProfileViewModel.uploadDialogAcceptLiveData.observe(this) { accepted ->
             imitateUserInteraction()
             if (accepted) {
                 walletApplication.configuration.setAcceptedUploadPolicy(editProfileViewModel.storageService.name, true)
                 startUploadProcess()
             }
-        })
-        editProfileViewModel.deleteProfilePictureConfirmationLiveData.observe(this, Observer { accepted ->
+        }
+        editProfileViewModel.deleteProfilePictureConfirmationLiveData.observe(this) { accepted ->
             imitateUserInteraction()
             if (accepted) {
                 showProfilePictureServiceDialog(false)
             }
-        })
+        }
     }
 
     private fun startUploadProcess() {
@@ -506,14 +504,14 @@ class EditProfileActivity : BaseMenuActivity() {
             DeleteProfilePictureConfirmationDialog().show(supportFragmentManager, null)
             return
         }
-        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this, Observer {
+        selectProfilePictureSharedViewModel.onChooseStorageService.observe(this) {
             editProfileViewModel.storageService = it
             if (walletApplication.configuration.getAcceptedUploadPolicy(editProfileViewModel.storageService.name)) {
                 startUploadProcess()
             } else {
                 UploadPolicyDialog().show(supportFragmentManager, null)
             }
-        })
+        }
         ChooseStorageServiceDialog.newInstance().show(supportFragmentManager, null)
     }
 
@@ -571,6 +569,8 @@ class EditProfileActivity : BaseMenuActivity() {
 
     //TODO: leave this for now, we might need it later
 //if the signed in do we need to do it again?
+    // TODO (ashikhmin): might be better to move GDrive related code to a separate service
+    // and inject it here or into the viewModel
     private fun checkGDriveAccess() {
         object : Thread() {
             override fun run() {

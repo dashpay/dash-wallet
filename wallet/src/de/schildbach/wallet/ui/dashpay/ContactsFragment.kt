@@ -21,7 +21,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.text.Editable
-import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -29,6 +28,7 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,14 +49,12 @@ import de.schildbach.wallet_test.databinding.FragmentContactsRootBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
-import javax.inject.Inject
 
 @AndroidEntryPoint
-class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), TextWatcher,
+class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root),
         ContactSearchResultsAdapter.Listener,
         ContactViewHolder.OnItemClickListener {
 
@@ -90,6 +88,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     private var direction = UsernameSortOrderBy.USERNAME
     private val mode by lazy { requireArguments().getInt(EXTRA_MODE, MODE_SEARCH_CONTACTS) }
     private var initialSearch = true
+    private var searchEventSent = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,13 +124,13 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
                 }
                 MODE_SEARCH_CONTACTS -> {
                     // search should be available for all other modes
-                    search.addTextChangedListener(this@ContactsFragment)
+                    search.doAfterTextChanged { afterSearchTextChanged(it) }
                     search.visibility = View.VISIBLE
                     icon.visibility = View.VISIBLE
                     setupActionBarWithTitle(R.string.contacts_title)
                 }
                 MODE_SELECT_CONTACT -> {
-                    search.addTextChangedListener(this@ContactsFragment)
+                    search.doAfterTextChanged { afterSearchTextChanged(it) }
                     search.visibility = View.VISIBLE
                     icon.visibility = View.VISIBLE
                     setupActionBarWithTitle(R.string.contacts_send_to_contact_title)
@@ -140,7 +139,8 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             }
 
             emptyStatePane.searchForUser.setOnClickListener {
-                onSearchUser()
+                dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEARCH_DASH_NETWORK)
+                searchUser()
             }
 
             searchContacts()
@@ -164,9 +164,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             networkErrorLayout.networkErrorSubtitle.setText(R.string.network_error_contact_suggestions)
         }
     }
-
-    @Inject
-    lateinit var analytics: AnalyticsService
 
     private fun showEmptyPane() {
         binding.contactList.suggestionsSearchNoResult.isVisible = true
@@ -253,7 +250,8 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
         KeyboardUtil.hideKeyboard(requireContext(), requireView())
         val searchUsersBtn = binding.contactList.suggestionsSearchNoResult.findViewById<View>(R.id.search_for_user_suggestions)
         searchUsersBtn.setOnClickListener {
-            onSearchUser()
+            dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEARCH_DASH_NETWORK)
+            searchUser()
         }
         val text = getString(R.string.suggestions_empty_result_part_1) +
                 " \"<b>$query</b>\" " + getString(R.string.suggestions_empty_result_part_2)
@@ -310,7 +308,8 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.contacts_add_contact -> {
-                onSearchUser()
+                dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEARCH_USER_ICON)
+                searchUser()
                 return true
             }
         }
@@ -323,6 +322,11 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     }
 
     override fun onSearchUser() {
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEARCH_DASH_NETWORK)
+        searchUser()
+    }
+
+    private fun searchUser() {
         startActivity(SearchUserActivity.createIntent(requireContext(), query))
     }
 
@@ -343,9 +347,14 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
             }
         }
         searchHandler.postDelayed(searchContactsRunnable, 500)
+
+        if (!searchEventSent && query.isNotEmpty()) {
+            searchEventSent = true
+            dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEARCH_CONTACTS)
+        }
     }
 
-    override fun afterTextChanged(s: Editable?) {
+    private fun afterSearchTextChanged(s: Editable?) {
         s?.let {
             query = it.toString()
             searchContacts()
@@ -354,12 +363,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
 
     private fun imitateUserInteraction() {
         (requireActivity() as LockScreenActivity).imitateUserInteraction()
-    }
-
-    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-    }
-
-    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {
@@ -374,6 +377,7 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root), Tex
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.ACCEPT_REQUEST)
         dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
     }
 

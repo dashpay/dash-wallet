@@ -50,19 +50,19 @@ object AnalyticsConstants {
         const val SEARCH_USER_ICON = "contacts_search_user_icon"
         const val SEND_REQUEST = "contacts_send_request"
         const val ACCEPT_REQUEST = "contacts_accept_request"
-        const val HOME_SCREEN_NOTIFICATIONS = "home_screen_notifications" //TODO ??
-        const val NOTIFICATION_ACCEPT_REQUEST = "notification_accept_contact_request" //TODO ??
-        const val NOTIFICATION_CONTACT_DETAILS = "notification_contact_details" //TODO ??
+        const val NOTIFICATIONS_HOME_SCREEN = "notifications_home_screen"
+        const val NOTIFICATIONS_ACCEPT_REQUEST = "notifications_accept_contact_request"
+        const val NOTIFICATIONS_CONTACT_DETAILS = "notifications_contact_details"
         const val PROFILE_EDIT_MORE = "profile_edit_from_more"
         const val PROFILE_CHANGE_NAME = "profile_change_display_name"
-        const val PROFILE_DISPLAY_NAME_LENGTH = "profile_display_name_text_length"
+        const val PROFILE_NAME_LENGTH = "profile_display_name_length"
         const val PROFILE_CHANGE_ABOUT_ME = "profile_change_about_me"
-        const val PROFILE_ABOUT_ME_LENGTH = "profile_about_me_text_length"
+        const val PROFILE_ABOUT_ME_LENGTH = "profile_about_me_length"
         const val PROFILE_CHANGE_PICTURE_GRAVATAR = "profile_change_picture_gravatar"
         const val PROFILE_CHANGE_PICTURE_PUBLIC_URL = "profile_change_picture_public_url"
         const val PROFILE_CHANGE_PICTURE_CAMERA = "profile_change_picture_camera_photo"
         const val PROFILE_CHANGE_PICTURE_GALLERY = "profile_change_picture_gallery"
-        const val TAB_SEND_TO_CONTACT = "send_tab_send_to_contact" //TODO ??
-        const val SHORTCUT_SEND_TO_CONTACT = "shortcut_send_to_contact" //TODO ??
+        const val TAB_SEND_TO_CONTACT = "send_tab_send_to_contact"
+        const val SHORTCUT_SEND_TO_CONTACT = "shortcut_send_to_contact"
     }
 }

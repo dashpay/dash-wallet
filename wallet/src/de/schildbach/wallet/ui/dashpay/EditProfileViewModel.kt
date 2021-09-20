@@ -23,6 +23,7 @@ import android.os.Environment
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
+import androidx.core.os.bundleOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
@@ -46,6 +47,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.*
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -77,6 +79,7 @@ class EditProfileViewModel @Inject constructor(
     lateinit var storageService: ProfilePictureStorageService
     private val config by lazy { WalletApplication.getInstance().configuration }
     var googleDrive: Drive? = null
+    var pictureSource: String = ""
 
     val profilePictureUploadLiveData = MutableLiveData<Resource<String>>()
     val uploadDialogAcceptLiveData = MutableLiveData<Boolean>()
@@ -121,6 +124,9 @@ class EditProfileViewModel @Inject constructor(
 
     fun broadcastUpdateProfile(displayName: String, publicMessage: String, avatarUrl: String,
                                uploadService: String = "", localAvatarUrl: String = "") {
+
+        logProfileInfoEvents(displayName, publicMessage, avatarUrl)
+
         val dashPayProfile = dashPayProfileData.value!!
         val avatarFingerprintBytes = avatarFingerprint?.run { ProfilePictureHelper.toByteArray(this) }
         val updatedProfile = DashPayProfile(dashPayProfile.userId, dashPayProfile.username,
@@ -146,7 +152,7 @@ class EditProfileViewModel @Inject constructor(
     }
 
     fun saveAsProfilePictureTmp(picturePath: String) {
-        viewModelScope.launch() {
+        viewModelScope.launch {
             copyFile(File(picturePath), tmpPictureFile)
             onTmpPictureReadyForEditEvent.call(tmpPictureFile)
         }
@@ -367,5 +373,35 @@ class EditProfileViewModel @Inject constructor(
 
     fun cancelUploadRequest() {
         uploadProfilePictureCall?.cancel()
+    }
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, bundleOf())
+    }
+
+    private fun logProfileInfoEvents(displayName: String, publicMessage: String, avatarUrl: String) {
+        if (displayName != dashPayProfile!!.displayName) {
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_NAME, bundleOf())
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_NAME_LENGTH, bundleOf(
+                "length" to displayName.length
+            ))
+        }
+
+        if (publicMessage != dashPayProfile!!.publicMessage) {
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_ABOUT_ME, bundleOf())
+            analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_ABOUT_ME_LENGTH, bundleOf(
+                "length" to publicMessage.length
+            ))
+        }
+
+        if (avatarUrl != dashPayProfile!!.avatarUrl) {
+            when (pictureSource) {
+                "gravatar" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GRAVATAR, bundleOf())
+                "public_url" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_PUBLIC_URL, bundleOf())
+                "camera" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_CAMERA, bundleOf())
+                "gallery" -> analytics.logEvent(AnalyticsConstants.UsersContacts.PROFILE_CHANGE_PICTURE_GALLERY, bundleOf())
+                else -> { }
+            }
+        }
     }
 }
