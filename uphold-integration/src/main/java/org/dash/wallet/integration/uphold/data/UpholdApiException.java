@@ -9,8 +9,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
@@ -158,6 +156,21 @@ public class UpholdApiException extends Exception {
      *          }
      *      }
      * }
+     *
+     * {
+     *      "code":"validation_failed",
+     *      "errors":
+     *      {"user":[
+     *          {
+     *              "code":"restricted_by_authentication_method_reset",
+     *              "message":"The user is restricted because authentication method has been changed recently",
+     *              "args":{
+     *                  "recentAuthenticationRestrictionEndDate":"2021-09-21T16:02:59.605Z"
+     *              }
+     *          }
+     *      ]
+     *      }
+     * }
      */
 
     private boolean isLockedFundsError() {
@@ -218,6 +231,28 @@ public class UpholdApiException extends Exception {
                         JSONObject args = (JSONObject) firstAmount.get("args");
                         arguments.put("code", "required");
                         return true;
+                    }
+                }
+            } else if (errors.has("user")) {
+                JSONArray userArray = (JSONArray) errors.getJSONArray("user");
+                JSONObject user = (JSONObject) userArray.get(0);
+                if (user.has("code")) {
+                    if (user.get("code").equals("password_reset_restriction")) {
+                        if (user.has("args")) {
+                            JSONObject args = (JSONObject) user.get("args");
+                            Date date = Date.from(Instant.parse(args.getString("recentPasswordRestrictionEndDate")));
+                            arguments.put("code", "password_reset_restriction");
+                            arguments.put("recentPasswordRestrictionEndDate", formatter.format(date));
+                            return true;
+                        }
+                    } else if (user.get("code").equals("restricted_by_authentication_method_reset")) {
+                        if (user.has("args")) {
+                            JSONObject args = (JSONObject) user.get("args");
+                            Date date = Date.from(Instant.parse(args.getString("recentPasswordRestrictionEndDate")));
+                            arguments.put("code", "restricted_by_authentication_method_reset");
+                            arguments.put("recentAuthenticationRestrictionEndDate", formatter.format(date));
+                            return true;
+                        }
                     }
                 }
             }
@@ -425,6 +460,10 @@ public class UpholdApiException extends Exception {
                         return context.getString(R.string.uphold_api_error_400_invalid_beneficiary);
                     case "required":
                         return context.getString(R.string.uphold_api_error_400_required);
+                    case "password_reset_restriction":
+                        return context.getString(R.string.uphold_api_error_400_password_reset, stringBuilder.toString());
+                    case "restricted_by_authentication_method_reset":
+                        return context.getString(R.string.uphold_api_error_400_authentication_change, stringBuilder.toString());
                     default:
                         return context.getString(R.string.loading_error);
                 }
@@ -434,8 +473,6 @@ public class UpholdApiException extends Exception {
                 Date date = Date.from(Instant.parse(availableAt));
                 stringBuilder.append(formatter.format(date));
                 return context.getString(R.string.uphold_api_error_400_description, availableAt);
-            } else if (isPasswordResetRestrictionError(stringBuilder)) {
-                return context.getString(R.string.uphold_api_error_400_password_reset_withdrawal, stringBuilder.toString());
             } else {
                 // undefined
                 return context.getString(R.string.loading_error);

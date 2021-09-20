@@ -34,7 +34,9 @@
     <string name="uphold_api_error_400_tx_insufficentfunds">You do not have sufficient funds for this transfer</string>
     <string name="uphold_api_error_400_less_than_or_equal_to">This value should be less than or equal to %s.</string>
     <string name="uphold_api_error_400_tx_validation">Cannot transfer that much with this app (max $3000)</string>
-    <string name="uphold_api_error_400_password_reset_withdrawal">Uphold funds are locked due to a recent password change.\n\nYou must wait until %s before you can transfer funds.</string>
+    <string name="uphold_api_error_400_password_reset">Uphold funds are locked due to a recent password change.\n\nYou must wait until %s before you can transfer funds.</string>
+    <string name="uphold_api_error_400_authentication_change">Uphold funds are locked due to a recent authentication method change.\n\nYou must wait until %s before you can transfer funds.</string>
+
     <string name="uphold_api_error_400_invalid_beneficiary">The provided beneficiary is invalid.</string>
     <string name="uphold_api_error_400_required">This value is required for the beneficiary.</string>
 
