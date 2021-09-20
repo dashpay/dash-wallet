@@ -27,6 +27,7 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ReceiveActivity
 import de.schildbach.wallet.util.Qr
@@ -38,13 +39,15 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.slf4j.LoggerFactory
 
 
 class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout(context, attrs) {
 
     private val log = LoggerFactory.getLogger(ReceiveInfoView::class.java)
-
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private var config: Configuration? = null
 
     private lateinit var address: Address
@@ -80,12 +83,15 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             config = walletApplication.configuration
 
             address_preview_pane.setOnClickListener {
+                analytics.logEvent(AnalyticsConstants.SendReceive.COPY_ADDRESS, bundleOf())
                 handleCopyAddress()
             }
             specify_amount_button.setOnClickListener {
+                analytics.logEvent(AnalyticsConstants.SendReceive.SPECIFY_AMOUNT, bundleOf())
                 handleSpecifyAmount()
             }
             share_button.setOnClickListener {
+                analytics.logEvent(AnalyticsConstants.SendReceive.SHARE, bundleOf())
                 handleShare()
             }
 
