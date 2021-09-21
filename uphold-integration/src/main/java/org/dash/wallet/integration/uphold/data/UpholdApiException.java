@@ -1,6 +1,7 @@
 package org.dash.wallet.integration.uphold.data;
 
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 
 import org.dash.wallet.integration.uphold.R;
@@ -9,7 +10,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.DateFormat;
-import java.time.Instant;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -191,13 +193,13 @@ public class UpholdApiException extends Exception {
                     if (firstAmount.has("code") && firstAmount.get("code").equals("sufficient_unlocked_funds")) {
                         JSONObject args = (JSONObject) firstAmount.get("args");
                         arguments.put("code", "sufficient_unlocked_funds");
-                        Date date = Date.from( Instant.parse( args.getString("availableAt") ));
+                        Date date = convertISO8601Date( args.getString("availableAt"));
                         arguments.put("availableAt", formatter.format(date));
                         arguments.put("missing", args.getString("missing"));
                         arguments.put("currency", args.getString("currency"));
                         return true;
                     } else if (firstAmount.has("code") && firstAmount.get("code").equals("sufficient_funds")) {
-                        JSONObject args = (JSONObject) firstAmount.get("args");
+                        // JSONObject args = (JSONObject) firstAmount.get("args");
                         arguments.put("code", "sufficient_funds");
                         return true;
                     }
@@ -240,15 +242,26 @@ public class UpholdApiException extends Exception {
                     if (user.get("code").equals("password_reset_restriction")) {
                         if (user.has("args")) {
                             JSONObject args = (JSONObject) user.get("args");
-                            Date date = Date.from(Instant.parse(args.getString("recentPasswordRestrictionEndDate")));
+                            Date date = convertISO8601Date(args.getString("recentPasswordRestrictionEndDate"));
                             arguments.put("code", "password_reset_restriction");
                             arguments.put("recentPasswordRestrictionEndDate", formatter.format(date));
                             return true;
                         }
                     } else if (user.get("code").equals("restricted_by_authentication_method_reset")) {
+                        /*
+                            {
+                                "user":[
+                                    {
+                                        "code":"restricted_by_authentication_method_reset",
+                                        "message":"The user is restricted because authentication method has been changed recently",
+                                        "args":{"recentAuthenticationRestrictionEndDate":"2021-09-21T16:02:59.605Z"}
+                                    }
+                                ]
+                            }
+                        */
                         if (user.has("args")) {
                             JSONObject args = (JSONObject) user.get("args");
-                            Date date = Date.from(Instant.parse(args.getString("recentPasswordRestrictionEndDate")));
+                            Date date = convertISO8601Date(args.getString("recentPasswordRestrictionEndDate"));
                             arguments.put("code", "restricted_by_authentication_method_reset");
                             arguments.put("recentAuthenticationRestrictionEndDate", formatter.format(date));
                             return true;
@@ -259,6 +272,17 @@ public class UpholdApiException extends Exception {
             return false;
         } catch (JSONException x) {
             return false;
+        }
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    private Date convertISO8601Date(String date) {
+        // in android 8 and above, we could use this: Date.from(Instant.parse(date))
+        try {
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            return df.parse(date);
+        } catch (ParseException x) {
+            return null;
         }
     }
 
@@ -331,7 +355,7 @@ public class UpholdApiException extends Exception {
                     if (user.get("code").equals("password_reset_restriction")) {
                         if (user.has("args")) {
                             JSONObject args = (JSONObject) user.get("args");
-                            Date date = Date.from( Instant.parse( args.getString("recentPasswordRestrictionEndDate") ));
+                            Date date = convertISO8601Date(args.getString("recentPasswordRestrictionEndDate"));
                             stringBuilder.append(formatter.format(date));
                             return true;
                         }
@@ -470,7 +494,7 @@ public class UpholdApiException extends Exception {
             } else if (isLockedFundsError()) {
                 // This may be obsolete
                 String availableAt = getErrorArg(UpholdApiException.AVAILABLE_AT_KEY);
-                Date date = Date.from(Instant.parse(availableAt));
+                Date date = convertISO8601Date(availableAt);
                 stringBuilder.append(formatter.format(date));
                 return context.getString(R.string.uphold_api_error_400_description, availableAt);
             } else {
