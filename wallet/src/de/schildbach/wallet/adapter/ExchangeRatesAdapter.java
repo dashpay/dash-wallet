@@ -56,7 +56,7 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
 
     @Override
     protected void filterObject(List<ExchangeRate> filteredList, ExchangeRate object, CharSequence searchText) {
-        if (object.getCurrencyName(mAppContext).toLowerCase(Locale.ROOT).contains(searchText))
+        if (object.getCurrencyName(mAppContext).toLowerCase(Locale.ROOT).contains(searchText) || object.getCurrencyCode().toLowerCase(Locale.ROOT).contains(searchText))
             filteredList.add(object);
     }
 
