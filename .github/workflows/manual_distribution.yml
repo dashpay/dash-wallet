@@ -28,9 +28,6 @@ jobs:
         key: "${{ github.event.inputs.flavor }}"
         map: |
           {
-            "beta": {
-              "firebase_app_id": "1:1039839682638:android:3cb62fcbd8b7d447"
-            },
             "prod": {
               "firebase_app_id": "1:1039839682638:android:989eecd6db36de6a"
             },
@@ -40,31 +37,8 @@ jobs:
             "staging": {
               "firebase_app_id": "1:1039839682638:android:bbcfa8c9939ee993ea631f"
             },
-            "devNet": {
-              "firebase_app_id": "1:1039839682638:android:67503b93d496d1db"
-            },
             "schnapps": {
               "firebase_app_id": "1:1039839682638:android:12d2ad31cc39093cea631f"
-            },
-            "evonet": {
-              "firebase_app_id": "1:1039839682638:android:b6feebc0a2eab038ea631f"
-            },
-            "mobile": {
-              "firebase_app_id": "1:1039839682638:android:00c0428ce4b131d2ea631f"
-            }
-          }
-            
-    - name: Map branch to build number offset
-      uses: kanga333/variable-mapper@master
-      with:
-        key: "${{ github.ref }}"
-        map: |
-          {
-            "refs/heads/master": {
-              "base_build_number": "70000"
-            },
-            "refs/heads/dashpay": {
-              "base_build_number": "80000"
             }
           }
           
@@ -72,7 +46,7 @@ jobs:
       env:
           run_num: ${{ github.run_number }}
       run: |
-          echo "build_number=$(($base_build_number+$run_num))" >> $GITHUB_ENV
+          echo "build_number=$((70000+$run_num))" >> $GITHUB_ENV
     
     - uses: actions/checkout@v2    
     - name: set up JDK 8

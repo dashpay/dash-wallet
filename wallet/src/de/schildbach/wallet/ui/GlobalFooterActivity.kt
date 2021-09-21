@@ -18,14 +18,18 @@ package de.schildbach.wallet.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import androidx.core.os.bundleOf
 import de.schildbach.wallet.ui.widget.GlobalFooterView
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 
 @SuppressLint("Registered")
 open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFooterActionListener {
 
     private lateinit var globalFooterView: GlobalFooterView
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     fun setContentViewWithFooter(layoutResId: Int) {
         globalFooterView = GlobalFooterView.encloseContentView(this, layoutResId)
@@ -46,6 +50,7 @@ open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFoote
     override fun onGotoClick() {
         val intent = PaymentsActivity.createIntent(this, PaymentsActivity.ACTIVE_TAB_RECENT)
         startActivity(intent)
+        analytics.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON, bundleOf())
     }
 
     override fun onMoreClick() {

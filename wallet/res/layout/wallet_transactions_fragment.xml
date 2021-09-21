@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/wallet_transactions_group"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context="de.schildbach.wallet.ui.WalletTransactionsFragment">
 
     <ProgressBar
         android:id="@+id/loading"
@@ -84,7 +85,9 @@
             android:layout_height="match_parent"
             android:animateLayoutChanges="false"
             android:clipToPadding="false"
-            android:scrollbars="vertical" />
+            android:scrollbars="vertical"
+            tools:itemCount="5"
+            tools:listitem="@layout/transaction_row"/>
 
     </LinearLayout>
 

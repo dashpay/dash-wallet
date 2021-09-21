@@ -27,6 +27,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.scan.ScanActivity
@@ -36,6 +37,8 @@ import kotlinx.android.synthetic.main.fragment_payments_pay.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 class PaymentsPayFragment : Fragment() {
 
@@ -47,6 +50,8 @@ class PaymentsPayFragment : Fragment() {
         fun newInstance() = PaymentsPayFragment()
     }
 
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_payments_pay, container, false)
     }
@@ -54,8 +59,14 @@ class PaymentsPayFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         //Make the whole row clickable
-        pay_by_qr_button.setOnClickListener { handleScan(it) }
-        pay_to_address.setOnClickListener { handlePaste(true) }
+        pay_by_qr_button.setOnClickListener {
+            handleScan(it)
+            analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, bundleOf())
+        }
+        pay_to_address.setOnClickListener {
+            handlePaste(true)
+            analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, bundleOf())
+        }
         handlePaste(false)
     }
 
