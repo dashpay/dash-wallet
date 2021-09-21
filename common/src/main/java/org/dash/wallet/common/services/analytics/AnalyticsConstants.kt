@@ -66,6 +66,20 @@ object AnalyticsConstants {
         const val ABOUT_SUPPORT = "settings_about_contact_support"
     }
 
+    object SendReceive {
+        const val SCAN_TO_SEND = "send_scan_to_send"
+        const val SEND_TO_ADDRESS = "send_to_address"
+        const val SHOW_QR_CODE = "receive_show_qr_code"
+        const val COPY_ADDRESS = "receive_copy_address"
+        const val SPECIFY_AMOUNT = "receive_specify_amount"
+        const val SHARE = "receive_tab_share"
+        const val ENTER_AMOUNT_MAX = "enter_amount_max"
+        const val ENTER_AMOUNT_DASH = "enter_amount_dash_amount"
+        const val ENTER_AMOUNT_FIAT = "enter_amount_fiat_amount"
+        const val ENTER_AMOUNT_SEND = "enter_amount_send"
+        const val ENTER_AMOUNT_RECEIVE = "enter_amount_receive"
+    }
+
     object Home {
         const val SHORTCUT_SECURE_WALLET = "shortcut_secure_wallet"
         const val SHORTCUT_SCAN_TO_PAY = "shortcut_scan_to_pay"

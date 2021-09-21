@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -32,7 +33,10 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.util.GenericUtils
+import java.util.*
 
 class EnterAmountFragment : Fragment() {
 
@@ -56,6 +60,7 @@ class EnterAmountFragment : Fragment() {
 
     private lateinit var viewModel: EnterAmountViewModel
     private lateinit var sharedViewModel: EnterAmountSharedViewModel
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     var maxAmountSelected: Boolean = false
 
@@ -67,11 +72,24 @@ class EnterAmountFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         convert_direction.setOnClickListener {
             viewModel.dashToFiatDirectionData.value = !viewModel.dashToFiatDirectionValue
+
+            if (viewModel.dashToFiatDirectionValue) {
+                analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_DASH, bundleOf())
+            } else {
+                analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_FIAT, bundleOf())
+            }
         }
         confirm_button.setOnClickListener {
             sharedViewModel.buttonClickEvent.call(sharedViewModel.dashAmount)
+
+            when (confirm_button.text.toString().toLowerCase(Locale.getDefault())) {
+                "send" -> analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND, bundleOf())
+                "receive" -> analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_RECEIVE, bundleOf())
+                else -> { }
+            }
         }
         max_button.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX, bundleOf())
             sharedViewModel.maxButtonClickEvent.call(true)
         }
         numeric_keyboard.enableDecSeparator(true);
