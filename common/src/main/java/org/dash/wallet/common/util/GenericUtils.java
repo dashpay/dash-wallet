@@ -59,15 +59,7 @@ public class GenericUtils {
      * @return
      */
     public static String getCurrentCountryCurrencySymbol() {
-        String countryCode = "";
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            countryCode = LocaleList.getDefault().get(0).getCountry();
-        } else {
-            Locale.getDefault().getCountry();
-        }
-        String deviceLocaleLanguage = Locale.getDefault().getLanguage();
-        Locale defaultLocale = new Locale(deviceLocaleLanguage, countryCode);
-
+        Locale defaultLocale = getDeviceLocale();
         Currency defaultCurrency = Currency.getInstance(defaultLocale);
         return defaultCurrency.getCurrencyCode();
     }
@@ -140,6 +132,17 @@ public class GenericUtils {
                 currencySymbol(currencyCode.toLowerCase(Locale.ROOT)) : Currency.getInstance(currentLocale).getSymbol();
 
         return currencyCode.equalsIgnoreCase(currentCurrencySymbol) ? currencyCode :
-                currencyCode.concat(" ").concat(currentCurrencySymbol);
+                String.format(getDeviceLocale(), "%s %s", currencyCode, currentCurrencySymbol);
+    }
+
+    public static Locale getDeviceLocale() {
+        String countryCode = "";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            countryCode = LocaleList.getDefault().get(0).getCountry();
+        } else {
+            countryCode = Locale.getDefault().getCountry();
+        }
+        String deviceLocaleLanguage = Locale.getDefault().getLanguage();
+        return new Locale(deviceLocaleLanguage, countryCode);
     }
 }

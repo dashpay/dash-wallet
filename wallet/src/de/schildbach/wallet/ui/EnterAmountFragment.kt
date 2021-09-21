@@ -44,6 +44,7 @@ import android.util.Log
 import de.schildbach.wallet.WalletApplication
 import org.dash.wallet.common.Configuration
 import android.content.Context
+import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
 
 
 class EnterAmountFragment : Fragment() {
@@ -52,6 +53,7 @@ class EnterAmountFragment : Fragment() {
         private const val DECIMAL_SEPARATOR = '.'
 
         private const val ARGUMENT_INITIAL_AMOUNT = "argument_initial_amount"
+        private const val RC_FIAT_CURRENCY_SELECTED = 99
 
         @JvmStatic
         fun newInstance(initialAmount: Monetary = Coin.ZERO): EnterAmountFragment {
@@ -157,13 +159,13 @@ class EnterAmountFragment : Fragment() {
         input_select_currency_toggle.setOnClickListener {
             val intent = Intent(activity, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, true)
-            startActivityForResult(intent, 99)
+            startActivityForResult(intent, RC_FIAT_CURRENCY_SELECTED)
         }
 
         calc_select_currency_toggle.setOnClickListener {
             val intent = Intent(activity, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, true)
-            startActivityForResult(intent, 99)
+            startActivityForResult(intent, RC_FIAT_CURRENCY_SELECTED)
         }
     }
 
@@ -324,9 +326,9 @@ class EnterAmountFragment : Fragment() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if(resultCode == Activity.RESULT_OK && requestCode == 99) {
+        if(resultCode == Activity.RESULT_OK && requestCode == RC_FIAT_CURRENCY_SELECTED) {
             shouldNotConvertFiatToDash = true
-            val exchangeRate: ExchangeRate = data?.getParcelableExtra("BUNDLE_EXCHANGE_RATE")!!
+            val exchangeRate: ExchangeRate = data?.getParcelableExtra(BUNDLE_EXCHANGE_RATE)!!
             sharedViewModel.setCurrentExchangeRate(exchangeRate)
             applyCurrencySymbol(GenericUtils.setCurrentCurrencySymbolWithCode(exchangeRate.currencyCode))
         } else

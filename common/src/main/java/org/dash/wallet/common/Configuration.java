@@ -309,7 +309,6 @@ public class Configuration {
     public void setExchangeCurrencyCode(final String exchangeCurrencyCode) {
         prefs.edit().putString(PREFS_KEY_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
     }
-    //todo: preference not used
     public boolean getExchangeCurrencyCodeDetected() {
         return prefs.getBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, false);
     }
