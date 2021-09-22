@@ -322,7 +322,6 @@ class EditProfileViewModel @Inject constructor(
                         config.imgurDeleteHash = imgurUploadResponse.data.deletehash
                         val avatarUrl = imgurUploadResponse.data.link
                         Log.d("AvatarUrl", avatarUrl)
-                        dashPayProfile?.avatarUrl = avatarUrl
                         log.info("imgur: upload successful (${response.code()})")
                         profilePictureUploadLiveData.postValue(Resource.success(avatarUrl))
                     } else {
