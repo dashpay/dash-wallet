@@ -35,10 +35,14 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
     private Coin rateBase = Coin.COIN;
     private Configuration mAppConfig;
     private Wallet mWallet;
+    private onExchangeRateItemSelectedListener itemSelectedListener;
+    private boolean isShownAsDialog;
 
     public ExchangeRatesAdapter(Context mAppContext, Configuration configuration,
                                 Wallet wallet, List<ExchangeRate> exchangeRateList,
-                                ResetViewListener listener
+                                ResetViewListener listener,
+                                onExchangeRateItemSelectedListener itemSelectedListener,
+                                boolean isShownAsDialog
     ) {
         super(listener);
         this.mAppContext = mAppContext;
@@ -46,6 +50,8 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
         mFilteredList = exchangeRateList;
         this.mAppConfig = configuration;
         this.mWallet = wallet;
+        this.itemSelectedListener = itemSelectedListener;
+        this.isShownAsDialog = isShownAsDialog;
     }
 
     @Override
@@ -81,18 +87,23 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     setDefaultCurrency(exchangeRate.getCurrencyCode());
-                    mAppConfig.setExchangeCurrencyCode(exchangeRate.getCurrencyCode());
                     WalletBalanceWidgetProvider.updateWidgets(mAppContext, mWallet);
+                    if (isShownAsDialog) {
+                        mAppConfig.setSendPaymentExchangeCurrencyCode(exchangeRate.getCurrencyCode());
+                        itemSelectedListener.onItemChecked(exchangeRate);
+                    } else {
+                        mAppConfig.setExchangeCurrencyCode(exchangeRate.getCurrencyCode());
+                    }
                 }
             }
         });
 
-        Glide.with(mAppContext).load(getFlagFromCurrencyCode(exchangeRate.getCurrencyCode())).apply(RequestOptions.circleCropTransform()).into(holder.currencyFlag);
+        Glide.with(mAppContext.getApplicationContext()).load(getFlagFromCurrencyCode(exchangeRate.getCurrencyCode())).apply(RequestOptions.circleCropTransform()).into(holder.currencyFlag);
         holder.itemSeparator.setVisibility(position == getItemCount() - 1 ? View.GONE : View.VISIBLE);
     }
 
     private Integer getFlagFromCurrencyCode(String currencyCode) {
-        final int resourceId = mAppContext.getResources().getIdentifier("currency_code_" + currencyCode.toLowerCase(Locale.ROOT), "drawable", mAppContext.getPackageName());
+        final int resourceId = mAppContext.getApplicationContext().getResources().getIdentifier("currency_code_" + currencyCode.toLowerCase(Locale.ROOT), "drawable", mAppContext.getPackageName());
         return resourceId == 0 ? R.drawable.ic_default_flag : resourceId;
     }
 
@@ -141,5 +152,9 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
             itemSeparator = itemView.findViewById(R.id.item_divider);
         }
 
+    }
+
+    public interface onExchangeRateItemSelectedListener {
+        void onItemChecked(ExchangeRate selectedRate);
     }
 }

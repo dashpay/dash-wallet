@@ -22,15 +22,33 @@ import androidx.lifecycle.MutableLiveData
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import androidx.lifecycle.LiveData
 
 class EnterAmountViewModel(application: Application) : AndroidViewModel(application) {
 
-    val dashToFiatDirectionData = MutableLiveData<Boolean>()
+    private val dashToFiatDirectionData = MutableLiveData<Boolean>()
+    val dashToFiatDirectionLiveData: LiveData<Boolean>
+        get() = dashToFiatDirectionData
+    fun setDashToFiatDirection(isDashToFiat: Boolean) {
+        dashToFiatDirectionData.value = isDashToFiat
+    }
+
     val dashToFiatDirectionValue: Boolean
         get() = (dashToFiatDirectionData.value == true)
 
-    val dashAmountData = MutableLiveData<Coin>()
-    val fiatAmountData = MutableLiveData<Fiat>()
+    private val dashAmountData = MutableLiveData<Coin>()
+    val dashAmountLiveData: LiveData<Coin>
+        get() = dashAmountData
+    fun setDashAmount(coin: Coin) {
+        dashAmountData.value = coin
+    }
+
+    private val fiatAmountData = MutableLiveData<Fiat>()
+    val fiatAmountLiveData: LiveData<Fiat>
+        get() = fiatAmountData
+    fun setFiatAmount(fiat: Fiat) {
+        fiatAmountData.value = fiat
+    }
 
     fun calculateDependent(exchangeRate: ExchangeRate?) {
         exchangeRate?.run {

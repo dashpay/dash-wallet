@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet.AppDatabase;
+import de.schildbach.wallet.data.executor.AppExecutors;
 
 /**
  * @author Samuel Barbosa
@@ -26,10 +27,10 @@ public class ExchangeRatesRepository {
     private AppDatabase appDatabase;
     private Executor executor;
     private Deque<ExchangeRatesClient> exchangeRatesClients = new ArrayDeque<>();
-
+    private ExchangeRatesDao exchangeRatesDao;
     private static final long UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30);
     private long lastUpdated;
-
+    private final AppExecutors appExecutors;
     public MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
     public MutableLiveData<Boolean> hasError = new MutableLiveData<>();
 
@@ -38,7 +39,8 @@ public class ExchangeRatesRepository {
     private ExchangeRatesRepository() {
         appDatabase = AppDatabase.getAppDatabase();
         executor = Executors.newSingleThreadExecutor();
-
+        exchangeRatesDao = appDatabase.exchangeRatesDao();
+        appExecutors = new AppExecutors();
         populateExchangeRatesStack();
     }
 
@@ -85,7 +87,7 @@ public class ExchangeRatesRepository {
                 try {
                     rates = exchangeRatesClient.getRates();
                     if (rates != null && !rates.isEmpty()) {
-                        appDatabase.exchangeRatesDao().insertAll(rates);
+                        exchangeRatesDao.insertAll(rates);
                         lastUpdated = System.currentTimeMillis();
                         populateExchangeRatesStack();
                         hasError.postValue(false);
@@ -126,19 +128,31 @@ public class ExchangeRatesRepository {
         if (shouldRefresh()) {
             refreshRates();
         }
-        return appDatabase.exchangeRatesDao().getAll();
+        return exchangeRatesDao.getAll();
     }
 
     public LiveData<ExchangeRate> getRate(String currencyCode) {
         if (shouldRefresh()) {
             refreshRates();
         }
-        return appDatabase.exchangeRatesDao().getRate(currencyCode);
+        return exchangeRatesDao.getRate(currencyCode);
     }
 
     public LiveData<List<ExchangeRate>> searchRates(String query) {
-        return appDatabase.exchangeRatesDao().searchRates(query);
+        return exchangeRatesDao.searchRates(query);
     }
 
+    public void getExchangeRate(final String currencyCode, GetExchangeRateCallback callback) {
+        Runnable readRunnable = () -> {
+            final ExchangeRate rate = exchangeRatesDao.getExchangeRateForCurrency(currencyCode);
+            appExecutors.mainThread().execute(() -> {
+                if (rate != null) callback.onExchangeRateLoaded(rate);
+            });
+        };
+        appExecutors.diskIO().execute(readRunnable);
+    }
 
+    public interface GetExchangeRateCallback {
+        void onExchangeRateLoaded(ExchangeRate exchangeRate);
+    }
 }

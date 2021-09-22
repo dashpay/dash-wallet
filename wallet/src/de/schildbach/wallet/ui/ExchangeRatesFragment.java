@@ -19,9 +19,12 @@ package de.schildbach.wallet.ui;
 
 import static android.view.View.VISIBLE;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -53,17 +56,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.adapter.BaseFilterAdapter;
 import de.schildbach.wallet.adapter.ExchangeRatesAdapter;
+import de.schildbach.wallet.rates.ExchangeRate;
+import de.schildbach.wallet.rates.ExchangeRatesRepository;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
  */
-public final class ExchangeRatesFragment extends DialogFragment implements OnSharedPreferenceChangeListener, TextWatcher, View.OnClickListener, BaseFilterAdapter.ResetViewListener {
+public final class ExchangeRatesFragment extends DialogFragment implements OnSharedPreferenceChangeListener, TextWatcher, View.OnClickListener, BaseFilterAdapter.ResetViewListener, ExchangeRatesAdapter.onExchangeRateItemSelectedListener {
     private AbstractBindServiceActivity activity;
     private WalletApplication application;
     private Configuration config;
@@ -82,7 +88,7 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
     private Group settingsGroup, sendPaymentGroup;
     public static final String ARG_SHOW_AS_DIALOG = "ARG_SHOW_AS_DIALOG";
     private boolean showAsDialog;
-
+    public static final String BUNDLE_EXCHANGE_RATE = "BUNDLE_EXCHANGE_RATE";
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
@@ -109,10 +115,12 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         super.onCreate(savedInstanceState);
         showAsDialog = getActivity().getIntent().getBooleanExtra(ARG_SHOW_AS_DIALOG, false);
         setRetainInstance(true);
-        adapter = new ExchangeRatesAdapter(activity, config, wallet, new ArrayList<>(), this);
+        adapter = new ExchangeRatesAdapter(activity, config, wallet, new ArrayList<>(), this, this,showAsDialog);
         adapter.setRateBase(config.getBtcBase());
-        adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
+        adapter.setDefaultCurrency(showAsDialog ? config.getSendPaymentExchangeCurrencyCode() : config.getExchangeCurrencyCode());
     }
+
+
 
     @Override
     public void onViewCreated(@NonNull View view, @androidx.annotation.Nullable Bundle savedInstanceState) {
@@ -232,6 +240,8 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         }
     }
 
+
+
     @Override
     public void setViewState() {
         if (adapter.getItemCount() == 0 && query == null) {
@@ -299,5 +309,13 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         int sizeInDp = (int)(paddingTopDp * scale);
         viewContainer.setPadding(0,sizeInDp,0,0);
         viewContainer.setBackgroundResource(R.drawable.background_dialog);
+    }
+
+    @Override
+    public void onItemChecked(ExchangeRate selectedRate) {
+        Intent intent = new Intent();
+        intent.putExtra(BUNDLE_EXCHANGE_RATE, selectedRate);
+        getActivity().setResult(Activity.RESULT_OK, intent);
+        getActivity().finish();
     }
 }
