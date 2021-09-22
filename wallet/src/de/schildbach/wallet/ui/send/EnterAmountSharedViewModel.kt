@@ -23,15 +23,27 @@ import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
+import de.schildbach.wallet.rates.ExchangeRatesRepository.GetExchangeRateCallback
 import de.schildbach.wallet.ui.SingleLiveEvent
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.Fiat
 
 class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(application) {
 
+    private lateinit var repo: ExchangeRatesRepository
+    private var _nameLiveData = MutableLiveData<ExchangeRate>()
     val exchangeRateData: LiveData<ExchangeRate>
+        get() = _nameLiveData
 
-    val exchangeRate: org.bitcoinj.utils.ExchangeRate?
-        get() = exchangeRateData.value?.run { org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRateData.value!!.fiat) }
+    fun setCurrentExchangeRate(selectedExchangeRate: ExchangeRate) {
+        _nameLiveData.value = selectedExchangeRate
+    }
+
+    var exchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+        get() = _nameLiveData.value?.run { org.bitcoinj.utils.ExchangeRate(Coin.COIN, _nameLiveData.value!!.fiat) }
+        set(value) {
+            field = value
+        }
 
     val dashAmountData = MutableLiveData<Coin>()
 
@@ -61,8 +73,14 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
     val maxButtonClickEvent = SingleLiveEvent<Boolean>()
 
     init {
-        val currencyCode = (application as WalletApplication).configuration.exchangeCurrencyCode
-        exchangeRateData = ExchangeRatesRepository.getInstance().getRate(currencyCode)
+        val currencyCode = (application as WalletApplication).configuration.getSendPaymentExchangeCurrencyCode()
+        repo = ExchangeRatesRepository.getInstance()
+        val callback: GetExchangeRateCallback = object : GetExchangeRateCallback {
+            override fun onExchangeRateLoaded(exchangeRate: ExchangeRate) {
+                _nameLiveData.value = exchangeRate
+            }
+        }
+        repo.getExchangeRate(currencyCode, callback)
     }
 
     fun hasAmount(): Boolean {

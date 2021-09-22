@@ -58,6 +58,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:orientation="horizontal"
+                android:visibility="visible"
                 app:layout_constraintBottom_toTopOf="@+id/convert_direction"
                 app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
                 app:layout_constraintStart_toStartOf="@+id/v_center_guideline">
@@ -79,8 +80,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
                     android:layout_marginRight="8dp"
-                    android:text="$"
-                    android:textColor="@color/dash_black"
+                    tools:text="$"
+                    android:textColor="@color/gray_900"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
 
                 <TextView
@@ -92,8 +93,16 @@
                     android:ellipsize="middle"
                     android:hint="0"
                     android:singleLine="true"
-                    android:textColor="@color/dash_black"
+                    android:textColor="@color/gray_900"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
+
+                <ImageView
+                    android:id="@+id/input_select_currency_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="3dp"
+                    android:src="@drawable/select_currency_toggle"
+                    />
 
             </LinearLayout>
 
@@ -102,6 +111,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
+                android:visibility="visible"
                 app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
                 app:layout_constraintStart_toStartOf="@+id/v_center_guideline"
                 app:layout_constraintTop_toBottomOf="@+id/convert_direction">
@@ -111,10 +121,9 @@
                     android:layout_width="@dimen/pay_calc_amount_dash_size"
                     android:layout_height="@dimen/pay_calc_amount_dash_size"
                     android:layout_gravity="center_vertical"
-                    android:layout_marginTop="1dp"
                     android:layout_marginEnd="4dp"
                     android:layout_marginRight="4dp"
-                    app:srcCompat="@drawable/ic_dash_d_black" />
+                    app:srcCompat="@drawable/ic_dash_d_gray" />
 
                 <TextView
                     android:id="@+id/calc_amount_symbol"
@@ -123,7 +132,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="4dp"
                     android:layout_marginRight="4dp"
-                    android:text="$"
+                    android:hint="$"
                     android:textColor="@color/dash_gray"
                     android:textSize="@dimen/pay_calc_amount_symbol_size" />
 
@@ -136,6 +145,14 @@
                     android:textColor="@color/dash_gray"
                     android:textSize="@dimen/pay_calc_amount_symbol_size" />
 
+                <ImageView
+                    android:id="@+id/calc_select_currency_toggle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginLeft="3dp"
+                    android:src="@drawable/select_currency_toggle"
+                    />
+
             </LinearLayout>
 
             <TextView
@@ -144,14 +161,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:background="@drawable/rounded_gray_frame"
-                android:paddingStart="24dp"
-                android:paddingTop="2dp"
-                android:paddingEnd="24dp"
-                android:paddingBottom="3dp"
+                android:background="@drawable/rounded_blue_frame"
+                android:paddingStart="12dp"
+                android:paddingTop="5dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="5dp"
                 android:text="@string/max"
-                android:textColor="@color/dash_gray"
-                android:textSize="18sp"
+                android:textColor="@color/dash_blue"
                 app:layout_constraintEnd_toEndOf="@+id/v_center_guideline"
                 app:layout_constraintStart_toStartOf="@+id/v_center_guideline"
                 app:layout_constraintTop_toBottomOf="@+id/calc_pane" />

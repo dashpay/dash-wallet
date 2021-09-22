@@ -2,6 +2,8 @@ package de.schildbach.wallet.rates;
 
 import android.content.Context;
 import android.os.Build;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
@@ -18,7 +20,7 @@ import java.util.Currency;
  * @author Samuel Barbosa
  */
 @Entity(tableName = "exchange_rates")
-public class ExchangeRate {
+public class ExchangeRate implements Parcelable {
 
     @PrimaryKey
     @NonNull
@@ -33,6 +35,13 @@ public class ExchangeRate {
     public ExchangeRate(@NonNull String currencyCode, String rate) {
         this.currencyCode = currencyCode;
         this.rate = rate;
+    }
+
+    protected ExchangeRate(Parcel in) {
+        currencyCode = in.readString();
+        rate = in.readString();
+        currencyName = in.readString();
+        currency = (Currency) in.readSerializable();
     }
 
     @NonNull
@@ -65,6 +74,10 @@ public class ExchangeRate {
         return currency;
     }
 
+    public String getCurrencySymbol() {
+        return getCurrency().getSymbol();
+    }
+
     public String getCurrencyName(Context context) {
 
         if (currencyName == null) {
@@ -93,4 +106,29 @@ public class ExchangeRate {
         }
         return currencyName;
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(currencyCode);
+        dest.writeString(rate);
+        dest.writeString(currencyName);
+        dest.writeSerializable(currency);
+    }
+
+    public static final Creator<ExchangeRate> CREATOR = new Creator<ExchangeRate>() {
+        @Override
+        public ExchangeRate createFromParcel(Parcel source) {
+            return new ExchangeRate(source);
+        }
+
+        @Override
+        public ExchangeRate[] newArray(int size) {
+            return new ExchangeRate[size];
+        }
+    };
 }
