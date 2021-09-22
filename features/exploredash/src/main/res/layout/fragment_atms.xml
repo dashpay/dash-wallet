@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dash_white"
-    tools:context="org.dash.wallet.features.exploredash.AtmsFragment">
+    tools:context="org.dash.wallet.features.exploredash.ui.AtmsFragment">
 
     <include
         android:id="@+id/title_bar"

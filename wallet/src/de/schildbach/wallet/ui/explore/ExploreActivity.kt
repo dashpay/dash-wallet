@@ -3,10 +3,12 @@ package de.schildbach.wallet.ui.explore
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
-import org.dash.wallet.features.exploredash.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 
+@AndroidEntryPoint
 class ExploreActivity : BaseMenuActivity() {
     private val viewModel: ExploreViewModel by viewModels()
 

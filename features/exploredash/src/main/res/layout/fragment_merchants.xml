@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dash_white"
-    tools:context="org.dash.wallet.features.exploredash.MerchantsFragment">
+    tools:context="org.dash.wallet.features.exploredash.ui.MerchantsFragment">
 
     <include
         android:id="@+id/title_bar"

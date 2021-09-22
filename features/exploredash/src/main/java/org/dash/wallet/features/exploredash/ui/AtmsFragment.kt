@@ -1,4 +1,4 @@
-package org.dash.wallet.features.exploredash
+package org.dash.wallet.features.exploredash.ui
 
 import android.os.Bundle
 import android.view.View
@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentAtmsBinding
 
 class AtmsFragment : Fragment(R.layout.fragment_atms) {

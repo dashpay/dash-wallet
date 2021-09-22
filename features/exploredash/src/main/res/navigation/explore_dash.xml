@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/exploreFragment"
-        android:name="org.dash.wallet.features.exploredash.ExploreFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.ExploreFragment"
         android:label="fragment_explore"
         tools:layout="@layout/fragment_explore">
 
@@ -28,14 +28,14 @@
 
     <fragment
         android:id="@+id/merchantsFragment"
-        android:name="org.dash.wallet.features.exploredash.MerchantsFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.MerchantsFragment"
         android:label="fragment_merchants"
         tools:layout="@layout/fragment_merchants">
     </fragment>
 
     <fragment
         android:id="@+id/atmsFragment"
-        android:name="org.dash.wallet.features.exploredash.AtmsFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.AtmsFragment"
         android:label="fragment_atms"
         tools:layout="@layout/fragment_atms">
 
