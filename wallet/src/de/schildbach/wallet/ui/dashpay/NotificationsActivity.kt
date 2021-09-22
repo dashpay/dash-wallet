@@ -173,12 +173,8 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         val newItems = data.filter { r -> r.getDate() >= newDate }.toMutableList()
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
-        //Add User Alert item
-        //Developer Mode Feature
-        if (walletApplication.configuration.developerMode) {
-            userAlertItem?.apply {
-                results.add(NotificationsAdapter.NotificationViewItem(this))
-            }
+        userAlertItem?.apply {
+            results.add(NotificationsAdapter.NotificationViewItem(this))
         }
 
         results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
