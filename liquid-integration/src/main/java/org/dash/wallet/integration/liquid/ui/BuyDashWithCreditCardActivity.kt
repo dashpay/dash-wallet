@@ -125,6 +125,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     private var walletAddress: String? = null
     private var userAmount: String? = null
     private var isTransactionSuccessful = false
+    private var finishWithCloseButton = false
     private var lostConnection = false
 
     private var mPermissionRequest: PermissionRequest? = null
@@ -495,6 +496,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                         viewBinding.closePane.visibility = View.VISIBLE
                                         viewBinding.btnOkay.setOnClickListener {
                                             setResult(Constants.RESULT_CODE_GO_HOME)
+                                            finishWithCloseButton = true
                                             onBackPressed()
                                         }
                                     }
@@ -587,7 +589,13 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
     override fun onBackPressed() {
         when (widgetState) {
-            "success" -> analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_PROCESSING_CLOSE_OVERLAY, bundleOf())
+            "success" -> {
+                if (finishWithCloseButton) {
+                    analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_PROCESSING_CLOSE_OVERLAY, bundleOf())
+                } else {
+                    analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_PROCESSING_CLOSE_TOP_LEFT, bundleOf())
+                }
+            }
             "quote_view" -> analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_QUOTE_CLOSE, bundleOf())
             "verifying" -> analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_PROCESSING_CLOSE_TOP_LEFT, bundleOf())
             else -> {}
