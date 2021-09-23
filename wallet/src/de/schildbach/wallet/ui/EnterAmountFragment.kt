@@ -342,7 +342,7 @@ class EnterAmountFragment : Fragment() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if(resultCode == Activity.RESULT_OK && requestCode == RC_FIAT_CURRENCY_SELECTED) {
-            val exchangeRate: ExchangeRate = data?.getParcelableExtra(BUNDLE_EXCHANGE_RATE)!!
+            val exchangeRate: ExchangeRate? = data?.getParcelableExtra(BUNDLE_EXCHANGE_RATE)
             if(exchangeRate != null){
                 shouldNotConvertFiatToDash = true
                 sharedViewModel.setCurrentExchangeRate(exchangeRate)
