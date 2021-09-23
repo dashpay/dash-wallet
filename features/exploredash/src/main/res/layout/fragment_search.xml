@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dash_white"
+    tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
+
+    <include
+        android:id="@+id/title_bar"
+        layout="@layout/app_bar_general"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <FrameLayout
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:background="#40E78010">
+
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_marginTop="100dp"
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:orientation="vertical"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/ExploreBottomContentBackground">
+
+        <FrameLayout
+            android:id="@+id/drag_area"
+            android:layout_height="24dp"
+            android:layout_width="match_parent">
+
+            <View
+                android:layout_height="4dp"
+                android:layout_width="40dp"
+                android:layout_gravity="center"
+                android:background="@drawable/rounded_background"
+                android:theme="@style/DragIndicatorBackground"
+                tools:background="@color/gray_100"/>
+        </FrameLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/search_results_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/merchant_row"
+            tools:itemCount="5"/>
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

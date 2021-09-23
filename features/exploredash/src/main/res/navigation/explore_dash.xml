@@ -12,32 +12,32 @@
         tools:layout="@layout/fragment_explore">
 
         <action
-            android:id="@+id/explore_to_merchants"
-            app:destination="@id/merchantsFragment"
+            android:id="@+id/explore_to_search"
+            app:destination="@id/searchFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.SearchFragment"
+        android:label="fragment_search"
+        tools:layout="@layout/fragment_search">
 
         <action
-            android:id="@+id/explore_to_atms"
-            app:destination="@id/atmsFragment"
+            android:id="@+id/search_to_details"
+            app:destination="@id/detailsFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
-        android:id="@+id/merchantsFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.MerchantsFragment"
-        android:label="fragment_merchants"
-        tools:layout="@layout/fragment_merchants">
-    </fragment>
-
-    <fragment
-        android:id="@+id/atmsFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.AtmsFragment"
-        android:label="fragment_atms"
-        tools:layout="@layout/fragment_atms">
+        android:id="@+id/detailsFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.DetailsFragment"
+        android:label="fragment_details"
+        tools:layout="@layout/fragment_details">
 
         <argument
             android:name="testArg"

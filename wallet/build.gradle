@@ -39,7 +39,7 @@ dependencies {
         exclude(group: 'com.android.support', module: 'support-media-compat')
     }
     implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android:flexbox:1.1.0'
     implementation 'androidx.preference:preference:1.1.1'
@@ -173,6 +173,15 @@ android {
         buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
         buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
         buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('keystore/debug.keystore')
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
     }
 
     buildTypes {

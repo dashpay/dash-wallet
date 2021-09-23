@@ -1,12 +1,13 @@
 package org.dash.wallet.features.exploredash.ui
 
-import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
+import org.dash.wallet.features.exploredash.repository.model.Merchant
 import javax.inject.Inject
 
 @HiltViewModel
@@ -15,10 +16,14 @@ class ExploreViewModel @Inject constructor(
 ): ViewModel() {
     val event = SingleLiveEvent<String>()
 
-    init {
+    private val _searchResults = MutableLiveData(listOf<Merchant>())
+    val searchResults: MutableLiveData<List<Merchant>>
+        get() = _searchResults
+
+    fun init() {
         viewModelScope.launch {
             val merchants = merchantRepository.get()
-            merchants?.forEach { Log.i("MERCHANTS", it.name ?: "null name") }
+            _searchResults.postValue(merchants)
         }
     }
 }

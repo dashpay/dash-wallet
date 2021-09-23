@@ -637,6 +637,12 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
+    <style name="DragIndicatorBackground">
+        <item name="primaryColor">@color/gray_100</item>
+        <item name="secondaryColor">@color/gray_100</item>
+        <item name="cornerRadius">2dp</item>
+    </style>
+
     <style name="CardViewRaised" parent="Base.CardView">
         <item name="android:background">@color/dash_white</item>
         <item name="cardCornerRadius">10dp</item>
@@ -672,6 +678,10 @@
 
     <style name="Body2.White">
         <item name="android:textColor">@color/dash_white</item>
+    </style>
+
+    <style name="Body2.SemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
 
     <style name="Subtitle2" parent="TextAppearance.MaterialComponents.Subtitle2">

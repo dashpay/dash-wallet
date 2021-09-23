@@ -20,11 +20,11 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         }
 
         binding.merchantsBtn.setOnClickListener {
-            findNavController().navigate(ExploreFragmentDirections.exploreToMerchants())
+            findNavController().navigate(ExploreFragmentDirections.exploreToSearch())
         }
 
         binding.atmsBtn.setOnClickListener {
-            findNavController().navigate(ExploreFragmentDirections.exploreToAtms("Test Argument"))
+            findNavController().navigate(ExploreFragmentDirections.exploreToSearch())
         }
     }
 }
