@@ -81,7 +81,6 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
         holder.price.setFormat(!rateBase.isLessThan(Coin.COIN) ? Constants.LOCAL_FORMAT.minDecimals(2)
                 : Constants.LOCAL_FORMAT.minDecimals(4));
         holder.price.setAmount(rate.coinToFiat(rateBase));
-
         holder.defaultCurrencyCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -90,10 +89,10 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
                     WalletBalanceWidgetProvider.updateWidgets(mAppContext, mWallet);
                     if (isShownAsDialog) {
                         mAppConfig.setSendPaymentExchangeCurrencyCode(exchangeRate.getCurrencyCode());
-                        itemSelectedListener.onItemChecked(exchangeRate);
                     } else {
                         mAppConfig.setExchangeCurrencyCode(exchangeRate.getCurrencyCode());
                     }
+                    itemSelectedListener.onItemChecked(exchangeRate);
                 }
             }
         });
