@@ -487,6 +487,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                 "success" -> {
                                     log.info("liquid: buy dash transaction successful")
                                     onUserInteraction()
+                                    widgetState = "success"
                                     logProcessingDuration("success")
 
                                     if (!isTransactionSuccessful) {
@@ -586,6 +587,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
     override fun onBackPressed() {
         when (widgetState) {
+            "success" -> analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_PROCESSING_CLOSE_OVERLAY, bundleOf())
             "quote_view" -> analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_QUOTE_CLOSE, bundleOf())
             "verifying" -> analytics.logEvent(AnalyticsConstants.Liquid.WIDGET_PROCESSING_CLOSE_TOP_LEFT, bundleOf())
             else -> {}
