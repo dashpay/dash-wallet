@@ -21,10 +21,10 @@ import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.isVisible
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.DashPayProfile
@@ -43,9 +43,7 @@ import kotlinx.android.synthetic.main.update_profile_error.*
 import kotlinx.android.synthetic.main.update_profile_error.error_try_again
 import kotlinx.android.synthetic.main.update_profile_error.view.*
 import kotlinx.android.synthetic.main.update_profile_network_unavailable.*
-import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.slf4j.LoggerFactory
@@ -56,9 +54,9 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     override val navigationItemId = R.id.more
 
     private var blockchainState: BlockchainState? = null
-    private lateinit var editProfileViewModel: EditProfileViewModel
-    private lateinit var mainActivityViewModel: MainActivityViewModel
-    private lateinit var createInviteViewModel: CreateInviteViewModel
+    private val editProfileViewModel: EditProfileViewModel by viewModels()
+    private val mainActivityViewModel: MainActivityViewModel by activityViewModels()
+    private val createInviteViewModel: CreateInviteViewModel by viewModels()
     private val walletApplication = WalletApplication.getInstance()
     private var showInviteSection = false
 
@@ -129,22 +127,18 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     }
 
     private fun initViewModel() {
-        mainActivityViewModel = ViewModelProvider(requireActivity())[MainActivityViewModel::class.java]
-        editProfileViewModel = ViewModelProvider(this)[EditProfileViewModel::class.java]
-        createInviteViewModel = ViewModelProvider(this)[CreateInviteViewModel::class.java]
-
-        mainActivityViewModel.blockchainStateData.observe(viewLifecycleOwner, Observer {
+        mainActivityViewModel.blockchainStateData.observe(viewLifecycleOwner) {
             blockchainState = it
-        })
+        }
 
         // observe our profile
-        editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner, Observer { dashPayProfile ->
+        editProfileViewModel.dashPayProfileData.observe(viewLifecycleOwner) { dashPayProfile ->
             if (dashPayProfile != null) {
                 showProfileSection(dashPayProfile)
             }
-        })
+        }
         // track the status of broadcast changes to our profile
-        editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner, Observer { state ->
+        editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner) { state ->
             if (state != null) {
                 (requireActivity() as LockScreenActivity).imitateUserInteraction()
                 when (state.status) {
@@ -188,19 +182,19 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
                     }
                 }
             }
-        })
+        }
 
-        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner, Observer {
+        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) {
             join_dashpay_container.visibility = if (it) {
                 View.VISIBLE
             } else {
                 View.GONE
             }
-        })
+        }
 
-        createInviteViewModel.isAbleToPerformInviteAction.observe(viewLifecycleOwner, Observer {
+        createInviteViewModel.isAbleToPerformInviteAction.observe(viewLifecycleOwner) {
             showInviteSection(it)
-        })
+        }
     }
 
     private fun showInviteSection(showInviteSection: Boolean) {
@@ -226,6 +220,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
         ProfilePictureDisplay.display(dashpayUserAvatar, profile)
 
         edit_profile.setOnClickListener {
+            editProfileViewModel.logEvent(AnalyticsConstants.UsersContacts.PROFILE_EDIT_MORE)
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
         }
         //if the invite section is not visible, show/hide it

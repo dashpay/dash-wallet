@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.common.services
+package org.dash.wallet.common.services.analytics
 
 import android.os.Bundle
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
+import org.dash.wallet.common.BuildConfig
 import javax.inject.Inject
 
 
@@ -33,6 +34,10 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
     private val crashlytics = Firebase.crashlytics
 
     override fun logEvent(event: String, params: Bundle) {
+        if (BuildConfig.DEBUG) {
+            return
+        }
+
         try {
             firebaseAnalytics.logEvent(event, params)
         } catch (ex: Exception) {
@@ -41,6 +46,10 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
     }
 
     override fun logError(error: Throwable, details: String?) {
+        if (BuildConfig.DEBUG) {
+            return
+        }
+
         details?.let { crashlytics.log(details) }
         crashlytics.recordException(error)
     }

@@ -20,9 +20,8 @@ import android.app.Application
 import androidx.core.os.bundleOf
 import androidx.lifecycle.AndroidViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.SingleLiveEvent
-import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import javax.inject.Inject
 

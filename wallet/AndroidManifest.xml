@@ -17,6 +17,7 @@
 
     <!-- dangerous permissions -->
     <uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
 
     <uses-feature

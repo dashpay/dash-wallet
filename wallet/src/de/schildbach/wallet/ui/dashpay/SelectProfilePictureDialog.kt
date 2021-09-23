@@ -20,16 +20,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.DialogFragment
-import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
+import de.schildbach.wallet.ui.invite.InvitesHistoryFilterViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.dialog_select_picture.*
-
+import de.schildbach.wallet_test.databinding.DialogInviteFilterBinding
+import de.schildbach.wallet_test.databinding.DialogSelectPictureBinding
+import org.dash.wallet.common.ui.viewBinding
 
 class SelectProfilePictureDialog : BaseBottomSheetDialogFragment() {
 
@@ -41,9 +40,14 @@ class SelectProfilePictureDialog : BaseBottomSheetDialogFragment() {
         }
     }
 
-    private lateinit var sharedViewModel: SelectProfilePictureSharedViewModel
+    private val sharedViewModel: SelectProfilePictureSharedViewModel by activityViewModels()
+    private val binding by viewBinding(DialogSelectPictureBinding::bind)
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         return inflater.inflate(R.layout.dialog_select_picture, container, false)
     }
 
@@ -51,40 +55,21 @@ class SelectProfilePictureDialog : BaseBottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // take care of actions here
-        view.apply {
-            take_picture.setOnClickListener {
-                sharedViewModel.onTakePictureCallback.call()
-                dismiss()
-            }
-            choose_picture.setOnClickListener {
-                sharedViewModel.onChoosePictureCallback.call()
-                dismiss()
-            }
-            external_url.setOnClickListener {
-                sharedViewModel.onFromUrlCallback.call()
-                dismiss()
-            }
-            gravatar.setOnClickListener {
-                sharedViewModel.onFromGravatarCallback.call()
-                dismiss()
-            }
+        binding.takePicture.setOnClickListener {
+            sharedViewModel.onTakePictureCallback.call()
+            dismiss()
         }
-
-        dialog?.setOnShowListener { dialog ->
-            // apply wrap_content height
-            val d = dialog as BottomSheetDialog
-            val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            val coordinatorLayout = bottomSheet!!.parent as CoordinatorLayout
-            val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-            bottomSheetBehavior.peekHeight = bottomSheet.height
-            coordinatorLayout.parent.requestLayout()
+        binding.choosePicture.setOnClickListener {
+            sharedViewModel.onChoosePictureCallback.call()
+            dismiss()
         }
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        sharedViewModel = activity?.run {
-            ViewModelProvider(this)[SelectProfilePictureSharedViewModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
+        binding.externalUrl.setOnClickListener {
+            sharedViewModel.onFromUrlCallback.call()
+            dismiss()
+        }
+        binding.gravatar.setOnClickListener {
+            sharedViewModel.onFromGravatarCallback.call()
+            dismiss()
+        }
     }
 }

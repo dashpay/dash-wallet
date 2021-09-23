@@ -89,13 +89,16 @@
         app:layout_constraintTop_toBottomOf="@id/search" />
 
     <include
+        android:id="@+id/user_search_empty_result"
         layout="@layout/user_search_empty_result"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="0dp" />
 
-    <include layout="@layout/user_search_loading" />
+    <include
+        android:id="@+id/user_search_loading"
+        layout="@layout/user_search_loading" />
 
     <include
         android:id="@+id/invite_friend_hint_view_dashpay_profile_1"

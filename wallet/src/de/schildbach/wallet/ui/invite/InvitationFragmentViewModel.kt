@@ -38,7 +38,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.services.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream

@@ -20,39 +20,34 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
-import android.text.Editable
-import android.text.TextWatcher
 import android.text.format.DateUtils
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
-import androidx.appcompat.widget.Toolbar
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
+import androidx.activity.viewModels
+import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.notification.ContactViewHolder
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.dashpay.notification.UserAlertViewHolder
+import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.fragment_notifications.*
-import org.dash.wallet.common.InteractionAwareActivity
+import de.schildbach.wallet_test.databinding.ActivityNotificationsBinding
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.max
 
 @AndroidEntryPoint
-class NotificationsActivity : LockScreenActivity(), TextWatcher,
-        NotificationsAdapter.OnItemClickListener, ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
+class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemClickListener,
+    ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
 
     companion object {
         private val log = LoggerFactory.getLogger(NotificationsAdapter::class.java)
@@ -71,7 +66,8 @@ class NotificationsActivity : LockScreenActivity(), TextWatcher,
         }
     }
 
-    private lateinit var dashPayViewModel: DashPayViewModel
+    private val dashPayViewModel: DashPayViewModel by viewModels()
+    private lateinit var binding: ActivityNotificationsBinding
     private var handler: Handler = Handler()
     private lateinit var searchContactsRunnable: Runnable
     private lateinit var notificationsAdapter: NotificationsAdapter
@@ -92,9 +88,10 @@ class NotificationsActivity : LockScreenActivity(), TextWatcher,
             mode = intent!!.extras!!.getInt(EXTRA_MODE)
         }
 
-        setContentView(R.layout.activity_notifications)
+        binding = ActivityNotificationsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        val toolbar = binding.appBarGeneral.toolbar
         setSupportActionBar(toolbar)
         val actionBar = supportActionBar
         actionBar?.apply {
@@ -102,28 +99,38 @@ class NotificationsActivity : LockScreenActivity(), TextWatcher,
             setDisplayShowHomeEnabled(true)
         }
 
-        contacts_rv.layoutManager = LinearLayoutManager(this)
-        contacts_rv.adapter = this.notificationsAdapter
+        binding.notifications.apply {
+            contactsRv.layoutManager = LinearLayoutManager(this@NotificationsActivity)
+            contactsRv.adapter = notificationsAdapter
 
-        initViewModel()
+            initViewModel()
 
-        if (mode and MODE_NOTIFICATIONS_SEARCH != 0) {
-            search.addTextChangedListener(this)
-            search.visibility = View.VISIBLE
-            icon.visibility = View.VISIBLE
-        } else {
-            search.visibility = View.GONE
-            icon.visibility = View.GONE
+            if (mode and MODE_NOTIFICATIONS_SEARCH != 0) {
+                search.doAfterTextChanged {
+                    it?.let {
+                        query = it.toString()
+                        searchContacts()
+                    }
+                }
+                search.visibility = View.VISIBLE
+                icon.visibility = View.VISIBLE
+            } else {
+                search.visibility = View.GONE
+                icon.visibility = View.GONE
+            }
+            setTitle(R.string.notifications_title)
         }
-        setTitle(R.string.notifications_title)
 
         searchContacts()
         dashPayViewModel.updateDashPayState()
+
+        if (mode == MODE_NOTIFICATIONS) {
+            dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_HOME_SCREEN)
+        }
     }
 
     private fun initViewModel() {
-        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
-        dashPayViewModel.notificationsLiveData.observe(this, Observer {
+        dashPayViewModel.notificationsLiveData.observe(this) {
             if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
                     val results = arrayListOf<NotificationItem>()
@@ -131,14 +138,14 @@ class NotificationsActivity : LockScreenActivity(), TextWatcher,
                     processResults(results)
                 }
             }
-        })
-        dashPayViewModel.sendContactRequestState.observe(this, Observer {
+        }
+        dashPayViewModel.sendContactRequestState.observe(this) {
             imitateUserInteraction()
             notificationsAdapter.sendContactRequestWorkStateMap = it
-        })
-        dashPayViewModel.recentlyModifiedContactsLiveData.observe(this, {
+        }
+        dashPayViewModel.recentlyModifiedContactsLiveData.observe(this) {
             notificationsAdapter.recentlyModifiedContacts = it
-        })
+        }
     }
 
     private fun processResults(data: ArrayList<NotificationItem>) {
@@ -200,23 +207,11 @@ class NotificationsActivity : LockScreenActivity(), TextWatcher,
         handler.postDelayed(searchContactsRunnable, 500)
     }
 
-    override fun afterTextChanged(s: Editable?) {
-        s?.let {
-            query = it.toString()
-            searchContacts()
-        }
-    }
-
-    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-    }
-
-    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-    }
-
     override fun onItemClicked(view: View, notificationItem: NotificationItem) {
 
         when (notificationItem) {
             is NotificationItemContact -> {
+                dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_CONTACT_DETAILS)
                 val usernameSearchResult = notificationItem.usernameSearchResult
                 startActivityForResult(DashPayUserActivity.createIntent(this, usernameSearchResult), DashPayUserActivity.REQUEST_CODE_DEFAULT)
             }
@@ -225,13 +220,13 @@ class NotificationsActivity : LockScreenActivity(), TextWatcher,
                 Toast.makeText(this, "payment $tx", Toast.LENGTH_LONG).show()
             }
             is NotificationItemUserAlert -> {
-                dashPayViewModel.inviteHistory.observeOnce(this, Observer {
+                dashPayViewModel.inviteHistory.observeOnce(this) {
                     if (it == null || it.isEmpty()) {
                         InviteFriendActivity.startOrError(this)
                     } else {
                         startActivity(InvitesHistoryActivity.createIntent(this))
                     }
-                })
+                }
             }
         }
     }
@@ -247,12 +242,13 @@ class NotificationsActivity : LockScreenActivity(), TextWatcher,
     }
 
     override fun onDestroy() {
-        walletApplication.configuration.setLastSeenNotificationTime(max(lastSeenNotificationTime,
-                walletApplication.configuration.lastSeenNotificationTime) + DateUtils.SECOND_IN_MILLIS)
+        walletApplication.configuration.lastSeenNotificationTime = max(lastSeenNotificationTime,
+            walletApplication.configuration.lastSeenNotificationTime) + DateUtils.SECOND_IN_MILLIS
         super.onDestroy()
     }
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+        dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_ACCEPT_REQUEST)
         dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
     }
 

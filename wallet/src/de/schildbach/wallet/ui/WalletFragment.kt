@@ -30,6 +30,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.data.PaymentIntent
@@ -44,7 +45,9 @@ import kotlinx.android.synthetic.main.sync_status_pane.*
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
+@AndroidEntryPoint
 class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
     companion object {
@@ -165,6 +168,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
     private fun handleSelectContact() {
         if (requireActivity() is PaymentsPayFragment.OnSelectContactToPayListener) {
+            mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.SHORTCUT_SEND_TO_CONTACT)
             (requireActivity() as PaymentsPayFragment.OnSelectContactToPayListener).selectContactToPay()
         }
     }

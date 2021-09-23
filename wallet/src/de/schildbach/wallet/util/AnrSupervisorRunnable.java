@@ -24,7 +24,7 @@ package de.schildbach.wallet.util;
 import android.os.Handler;
 import android.os.Looper;
 
-import org.dash.wallet.common.services.FirebaseAnalyticsServiceImpl;
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

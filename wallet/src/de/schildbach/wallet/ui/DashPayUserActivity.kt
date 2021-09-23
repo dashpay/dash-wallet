@@ -22,8 +22,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
+import androidx.activity.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
@@ -37,19 +36,21 @@ import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_dashpay_user.*
-import kotlinx.android.synthetic.main.contact_request_view.*
+import de.schildbach.wallet_test.databinding.ActivityDashpayUserBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 @AndroidEntryPoint
 class DashPayUserActivity : LockScreenActivity(),
         NotificationsAdapter.OnItemClickListener,
         ContactViewHolder.OnContactActionClickListener, UserAlertViewHolder.OnUserAlertDismissListener {
 
-    private lateinit var viewModel: DashPayUserActivityViewModel
-    private lateinit var dashPayViewModel: DashPayViewModel
+    private val viewModel: DashPayUserActivityViewModel by viewModels()
+    private val dashPayViewModel: DashPayViewModel by viewModels()
+    private lateinit var binding: ActivityDashpayUserBinding
+
     private val showContactHistoryDisclaimer by lazy {
         intent.getBooleanExtra(EXTRA_SHOW_CONTACT_HISTORY_DISCLAIMER, false)
     }
@@ -87,12 +88,11 @@ class DashPayUserActivity : LockScreenActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_dashpay_user)
 
-        close.setOnClickListener { finish() }
+        binding = ActivityDashpayUserBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        viewModel = ViewModelProvider(this).get(DashPayUserActivityViewModel::class.java)
-        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
+        binding.close.setOnClickListener { finish() }
 
         if (intent.hasExtra(EXTRA_INIT_USER_DATA)) {
             viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)!!
@@ -102,44 +102,45 @@ class DashPayUserActivity : LockScreenActivity(),
             val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile
             viewModel.updateProfileData(dashPayProfile) // save the profile to the database for non-contacts
             viewModel.userData = UsernameSearchResult(dashPayProfile.username, dashPayProfile, null, null)
-            viewModel.initUserData(dashPayProfile.username).observe(this, Observer {
+            viewModel.initUserData(dashPayProfile.username).observe(this) {
                 updateContactRelationUi()
-            })
+            }
         }
 
-        viewModel.userLiveData.observe(this, Observer {
+        viewModel.userLiveData.observe(this) {
             updateContactRelationUi()
-        })
-        viewModel.sendContactRequestState.observe(this, Observer {
+        }
+        viewModel.sendContactRequestState.observe(this) {
             imitateUserInteraction()
             updateContactRelationUi()
-        })
-        viewModel.notificationsForUser.observe(this, Observer {
+        }
+        viewModel.notificationsForUser.observe(this) {
             if (Status.SUCCESS == it.status) {
                 if (it.data != null) {
                     processResults(it.data)
                 }
             }
-        })
-        viewModel.transactionsLiveData.observe(this, {
+        }
+        viewModel.transactionsLiveData.observe(this) {
             viewModel.notificationsForUser.onContactsUpdated()
-        })
+        }
 
         val username = viewModel.userData.username
         val profile = viewModel.userData.dashPayProfile
         val displayName = profile.displayName
 
-        ProfilePictureDisplay.display(avatar, profile)
+        ProfilePictureDisplay.display(binding.avatar, profile)
 
         if (displayName.isNotEmpty()) {
-            displayNameTxt.text = displayName
-            usernameTxt.text = username
+            binding.displayNameTxt.text = displayName
+            binding.usernameTxt.text = username
         } else {
-            displayNameTxt.text = username
+            binding.displayNameTxt.text = username
         }
-        contact_request_pane.setOnUserActionListener(object : ContactRequestPane.OnUserActionListener {
+        binding.contactRequestPane.setOnUserActionListener(object : ContactRequestPane.OnUserActionListener {
 
             override fun onSendContactRequestClick() {
+                dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEND_REQUEST)
                 viewModel.sendContactRequest()
                 setResult(RESULT_CODE_CHANGED)
             }
@@ -158,16 +159,15 @@ class DashPayUserActivity : LockScreenActivity(),
             }
         })
 
-        activity_rv.layoutManager = LinearLayoutManager(this)
-        activity_rv.adapter = this.notificationsAdapter
+        binding.activityRv.layoutManager = LinearLayoutManager(this)
+        binding.activityRv.adapter = this.notificationsAdapter
 
-        dashPayViewModel.blockchainStateData.observe(this, {
+        dashPayViewModel.blockchainStateData.observe(this) {
             it?.apply {
                 val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
-                main_button.isEnabled = !networkError
-                accept.isEnabled = !networkError
+                binding.contactRequestPane.applyNetworkErrorState(networkError)
             }
-        })
+        }
     }
 
     private fun updateContactRelationUi() {
@@ -175,41 +175,41 @@ class DashPayUserActivity : LockScreenActivity(),
         val state = viewModel.sendContactRequestState.value
         ContactRelation.process(viewModel.userData.type, state, object : ContactRelation.RelationshipCallback {
             override fun none() {
-                contact_request_pane.applySendStateWithDisclaimer(userData.username)
-                activity_rv.visibility = View.GONE
-                activity_rv_top_line.visibility = View.GONE
+                binding.contactRequestPane.applySendStateWithDisclaimer(userData.username)
+                binding.activityRv.visibility = View.GONE
+                binding.activityRvTopLine.visibility = View.GONE
             }
 
             override fun inviting() {
-                contact_request_pane.applySendingStateWithDisclaimer(userData.username)
+                binding.contactRequestPane.applySendingStateWithDisclaimer(userData.username)
             }
 
             override fun invited() {
-                contact_request_pane.applySentStateWithDisclaimer(userData.username)
-                viewModel.initUserData(userData.username).observe(this@DashPayUserActivity, {
-                    activity_rv.visibility = View.VISIBLE
-                    activity_rv_top_line.visibility = View.VISIBLE
+                binding.contactRequestPane.applySentStateWithDisclaimer(userData.username)
+                viewModel.initUserData(userData.username).observe(this@DashPayUserActivity) {
+                    binding.activityRv.visibility = View.VISIBLE
+                    binding.activityRvTopLine.visibility = View.VISIBLE
                     viewModel.initNotificationsForUser()
-                })
+                }
             }
 
             override fun inviteReceived() {
-                contact_request_pane.applyReceivedState(userData.username)
-                activity_rv.visibility = View.VISIBLE
-                activity_rv_top_line.visibility = View.GONE
+                binding.contactRequestPane.applyReceivedState(userData.username)
+                binding.activityRv.visibility = View.VISIBLE
+                binding.activityRvTopLine.visibility = View.GONE
             }
 
             override fun acceptingInvite() {
-                contact_request_pane.applyAcceptingState()
+                binding.contactRequestPane.applyAcceptingState()
             }
 
             override fun friends() {
-                contact_request_pane.applyFriendsState()
-                activity_rv.visibility = View.VISIBLE
-                activity_rv_top_line.visibility = View.GONE
+                binding.contactRequestPane.applyFriendsState()
+                binding.activityRv.visibility = View.VISIBLE
+                binding.activityRvTopLine.visibility = View.GONE
             }
-
         })
+
         if (userData.type != UsernameSearchResult.Type.NO_RELATIONSHIP) {
             viewModel.initNotificationsForUser()
         }

@@ -23,20 +23,17 @@ import android.graphics.drawable.AnimationDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.text.Editable
 import android.text.TextUtils
-import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
 import android.view.Window
-import androidx.appcompat.widget.Toolbar
+import androidx.activity.viewModels
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.text.HtmlCompat
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
+import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.transition.ChangeBounds
 import androidx.transition.Transition
@@ -51,15 +48,10 @@ import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_search_dashpay_profile_1.*
-import kotlinx.android.synthetic.main.activity_search_dashpay_profile_root.*
-import kotlinx.android.synthetic.main.invite_friend_hint_view.*
-import kotlinx.android.synthetic.main.network_unavailable.*
-import kotlinx.android.synthetic.main.user_search_empty_result.*
-import kotlinx.android.synthetic.main.user_search_loading.*
+import de.schildbach.wallet_test.databinding.ActivitySearchDashpayProfileRootBinding
 
 @AndroidEntryPoint
-class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.OnItemClickListener,
+class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickListener,
         ContactViewHolder.OnContactRequestButtonClickListener {
 
     companion object {
@@ -73,7 +65,8 @@ class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.
         }
     }
 
-    private lateinit var dashPayViewModel: DashPayViewModel
+    private val dashPayViewModel: DashPayViewModel by viewModels()
+    private lateinit var binding: ActivitySearchDashpayProfileRootBinding
     private var handler: Handler = Handler()
     private lateinit var searchUserRunnable: Runnable
     private val adapter: UsernameSearchResultsAdapter = UsernameSearchResultsAdapter(this)
@@ -87,9 +80,10 @@ class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.
         }
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_search_dashpay_profile_root)
+        binding = ActivitySearchDashpayProfileRootBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        val toolbar = binding.appBarLayout.toolbar
         setSupportActionBar(toolbar)
         val actionBar = supportActionBar
         actionBar?.apply {
@@ -98,82 +92,91 @@ class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.
         }
         setTitle(R.string.add_new_contact)
 
-        search_results_rv.layoutManager = LinearLayoutManager(this)
-        search_results_rv.adapter = this.adapter
-        this.adapter.itemClickListener = this
+        binding.profile1.apply {
+            searchResultsRv.layoutManager = LinearLayoutManager(this@SearchUserActivity)
+            searchResultsRv.adapter = adapter
+            adapter.itemClickListener = this@SearchUserActivity
 
-        initViewModel()
+            initViewModel()
 
-        var setChanged = false
-        val constraintSet1 = ConstraintSet()
-        constraintSet1.clone(root)
-        val constraintSet2 = ConstraintSet()
-        constraintSet2.clone(this, R.layout.activity_search_dashpay_profile_2)
+            var setChanged = false
+            val constraintSet1 = ConstraintSet()
+            constraintSet1.clone(root)
+            val constraintSet2 = ConstraintSet()
+            constraintSet2.clone(this@SearchUserActivity, R.layout.activity_search_dashpay_profile_2)
 
-        search.addTextChangedListener(this)
-        search.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus && !setChanged) {
-                val transition: Transition = ChangeBounds()
-                transition.addListener(object : Transition.TransitionListener {
-                    override fun onTransitionEnd(transition: Transition) {
-                        finalizeViewsTransition()
-                        search_results_rv.visibility = View.VISIBLE
-                    }
+            search.doAfterTextChanged {
+                it?.let {
+                    imitateUserInteraction()
+                    query = it.toString()
+                    searchUser()
+                }
+            }
 
-                    override fun onTransitionResume(transition: Transition) {
-                    }
+            search.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus && !setChanged) {
+                    val transition: Transition = ChangeBounds()
+                    transition.addListener(object : Transition.TransitionListener {
+                        override fun onTransitionEnd(transition: Transition) {
+                            finalizeViewsTransition()
+                            searchResultsRv.visibility = View.VISIBLE
+                        }
 
-                    override fun onTransitionPause(transition: Transition) {
-                    }
+                        override fun onTransitionResume(transition: Transition) {
+                        }
 
-                    override fun onTransitionCancel(transition: Transition) {
-                    }
+                        override fun onTransitionPause(transition: Transition) {
+                        }
 
-                    override fun onTransitionStart(transition: Transition) {
-                        layout_title.visibility = View.GONE
-                        find_a_user_label.visibility = View.GONE
-                        invite_friend_hint_view_dashpay_profile_1.visibility = View.GONE
-                    }
+                        override fun onTransitionCancel(transition: Transition) {
+                        }
 
-                })
-                TransitionManager.beginDelayedTransition(root, transition)
+                        override fun onTransitionStart(transition: Transition) {
+                            layoutTitle.visibility = View.GONE
+                            findAUserLabel.visibility = View.GONE
+                            inviteFriendHintViewDashpayProfile1.root.visibility = View.GONE
+                        }
+
+                    })
+                    TransitionManager.beginDelayedTransition(root, transition)
+                    constraintSet2.applyTo(root)
+                    setChanged = true
+                }
+            }
+
+            val initQuery = intent.getStringExtra(EXTRA_INIT_QUERY)
+            if (!TextUtils.isEmpty(initQuery)) {
                 constraintSet2.applyTo(root)
                 setChanged = true
+                layoutTitle.visibility = View.GONE
+                findAUserLabel.visibility = View.GONE
+                finalizeViewsTransition()
+                search.setText(initQuery)
+            }
+
+            inviteFriendHintViewDashpayProfile1.root.setOnClickListener {
+                startInviteFlow()
+            }
+            userSearchEmptyResult.inviteFriendHintViewEmptyResult.root.setOnClickListener {
+                startInviteFlow()
             }
         }
 
-        val initQuery = intent.getStringExtra(EXTRA_INIT_QUERY)
-        if (!TextUtils.isEmpty(initQuery)) {
-            constraintSet2.applyTo(root)
-            setChanged = true
-            layout_title.visibility = View.GONE
-            find_a_user_label.visibility = View.GONE
-            finalizeViewsTransition()
-            search.setText(initQuery)
-        }
-
-        invite_friend_hint_view_dashpay_profile_1.setOnClickListener {
-            startInviteFlow()
-        }
-        invite_friend_hint_view_empty_result.setOnClickListener {
-            startInviteFlow()
-        }
-
-        network_error_subtitle.setText(R.string.network_error_user_search)
+        binding.networkUnavailable.networkErrorSubtitle.setText(R.string.network_error_user_search)
     }
 
     private fun startInviteFlow() {
-        dashPayViewModel.inviteHistory.observeOnce(this, Observer {
+        dashPayViewModel.inviteHistory.observeOnce(this) {
             if (it == null || it.isEmpty()) {
                 InviteFriendActivity.startOrError(this)
             } else {
                 startActivity(InvitesHistoryActivity.createIntent(this))
             }
-        })
+        }
     }
 
     private fun finalizeViewsTransition() {
-        search.apply {
+        binding.profile1.search.apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             val searchPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 60f, resources.displayMetrics).toInt()
@@ -183,8 +186,7 @@ class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.
     }
 
     private fun initViewModel() {
-        dashPayViewModel = ViewModelProvider(this).get(DashPayViewModel::class.java)
-        dashPayViewModel.searchUsernamesLiveData.observe(this, Observer {
+        dashPayViewModel.searchUsernamesLiveData.observe(this) {
             imitateUserInteraction()
             if (Status.LOADING == it.status) {
                 if (clearList) {
@@ -205,49 +207,56 @@ class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.
                     showEmptyResult()
                 }
             }
-        })
-        dashPayViewModel.sendContactRequestState.observe(this, Observer {
+        }
+        dashPayViewModel.sendContactRequestState.observe(this) {
             imitateUserInteraction()
             adapter.sendContactRequestWorkStateMap = it
-        })
-        dashPayViewModel.blockchainStateData.observe(this, {
+        }
+        dashPayViewModel.blockchainStateData.observe(this) {
             it?.apply {
                 val networkError = impediments.contains(BlockchainState.Impediment.NETWORK)
                 updateNetworkErrorVisibility(networkError)
             }
-        })
+        }
     }
 
     private fun updateNetworkErrorVisibility(networkError: Boolean) {
-        network_error.visibility = if (networkError) View.VISIBLE else View.GONE
-        network_error_root.visibility = if (networkError) View.VISIBLE else View.GONE
+        binding.networkError.visibility = if (networkError) View.VISIBLE else View.GONE
+        binding.networkUnavailable.root.visibility = if (networkError) View.VISIBLE else View.GONE
     }
 
     private fun startLoading() {
-        val query = search.text.toString()
-        hideEmptyResult()
-        search_loading.visibility = View.VISIBLE
-        var loadingText = getString(R.string.search_user_loading)
-        loadingText = loadingText.replace("%", "\"<b>$query</b>\"")
-        search_loading_label.text = HtmlCompat.fromHtml(loadingText,
+        binding.profile1.apply {
+            val query = search.text.toString()
+            hideEmptyResult()
+            userSearchLoading.root.visibility = View.VISIBLE
+            var loadingText = getString(R.string.search_user_loading)
+            loadingText = loadingText.replace("%", "\"<b>$query</b>\"")
+            userSearchLoading.searchLoadingLabel.text = HtmlCompat.fromHtml(loadingText,
                 HtmlCompat.FROM_HTML_MODE_COMPACT)
-        (search_loading_icon.drawable as AnimationDrawable).start()
+            (userSearchLoading.searchLoadingIcon.drawable as AnimationDrawable).start()
+        }
     }
 
     private fun stopLoading() {
-        search_loading.visibility = View.GONE
-        (search_loading_icon.drawable as AnimationDrawable).start()
+        binding.profile1.apply {
+            userSearchLoading.root.visibility = View.GONE
+            (userSearchLoading.searchLoadingIcon.drawable as AnimationDrawable).start()
+        }
     }
 
     private fun showEmptyResult() {
-        search_user_empty_result.visibility = View.VISIBLE
-        var emptyResultText = getString(R.string.search_user_no_results)
-        emptyResultText += " \"<b>$query</b>\""
-        no_results_label.text = HtmlCompat.fromHtml(emptyResultText, HtmlCompat.FROM_HTML_MODE_COMPACT)
+        binding.profile1.apply {
+            userSearchEmptyResult.root.visibility = View.VISIBLE
+            var emptyResultText = getString(R.string.search_user_no_results)
+            emptyResultText += " \"<b>$query</b>\""
+            userSearchEmptyResult.noResultsLabel.text = HtmlCompat.fromHtml(emptyResultText,
+                HtmlCompat.FROM_HTML_MODE_COMPACT)
+        }
     }
 
     private fun hideEmptyResult() {
-        search_user_empty_result.visibility = View.GONE
+        binding.profile1.userSearchEmptyResult.root.visibility = View.GONE
     }
 
     var clearList: Boolean = true
@@ -267,20 +276,6 @@ class SearchUserActivity : LockScreenActivity(), TextWatcher, ContactViewHolder.
             }
             handler.postDelayed(searchUserRunnable, 500)
         }
-    }
-
-    override fun afterTextChanged(s: Editable?) {
-        s?.let {
-            imitateUserInteraction()
-            query = it.toString()
-            searchUser()
-        }
-    }
-
-    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-    }
-
-    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
     }
 
     override fun onItemClicked(view: View, usernameSearchResult: UsernameSearchResult) {

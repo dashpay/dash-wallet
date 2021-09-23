@@ -7,7 +7,8 @@
     android:animateLayoutChanges="true"
     android:background="@color/bg_less_bright"
     android:orientation="vertical"
-    tools:parentTag="android.widget.LinearLayout">
+    tools:parentTag="android.widget.LinearLayout"
+    tools:context="de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane">
 
     <FrameLayout
         android:layout_width="match_parent"

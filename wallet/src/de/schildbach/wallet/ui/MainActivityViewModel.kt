@@ -1,8 +1,10 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
+import androidx.core.os.bundleOf
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.liveData
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
@@ -11,9 +13,14 @@ import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-class MainActivityViewModel(application: Application) : BaseProfileViewModel(application) {
+@HiltViewModel
+class MainActivityViewModel @Inject constructor(
+    application: Application,
+    private val analytics: AnalyticsService) : BaseProfileViewModel(application) {
 
     companion object {
         private val log = LoggerFactory.getLogger(MainActivityViewModel::class.java)
@@ -65,4 +72,8 @@ class MainActivityViewModel(application: Application) : BaseProfileViewModel(app
     val showCreateUsernameEvent = SingleLiveEventExt<Unit>()
 
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(application)
+
+    fun logEvent(event: String) {
+        analytics.logEvent(event, bundleOf())
+    }
 }
