@@ -213,8 +213,3 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
         onShortcutClickListener?.onClick(v)
     }
 }
-
-enum class ShortcutsPaneType {
-    USER_WITHOUT_BALANCE,
-    USER_WITH_BALANCE,
-}
