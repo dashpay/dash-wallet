@@ -219,22 +219,18 @@ public class UpholdApiException extends Exception {
                     }
                 }
             } else if (errors.has("beneficiary")) {
-                JSONObject beneficiary = (JSONObject)errors.get("beneficiary");
-                String code = beneficiary.getString("code");
-                if (code.equals(VALIDATION_FAILED)) {
-                    JSONObject errorArray = (JSONObject) beneficiary.get("errors");
-                    JSONArray amount = errorArray.getJSONArray("name");
-                    JSONObject firstAmount = (JSONObject) amount.get(0);
-                    if (firstAmount.has("code") && firstAmount.get("code").equals("invalid_beneficiary")) {
-                        JSONObject args = (JSONObject) firstAmount.get("args");
-                        arguments.put("code", "invalid_beneficiary");
-                        return true;
-                    } else if (firstAmount.has("code") && firstAmount.get("code").equals("required")) {
-                        JSONObject args = (JSONObject) firstAmount.get("args");
-                        arguments.put("code", "required");
-                        return true;
-                    }
+                // {"code":"validation_failed","errors":{"beneficiary":[{"code":"required","message":"This value is required"}],"purpose":[{"code":"required","message":"This value is required"}]}}
+                JSONArray beneficiaryArray = errors.getJSONArray("beneficiary");
+                JSONObject firstCode = (JSONObject) beneficiaryArray.get(0);
+
+                if (firstCode.has("code") && firstCode.get("code").equals("invalid_beneficiary")) {
+                    arguments.put("code", "invalid_beneficiary");
+                    return true;
+                } else if (firstCode.has("code") && firstCode.get("code").equals("required")) {
+                    arguments.put("code", "required");
+                    return true;
                 }
+
             } else if (errors.has("user")) {
                 JSONArray userArray = (JSONArray) errors.getJSONArray("user");
                 JSONObject user = (JSONObject) userArray.get(0);
