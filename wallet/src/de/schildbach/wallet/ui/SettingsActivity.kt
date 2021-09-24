@@ -27,13 +27,19 @@ import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
 import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
+import android.util.Log
+import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
+import android.app.Activity
+import de.schildbach.wallet.rates.ExchangeRate
 
 
 class SettingsActivity : BaseMenuActivity() {
 
     private val log = LoggerFactory.getLogger(SettingsActivity::class.java)
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
-
+    companion object Constants {
+        private const val RC_DEFAULT_FIAT_CURRENCY_SELECTED: Int = 100
+    }
     override fun getLayoutId(): Int {
         return R.layout.activity_settings
     }
@@ -50,7 +56,7 @@ class SettingsActivity : BaseMenuActivity() {
             analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, bundleOf())
             val intent = Intent(this, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, false)
-            startActivity(intent)
+            startActivityForResult(intent, RC_DEFAULT_FIAT_CURRENCY_SELECTED)
         }
         rescan_blockchain.setOnClickListener { resetBlockchain() }
     }
@@ -82,5 +88,15 @@ class SettingsActivity : BaseMenuActivity() {
             }
         }
         dialog.show()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if(resultCode == Activity.RESULT_OK && requestCode == RC_DEFAULT_FIAT_CURRENCY_SELECTED){
+            val exchangeRate: ExchangeRate? = data?.getParcelableExtra(BUNDLE_EXCHANGE_RATE)
+            local_currency_symbol.text = if(exchangeRate != null) exchangeRate.currencyCode else
+                WalletApplication.getInstance().configuration.exchangeCurrencyCode
+        } else {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
     }
 }

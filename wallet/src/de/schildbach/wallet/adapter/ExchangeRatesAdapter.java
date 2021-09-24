@@ -56,7 +56,7 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
 
     @Override
     protected void filterObject(List<ExchangeRate> filteredList, ExchangeRate object, CharSequence searchText) {
-        if (object.getCurrencyName(mAppContext).toLowerCase(Locale.ROOT).contains(searchText))
+        if (object.getCurrencyName(mAppContext).toLowerCase(Locale.ROOT).contains(searchText) || object.getCurrencyCode().toLowerCase(Locale.ROOT).contains(searchText))
             filteredList.add(object);
     }
 
@@ -75,25 +75,27 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
 
         holder.defaultCurrencyCheckbox.setOnCheckedChangeListener(null);
         holder.defaultCurrencyCheckbox.setChecked(isDefaultCurrency);
-
         holder.currencyCode.setText(exchangeRate.getCurrencyCode());
         holder.currencyName.setText(exchangeRate.getCurrencyName(mAppContext));
         holder.price.setFormat(!rateBase.isLessThan(Coin.COIN) ? Constants.LOCAL_FORMAT.minDecimals(2)
                 : Constants.LOCAL_FORMAT.minDecimals(4));
         holder.price.setAmount(rate.coinToFiat(rateBase));
-
         holder.defaultCurrencyCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
+                    holder.defaultCurrencyCheckbox.setChecked(true);
                     setDefaultCurrency(exchangeRate.getCurrencyCode());
                     WalletBalanceWidgetProvider.updateWidgets(mAppContext, mWallet);
                     if (isShownAsDialog) {
                         mAppConfig.setSendPaymentExchangeCurrencyCode(exchangeRate.getCurrencyCode());
-                        itemSelectedListener.onItemChecked(exchangeRate);
                     } else {
                         mAppConfig.setExchangeCurrencyCode(exchangeRate.getCurrencyCode());
                     }
+                    itemSelectedListener.onItemChecked(exchangeRate);
+                } else if (isDefaultCurrency){
+                    holder.defaultCurrencyCheckbox.setChecked(true);
+                    itemSelectedListener.onItemChecked(null);
                 }
             }
         });
