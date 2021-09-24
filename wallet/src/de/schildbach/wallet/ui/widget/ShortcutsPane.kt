@@ -26,57 +26,83 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import androidx.core.view.children
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import de.schildbach.wallet_test.R
 
 class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs), View.OnClickListener {
 
     val secureNowButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_secure_now,
-                R.string.shortcut_secure_now,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_secure_now,
+            R.string.shortcut_secure_now,
+            this
+        )
     }
     val receiveButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_receive,
-                R.string.shortcut_receive,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_receive,
+            R.string.shortcut_receive,
+            this
+        )
     }
     val scanToPayButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_scan_to_pay,
-                R.string.shortcut_scan_to_pay,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_scan_to_pay,
+            R.string.shortcut_scan_to_pay,
+            this
+        )
     }
     val payToAddressButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_pay_to_address,
-                R.string.shortcut_pay_to_address,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_pay_to_address,
+            R.string.shortcut_pay_to_address,
+            this
+        )
     }
     val buySellButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_buy_sell_dash,
-                R.string.shortcut_buy_sell,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_buy_sell_dash,
+            R.string.shortcut_buy_sell,
+            this
+        )
     }
     val importPrivateKey: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_import_key,
-                R.string.shortcut_import_key,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_import_key,
+            R.string.shortcut_import_key,
+            this
+        )
     }
     val configButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_add,
-                R.string.shortcut_add_shortcut,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_add,
+            R.string.shortcut_add_shortcut,
+            this
+        )
+    }
+
+    val explore: ShortcutButton by lazy {
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_bar_explore,
+            R.string.menu_explore_title,
+            this
+        )
     }
 
     private var isSmallScreen = resources.displayMetrics.densityDpi <= DisplayMetrics.DENSITY_MEDIUM
     private val secondaryItems = mutableListOf<ShortcutButton>()
 
     private var showSecureNow: Boolean = true
+    private var userHasBalance: Boolean = false
     private var showJoinDashPay: Boolean = true
     private var showPayToContact: Boolean = true
 
@@ -100,47 +126,64 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
                 refresh()
                 return false
             }
-
         }
         viewTreeObserver.addOnPreDrawListener(onPreDrawListener)
     }
 
     fun setup() {
         addShortcut(secureNowButton)
-        secondaryItems.add(scanToPayButton)
-        if (isSmallScreen) {
-            secondaryItems.add(receiveButton)
+        if (userHasBalance) {
+            secondaryItems.add(scanToPayButton)
         }
-        secondaryItems.add(payToAddressButton)
+        secondaryItems.add(receiveButton)
+
+        if (userHasBalance) {
+            secondaryItems.add(payToAddressButton)
+        }
         secondaryItems.add(buySellButton)
         secondaryItems.forEach {
             addShortcut(it)
         }
-        if (!isSmallScreen) {
-            addShortcut(receiveButton)
-        }
+
+        addShortcut(explore)
     }
 
     private fun refresh() {
         val displayed = mutableSetOf<ShortcutButton>()
-        secureNowButton.visibility = if (showSecureNow) {
+
+        secureNowButton.isVisible = showSecureNow
+        if (secureNowButton.isVisible) {
             displayed.add(secureNowButton)
-            View.VISIBLE
-        } else View.GONE
-        if (!isSmallScreen) {
-            displayed.add(receiveButton)
         }
-        val numberOfButtons = if (isSmallScreen) 3 else 4
-        secondaryItems.forEach {
-            it.visibility = if (displayed.size < numberOfButtons) {
-                displayed.add(it)
-                View.VISIBLE
-            } else View.GONE
+
+        scanToPayButton.isVisible = userHasBalance
+        if (scanToPayButton.isVisible) {
+            displayed.add(scanToPayButton)
+        }
+
+        displayed.add(receiveButton)
+
+        buySellButton.isVisible = !userHasBalance
+        payToAddressButton.isVisible = userHasBalance
+        if (userHasBalance) {
+            displayed.add(payToAddressButton)
+        } else {
+            displayed.add(buySellButton)
+        }
+
+        explore.isGone = userHasBalance && showSecureNow
+        if (explore.isVisible) {
+            displayed.add(explore)
         }
     }
 
     fun showSecureNow(showSecureNow: Boolean) {
         this.showSecureNow = showSecureNow
+        refresh()
+    }
+
+    fun userHasBalance(userHasBalance: Boolean) {
+        this.userHasBalance = userHasBalance
         refresh()
     }
 
@@ -169,4 +212,9 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
     override fun onClick(v: View) {
         onShortcutClickListener?.onClick(v)
     }
+}
+
+enum class ShortcutsPaneType {
+    USER_WITHOUT_BALANCE,
+    USER_WITH_BALANCE,
 }

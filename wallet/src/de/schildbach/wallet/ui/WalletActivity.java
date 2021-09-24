@@ -54,6 +54,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.HttpUrl;
 
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
@@ -79,6 +80,7 @@ import de.schildbach.wallet.ui.InputParser.BinaryInputParser;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment;
 import de.schildbach.wallet.ui.backup.RestoreFromFileHelper;
+import de.schildbach.wallet.ui.explore.ExploreActivity;
 import de.schildbach.wallet.ui.preference.PreferenceActivity;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
@@ -215,14 +217,24 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 } else if (v == shortcutsPane.getImportPrivateKey()) {
                     SweepWalletActivity.start(WalletActivity.this, true);
                 }
+                else if (v == shortcutsPane.getExplore()) {
+                    startActivity(new Intent(WalletActivity.this, ExploreActivity.class));
+                }
             }
         });
         showHideSecureAction();
+        refreshIfUserHasBalance();
     }
 
     private void showHideSecureAction() {
         shortcutsPane.showSecureNow(config.getRemindBackupSeed());
     }
+
+    private void refreshIfUserHasBalance() {
+        Coin balance = wallet.getBalance(Wallet.BalanceType.ESTIMATED);
+        shortcutsPane.userHasBalance(balance.value>0);
+    }
+
 
     @Override
     protected void onResume() {
