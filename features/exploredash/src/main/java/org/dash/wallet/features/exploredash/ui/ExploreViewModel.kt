@@ -3,6 +3,7 @@ package org.dash.wallet.features.exploredash.ui
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.FirebaseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -22,8 +23,13 @@ class ExploreViewModel @Inject constructor(
 
     fun init() {
         viewModelScope.launch {
-            val merchants = merchantRepository.get()
-            _searchResults.postValue(merchants)
+            try {
+                val merchants = merchantRepository.get()
+                _searchResults.postValue(merchants)
+            } catch (ex: FirebaseException) {
+                // TODO
+                event.postValue(ex.message)
+            }
         }
     }
 }

@@ -6,4 +6,11 @@
     <string name="explore_merchants_subtitle">Find merchants who accept Dash as payment.</string>
     <string name="explore_atms_title">ATMs</string>
     <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
+    <string name="explore_search_hint">Search</string>
+    <string name="explore_filter">Filter</string>
+    <string name="explore_option_all">All</string>
+    <string name="explore_option_physical">Physical Merchants</string>
+    <string name="explore_physical_merchant">Physical Merchant</string>
+    <string name="explore_online_merchant">Online</string>
+    <string name="explore_both_types_merchant">Online, Physical Merchant</string>
 </resources>

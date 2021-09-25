@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dash_white"
+    android:background="@color/white"
     tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
 
     <include
@@ -28,7 +28,7 @@
         android:layout_width="match_parent"
         android:orientation="vertical"
         android:background="@drawable/rounded_background"
-        android:theme="@style/ExploreBottomContentBackground">
+        android:theme="@style/ExploreSearchResultsBackground">
 
         <FrameLayout
             android:id="@+id/drag_area"
@@ -44,7 +44,88 @@
                 tools:background="@color/gray_100"/>
         </FrameLayout>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/search_results_title"
+                style="@style/Headline6.Bold"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginHorizontal="15dp"
+                android:text="United States"
+                tools:text="United States" />
+
+            <Button
+                android:id="@+id/filter_btn"
+                style="@style/Button.Borderless"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:textSize="13sp"
+                android:text="@string/explore_filter"
+                android:drawablePadding="4dp"
+                android:drawableEnd="@drawable/ic_filter" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/search"
+            style="@style/Body2"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginHorizontal="15dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/SearchInputBackground"
+            android:hint="@string/explore_search_hint"
+            android:drawableStart="@drawable/ic_search"
+            android:drawablePadding="7dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:inputType="text"
+            android:textColor="@android:color/black" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="horizontal">
+
+            <ToggleButton
+                android:id="@+id/all_option"
+                style="@style/ToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:textOff="@string/explore_option_all"
+                android:textOn="@string/explore_option_all" />
+
+            <ToggleButton
+                android:id="@+id/physical_option"
+                style="@style/ToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:textOff="@string/explore_option_physical"
+                android:textOn="@string/explore_option_physical" />
+
+            <ToggleButton
+                android:id="@+id/online_option"
+                style="@style/ToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:textOff="@string/explore_online_merchant"
+                android:textOn="@string/explore_online_merchant" />
+        </LinearLayout>
+
         <androidx.recyclerview.widget.RecyclerView
+            android:layout_marginTop="12dp"
+
             android:id="@+id/search_results_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
