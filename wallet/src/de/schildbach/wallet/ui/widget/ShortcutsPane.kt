@@ -118,14 +118,12 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
 
     fun setup() {
         addShortcut(secureNowButton)
-        if (userHasBalance) {
-            secondaryItems.add(scanToPayButton)
-        }
+        secondaryItems.add(scanToPayButton)
+
         secondaryItems.add(receiveButton)
 
-        if (userHasBalance) {
-            secondaryItems.add(payToAddressButton)
-        }
+        secondaryItems.add(payToAddressButton)
+
         secondaryItems.add(buySellButton)
         secondaryItems.forEach {
             addShortcut(it)

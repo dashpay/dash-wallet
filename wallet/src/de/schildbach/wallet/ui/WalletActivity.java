@@ -222,6 +222,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 }
             }
         });
+        refreshShortcutBar();
+    }
+
+    private void refreshShortcutBar() {
         showHideSecureAction();
         refreshIfUserHasBalance();
     }
@@ -912,6 +916,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         }
 
         updateSyncPaneVisibility(R.id.sync_error_pane, false);
+        if(blockchainState.isSynced()) {
+            refreshShortcutBar();
+        }
     }
 
     /**
