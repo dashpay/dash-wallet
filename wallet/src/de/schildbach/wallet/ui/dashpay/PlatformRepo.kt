@@ -58,7 +58,7 @@ import org.dashj.platform.dpp.errors.InvalidIdentityAssetLockProofError
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.identity.IdentityPublicKey
-import org.dashj.platform.dpp.toHexString
+import org.dashj.platform.dpp.toHex
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.sdk.platform.Platform
 import org.dashj.platform.sdk.platform.multicall.MulticallQuery
@@ -638,7 +638,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             var cftxData = platform.client.getTransaction(invite.cftx)
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
-                cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
+                cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
             val cftx = CreditFundingTransaction(platform.params, cftxData!!.transaction)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
             cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
@@ -672,6 +672,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 3: Verify that the identity is registered
     //
+    @Deprecated("watch* functions should no longer be used")
     suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             blockchainIdentity.watchIdentity(100, 1000, RetryDelayType.SLOW20)
@@ -707,6 +708,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 4: Verify that the username was preordered
     //
+    @Deprecated("watch* functions should no longer be used")
     suspend fun isNamePreorderedAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
@@ -731,6 +733,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 5: Verify that the username was registered
     //
+    @Deprecated("watch* functions should no longer be used")
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
@@ -837,10 +840,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val errorMessage = exception?.run {
             var message = "${exception.javaClass.simpleName}: ${exception.message}"
             if (this is StatusRuntimeException) {
-                val exceptionInfo = GrpcExceptionInfo(this)
-                if (exceptionInfo.errors.isNotEmpty() && exceptionInfo.errors.first().containsKey("name")) {
-                    message += " ${exceptionInfo.errors.first()["name"]}"
-                }
+                val exceptionInfo = GrpcExceptionInfo(this).exception
+                message += exceptionInfo
             }
             message
         }
@@ -1037,7 +1038,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val watch = Stopwatch.createStarted()
             var addedContact = false
             Context.propagate(walletApplication.wallet.context)
-            var encryptionKey: KeyParameter? = null
 
             var lastContactRequestTime = if (dashPayContactRequestDao.countAllRequests() > 0) {
                 val lastTimeStamp = dashPayContactRequestDao.getLastTimestamp()
@@ -1598,7 +1598,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         //TODO: remove when iOS uses big endian
         if (tx == null) {
             tx =
-                platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
+                platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
         }
         if (tx != null) {
             val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.transaction)
