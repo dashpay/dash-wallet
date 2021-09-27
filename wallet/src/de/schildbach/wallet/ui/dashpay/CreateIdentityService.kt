@@ -35,6 +35,10 @@ import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dpp.errors.ErrorMetadata
+import org.dashj.platform.dpp.errors.concensus.ConcensusException
+import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
+import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
 import org.dashj.platform.dpp.identity.Identity
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -283,8 +287,16 @@ class CreateIdentityService : LifecycleService() {
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
 
             // handle case of "InvalidIdentityAssetLockProofSignatureError", where we need to start over from scratch
+            val isInvalidLockProof = try {
+                val errorMetadata =
+                    ErrorMetadata(blockchainIdentityData.creationStateErrorMessage!!)
+                val exception = ConcensusException.create(errorMetadata)
+                exception is InvalidInstantAssetLockProofSignatureException
+            } catch (e: IllegalArgumentException) {
+                false
+            }
             if (blockchainIdentityData.creationState == CreationState.IDENTITY_REGISTERING &&
-                    blockchainIdentityData.creationStateErrorMessage!!.contains("InvalidIdentityAssetLockProofSignatureError")) {
+                    isInvalidLockProof) {
                 blockchainIdentityData.creationState = CreationState.NONE
                 blockchainIdentityData.creditFundingTxId = null
                 isRetry = true
@@ -451,8 +463,16 @@ class CreateIdentityService : LifecycleService() {
             log.info("resuming identity creation process [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
 
             // handle case of "InvalidIdentityAssetLockProofSignatureError", where we need to start over from scratch
+            val isInvalidLockProof = try {
+                val errorMetadata =
+                    ErrorMetadata(blockchainIdentityData.creationStateErrorMessage!!)
+                val exception = ConcensusException.create(errorMetadata)
+                exception is InvalidInstantAssetLockProofSignatureException
+            } catch (e: IllegalArgumentException) {
+                false
+            }
             if (blockchainIdentityData.creationState == CreationState.IDENTITY_REGISTERING &&
-                    blockchainIdentityData.creationStateErrorMessage!!.contains("InvalidIdentityAssetLockProofSignatureError")) {
+                    isInvalidLockProof) {
                 blockchainIdentityData.creationState = CreationState.NONE
                 blockchainIdentityData.creditFundingTxId = null
                 isRetry = true
@@ -495,11 +515,6 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
-        // do one last validation of the invite
-        //if(!platformRepo.validateInvitation(invite!!)) {
-        // stop the username registration process
-        //}
-
         // This step will fail because register identity
         if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
@@ -519,17 +534,17 @@ class CreateIdentityService : LifecycleService() {
                 //2021-03-26 10:08:08.411 28005-28085/hashengineering.darkcoin.wallet_test W/DapiClient: [DefaultDispatcher-worker-2] RPC failed with 54.187.224.80: Status{code=INVALID_ARGUMENT, description=State Transition is invalid, cause=null}: Metadata(server=nginx/1.19.7,date=Fri, 26 Mar 2021 17:08:09 GMT,content-type=application/grpc,content-length=0,errors=[{"name":"IdentityAssetLockTransactionOutPointAlreadyExistsError","message":"Asset lock transaction outPoint already exists","outPoint":{"type":"Buffer","data":[55,69,23,188,75,149,231,235,207,70,187,182,129,183,150,17,229,10,161,32,78,107,54,101,131,27,181,254,197,4,167,134,1,0,0,0]}}])
                 // did this fail because the invitation was already used?
                 if (e.status.code == Status.INVALID_ARGUMENT.code) {
-                    val errors = GrpcExceptionInfo(e)
-                    if (errors.errors.isNotEmpty() && errors.errors[0].containsKey("name")) {
-                        if (errors.errors[0]["name"] == "IdentityAssetLockTransactionOutPointAlreadyExistsError") {
+                    val exception = GrpcExceptionInfo(e).exception
+
+                        if (exception is IdentityAssetLockTransactionOutPointAlreadyExistsException) {
                             log.warn("Invite has already been used")
 
                             // activate link or activity with the link (to show that the invite was used)
                             // and then, wipe all blockchain identity data and status (NONE)
                             //
-                            throw IllegalStateException(errors.errors[0]["name"] as String)
+                            throw IllegalStateException("Invite has already been used", exception)
                         }
-                    }
+
                     log.error(e.toString());
                     throw e
                 }
@@ -633,7 +648,6 @@ class CreateIdentityService : LifecycleService() {
 
         }
     }
-
 
     private fun handleRestoreIdentityAction(identity: ByteArray) {
         workInProgress = true
