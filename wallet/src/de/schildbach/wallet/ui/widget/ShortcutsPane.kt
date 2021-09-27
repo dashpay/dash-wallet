@@ -33,46 +33,60 @@ import de.schildbach.wallet_test.R
 class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs), View.OnClickListener {
 
     val secureNowButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_secure_now,
-                R.string.shortcut_secure_now,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_secure_now,
+            R.string.shortcut_secure_now,
+            this
+        )
     }
     val receiveButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_receive,
-                R.string.shortcut_receive,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_receive,
+            R.string.shortcut_receive,
+            this
+        )
     }
     val scanToPayButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_scan_to_pay,
-                R.string.shortcut_scan_to_pay,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_scan_to_pay,
+            R.string.shortcut_scan_to_pay,
+            this
+        )
     }
     val payToAddressButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_pay_to_address,
-                R.string.shortcut_pay_to_address,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_pay_to_address,
+            R.string.shortcut_pay_to_address,
+            this
+        )
     }
     val buySellButton: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_buy_sell_dash,
-                R.string.shortcut_buy_sell,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_buy_sell_dash,
+            R.string.shortcut_buy_sell,
+            this
+        )
     }
     val importPrivateKey: ShortcutButton by lazy {
-        ShortcutButton(context,
-                R.drawable.ic_shortcut_import_key,
-                R.string.shortcut_import_key,
-                this)
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_import_key,
+            R.string.shortcut_import_key,
+            this
+        )
     }
     val configButton: ShortcutButton by lazy {
-        ShortcutButton(context,
+        ShortcutButton(
+            context,
             R.drawable.ic_shortcut_add,
             R.string.shortcut_add_shortcut,
-            this)
+            this
+        )
     }
     val explore: ShortcutButton by lazy {
         ShortcutButton(
@@ -129,8 +143,9 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
         secondaryItems.forEach {
             addShortcut(it)
         }
-
-        addShortcut(explore)
+        if (!isSmallScreen) {
+            addShortcut(explore)
+        }
     }
 
     private fun refresh() {
@@ -157,8 +172,10 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
         }
 
         explore.isGone = userHasBalance && showSecureNow
-        if (explore.isVisible) {
-            displayed.add(explore)
+        if (!isSmallScreen) {
+            if (explore.isVisible) {
+                displayed.add(explore)
+            }
         }
     }
 
