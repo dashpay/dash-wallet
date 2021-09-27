@@ -27,8 +27,7 @@ public class UpholdApiException extends Exception {
     public static final String VALIDATION_FAILED = "validation_failed";
     private static final DateFormat formatter = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.DEFAULT);
 
-
-    private int httpStatusCode;
+    private final int httpStatusCode;
 
     private JSONObject errorBody;
 
@@ -124,57 +123,6 @@ public class UpholdApiException extends Exception {
         return (errors != null) && errors.has(IDENTITY_ERROR_KEY);
     }
 
-    /**
-     *
-     * {
-     *      "args": {
-     *          "availableAt":"2020-04-17T22:42:00.151Z",
-     *          "missing":"1.03430005",
-     *          "currency":"DASH"
-     *      },
-     *      "code":"sufficient_unlocked_funds",
-     *      "message":"You will have sufficient funds by 2020-04-17T22:42:00.151Z"
-     * }
-     *
-     * {
-     *      "code":"validation_failed",
-     *      "errors":{
-     *          "denomination":
-     *              {"code": "validation_failed",
-     *              "errors":{
-     *                  "amount":[
-     *                      {
-     *                          "code":"sufficient_unlocked_funds","
-     *                          "message":"You will have sufficient funds by 2021-11-24T03:38:58.663Z",
-     *                          "args":{
-     *                              "availableAt":"2021-11-24T03:38:58.663Z",
-     *                              "currency":"DASH",
-     *                              "missing":"6.21186161",
-     *                              "restrictions":["ach-deposit-settlement","ach-deposit-cooldown"]
-     *                           }
-     *                       }
-     *                   ]
-     *              }
-     *          }
-     *      }
-     * }
-     *
-     * {
-     *      "code":"validation_failed",
-     *      "errors":
-     *      {"user":[
-     *          {
-     *              "code":"restricted_by_authentication_method_reset",
-     *              "message":"The user is restricted because authentication method has been changed recently",
-     *              "args":{
-     *                  "recentAuthenticationRestrictionEndDate":"2021-09-21T16:02:59.605Z"
-     *              }
-     *          }
-     *      ]
-     *      }
-     * }
-     */
-
     private boolean isLockedFundsError() {
         JSONObject errors = getErrors();
         return (errors != null) && errors.has(LOCKED_FUNDS_ERROR);
@@ -199,7 +147,6 @@ public class UpholdApiException extends Exception {
                         arguments.put("currency", args.getString("currency"));
                         return true;
                     } else if (firstAmount.has("code") && firstAmount.get("code").equals("sufficient_funds")) {
-                        // JSONObject args = (JSONObject) firstAmount.get("args");
                         arguments.put("code", "sufficient_funds");
                         return true;
                     }
@@ -219,7 +166,6 @@ public class UpholdApiException extends Exception {
                     }
                 }
             } else if (errors.has("beneficiary")) {
-                // {"code":"validation_failed","errors":{"beneficiary":[{"code":"required","message":"This value is required"}],"purpose":[{"code":"required","message":"This value is required"}]}}
                 JSONArray beneficiaryArray = errors.getJSONArray("beneficiary");
                 JSONObject firstCode = (JSONObject) beneficiaryArray.get(0);
 
@@ -230,7 +176,6 @@ public class UpholdApiException extends Exception {
                     arguments.put("code", "required");
                     return true;
                 }
-
             } else if (errors.has("user")) {
                 JSONArray userArray = (JSONArray) errors.getJSONArray("user");
                 JSONObject user = (JSONObject) userArray.get(0);
@@ -244,17 +189,6 @@ public class UpholdApiException extends Exception {
                             return true;
                         }
                     } else if (user.get("code").equals("restricted_by_authentication_method_reset")) {
-                        /*
-                            {
-                                "user":[
-                                    {
-                                        "code":"restricted_by_authentication_method_reset",
-                                        "message":"The user is restricted because authentication method has been changed recently",
-                                        "args":{"recentAuthenticationRestrictionEndDate":"2021-09-21T16:02:59.605Z"}
-                                    }
-                                ]
-                            }
-                        */
                         if (user.has("args")) {
                             JSONObject args = (JSONObject) user.get("args");
                             Date date = convertISO8601Date(args.getString("recentPasswordRestrictionEndDate"));
@@ -282,139 +216,14 @@ public class UpholdApiException extends Exception {
         }
     }
 
-    /**
-     *
-     * {
-     *   "code": "validation_failed",
-     *   "errors": {
-     *     "denomination": {
-     *       "code": "validation_failed",
-     *       "errors": {
-     *         "amount": [
-     *           {
-     *             "code": "sufficient_funds",
-     *             "message": "Not enough funds for the specified amount"
-     *           }
-     *         ]
-     *       }
-     *     }
-     *   }
-     * }
-     */
-
-    /*
-     * {
-     *   "code": "validation_failed",
-     *   "errors": {
-     *     "destination": {
-     *       "code": "validation_failed",
-     *       "errors": {
-     *         "amount": [
-     *           {
-     *             "code": "less_than_or_equal_to",
-     *             "message": "This value should be less than or equal to 25",
-     *             "args": {
-     *               "threshold": "25"
-     *             }
-     *           }
-     *         ]
-     *       }
-     *     }
-     *   }
-     * }
-     */
-
-    // {
-    //      "code":"validation_failed",
-    //      "errors":{
-    //          "user":[
-    //              {
-    //                  "code":"password_reset_restriction",
-    //                  "message":"The user password has been changed in the last 1 day",
-    //                  "args":{
-    //                      "recentPasswordRestrictionEndDate":"2021-09-16T17:19:34.996Z",
-    //                      "threshold":1,
-    //                      "unit":"day"
-    //                  }
-    //               }
-    //          ]
-    //      }
+    //  403
+    //  error: {
+    //       "capability":"withdrawals",
+    //       "code":"forbidden",
+    //       "message":"Quote not allowed due to capability constraints",
+    //       "requirements":[],
+    //       "restrictions":["user-status-not-valid"]
     //  }
-
-    private boolean isPasswordResetRestrictionError(StringBuilder stringBuilder) {
-        JSONObject errors = getErrors();
-        try {
-            if (errors != null && errors.has("user")) {
-                JSONArray userArray = (JSONArray) errors.getJSONArray("user");
-                JSONObject user = (JSONObject) userArray.get(0);
-                if (user.has("code")) {
-                    if (user.get("code").equals("password_reset_restriction")) {
-                        if (user.has("args")) {
-                            JSONObject args = (JSONObject) user.get("args");
-                            Date date = convertISO8601Date(args.getString("recentPasswordRestrictionEndDate"));
-                            stringBuilder.append(formatter.format(date));
-                            return true;
-                        }
-                    }
-                }
-            }
-        } catch (JSONException x) {
-            //swallow
-        }
-        return false;
-    }
-
-    /*
-
-    In both cases, incomplete beneficiary information will be reported in a format similar to this:
-
-    {
-      "code": "validation_failed",
-      "errors": {
-        "beneficiary": {
-          "code": "validation_failed",
-          "errors": {
-            "name": [
-              {
-                "code": "required",
-                "message": "This value is required"
-              }
-            ]
-          }
-        }
-      }
-    }
-
-    Invalid beneficiary information will be reported like this:
-
-    {
-      "code": "validation_failed",
-      "errors": {
-        "beneficiary": {
-          "code": "validation_failed",
-          "errors": {
-            "name": [
-              {
-                "code": "invalid_beneficiary",
-                "message": "The provided beneficiary is invalid"
-              }
-            ]
-          }
-        }
-      }
-    }
-     */
-
-    /**
-     * 403
-     * error: {
-     *      "capability":"withdrawals",
-     *      "code":"forbidden",
-     *      "message":"Quote not allowed due to capability constraints",
-     *      "requirements":[],
-     *      "restrictions":["user-status-not-valid"]
-     *      }
-     */
 
     private boolean isForbiddenError() {
         JSONObject errors = getErrors();
@@ -481,9 +290,9 @@ public class UpholdApiException extends Exception {
                     case "required":
                         return context.getString(R.string.uphold_api_error_400_required);
                     case "password_reset_restriction":
-                        return context.getString(R.string.uphold_api_error_400_password_reset, stringBuilder.toString());
+                        return context.getString(R.string.uphold_api_error_400_password_reset, arguments.get("recentPasswordRestrictionEndDate"));
                     case "restricted_by_authentication_method_reset":
-                        return context.getString(R.string.uphold_api_error_400_authentication_change, stringBuilder.toString());
+                        return context.getString(R.string.uphold_api_error_400_authentication_change, arguments.get("recentAuthenticationRestrictionEndDate"));
                     default:
                         return context.getString(R.string.loading_error);
                 }
