@@ -24,9 +24,10 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import org.dash.wallet.common.R
+import de.schildbach.wallet_test.R
 
 open class BaseBottomSheetDialogFragment : BottomSheetDialogFragment() {
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

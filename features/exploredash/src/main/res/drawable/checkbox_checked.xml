@@ -9,7 +9,8 @@
                 </shape>
             </item>
 
-            <item android:drawable="@drawable/ic_checkmark" />
+            <item android:top="7dp" android:bottom="6dp" android:left="6dp" android:right="6dp"
+                  android:drawable="@drawable/ic_checkmark" />
         </layer-list>
     </item>
 </selector>
