@@ -5,8 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dash_white"
-    tools:context="org.dash.wallet.features.exploredash.MerchantsFragment">
+    android:background="@color/white"
+    tools:context="org.dash.wallet.features.exploredash.ui.DetailsFragment">
 
     <include
         android:id="@+id/title_bar"

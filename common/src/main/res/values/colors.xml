@@ -44,6 +44,7 @@
     <color name="close_btn_dark_gray">#5D5F61</color>
     <color name="search_light_gray">#6D7885</color>
     <color name="gray_300">#99A2AD</color>
+    <color name="gray_100">#E1E3E6</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
@@ -72,6 +73,5 @@
     <color name="grey_liquid">#9B9B9B</color>
     <color name="warning_yellow">#FFFAF0</color>
     <color name="bg_explore">#003470</color>
-    <color name="bg_explore_bottom">#F2F3F5</color>
-    <color name="divider_color">#EBEDF0</color>
+    <color name="divider_color">#EBEDF0</color> <!-- #F1F3F5-->
 </resources>

@@ -1,10 +1,11 @@
-package org.dash.wallet.features.exploredash
+package org.dash.wallet.features.exploredash.ui
 
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
 
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
@@ -19,11 +20,11 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         }
 
         binding.merchantsBtn.setOnClickListener {
-            findNavController().navigate(ExploreFragmentDirections.exploreToMerchants())
+            findNavController().navigate(ExploreFragmentDirections.exploreToSearch())
         }
 
         binding.atmsBtn.setOnClickListener {
-            findNavController().navigate(ExploreFragmentDirections.exploreToAtms("Test Argument"))
+            findNavController().navigate(ExploreFragmentDirections.exploreToSearch())
         }
     }
 }
