@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">تم إعادة تعيين المحفظة!\n سيستغرق بعض الوقت لاستعادة الوضع.</string>
+    <string name="toast_start_storage_provider_selector_failed">لم يتم تثبيت أي موفر تخزين سحابي مناسب.\nتحتاج إلى شيء مثل \"Nextcloud\" أو \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">استخدم على مسؤوليتك الخاصة. يرجى قراءة ملاحظات السلامة.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">تحتاج إلى عمل نسخة احتياطية من محفظتك!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d متأخر ساعات</string>
@@ -206,6 +207,7 @@
     <string name="import_keys_dialog_button_import">استعادة</string>
     <string name="restore_wallet_dialog_success">تمت استعادة المحفظة.</string>
     <string name="restore_wallet_dialog_success_replay">تمت استعادة محفظتك بنجاح. وسيتم تحديد رصيدها بعد ذلك. سيستغرق ذلك بعض الوقت.</string>
+    <string name="restore_wallet_dialog_success_encrypted">تحذير: محفظتك محمية برمز PIN للإنفاق. تأكد من أنك لا تزال تتذكرها قبل أن تتلقى الى هذه المحفظة.</string>
     <string name="import_keys_dialog_failure">لم تتم استعادة المحفظة:\n\n%s\n\nخطأ في كلمة المرور ؟</string>
     <string name="backup_wallet_permission_dialog_title">إذن الكتابة مفقود</string>
     <string name="backup_wallet_permission_dialog_message">لنسخ محفظتك احتياطيًا إلى وحدة تخزين خارجية ، تحتاج إلى منح إذن الكتابة.</string>
@@ -213,7 +215,7 @@
     <string name="backup_wallet_dialog_message">سيتم تشفير النسخة الاحتياطية باستخدام كلمة المرور المختارة وكتابتها على وحدة التخزين الخارجية.</string>
     <string name="backup_wallet_dialog_warning_encrypted">محفظتك محمية برقم تعريف شخصي للانفاق. تأكد من تذكر رقم التعريف الشخصي بالإضافة إلى كلمة مرور النسخ الاحتياطي!</string>
     <string name="export_keys_dialog_button_export">حفظ احتياطي</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>تم الاحتفاظ بنسخة احتياطية من محفظتك في <tt>%s</tt></p><p>إذا كان جهازك يحتوي على بطاقة SD قابلة للإزالة ، <i>يجب</i> أن تكون النسخة الاحتياطية على تلك البطاقة. أزلها واحتفظ بها في مكان آمن. إذا كانت البطاقة <i>غير</i> قابلة للإزالة ، فأنت بحاجة إلى أرشفة النسخة الاحتياطية إلى مكان آخر غير جهازك.</p><p><b> إذا كان المكان الوحيد الذي توجد فيه النسخة الاحتياطية على جهازك ، فأنت تخاطر بفقدهما في نفس الوقت!</b></p><p> تأكد من تذكر كلمة المرور الاحتياطية الخاصة بك. هل تريد أرشفة محفظتك الآن؟</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>تم الاحتفاظ بنسخة احتياطية من محفظتك<tt>%s</tt></p><p><b> إذا كان المكان الوحيد الموجود على جهازك هو النسخة الاحتياطية ، فإنك تخاطر بفقدانهما في نفس الوقت!</b></p><p> على أي حال ، تأكد من تذكر كلمة المرور الاحتياطية الخاصة بك.</p>]]></string>
     <string name="export_keys_dialog_failure">تعذر الاحتفاظ بنسخة احتياطية من محفظتك:\n%s</string>
     <string name="export_keys_dialog_button_archive">أرشيف</string>
     <string name="export_keys_dialog_mail_subject">النسخة الاحتياطية لمحفظة داش</string>
@@ -383,4 +385,4 @@
     <string name="select_a_service">اختر خدمة</string>
     <string name="activity_buy_and_sell_dash_filter">منقي</string>
     <string name="clear_filter">ازل فلتر البحث</string>
-</resources>
+    </resources>

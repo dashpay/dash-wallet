@@ -204,7 +204,7 @@
     <string name="verify_it_is_important">É Importante</string>
     <string name="verify_it_is_important_subtitle">Estamos prestes a te mostrar a chave secreta para a sua carteira.</string>
     <string name="verify_info_text_1">Esta frase de recuperação é o seu acesso aos fundos desta carteira.</string>
-    <string name="verify_info_text_2">Nós não guardamos esta frase de recuperação.</string>
+    <string name="verify_info_text_2">Nós NÃO guardamos esta frase de recuperação.</string>
     <string name="verify_info_text_3">Você precisará de esta frase de recuperação para acessar os seus fundos se este dispositivo se perca, danifique ou se Dash Wallet seja desinstalada acidentalmente de este dispositivo.</string>
     <string name="verify_skip">Pular</string>
     <string name="verify_secure_now_btn">Proteger agora</string>
@@ -214,6 +214,15 @@
     <string name="verify_seed_buttons_tip">Por favor, toque as palavras da sua frase de recuperação na ordem correta</string>
     <string name="verify_seed_success_title">Verificado com Sucesso</string>
     <string name="verify_seed_success_message"> Sua carteira está segura agora. Você pode usar sua frase de recuperação em qualquer momento para recuperar sua conta em outro dispositivo.</string>
+    <string name="verify_no_screenshot_title">Não faça uma captura de tela</string>
+    <string name="verify_no_screenshot_message">Guarde a frase de recuperação em um local seguro.</string>
+    <string name="verify_why_no_screenshot">Por que não devo fazer uma captura de tela?</string>
+    <string name="verify_warning_title">Advertência</string>
+    <string name="verify_warning_message">Esta frase de recuperação é o seu acesso ao saldo da sua carteira.</string>
+    <string name="verify_warning_screenshots_title">NÃO faça uma captura de tela</string>
+    <string name="verify_warning_screenshots_message">As capturas de tela são visíveis para outros aplicativos e dispositivos.</string>
+    <string name="verify_warning_do_not_show">NÃO permita que ninguém veja a sua frase de recuperação.</string>
+    <string name="verify_warning_do_not_type">Nunca digite sua frase de recuperação em gerenciadores de senha ou em outro lugar.</string>
     <string name="view_seed_done">Feito</string>
     <string name="view_seed_title">Frase de Recuperação</string>
     <string name="transaction_result_view_on_explorer">Ver no Explorador de Blocos</string>

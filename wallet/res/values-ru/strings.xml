@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Ваш кошелёк был сброшен!\nВосстановление займёт некоторое время.</string>
+    <string name="toast_start_storage_provider_selector_failed">Подходящих облачных хранилищ не установлено.\nВам потребуется что-то вроде \"Nextcloud\" или \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Используйте на свой страх и риск. Прочитайте &lt;u&gt;заметки по безопасности&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Вам необходимо создать резервную копию кошелька!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d часов отставания</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Восстановить</string>
     <string name="restore_wallet_dialog_success">Кошелёк был восстановлен.</string>
     <string name="restore_wallet_dialog_success_replay">Ваш кошелёк успешно восстановлен. Сейчас определится его баланс. Это может занять какое-то время.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Предупреждение: Ваш кошелёк защищён PIN-кодом. Прежде чем получить средства на этот кошелёк, убедитесь, что Вы его помните.</string>
     <string name="import_keys_dialog_failure">Кошелёк не может быть восстановлен:\n\n%s\n\nПроверьте правильность набора пароля.</string>
     <string name="backup_wallet_permission_dialog_title">Отсутствуют права на запись</string>
     <string name="backup_wallet_permission_dialog_message">Для того, чтобы сохранить резервную копию кошелька на внешнем устройстве, Вам нужно предоставить права на запись.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Резервная копия будет зашифрована выбранным паролем и сохранена на внешнем устройстве.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ваш кошелёк защищен PIN-кодом. Запомните ваш PIN-код и пароль для восстановления резервной копии.</string>
     <string name="export_keys_dialog_button_export">Резервная копия</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Создана резервная копия кошелька <tt>%s</tt></p><p>Если Ваше устройство имеет съёмную SD-карту, резервная копия <i>должна</i> быть на этой карте. Извлеките её и храните в безопасном месте. Если Ваше устройство <i>не поддерживает</i> съёмную SD-карту, то Вы должны хранить резервную копию в другом месте, а не на Вашем устройстве.</p><p><b>Если Ваше устройство - это единственное место, где хранится резервная копия, то Вы рискуете потерять кошелёк, потеряв устройство!</b></p><p>В любом случае, убедитесь, что Вы помните пароль от резервной копии. Вы хотите заархивировать Ваш кошелёк сейчас?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Резервная копия Вашего кошелька была сохранена в<tt>%s</tt></p><p><b>Если все резервные копии хранятся на одном устройстве, Вы рискуете потерять их вместе с устройством!</b></p><p>В любом случае, убедитесь, что вы помните пароль для восстановления из резервной копии.</p>]]></string>
     <string name="export_keys_dialog_failure">Не удается создать резервную копию кошелька:\n%s</string>
     <string name="export_keys_dialog_button_archive">Архив</string>
     <string name="export_keys_dialog_mail_subject">Резервное копирование кошелька Dash</string>
@@ -382,4 +384,4 @@
     <string name="select_a_service">Выберите сервис</string>
     <string name="activity_buy_and_sell_dash_filter">Фильтр</string>
     <string name="clear_filter">Очистить фильтр</string>
-</resources>
+    </resources>

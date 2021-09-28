@@ -198,7 +198,6 @@
     <string name="verify_it_is_important">それは大切です</string>
     <string name="verify_it_is_important_subtitle">これからあなたのウォレットの秘密鍵を表示します</string>
     <string name="verify_info_text_1">この復元フレーズがあれば、このウォレットの中の資金へのアクセスできます</string>
-    <string name="verify_info_text_2">この復元フレーズは保存されません</string>
     <string name="verify_info_text_3">この端末を紛失したり故障した場合やこの端末からDashウォレットを
 誤まってアンインストールしてしまった場合に、あなたの資金にアクセス
 するためには、この復元フレーズが必要となります。</string>
@@ -213,6 +212,9 @@
 </string>
     <string name="verify_seed_success_message">現在あなたのウォレットは安全です。復元フレーズを使えばいつでも
 他の端末であなたのアカウントを復元できます。</string>
+    <string name="verify_no_screenshot_title">スクリーンショット厳禁</string>
+    <string name="verify_why_no_screenshot">なぜスクリーンショットを撮ってはいけませんか？</string>
+    <string name="verify_warning_title">警告</string>
     <string name="view_seed_done">完了</string>
     <string name="view_seed_title">復元フレーズ</string>
     <string name="transaction_result_view_on_explorer">ブロックエクスプローラーで見る</string>

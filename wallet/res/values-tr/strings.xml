@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Cüzdanınız sıfırlandı reset!\nIt normale dönmesi biraz vakit alacaktır.</string>
+    <string name="toast_start_storage_provider_selector_failed">Uygun bir bulut depolama sağlayıcısı kurulu değil. \n\"Nextcloud\" veya \"Google Drive\" gibi bir şeye ihtiyacınız var.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Riskin size ait olduğunu bilerek kullanın. &lt;u&gt;Güvenlik notlarını&lt;/u&gt; okuyunuz.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Cüzdanınızı yedeklemeniz gerekmektedir!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d saat geride</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Geri Yükle</string>
     <string name="restore_wallet_dialog_success">Cüzdan geri yüklendi.</string>
     <string name="restore_wallet_dialog_success_replay">Cüzdanınız başarılı bir şekilde geri yüklendi. Bundan sonra bakiyesi belirlenecektir. Bu biraz vakit alacaktır.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Uyarı: Cüzdanınız bir harcama PİN\'i ile korunmaktadır. Bu cüzdana gönderimler yapmadan önce PİN\'i bildiğinizden emin olun.</string>
     <string name="import_keys_dialog_failure">Cüzdan geri yüklenemedi:\n\n%s\n\nYanlış şifre olmasın?</string>
     <string name="backup_wallet_permission_dialog_title">Yazma izni eksik</string>
     <string name="backup_wallet_permission_dialog_message">Cüzdanınızı harici bir belleğe yedeklemek için, yazma izni vermeniz gerekiyor.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Yedeğiniz seçtiğiniz parola ile şifrelenecek ve harici belleğe yazılacaktır.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Cüzdanınız bir harcama PİN\'i ile korunmaktadır. Yedekleme parolasına ilâve olarak bu PİN\'i hatırlayacağınızdan emin olunuz!</string>
     <string name="export_keys_dialog_button_export">Yedekle</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Cüzdanınız <tt>%s</tt> konumuna yedeklendi.</p><p>Eğer cihazınızın çıkarılabilir bir SD kartı varsa, yedeğinizin o kartta olması <i>gerekir</i>. Onu çıkarıp güvenli bir yerde saklayınız. Eğer kart çıkarılabilir <i>değilse</i>, yedeğinizi cihazınızın dışında bir yere arşivlemeniz gerekir.</p><p><b>Yedeğinizin bulunabileceği tek yer cihazınız ise, hem cihazınızı hem de yedeğinizi aynı anda kaybetme riskini almış olursunuz!</b></p><p>Her halükarda, yedeğinizin parolasını hatırlayacağınızdan emin olunuz. Cüzdanınızı şimdi arşivlemek istiyor musunuz?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Cüzdanınız buraya yedeklendi <tt>%s</tt></p><p><b>Yedeklemenizin bulunduğu tek yer cihazınızdaysa, hem cihazınızı hem de yedeğinizi aynı anda kaybetme riskiyle karşı karşıya kalırsınız!</b></p><p>Her ihtimale karşın, yedek şifrenizi hatırladığınızdan emin olun.</p>]]></string>
     <string name="export_keys_dialog_failure">Cüzdanınız yedeklenemedi:\n%s</string>
     <string name="export_keys_dialog_button_archive">Arşivle</string>
     <string name="export_keys_dialog_mail_subject">Dash Cüzdanı yedeği</string>
@@ -382,4 +384,4 @@
     <string name="select_a_service">Bir Hizmet Seçin</string>
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
     <string name="clear_filter">Filtreyi sıfırla</string>
-</resources>
+    </resources>

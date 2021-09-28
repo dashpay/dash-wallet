@@ -204,7 +204,7 @@
     <string name="verify_it_is_important">C\'est important</string>
     <string name="verify_it_is_important_subtitle">Nous allons vous afficher la clé secrète de votre portefeuille.</string>
     <string name="verify_info_text_1">Cette phrase de récupération vous permet d\'accéder aux fonds de ce portefeuille.</string>
-    <string name="verify_info_text_2">Nous ne stockons pas cette phrase de récupération.</string>
+    <string name="verify_info_text_2">Nous ne stockons PAS cette phrase de récupération.</string>
     <string name="verify_info_text_3">Vous aurez besoin de cette phrase de récupération pour accéder à vos fonds si votre appareil est perdu ou endommagé, ou si Dash Wallet en est désinstallé accidentellement.</string>
     <string name="verify_skip">Ignorer</string>
     <string name="verify_secure_now_btn">Sécuriser maintenant</string>
@@ -214,6 +214,15 @@
     <string name="verify_seed_buttons_tip">Veuillez saisir les mots de votre phrase de récupération dans le bon ordre</string>
     <string name="verify_seed_success_title">Vérifié avec succès</string>
     <string name="verify_seed_success_message">Votre portefeuille est désormais sécurisé. Vous pouvez utiliser cette phrase de récupération à tout moment pour récupérer votre compte sur un autre appareil.</string>
+    <string name="verify_no_screenshot_title">Ne prenez pas de capture d\'écran</string>
+    <string name="verify_no_screenshot_message">Veuillez noter la phrase de récupération dans un endroit sûr.</string>
+    <string name="verify_why_no_screenshot">Pourquoi ne dois-je pas prendre de capture d\'écran ?</string>
+    <string name="verify_warning_title">Avertissement</string>
+    <string name="verify_warning_message">Cette phrase de récupération vous permet d\'accéder aux fonds de votre portefeuille.</string>
+    <string name="verify_warning_screenshots_title">Ne prenez PAS de captures d\'écran</string>
+    <string name="verify_warning_screenshots_message">Les captures d\'écran sont visibles par les autres applications et appareils.</string>
+    <string name="verify_warning_do_not_show">Ne laissez PERSONNE voir votre phrase de récupération.</string>
+    <string name="verify_warning_do_not_type">Ne tapez jamais votre phrase de récupération dans des gestionnaires de mots de passe, ni nulle part ailleurs.</string>
     <string name="view_seed_done">Terminé</string>
     <string name="view_seed_title">Phrase de récupération</string>
     <string name="transaction_result_view_on_explorer">Voir dans l\'explorateur</string>
@@ -304,6 +313,7 @@
     <string name="welcome_screen_subtitle_3">Gardez un contrôle complet et personnalisez votre portefeuille selon vos besoins</string>
 
     <string name="sync_status_wait">Veuillez attendre la fin de la synchronisation</string>
+    <string name="sync_status_syncing_title">Synchronisation %1$d</string>
     <string name="sync_status_syncing_sub_title">avec la blockchain Dash</string>
     <string name="sync_status_unable_to_connect">Impossible de se connecter</string>
     <string name="sync_status_check_connection">Vérifier votre connexion</string>
@@ -332,6 +342,8 @@
     <string name="import_image_invalid_private">Clé privée invalide</string>
 
     <string name="syncing">En synchronisation</string>
+    <string name="syncing_balance">Synchronisation du solde</string>
+
     <string name="all_transactions">Tous</string>
     <string name="received_transactions">Reçu</string>
     <string name="sent_transactions">Envoyé</string>

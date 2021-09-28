@@ -201,7 +201,7 @@
     <string name="verify_it_is_important">這一點很重要</string>
     <string name="verify_it_is_important_subtitle">我們將向您展示錢包的密鑰。</string>
     <string name="verify_info_text_1">此恢復詞組是您使用此錢包中的資金的權限。</string>
-    <string name="verify_info_text_2">我們不會存儲此恢復詞組。</string>
+    <string name="verify_info_text_2">我們不會儲存此恢復詞組。</string>
     <string name="verify_info_text_3">如果此設備丟失，損壞或意外從該設備卸載了達世幣錢包，則需要此恢復詞組來訪問您的資金。</string>
     <string name="verify_skip">略過</string>
     <string name="verify_secure_now_btn">立即確保安全</string>
@@ -211,6 +211,15 @@
     <string name="verify_seed_buttons_tip">請以正確的順序點按您的恢復詞組中的單詞</string>
     <string name="verify_seed_success_title">已成功驗證</string>
     <string name="verify_seed_success_message">您的錢包現在已經安全了。 您可以隨時使用恢復詞組在另一台設備上恢復帳戶。</string>
+    <string name="verify_no_screenshot_title">不要截圖</string>
+    <string name="verify_no_screenshot_message">相反，在安全的地方寫下恢復詞組。</string>
+    <string name="verify_why_no_screenshot">為什麼我不應該截圖?</string>
+    <string name="verify_warning_title">警告</string>
+    <string name="verify_warning_message">此恢復詞組能讓您動用錢包中的資金。</string>
+    <string name="verify_warning_screenshots_title">不要截圖</string>
+    <string name="verify_warning_screenshots_message">其他應用和設備可輕易讀取屏幕截圖。</string>
+    <string name="verify_warning_do_not_show">不要讓任何人看到你的恢復詞組。</string>
+    <string name="verify_warning_do_not_type">切勿在密碼管理器或其他地方鍵入恢復詞組。</string>
     <string name="view_seed_done">完成</string>
     <string name="view_seed_title">恢復詞組</string>
     <string name="transaction_result_view_on_explorer">在區塊瀏覽器中查看</string>

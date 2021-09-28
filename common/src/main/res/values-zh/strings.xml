@@ -4,7 +4,9 @@
     <string name="loading">加载中...</string>
     <string name="loading_error">发生错误, 请稍后再试.</string>
     <string name="dash_available">%1$s 可用</string>
-
+    <string name="network_unavailable_title">网络不可用</string>
+    <string name="network_unavailable_check_connection">请检查您的网络连接</string>
+    <string name="network_unavailable_balance_not_accurate">由于连接断开, 余额显示可能不准确</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey镑</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">Paxos Standard稳定币</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar稳定币</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">忽略</string>
+    <string name="network_unavailable_return">返回到钱包</string>
+
 </resources>

@@ -212,7 +212,6 @@
     <string name="backup_wallet_dialog_message">Các khóa cá nhân của bạn sẽ được mã hóa với một mật khẩu do bạn chọn và sau đó ghi dữ liệu mã hóa vào thẻ nhớ.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ví của bạn đã được bảo vệ với mã PIN chi tiêu. Hãy nhớ mã PIN của bạn cùng với mật khẩu sao lưu.</string>
     <string name="export_keys_dialog_button_export">Xuất dữ liệu</string>
-    <string name="export_keys_dialog_success">Khóa cá nhân đã được xuất đến\n\n%s\n\nGiữ các khóa này ở nơi an toàn cũng ghi nhớ mật khẩu bạn đã đặt!\n\nBạn có muốn lưu giữ các khóa của bạn khi sử dụng ứng này không?</string>
     <string name="export_keys_dialog_failure">Khóa cá nhân của bạn vẫn chưa được xuất dữ liệu:\n%s</string>
     <string name="export_keys_dialog_button_archive">Lưu trữ</string>
     <string name="export_keys_dialog_mail_subject">Sao lưu khóa cá nhân của Dash Wallet</string>

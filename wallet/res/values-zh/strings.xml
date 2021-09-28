@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">钱包已重置!\nIt 需要一些时间才能恢复.</string>
+    <string name="toast_start_storage_provider_selector_failed">未安装适用的云存储器.\n您需要安装 \"Nextcloud\" 或 \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">使用时请您自担风险. 请务必阅读 &lt;u&gt;安全提示&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">您需要备份您的钱包!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d 小时延迟</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">恢复</string>
     <string name="restore_wallet_dialog_success">钱包已恢复.</string>
     <string name="restore_wallet_dialog_success_replay">您的钱包已经成功恢复. 下一步将会确定您的余额, 这将会花费一些时间.</string>
+    <string name="restore_wallet_dialog_success_encrypted">警告: 您的钱包受消费PIN码保护. 在您通过此钱包收款前, 确保您仍记得PIN码.</string>
     <string name="import_keys_dialog_failure">无法恢复钱包:\n\n%s\n\n是否输入了错误的密码?</string>
     <string name="backup_wallet_permission_dialog_title">写入权限缺失</string>
     <string name="backup_wallet_permission_dialog_message">为了将钱包备份到外部设备, 您需要准许写入权限.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">您的备份将会使用选定的密码进行加密, 然后放置在外部存储设备上.</string>
     <string name="backup_wallet_dialog_warning_encrypted">您的钱包受支付PIN码保护. 除了备份密码以外, 请确保您记住该PIN码!</string>
     <string name="export_keys_dialog_button_export">备份</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>您的钱包已经被备份到 <tt>%s</tt></p><p>如果您的设备上有SD卡, 备份文件<i>应该</i>是在该卡上. 请将该备份文件转移到安全的地方并将SD卡上的该备份文件删除. 如果您的卡<i>不是</i>可移动的, 您需要将其归档备份到其它地方, 而不是您的设备上. </p><p><b>如果只把您的备份存放在是您的设备上, 您将承担着两者同时丢失的风险! </b></p><p>在任何情况下, 请一定要记住您的备份密码. 是否要现在归档您的钱包? </p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>您的钱包已备份到 <tt>%s</tt></p><p><b>若您的备份只存于一个设备的话, 当您丢失设备时备份也会随之丢失!</b></p><p>在任何情况下, 请确保您记住备份密码.</p>]]></string>
     <string name="export_keys_dialog_failure">无法备份钱包:\n%s</string>
     <string name="export_keys_dialog_button_archive">归档</string>
     <string name="export_keys_dialog_mail_subject">Dash钱包备份</string>
@@ -382,4 +384,4 @@
     <string name="select_a_service">选择服务</string>
     <string name="activity_buy_and_sell_dash_filter">过滤</string>
     <string name="clear_filter">清除过滤</string>
-</resources>
+    </resources>
