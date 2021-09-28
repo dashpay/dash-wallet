@@ -170,8 +170,10 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
     }
 
     fun userHasBalance(userHasBalance: Boolean) {
-        this.userHasBalance = userHasBalance
-        refresh()
+        if (this.userHasBalance != userHasBalance) {
+            this.userHasBalance = userHasBalance
+            refresh()
+        }
     }
 
     fun showJoinDashPay(showJoinDashPay: Boolean) {

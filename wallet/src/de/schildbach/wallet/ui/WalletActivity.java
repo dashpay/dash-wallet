@@ -47,6 +47,7 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 
 import com.google.android.material.appbar.AppBarLayout;
@@ -187,6 +188,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 WalletActivity.this.blockchainState = blockchainState;
                 updateSyncState();
             }
+        });
+
+        RefreshUpdateShortcutsPaneViewModel model = new ViewModelProvider(this).get(RefreshUpdateShortcutsPaneViewModel.class);
+        model.getOnTransactionsUpdated().observe(this, aVoid -> {
+            refreshShortcutBar();
         });
     }
 
