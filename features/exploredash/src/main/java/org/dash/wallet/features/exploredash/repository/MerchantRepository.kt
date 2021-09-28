@@ -1,10 +1,8 @@
 package org.dash.wallet.features.exploredash.repository
 
 
-import android.app.AuthenticationRequiredException
-import android.util.Log
-import com.google.android.gms.tasks.OnCompleteListener
-import com.google.android.gms.tasks.Task
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -18,30 +16,24 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import org.dash.wallet.features.exploredash.repository.model.Merchant
+import java.util.*
 import javax.inject.Inject
-import com.google.firebase.auth.FirebaseUser
-
-import com.google.firebase.auth.AuthResult
-import com.google.firebase.auth.FirebaseAuthException
-import kotlinx.coroutines.suspendCancellableCoroutine
 
 
 interface MerchantRepository {
     suspend fun get(): List<Merchant>?
     fun observe(): Flow<List<Merchant>>
+    suspend fun search(query: String): List<Merchant>?
 }
 
 class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
     companion object {
         private const val merchantPath = "explore/merchant"
+        private const val nameChild = "name"
     }
 
     private val auth = Firebase.auth
     private var tableRef = Firebase.database.getReference(merchantPath)
-
-//    init {
-//        ensureAuthenticated()
-//    }
 
     override suspend fun get(): List<Merchant>? {
         ensureAuthenticated()
@@ -49,6 +41,7 @@ class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
     }
 
     override fun observe(): Flow<List<Merchant>> = callbackFlow {
+        ensureAuthenticated()
         val callback = object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 val client = dataSnapshot.getValue<List<Merchant>>()
@@ -62,6 +55,12 @@ class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
 
         tableRef.addValueEventListener(callback)
         awaitClose { tableRef.removeEventListener(callback) }
+    }
+
+    override suspend fun search(query: String): List<Merchant>? {
+        return tableRef.orderByChild(nameChild)
+            .startAt(query)
+            .endAt(query + "\uf8ff").get().await().getValue<List<Merchant>>()
     }
 
     private suspend fun ensureAuthenticated() {

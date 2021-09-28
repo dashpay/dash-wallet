@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/header"
+    style="@style/Subtitle1.SemiBold"
+    android:layout_width="match_parent"
+    android:layout_height="52dp"
+    android:paddingTop="24dp"
+    android:paddingHorizontal="15dp"
+    tools:text="Alabama" />

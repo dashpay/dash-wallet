@@ -719,6 +719,15 @@
         <item name="android:textColor">@color/gray_900</item>
     </style>
 
+    <style name="Subtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="fontFamily">@font/montserrat_medium</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Subtitle1.SemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
     <style name="Caption" parent="TextAppearance.MaterialComponents.Caption">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>

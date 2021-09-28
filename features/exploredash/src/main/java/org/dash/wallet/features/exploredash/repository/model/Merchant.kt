@@ -14,10 +14,6 @@ object MerchantType {
 }
 
 data class Merchant(
-    val id: Long? = -1,
-    val active: Boolean? = true,
-    val name: String? = "",
-
     @PropertyName("pluscode")
     val plusCode: String? = "",
 
@@ -33,6 +29,8 @@ data class Merchant(
     val address4: String? = "",
     val latitude: Double? = 0.0,
     val longitude: Double? = 0.0,
+    val territory: String? = "",
+    val city: String? = "",
     val website: String? = "",
     val type: String? = "",
 
@@ -41,4 +39,4 @@ data class Merchant(
 
     @PropertyName("paymentmethod")
     val paymentMethod: String? = ""
-)
+) : SearchResult()

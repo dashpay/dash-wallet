@@ -8,12 +8,28 @@
     android:background="@color/white"
     tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
 
-    <include
-        android:id="@+id/title_bar"
-        layout="@layout/app_bar_general"
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:theme="@style/Explore.AppBarOverlay"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:menu="@menu/info_menu"
+            app:navigationIcon="@drawable/ic_back_arrow">
+
+            <TextView
+                android:id="@+id/toolbar_title"
+                style="@style/Subtitle1.SemiBold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+        </androidx.appcompat.widget.Toolbar>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <FrameLayout
         android:layout_height="match_parent"
@@ -72,22 +88,37 @@
                 android:drawableEnd="@drawable/ic_filter" />
         </LinearLayout>
 
-        <EditText
-            android:id="@+id/search"
-            style="@style/Body2"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_marginTop="10dp"
-            android:layout_marginHorizontal="15dp"
-            android:background="@drawable/rounded_background"
-            android:theme="@style/SearchInputBackground"
-            android:hint="@string/explore_search_hint"
-            android:drawableStart="@drawable/ic_search"
-            android:drawablePadding="7dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:inputType="text"
-            android:textColor="@android:color/black" />
+            android:layout_marginHorizontal="15dp">
+
+            <EditText
+                android:id="@+id/search"
+                style="@style/Body2"
+                android:layout_height="match_parent"
+                android:layout_width="match_parent"
+                android:background="@drawable/rounded_background"
+                android:theme="@style/SearchInputBackground"
+                android:hint="@string/explore_search_hint"
+                android:drawableStart="@drawable/ic_search"
+                android:drawablePadding="7dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="40dp"
+                android:inputType="text"
+                android:textColor="@android:color/black" />
+
+            <ImageButton
+                android:id="@+id/clear_btn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:src="@drawable/ic_close"
+                android:layout_gravity="end|center_vertical"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -124,11 +155,11 @@
         </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
-            android:layout_marginTop="12dp"
-
             android:id="@+id/search_results_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:paddingBottom="40dp"
+            android:clipToPadding="false"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             tools:listitem="@layout/merchant_row"
             tools:itemCount="5"/>

@@ -13,4 +13,7 @@
     <string name="explore_physical_merchant">Physical Merchant</string>
     <string name="explore_online_merchant">Online</string>
     <string name="explore_both_types_merchant">Online, Physical Merchant</string>
+    <string name="explore_menu_info">info</string>
+    <string name="explore_where_to_spend">Where to Spend</string>
+    <string name="explore_select_state">Select the State</string>
 </resources>
