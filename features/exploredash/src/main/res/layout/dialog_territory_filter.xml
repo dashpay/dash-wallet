@@ -9,7 +9,8 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp">
 
         <TextView
             android:id="@+id/search_results_title"
@@ -24,8 +25,8 @@
             android:id="@+id/collapse_button"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_margin="10dp"
             android:layout_gravity="end"
+            android:layout_margin="10dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_popup_close"
             app:layout_constraintEnd_toEndOf="parent"
@@ -36,7 +37,7 @@
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_marginHorizontal="15dp"
-        android:layout_marginTop="10dp">
+        android:layout_marginTop="5dp">
 
         <EditText
             android:id="@+id/search"
@@ -68,7 +69,9 @@
         android:id="@+id/territories"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:paddingTop="10dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:itemCount="5"
-        tools:listitem="@layout/group_header" />
+        tools:listitem="@layout/territory_row" />
 </LinearLayout>

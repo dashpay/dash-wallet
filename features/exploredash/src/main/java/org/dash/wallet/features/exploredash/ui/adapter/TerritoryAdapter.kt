@@ -20,7 +20,10 @@ class TerritoryAdapter(private val clickListener: (String, TerritoryViewHolder) 
     override fun onBindViewHolder(holder: TerritoryViewHolder, position: Int) {
         val item = getItem(position)
         holder.bind(item)
-        holder.binding.root.setOnClickListener { clickListener.invoke(item, holder) }
+        holder.binding.root.setOnClickListener {
+            holder.binding.checkbox.isChecked = !holder.binding.checkbox.isChecked
+            clickListener.invoke(item, holder)
+        }
     }
 
     class DiffCallback : DiffUtil.ItemCallback<String>() {

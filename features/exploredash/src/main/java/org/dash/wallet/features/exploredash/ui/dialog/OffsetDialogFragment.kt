@@ -12,6 +12,7 @@ import org.dash.wallet.features.exploredash.R
 open class OffsetDialogFragment : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         dialog?.setOnShowListener { dialog ->
             // apply wrap_content height
             val d = dialog as BottomSheetDialog
