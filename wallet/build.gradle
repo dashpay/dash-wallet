@@ -68,10 +68,10 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
 
-    def room_version = "2.3.0"
-    implementation "androidx.room:room-ktx:$room_version"
-    implementation "androidx.room:room-runtime:$room_version"
-    kapt "androidx.room:room-compiler:$room_version"
+    // Database
+    implementation "androidx.room:room-ktx:$roomVersion"
+    implementation "androidx.room:room-runtime:$roomVersion"
+    kapt "androidx.room:room-compiler:$roomVersion"
 
     implementation 'androidx.multidex:multidex:2.0.1'
 

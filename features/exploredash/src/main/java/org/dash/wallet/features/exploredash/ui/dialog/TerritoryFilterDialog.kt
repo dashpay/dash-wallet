@@ -32,7 +32,7 @@ class TerritoryFilterDialog: OffsetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val adapter = TerritoryAdapter { id, viewHolder ->
+        val adapter = TerritoryAdapter { id, _ ->
             Log.i("MERCHANTS", id)
         }
 

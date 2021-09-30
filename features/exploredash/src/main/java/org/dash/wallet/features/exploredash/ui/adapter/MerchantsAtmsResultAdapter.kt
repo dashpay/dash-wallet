@@ -10,10 +10,10 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.GroupHeaderBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
-import org.dash.wallet.features.exploredash.repository.model.Merchant
-import org.dash.wallet.features.exploredash.repository.model.MerchantType
-import org.dash.wallet.features.exploredash.repository.model.PaymentMethod
-import org.dash.wallet.features.exploredash.repository.model.SearchResult
+import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantType
+import org.dash.wallet.features.exploredash.data.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.model.SearchResult
 import java.util.*
 
 class MerchantsAtmsResultAdapter(private val clickListener: (Int?, MerchantsViewHolder) -> Unit)

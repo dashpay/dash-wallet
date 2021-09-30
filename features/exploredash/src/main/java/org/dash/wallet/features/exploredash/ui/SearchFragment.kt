@@ -60,7 +60,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             TerritoryFilterDialog().show(parentFragmentManager, "territory_filter")
         }
 
-        val adapter = MerchantsAtmsResultAdapter { id, viewHolder ->
+        val adapter = MerchantsAtmsResultAdapter { id, _ ->
             Log.i("MERCHANTS", id?.toString() ?: "null id")
         }
 
@@ -76,6 +76,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.onlineOption.isChecked = it == ExploreViewModel.FilterMode.Online
         }
 
-        viewModel.init()
+        viewModel.initData()
     }
 }

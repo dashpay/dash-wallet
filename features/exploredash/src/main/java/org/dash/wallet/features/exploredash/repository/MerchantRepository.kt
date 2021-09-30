@@ -1,6 +1,5 @@
 package org.dash.wallet.features.exploredash.repository
 
-
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
@@ -15,10 +14,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import org.dash.wallet.features.exploredash.repository.model.Merchant
-import java.util.*
+import org.dash.wallet.features.exploredash.data.model.Merchant
 import javax.inject.Inject
-
 
 interface MerchantRepository {
     suspend fun get(): List<Merchant>?
