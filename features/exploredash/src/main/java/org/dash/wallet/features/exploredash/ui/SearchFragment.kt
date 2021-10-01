@@ -1,8 +1,11 @@
 package org.dash.wallet.features.exploredash.ui
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -50,6 +53,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.search.doOnTextChanged { text, _, _, _ ->
             binding.clearBtn.isVisible = !text.isNullOrEmpty()
             viewModel.submitSearchQuery(text.toString())
+        }
+
+        binding.search.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                val inputManager = requireContext()
+                    .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                inputManager.toggleSoftInput(0, 0)
+            }
+
+            false
         }
 
         binding.clearBtn.setOnClickListener {

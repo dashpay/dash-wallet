@@ -1,5 +1,6 @@
 package org.dash.wallet.features.exploredash.ui
 
+import android.util.Log
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +14,7 @@ import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import java.util.*
+import java.util.logging.Filter
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,21 +38,16 @@ class ExploreViewModel @Inject constructor(
         get() = _searchResults
 
     fun initData() {
-//        searchQuery.debounce(300)
-//            .onEach {
-//                val results = merchantRepository.search(it) ?: listOf()
-//                val header = SearchResult("Alabama".hashCode(), true,"Alabama")
-//                _searchResults.postValue(listOf(header) + results)
-//            }
-//            .launchIn(viewModelWorkerScope)
-
-
-        merchantDao.observeAll()
-            .filterNotNull()
-            .flatMapLatest { merchants ->
-                _filterMode
-                    .map { filterByMode(merchants, it) }
-                    .map(::groupByTerritory)
+        searchQuery
+            .debounce(300)
+            .flatMapLatest { query ->
+                merchantDao.observe(query)
+                    .filterNotNull()
+                    .flatMapLatest { merchants ->
+                        _filterMode
+                            .map { filterByMode(merchants, it) }
+                            .map(::groupByTerritory)
+                    }
             }
             .onEach(_searchResults::postValue)
             .launchIn(viewModelWorkerScope)

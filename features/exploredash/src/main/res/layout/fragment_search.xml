@@ -41,6 +41,7 @@
             android:layout_height="match_parent"
             android:layout_width="match_parent"
             android:orientation="vertical"
+            android:paddingBottom="400dp"
             android:background="@drawable/rounded_background"
             android:theme="@style/ExploreSearchResultsBackground">
 
@@ -97,14 +98,15 @@
                     style="@style/Body2"
                     android:layout_height="match_parent"
                     android:layout_width="match_parent"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="40dp"
                     android:background="@drawable/rounded_background"
                     android:theme="@style/SearchInputBackground"
                     android:hint="@string/explore_search_hint"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
                     android:drawableStart="@drawable/ic_search"
                     android:drawablePadding="7dp"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="40dp"
-                    android:inputType="text"
                     android:textColor="@android:color/black" />
 
                 <ImageButton
