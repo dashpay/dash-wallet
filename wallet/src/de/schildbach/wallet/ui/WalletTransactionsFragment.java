@@ -112,8 +112,6 @@ public class WalletTransactionsFragment extends Fragment
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setRetainInstance(true);
-
         adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
     }
 

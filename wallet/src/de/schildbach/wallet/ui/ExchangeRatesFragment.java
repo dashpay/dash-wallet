@@ -105,7 +105,6 @@ public final class ExchangeRatesFragment extends Fragment implements OnSharedPre
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setRetainInstance(true);
         setHasOptionsMenu(true);
 
         adapter = new ExchangeRatesAdapter();
