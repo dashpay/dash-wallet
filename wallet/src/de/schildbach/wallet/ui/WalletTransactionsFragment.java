@@ -115,6 +115,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
     private TransactionsAdapter adapter;
     private TextView syncingText;
     private TransactionsFilterSharedViewModel transactionsFilterSharedViewModel;
+    private RefreshUpdateShortcutsPaneViewModel refreshShortcutsPaneViewModel;
 
     @Nullable
     private Direction direction;
@@ -181,6 +182,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
             new TransactionsFilterDialog().show(getChildFragmentManager(), null);
         });
+
+        refreshShortcutsPaneViewModel = new ViewModelProvider(requireActivity()).get(RefreshUpdateShortcutsPaneViewModel.class);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -594,6 +597,7 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
 
     private void updateView() {
         adapter.setFormat(config.getFormat());
+        refreshShortcutsPaneViewModel.getOnTransactionsUpdated().call();
     }
 
     public boolean isHistoryEmpty() {
