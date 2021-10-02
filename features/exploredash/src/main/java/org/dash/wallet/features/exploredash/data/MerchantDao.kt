@@ -6,21 +6,23 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantFTS
 
 @Dao
 interface MerchantDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun save(list: List<Merchant>)
 
+    @Query("""SELECT * FROM Merchant""")
+    fun observe(): Flow<List<Merchant>>
+
     @Query("""
-        SELECT * FROM Merchant 
-        WHERE name LIKE '%' || :query || '%' 
-            OR address1 LIKE '%' || :query || '%' 
-            OR address2 LIKE '%' || :query || '%' 
-            OR address3 LIKE '%' || :query || '%'
-            OR address4 LIKE '%' || :query || '%' 
-            OR territory LIKE '%' || :query || '%'""")
-    fun observe(query: String = ""): Flow<List<Merchant>>
+        SELECT *
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query
+    """)
+    fun observeSearchResults(query: String): Flow<List<Merchant>>
 
     @Query("SELECT * FROM Merchant WHERE id = :merchantId LIMIT 1")
     suspend fun getMerchant(merchantId: Int): Merchant?

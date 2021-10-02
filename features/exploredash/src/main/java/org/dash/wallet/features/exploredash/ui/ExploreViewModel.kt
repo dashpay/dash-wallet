@@ -41,8 +41,11 @@ class ExploreViewModel @Inject constructor(
         searchQuery
             .debounce(300)
             .flatMapLatest { query ->
-                merchantDao.observe(query)
-                    .filterNotNull()
+                if (query.isNotBlank()) {
+                    merchantDao.observeSearchResults(sanitizeQuery(query))
+                } else {
+                    merchantDao.observe()
+                }.filterNotNull()
                     .flatMapLatest { merchants ->
                         _filterMode
                             .map { filterByMode(merchants, it) }
@@ -91,6 +94,11 @@ class ExploreViewModel @Inject constructor(
         return merchants.groupBy { it.territory }.flatMap { kv ->
             listOf(SearchResult(kv.key.hashCode(), true, kv.key)) + kv.value
         }
+    }
+
+    private fun sanitizeQuery(query: String): String {
+        val escapedQuotes = query.replace(Regex.fromLiteral("\""), "\"\"")
+        return "\"$escapedQuotes*\""
     }
 
     enum class FilterMode {

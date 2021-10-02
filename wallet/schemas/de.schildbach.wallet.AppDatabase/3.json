@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "cc005f209b2a5176f8063f315155dc13",
+    "identityHash": "2be46c38ea60fe2c4e7d24ac608bf960",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -32,14 +32,8 @@
       },
       {
         "tableName": "blockchain_state",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `bestChainDate` INTEGER, `bestChainHeight` INTEGER NOT NULL, `replaying` INTEGER NOT NULL, `impediments` TEXT NOT NULL, `chainlockHeight` INTEGER NOT NULL, `mnlistHeight` INTEGER NOT NULL, `percentageSync` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bestChainDate` INTEGER, `bestChainHeight` INTEGER NOT NULL, `replaying` INTEGER NOT NULL, `impediments` TEXT NOT NULL, `chainlockHeight` INTEGER NOT NULL, `mnlistHeight` INTEGER NOT NULL, `percentageSync` INTEGER NOT NULL, `id` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
           {
             "fieldPath": "bestChainDate",
             "columnName": "bestChainDate",
@@ -79,6 +73,12 @@
           {
             "fieldPath": "percentageSync",
             "columnName": "percentageSync",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -208,12 +208,77 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "merchant",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_merchant_fts_BEFORE_UPDATE BEFORE UPDATE ON `merchant` BEGIN DELETE FROM `merchant_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_merchant_fts_BEFORE_DELETE BEFORE DELETE ON `merchant` BEGIN DELETE FROM `merchant_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_merchant_fts_AFTER_UPDATE AFTER UPDATE ON `merchant` BEGIN INSERT INTO `merchant_fts`(`docid`, `name`, `address1`, `address2`, `address3`, `address4`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`address1`, NEW.`address2`, NEW.`address3`, NEW.`address4`, NEW.`territory`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_merchant_fts_AFTER_INSERT AFTER INSERT ON `merchant` BEGIN INSERT INTO `merchant_fts`(`docid`, `name`, `address1`, `address2`, `address3`, `address4`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`address1`, NEW.`address2`, NEW.`address3`, NEW.`address4`, NEW.`territory`); END"
+        ],
+        "tableName": "merchant_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, `address1` TEXT NOT NULL, `address2` TEXT NOT NULL, `address3` TEXT NOT NULL, `address4` TEXT NOT NULL, `territory` TEXT NOT NULL, content=`merchant`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address1",
+            "columnName": "address1",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address2",
+            "columnName": "address2",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address3",
+            "columnName": "address3",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address4",
+            "columnName": "address4",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "territory",
+            "columnName": "territory",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cc005f209b2a5176f8063f315155dc13')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2be46c38ea60fe2c4e7d24ac608bf960')"
     ]
   }
 }
