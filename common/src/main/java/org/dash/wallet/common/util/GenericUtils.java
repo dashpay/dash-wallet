@@ -24,6 +24,7 @@ import android.os.LocaleList;
 import android.text.TextUtils;
 import android.widget.Toast;
 
+import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.Locale;
 
@@ -144,5 +145,34 @@ public class GenericUtils {
         }
         String deviceLocaleLanguage = Locale.getDefault().getLanguage();
         return new Locale(deviceLocaleLanguage, countryCode);
+    }
+
+    public static FiatAmountFormat formatFiatFromLocale(CharSequence fiatValue) {
+        String valWithoutLetters = stripLettersFromString(fiatValue.toString());
+        String valWithoutComma = formatFiatWithoutComma(valWithoutLetters);
+        Double fiatAsDouble = valWithoutComma.length() == 0 ? 0.00 : Double.parseDouble(valWithoutComma);
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        String formattedStringValue = numberFormat.format(fiatAsDouble);
+        return new FiatAmountFormat(Character.isDigit(formattedStringValue.charAt(0)), stripLettersFromString(formattedStringValue));
+    }
+
+    /**
+     * Keep numericals, minus, dot, comma
+     * @param st
+     * @return
+     */
+    private static String stripLettersFromString(String st) {
+        return st.replaceAll("[^\\d,.-]", "");
+    }
+
+    /**
+     * To perform some operations on our fiat values (ex: parse to double, convert fiat to Coin), it needs to be properly formatted
+     * In case our fiat value is in a currency that has a comma, we need to strip it away so as to have our value as a decimal
+     * @param fiatValue
+     * @return
+     */
+    public static String formatFiatWithoutComma(String fiatValue){
+        boolean fiatValueContainsCommaWithDecimal = fiatValue.contains(",") && fiatValue.contains(".");
+        return fiatValueContainsCommaWithDecimal ? fiatValue.replaceAll(",", "") :  fiatValue.replaceAll(",", ".");
     }
 }
