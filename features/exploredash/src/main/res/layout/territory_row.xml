@@ -8,7 +8,7 @@
     android:paddingHorizontal="15dp">
 
     <TextView
-        android:id="@+id/title"
+        android:id="@+id/name"
         style="@style/Body2.Medium"
         android:layout_width="0dp"
         android:layout_height="wrap_content"

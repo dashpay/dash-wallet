@@ -1,6 +1,5 @@
 package org.dash.wallet.features.exploredash.ui
 
-import android.util.Log
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -13,8 +12,6 @@ import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
-import java.util.*
-import java.util.logging.Filter
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,6 +26,13 @@ class ExploreViewModel @Inject constructor(
 
     private val searchQuery = MutableStateFlow("")
 
+    private val _pickedTerritory = MutableStateFlow("")
+    var pickedTerritory: String
+        get() = _pickedTerritory.value
+        set(value) {
+            _pickedTerritory.value = value
+        }
+
     private val _filterMode = MutableStateFlow(FilterMode.All)
     val filterMode: LiveData<FilterMode>
         get() = _filterMode.asLiveData()
@@ -41,15 +45,18 @@ class ExploreViewModel @Inject constructor(
         searchQuery
             .debounce(300)
             .flatMapLatest { query ->
-                if (query.isNotBlank()) {
-                    merchantDao.observeSearchResults(sanitizeQuery(query))
-                } else {
-                    merchantDao.observe()
-                }.filterNotNull()
-                    .flatMapLatest { merchants ->
-                        _filterMode
-                            .map { filterByMode(merchants, it) }
-                            .map(::groupByTerritory)
+                _pickedTerritory
+                    .flatMapLatest { territory ->
+                        if (query.isNotBlank()) {
+                            merchantDao.observeSearchResults(sanitizeQuery(query), territory)
+                        } else {
+                            merchantDao.observe(territory)
+                        }.filterNotNull()
+                            .flatMapLatest { merchants ->
+                                _filterMode
+                                    .map { filterByMode(merchants, it) }
+                                    .map(::groupByTerritory)
+                            }
                     }
             }
             .onEach(_searchResults::postValue)
@@ -78,22 +85,29 @@ class ExploreViewModel @Inject constructor(
         searchQuery.value = query
     }
 
+    suspend fun getTerritoriesWithMerchants(): List<String> {
+        return merchantDao.getTerritories().filter { it.isNotEmpty() }
+    }
+
     private fun filterByMode(merchants: List<Merchant>, mode: FilterMode): List<Merchant> {
         val filtered = if (mode == FilterMode.All) {
             merchants.filter { it.active != false }
         } else {
             merchants.filter {
                 it.active != false && (it.type == "both" ||
-                        it.type == mode.toString().toLowerCase(Locale.getDefault()))
+                        it.type == mode.toString().lowercase())
             }
         }
         return filtered
     }
 
     private fun groupByTerritory(merchants: List<Merchant>): List<SearchResult> {
-        return merchants.groupBy { it.territory }.flatMap { kv ->
-            listOf(SearchResult(kv.key.hashCode(), true, kv.key)) + kv.value
-        }
+        return merchants
+            .groupBy { it.territory ?: "" }
+            .toSortedMap()
+            .flatMap { kv ->
+                listOf(SearchResult(kv.key.hashCode(), true, kv.key)) + kv.value
+            }
     }
 
     private fun sanitizeQuery(query: String): String {

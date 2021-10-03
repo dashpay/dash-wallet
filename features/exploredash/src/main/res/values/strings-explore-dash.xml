@@ -16,4 +16,5 @@
     <string name="explore_menu_info">info</string>
     <string name="explore_where_to_spend">Where to Spend</string>
     <string name="explore_select_state">Select the State</string>
+    <string name="explore_all_states">All states</string>
 </resources>

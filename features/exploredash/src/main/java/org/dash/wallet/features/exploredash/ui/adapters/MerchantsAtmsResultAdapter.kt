@@ -1,4 +1,4 @@
-package org.dash.wallet.features.exploredash.ui.adapter
+package org.dash.wallet.features.exploredash.ui.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -14,7 +14,6 @@ import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import org.dash.wallet.features.exploredash.data.model.SearchResult
-import java.util.*
 
 class MerchantsAtmsResultAdapter(private val clickListener: (Int?, MerchantsViewHolder) -> Unit)
     : ListAdapter<SearchResult, RecyclerView.ViewHolder>(DiffCallback()) {
@@ -64,7 +63,11 @@ class MerchantsAtmsResultAdapter(private val clickListener: (Int?, MerchantsView
 
 class GroupHeaderViewHolder(val binding: GroupHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
     fun bind(header: String?) {
-        binding.header.text = header
+        binding.header.text = if (header.isNullOrEmpty()) {
+            binding.root.resources.getString(R.string.explore_online_merchant)
+        } else {
+            header
+        }
     }
 }
 
@@ -93,6 +96,6 @@ class MerchantsViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHo
     }
 
     private fun cleanValue(value: String?): String? {
-        return value?.trim()?.toLowerCase(Locale.getDefault())?.replace(" ", "_")
+        return value?.trim()?.lowercase()?.replace(" ", "_")
     }
 }

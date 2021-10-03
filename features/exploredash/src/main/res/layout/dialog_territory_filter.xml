@@ -2,10 +2,13 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="org.dash.wallet.features.exploredash.ui.dialog.TerritoryFilterDialog">
+    android:background="@drawable/rounded_background"
+    android:theme="@style/ExploreSearchResultsBackground"
+    tools:context="org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -49,6 +52,7 @@
             android:drawablePadding="7dp"
             android:hint="@string/explore_search_hint"
             android:inputType="text"
+            android:imeOptions="actionSearch"
             android:paddingStart="8dp"
             android:paddingEnd="40dp"
             android:textColor="@android:color/black"
@@ -71,6 +75,7 @@
         android:layout_height="wrap_content"
         android:clipToPadding="false"
         android:paddingTop="10dp"
+        android:paddingBottom="30dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:itemCount="5"
         tools:listitem="@layout/territory_row" />

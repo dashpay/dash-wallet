@@ -11,14 +11,17 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
-import org.dash.wallet.features.exploredash.ui.adapter.MerchantsAtmsResultAdapter
-import org.dash.wallet.features.exploredash.ui.dialog.TerritoryFilterDialog
+import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
+import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
@@ -70,7 +73,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.filterBtn.setOnClickListener {
-            TerritoryFilterDialog().show(parentFragmentManager, "territory_filter")
+            lifecycleScope.launch {
+                val territories = viewModel.getTerritoriesWithMerchants()
+                TerritoryFilterDialog(territories, viewModel.pickedTerritory) { name, dialog ->
+                    lifecycleScope.launch {
+                        delay(300)
+                        dialog.dismiss()
+                        viewModel.pickedTerritory = name
+                    }
+                }.show(parentFragmentManager, "territory_filter")
+            }
         }
 
         val adapter = MerchantsAtmsResultAdapter { id, _ ->
