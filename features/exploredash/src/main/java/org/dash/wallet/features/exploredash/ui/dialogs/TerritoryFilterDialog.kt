@@ -76,7 +76,7 @@ class TerritoryFilterDialog(
                 inputManager.toggleSoftInput(0, 0)
             }
 
-            false
+            true
         }
 
         binding.clearBtn.setOnClickListener {

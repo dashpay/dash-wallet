@@ -2,7 +2,6 @@ package org.dash.wallet.features.exploredash.ui
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -19,14 +18,41 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
+
 
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
+
+    // TODO: re-integrate when the permission request story is ready
+//    private lateinit var fusedLocationClient: FusedLocationProviderClient
+//    private val permissionRequestLauncher = registerForActivityResult(
+//        ActivityResultContracts.RequestPermission()) { isGranted ->
+//        if (isGranted) {
+//            Log.i("LOCATION", "permission granted")
+//        } else {
+//            Log.i("LOCATION", "permission NOT granted")
+//        }
+//    }
+//
+//    override fun onCreate(savedInstanceState: Bundle?) {
+//        super.onCreate(savedInstanceState)
+//
+//        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+//
+//        if (ActivityCompat.checkSelfPermission(
+//                requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION
+//            ) != PackageManager.PERMISSION_GRANTED
+//        ) {
+//            permissionRequestLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+//        }
+//    }
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -36,10 +62,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             findNavController().popBackStack()
         }
 
-//        binding.testBtn.setOnClickListener {
-//            viewModel.event.postValue("test event call")
-//            SearchFragmentDirections.searchToDetails("Test Argument")
-//        }
+        binding.searchTitle.text = "United States" // TODO: use location to resolve
 
         binding.allOption.setOnClickListener {
             viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
@@ -65,7 +88,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 inputManager.toggleSoftInput(0, 0)
             }
 
-            false
+            true
         }
 
         binding.clearBtn.setOnClickListener {
@@ -85,8 +108,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        val adapter = MerchantsAtmsResultAdapter { id, _ ->
-            Log.i("MERCHANTS", id?.toString() ?: "null id")
+        val adapter = MerchantsAtmsResultAdapter { item, _ ->
+            if (item is Merchant) {
+                viewModel.openMerchantDetails(item)
+            }
         }
 
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
@@ -94,13 +119,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.searchResultsList.addItemDecoration(decorator)
         binding.searchResultsList.adapter = adapter
 
-        viewModel.searchResults.observe(viewLifecycleOwner, adapter::submitList)
+        viewModel.searchResults.observe(viewLifecycleOwner) { results ->
+            binding.noResultsText.isVisible = results.isEmpty()
+            adapter.submitList(results)
+        }
+
         viewModel.filterMode.observe(viewLifecycleOwner) {
             binding.allOption.isChecked = it == ExploreViewModel.FilterMode.All
             binding.physicalOption.isChecked = it == ExploreViewModel.FilterMode.Physical
             binding.onlineOption.isChecked = it == ExploreViewModel.FilterMode.Online
         }
 
-        viewModel.initData()
+        viewModel.init()
     }
 }

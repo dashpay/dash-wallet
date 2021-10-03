@@ -16,7 +16,7 @@
         android:layout_marginTop="5dp">
 
         <TextView
-            android:id="@+id/search_results_title"
+            android:id="@+id/search_title"
             style="@style/Subtitle1.SemiBold"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

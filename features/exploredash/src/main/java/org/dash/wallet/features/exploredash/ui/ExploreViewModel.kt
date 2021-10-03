@@ -37,11 +37,11 @@ class ExploreViewModel @Inject constructor(
     val filterMode: LiveData<FilterMode>
         get() = _filterMode.asLiveData()
 
-    private val _searchResults = MutableLiveData(listOf<SearchResult>())
+    private val _searchResults = MutableLiveData<List<SearchResult>>()
     val searchResults: LiveData<List<SearchResult>>
         get() = _searchResults
 
-    fun initData() {
+    fun init() {
         searchQuery
             .debounce(300)
             .flatMapLatest { query ->
@@ -69,7 +69,7 @@ class ExploreViewModel @Inject constructor(
             val merchants = try {
                 merchantRepository.get() ?: listOf()
             } catch (ex: Exception) {
-                event.postValue(ex.message) // TODO
+                event.postValue(ex.message)
                 listOf()
             }
 
@@ -89,6 +89,11 @@ class ExploreViewModel @Inject constructor(
         return merchantDao.getTerritories().filter { it.isNotEmpty() }
     }
 
+    fun openMerchantDetails(merchant: Merchant) {
+        // TODO
+        event.postValue("${merchant.name}: ${merchant.address4}")
+    }
+
     private fun filterByMode(merchants: List<Merchant>, mode: FilterMode): List<Merchant> {
         val filtered = if (mode == FilterMode.All) {
             merchants.filter { it.active != false }
@@ -106,7 +111,7 @@ class ExploreViewModel @Inject constructor(
             .groupBy { it.territory ?: "" }
             .toSortedMap()
             .flatMap { kv ->
-                listOf(SearchResult(kv.key.hashCode(), true, kv.key)) + kv.value
+                listOf(SearchResult(kv.key.hashCode(), true, kv.key)) + kv.value.sortedBy { it.name }
             }
     }
 

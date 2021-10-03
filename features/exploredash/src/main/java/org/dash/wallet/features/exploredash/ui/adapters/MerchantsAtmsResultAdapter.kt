@@ -15,7 +15,7 @@ import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 
-class MerchantsAtmsResultAdapter(private val clickListener: (Int?, MerchantsViewHolder) -> Unit)
+class MerchantsAtmsResultAdapter(private val clickListener: (SearchResult, MerchantsViewHolder) -> Unit)
     : ListAdapter<SearchResult, RecyclerView.ViewHolder>(DiffCallback()) {
 
     override fun getItemViewType(position: Int): Int {
@@ -44,7 +44,7 @@ class MerchantsAtmsResultAdapter(private val clickListener: (Int?, MerchantsView
 
         if (holder is MerchantsViewHolder) {
             holder.bind(item as Merchant)
-            holder.binding.root.setOnClickListener { clickListener.invoke(item.id, holder) }
+            holder.binding.root.setOnClickListener { clickListener.invoke(item, holder) }
         } else if (holder is GroupHeaderViewHolder) {
             holder.bind(item.name)
         }

@@ -71,7 +71,6 @@ dependencies {
     // UI
     implementation 'com.google.android.material:material:1.4.0'
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
-
     implementation "com.github.bumptech.glide:glide:$glideVersion"
     kapt "com.github.bumptech.glide:compiler:$glideVersion"
 
