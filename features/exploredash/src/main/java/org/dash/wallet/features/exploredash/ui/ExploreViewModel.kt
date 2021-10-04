@@ -33,7 +33,7 @@ class ExploreViewModel @Inject constructor(
             _pickedTerritory.value = value
         }
 
-    private val _filterMode = MutableStateFlow(FilterMode.All)
+    private val _filterMode = MutableStateFlow(FilterMode.Online)
     val filterMode: LiveData<FilterMode>
         get() = _filterMode.asLiveData()
 
