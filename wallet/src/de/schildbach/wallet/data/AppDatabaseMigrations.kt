@@ -5,7 +5,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 class AppDatabaseMigrations {
     companion object {
-        val MIGRATION_2_3 = object : Migration(2, 3) {
+        val migration2To3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("CREATE TABLE `merchant` (`id` INTEGER NOT NULL, `name` TEXT, " +
                         "`active` INTEGER DEFAULT 1, `plusCode` TEXT, `addDate` TEXT, " +

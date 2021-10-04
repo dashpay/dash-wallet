@@ -1,0 +1,92 @@
+package de.schildbach.wallet.database
+
+import android.content.ContentValues
+import android.database.sqlite.SQLiteDatabase
+import androidx.room.Room
+import androidx.room.testing.MigrationTestHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.data.AppDatabaseMigrations.Companion.migration2To3
+import kotlinx.coroutines.runBlocking
+import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.io.IOException
+
+
+@RunWith(AndroidJUnit4::class)
+open class DatabaseMigrationTest {
+    companion object {
+        private const val TEST_DB_NAME = "test_database"
+        private const val BLOCKCHAIN_HEIGHT = 587680
+        private const val EXCHANGE_RATE = "31438.8212"
+    }
+
+    private val migrations = arrayOf(migration2To3)
+
+    @Rule
+    @JvmField
+    val testHelper: MigrationTestHelper = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        AppDatabase::class.java.canonicalName,
+        FrameworkSQLiteOpenHelperFactory()
+    )
+
+    @Test
+    @Throws(IOException::class)
+    fun migrateAll() {
+        // Create db and fill with data
+        testHelper.createDatabase(TEST_DB_NAME, 2).apply {
+            var values = ContentValues()
+            values.put("id", 1)
+            values.put("bestChainDate", 1633356847000)
+            values.put("bestChainHeight", BLOCKCHAIN_HEIGHT)
+            values.put("replaying", 0)
+            values.put("impediments", "")
+            values.put("chainlockHeight", 0)
+            values.put("mnlistHeight", 587091)
+            values.put("percentageSync", 100)
+            this.insert("blockchain_state", SQLiteDatabase.CONFLICT_REPLACE, values)
+
+            values = ContentValues()
+            values.put("currencyCode", "ARS")
+            values.put("rate", EXCHANGE_RATE)
+            this.insert("exchange_rates", SQLiteDatabase.CONFLICT_REPLACE, values)
+
+            close()
+        }
+
+        // Run migrations
+        val db = Room.databaseBuilder(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            AppDatabase::class.java, TEST_DB_NAME
+        ).addMigrations(*migrations).build()
+
+        // Check that data is valid
+        runBlocking {
+            val merchant = Merchant().apply {
+                id = 5
+                name = "Merchant 5"
+                active = true
+                addDate = "2021-09-12T15:26:00.000Z"
+                address1 = "Address1 5"
+                type = "physical"
+            }
+            db.merchantDao().save(listOf(merchant))
+
+            val savedMerchant = db.merchantDao().getMerchant(5)
+            assert(savedMerchant!!.name == merchant.name)
+
+            val savedBlockchainState = db.blockchainStateDao().loadSync()
+            assert(savedBlockchainState!!.bestChainHeight == BLOCKCHAIN_HEIGHT)
+
+            val savedRate = db.exchangeRatesDao().getRateSync("ARS")
+            assert(savedRate.rate == EXCHANGE_RATE)
+        }
+
+        db.close()
+    }
+}

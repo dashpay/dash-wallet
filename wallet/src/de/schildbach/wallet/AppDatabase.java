@@ -38,7 +38,7 @@ public abstract class AppDatabase extends RoomDatabase {
         if (instance == null) {
             instance = Room.databaseBuilder(WalletApplication.getInstance(),
                     AppDatabase.class, "dash-wallet-database")
-                    .addMigrations(AppDatabaseMigrations.Companion.getMIGRATION_2_3())
+                    .addMigrations(AppDatabaseMigrations.Companion.getMigration2To3())
                     .fallbackToDestructiveMigration().build();
         }
         return instance;
