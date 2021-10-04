@@ -126,8 +126,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewModel.filterMode.observe(viewLifecycleOwner) {
             binding.allOption.isChecked = it == ExploreViewModel.FilterMode.All
+            binding.allOption.isEnabled = it != ExploreViewModel.FilterMode.All
             binding.physicalOption.isChecked = it == ExploreViewModel.FilterMode.Physical
+            binding.physicalOption.isEnabled = it != ExploreViewModel.FilterMode.Physical
             binding.onlineOption.isChecked = it == ExploreViewModel.FilterMode.Online
+            binding.onlineOption.isEnabled = it != ExploreViewModel.FilterMode.Online
         }
 
         viewModel.init()
