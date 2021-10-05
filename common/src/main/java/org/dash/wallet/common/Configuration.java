@@ -91,7 +91,7 @@ public class Configuration {
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
-    public static final String PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY = "send_payment_exchange_currency";
+    public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration(final SharedPreferences prefs, final Resources res) {
@@ -472,11 +472,11 @@ public class Configuration {
     /*
      * If no sendPayment currency code is found, set the local currency as the default
      */
-    public String getSendPaymentExchangeCurrencyCode() {
-        return prefs.getString(PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY, GenericUtils.getCurrentCountryCurrencySymbol());
+    public Boolean isDashToFiatDirection() {
+        return prefs.getBoolean(PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION, true);
     }
 
-    public void setSendPaymentExchangeCurrencyCode(final String exchangeCurrencyCode) {
-        prefs.edit().putString(PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
+    public void setDashToFiatDirection(final Boolean isDashToFiatDirection) {
+        prefs.edit().putBoolean(PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION, isDashToFiatDirection).apply();
     }
 }

@@ -56,20 +56,10 @@ public class GenericUtils {
     }
 
     /**
-     * Funtion which returns a concatenation of the currency code of the device's Locale
-     * @return
-     */
-    public static String getCurrentCountryCurrencySymbol() {
-        Locale defaultLocale = getDeviceLocale();
-        Currency defaultCurrency = Currency.getInstance(defaultLocale);
-        return defaultCurrency.getCurrencyCode();
-    }
-
-    /**
-     * Funtion which returns a concatenation of the currency code together with the currency symbol
+     * Function which returns a concatenation of the currency code or currency symbol
      * For currencies used by multiple countries, we set a locale with any country using the currency
      * If the currentCurrencySymbol equals the currency code, we just use the currency code, otherwise we
-     * concatenate both
+     * get the symbol
      * @param currencyCode
      * @return
      */
@@ -132,8 +122,8 @@ public class GenericUtils {
         currentCurrencySymbol = TextUtils.isEmpty(currentLocale.getLanguage()) ?
                 currencySymbol(currencyCode.toLowerCase(Locale.ROOT)) : Currency.getInstance(currentLocale).getSymbol();
 
-        return currencyCode.equalsIgnoreCase(currentCurrencySymbol) ? currencyCode :
-                String.format(getDeviceLocale(), "%s %s", currencyCode, currentCurrencySymbol);
+        return String.format(getDeviceLocale(), "%s",
+                currencyCode.equalsIgnoreCase(currentCurrencySymbol) ? currencyCode : currentCurrencySymbol);
     }
 
     public static Locale getDeviceLocale() {

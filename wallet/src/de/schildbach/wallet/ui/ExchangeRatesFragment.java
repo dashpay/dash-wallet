@@ -117,7 +117,7 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         setRetainInstance(true);
         adapter = new ExchangeRatesAdapter(activity, config, wallet, new ArrayList<>(), this, this,showAsDialog);
         adapter.setRateBase(config.getBtcBase());
-        adapter.setDefaultCurrency(showAsDialog ? config.getSendPaymentExchangeCurrencyCode() : config.getExchangeCurrencyCode());
+        adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
     }
 
 
