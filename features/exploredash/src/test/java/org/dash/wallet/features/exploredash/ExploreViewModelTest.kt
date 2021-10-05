@@ -66,7 +66,6 @@ class ExploreViewModelTest {
                                 (it.type == "online" || it.type == "both") && it.active != false
                     }
             val actual = viewModel.searchFilterFlow.first()
-            expected.first().name = "dsf"
 
             assertEquals(expected, actual)
         }
