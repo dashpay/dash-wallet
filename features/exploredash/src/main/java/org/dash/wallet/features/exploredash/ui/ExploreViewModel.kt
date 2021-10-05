@@ -41,24 +41,27 @@ class ExploreViewModel @Inject constructor(
     val searchResults: LiveData<List<SearchResult>>
         get() = _searchResults
 
+    val searchFilterFlow = searchQuery
+        .debounce(300)
+        .flatMapLatest { query ->
+            _pickedTerritory
+                .flatMapLatest { territory ->
+                    if (query.isNotBlank()) {
+                        val qq = sanitizeQuery(query)
+                        merchantDao.observeSearchResults(qq, territory)
+                    } else {
+                        merchantDao.observe(territory)
+                    }.filterNotNull()
+                        .flatMapLatest { merchants ->
+                            _filterMode
+                                .map { filterByMode(merchants, it) }
+                                .map(::groupByTerritory)
+                        }
+                }
+        }
+
     fun init() {
-        searchQuery
-            .debounce(300)
-            .flatMapLatest { query ->
-                _pickedTerritory
-                    .flatMapLatest { territory ->
-                        if (query.isNotBlank()) {
-                            merchantDao.observeSearchResults(sanitizeQuery(query), territory)
-                        } else {
-                            merchantDao.observe(territory)
-                        }.filterNotNull()
-                            .flatMapLatest { merchants ->
-                                _filterMode
-                                    .map { filterByMode(merchants, it) }
-                                    .map(::groupByTerritory)
-                            }
-                    }
-            }
+        searchFilterFlow
             .onEach(_searchResults::postValue)
             .launchIn(viewModelWorkerScope)
     }
@@ -90,7 +93,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant) {
-        // TODO
+        // TODO details
         event.postValue("${merchant.name}: ${merchant.address4}")
     }
 

@@ -11,7 +11,10 @@ open class SearchResult(
     var name: String? = ""
 ) {
     override fun equals(other: Any?): Boolean {
-        return id == (other as SearchResult).id
+        val second = other as SearchResult
+        return id == second.id &&
+                name == second.name &&
+                active == second.active
     }
 
     override fun hashCode(): Int {
