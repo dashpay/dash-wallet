@@ -1,0 +1,284 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "2be46c38ea60fe2c4e7d24ac608bf960",
+    "entities": [
+      {
+        "tableName": "exchange_rates",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`currencyCode` TEXT NOT NULL, `rate` TEXT, PRIMARY KEY(`currencyCode`))",
+        "fields": [
+          {
+            "fieldPath": "currencyCode",
+            "columnName": "currencyCode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rate",
+            "columnName": "rate",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "currencyCode"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "blockchain_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bestChainDate` INTEGER, `bestChainHeight` INTEGER NOT NULL, `replaying` INTEGER NOT NULL, `impediments` TEXT NOT NULL, `chainlockHeight` INTEGER NOT NULL, `mnlistHeight` INTEGER NOT NULL, `percentageSync` INTEGER NOT NULL, `id` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "bestChainDate",
+            "columnName": "bestChainDate",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "bestChainHeight",
+            "columnName": "bestChainHeight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "replaying",
+            "columnName": "replaying",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "impediments",
+            "columnName": "impediments",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chainlockHeight",
+            "columnName": "chainlockHeight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mnlistHeight",
+            "columnName": "mnlistHeight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "percentageSync",
+            "columnName": "percentageSync",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "id"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "merchant",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `territory` TEXT, `website` TEXT, `type` TEXT, `logoLocation` TEXT, `paymentMethod` TEXT, `id` INTEGER NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "plusCode",
+            "columnName": "plusCode",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "addDate",
+            "columnName": "addDate",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "updateDate",
+            "columnName": "updateDate",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address1",
+            "columnName": "address1",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address2",
+            "columnName": "address2",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address3",
+            "columnName": "address3",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address4",
+            "columnName": "address4",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "territory",
+            "columnName": "territory",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "website",
+            "columnName": "website",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "logoLocation",
+            "columnName": "logoLocation",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "paymentMethod",
+            "columnName": "paymentMethod",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "active",
+            "columnName": "active",
+            "affinity": "INTEGER",
+            "notNull": false,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "id"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "merchant",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_merchant_fts_BEFORE_UPDATE BEFORE UPDATE ON `merchant` BEGIN DELETE FROM `merchant_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_merchant_fts_BEFORE_DELETE BEFORE DELETE ON `merchant` BEGIN DELETE FROM `merchant_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_merchant_fts_AFTER_UPDATE AFTER UPDATE ON `merchant` BEGIN INSERT INTO `merchant_fts`(`docid`, `name`, `address1`, `address2`, `address3`, `address4`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`address1`, NEW.`address2`, NEW.`address3`, NEW.`address4`, NEW.`territory`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_merchant_fts_AFTER_INSERT AFTER INSERT ON `merchant` BEGIN INSERT INTO `merchant_fts`(`docid`, `name`, `address1`, `address2`, `address3`, `address4`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`address1`, NEW.`address2`, NEW.`address3`, NEW.`address4`, NEW.`territory`); END"
+        ],
+        "tableName": "merchant_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, `address1` TEXT NOT NULL, `address2` TEXT NOT NULL, `address3` TEXT NOT NULL, `address4` TEXT NOT NULL, `territory` TEXT NOT NULL, content=`merchant`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address1",
+            "columnName": "address1",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address2",
+            "columnName": "address2",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address3",
+            "columnName": "address3",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address4",
+            "columnName": "address4",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "territory",
+            "columnName": "territory",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2be46c38ea60fe2c4e7d24ac608bf960')"
+    ]
+  }
+}

@@ -14,20 +14,29 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.features.exploredash.di
+package de.schildbach.wallet.di
 
-import dagger.Binds
+import android.content.Context
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.features.exploredash.repository.FirebaseMerchantTable
-import org.dash.wallet.features.exploredash.repository.MerchantRepository
+import de.schildbach.wallet.AppDatabase
+import org.dash.wallet.features.exploredash.data.MerchantDao
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class ExploreDashModule {
-    @Binds
-    abstract fun bindMerchantRepository(
-        analyticsService: FirebaseMerchantTable
-    ): MerchantRepository
+object DatabaseModule {
+    @Singleton
+    @Provides
+    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        return AppDatabase.getAppDatabase()
+    }
+
+    @Provides
+    fun provideMerchantDao(database: AppDatabase): MerchantDao {
+        return database.merchantDao()
+    }
 }

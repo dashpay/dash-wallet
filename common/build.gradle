@@ -66,7 +66,10 @@ dependencies {
     api 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
+
+    // Database
     api "androidx.room:room-runtime:$roomVersion"
+    api "androidx.room:room-ktx:$roomVersion"
     annotationProcessor "androidx.room:room-compiler:$roomVersion"
 
     testImplementation 'junit:junit:4.13.1'

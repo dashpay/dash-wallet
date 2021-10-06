@@ -710,6 +710,10 @@
         <item name="android:textColor">@color/steel_gray</item>
     </style>
 
+    <style name="Body2.Medium">
+        <item name="fontFamily">@font/montserrat_medium</item>
+    </style>
+
     <style name="Body2.SemiBold">
         <item name="fontFamily">@font/montserrat_semibold</item>
     </style>

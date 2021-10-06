@@ -68,7 +68,7 @@ jobs:
         gpg -d --passphrase "${{ secrets.KEYSTORE_KEY }}" --batch .deploy/keystore.jks.gpg > .deploy/keystore.jks
     
     - name: Test
-      run: bundle exec fastlane test flavor:"_testNet3" type:"debug"
+      run: bundle exec fastlane test flavor:"" type:"debug"
       
     - name: Build
       if: github.event_name == 'pull_request'

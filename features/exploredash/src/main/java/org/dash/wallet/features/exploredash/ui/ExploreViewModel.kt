@@ -1,30 +1,40 @@
+/*
+ * Copyright 2021 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.dash.wallet.features.exploredash.ui
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.FirebaseException
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
-import org.dash.wallet.features.exploredash.repository.model.Merchant
-import org.dash.wallet.features.exploredash.repository.model.SearchResult
-import java.util.*
+import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.SearchResult
 import javax.inject.Inject
 
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    private val merchantRepository: MerchantRepository
-): ViewModel() {
+    private val merchantRepository: MerchantRepository,
+    private val merchantDao: MerchantDao
+) : ViewModel() {
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
@@ -32,48 +42,58 @@ class ExploreViewModel @Inject constructor(
 
     private val searchQuery = MutableStateFlow("")
 
-    private val _filterMode = MutableLiveData(FilterMode.All)
-    val filterMode: LiveData<FilterMode>
-        get() = _filterMode
+    private val _pickedTerritory = MutableStateFlow("")
+    var pickedTerritory: String
+        get() = _pickedTerritory.value
+        set(value) {
+            _pickedTerritory.value = value
+        }
 
-    private val _searchResults = MutableLiveData(listOf<SearchResult>())
+    private val _filterMode = MutableStateFlow(FilterMode.Online)
+    val filterMode: LiveData<FilterMode>
+        get() = _filterMode.asLiveData()
+
+    private val _searchResults = MutableLiveData<List<SearchResult>>()
     val searchResults: LiveData<List<SearchResult>>
         get() = _searchResults
 
+    val searchFilterFlow = searchQuery
+        .debounce(300)
+        .flatMapLatest { query ->
+            _pickedTerritory
+                .flatMapLatest { territory ->
+                    if (query.isNotBlank()) {
+                        val qq = sanitizeQuery(query)
+                        merchantDao.observeSearchResults(qq, territory)
+                    } else {
+                        merchantDao.observe(territory)
+                    }.filterNotNull()
+                        .flatMapLatest { merchants ->
+                            _filterMode
+                                .map { filterByMode(merchants, it) }
+                                .map(::groupByTerritory)
+                        }
+                }
+        }
+
     fun init() {
+        searchFilterFlow
+            .onEach(_searchResults::postValue)
+            .launchIn(viewModelWorkerScope)
+    }
+
+    // TODO: replace with smart sync
+    fun dumbSync() {
         viewModelScope.launch {
             val merchants = try {
-                 merchantRepository.get() ?: listOf()
+                merchantRepository.get() ?: listOf()
             } catch (ex: Exception) {
-                event.postValue(ex.message) // TODO
+                event.postValue(ex.message)
                 listOf()
             }
 
-            filterMode.observeForever { mode ->
-                val filtered = if (mode == FilterMode.All) {
-                    merchants.filter { it.active != false }
-                } else {
-                    merchants.filter { it.active != false && (it.type == "both" ||
-                            it.type == mode.toString().toLowerCase(Locale.getDefault())) }
-                }
-
-                val grouped = mutableListOf<SearchResult>()
-                filtered.groupBy { it.territory }.forEach { kv ->
-                    grouped.add(SearchResult(kv.key.hashCode(), true, kv.key))
-                    kv.value.forEach { grouped.add(it) }
-                }
-
-                _searchResults.postValue(grouped)
-            }
+            merchantDao.save(merchants)
         }
-
-//        searchQuery.debounce(300)
-//            .onEach {
-//                val results = merchantRepository.search(it) ?: listOf()
-//                val header = SearchResult("Alabama".hashCode(), true,"Alabama")
-//                _searchResults.postValue(listOf(header) + results)
-//            }
-//            .launchIn(viewModelWorkerScope)
     }
 
     fun setFilterMode(mode: FilterMode) {
@@ -82,6 +102,41 @@ class ExploreViewModel @Inject constructor(
 
     fun submitSearchQuery(query: String) {
         searchQuery.value = query
+    }
+
+    suspend fun getTerritoriesWithMerchants(): List<String> {
+        return merchantDao.getTerritories().filter { it.isNotEmpty() }
+    }
+
+    fun openMerchantDetails(merchant: Merchant) {
+        // TODO details
+        event.postValue("${merchant.name}: ${merchant.address4}")
+    }
+
+    private fun filterByMode(merchants: List<Merchant>, mode: FilterMode): List<Merchant> {
+        val filtered = if (mode == FilterMode.All) {
+            merchants.filter { it.active != false }
+        } else {
+            merchants.filter {
+                it.active != false && (it.type == "both" ||
+                        it.type == mode.toString().lowercase())
+            }
+        }
+        return filtered
+    }
+
+    private fun groupByTerritory(merchants: List<Merchant>): List<SearchResult> {
+        return merchants
+            .groupBy { it.territory ?: "" }
+            .toSortedMap()
+            .flatMap { kv ->
+                listOf(SearchResult(kv.key.hashCode(), true, kv.key)) + kv.value.sortedBy { it.name }
+            }
+    }
+
+    private fun sanitizeQuery(query: String): String {
+        val escapedQuotes = query.replace(Regex.fromLiteral("\""), "\"\"")
+        return "\"$escapedQuotes*\""
     }
 
     enum class FilterMode {

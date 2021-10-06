@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.features.exploredash.di
+package org.dash.wallet.features.exploredash.data.model
 
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.features.exploredash.repository.FirebaseMerchantTable
-import org.dash.wallet.features.exploredash.repository.MerchantRepository
+import androidx.room.Entity
+import androidx.room.Fts4
 
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class ExploreDashModule {
-    @Binds
-    abstract fun bindMerchantRepository(
-        analyticsService: FirebaseMerchantTable
-    ): MerchantRepository
-}
+// Virtual table for Full-Text Search over Merchant table
+@Entity(tableName = "merchant_fts")
+@Fts4(contentEntity = Merchant::class)
+data class MerchantFTS(
+    val name: String,
+    val address1: String,
+    val address2: String,
+    val address3: String,
+    val address4: String,
+    var territory: String,
+)

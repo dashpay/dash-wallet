@@ -9,7 +9,7 @@
                 </shape>
             </item>
 
-            <item android:top="7dp" android:bottom="6dp" android:left="6dp" android:right="6dp"
+            <item android:top="6.8dp" android:bottom="6.2dp" android:left="6.4dp" android:right="6.5dp"
                   android:drawable="@drawable/ic_checkmark" />
         </layer-list>
     </item>

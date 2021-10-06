@@ -16,7 +16,5 @@
     <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
         <item name="android:background">@color/white</item>
         <item name="android:textColor">@color/gray_900</item>
-<!--        <item name="elevation">0dp</item>-->
-<!--        <item name="android:windowTranslucentStatus">true</item>-->
     </style>
 </resources>
