@@ -22,12 +22,15 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -80,6 +83,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.searchTitle.text = "United States" // TODO: use location to resolve
 
+        val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
+        bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+
         binding.allOption.setOnClickListener {
             viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
         }
@@ -109,6 +115,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.clearBtn.setOnClickListener {
             binding.search.text.clear()
+        }
+
+        requireActivity().window?.decorView?.let { decor ->
+            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
+                val showingKeyboard = insets.isVisible(WindowInsetsCompat.Type.ime())
+
+                if(showingKeyboard) {
+                    bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
+                }
+
+                insets
+            }
         }
 
         binding.filterBtn.setOnClickListener {
@@ -147,6 +165,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.physicalOption.isEnabled = it != ExploreViewModel.FilterMode.Physical
             binding.onlineOption.isChecked = it == ExploreViewModel.FilterMode.Online
             binding.onlineOption.isEnabled = it != ExploreViewModel.FilterMode.Online
+
+            if (it == ExploreViewModel.FilterMode.Online) {
+                bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
+            }
         }
 
         viewModel.init()

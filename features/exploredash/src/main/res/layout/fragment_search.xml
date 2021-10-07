@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
+    android:background="#40E78010"
     tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/Explore.AppBarOverlay"
-        app:layout_constraintTop_toTopOf="parent">
+        android:theme="@style/Explore.AppBarOverlay">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -31,152 +30,147 @@
         </androidx.appcompat.widget.Toolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.core.widget.NestedScrollView
+    <LinearLayout
+        android:id="@+id/content_panel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#40E78010">
+        android:paddingBottom="40dp"
+        android:orientation="vertical"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/ExploreSearchResultsBackground"
+        app:behavior_expandedOffset="40dp"
+        app:behavior_fitToContents="false"
+        app:behavior_halfExpandedRatio="0.41"
+        app:behavior_peekHeight="24dp"
+        app:layout_behavior="@string/bottom_sheet_behavior">
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center"
+            android:layout_marginVertical="10dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/DragIndicatorBackground"
+            tools:background="@color/gray_100" />
 
         <LinearLayout
-            android:layout_marginTop="100dp"
-            android:layout_height="match_parent"
             android:layout_width="match_parent"
-            android:orientation="vertical"
-            android:paddingBottom="400dp"
-            android:background="@drawable/rounded_background"
-            android:theme="@style/ExploreSearchResultsBackground">
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-            <FrameLayout
-                android:id="@+id/drag_area"
-                android:layout_height="24dp"
-                android:layout_width="match_parent">
-
-                <View
-                    android:layout_height="4dp"
-                    android:layout_width="40dp"
-                    android:layout_gravity="center"
-                    android:background="@drawable/rounded_background"
-                    android:theme="@style/DragIndicatorBackground"
-                    tools:background="@color/gray_100"/>
-            </FrameLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/search_title"
+                style="@style/Headline6.Bold"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_gravity="center"
+                android:layout_marginHorizontal="15dp"
+                android:layout_weight="1"
+                tools:text="United States" />
 
-                <TextView
-                    android:id="@+id/search_title"
-                    style="@style/Headline6.Bold"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginHorizontal="15dp"
-                    tools:text="United States" />
-
-                <Button
-                    android:id="@+id/filter_btn"
-                    style="@style/Button.Borderless"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:textSize="13sp"
-                    android:text="@string/explore_filter"
-                    android:drawablePadding="4dp"
-                    android:drawableEnd="@drawable/ic_filter" />
-            </LinearLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginHorizontal="15dp">
-
-                <EditText
-                    android:id="@+id/search"
-                    style="@style/Body2"
-                    android:layout_height="match_parent"
-                    android:layout_width="match_parent"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="40dp"
-                    android:background="@drawable/rounded_background"
-                    android:theme="@style/SearchInputBackground"
-                    android:hint="@string/explore_search_hint"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:drawableStart="@drawable/ic_search"
-                    android:drawablePadding="7dp"
-                    android:textColor="@android:color/black" />
-
-                <ImageButton
-                    android:id="@+id/clear_btn"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@android:color/transparent"
-                    android:src="@drawable/ic_close"
-                    android:layout_gravity="end|center_vertical"
-                    android:visibility="gone"
-                    tools:visibility="visible" />
-            </FrameLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
+            <Button
+                android:id="@+id/filter_btn"
+                style="@style/Button.Borderless"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal">
-
-                <ToggleButton
-                    android:id="@+id/all_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:textOff="@string/explore_option_all"
-                    android:textOn="@string/explore_option_all" />
-
-                <ToggleButton
-                    android:id="@+id/physical_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_option_physical"
-                    android:textOn="@string/explore_option_physical" />
-
-                <ToggleButton
-                    android:id="@+id/online_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_online_merchant"
-                    android:textOn="@string/explore_online_merchant" />
-            </LinearLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <TextView
-                    android:id="@+id/no_results_text"
-                    style="@style/Body2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="15dp"
-                    android:layout_marginVertical="24dp"
-                    android:text="@string/explore_no_results"
-                    android:visibility="gone" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/search_results_list"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:paddingBottom="40dp"
-                    android:clipToPadding="false"
-                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                    tools:listitem="@layout/merchant_row"
-                    tools:itemCount="5"/>
-            </FrameLayout>
+                android:layout_marginEnd="8dp"
+                android:drawableEnd="@drawable/ic_filter"
+                android:drawablePadding="4dp"
+                android:text="@string/explore_filter"
+                android:textSize="13sp" />
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
-</androidx.constraintlayout.widget.ConstraintLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginHorizontal="15dp"
+            android:layout_marginTop="10dp">
+
+            <EditText
+                android:id="@+id/search"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/rounded_background"
+                android:drawableStart="@drawable/ic_search"
+                android:drawablePadding="7dp"
+                android:hint="@string/explore_search_hint"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:paddingStart="8dp"
+                android:paddingEnd="40dp"
+                android:textColor="@android:color/black"
+                android:theme="@style/SearchInputBackground" />
+
+            <ImageButton
+                android:id="@+id/clear_btn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="end|center_vertical"
+                android:background="@android:color/transparent"
+                android:src="@drawable/ic_close"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/options"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="horizontal">
+
+            <ToggleButton
+                android:id="@+id/all_option"
+                style="@style/ToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:textOff="@string/explore_option_all"
+                android:textOn="@string/explore_option_all" />
+
+            <ToggleButton
+                android:id="@+id/physical_option"
+                style="@style/ToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:textOff="@string/explore_option_physical"
+                android:textOn="@string/explore_option_physical" />
+
+            <ToggleButton
+                android:id="@+id/online_option"
+                style="@style/ToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:textOff="@string/explore_online_merchant"
+                android:textOn="@string/explore_online_merchant" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/no_results_text"
+                style="@style/Body2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginVertical="24dp"
+                android:text="@string/explore_no_results"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/search_results_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingBottom="40dp"
+                android:clipToPadding="false"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:itemCount="5"
+                tools:listitem="@layout/merchant_row" />
+        </FrameLayout>
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
