@@ -24,7 +24,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -43,7 +42,6 @@ import androidx.constraintlayout.widget.Group;
 import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
-import androidx.loader.app.LoaderManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -56,13 +54,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.adapter.BaseFilterAdapter;
 import de.schildbach.wallet.adapter.ExchangeRatesAdapter;
 import de.schildbach.wallet.rates.ExchangeRate;
-import de.schildbach.wallet.rates.ExchangeRatesRepository;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
 
@@ -114,13 +110,22 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         showAsDialog = getActivity().getIntent().getBooleanExtra(ARG_SHOW_AS_DIALOG, false);
-        setRetainInstance(true);
         adapter = new ExchangeRatesAdapter(activity, config, wallet, new ArrayList<>(), this, this,showAsDialog);
         adapter.setRateBase(config.getBtcBase());
-        adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
+        if (showAsDialog){
+            if (config.isDefaultFiatCurrencyChanged()) {
+                adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
+                config.setDefaultFiatCurrencyChanged(false);
+            } else if (config.isCurrentFiatCurrencyChanged()) {
+                adapter.setDefaultCurrency(config.getSendPaymentExchangeCurrencyCode());
+                config.setCurrentFiatCurrencyChanged(false);
+            } else {
+                adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
+            }
+        } else {
+            adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
+        }
     }
-
-
 
     @Override
     public void onViewCreated(@NonNull View view, @androidx.annotation.Nullable Bundle savedInstanceState) {
@@ -239,8 +244,6 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
             recyclerView.scrollToPosition(positionToScrollTo);
         }
     }
-
-
 
     @Override
     public void setViewState() {

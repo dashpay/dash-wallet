@@ -87,8 +87,12 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
                     holder.defaultCurrencyCheckbox.setChecked(true);
                     setDefaultCurrency(exchangeRate.getCurrencyCode());
                     WalletBalanceWidgetProvider.updateWidgets(mAppContext, mWallet);
-                    if (!isShownAsDialog) {
+                    if (isShownAsDialog) {
+                        mAppConfig.setSendPaymentExchangeCurrencyCode(exchangeRate.getCurrencyCode());
+                        mAppConfig.setCurrentFiatCurrencyChanged(true);
+                    } else {
                         mAppConfig.setExchangeCurrencyCode(exchangeRate.getCurrencyCode());
+                        mAppConfig.setDefaultFiatCurrencyChanged(true);
                     }
                     itemSelectedListener.onItemChecked(exchangeRate);
                 } else if (isDefaultCurrency){
