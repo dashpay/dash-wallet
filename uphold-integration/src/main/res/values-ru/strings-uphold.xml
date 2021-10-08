@@ -30,4 +30,14 @@
     <string name="uphold_api_error_identity">Ваш аккаунт Uphold ещё не верифицирован. Вывод средств невозможен.</string>
     <string name="uphold_api_error_403_description">Ваш Uphold аккаунт был отмечен для изучения.\n\nUphold временно забанил ваш аккаунт, вы не сможете вывести средства.\n\nUphold остаётся на связи, чтобы помочь вам быстро решить эту проблему.</string>
     <string name="uphold_api_error_400_description">Средства на Uphold заблокированы на 24 часа.\n\nСредства для этой транзакции станут доступны через %s.</string>
+    <string name="uphold_api_error_400_locked">Средства на Uphold (%1$s%2$s) заблокированы на 65 дней.\n\nСредства для этой транзакции станут доступны через %3$s.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">У вас недостаточно средств для этой транзакции</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">Это значение должно быть больше или равно %s.</string>
+    <string name="uphold_api_error_400_tx_validation">Невозможно перевести такую большую сумму через приложение (максимум $3000)</string>
+    <string name="uphold_api_error_400_password_reset">Средства на Uphold заблокированы из-за недавней смены пароля.\n\nНеобходимо подождать до %s, прежде чем переводить средства.</string>
+    <string name="uphold_api_error_400_authentication_change">Средства на Uphold заблокированы из-за недавней смены способа аутентификации.\n\nНеобходимо подождать до %s, прежде чем переводить средства.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">Невозможно перевести такую большую сумму через приложение (максимум $3000)\n\nПожалуйста, воспользуйтесь для перевода аккаунтом Uphold. </string>
+    <string name="uphold_api_error_400_required">Невозможно перевести такую большую сумму через приложение (максимум $3000)\n\nПожалуйста, воспользуйтесь для перевода аккаунтом Uphold. </string>
+
 </resources>
