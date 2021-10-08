@@ -75,18 +75,9 @@ class EnterAmountFragment : Fragment() {
     private var fiatAmountFormat: FiatAmountFormat ? = null
     var maxAmountSelected: Boolean = false
     private var shouldNotConvertFiatToDash: Boolean = false
-    private lateinit var abstractBindServiceActivity: AbstractBindServiceActivity
-    private lateinit var walletApplication: WalletApplication
     private lateinit var configuration: Configuration
     private var isInit: Boolean = true
 
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        abstractBindServiceActivity = context as AbstractBindServiceActivity
-        walletApplication = abstractBindServiceActivity.application as WalletApplication
-        configuration = walletApplication.configuration
-    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.enter_amount_fragment, container, false)
@@ -94,6 +85,7 @@ class EnterAmountFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        configuration = WalletApplication.getInstance().configuration
         convert_direction.setOnClickListener {
             viewModel.setDashToFiatDirection(!viewModel.dashToFiatDirectionValue)
             if (viewModel.dashToFiatDirectionValue) {
@@ -235,9 +227,9 @@ class EnterAmountFragment : Fragment() {
         if (arguments != null) {
             val initialAmount = requireArguments().getSerializable(ARGUMENT_INITIAL_AMOUNT) as Monetary
             if (viewModel.dashToFiatDirectionValue) {
-                viewModel.setDashAmount(initialAmount as Coin)
+                viewModel.setDashAmount(Coin.valueOf(initialAmount.value))
             } else {
-                viewModel.setFiatAmount(initialAmount as Fiat)
+                viewModel.setFiatAmount(Fiat.valueOf(configuration.exchangeCurrencyCode, initialAmount.value))
             }
         } else {
             viewModel.setDashAmount(Coin.ZERO)
