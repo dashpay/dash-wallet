@@ -27,6 +27,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import javax.inject.Inject
 
@@ -57,14 +58,17 @@ class ExploreViewModel @Inject constructor(
     val searchResults: LiveData<List<SearchResult>>
         get() = _searchResults
 
+    private val _selectedMerchant = MutableLiveData<Merchant?>()
+    val selectedMerchant: LiveData<Merchant?>
+        get() = _selectedMerchant
+
     val searchFilterFlow = searchQuery
         .debounce(300)
         .flatMapLatest { query ->
             _pickedTerritory
                 .flatMapLatest { territory ->
                     if (query.isNotBlank()) {
-                        val qq = sanitizeQuery(query)
-                        merchantDao.observeSearchResults(qq, territory)
+                        merchantDao.observeSearchResults(sanitizeQuery(query), territory)
                     } else {
                         merchantDao.observe(territory)
                     }.filterNotNull()
@@ -109,16 +113,21 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant) {
-        // TODO details
-        event.postValue("${merchant.name}: ${merchant.address4}")
+        _selectedMerchant.postValue(merchant)
+    }
+
+    fun openSearchResults() {
+        _selectedMerchant.postValue(null)
     }
 
     private fun filterByMode(merchants: List<Merchant>, mode: FilterMode): List<Merchant> {
         val filtered = if (mode == FilterMode.All) {
+            // Showing all merchants
             merchants.filter { it.active != false }
         } else {
+            // Showing merchants of specific type or both types
             merchants.filter {
-                it.active != false && (it.type == "both" ||
+                it.active != false && (it.type == MerchantType.BOTH ||
                         it.type == mode.toString().lowercase())
             }
         }

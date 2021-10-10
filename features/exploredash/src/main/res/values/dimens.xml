@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="dialog_margin_top">20dp</dimen>
+    <dimen name="details_physical_margin_top">20dp</dimen>
+    <dimen name="details_online_margin_top">40dp</dimen>
 </resources>
