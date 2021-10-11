@@ -217,7 +217,7 @@ public class UpholdApiException extends Exception {
     }
 
     //  403
-    //  error: {
+    //  {
     //       "capability":"withdrawals",
     //       "code":"forbidden",
     //       "message":"Quote not allowed due to capability constraints",
@@ -226,7 +226,7 @@ public class UpholdApiException extends Exception {
     //  }
 
     private boolean isForbiddenError() {
-        JSONObject errors = getErrors();
+        JSONObject errors = errorBody;
         try {
             if (errors != null && errors.has("code")) {
                 if (errors.get("code").equals(FORBIDDEN_ERROR)) {
