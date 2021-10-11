@@ -16,6 +16,7 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.util.Log
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +32,10 @@ import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import javax.inject.Inject
 
+enum class NavigationRequest {
+    SendDash, None
+}
+
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
     private val merchantRepository: MerchantRepository,
@@ -39,7 +44,7 @@ class ExploreViewModel @Inject constructor(
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
-    val event = SingleLiveEvent<String>()
+    val navigationCallback = SingleLiveEvent<NavigationRequest>()
 
     private val searchQuery = MutableStateFlow("")
 
@@ -92,7 +97,6 @@ class ExploreViewModel @Inject constructor(
             val merchants = try {
                 merchantRepository.get() ?: listOf()
             } catch (ex: Exception) {
-                event.postValue(ex.message)
                 listOf()
             }
 
@@ -120,8 +124,12 @@ class ExploreViewModel @Inject constructor(
         _selectedMerchant.postValue(null)
     }
 
+    fun sendDash() {
+        navigationCallback.postValue(NavigationRequest.SendDash)
+    }
+
     private fun filterByMode(merchants: List<Merchant>, mode: FilterMode): List<Merchant> {
-        val filtered = if (mode == FilterMode.All) {
+        return if (mode == FilterMode.All) {
             // Showing all merchants
             merchants.filter { it.active != false }
         } else {
@@ -131,7 +139,6 @@ class ExploreViewModel @Inject constructor(
                         it.type == mode.toString().lowercase())
             }
         }
-        return filtered
     }
 
     private fun groupByTerritory(merchants: List<Merchant>): List<SearchResult> {
