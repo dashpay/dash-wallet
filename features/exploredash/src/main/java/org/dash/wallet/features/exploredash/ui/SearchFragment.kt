@@ -46,6 +46,7 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapt
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 import androidx.core.view.ViewCompat.animate
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 
@@ -143,7 +144,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.onlineOption.isChecked = it == ExploreViewModel.FilterMode.Online
             binding.onlineOption.isEnabled = it != ExploreViewModel.FilterMode.Online
 
-            if (it == ExploreViewModel.FilterMode.Online) {
+            if (viewModel.selectedMerchant.value == null && it == ExploreViewModel.FilterMode.Online) {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
             }
         }
@@ -228,6 +229,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             Glide.with(requireContext())
                 .load(merchant.logoLocation)
                 .error(R.drawable.ic_merchant_placeholder)
+                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
                 .into(merchantLogo)
 
@@ -256,15 +258,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
                     matchConstraintPercentHeight = 1f
                 }
-                root.updatePaddingRelative(
-                    top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
+                root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
             } else {
                 payBtn.text = getText(R.string.explore_pay_with_dash)
+                payBtn.setOnClickListener { viewModel.sendDash() }
+
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
                     matchConstraintPercentHeight = 0.44f
                 }
-                root.updatePaddingRelative(
-                    top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
+                root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
             }
 
             directionBtn.isVisible = !isOnline && merchant.latitude != null && merchant.longitude != null

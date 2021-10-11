@@ -18,9 +18,9 @@
     <ImageView
         android:layout_width="wrap_content"
         android:layout_height="0dp"
-        android:maxHeight="260dp"
+        android:maxHeight="220dp"
         android:src="@drawable/explore_image"
-        app:layout_constraintBottom_toTopOf="@id/explore_subtitle"
+        app:layout_constraintBottom_toTopOf="@id/explore_title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/title_bar" />
