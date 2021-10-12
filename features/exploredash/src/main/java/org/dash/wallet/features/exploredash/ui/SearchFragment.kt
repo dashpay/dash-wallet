@@ -46,6 +46,7 @@ import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 import androidx.core.view.ViewCompat.animate
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -118,17 +119,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         setupFilters(bottomSheet)
         setupSearchInput(bottomSheet)
         setupSearchResults()
-
-        viewModel.selectedMerchant.observe(viewLifecycleOwner) { merchant ->
-            if (merchant != null) {
-                binding.toolbarTitle.text = merchant.name
-                transitToDetails(merchant.type == MerchantType.ONLINE)
-                bindMerchantDetails(merchant)
-            } else {
-                binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
-                transitToSearchResults()
-            }
-        }
+        setupMerchantDetails()
 
         viewModel.init()
     }
@@ -215,6 +206,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
+        adapter.registerAdapterDataObserver(object: RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                binding.searchResultsList.scrollToPosition(0)
+            }
+        })
+
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
         val decorator = ListDividerDecorator(divider, false, R.layout.group_header)
         binding.searchResultsList.addItemDecoration(decorator)
@@ -223,6 +220,19 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.searchResults.observe(viewLifecycleOwner) { results ->
             binding.noResultsText.isVisible = results.isEmpty()
             adapter.submitList(results)
+        }
+    }
+
+    private fun setupMerchantDetails() {
+        viewModel.selectedMerchant.observe(viewLifecycleOwner) { merchant ->
+            if (merchant != null) {
+                binding.toolbarTitle.text = merchant.name
+                transitToDetails(merchant.type == MerchantType.ONLINE)
+                bindMerchantDetails(merchant)
+            } else {
+                binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
+                transitToSearchResults()
+            }
         }
     }
 
