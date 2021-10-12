@@ -37,6 +37,11 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
+import org.dashj.platform.dpp.errors.ErrorMetadata
+import org.dashj.platform.dpp.errors.concensus.ConcensusException
+import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
+import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
+import org.dashj.platform.dpp.errors.concensus.fee.BalanceIsNotEnoughException
 import org.slf4j.LoggerFactory
 
 class InviteHandler(val activity: AppCompatActivity, private val analytics: AnalyticsService) {
@@ -208,24 +213,28 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
      */
     fun handleError(blockchainIdentityData: BlockchainIdentityBaseData): Boolean {
         // handle errors
-        var errorMessage: String
-        if (blockchainIdentityData.creationStateErrorMessage.also { errorMessage = it!! } != null) {
+        var exception: ConcensusException
+        if (blockchainIdentityData.creationStateErrorMessage.also {
+            val errorMetadata = ErrorMetadata(it!!)
+                exception = ConcensusException.Companion.create(errorMetadata)
+        } != null) {
+
             when {
-                (errorMessage.contains("IdentityAssetLockTransactionOutPointAlreadyExistsError")) -> {
+                exception is IdentityAssetLockTransactionOutPointAlreadyExistsException -> {
                     showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
                     // now erase the blockchain data
                     getInstance().clearBlockchainIdentityData()
                     return true
                 }
 
-                errorMessage.contains("InvalidIdentityAssetLockProofSignatureError") -> {
+                exception is InvalidInstantAssetLockProofSignatureException -> {
                     handle(loading(blockchainIdentityData.invite, 0))
-                    handle(error(errorMessage, blockchainIdentityData.invite))
+                    handle(error(exception.message!!, blockchainIdentityData.invite))
                     // now erase the blockchain data
                     getInstance().clearBlockchainIdentityData()
                     return true
                 }
-                errorMessage.contains("InsuffientFundsError") -> {
+                exception is BalanceIsNotEnoughException -> {
                     showInsufficientFundsDialog()
                     // now erase the blockchain data
                     getInstance().clearBlockchainIdentityData()
