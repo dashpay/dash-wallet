@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -89,8 +90,30 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
         binding.searchTitle.text = "United States" // TODO: use location to resolve
 
+        binding.toolbar.setOnMenuItemClickListener {
+            if (it.itemId == R.id.menu_info) {
+                Log.i("MERCHANTS", "info menu click")
+            }
+            true
+        }
+
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+        bottomSheet.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback() {
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {}
+
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                val isExpanded = newState == BottomSheetBehavior.STATE_EXPANDED
+                binding.appbarDivider.alpha = if (isExpanded) 1f else 0f
+                // TODO (ashikhmin): it's better to replace this with android:translationZ="0.1dp"
+                // (not supported on API 19) in the appbar to bring it
+                // on top of the search results while keeping the shadow off
+                animate(binding.dragIndicator).apply {
+                    duration = 100
+                    alpha(if (isExpanded) 0f else 1f)
+                }.start()
+            }
+        })
 
         setupFilters(bottomSheet)
         setupSearchInput(bottomSheet)
@@ -146,6 +169,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             if (viewModel.selectedMerchant.value == null && it == ExploreViewModel.FilterMode.Online) {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
+                binding.appbarDivider.alpha = 1f
+                binding.dragIndicator.alpha = 0f
             }
         }
     }
@@ -287,8 +312,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun transitToDetails(fullHeight: Boolean) {
-        binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
-
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = false
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED

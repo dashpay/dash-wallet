@@ -12,7 +12,8 @@
         android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/Explore.AppBarOverlay">
+        android:theme="@style/Explore.AppBarOverlay"
+        app:elevation="0dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -51,6 +52,7 @@
             android:orientation="vertical">
 
             <View
+                android:id="@+id/drag_indicator"
                 android:layout_width="40dp"
                 android:layout_height="4dp"
                 android:layout_gravity="center"
@@ -187,5 +189,14 @@
             android:layout_height="0dp"
             android:visibility="gone"
             app:layout_constraintHeight_percent="0.44" />
+
+        <View
+            android:id="@+id/appbar_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:alpha="0"
+            android:background="@color/divider_color"
+            app:layout_constraintTop_toTopOf="parent"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
