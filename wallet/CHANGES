@@ -1,4 +1,11 @@
 Dash Wallet
+v7.3.3
+* Use DashJ 0.17.9 (sync fixes for Android 6 and below)
+* Redesign Local Currency Screen
+* Allow changing of fiat currency on Send Flow
+* Fix missing close button after Liquid purchase
+* Keep payment flow unlocked if activated from Lock Screen
+* Prevent task hijacking for all screens (Strandhogg v1)
 
 v7.3.2
 * Dismiss the last PIN Entry Dialog upon Autologout  (bug from 7.2.4)
