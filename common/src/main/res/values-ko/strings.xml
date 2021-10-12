@@ -4,7 +4,9 @@
     <string name="loading">로딩중...</string>
     <string name="loading_error">오류가 발생했습니다. 나중에 다시 시도하십시오.</string>
     <string name="dash_available">%1$s 이용 가능</string>
-
+    <string name="network_unavailable_title">네트워크를 이용할 수 없음</string>
+    <string name="network_unavailable_check_connection">네트워크 연결을 확인하세요</string>
+    <string name="network_unavailable_balance_not_accurate">연결이 끊어져 잔고가 정확하지 않을 수 있습니다</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">건지섬 파운드</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">팍소스 스탠다드</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">제미니 파운드</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">닫기</string>
+    <string name="network_unavailable_return">지갑으로 돌아가기</string>
+
 </resources>

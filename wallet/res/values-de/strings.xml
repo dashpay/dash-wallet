@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Deine Wallet wurde zurückgesetzt,\ndies wird einige Zeit in Anspruch nehmen.</string>
+    <string name="toast_start_storage_provider_selector_failed">Es ist kein entsprechender Cloud-Speicheranbieter installiert.\nDu brauchst etwas wie \"Nextcloud\" oder \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Nutzung auf eigene Gefahr. Lies bitte die &lt;u&gt;Sicherheitshinweise&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Ein Backup muss erstellt werden!</string>
     <string name="blockchain_state_progress_hours">%1$s, hinkt %2$d Stunden hinterher</string>
@@ -206,6 +207,7 @@
     <string name="import_keys_dialog_button_import">Wiederherstellen</string>
     <string name="restore_wallet_dialog_success">Wallet wurde wiederhergestellt.</string>
     <string name="restore_wallet_dialog_success_replay">Deine Wallet wurde erfolgreich wiederhergestellt. Jetzt wird das Guthaben ermittelt. Das wird einige Zeit dauern.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Warnung: Deine Wallet ist durch eine Ausgabe-PIN geschützt. Vergewissere dich, dass du dich noch an diese erinnern kannst, bevor du Geld mit dieser Wallet empfängst.</string>
     <string name="import_keys_dialog_failure">Die Wallet konnte nicht wieder hergestellt werden:\n\n%s\n\nFalsches Passwort?</string>
     <string name="backup_wallet_permission_dialog_title">Schreibe-Erlaubnis fehlt</string>
     <string name="backup_wallet_permission_dialog_message">Damit ein Wallet-Backup auf Deinen externen Speicher geschrieben werden kann, musst Du eine Schreibe-Erlaubnis erteilen.</string>
@@ -213,7 +215,7 @@
     <string name="backup_wallet_dialog_message">Dein Backup wird mit dem gewählten Passwort verschlüsselt und auf dem externen Speicher gesichert.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Deine Wallet ist durch eine Ausgabe-PIN geschützt. Stell bitte sicher, dass Du die PIN, sowie das Backup-Passwort nicht vergisst!</string>
     <string name="export_keys_dialog_button_export">Exportieren</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Deine Wallet wurde nach <tt>%s</tt> gesichert.</p><p>Wenn die SD-Karte deines Geräts wechselbar ist, <i>solltest</i> Du das Backup auf dieser Karte lagern. Entferne die Karte und bewahre sie an einem sicheren Ort auf. Wenn die Karte <i>nicht</i> wechselbar ist, musst Du das Backup an einem anderen Ort als auf dem Gerät archivieren.</p><p><b>Wenn Dein Backup nur auf Deinem Gerät lagert, läufst Du Gefahr beide zusammen zu verlieren!</b></p><p>Verwahre auf jeden Fall auch Dein Backup-Passwort an einem sicheren Ort. Möchtest Du Deine Wallet nun archivieren?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Deine Wallet wurde gesichert nach <tt>%s</tt></p><p><b>Wenn das Backup dieser Wallet nur auf diesem Gerät gespeichert ist, besteht das Risiko, dass du beides gleichzeitig verlierst!</b></p><p>In jedem Fall solltest du sicher gehen, dass du dich an dein Backup-Passwort erinnerst.</p>]]></string>
     <string name="export_keys_dialog_failure">Deine Wallet konnte nicht gesichert werden:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archivieren</string>
     <string name="export_keys_dialog_mail_subject">Dash Wallet Sicherung</string>
@@ -383,4 +385,6 @@
     <string name="select_a_service">Dienst auswählen</string>
     <string name="activity_buy_and_sell_dash_filter">Filter</string>
     <string name="clear_filter">Filter leeren</string>
+    <string name="select_currency">Währung auswählen</string>
+
 </resources>

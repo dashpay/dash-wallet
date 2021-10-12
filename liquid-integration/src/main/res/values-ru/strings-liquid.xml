@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">Купить Dash с помощью кредитной карты</string>
     <string name="liquid_logout">Выйти</string>
     <string name="liquid_logout_title">Выйти из Liquid</string>
+    <string name="liquid_forced_logout">Ссылка на ваш аккаунт в Liquid не работает. Пожалуйста, выберите Привязать аккаунт Liquid на следующем экране.</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Обменять Dash на другие криптовалюты</string>
     <string name="transfer_dash_to_and_from_account">Внести или вывести Dash из вашего Liquid аккаунта</string>
 
@@ -17,10 +18,12 @@
     <string name="button_cancel">Отмена</string>
     <string name="choose_your_payment_method">Выберите способ оплаты</string>
     <string name="crypto_support">Крипто Поддержка</string>
+    <string name="credit_card_support">Поддержка кредитных карт</string>
     <string name="okay">Да</string>
     <string name="close">Закрыть</string>
-    <string name="list_of_countries">Посмотреть список неподдерживаемых стран</string>
-    <string name="buying_dash_not_supported">Покупка Dash за криптовалюту не поддерживается в некоторых странах</string>
+    <string name="list_of_countries">Список неподдерживаемых стран.</string>
+    <string name="buying_dash_not_supported_credit_cards">Покупка Dash по кредитной карте не поддерживается в некоторых странах</string>
+    <string name="buying_dash_not_supported_crypto">Покупка Dash за криптовалюту не поддерживается в некоторых странах</string>
     <string name="buying_dash_success_message">Этот экран можно закрыть, Dash будет отправлен на ваш кошелёк. </string>
 
     <string name="confirm">Подтвердить</string>
@@ -30,6 +33,7 @@
     <string name="total">Всего</string>
     <string name="connect">Подключиться</string>
     <string name="connected">Подключено</string>
+    <string name="disconnected">Подключение отсутствует</string>
     <string name="buy_sell_dash">Купить и продать Dash или создать новый аккаунт</string>
 
 
