@@ -50,6 +50,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 
 
@@ -58,6 +59,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private var bottomSheetWasExpanded: Boolean = false
+    private var isKeyboardShowing: Boolean = false
 
     // TODO: re-integrate when the permission request story is ready
 //    private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -174,9 +176,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.search.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                val inputManager = requireContext()
-                    .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                inputManager.toggleSoftInput(0, 0)
+                hideKeyboard()
             }
 
             true
@@ -189,6 +189,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         requireActivity().window?.decorView?.let { decor ->
             ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
                 val showingKeyboard = insets.isVisible(WindowInsetsCompat.Type.ime())
+                this.isKeyboardShowing = showingKeyboard
 
                 if (showingKeyboard) {
                     bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
@@ -201,6 +202,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun setupSearchResults() {
         val adapter = MerchantsAtmsResultAdapter { item, _ ->
+            hideKeyboard()
+
             if (item is Merchant) {
                 viewModel.openMerchantDetails(item)
             }
@@ -221,14 +224,25 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.noResultsText.isVisible = results.isEmpty()
             adapter.submitList(results)
         }
+
+        viewLifecycleOwner.observeOnDestroy {
+            binding.searchResultsList.adapter = null
+        }
     }
 
     private fun setupMerchantDetails() {
         viewModel.selectedMerchant.observe(viewLifecycleOwner) { merchant ->
             if (merchant != null) {
                 binding.toolbarTitle.text = merchant.name
-                transitToDetails(merchant.type == MerchantType.ONLINE)
                 bindMerchantDetails(merchant)
+
+                lifecycleScope.launch {
+                    if (isKeyboardShowing) {
+                        delay(100)
+                    }
+
+                    transitToDetails(merchant.type == MerchantType.ONLINE)
+                }
             } else {
                 binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
                 transitToSearchResults()
@@ -383,6 +397,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun openWebsite(website: String) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(website))
         startActivity(intent, null)
+    }
+
+    private fun hideKeyboard() {
+        val inputManager = requireContext()
+                .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+        inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
 
     private fun cleanValue(value: String?): String? {
