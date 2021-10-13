@@ -30,9 +30,11 @@ import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.ui.backup.RestoreFromFileHelper
@@ -313,6 +315,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
         if (viewModel.hasIdentity) {
+            viewModel.blockchainIdentityData.observeOnce(this) {
+                if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
+                    viewModel.dismissUsernameCreatedCard()
+                }
+            }
             val contactsFragment = ContactsFragment.newInstance(mode)
             if (mode == MODE_VIEW_REQUESTS) {
                 addFragment(contactsFragment)
