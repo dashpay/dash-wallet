@@ -437,7 +437,6 @@ open class LockScreenActivity : SecureActivity() {
         }
 
         log.info("start fingerprint listener: $fingerprintCancellationSignal")
-        //fingerprintListening = true
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
                 log.info("fingerprint scan successful")
@@ -479,7 +478,6 @@ open class LockScreenActivity : SecureActivity() {
         dialogBuilder.setTitle(R.string.fingerprint_changed_title)
         dialogBuilder.setMessage(R.string.fingerprint_changed_message)
         dialogBuilder.setPositiveButton(android.R.string.ok) { _, _ ->
-            fingerprintHelper!!.resetFingerprintKeyChanged()
             setLockState(State.ENTER_PIN)
         }
         dialogBuilder.show()
