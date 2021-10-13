@@ -293,7 +293,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 R.string.explore_merchant_address,
                 merchant.address1,
                 merchant.address2,
-                merchant.address4)
+                merchant.address3)
 
             val isOnline = merchant.type == MerchantType.ONLINE
             val drawable = ResourcesCompat.getDrawable(resources,
