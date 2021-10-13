@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">Bumili ng Dash gamit ang credit card</string>
     <string name="liquid_logout">Mag-log out</string>
     <string name="liquid_logout_title">Mag-log out mula sa Liquid</string>
+    <string name="liquid_forced_logout">Ang link sa iyong Liquid account ay nasira. Mangyaring piliin ang Link Liquid Account sa susunod na screen.</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Ipagpalit ang Dash sa iba pang mga cryptocurrency</string>
     <string name="transfer_dash_to_and_from_account">Ilipat ang Dash papunta at mula sa iyong Liquid account</string>
 
@@ -17,10 +18,12 @@
     <string name="button_cancel">Kanselahin</string>
     <string name="choose_your_payment_method">Piliin ang iyong paraan ng pagbabayad</string>
     <string name="crypto_support">Suporta ng Crypto</string>
+    <string name="credit_card_support">Suporta sa Credit Card</string>
     <string name="okay">Okay</string>
     <string name="close">Sarado</string>
-    <string name="list_of_countries">Tingnan ang listahan ng mga bansa na hindi suportado</string>
-    <string name="buying_dash_not_supported">Ang pagbili ng Dash gamit ang cryptocurrency ay hindi suportado sa ilang mga bansa</string>
+    <string name="list_of_countries">Tingnan ang isang listahan ng mga hindi sinusuportahang bansa.</string>
+    <string name="buying_dash_not_supported_credit_cards">Ang pagbili ng Dash gamit ang isang credit card ay hindi suportado sa ilang mga bansa.</string>
+    <string name="buying_dash_not_supported_crypto">Ang pagbili ng Dash gamit ang cryptocurrency ay hindi suportado sa ilang mga bansa</string>
     <string name="buying_dash_success_message">Maaari mong isara ang screen na ito, ipapadala ang iyong Dash sa iyong wallet.</string>
 
     <string name="confirm">Kumpirmahin</string>
@@ -30,7 +33,8 @@
     <string name="total">Kabuuan</string>
     <string name="connect">kumonekta</string>
     <string name="connected">Konektado</string>
-    <string name="buy_sell_dash">Upang bumili ng &amp; ibenta ang Dash o lumikha ng isang bagong account</string>
+    <string name="disconnected">Idiskonekta</string>
+    <string name="buy_sell_dash">Upang bumili &amp; ibenta ang Dash o lumikha ng isang bagong account</string>
 
 
     <string name="transfer_to_liquid">Lumipat sa Liquid</string>

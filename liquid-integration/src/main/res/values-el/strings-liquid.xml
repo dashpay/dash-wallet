@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">Αγορά Dash με πιστωτική κάρτα</string>
     <string name="liquid_logout">Αποσύνδεση</string>
     <string name="liquid_logout_title">Αποσυνδεθείτε από Liquid</string>
+    <string name="liquid_forced_logout">Η σύνδεση με τον λογαριασμό σας στο Liquid έχει διακοπεί. Παρακαλούμε επιλέξτε Σύνδεση λογαριασμού Liquid στην επόμενη οθόνη.</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Ανταλλάξτε Dash με άλλα κρυπτονομίσματα</string>
     <string name="transfer_dash_to_and_from_account">Μεταφέρετε Dash από και προς τον Liquid λογαριασμό σας</string>
 
@@ -17,10 +18,12 @@
     <string name="button_cancel">Ακύρωση</string>
     <string name="choose_your_payment_method">Επιλέξτε μέθοδο πληρωμής</string>
     <string name="crypto_support">Υποστήριξη Κρυπτονομισμάτων</string>
+    <string name="credit_card_support">Υποστήριξη πιστωτικής κάρτας</string>
     <string name="okay">Εντάξει</string>
     <string name="close">κλείσιμο</string>
-    <string name="list_of_countries">Προβολή λίστας χωρών που δεν υποστηρίζονται</string>
-    <string name="buying_dash_not_supported">Η αγορά Dash με κρυπτονομίσματα δεν υποστηρίζεται σε ορισμένες χώρες</string>
+    <string name="list_of_countries">Δείτε μια λίστα με τις χώρες που δεν υποστηρίζονται.</string>
+    <string name="buying_dash_not_supported_credit_cards">Η αγορά Dash με πιστωτική κάρτα δεν υποστηρίζεται σε ορισμένες χώρες.</string>
+    <string name="buying_dash_not_supported_crypto">Η αγορά Dash με κρυπτονομίσματα δεν υποστηρίζεται σε ορισμένες χώρες.</string>
     <string name="buying_dash_success_message">Μπορείτε να κλείσετε αυτήν την οθόνη, τα Dash σας θα σταλούν στο πορτοφόλι σας.</string>
 
     <string name="confirm">Επιβεβαίωση</string>
@@ -30,7 +33,8 @@
     <string name="total">Σύνολο</string>
     <string name="connect">Σύνδεση</string>
     <string name="connected">Συνδέθηκε</string>
-    <string name="buy_sell_dash">Για να πουλήσετε &amp;amp; πουλήστε Dash η δημιουργήστε ένα νέο λογαριασμό</string>
+    <string name="disconnected">Αποσυνδεδεμένο</string>
+    <string name="buy_sell_dash">Για να αγοράσετε &amp; να πουλήσετε Dash ή να δημιουργήσετε νέο λογαριασμό</string>
 
 
     <string name="transfer_to_liquid">Μεταφορά στο Liquid</string>

@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">지갑이 재설치되었습니다!\n완전한 복구를 위해 잠시 기다려 주세요.</string>
+    <string name="toast_start_storage_provider_selector_failed">알맞은 클라우드 저장소 공급자가 설치되지 않았습니다.\n\"넥스트클라우드\" 혹은 \"구글 드라이브\" 등이 필요합니다.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">사용자의 전적인 책임 하에 사용하십시오. &lt;u&gt;안전성 노트&lt;/u&gt;를 확인하십시오.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">지갑을 백업해야 합니다!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d시간 이전으로부터 동기화 중</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">복구</string>
     <string name="restore_wallet_dialog_success">전자 지갑이 복구되었습니다.</string>
     <string name="restore_wallet_dialog_success_replay">지갑이 성공적으로 복구되었습니다. 지갑의 잔액 갱신에 다소 시간이 소요될 수 있습니다.</string>
+    <string name="restore_wallet_dialog_success_encrypted">경고: 당신의 지갑은 지출 PIN으로 보호되고 있습니다. 이 지갑을 받기 전 해당 내용을 기억하여야 합니다.</string>
     <string name="import_keys_dialog_failure">전자 지갑을 복구할 수 없습니다. :\n\n%s\n\n비밀번호를 잘못 입력하셨나요?</string>
     <string name="backup_wallet_permission_dialog_title">쓰기 권한 없음</string>
     <string name="backup_wallet_permission_dialog_message">대시 지갑을 외부 저장소에 백업하기 위해서는 쓰기 권한을 허용해야 합니다.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">전자 지갑이 선택된 패스워드로 암호화되고 기기의 저장 장치에 백업됩니다.</string>
     <string name="backup_wallet_dialog_warning_encrypted">전자 지갑이 송금 PIN으로 보호됩니다. 백업 패스워드와 함께 PIN 번호를 꼭 기억하세요.</string>
     <string name="export_keys_dialog_button_export">백업</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>전자 지갑이 다음 위치에 백업되었습니다:<tt>%s</tt></p><p>당신의 기기에 이동식 SD 카드가 있다면, 당신의 백업은 해당 카드에 <i>저장되어야 합니다</i>. 백업 후 카드를 제거하여 안전한 장소에 보관하세요. 만일 SD 카드가 이동형이 <i>아니라면</i>, 당신의 기기보다는 다른 장소에 백업을 수행하는 것이 좋습니다.</p><p><b>만일 유일한 백업 가능 장소가 이 기기에 있다면, 두 가지 모두 분실할 수 있는 리스크가 있음을 숙지하십시오!</b></p><p>어떤 경우라도 당신의 백업 비밀번호를 기억하십시오. 지금 당신의 지갑을 저장하시겠습니까?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>당신의 지갑은 <tt>%s</tt>에 백업되었습니다.</p> <p><b>만일 백업이 당신의 기기에만 존재한다면, 이를 모두 잃을 수 있는 리스크가 발생할 수 있습니다!</b></p><p>어떤 경우에도 백업 비밀 번호를 기억하여야 합니다.</p>]]></string>
     <string name="export_keys_dialog_failure">전자 지갑 백업에 실패했습니다:\n%s</string>
     <string name="export_keys_dialog_button_archive">저장하기</string>
     <string name="export_keys_dialog_mail_subject">대시 지갑 백업</string>
@@ -382,4 +384,4 @@
     <string name="select_a_service">서비스를 선택하십시오</string>
     <string name="activity_buy_and_sell_dash_filter">필터</string>
     <string name="clear_filter">필터 초기화</string>
-</resources>
+    </resources>

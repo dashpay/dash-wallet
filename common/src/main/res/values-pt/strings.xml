@@ -4,7 +4,9 @@
     <string name="loading">Carregando…</string>
     <string name="loading_error">Ocorreu um erro. Por favor, tente novamente mais tarde.</string>
     <string name="dash_available">%1$s disponível</string>
-
+    <string name="network_unavailable_title">A rede não está disponível</string>
+    <string name="network_unavailable_check_connection">Por favor, verifique sua conexão de rede</string>
+    <string name="network_unavailable_balance_not_accurate">O saldo pode não ser preciso devido à perda de conexão</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra Guernsey</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">PAX</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dólar</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">Dispensar</string>
+    <string name="network_unavailable_return">Voltar para a carteira</string>
+
 </resources>

@@ -204,7 +204,7 @@
     <string name="verify_it_is_important">Ito ay importante</string>
     <string name="verify_it_is_important_subtitle">Ngayon ay ipapakita namin sa iyo ang sekretong susi ng iyong wallet.</string>
     <string name="verify_info_text_1">Ang recovery phrase na ito ay kinakailangan upang ma-access ang pondo sa wallet.</string>
-    <string name="verify_info_text_2">Hindi namim itatabi ang iyong recovery phrase</string>
+    <string name="verify_info_text_2">HINDI namim itatabi ang iyong recovery phrase.</string>
     <string name="verify_info_text_3">Kakailanganin mo ang recovery phrase para mabuksan ang iyong pondo kung sakaling mawala ang device, masira o kaya hindi sinasadyang ma-uninstall mo sa deviceang Dash Wallet.</string>
     <string name="verify_skip">Laktawan</string>
     <string name="verify_secure_now_btn">Protektahan ngayon</string>
@@ -214,6 +214,15 @@
     <string name="verify_seed_buttons_tip">Paki-pindot ang mga salita mula sa iyong recovery phrase sa tamang pagkakasunod-sunod.</string>
     <string name="verify_seed_success_title">Matagumpay na na-beripika</string>
     <string name="verify_seed_success_message">Ang iyong pitaka ay ligtas na. Maari mong magamit ang recovery phrase kahit kailan upanh marekober ang account sa ibang device.</string>
+    <string name="verify_no_screenshot_title">Huwag kumuha ng screenshot</string>
+    <string name="verify_no_screenshot_message">Sa halip, isulat ang recovery phrase sa isang ligtas na lugar.</string>
+    <string name="verify_why_no_screenshot">Bakit hindi ako dapat kumuha ng screenshot?</string>
+    <string name="verify_warning_title">Babala</string>
+    <string name="verify_warning_message">Ang recovery phrase na ito ay kinakailangan upang ma-access ang pondo sa wallet.</string>
+    <string name="verify_warning_screenshots_title">HUWAG kumuha ng screenshot</string>
+    <string name="verify_warning_screenshots_message">Ang mga screenshot ay nakikita sa ibang apps o device.</string>
+    <string name="verify_warning_do_not_show">HUWAG hayaan ang sinuman na makita ang iyong recovery phrase.</string>
+    <string name="verify_warning_do_not_type">Huwag i-type ang iyong recovery phrase sa mga tagapamahala ng password o saanman.</string>
     <string name="view_seed_done">Tapos</string>
     <string name="view_seed_title">Recovery phrase</string>
     <string name="transaction_result_view_on_explorer">Tingnan sa block explorer</string>

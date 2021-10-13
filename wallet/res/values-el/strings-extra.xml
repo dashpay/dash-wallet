@@ -204,7 +204,7 @@
     <string name="verify_it_is_important">Είναι σημαντικό</string>
     <string name="verify_it_is_important_subtitle">Θα σας αποκαλύψουμε το μυστικό κλειδί του πορτοφολιού σας.</string>
     <string name="verify_info_text_1">Αυτή η φράση ανάκτησης σας δίνει πρόσβασή στα χρήματα αυτού του πορτοφολιού.</string>
-    <string name="verify_info_text_2">Δεν αποθηκεύουμε αυτήν την φράση ανάκτησης</string>
+    <string name="verify_info_text_2">ΔΕΝ αποθηκεύουμε αυτή τη φράση ανάκτησης.</string>
     <string name="verify_info_text_3">Θα χρειαστείτε αυτή τη φράση ανάκτησης για να αποκτήσετε πρόσβαση στα χρήματά σας εάν αυτή η συσκευή χαθεί, καταστραφεί ή εάν το Πορτοφόλι Dash απεγκατασταθει τυχαία από αυτήν τη συσκευή.</string>
     <string name="verify_skip">Παράλειψη</string>
     <string name="verify_secure_now_btn">Ασφαλίστε τώρα</string>
@@ -214,6 +214,15 @@
     <string name="verify_seed_buttons_tip">Πατήστε στις λέξεις από τη φράση ανάκτησης σας με τη σωστή σειρά</string>
     <string name="verify_seed_success_title">Επιβεβαιώθηκε με επιτυχία</string>
     <string name="verify_seed_success_message">Το πορτοφόλι σας είναι ασφαλές τώρα. Μπορείτε να χρησιμοποιήσετε τη φράση ανάκτησης ανά πάσα στιγμή για να ανακτήσετε το λογαριασμό σας σε άλλη συσκευή.</string>
+    <string name="verify_no_screenshot_title">Μην τραβήξετε στιγμιότυπο οθόνης</string>
+    <string name="verify_no_screenshot_message">Αντ\' αυτού, γράψτε τη φράση ανάκτησης σε ένα ασφαλές μέρος.</string>
+    <string name="verify_why_no_screenshot">Γιατί δεν πρέπει να τραβήξω στιγμιότυπο οθόνης;</string>
+    <string name="verify_warning_title">Προειδοποίηση</string>
+    <string name="verify_warning_message">Αυτή η φράση ανάκτησης είναι η πρόσβασή σας στα χρήματα που βρίσκονται στο πορτοφόλι σας.</string>
+    <string name="verify_warning_screenshots_title">ΜΗΝ τραβάτε στιγμιότυπα οθόνης</string>
+    <string name="verify_warning_screenshots_message">Τα στιγμιότυπα οθόνης είναι ορατά σε άλλες εφαρμογές και συσκευές.</string>
+    <string name="verify_warning_do_not_show">ΜΗΝ αφήνετε κανέναν να δει τη φράση αποκατάστασης.</string>
+    <string name="verify_warning_do_not_type">Ποτέ μην πληκτρολογείτε τη φράση ανάκτησης σε διαχειριστές κωδικών πρόσβασης ή αλλού.</string>
     <string name="view_seed_done">Έγινε</string>
     <string name="view_seed_title">Φράση Ανάκτησης</string>
     <string name="transaction_result_view_on_explorer">Προβολή στον Explorer των Block</string>

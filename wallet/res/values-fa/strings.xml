@@ -2,6 +2,8 @@
 <resources>
 
     <string name="toast_wallet_reset">کیف پول‌تان ریست شد!n\ این کار کمی وقت می‌گیرد.</string>
+    <string name="toast_start_storage_provider_selector_failed">هیچ تامین‌کننده خدمات ذخیره ابری مناسبی نصب نشده است. 
+به چیزی مثل «نکست‌کلاود» یا «گوگل درایو» نیاز دارید. </string>
     <string name="wallet_disclaimer_fragment_remind_safety">مسئولیت هر نوع مخاطره بر عهده خودتان است. برای اطلاعات بیشتر &lt;u&gt; توصیه‌های امنیتی &lt;/u&gt; را بخوانید.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">باید از کیف پول‌تان نسخه پشتیبان تهیه کنید!</string>
     <string name="blockchain_state_progress_hours">%1$s، %2$d ساعت گذشته</string>
@@ -205,6 +207,7 @@
     <string name="import_keys_dialog_button_import">بازگردانی</string>
     <string name="restore_wallet_dialog_success">کیف پول بازگردانی شد</string>
     <string name="restore_wallet_dialog_success_replay">کیف پول‌تان با موفقیت بازگردانی شد. موجودی آن بعدا تعیین می‌شود. این کار زمان‌بر خواهد بود. </string>
+    <string name="restore_wallet_dialog_success_encrypted">هشدار: کیف پول‌تان دارای رمز ویژه خرج کردن است. پیش از دریافت این کیف پول، اطمینان یابید که همچنان این رمز ویژه را به خاطر می‌آورید. </string>
     <string name="import_keys_dialog_failure">کیف پول را نمی‌توان بازگردانی کرد: n\n\%sn\n\آیا مطمئن هستید گذرواژه درست است؟</string>
     <string name="backup_wallet_permission_dialog_title">مجوز نوشتن پیدا نشد!</string>
     <string name="backup_wallet_permission_dialog_message">به منظور گرفتن نسخه پشتیبان از کیف پول‌تان بر روی حافظه خارجی، باید مجوز نوشتن داشته باشید. </string>
@@ -212,7 +215,7 @@
     <string name="backup_wallet_dialog_message">نسخه پشتیبان با گذرواژه انتخابی رمزگذاری شده و بر روی حافظه خارجی نوشته می‌شود.</string>
     <string name="backup_wallet_dialog_warning_encrypted">کیف پول‌تان توسط رمزپرداخت حفاظت می‌شود. اطمینان یابید که علاوه بر گذرواژه نسخه پشتیبان، این رمز را نیز به خاطر داشته باشید!</string>
     <string name="export_keys_dialog_button_export">ایجاد نسخه پشتیبان</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>نسخه پشتیبان تهیه شده از کیف پول‌تان در <tt>%s</tt>ذخیره شد.</p><p>اگر دستگاه‌تان دارای کارت حافظه جداشدنی است، نسخه پشتیبان <i>باید</i>بر روی آن ذخیره شده باشد. کارت حافظه را در آورده و از آن را در جای امنی نگهداری کنید. اگر کارت حافظه دستگاه‌تان جداشدنی <i>نباشد</i>، باید نسخه پشتیبان را در جایی دیگر بر روی دستگاه‌تان ذخیره کنید.</p><p><b>اگر نسخه پشتیبان به صورت مستقیم فقط بر روی دستگاه‌تان ذخیره شود، این خطر وجود دارد که هر دو را در یک زمان از دست بدهید!</b></p><p>در  هر صورت باید گذرواژه نسخه پشتیبان را نیز به خاطر داشته باشید. آیا مایلید کیف‌پول‌تان را اکنون بایگانی کنید؟</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>نسخه پشتیبان از کیف پول‌تان روی <tt>%s</tt></p> قرار دارد. <p><b>اگر کیف پول‌تان فقط روی این دستگاه قرار دارد، با این خطر مواجهید که هر دوی آنها را همزمان از دست بدهید. </b></p><p>در هر صورت، اطمینان یابید که گذرواژه بازیابی را به خاطر خواهید داشت. </p>]]></string>
     <string name="export_keys_dialog_failure">امکان تهیه نسخه پشتیبان از کیف پول‌تان وجود ندارد: n/ %s</string>
     <string name="export_keys_dialog_button_archive">بایگانی</string>
     <string name="export_keys_dialog_mail_subject">نسخه پشتیبان دش والت</string>
@@ -379,5 +382,7 @@
 
 
 
+    <string name="select_a_service">یک خدمت را انتخاب کنید</string>
     <string name="activity_buy_and_sell_dash_filter">فیلتر</string>
+    <string name="clear_filter">حذف فیلتر</string>
     </resources>

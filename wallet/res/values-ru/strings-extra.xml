@@ -210,7 +210,7 @@
     <string name="verify_it_is_important">Это важно</string>
     <string name="verify_it_is_important_subtitle">Сейчас мы покажем секретный ключ к Вашему кошельку.</string>
     <string name="verify_info_text_1">Эта фраза восстановления - Ваш доступ к средствам на этом кошельке.</string>
-    <string name="verify_info_text_2">Мы не храним эту фразу восстановления.</string>
+    <string name="verify_info_text_2">Мы НЕ ХРАНИМ эту фразу восстановления.</string>
     <string name="verify_info_text_3">Вам понадобится эта фраза восстановления для доступа к Вашим средствам, если это устройство будет утеряно, повреждено или приложение Dash Wallet будет случайно удалено.</string>
     <string name="verify_skip">Пропустить</string>
     <string name="verify_secure_now_btn">Сохранить кошелек</string>
@@ -220,6 +220,15 @@
     <string name="verify_seed_buttons_tip">Пожалуйста, нажмите на слова из Вашей фразы восстановления в правильном порядке</string>
     <string name="verify_seed_success_title">Успешно подтверждено</string>
     <string name="verify_seed_success_message">Сейчас Ваш кошелёк защищён. Вы можете использовать фразу восстановления в любое время, чтобы получить доступ к Вашему аккаунту на другом устройстве.</string>
+    <string name="verify_no_screenshot_title">Не делайте скриншот</string>
+    <string name="verify_no_screenshot_message">Пожалуйста, запишите фразу восстановления в надёжном месте.</string>
+    <string name="verify_why_no_screenshot">Почему я не могу сделать скриншот?</string>
+    <string name="verify_warning_title">Предупреждение</string>
+    <string name="verify_warning_message">Эта фраза восстановления - Ваш доступ к средствам на этом кошельке.</string>
+    <string name="verify_warning_screenshots_title">НЕ ДЕЛАЙТЕ скриншоты</string>
+    <string name="verify_warning_screenshots_message">Скриншоты видны другим приложениям и устройствам.</string>
+    <string name="verify_warning_do_not_show">НЕ ПОКАЗЫВАЙТЕ никому вашу фразу восстановления.</string>
+    <string name="verify_warning_do_not_type">НИКОГДА не вводите Вашу фразу восстановления в менеджеры паролей или другие приложения.</string>
     <string name="view_seed_done">Готово</string>
     <string name="view_seed_title">Фраза восстановления</string>
     <string name="transaction_result_view_on_explorer">Посмотреть в Block Explorer</string>

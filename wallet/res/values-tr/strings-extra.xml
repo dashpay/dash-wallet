@@ -204,7 +204,7 @@
     <string name="verify_it_is_important">Bu önemli</string>
     <string name="verify_it_is_important_subtitle">Size cüzdanınızın gizli anahtarını göstermek üzereyiz.</string>
     <string name="verify_info_text_1">Bu kurtarma sözcük grubu cüzdanınızdaki paranıza erişmenizi sağlar.</string>
-    <string name="verify_info_text_2">Kurtarma sözcük grubunuzu saklamıyoruz.</string>
+    <string name="verify_info_text_2">Bu kurtarma sözcük grubunu SAKLAMIYORUZ.</string>
     <string name="verify_info_text_3">Bu cihazın kaybolması / hasar görmesi, Dash cüzdanının bu cihazdan yanlışlıkla silinmesi durumunda paranıza erişmek için bu kurtarma ifadesine ihtiyacınız olacaktır.</string>
     <string name="verify_skip">Atla</string>
     <string name="verify_secure_now_btn">Şimdi Korumaya Al</string>
@@ -214,6 +214,15 @@
     <string name="verify_seed_buttons_tip">Lütfen kurtarma sözcük grubunuzu doğru şekilde sıralayın</string>
     <string name="verify_seed_success_title">Başarıyla Doğrulandı</string>
     <string name="verify_seed_success_message">Cüzdanınız artık güvende. Hesabınızı başka bir cihaza aktarmak için kurtarma sözcük grubunuzu istediğiniz zaman kullanabilirsiniz.</string>
+    <string name="verify_no_screenshot_title">Ekran görüntüsü almayın</string>
+    <string name="verify_no_screenshot_message">Bunun yerine kurtarma sözcük grubunu güvenli bir yere yazın.</string>
+    <string name="verify_why_no_screenshot">Neden ekran görüntüsü almamalıyım?</string>
+    <string name="verify_warning_title">Uyarı</string>
+    <string name="verify_warning_message">Bu kurtarma sözcük grubu, cüzdanınızdaki fonlara erişiminizdir.</string>
+    <string name="verify_warning_screenshots_title">Ekran görüntüleri ALMAYIN</string>
+    <string name="verify_warning_screenshots_message">Ekran görüntüleri başka uygulamalara ve cihazlara açıktır.</string>
+    <string name="verify_warning_do_not_show">Kurtarma sözcük grubunuzu kimsenin görmesine izin VERMEYİN.</string>
+    <string name="verify_warning_do_not_type">Kurtarma sözcük grubunuzu parola yöneticilerine veya başka bir yere asla yazmayın.</string>
     <string name="view_seed_done">Bitti</string>
     <string name="view_seed_title">Kurtarma Sözcük Grubu</string>
     <string name="transaction_result_view_on_explorer">Blok gezgininde görüntüle</string>
