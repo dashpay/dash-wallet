@@ -583,8 +583,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     public void setBlockchainIdentityData(BlockchainIdentityBaseData blockchainIdentityData) {
         this.blockchainIdentityData = blockchainIdentityData;
-        notifyItemChanged(0);
-        //notifyDataSetChanged();
+        notifyDataSetChanged();
     }
 
     private boolean shouldShowHelloCard() {
