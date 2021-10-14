@@ -4,7 +4,9 @@
     <string name="loading">Načítava sa...</string>
     <string name="loading_error">Nastala chyba. Skúste neskôr prosím.</string>
     <string name="dash_available">Dostupných %1$s</string>
-
+    <string name="network_unavailable_title">Sieť nedostupná</string>
+    <string name="network_unavailable_check_connection">Skontrolujte svoje sieťové pripojenie</string>
+    <string name="network_unavailable_balance_not_accurate">Zostatok nemusí byť presný kvôli stratenému spojeniu</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyova libra</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">Paxos Standard</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini dolár</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">Zrušiť</string>
+    <string name="network_unavailable_return">Návrat do Peňaženky</string>
+
 </resources>

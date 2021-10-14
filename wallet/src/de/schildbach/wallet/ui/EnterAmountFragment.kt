@@ -41,13 +41,11 @@ import de.schildbach.wallet.rates.ExchangeRate
 import java.util.*
 import android.content.Intent
 import android.app.Activity
-import android.os.Build
-import android.os.LocaleList
-import android.util.Log
-import de.schildbach.wallet.WalletApplication
-import org.dash.wallet.common.Configuration
 import android.content.Context
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.util.FiatAmountFormat
 
 
 class EnterAmountFragment : Fragment() {
@@ -69,21 +67,25 @@ class EnterAmountFragment : Fragment() {
     }
 
     private val dashFormat = MonetaryFormat().noCode().minDecimals(6).optionalDecimals()
-    private val fiatFormat = Constants.LOCAL_FORMAT
+    private val fiatFormat = Constants.SEND_PAYMENT_LOCAL_FORMAT
     private lateinit var viewModel: EnterAmountViewModel
     private lateinit var sharedViewModel: EnterAmountSharedViewModel
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
-
+    private lateinit var fiatValue: CharSequence
+    private var fiatAmountFormat: FiatAmountFormat ? = null
     var maxAmountSelected: Boolean = false
-    private lateinit var currentLocale: Locale
-    private lateinit var fiatExchangeRate: org.bitcoinj.utils.ExchangeRate
     private var shouldNotConvertFiatToDash: Boolean = false
+    private lateinit var configuration: Configuration
+    private var isInit: Boolean = true
+
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.enter_amount_fragment, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        configuration = WalletApplication.getInstance().configuration
         convert_direction.setOnClickListener {
             viewModel.setDashToFiatDirection(!viewModel.dashToFiatDirectionValue)
             if (viewModel.dashToFiatDirectionValue) {
@@ -94,7 +96,6 @@ class EnterAmountFragment : Fragment() {
         }
         confirm_button.setOnClickListener {
             sharedViewModel.buttonClickEvent.call(sharedViewModel.dashAmount)
-
             when (confirm_button.text.toString().toLowerCase(Locale.getDefault())) {
                 "send" -> analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND, bundleOf())
                 "receive" -> analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_RECEIVE, bundleOf())
@@ -121,9 +122,10 @@ class EnterAmountFragment : Fragment() {
                     // avoid entering leading zeros without decimal separator
                     return
                 }
-                val isFraction = value.indexOf(DECIMAL_SEPARATOR) > -1
+                val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
+                val isFraction = formattedValue.indexOf(DECIMAL_SEPARATOR) > -1
                 if (isFraction) {
-                    val lengthOfDecimalPart = value.length - value.indexOf(DECIMAL_SEPARATOR)
+                    val lengthOfDecimalPart = formattedValue.length - formattedValue.indexOf(DECIMAL_SEPARATOR)
                     val decimalsThreshold = if (viewModel.dashToFiatDirectionValue) 8 else 2
                     if (lengthOfDecimalPart > decimalsThreshold) {
                         return
@@ -165,7 +167,9 @@ class EnterAmountFragment : Fragment() {
             private fun appendIfValidAfter(number: String) {
                 try {
                     value.append(number)
-                    Coin.parseCoin(value.toString())
+                    val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
+
+                    Coin.parseCoin(formattedValue)
                 } catch (e: Exception) {
                     value.deleteCharAt(value.length - 1)
                 }
@@ -186,11 +190,11 @@ class EnterAmountFragment : Fragment() {
 
     fun applyNewValue(value: String) {
         input_amount.text = value
-
+        val formattedValue = GenericUtils.formatFiatWithoutComma(value)
         if (viewModel.dashToFiatDirectionValue) {
 
             val dashAmount = try {
-                Coin.parseCoin(value)
+                Coin.parseCoin(formattedValue)
             } catch (x: Exception) {
                 Coin.ZERO
             }
@@ -202,7 +206,7 @@ class EnterAmountFragment : Fragment() {
                     ?: viewModel.fiatAmountLiveData.value!!.currencyCode
 
             val fiatAmount = try {
-                Fiat.parseFiat(currencyCode, value)
+                Fiat.parseFiat(currencyCode, formattedValue)
             } catch (x: Exception) {
                 Fiat.valueOf(currencyCode, 0)
             }
@@ -219,19 +223,15 @@ class EnterAmountFragment : Fragment() {
 
         calc_pane.visibility = View.GONE
         convert_direction.visibility = View.GONE
-
         initViewModels()
-
         if (arguments != null) {
-            val initialAmount = arguments!!.getSerializable(ARGUMENT_INITIAL_AMOUNT) as Monetary
-            viewModel.setDashToFiatDirection(initialAmount is Coin)
+            val initialAmount = requireArguments().getSerializable(ARGUMENT_INITIAL_AMOUNT) as Monetary
             if (viewModel.dashToFiatDirectionValue) {
-                viewModel.setDashAmount(initialAmount as Coin)
+                viewModel.setDashAmount(Coin.valueOf(initialAmount.value))
             } else {
-                viewModel.setFiatAmount(initialAmount as Fiat)
+                viewModel.setFiatAmount(Fiat.valueOf(configuration.exchangeCurrencyCode, initialAmount.value))
             }
         } else {
-            viewModel.setDashToFiatDirection(true)
             viewModel.setDashAmount(Coin.ZERO)
         }
     }
@@ -241,19 +241,53 @@ class EnterAmountFragment : Fragment() {
         sharedViewModel = activity?.run {
             ViewModelProviders.of(this)[EnterAmountSharedViewModel::class.java]
         } ?: throw Exception("Invalid Activity")
+        if (configuration.isDashToFiatDirection) {
+            viewModel.setDashToFiatDirection(configuration.isDashToFiatDirection)
+        }
+        sharedViewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
+            it?.also {
+                if (!configuration.isDashToFiatDirection && isInit){ //this is done only ONCE we enter this UI, to make sure we get the dashToFiat state after getting the current exchange rate
+                    viewModel.setDashToFiatDirection(configuration.isDashToFiatDirection)
+                    isInit = false
+                }
+                calc_pane.visibility = View.VISIBLE
+                convert_direction.visibility = View.VISIBLE
+                val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat)
+                if(shouldNotConvertFiatToDash && !viewModel.dashToFiatDirectionValue){
+                    val currentDashAmount = viewModel.dashAmountLiveData.value!!
+                    val newFiatAmount = rate.coinToFiat(currentDashAmount)
+                    viewModel.setFiatAmount(newFiatAmount)
+                    fiatValue = if (viewModel.fiatAmountLiveData.value!!.isZero) "" else fiatFormat.format(viewModel.fiatAmountLiveData.value)
+                    if (fiatValue.isNotEmpty()) {
+                        fiatAmountFormat = GenericUtils.formatFiatFromLocale(fiatValue)
+                    }
+                    input_amount.text = if (fiatValue.isEmpty()) "" else fiatAmountFormat?.formattedAmount?.let { amount -> if(amount.isBlank()) "" else amount }
+                } else {
+                    viewModel.calculateDependent(rate)
+                }
+            }
+        })
 
         viewModel.dashToFiatDirectionLiveData.observe(viewLifecycleOwner, Observer {
             if (it) {
                 val dashAmount = viewModel.dashAmountLiveData.value!!
                 input_amount.text = if (dashAmount.isZero) "" else dashFormat.format(viewModel.dashAmountLiveData.value)
             } else {
-                val currencyCode = sharedViewModel.exchangeRateData.value?.currencyCode ?: viewModel.fiatAmountLiveData.value?.currencyCode
-                viewModel.setFiatAmount(Fiat.parseFiat(currencyCode, calc_amount.text.toString()))
-                input_amount.text = if (viewModel.fiatAmountLiveData.value!!.isZero) "" else fiatFormat.format(viewModel.fiatAmountLiveData.value)
+                val sharedCode = sharedViewModel.exchangeRateData.value?.currencyCode
+                val fiatCode = viewModel.fiatAmountLiveData.value?.currencyCode
+                val currencyCode = sharedCode ?: fiatCode
+                val parseFiatWithoutComma = GenericUtils.formatFiatWithoutComma(calc_amount.text.toString())
+                viewModel.setFiatAmount(Fiat.parseFiat(currencyCode, parseFiatWithoutComma))
+                fiatValue = if (viewModel.fiatAmountLiveData.value!!.isZero) "" else fiatFormat.format(viewModel.fiatAmountLiveData.value)
+                if (fiatValue.isNotEmpty()) {
+                    fiatAmountFormat = GenericUtils.formatFiatFromLocale(fiatValue)
+                }
+                input_amount.text = if (fiatValue.isEmpty()) "" else fiatAmountFormat?.formattedAmount?.let { amount -> if (amount.isBlank()) "" else amount }
             }
             val utilsExRate = sharedViewModel.exchangeRate
             viewModel.calculateDependent(utilsExRate)
             setupSymbolsVisibility()
+            configuration.isDashToFiatDirection = it
         })
         viewModel.dashAmountLiveData.observe(viewLifecycleOwner, Observer {
             if (!viewModel.dashToFiatDirectionValue) {
@@ -263,7 +297,9 @@ class EnterAmountFragment : Fragment() {
         })
         viewModel.fiatAmountLiveData.observe(viewLifecycleOwner, Observer {
             if (viewModel.dashToFiatDirectionValue) {
-                calc_amount.text = fiatFormat.format(it)
+                fiatValue = fiatFormat.format(it)
+                fiatAmountFormat = GenericUtils.formatFiatFromLocale(fiatValue)
+                calc_amount.text = fiatAmountFormat?.formattedAmount?.let { amount -> if(amount.isBlank()) "" else amount }
             }
             applyCurrencySymbol(GenericUtils.setCurrentCurrencySymbolWithCode(it.currencyCode))
         })
@@ -297,21 +333,6 @@ class EnterAmountFragment : Fragment() {
             }
             message.visibility = if (it > 0) View.VISIBLE else View.INVISIBLE
         })
-        sharedViewModel.exchangeRateData.observe(viewLifecycleOwner, Observer {
-            it?.also {
-                calc_pane.visibility = View.VISIBLE
-                convert_direction.visibility = View.VISIBLE
-                val rate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat)
-                if(shouldNotConvertFiatToDash && !viewModel.dashToFiatDirectionValue){
-                    val currentDashAmount = viewModel.dashAmountLiveData.value!!
-                    val newFiatAmount = rate.coinToFiat(currentDashAmount)
-                    viewModel.setFiatAmount(newFiatAmount)
-                    input_amount.text = if (viewModel.fiatAmountLiveData.value!!.isZero) "" else fiatFormat.format(viewModel.fiatAmountLiveData.value)
-                } else {
-                    viewModel.calculateDependent(rate)
-                }
-            }
-        })
         sharedViewModel.changeDashAmountEvent.observe(viewLifecycleOwner, Observer {
             applyNewValue(it.toPlainString())
         })
@@ -326,15 +347,32 @@ class EnterAmountFragment : Fragment() {
     }
 
     private fun applyCurrencySymbol(symbol: String) {
-        input_symbol.text = symbol
-        calc_amount_symbol.text = symbol
+        left_input_symbol.text = symbol
+        right_input_symbol.text = symbol
+        right_calc_amount_symbol.text = symbol
+        left_calc_amount_symbol.text = symbol
         setupSymbolsVisibility()
     }
 
     private fun setupSymbolsVisibility() {
-        input_symbol.visibility = if (viewModel.dashToFiatDirectionValue) View.GONE else View.VISIBLE
+        val amountPositionState = fiatAmountFormat?.isAmountToLeftPosition
+        if (viewModel.dashToFiatDirectionValue) {
+            left_input_symbol.visibility = View.GONE
+            right_input_symbol.visibility = View.GONE
+            if(amountPositionState != null) {
+                left_calc_amount_symbol.visibility = if (amountPositionState) View.GONE else View.VISIBLE
+                right_calc_amount_symbol.visibility = if (amountPositionState) View.VISIBLE else View.GONE
+            }
+        } else {
+            left_calc_amount_symbol.visibility = View.GONE
+            right_calc_amount_symbol.visibility = View.GONE
+            if(amountPositionState != null) {
+                left_input_symbol.visibility = if (amountPositionState) View.GONE else View.VISIBLE
+                right_input_symbol.visibility = if (amountPositionState) View.VISIBLE else View.GONE
+            }
+        }
+
         input_symbol_dash.visibility = if (viewModel.dashToFiatDirectionValue) View.VISIBLE else View.GONE
-        calc_amount_symbol.visibility = if (viewModel.dashToFiatDirectionValue) View.VISIBLE else View.GONE
         calc_amount_symbol_dash.visibility = if (viewModel.dashToFiatDirectionValue) View.GONE else View.VISIBLE
         input_select_currency_toggle.visibility = if (viewModel.dashToFiatDirectionValue) View.GONE else View.VISIBLE
         calc_select_currency_toggle.visibility = if (viewModel.dashToFiatDirectionValue) View.VISIBLE else View.GONE

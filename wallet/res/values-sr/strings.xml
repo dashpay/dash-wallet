@@ -179,7 +179,6 @@
     <string name="backup_wallet_dialog_message">Vaša rezervna kopija će biti šifrovana sa odabranom šifrom i upisana na eksterno skladište.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Vaš novčanik je zaštićen PIN-om za potrošnju. Postarajte se da zapamtite PIN kao i šifru za rezervnu kopiju.</string>
     <string name="export_keys_dialog_button_export">Rezervna kopija</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Rezervna kopija vašeg novčanika je napravljena na <tt>%s</tt></p><p>Ako vaš uređaj ima SD karticu koja se može izvaditi, vaša rezervna kopija <i>bi trebala</i>da bude na toj kartici. Izvadite je i čuvajte je na sigurnom. Ako kartica <i>ne može</i> da se izvadi, treba da arhivirate rezervnu kopiju na nekom drugom mestu a ne na vašem uređaju.</p><p><b>Ako je vaš uređaj jedino mesto na kom čuvate rezervnu kopiju, rizikujete da izgubite i jedno i drugo u isto vreme!</b></p><p>U svakom slučaju se postarajte da zapamtite šifru za rezervnu kopiju. Da li želite da arhivirate vaš novčanik sad?</p>]]></string>
     <string name="export_keys_dialog_failure">Nije uspelo pravljanje rezervne kopije vašeg novčanika:\n%s</string>
     <string name="export_keys_dialog_button_archive">Arhiva</string>
     <string name="export_keys_dialog_mail_subject">Dash Wallet rezervna kopija</string>

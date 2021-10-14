@@ -204,7 +204,7 @@
     <string name="verify_it_is_important">È importante</string>
     <string name="verify_it_is_important_subtitle">Stiamo per mostrarti la chiave segreta del tuo portafoglio.</string>
     <string name="verify_info_text_1">Questa frase di recupero è il tuo accesso ai fondi in questo portafoglio.</string>
-    <string name="verify_info_text_2">Noi non memorizziamo la frase di recupero.</string>
+    <string name="verify_info_text_2">NON memorizziamo la frase di ripristino.</string>
     <string name="verify_info_text_3">Questa frase di recupero sarà necessaria per accedere ai tuoi fondi in caso di smarrimento, danneggiamento del dispositivo o in caso di disinstallazione accidentale del Wallet Dash da questo dispositivo.</string>
     <string name="verify_skip">Salta</string>
     <string name="verify_secure_now_btn">Rendilo sicuro ora</string>
@@ -214,6 +214,15 @@
     <string name="verify_seed_buttons_tip">Si prega di toccare le parole dalla frase di recupero nel giusto ordine</string>
     <string name="verify_seed_success_title">Verifica effettuata con Successo</string>
     <string name="verify_seed_success_message">Il tuo Wallet ora è protetto. Puoi utilizzare la frase di recupero in qualsiasi momento per ripristinare il tuo account su un altro dispositivo.</string>
+    <string name="verify_no_screenshot_title">Non scattare screenshot</string>
+    <string name="verify_no_screenshot_message">Scrivi la frase di recupero in un luogo sicuro.</string>
+    <string name="verify_why_no_screenshot">Perché non devo scattare screenshot?</string>
+    <string name="verify_warning_title">Attenzione</string>
+    <string name="verify_warning_message">Questa frase di recupero è il tuo accesso ai fondi nel tuo portafoglio.</string>
+    <string name="verify_warning_screenshots_title">Non Eseguire il cattura schermo</string>
+    <string name="verify_warning_screenshots_message">Gli screenshots sono immagini visibili dalle altre applicazioni</string>
+    <string name="verify_warning_do_not_show">Non dare Mai a nessuno la tua frase di recupero</string>
+    <string name="verify_warning_do_not_type">Non digitare mai la frase di ripristino nei gestori di password o altrove.</string>
     <string name="view_seed_done">Fatto</string>
     <string name="view_seed_title">Frase di recupero</string>
     <string name="transaction_result_view_on_explorer">Visualizza in Block Explorer</string>

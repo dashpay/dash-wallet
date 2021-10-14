@@ -4,7 +4,9 @@
     <string name="loading">Yükleniyor...</string>
     <string name="loading_error">Bir hata oluştu. Lütfen tekrar deneyin.</string>
     <string name="dash_available">%1$s mevcut</string>
-
+    <string name="network_unavailable_title">Ağ Kullanılamıyor</string>
+    <string name="network_unavailable_check_connection">Lütfen ağ bağlantınızı kontrol edin</string>
+    <string name="network_unavailable_balance_not_accurate">Bağlantının kesilmesi nedeniyle bakiye doğru olmayabilir</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">Paxos Standardı</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Doları</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">Son Ver</string>
+    <string name="network_unavailable_return">Cüzdan\'a Dön</string>
+
 </resources>

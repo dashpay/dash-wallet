@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Votre portefeuille a été réinitialisé !\nSa récupération va prendre un certain temps.</string>
+    <string name="toast_start_storage_provider_selector_failed">Aucun fournisseur de stockage en ligne compatible n\'est installé.\nVous avez besoin de quelque chose tel que \"Nextcloud\" ou \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">L\'utilisation est à vos risques et périls. Veuillez lire les &lt;u&gt;notes de sécurité&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Vous devez sauvegarder votre portefeuille  !</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d heures en retard</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Restaurer</string>
     <string name="restore_wallet_dialog_success">Le portefeuille a été restauré.</string>
     <string name="restore_wallet_dialog_success_replay">Votre portefeuille a été restauré avec succès. Son solde va maintenant être calculé. Cela prendra un certain temps.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Attention : les dépenses depuis votre portefeuille sont protégées par un code PIN. Assurez-vous de vous souvenir de ce code PIN avant de recevoir dans ce portefeuille.</string>
     <string name="import_keys_dialog_failure">Impossible de restaurer le portefeuille :\n\n%s\n\nMot de passe erroné ?</string>
     <string name="backup_wallet_permission_dialog_title">Autorisation d\'écriture manquante</string>
     <string name="backup_wallet_permission_dialog_message">Pour sauvegarder votre portefeuille sur votre unité extérieure de stockage, vous devez accorder les autorisations d\'écriture.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Votre sauvegarde sera chiffrée avec le mot de passe choisi et enregistrée sur le stockage externe.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Votre portefeuille est protégé par un code PIN de paiement. Assurez-vous de retenir le code PIN en plus du mot de passe de sauvegarde !</string>
     <string name="export_keys_dialog_button_export">Sauvegarder</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Votre portefeuille a été sauvegardé vers <tt>%s</tt>.</p><p>Si votre appareil a une carte SD amovible, votre sauvegarde <i>devrait</i> être sur cette carte. Enlevez-la et conservez-la dans un endroit sûr. Si la carte n\'est <i>pas</i> amovible, vous devez archiver votre sauvegarde dans un endroit autre que votre appareil.</p><p><b>Si votre sauvegarde existe seulement sur votre appareil, vous courez le risque de perdre les deux en même temps !</b></p><p>Dans tous les cas, assurez-vous de vous souvenir du mot de passe de votre sauvegarde. Voulez-vous archiver votre portefeuille maintenant ?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Votre portefeuille a été sauvegardé sur <tt>%s</tt></p><p><b>Si votre appareil est le seul endroit où est votre sauvegarde, vous courez le risque de perdre les deux en même temps !</b></p><p>Dans tous les cas, assurez-vous de vous souvenir de votre mot de passe de sauvegarde.</p>]]></string>
     <string name="export_keys_dialog_failure">Votre portefeuille n\'a pas pu être sauvegardé :\n%s</string>
     <string name="export_keys_dialog_button_archive">Archiver</string>
     <string name="export_keys_dialog_mail_subject">Sauvegarde du portefeuille Dash</string>
@@ -379,5 +381,9 @@
 
 
 
+    <string name="select_a_service">Choisissez un service</string>
     <string name="activity_buy_and_sell_dash_filter">Filtre</string>
-    </resources>
+    <string name="clear_filter">Effacer le filtre</string>
+    <string name="select_currency">Choisir la monnaie</string>
+
+</resources>

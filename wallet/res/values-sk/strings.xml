@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Peňaženka bola resetovaná.\nObnova chvíľu potrvá.</string>
+    <string name="toast_start_storage_provider_selector_failed">Nie je nainštalovaný žiadny vhodný poskytovateľ cloudového úložiska.\nPotrebujete niečo ako „Nextcloud“ alebo „Disk Google“.</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Použitie na vlastné riziko. Viac informácií v sekcii &lt;u&gt;o bezpečnosti&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Je potrebné zálohovať peňaženku!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d hodín pozadu</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Obnoviť</string>
     <string name="restore_wallet_dialog_success">Peňaženka bol obnovená.</string>
     <string name="restore_wallet_dialog_success_replay">Vaša peňaženka bola úspešne obnovená. Jej bilancia bude následne vypočítaná. Zaberie to nejaký čas.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Upozornenie: Vaša peňaženka je chránená výdavkovým PIN-om. Uistite sa, že si ho stale pamätáte pred prijatím do tejto peňaženky.</string>
     <string name="import_keys_dialog_failure">Peňaženku sa nepodarilo obnoviť:\n\n%s\n\nNesprávne heslo?</string>
     <string name="backup_wallet_permission_dialog_title">Chyba povolenie k ukladaniu dát</string>
     <string name="backup_wallet_permission_dialog_message">Aby ste mohli zálohovať vašu peňaženku na externé úložisko, potrebujete povoliť zapisovanie dát. </string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Vaša záloha bude zašifrovaná zvoleným heslom a uložená na externú pamäť.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Vaša peňaženka je zabezpečená PIN-om. Uistite sa že si pamätáte nie len PIN ale tiež heslo k zálohe! </string>
     <string name="export_keys_dialog_button_export">Zálohovať</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Vaša peňaženka bola zálohovaná do <tt>%s</tt></p><p>Ak má zariadenie vymeniteľnú SD kartu, záloha <i>by mala</i> byť na tejto karte. Vyberte ju a uschovajte na bezpečnom mieste. Ak karta <i>nie je</i> odnímateľná, musíte zálohovať na iné miesto, ako je vaše zariadenie.</p><b>Ak je vaše zariadenie jediné miesto kde existuje záloha, riskujete, že naraz stratíte oboje!</b><p><p> V každom prípade, nezabudnite zapamätajte si svoje záložné heslo. Chcete svoju peňaženku teraz zálohovať?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Vaša peňaženka bola zálohovaná na <tt>%s</tt></p><p><b>Ak je záloha len na vašom zariadení, riskujete stratu oboch súčasne!</b></p><p>V každom prípade si nezabudnite zapamätať záložné heslo.</p>]]></string>
     <string name="export_keys_dialog_failure">Vašu peňaženku sa nepodarilo zálohovať:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archivovať</string>
     <string name="export_keys_dialog_mail_subject">Záloha Dash peňaženky</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">Vyberte službu</string>
     <string name="activity_buy_and_sell_dash_filter">Filter platieb</string>
     <string name="clear_filter">Zrušiť filter</string>
+    <string name="select_currency">Vyberte menu</string>
+
 </resources>
