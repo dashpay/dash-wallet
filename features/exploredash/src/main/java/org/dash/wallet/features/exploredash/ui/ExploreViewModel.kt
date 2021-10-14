@@ -16,6 +16,7 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.util.Log
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -24,11 +25,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
-import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
+import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import javax.inject.Inject
 
 enum class NavigationRequest {
@@ -37,8 +39,9 @@ enum class NavigationRequest {
 
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    private val merchantRepository: MerchantRepository,
-    private val merchantDao: MerchantDao
+    private val exploreRepository: ExploreRepository,
+    private val merchantDao: MerchantDao,
+    private val atmDao: AtmDao
 ) : ViewModel() {
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
@@ -94,12 +97,22 @@ class ExploreViewModel @Inject constructor(
     fun dumbSync() {
         viewModelScope.launch {
             val merchants = try {
-                merchantRepository.get() ?: listOf()
+                exploreRepository.getMerchants() ?: listOf()
             } catch (ex: Exception) {
+                Log.e("EXPLOREDASH", ex.message ?: "null msg")
                 listOf()
             }
 
             merchantDao.save(merchants)
+
+            val atms = try {
+                exploreRepository.getAtms() ?: listOf()
+            } catch (ex: Exception) {
+                Log.e("EXPLOREDASH", ex.message ?: "null msg")
+                listOf()
+            }
+
+            atmDao.save(atms)
         }
     }
 

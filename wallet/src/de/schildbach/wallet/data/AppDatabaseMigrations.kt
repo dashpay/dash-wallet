@@ -30,9 +30,20 @@ class AppDatabaseMigrations {
                         "`phone` TEXT, `website` TEXT, `type` TEXT, `logoLocation` TEXT, " +
                         "`deeplink` TEXT, `paymentMethod` TEXT, PRIMARY KEY(`id`))")
 
+                database.execSQL("CREATE TABLE `atm` (`id` INTEGER NOT NULL, `name` TEXT, " +
+                        "`active` INTEGER DEFAULT 1, `city` TEXT, `image` TEXT, `phone` TEXT, " +
+                        "`postcode` TEXT, `website` TEXT, `type` TEXT, `manufacturer` TEXT, " +
+                        "`latitude` TEXT, `longitude` TEXT, `territory` TEXT, " +
+                        "`address1` TEXT, `displayAddress` TEXT, `logoLocation` TEXT, " +
+                        "PRIMARY KEY(`id`))")
+
                 database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `merchant_fts` " +
                         "USING FTS4(`name`, `address1`, `address2`, `address3`, `address4`, " +
                         "`territory`, content=`merchant`)")
+
+                database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `atm_fts` " +
+                        "USING FTS4(`name`, `manufacturer`, `address1`, `displayAddress`, " +
+                        "`city`, `territory`, content=`merchant`)")
             }
         }
     }

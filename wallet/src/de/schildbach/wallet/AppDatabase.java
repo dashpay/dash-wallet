@@ -5,7 +5,10 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 
+import org.dash.wallet.features.exploredash.data.AtmDao;
 import org.dash.wallet.features.exploredash.data.MerchantDao;
+import org.dash.wallet.features.exploredash.data.model.Atm;
+import org.dash.wallet.features.exploredash.data.model.AtmFTS;
 import org.dash.wallet.features.exploredash.data.model.Merchant;
 import org.dash.wallet.features.exploredash.data.model.MerchantFTS;
 
@@ -23,7 +26,9 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
         ExchangeRate.class,
         BlockchainState.class,
         Merchant.class,
-        MerchantFTS.class
+        MerchantFTS.class,
+        Atm.class,
+        AtmFTS.class
     }, version = 3)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
@@ -33,6 +38,7 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract ExchangeRatesDao exchangeRatesDao();
     public abstract BlockchainStateDao blockchainStateDao();
     public abstract MerchantDao merchantDao();
+    public abstract AtmDao atmDao();
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
@@ -43,5 +49,4 @@ public abstract class AppDatabase extends RoomDatabase {
         }
         return instance;
     }
-
 }

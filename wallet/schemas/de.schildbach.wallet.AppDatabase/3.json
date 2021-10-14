@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "cf1b678b56f81e2c3a066038c22b3020",
+    "identityHash": "888d3d97e8eada512091ce035f956f24",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -285,12 +285,188 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "atm",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`city` TEXT, `image` TEXT, `phone` TEXT, `postcode` TEXT, `website` TEXT, `type` TEXT, `manufacturer` TEXT, `address1` TEXT, `displayAddress` TEXT, `latitude` TEXT, `longitude` TEXT, `territory` TEXT, `logoLocation` TEXT, `id` INTEGER NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "city",
+            "columnName": "city",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "image",
+            "columnName": "image",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "phone",
+            "columnName": "phone",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "postcode",
+            "columnName": "postcode",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "website",
+            "columnName": "website",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "manufacturer",
+            "columnName": "manufacturer",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address1",
+            "columnName": "address1",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "displayAddress",
+            "columnName": "displayAddress",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "territory",
+            "columnName": "territory",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "logoLocation",
+            "columnName": "logoLocation",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "active",
+            "columnName": "active",
+            "affinity": "INTEGER",
+            "notNull": false,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "id"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "atm",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_BEFORE_UPDATE BEFORE UPDATE ON `atm` BEGIN DELETE FROM `atm_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_BEFORE_DELETE BEFORE DELETE ON `atm` BEGIN DELETE FROM `atm_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_AFTER_UPDATE AFTER UPDATE ON `atm` BEGIN INSERT INTO `atm_fts`(`docid`, `name`, `manufacturer`, `address1`, `displayAddress`, `city`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`manufacturer`, NEW.`address1`, NEW.`displayAddress`, NEW.`city`, NEW.`territory`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_AFTER_INSERT AFTER INSERT ON `atm` BEGIN INSERT INTO `atm_fts`(`docid`, `name`, `manufacturer`, `address1`, `displayAddress`, `city`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`manufacturer`, NEW.`address1`, NEW.`displayAddress`, NEW.`city`, NEW.`territory`); END"
+        ],
+        "tableName": "atm_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, `manufacturer` TEXT NOT NULL, `address1` TEXT NOT NULL, `displayAddress` TEXT NOT NULL, `city` TEXT NOT NULL, `territory` TEXT NOT NULL, content=`atm`)",
+        "fields": [
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "manufacturer",
+            "columnName": "manufacturer",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address1",
+            "columnName": "address1",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayAddress",
+            "columnName": "displayAddress",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "city",
+            "columnName": "city",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "territory",
+            "columnName": "territory",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cf1b678b56f81e2c3a066038c22b3020')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '888d3d97e8eada512091ce035f956f24')"
     ]
   }
 }
