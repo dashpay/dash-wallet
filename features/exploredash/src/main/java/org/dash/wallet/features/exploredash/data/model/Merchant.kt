@@ -17,7 +17,6 @@
 package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.Entity
-import androidx.room.Ignore
 import com.google.firebase.database.PropertyName
 
 object PaymentMethod {
@@ -50,6 +49,7 @@ data class Merchant(
     var longitude: Double? = 0.0,
     var territory: String? = "",
     var website: String? = "",
+    var deeplink: String? = "",
     var phone: String? = "",
     var type: String? = "",
 

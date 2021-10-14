@@ -95,7 +95,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
-                Log.i("MERCHANTS", "info menu click")
+                Log.i("EXPLOREDASH", "info menu click")
             }
             true
         }
@@ -162,6 +162,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             if (viewModel.selectedMerchant.value == null && it == ExploreViewModel.FilterMode.Online) {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
+                bottomSheetWasExpanded = true
                 binding.appbarDivider.alpha = 1f
                 binding.dragIndicator.alpha = 0f
             }
@@ -303,7 +304,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             merchantAddress.isVisible = !isOnline
 
             if (isOnline) {
+                payBtn.isVisible = !merchant.deeplink.isNullOrBlank()
                 payBtn.text = getText(R.string.explore_buy_gift_card)
+                payBtn.setOnClickListener { openDeeplink(merchant.deeplink!!) }
+
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
                     matchConstraintPercentHeight = 1f
                 }
@@ -396,6 +400,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun openWebsite(website: String) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(website))
+        startActivity(intent, null)
+    }
+
+    private fun openDeeplink(link: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
         startActivity(intent, null)
     }
 

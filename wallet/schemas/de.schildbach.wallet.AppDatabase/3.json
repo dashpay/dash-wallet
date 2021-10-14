@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "eaf6d08d7a5dc0fde4dee6b595a26818",
+    "identityHash": "cf1b678b56f81e2c3a066038c22b3020",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -94,7 +94,7 @@
       },
       {
         "tableName": "merchant",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `territory` TEXT, `website` TEXT, `phone` TEXT, `type` TEXT, `logoLocation` TEXT, `paymentMethod` TEXT, `id` INTEGER NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `territory` TEXT, `website` TEXT, `deeplink` TEXT, `phone` TEXT, `type` TEXT, `logoLocation` TEXT, `paymentMethod` TEXT, `id` INTEGER NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "plusCode",
@@ -159,6 +159,12 @@
           {
             "fieldPath": "website",
             "columnName": "website",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "deeplink",
+            "columnName": "deeplink",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -284,7 +290,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'eaf6d08d7a5dc0fde4dee6b595a26818')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cf1b678b56f81e2c3a066038c22b3020')"
     ]
   }
 }
