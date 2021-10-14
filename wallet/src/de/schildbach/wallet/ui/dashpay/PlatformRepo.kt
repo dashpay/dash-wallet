@@ -761,10 +761,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
-        if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE_AND_DISMISS) {
-            blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.DONE
-            blockchainIdentityDataDaoAsync.insert(blockchainIdentityData)
-        }
         val blockchainIdentity = if (creditFundingTransaction != null) {
             BlockchainIdentity(platform, creditFundingTransaction, wallet, blockchainIdentityData.identity)
         } else {
