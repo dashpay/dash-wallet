@@ -29,6 +29,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -277,7 +278,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
         if (viewType == VIEW_TYPE_PROCESSING_IDENTITY) {
             return new ProcessingIdentityViewHolder(inflater.inflate(R.layout.identity_creation_state, parent, false));
         } else if (viewType == VIEW_TYPE_TRANSACTION) {
@@ -292,7 +293,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     @Override
-    public void onBindViewHolder(final RecyclerView.ViewHolder holder, final int position) {
+    public void onBindViewHolder(@NonNull final RecyclerView.ViewHolder holder, final int position) {
         if (holder instanceof TransactionViewHolder) {
             final TransactionViewHolder transactionHolder = (TransactionViewHolder) holder;
 
@@ -340,7 +341,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                         //hide "Hello Card" after first click
                         if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
                             onClickListener.onUsernameCreatedClicked();
-                            notifyItemRemoved(0);
+                            notifyDataSetChanged();
                         }
                     }
                 }
@@ -350,7 +351,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                 if (onClickListener != null) {
                     onClickListener.onJoinDashPayClicked();
                     preferences.edit().putBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, true).apply();
-                    notifyItemRemoved(0);
+                    notifyDataSetChanged();
                 }
             });
         } else if (holder instanceof TransactionGroupHeaderViewHolder) {
@@ -581,14 +582,15 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         return blockchainIdentityData;
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setBlockchainIdentityData(BlockchainIdentityBaseData blockchainIdentityData) {
         this.blockchainIdentityData = blockchainIdentityData;
         notifyDataSetChanged();
     }
 
     private boolean shouldShowHelloCard() {
-        return blockchainIdentityData != null && !blockchainIdentityData.getCreationInProgress() &&
-                blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS;
+        return blockchainIdentityData != null && (blockchainIdentityData.getCreationInProgress() ||
+                blockchainIdentityData.getCreationComplete());
     }
 
     private boolean shouldShowJoinDashPay() {
@@ -609,6 +611,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         filter();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private void filter() {
         filteredTransactions.clear();
         transactionsByDate.clear();
