@@ -448,6 +448,7 @@ open class LockScreenActivity : SecureActivity() {
                 log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
                 if (!canceled) {
                     if (fingerprintHelper!!.hasFingerprintKeyChanged()) {
+                        fingerprintHelper!!.resetFingerprintKeyChanged()
                         showFingerprintKeyChangedDialog()
                         action_login_with_fingerprint.isEnabled = false
                     } else {
