@@ -28,7 +28,7 @@ import kotlinx.android.synthetic.main.verify_seed_write_down.*
 /**
  * @author Samuel Barbosa
  */
-class VerifySeedWriteDownFragment private constructor() : VerifySeedBaseFragment() {
+class VerifySeedWriteDownFragment : VerifySeedBaseFragment() {
 
     private val recoverySeedTextView by lazy { recovery_seed }
     private val confirmButton by lazy { confirm_written_down_btn }
