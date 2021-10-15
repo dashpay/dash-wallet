@@ -590,7 +590,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
     private boolean shouldShowHelloCard() {
         return blockchainIdentityData != null && (blockchainIdentityData.getCreationInProgress() ||
-                blockchainIdentityData.getCreationComplete()) &&
+                blockchainIdentityData.getCreationComplete() ||
+                blockchainIdentityData.getCreationError()) &&
                 !blockchainIdentityData.getCreationCompleteDismissed();
     }
 
