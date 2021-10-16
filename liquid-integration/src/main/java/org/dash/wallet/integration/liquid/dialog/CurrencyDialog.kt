@@ -22,13 +22,9 @@ import android.content.Context
 import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
-import android.view.LayoutInflater
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
-import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.common.base.Strings
@@ -41,12 +37,12 @@ import kotlin.collections.ArrayList
 abstract class CurrencyDialog(
     val activity: Context,
     private val selectedFilterCurrencyItem: PayloadItem?,
-    val listener: CurrencySelectListener
+    private val titleResId: Int
 ) : BottomSheetDialog(activity) {
 
 
     protected val currencyArrayList: ArrayList<PayloadItem> = arrayListOf()
-    private lateinit var viewBinding: DialogLiquidAllCurrienciesBinding
+    protected lateinit var viewBinding: DialogLiquidAllCurrienciesBinding
     protected lateinit var currencyAdapter: CurrencyAdapter
     protected lateinit var dialog: Dialog
 
@@ -82,12 +78,6 @@ abstract class CurrencyDialog(
             }
         }
 
-        viewBinding.txtClearFilter.setOnClickListener {
-            currencyAdapter.setSelectedPositions(-1)
-            viewBinding.txtClearFilter.isVisible = false
-            listener.onCurrencySelected(true, true, null)
-        }
-
         viewBinding.currencySearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
             }
@@ -101,6 +91,10 @@ abstract class CurrencyDialog(
             override fun afterTextChanged(view: Editable?) {
             }
         })
+        viewBinding.closeButton.setOnClickListener {
+            dialog.dismiss()
+        }
+        viewBinding.selectTitle.text = context.getString(titleResId)
 
         dialog.show()
     }

@@ -97,7 +97,7 @@ class CurrencyAdapter(
         } else {
             holder.imgCheckBox.setImageResource(R.drawable.ic_radio_round_unchecked)
         }
-        holder.txtCurrency.text = filteredList[position].symbol
+        holder.txtCurrency.text = filteredList[position].ccyCode
         holder.txtCurrencyName.text = filteredList[position].label
 
         holder.rlCurrency.setOnClickListener {

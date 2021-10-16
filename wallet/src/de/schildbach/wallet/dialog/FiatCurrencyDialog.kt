@@ -19,6 +19,8 @@ package de.schildbach.wallet.dialog
 
 import android.content.Context
 import android.view.LayoutInflater
+import androidx.core.view.isVisible
+import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
@@ -34,8 +36,17 @@ class FiatCurrencyDialog(
     private val liquidCurrencyArrayList: ArrayList<PayloadItem>,
     private val upholdCurrencyArrayList: ArrayList<UpholdCurrencyResponse>,
     selectedFilterCurrencyItem: PayloadItem?,
-    listener: CurrencySelectListener
-) : CurrencyDialog(activity, selectedFilterCurrencyItem, listener) {
+    val listener: CurrencySelectListener
+) : CurrencyDialog(activity, selectedFilterCurrencyItem, R.string.select_fiat_currency) {
+
+    override fun create() {
+        super.create()
+        viewBinding.txtClearFilter.setOnClickListener {
+            currencyAdapter.setSelectedPositions(-1)
+            viewBinding.txtClearFilter.isVisible = false
+            listener.onCurrencySelected(true, true, null)
+        }
+    }
 
     override fun generateList() {
         for (i in liquidCurrencyArrayList.indices) {
