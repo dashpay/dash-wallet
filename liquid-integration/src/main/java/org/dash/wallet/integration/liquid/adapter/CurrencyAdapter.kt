@@ -15,11 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.adapter
+package org.dash.wallet.integration.liquid.adapter
 
 import android.annotation.SuppressLint
-import android.graphics.drawable.Drawable
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -31,15 +29,9 @@ import coil.ImageLoader
 import coil.api.load
 import coil.decode.SvgDecoder
 import coil.request.LoadRequest
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.Target
+import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
-import de.schildbach.wallet_test.R
 import java.util.*
 
 fun ImageView.loadSvgOrOthers(myUrl: String?) {
@@ -118,7 +110,6 @@ class CurrencyAdapter(
         }
         holder.currencyImage.loadSvgOrOthers(filteredList[position].icon)
     }
-
 
     class CurrencyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val txtCurrency = itemView.findViewById<TextView>(R.id.currency_code)

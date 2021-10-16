@@ -32,7 +32,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.dialog.CurrencyDialog
+import de.schildbach.wallet.dialog.FiatCurrencyDialog
 import de.schildbach.wallet.rates.ExchangeRatesViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
@@ -63,7 +63,6 @@ import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.math.BigDecimal
 
 class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
@@ -511,7 +510,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
      */
 
     private fun showCurrenciesDialog() {
-        CurrencyDialog(
+        FiatCurrencyDialog(
             this,
             liquidCurrencyArrayList,
             upholdCurrencyArrayList,
@@ -527,7 +526,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     selectedFilterCurrencyItems = selectedFilterCurrencyItem
                     setSelectedCurrency()
                 }
-            })
+            }).create()
     }
 
     /**
