@@ -7,6 +7,16 @@
     android:background="@color/dash_white"
     android:orientation="vertical">
 
+    <View
+        android:id="@+id/item_separater"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@color/browser_actions_bg_grey"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <RelativeLayout
         android:id="@+id/rlCurrency"
         android:layout_width="match_parent"
@@ -15,6 +25,7 @@
         android:paddingTop="10dp"
         android:paddingBottom="10dp">
 
+
         <ImageView
             android:id="@+id/currency_image"
             android:layout_width="30dp"
@@ -22,7 +33,7 @@
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
             android:layout_marginStart="15dp"
-            app:srcCompat="@drawable/currency_code_usd" />
+            tools:srcCompat="@drawable/ic_arrows" />
 
         <ImageView
             android:id="@+id/radio_button"

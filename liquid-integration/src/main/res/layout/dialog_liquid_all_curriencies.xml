@@ -3,14 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="300dp"
+    android:layout_height="match_parent"
     android:background="@android:color/transparent"
     android:orientation="vertical"
     tools:ignore="ContentDescription">
 
     <LinearLayout
+        android:id="@+id/view_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:background="@drawable/drawable_white_corner"
         android:orientation="vertical">
 
@@ -42,13 +43,14 @@
             <TextView
                 android:id="@+id/txtClearFilter"
                 style="@style/MontserratRegular"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/clear_filter"
                 android:textColor="@color/colorPrimary"
                 android:textSize="15sp"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/select_title"
                 app:layout_constraintEnd_toStartOf="@id/close_button"
                 android:visibility="gone"
                 tools:visibility="visible"/>
@@ -67,13 +69,8 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <LinearLayout
-            android:id="@+id/search_exchange_rate_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
             <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/search_exchange_rate_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
@@ -89,7 +86,7 @@
                     android:layout_width="0dp"
                     android:layout_height="40dp"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toStartOf="@+id/cancel_button"
+                    app:layout_constraintEnd_toStartOf="@id/search_close_btn"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent"
                     android:layout_gravity="center_vertical"
@@ -108,37 +105,54 @@
                     android:textSize="15sp"
                     app:drawableLeftCompat="@drawable/ic_search_exchange_rates" />
 
+                <ImageView
+                    android:id="@+id/cancel_search"
+                    app:layout_constraintEnd_toEndOf="@+id/currency_search"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginLeft="8dp"
+                    android:layout_marginRight="8dp"
+                    android:background="@drawable/ic_xmark_circle"
+                    android:contentDescription="@string/abc_searchview_description_clear"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+
                 <TextView
-                    android:id="@+id/cancel_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:id="@+id/search_close_btn"
+                    style="@style/MontserratBold"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent"
-                    android:layout_marginStart="20dp"
+
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginStart="12dp"
                     android:layout_marginEnd="12dp"
                     android:text="@string/button_cancel"
+                    android:textAllCaps="false"
+                    android:textColor="@color/dash_blue"
+                    android:textSize="13sp"
                     android:visibility="gone"
                     tools:visibility="visible" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <TextView
-                android:id="@+id/search_close_btn"
-                style="@style/MontserratRegular"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
-                android:text="@string/button_cancel"
-                android:textAllCaps="false"
-                android:textColor="@color/dash_blue"
-                android:visibility="gone"
-                tools:visibility="gone" />
-        </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvCurrency"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" />
+            android:layout_marginTop="10dp"
+            android:scrollbars="vertical"
+            android:clipToPadding="false"
+
+            tools:itemCount="8"
+            tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+            tools:listitem="@layout/item_currency"/>
     </LinearLayout>
 </LinearLayout>

@@ -23,8 +23,11 @@ import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.View
+import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.common.base.Strings
@@ -45,6 +48,7 @@ abstract class CurrencyDialog(
     protected lateinit var viewBinding: DialogLiquidAllCurrienciesBinding
     protected lateinit var currencyAdapter: CurrencyAdapter
     protected lateinit var dialog: Dialog
+    protected var expandedSheet = false
 
     open fun generateList() {
     }
@@ -60,50 +64,109 @@ abstract class CurrencyDialog(
 
         generateList()
 
-        viewBinding.rvCurrency.layoutManager = LinearLayoutManager(activity)
-        currencyAdapter = createAdapter()
-        viewBinding.rvCurrency.adapter = currencyAdapter
+        viewBinding.apply {
+            rvCurrency.layoutManager = LinearLayoutManager(activity)
+            currencyAdapter = createAdapter()
+            rvCurrency.adapter = currencyAdapter
 
-        if (selectedFilterCurrencyItem != null) {
-            for (i in currencyArrayList.indices) {
-                if ((selectedFilterCurrencyItem.symbol.equals(
-                        currencyArrayList[i].symbol,
-                        ignoreCase = true
-                    ))
-                ) {
-                    currencyAdapter.setSelectedPositions(i)
-                    viewBinding.txtClearFilter.visibility = View.VISIBLE
-                    break
+            if (selectedFilterCurrencyItem != null) {
+                for (i in currencyArrayList.indices) {
+                    if ((selectedFilterCurrencyItem.symbol.equals(
+                            currencyArrayList[i].symbol,
+                            ignoreCase = true
+                        ))
+                    ) {
+                        currencyAdapter.setSelectedPositions(i)
+                        rvCurrency.scrollToPosition(i)
+
+                        txtClearFilter.visibility = View.VISIBLE
+                        break
+                    }
                 }
             }
+
+            currencySearch.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                }
+
+                override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                    val query = Strings.emptyToNull(s.toString().trim { it <= ' ' }) ?: ""
+                    updateView()
+                    currencyAdapter.filter(query)
+                }
+
+                override fun afterTextChanged(view: Editable?) {
+                }
+            })
+
+            currencySearch.setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) {
+                    expandSheet()
+                }
+            }
+            closeButton.setOnClickListener {
+                dialog.dismiss()
+            }
+            cancelSearch.setOnClickListener {
+                val imm =
+                    activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                currencySearch.setText("")
+                currencySearch.requestFocus()
+                if (imm.isActive) {
+                    imm.showSoftInput(it, 0)
+                }
+            }
+            searchCloseBtn.setOnClickListener {
+                val imm =
+                    activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                currencySearch.setText("")
+                currencySearch.clearFocus()
+                if (imm.isActive) {
+                    imm.hideSoftInputFromWindow(it.windowToken, 0)
+                }
+                dialog.dismiss()
+            }
+            selectTitle.text = context.getString(titleResId)
+
         }
-
-        viewBinding.currencySearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-            }
-
-            override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                val query = Strings.emptyToNull(s.toString().trim { it <= ' ' }) ?: ""
-                updateCloseButton()
-                currencyAdapter.filter(query)
-            }
-
-            override fun afterTextChanged(view: Editable?) {
-            }
-        })
-        viewBinding.closeButton.setOnClickListener {
-            dialog.dismiss()
-        }
-        viewBinding.selectTitle.text = context.getString(titleResId)
-
+        setViewPaddingAndBackground()
         dialog.show()
     }
 
-    private fun updateCloseButton() {
+    private fun expandSheet() {
+        val bottomSheetDialog = dialog//it as BottomSheetDialog
+        val parentLayout =
+            bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        parentLayout?.let { it ->
+            val behaviour = BottomSheetBehavior.from(it)
+            setupFullHeight(it)
+            behaviour.state = BottomSheetBehavior.STATE_EXPANDED
+        }
+    }
+
+    private fun setupFullHeight(bottomSheet: View) {
+        val layoutParams = bottomSheet.layoutParams
+        layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT
+        bottomSheet.layoutParams = layoutParams
+    }
+
+    private fun updateView() {
         val hasText = !TextUtils.isEmpty(viewBinding.currencySearch.text)
+        if (hasText) {
+            expandSheet()
+        }
         // Should we show the close button? It is not shown if there's no focus,
         // field is not iconified by default and there is no text in it.
         viewBinding.searchCloseBtn.isVisible = hasText
+        viewBinding.cancelSearch.isVisible = hasText
         viewBinding.headerLayout.isVisible = !hasText
+    }
+
+    private fun setViewPaddingAndBackground() {
+        val paddingTopDp = 16
+        val scale: Float = activity.resources.displayMetrics.density
+        val sizeInDp = (paddingTopDp * scale).toInt()
+        viewBinding.viewContainer.setPadding(0, sizeInDp, 0, 0)
+        viewBinding.viewContainer.setBackgroundResource(R.drawable.background_dialog)
     }
 }
