@@ -1,57 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="56dp"
+    android:background="@color/dash_white"
     android:orientation="vertical">
-    <!--style="@style/DashButton.White"-->
-
 
     <RelativeLayout
         android:id="@+id/rlCurrency"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="15dp"
-        style="@style/DashButton.White"
-        android:background="@color/white"
-        android:paddingTop="20dp"
-        android:paddingBottom="20dp">
+        android:background="@color/dash_white"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
 
         <ImageView
-            android:id="@+id/imgCheckBox"
+            android:id="@+id/currency_image"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="15dp"
+            app:srcCompat="@drawable/currency_code_usd" />
+
+        <ImageView
+            android:id="@+id/radio_button"
             style="@style/MontserratRegular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:layout_marginRight="15dp"
-            android:src="@drawable/ic_radio_round_unchecked" />
+            android:layout_marginEnd="15dp"
+            app:srcCompat="@drawable/ic_radio_round_unchecked" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_toLeftOf="@+id/imgCheckBox"
-            android:orientation="horizontal">
+            android:layout_toEndOf="@+id/currency_image"
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/txtCurrency"
-                style="@style/MontserratRegular"
+                android:id="@+id/currency_code"
+                style="@style/MontserratBold"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="25dp"
+                android:layout_marginStart="10dp"
                 android:textColor="@color/black_liquid"
-                android:textSize="18dp" />
+                android:textSize="14sp"
+                tools:text="USD" />
 
             <TextView
-                android:id="@+id/txtCurrencyName"
+                android:id="@+id/currency_name"
                 style="@style/MontserratRegular"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:gravity="center"
                 android:textColor="@color/grey_liquid"
-                android:textSize="14dp" />
+                android:textSize="12sp"
+                tools:text="United States Dollar" />
 
         </LinearLayout>
     </RelativeLayout>

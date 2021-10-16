@@ -60,10 +60,10 @@ currencyArrayList: List<PayloadItem>, val listener: ValueSelectListener) : Recyc
 
     class CurrencyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-        val txtCurrency = itemView.findViewById<TextView>(R.id.txtCurrency)
-        val txtCurrencyName = itemView.findViewById<TextView>(R.id.txtCurrencyName)
+        val txtCurrency = itemView.findViewById<TextView>(R.id.currency_code)
+        val txtCurrencyName = itemView.findViewById<TextView>(R.id.currency_name)
         val rlCurrency = itemView.findViewById<RelativeLayout>(R.id.rlCurrency)
-        val imgCheckBox = itemView.findViewById<ImageView>(R.id.imgCheckBox)
+        val imgCheckBox = itemView.findViewById<ImageView>(R.id.radio_button)
     }
 }
 

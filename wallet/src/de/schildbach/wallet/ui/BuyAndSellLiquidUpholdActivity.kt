@@ -418,11 +418,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
      * For getting liquid supported currency list
      */
     private fun getLiquidCurrencyList() {
-
         if (GenericUtils.isInternetConnected(this)) {
-
             loadingDialog!!.show()
-
             liquidClient?.getAllCurrencies(object : LiquidClient.Callback<CurrencyResponse> {
                 override fun onSuccess(data: CurrencyResponse) {
                     if (isFinishing) {
@@ -439,9 +436,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     }
                     checkAndCallApiOfUpload()
                 }
-
             })
-
         } else {
             log.error("liquid: There is no internet connection")
         }
