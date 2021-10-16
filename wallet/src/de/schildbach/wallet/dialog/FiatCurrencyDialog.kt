@@ -96,7 +96,7 @@ class FiatCurrencyDialog(
 
     override fun createAdapter(): CurrencyAdapter {
         return CurrencyAdapter(
-            LayoutInflater.from(activity),
+            activity,
             currencyArrayList,
             object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {

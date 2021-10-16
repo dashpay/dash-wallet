@@ -18,12 +18,11 @@
 package org.dash.wallet.integration.liquid.adapter
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.RelativeLayout
-import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import coil.ImageLoader
@@ -33,6 +32,8 @@ import coil.request.LoadRequest
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
+import org.dash.wallet.integration.liquid.databinding.ItemCurrencyBinding
+import org.dash.wallet.integration.liquid.databinding.ItemCurrencyEmptyBinding
 import java.util.*
 
 fun ImageView.loadSvgOrOthers(myUrl: String?) {
@@ -55,12 +56,13 @@ fun ImageView.loadSvgOrOthers(myUrl: String?) {
 }
 
 data class CurrencyItem(val type: Int, val currency: PayloadItem?)
+class CurrencyItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
 class CurrencyAdapter(
-    val layoutInflater: LayoutInflater,
+    val context: Context,
     private val currencyArrayList: List<PayloadItem>,
     val listener: ValueSelectListener
-) : RecyclerView.Adapter<CurrencyAdapter.AbstractViewHolder>() {
+) : RecyclerView.Adapter<CurrencyItemViewHolder>() {
 
     companion object {
         const val TYPE_CURRENCY = 0
@@ -73,20 +75,19 @@ class CurrencyAdapter(
     }
     private var lastQuery: String = ""
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AbstractViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CurrencyItemViewHolder {
         return if (viewType == TYPE_CURRENCY) {
-            val view = layoutInflater.inflate(R.layout.item_currency, parent, false)
-            CurrencyViewHolder(view)
+            val view = ItemCurrencyBinding.inflate(LayoutInflater.from(context), parent, false).root
+            CurrencyItemViewHolder(view)
         } else {
-            val view = layoutInflater.inflate(R.layout.item_currency_empty, parent, false)
-            EmptyViewHolder(view, lastQuery)
+            val view = ItemCurrencyEmptyBinding.inflate(LayoutInflater.from(context), parent, false).root
+            CurrencyItemViewHolder(view)
         }
     }
 
     override fun getItemCount(): Int {
         return filteredList.size
     }
-
     fun setSelectedPositions(position: Int) {
         selectedPosition = position
         notifyItemChanged(position)
@@ -102,18 +103,6 @@ class CurrencyAdapter(
 
     override fun getItemViewType(position: Int): Int {
         return filteredList[position].type
-    }
-
-    fun getItemPosition(item: PayloadItem): Int {
-        for (i in filteredList.indices) {
-            val item = filteredList[i];
-            if (item.type == TYPE_CURRENCY) {
-                if (item.currency!!.label?.equals(item.currency.label, true) == true) {
-                    return i
-                }
-            }
-        }
-        return -1
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -133,56 +122,40 @@ class CurrencyAdapter(
         notifyDataSetChanged()
     }
 
-    override fun onBindViewHolder(holder: AbstractViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: CurrencyItemViewHolder, position: Int) {
 
         if (filteredList[position].type == TYPE_CURRENCY) {
-            holder as CurrencyViewHolder
-            val item = filteredList[position].currency!!
-            holder.separater.isVisible = position != 0
-            if (selectedPosition == position) {
-                holder.imgCheckBox.setImageResource(R.drawable.ic_radio_round_checked)
-            } else {
-                holder.imgCheckBox.setImageResource(R.drawable.ic_radio_round_unchecked)
-            }
+            ItemCurrencyBinding.bind(holder.itemView).apply {
+                val item = filteredList[position].currency!!
+                itemSeparater.isVisible = position != 0
+                if (selectedPosition == position) {
+                    radioButton.setImageResource(R.drawable.ic_radio_round_checked)
+                } else {
+                    radioButton.setImageResource(R.drawable.ic_radio_round_unchecked)
+                }
 
-            holder.txtCurrency.text = if (!item.ccyCode.isNullOrEmpty()) {
-                item.ccyCode
-            } else {
-                item.symbol
-            }
-            holder.txtCurrencyName.text = item.label
+                currencyCode.text = if (!item.ccyCode.isNullOrEmpty()) {
+                    item.ccyCode
+                } else {
+                    item.symbol
+                }
+                currencyName.text = item.label
 
-            holder.rlCurrency.setOnClickListener {
-                val copyOfLastCheckedPosition: Int = selectedPosition
-                selectedPosition = position
-                notifyItemChanged(copyOfLastCheckedPosition)
-                notifyItemChanged(selectedPosition)
+                rlCurrency.setOnClickListener {
+                    val copyOfLastCheckedPosition: Int = selectedPosition
+                    selectedPosition = position
+                    notifyItemChanged(copyOfLastCheckedPosition)
+                    notifyItemChanged(selectedPosition)
 
-                listener.onItemSelected(position)
+                    listener.onItemSelected(position)
+                }
+                currencyImage.loadSvgOrOthers(item.icon)
             }
-            holder.currencyImage.loadSvgOrOthers(item.icon)
         } else {
-            holder as EmptyViewHolder
-            holder.message.text = holder.itemView.context.getString(R.string.no_results, lastQuery)
+            ItemCurrencyEmptyBinding.bind(holder.itemView).apply {
+                message.text = context.getString(R.string.no_results, lastQuery)
+            }
         }
-    }
-
-    abstract class AbstractViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-
-    }
-
-    class CurrencyViewHolder(itemView: View) : AbstractViewHolder(itemView) {
-        val txtCurrency = itemView.findViewById<TextView>(R.id.currency_code)
-        val txtCurrencyName = itemView.findViewById<TextView>(R.id.currency_name)
-        val rlCurrency = itemView.findViewById<RelativeLayout>(R.id.rlCurrency)
-        val imgCheckBox = itemView.findViewById<ImageView>(R.id.radio_button)
-        val currencyImage = itemView.findViewById<ImageView>(R.id.currency_image)
-        val separater = itemView.findViewById<View>(R.id.item_separater)
-    }
-
-    class EmptyViewHolder(itemView: View, val lastQuery: String) : AbstractViewHolder(itemView) {
-        val title = itemView.findViewById<TextView>(R.id.title)
-        val message = itemView.findViewById<TextView>(R.id.message)
     }
 }
 

@@ -24,7 +24,7 @@ class BuyDashCryptoCurrencyDialog(
     }
 
     override fun createAdapter(): CurrencyAdapter {
-        return CurrencyAdapter(LayoutInflater.from(activity), payload, object : ValueSelectListener {
+        return CurrencyAdapter(activity, payload, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 // Showing timer for radio button selected currency
                 Timer().schedule(object : TimerTask() {
