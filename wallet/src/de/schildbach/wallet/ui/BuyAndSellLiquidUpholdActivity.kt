@@ -54,7 +54,7 @@ import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
-import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
+import org.dash.wallet.integration.liquid.ui.LiquidPortalActivity
 import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidViewModel
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
@@ -131,7 +131,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             }, bundleOf())
 
             startActivityForResult(
-                LiquidBuyAndSellDashActivity.createIntent(this),
+                LiquidPortalActivity.createIntent(this),
                 USER_BUY_SELL_DASH
             )
         }

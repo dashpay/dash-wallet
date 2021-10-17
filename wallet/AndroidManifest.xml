@@ -350,7 +350,7 @@
 
 
         <activity
-            android:name="org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity"
+            android:name="org.dash.wallet.integration.liquid.ui.LiquidPortalActivity"
             android:theme="@style/My.Theme.ChildActivity" />
         <activity
             android:name="org.dash.wallet.integration.liquid.ui.LiquidSplashActivity"

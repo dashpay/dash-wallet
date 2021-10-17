@@ -26,7 +26,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.preference.PreferenceManager
 import android.view.MenuItem
 import android.view.View
@@ -249,7 +248,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     private fun startLiquidBuyAndSellDashActivity() {
-        val intent = Intent(this, LiquidBuyAndSellDashActivity::class.java)
+        val intent = Intent(this, LiquidPortalActivity::class.java)
         val extras = getIntent().extras
         if (extras != null) {
             intent.putExtras(extras)
