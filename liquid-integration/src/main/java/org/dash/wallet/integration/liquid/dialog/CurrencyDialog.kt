@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integration.liquid.dialog
 
+import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.text.Editable
@@ -38,11 +39,10 @@ import kotlin.collections.ArrayList
 
 
 abstract class CurrencyDialog(
-    val activity: Context,
+    val activity: Activity,
     private val selectedFilterCurrencyItem: PayloadItem?,
     private val titleResId: Int
 ) : BottomSheetDialog(activity) {
-
 
     protected val currencyArrayList: ArrayList<PayloadItem> = arrayListOf()
     protected lateinit var viewBinding: DialogSearchCurrienciesBinding
@@ -155,11 +155,12 @@ abstract class CurrencyDialog(
         if (hasText) {
             expandSheet()
         }
-        // Should we show the close button? It is not shown if there's no focus,
-        // field is not iconified by default and there is no text in it.
-        viewBinding.searchCloseBtn.isVisible = hasText
-        viewBinding.cancelSearch.isVisible = hasText
-        viewBinding.headerLayout.isVisible = !hasText
+
+        viewBinding.apply {
+            searchCloseBtn.isVisible = hasText
+            cancelSearch.isVisible = hasText
+            headerLayout.isVisible = !hasText
+        }
     }
 
     private fun setViewPaddingAndBackground() {

@@ -54,7 +54,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     companion object {
         val log: Logger = LoggerFactory.getLogger(LiquidBuyAndSellDashActivity::class.java)
 
-        fun createIntent(context: Context?): Intent {
+        fun createIntent(context: Context): Intent {
             return if (LiquidClient.getInstance()!!.isAuthenticated) {
                 Intent(context, LiquidBuyAndSellDashActivity::class.java)
             } else {
@@ -69,7 +69,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private lateinit var viewBinding: ActivityLiquidBuyAndSellDashBinding
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
-    private lateinit var context: Context
     private var loadingDialog: ProgressDialog? = null
 
     private val cryptoCurrencyArrayList = ArrayList<PayloadItem>()
@@ -86,7 +85,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         viewBinding = ActivityLiquidBuyAndSellDashBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
 
-        this.context = this@LiquidBuyAndSellDashActivity
         liquidClient = LiquidClient.getInstance()
 
         
@@ -249,7 +247,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     private fun showSellDashDialog() {
         log.info("liquid: show buy dash dialog")
-        SelectSellDashDialog(context, object : ValueSelectListener {
+        SelectSellDashDialog(this, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 if (value == 1) {
                     isSelectFiatCurrency = true
@@ -277,20 +275,20 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private fun showSellDashCurrencyDialog() {
         log.info("liquid: starting sell dash currency dialog")
         if (isSelectFiatCurrency) {
-            SellDashCryptoCurrencyDialog(context, "FiatCurrency", fiatCurrencyList, object : ValueSelectListener {
+            SellDashCryptoCurrencyDialog(this, "FiatCurrency", fiatCurrencyList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
                     super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
-                    val intent = Intent(context, SellDashActivity::class.java)
+                    val intent = Intent(this@LiquidBuyAndSellDashActivity, SellDashActivity::class.java)
                     intent.putExtra("CurrencySelected", fiatCurrencyList[value].ccyCode)
                     intent.putExtra("CurrencyType", "FIAT")
                     startActivity(intent)
                 }
             })
         } else {
-            SellDashCryptoCurrencyDialog(context, "CryptoCurrency", cryptoCurrencyArrayList, object : ValueSelectListener {
+            SellDashCryptoCurrencyDialog(this, "CryptoCurrency", cryptoCurrencyArrayList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
                     super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
-                    val intent = Intent(context, SellDashActivity::class.java)
+                    val intent = Intent(this@LiquidBuyAndSellDashActivity, SellDashActivity::class.java)
                     intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].ccyCode)
                     intent.putExtra("CurrencyType", "CRYPTO")
                     startActivity(intent)
@@ -323,13 +321,13 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         log.info("liquid: buy dash")
         analytics.logEvent(AnalyticsConstants.Liquid.BUY_DASH, bundleOf())
 
-        SelectBuyDashDialog(context, object : ValueSelectListener {
+        SelectBuyDashDialog(this, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 if (value == 1) {
                     super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
                     analytics.logEvent(AnalyticsConstants.Liquid.BUY_CREDIT_CARD, bundleOf())
 
-                    val intent = Intent(context, BuyDashWithCreditCardActivity::class.java)
+                    val intent = Intent(this@LiquidBuyAndSellDashActivity, BuyDashWithCreditCardActivity::class.java)
                     intent.putExtra("Amount", "5")
                     startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
                 } else if (value == 2) {
@@ -600,7 +598,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         BuyDashCryptoCurrencyDialog(this, cryptoCurrencyArrayList, object : ValueSelectListener {
             override fun onItemSelected(value: Int) {
                 super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
-                val intent = Intent(context, BuyDashWithCryptoCurrencyActivity::class.java)
+                val intent = Intent(this@LiquidBuyAndSellDashActivity, BuyDashWithCryptoCurrencyActivity::class.java)
                 intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].ccyCode)
                 startActivityForResult(intent, Constants.USER_BUY_SELL_DASH)
             }

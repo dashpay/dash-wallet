@@ -17,7 +17,7 @@
 
 package de.schildbach.wallet.dialog
 
-import android.content.Context
+import android.app.Activity
 import androidx.core.view.isVisible
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
@@ -29,9 +29,8 @@ import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import java.util.*
 import kotlin.collections.ArrayList
 
-
 class FiatCurrencyDialog(
-    activity: Context,
+    activity: Activity,
     private val liquidCurrencyArrayList: ArrayList<PayloadItem>,
     private val upholdCurrencyArrayList: ArrayList<UpholdCurrencyResponse>,
     selectedFilterCurrencyItem: PayloadItem?,

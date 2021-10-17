@@ -18,48 +18,26 @@
 package org.dash.wallet.integration.liquid.adapter
 
 import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Activity
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
-import coil.ImageLoader
-import coil.api.load
-import coil.decode.SvgDecoder
-import coil.request.LoadRequest
+import com.github.twocoffeesoneteam.glidetovectoryou.GlideToVectorYou
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.databinding.ItemCurrencyBinding
 import org.dash.wallet.integration.liquid.databinding.ItemCurrencyEmptyBinding
-import java.util.*
 
-fun ImageView.loadSvgOrOthers(myUrl: String?) {
-    myUrl?.let {
-        if (it.toLowerCase(Locale.ENGLISH).endsWith("svg")) {
-            val imageLoader = ImageLoader.Builder(this.context)
-                .componentRegistry {
-                    add(SvgDecoder(this@loadSvgOrOthers.context))
-                }
-                .build()
-            val request = LoadRequest.Builder(this.context)
-                .data(it)
-                .target(this)
-                .build()
-            imageLoader.execute(request)
-        } else {
-            this.load(myUrl)
-        }
-    }
-}
 
 data class CurrencyItem(val type: Int, val currency: PayloadItem?)
 class CurrencyItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
 class CurrencyAdapter(
-    val context: Context,
+    val activity: Activity,
     private val currencyArrayList: List<PayloadItem>,
     val listener: ValueSelectListener
 ) : RecyclerView.Adapter<CurrencyItemViewHolder>() {
@@ -78,10 +56,10 @@ class CurrencyAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CurrencyItemViewHolder {
         return if (viewType == TYPE_CURRENCY) {
-            val view = ItemCurrencyBinding.inflate(LayoutInflater.from(context), parent, false).root
+            val view = ItemCurrencyBinding.inflate(LayoutInflater.from(activity), parent, false).root
             CurrencyItemViewHolder(view)
         } else {
-            val view = ItemCurrencyEmptyBinding.inflate(LayoutInflater.from(context), parent, false).root
+            val view = ItemCurrencyEmptyBinding.inflate(LayoutInflater.from(activity), parent, false).root
             CurrencyItemViewHolder(view)
         }
     }
@@ -154,11 +132,12 @@ class CurrencyAdapter(
 
                     listener.onItemSelected(position)
                 }
-                currencyImage.loadSvgOrOthers(currencyItem.icon)
+                // Does this load only SVG's?
+                GlideToVectorYou.justLoadImage(activity, Uri.parse(currencyItem.icon), currencyImage)
             }
         } else {
             ItemCurrencyEmptyBinding.bind(holder.itemView).apply {
-                message.text = context.getString(R.string.no_results, lastQuery)
+                message.text = activity.getString(R.string.no_results, lastQuery)
             }
         }
     }

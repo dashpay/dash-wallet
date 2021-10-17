@@ -1,7 +1,6 @@
 package org.dash.wallet.integration.liquid.dialog
 
-import android.content.Context
-import android.view.LayoutInflater
+import android.app.Activity
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
@@ -10,7 +9,7 @@ import java.util.*
 
 
 class SellDashCryptoCurrencyDialog(
-    activity: Context,
+    activity: Activity,
     val currencyType: String,
     val payload: List<PayloadItem>,
     val listener: ValueSelectListener)
