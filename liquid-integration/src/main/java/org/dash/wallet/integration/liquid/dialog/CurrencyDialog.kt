@@ -33,7 +33,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.common.base.Strings
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.adapter.CurrencyAdapter
-import org.dash.wallet.integration.liquid.databinding.DialogLiquidAllCurrienciesBinding
+import org.dash.wallet.integration.liquid.databinding.DialogSearchCurrienciesBinding
 import kotlin.collections.ArrayList
 
 
@@ -45,7 +45,7 @@ abstract class CurrencyDialog(
 
 
     protected val currencyArrayList: ArrayList<PayloadItem> = arrayListOf()
-    protected lateinit var viewBinding: DialogLiquidAllCurrienciesBinding
+    protected lateinit var viewBinding: DialogSearchCurrienciesBinding
     protected lateinit var currencyAdapter: CurrencyAdapter
     protected lateinit var dialog: Dialog
     protected var expandedSheet = false
@@ -58,7 +58,7 @@ abstract class CurrencyDialog(
     override fun create() {
         setCancelable(true)
         setCanceledOnTouchOutside(true)
-        viewBinding = DialogLiquidAllCurrienciesBinding.inflate(layoutInflater)
+        viewBinding = DialogSearchCurrienciesBinding.inflate(layoutInflater)
         dialog = BottomSheetDialog(activity, R.style.BottomSheetDialog) // Style here
         dialog.setContentView(viewBinding.root)
 
