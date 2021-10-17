@@ -4,6 +4,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'dagger.hilt.android.plugin'
+apply plugin: 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 
 ext {
     archivesBaseName = 'dash-wallet'

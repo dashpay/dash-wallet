@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/white" />
+            <size android:width="24dp" android:height="24dp" />
+        </shape>
+    </item>
+
+    <item
+        android:gravity="center"
+        android:top="8dp"
+        android:bottom="8dp"
+        android:left="8dp"
+        android:right="8dp"
+        android:drawable="@drawable/ic_dash_d_blue" />
+
+</layer-list>

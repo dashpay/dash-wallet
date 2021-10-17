@@ -16,12 +16,27 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -30,48 +45,69 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.maps.*
+import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.maps.android.ktx.*
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.DialogBuilder
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 
 
+@FlowPreview
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
-class SearchFragment : Fragment(R.layout.fragment_search) {
+class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerClickListener {
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
+    private var googleMap: GoogleMap? = null
+    private lateinit var adapter: MerchantsAtmsResultAdapter
+    private lateinit var mCurrentUserLocation : LatLng
+    private var currentLocationMarker: Marker? = null
+    private var currentLocationCircle: Circle? = null
+    private val CURRENT_POSITION_MARKER_TAG = 0
 
-    // TODO: re-integrate when the permission request story is ready
-//    private lateinit var fusedLocationClient: FusedLocationProviderClient
-//    private val permissionRequestLauncher = registerForActivityResult(
-//        ActivityResultContracts.RequestPermission()) { isGranted ->
-//        if (isGranted) {
-//            Log.i("LOCATION", "permission granted")
-//        } else {
-//            Log.i("LOCATION", "permission NOT granted")
-//        }
-//    }
-//
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//
-//        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-//
-//        if (ActivityCompat.checkSelfPermission(
-//                requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION
-//            ) != PackageManager.PERMISSION_GRANTED
-//        ) {
-//            permissionRequestLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-//        }
-//    }
+    private val permissionRequestLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()) { isPermissionGranted ->
+        if (isPermissionGranted){
+            viewModel.monitorUserLocation()
+            viewModel.observeCurrentUserLocation.observe(viewLifecycleOwner) {
+                showLocationOnMap(it)
+            }
+        } else {
+            showPermissionDeniedDialog()
+        }
+    }
 
+    private fun showPermissionDeniedDialog() {
+        val deniedPermissionDialog = DialogBuilder.warn(
+            requireActivity(),
+            R.string.permission_required_title,
+            R.string.permission_required_message
+        )
+        deniedPermissionDialog.setPositiveButton(R.string.goto_settings) { _, _ ->
+            val intent = createAppSettingsIntent()
+            startActivity(intent)
+        }
+        deniedPermissionDialog.setNegativeButton(R.string.button_dismiss) { dialog: DialogInterface, _ ->
+            dialog.dismiss()
+        }
+        deniedPermissionDialog.show()
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -142,7 +178,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        val adapter = MerchantsAtmsResultAdapter { item, _ ->
+        adapter = MerchantsAtmsResultAdapter { item, _ ->
             if (item is Merchant) {
                 viewModel.openMerchantDetails(item)
             }
@@ -156,6 +192,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.searchResults.observe(viewLifecycleOwner) { results ->
             binding.noResultsText.isVisible = results.isEmpty()
             adapter.submitList(results)
+            renderMerchantAtmsOnMap(results)
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) {
@@ -172,5 +209,131 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.init()
+
+        val mapFragment = childFragmentManager.findFragmentById(R.id.explore_map) as SupportMapFragment
+        lifecycleScope.launchWhenStarted {
+            googleMap = mapFragment.awaitMap()
+            checkPermissionOrShowMap()
+            setUserLocationMarkerMovementState()
+        }
+    }
+
+    private suspend fun setUserLocationMarkerMovementState() {
+        googleMap?.markerDragEvents()?.collect { value: OnMarkerDragEvent ->
+            if (value is MarkerDragEndEvent) {
+                currentLocationMarker?.position = value.marker.position
+                currentLocationCircle?.center = value.marker.position
+                googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(value.marker.position, 7f))
+            }
+        }
+    }
+
+    private fun renderMerchantAtmsOnMap(results: List<SearchResult>) {
+        results.forEach {
+            if (it is Merchant) {
+                googleMap?.addMarker {
+                    position(LatLng(it.latitude!!, it.longitude!!))
+                    anchor(0.5f, 0.5f)
+                    val bitmap = getBitmapFromDrawable(R.drawable.atm_map_marker)
+                    icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+                }
+            }
+        }
+        googleMap?.setOnMarkerClickListener(this)
+    }
+
+    private fun checkPermissionOrShowMap() {
+        if (isGooglePlayServicesAvailable()) {
+            if (isForegroundLocationPermissionGranted()) {
+                viewModel.monitorUserLocation()
+                viewModel.observeCurrentUserLocation.observe(viewLifecycleOwner) {
+                    showLocationOnMap(it)
+                }
+            } else {
+                permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+            googleMap?.uiSettings?.isZoomControlsEnabled = true
+        }
+    }
+
+    private fun addCircleAroundCurrentPosition() {
+        currentLocationCircle = googleMap?.addCircle {
+            center(mCurrentUserLocation)
+            radius(milesToMeters(50.0))
+            fillColor(Color.parseColor("#26008DE4"))
+            strokeColor(Color.TRANSPARENT)
+        }
+    }
+
+    private fun addMarkerOnCurrentPosition() {
+        val bitmap = getBitmapFromDrawable(R.drawable.user_location_map_marker)
+        currentLocationMarker = googleMap?.addMarker {
+            position(mCurrentUserLocation)
+            anchor(0.5f, 0.5f)
+            icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+            draggable(true)
+        }
+        currentLocationMarker?.tag = CURRENT_POSITION_MARKER_TAG
+    }
+
+    private fun showLocationOnMap(userLocation: UserLocation) {
+        mCurrentUserLocation = LatLng(userLocation.latitude, userLocation.longitude)
+        currentLocationCircle?.remove()
+        currentLocationMarker?.remove()
+        addMarkerOnCurrentPosition()
+        addCircleAroundCurrentPosition()
+        googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(mCurrentUserLocation, 7f))
+    }
+
+    private fun isForegroundLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),
+            Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    private fun isGooglePlayServicesAvailable(): Boolean {
+        val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
+        val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(requireActivity())
+        if (ConnectionResult.SUCCESS === status) return true else {
+            if (googleApiAvailability.isUserResolvableError(status))
+                Toast.makeText(requireActivity(), R.string.common_google_play_services_install_title, Toast.LENGTH_LONG).show()
+        }
+        return false
+    }
+
+    private fun createAppSettingsIntent() = Intent().apply {
+        action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        data = Uri.fromParts("package", requireContext().packageName, null)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+
+    override fun onMarkerClick(marker: Marker): Boolean {
+        return if (marker.tag == CURRENT_POSITION_MARKER_TAG) {
+            false
+        } else {
+            val atmItemCoordinates = marker.position
+            adapter.currentList.forEach {
+                if (it is Merchant) {
+                    if ((it.latitude == atmItemCoordinates.latitude) && (it.longitude == atmItemCoordinates.longitude)) {
+                        viewModel.openMerchantDetails(it)
+                    }
+                }
+            }
+
+            true
+        }
+    }
+
+    private fun getBitmapFromDrawable(drawableId: Int): Bitmap {
+        var drawable =  AppCompatResources.getDrawable(requireActivity(), drawableId)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            drawable = (DrawableCompat.wrap(drawable!!)).mutate()
+        }
+        val bitmap = Bitmap.createBitmap(drawable!!.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    private fun milesToMeters(miles: Double): Double {
+        return miles * 1609.344
     }
 }

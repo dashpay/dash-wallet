@@ -18,4 +18,7 @@
     <string name="explore_select_state">Select the State</string>
     <string name="explore_all_states">All states</string>
     <string name="explore_no_results">No results</string>
+    <string name="permission_required_title">Permission required</string>
+    <string name="permission_required_message">We need to know your current location</string>
+    <string name="goto_settings">Settings</string>
 </resources>
