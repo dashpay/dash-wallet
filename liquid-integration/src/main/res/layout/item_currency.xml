@@ -8,7 +8,7 @@
     android:orientation="vertical">
 
     <View
-        android:id="@+id/item_separater"
+        android:id="@+id/item_separator"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginStart="16dp"
@@ -43,7 +43,7 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:layout_marginEnd="15dp"
-            app:srcCompat="@drawable/ic_radio_round_unchecked" />
+            app:srcCompat="@drawable/ic_radio_round_checked" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -69,7 +69,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:gravity="center"
-                android:textColor="@color/grey_liquid"
+                android:textColor="@color/gray_400"
                 android:textSize="12sp"
                 tools:text="United States Dollar" />
 

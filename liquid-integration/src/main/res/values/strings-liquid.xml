@@ -58,5 +58,6 @@
     <string name="transfer">Transfer</string>
     <string name="filter_by">Filtered By</string>
 
-    <string name="no_results">No currency found for "%s". Try something else.</string>
+    <string name="no_results_title">No Results</string>
+    <string name="no_results">No currency found for \"%s\". Try something else.</string>
 </resources>

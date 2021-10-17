@@ -76,7 +76,7 @@ abstract class CurrencyDialog(
                             ignoreCase = true
                         ))
                     ) {
-                        currencyAdapter.setSelectedPositions(i)
+                        currencyAdapter.setSelectedPosition(i, selectedFilterCurrencyItem)
                         rvCurrency.scrollToPosition(i)
 
                         txtClearFilter.visibility = View.VISIBLE

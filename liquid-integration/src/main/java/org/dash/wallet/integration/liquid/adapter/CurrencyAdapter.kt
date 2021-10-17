@@ -70,6 +70,7 @@ class CurrencyAdapter(
     }
 
     private var selectedPosition = -1
+    private var selectedItem: PayloadItem? = null
     private var filteredList: List<CurrencyItem> = currencyArrayList.map {
         CurrencyItem(TYPE_CURRENCY, it)
     }
@@ -88,8 +89,9 @@ class CurrencyAdapter(
     override fun getItemCount(): Int {
         return filteredList.size
     }
-    fun setSelectedPositions(position: Int) {
+    fun setSelectedPosition(position: Int, item: PayloadItem?) {
         selectedPosition = position
+        selectedItem = item
         notifyItemChanged(position)
     }
 
@@ -124,32 +126,35 @@ class CurrencyAdapter(
 
     override fun onBindViewHolder(holder: CurrencyItemViewHolder, position: Int) {
 
-        if (filteredList[position].type == TYPE_CURRENCY) {
+        val item = filteredList[position]
+        if (item.type == TYPE_CURRENCY) {
             ItemCurrencyBinding.bind(holder.itemView).apply {
-                val item = filteredList[position].currency!!
-                itemSeparater.isVisible = position != 0
-                if (selectedPosition == position) {
+                val currencyItem = filteredList[position].currency!!
+                itemSeparator.isVisible = position != 0
+                if (selectedItem?.symbol == currencyItem.symbol) {
                     radioButton.setImageResource(R.drawable.ic_radio_round_checked)
                 } else {
                     radioButton.setImageResource(R.drawable.ic_radio_round_unchecked)
                 }
 
-                currencyCode.text = if (!item.ccyCode.isNullOrEmpty()) {
-                    item.ccyCode
+                currencyCode.text = if (!currencyItem.ccyCode.isNullOrEmpty()) {
+                    currencyItem.ccyCode
                 } else {
-                    item.symbol
+                    currencyItem.symbol
                 }
-                currencyName.text = item.label
+                currencyName.text = currencyItem.label
 
                 rlCurrency.setOnClickListener {
-                    val copyOfLastCheckedPosition: Int = selectedPosition
+                    val copyOfLastCheckedPosition: Int = filteredList.indexOf(
+                        CurrencyItem(TYPE_CURRENCY,selectedItem)
+                    )
                     selectedPosition = position
                     notifyItemChanged(copyOfLastCheckedPosition)
                     notifyItemChanged(selectedPosition)
 
                     listener.onItemSelected(position)
                 }
-                currencyImage.loadSvgOrOthers(item.icon)
+                currencyImage.loadSvgOrOthers(currencyItem.icon)
             }
         } else {
             ItemCurrencyEmptyBinding.bind(holder.itemView).apply {

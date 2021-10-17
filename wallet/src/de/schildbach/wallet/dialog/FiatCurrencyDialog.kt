@@ -18,7 +18,6 @@
 package de.schildbach.wallet.dialog
 
 import android.content.Context
-import android.view.LayoutInflater
 import androidx.core.view.isVisible
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
@@ -42,7 +41,7 @@ class FiatCurrencyDialog(
     override fun create() {
         super.create()
         viewBinding.txtClearFilter.setOnClickListener {
-            currencyAdapter.setSelectedPositions(-1)
+            currencyAdapter.setSelectedPosition(-1, null)
             viewBinding.txtClearFilter.isVisible = false
             listener.onCurrencySelected(true, true, null)
         }
