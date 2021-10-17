@@ -134,7 +134,7 @@ abstract class CurrencyDialog(
     }
 
     private fun expandSheet() {
-        val bottomSheetDialog = dialog//it as BottomSheetDialog
+        val bottomSheetDialog = dialog
         val parentLayout =
             bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
         parentLayout?.let { it ->

@@ -15,12 +15,6 @@ class SellDashCryptoCurrencyDialog(
     val listener: ValueSelectListener)
     : CurrencyDialog(activity, null, R.string.select_buy_currency) {
 
-    init {
-        setCancelable(true)
-        setCanceledOnTouchOutside(true)
-        create()
-    }
-
     override fun generateList() {
         currencyArrayList.addAll(payload)
     }
