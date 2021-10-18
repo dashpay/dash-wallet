@@ -24,24 +24,24 @@ import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.adapter.CurrencyAdapter
-import org.dash.wallet.integration.liquid.dialog.CurrencyDialog
+import org.dash.wallet.integration.liquid.dialog.CurrencySearchDialog
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import java.util.*
 import kotlin.collections.ArrayList
 
-class FiatCurrencyDialog(
+class FiatCurrencySearchDialog(
     activity: Activity,
     private val liquidCurrencyArrayList: ArrayList<PayloadItem>,
     private val upholdCurrencyArrayList: ArrayList<UpholdCurrencyResponse>,
     selectedFilterCurrencyItem: PayloadItem?,
     val listener: CurrencySelectListener
-) : CurrencyDialog(activity, selectedFilterCurrencyItem, R.string.select_fiat_currency) {
+) : CurrencySearchDialog(activity, selectedFilterCurrencyItem, R.string.select_fiat_currency) {
 
     override fun create() {
         super.create()
-        viewBinding.txtClearFilter.setOnClickListener {
+        viewBinding.clearFilter.setOnClickListener {
             currencyAdapter.setSelectedPosition(-1, null)
-            viewBinding.txtClearFilter.isVisible = false
+            viewBinding.clearFilter.isVisible = false
             listener.onCurrencySelected(true, true, null)
         }
     }

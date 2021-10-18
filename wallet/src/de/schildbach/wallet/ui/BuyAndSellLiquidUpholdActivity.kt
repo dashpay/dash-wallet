@@ -32,7 +32,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.dialog.FiatCurrencyDialog
+import de.schildbach.wallet.dialog.FiatCurrencySearchDialog
 import de.schildbach.wallet.rates.ExchangeRatesViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
@@ -510,7 +510,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
      */
 
     private fun showCurrenciesDialog() {
-        FiatCurrencyDialog(
+        FiatCurrencySearchDialog(
             this,
             liquidCurrencyArrayList,
             upholdCurrencyArrayList,

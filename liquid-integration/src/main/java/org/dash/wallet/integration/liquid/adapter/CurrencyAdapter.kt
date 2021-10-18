@@ -103,7 +103,6 @@ class CurrencyAdapter(
     }
 
     override fun onBindViewHolder(holder: CurrencyItemViewHolder, position: Int) {
-
         val item = filteredList[position]
         if (item.type == TYPE_CURRENCY) {
             ItemCurrencyBinding.bind(holder.itemView).apply {
@@ -122,7 +121,7 @@ class CurrencyAdapter(
                 }
                 currencyName.text = currencyItem.label
 
-                rlCurrency.setOnClickListener {
+                currencyContainer.setOnClickListener {
                     val copyOfLastCheckedPosition: Int = filteredList.indexOf(
                         CurrencyItem(TYPE_CURRENCY,selectedItem)
                     )

@@ -38,7 +38,7 @@ import org.dash.wallet.integration.liquid.databinding.DialogSearchCurrienciesBin
 import kotlin.collections.ArrayList
 
 
-abstract class CurrencyDialog(
+abstract class CurrencySearchDialog(
     val activity: Activity,
     private val selectedFilterCurrencyItem: PayloadItem?,
     private val titleResId: Int
@@ -65,9 +65,9 @@ abstract class CurrencyDialog(
         generateList()
 
         viewBinding.apply {
-            rvCurrency.layoutManager = LinearLayoutManager(activity)
+            currencyList.layoutManager = LinearLayoutManager(activity)
             currencyAdapter = createAdapter()
-            rvCurrency.adapter = currencyAdapter
+            currencyList.adapter = currencyAdapter
 
             if (selectedFilterCurrencyItem != null) {
                 for (i in currencyArrayList.indices) {
@@ -77,9 +77,9 @@ abstract class CurrencyDialog(
                         ))
                     ) {
                         currencyAdapter.setSelectedPosition(i, selectedFilterCurrencyItem)
-                        rvCurrency.scrollToPosition(i)
+                        currencyList.scrollToPosition(i)
 
-                        txtClearFilter.visibility = View.VISIBLE
+                        clearFilter.visibility = View.VISIBLE
                         break
                     }
                 }

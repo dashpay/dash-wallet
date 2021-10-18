@@ -13,7 +13,7 @@ class SellDashCryptoCurrencyDialog(
     val currencyType: String,
     val payload: List<PayloadItem>,
     val listener: ValueSelectListener)
-    : CurrencyDialog(activity, null, R.string.select_buy_currency) {
+    : CurrencySearchDialog(activity, null, R.string.select_buy_currency) {
 
     override fun generateList() {
         currencyArrayList.addAll(payload)
