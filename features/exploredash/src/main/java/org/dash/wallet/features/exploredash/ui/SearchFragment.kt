@@ -234,8 +234,9 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
                 googleMap?.addMarker {
                     position(LatLng(it.latitude!!, it.longitude!!))
                     anchor(0.5f, 0.5f)
-                    val bitmap = getBitmapFromDrawable(R.drawable.atm_map_marker)
+                    val bitmap = getBitmapFromDrawable(R.drawable.merchant_marker)
                     icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+                    draggable(false)
                 }
             }
         }
@@ -252,7 +253,8 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
             } else {
                 permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
-            googleMap?.uiSettings?.isZoomControlsEnabled = true
+        } else {
+            Toast.makeText(requireActivity(), getString(R.string.common_google_play_services_install_title), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -282,7 +284,6 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
         currentLocationMarker?.remove()
         addMarkerOnCurrentPosition()
         addCircleAroundCurrentPosition()
-        googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(mCurrentUserLocation, 7f))
     }
 
     private fun isForegroundLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),

@@ -30,27 +30,12 @@
         </androidx.appcompat.widget.Toolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/explore_map"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
-        <androidx.fragment.app.FragmentContainerView
-            android:id="@+id/explore_map"
-            android:layout_width="match_parent"
-            android:layout_height="300dp"
-            android:name="com.google.android.gms.maps.SupportMapFragment"
-            app:layout_constraintTop_toTopOf="parent"
-            />
-        <View
-            android:id="@+id/explore_map_background"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/explore_map"
-            android:background="@color/white"
-            />
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        />
 
     <LinearLayout
         android:id="@+id/content_panel"
@@ -62,7 +47,7 @@
         android:theme="@style/ExploreSearchResultsBackground"
         app:behavior_expandedOffset="40dp"
         app:behavior_fitToContents="false"
-        app:behavior_halfExpandedRatio="0.55"
+        app:behavior_halfExpandedRatio="0.41"
         app:behavior_peekHeight="24dp"
         app:layout_behavior="@string/bottom_sheet_behavior">
 

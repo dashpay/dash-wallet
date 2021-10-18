@@ -3,16 +3,16 @@
     <item>
         <shape android:shape="oval">
             <solid android:color="@color/white" />
-            <size android:width="24dp" android:height="24dp" />
+            <size android:width="20dp" android:height="20dp" />
         </shape>
     </item>
 
     <item
         android:gravity="center"
-        android:top="8dp"
-        android:bottom="8dp"
-        android:left="8dp"
-        android:right="8dp"
+        android:top="12dp"
+        android:bottom="12dp"
+        android:left="12dp"
+        android:right="12dp"
         android:drawable="@drawable/ic_dash_d_blue" />
 
 </layer-list>
