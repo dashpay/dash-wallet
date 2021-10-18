@@ -16,6 +16,7 @@
 
 package org.dash.wallet.features.exploredash.data.model
 
+import androidx.annotation.Keep
 import androidx.room.Entity
 import com.google.firebase.database.PropertyName
 
@@ -30,6 +31,7 @@ object MerchantType {
     const val BOTH = "both"
 }
 
+@Keep
 @Entity(tableName = "merchant")
 data class Merchant(
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
