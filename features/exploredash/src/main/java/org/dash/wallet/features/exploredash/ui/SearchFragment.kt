@@ -253,8 +253,6 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
             } else {
                 permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
-        } else {
-            Toast.makeText(requireActivity(), getString(R.string.common_google_play_services_install_title), Toast.LENGTH_LONG).show()
         }
     }
 
