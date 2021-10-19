@@ -14,5 +14,10 @@ object LiquidConstants {
 
     const val COUNTRY_NOT_SUPPORTED = " https://help.liquid.com/en/articles/2272984-can-i-use-liquid-in-my-country"
 
-    const val BUY_WITH_CREDIT_CARD_URL = "https://plugin.partners.liquid.com"//"https://sandbox-demo.partners.liquid.com"//https://plugin.partners.liquid.com
+    const val BUY_WITH_CREDIT_CARD_URL = "https://plugin.partners.liquid.com"
+
+    @JvmStatic
+    fun hasValidCredentials(): Boolean {
+        return PUBLIC_API_KEY.isNotEmpty() && !PUBLIC_API_KEY.contains("PUBLIC_API")
+    }
 }
