@@ -21,7 +21,9 @@ import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import androidx.core.os.bundleOf
+import com.google.firebase.installations.FirebaseInstallations
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
@@ -56,6 +58,15 @@ class AboutActivity : BaseMenuActivity() {
         contact_support.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT, bundleOf())
             handleReportIssue()
+        }
+
+        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
+            if (task.isSuccessful && BuildConfig.DEBUG) {
+                firebase_installation_id.visibility = View.VISIBLE
+                firebase_installation_id.text = task.result.toString()
+            } else {
+                firebase_installation_id.visibility = View.GONE
+            }
         }
     }
 
