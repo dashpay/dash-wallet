@@ -1,12 +1,13 @@
 package de.schildbach.wallet.ui.explore
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
+import de.schildbach.wallet.ui.PaymentsActivity
 import de.schildbach.wallet_test.R
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.NavigationRequest
 
 @AndroidEntryPoint
 class ExploreActivity : BaseMenuActivity() {
@@ -19,8 +20,14 @@ class ExploreActivity : BaseMenuActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        viewModel.event.observe(this) {
-            Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+        viewModel.navigationCallback.observe(this) { request ->
+            when (request) {
+                NavigationRequest.SendDash -> {
+                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 0)
+                    startActivity(sendCoinsIntent)
+                }
+                else -> {}
+            }
         }
     }
 }

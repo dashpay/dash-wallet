@@ -16,6 +16,7 @@
 
 package org.dash.wallet.features.exploredash.data.model
 
+import androidx.annotation.Keep
 import androidx.room.Entity
 import com.google.firebase.database.PropertyName
 
@@ -30,15 +31,16 @@ object MerchantType {
     const val BOTH = "both"
 }
 
+@Keep
 @Entity(tableName = "merchant")
 data class Merchant(
-    @PropertyName("pluscode")
+    @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
 
-    @PropertyName("adddate")
+    @get:PropertyName("add_date") @set:PropertyName("add_date")
     var addDate: String? = "",
 
-    @PropertyName("updatedate")
+    @get:PropertyName("update_date") @set:PropertyName("update_date")
     var updateDate: String? = "",
 
     var address1: String? = "",
@@ -49,11 +51,13 @@ data class Merchant(
     var longitude: Double? = 0.0,
     var territory: String? = "",
     var website: String? = "",
+    var deeplink: String? = "",
+    var phone: String? = "",
     var type: String? = "",
 
-    @PropertyName("logolocation")
+    @get:PropertyName("logo_location") @set:PropertyName("logo_location")
     var logoLocation: String? = "",
 
-    @PropertyName("paymentmethod")
+    @get:PropertyName("payment_method") @set:PropertyName("payment_method")
     var paymentMethod: String? = ""
 ) : SearchResult()
