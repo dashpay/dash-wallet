@@ -3,12 +3,11 @@ package org.dash.wallet.integration.liquid.dialog
 import android.content.Context
 import android.widget.ImageView
 import android.widget.LinearLayout
-import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import org.dash.wallet.integration.liquid.R
 
 
-class SelectSellDashDialog(val contexts: Context, val listener: ValueSelectListener) : BottomSheetDialog(contexts) {
+class SelectSellDashDialog(val contexts: Context, val valueSelectListener: (Int) -> Unit) : BottomSheetDialog(contexts) {
 
     init {
         setCancelable(true)
@@ -29,12 +28,12 @@ class SelectSellDashDialog(val contexts: Context, val listener: ValueSelectListe
 
         llCreditCard.setOnClickListener {
             dialog.dismiss()
-            listener.onItemSelected(1)
+            valueSelectListener(1)
         }
 
         llCryptocurrency.setOnClickListener {
             dialog.dismiss()
-            listener.onItemSelected(2)
+            valueSelectListener(2)
         }
 
         collapseButton.setOnClickListener {

@@ -20,8 +20,6 @@ package de.schildbach.wallet.dialog
 import android.app.Activity
 import androidx.core.view.isVisible
 import org.dash.wallet.integration.liquid.R
-import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
-import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.adapter.CurrencyAdapter
 import org.dash.wallet.integration.liquid.dialog.CurrencySearchDialog
@@ -34,7 +32,7 @@ class FiatCurrencySearchDialog(
     private val liquidCurrencyArrayList: ArrayList<PayloadItem>,
     private val upholdCurrencyArrayList: ArrayList<UpholdCurrencyResponse>,
     selectedFilterCurrencyItem: PayloadItem?,
-    val listener: CurrencySelectListener
+    val currencySelectListener: (Boolean, Boolean, PayloadItem?) -> Unit
 ) : CurrencySearchDialog(activity, selectedFilterCurrencyItem, R.string.select_fiat_currency) {
 
     override fun create() {
@@ -42,7 +40,7 @@ class FiatCurrencySearchDialog(
         viewBinding.clearFilter.setOnClickListener {
             currencyAdapter.setSelectedPosition(-1, null)
             viewBinding.clearFilter.isVisible = false
-            listener.onCurrencySelected(true, true, null)
+            currencySelectListener(true, true, null)
         }
     }
 
@@ -93,51 +91,46 @@ class FiatCurrencySearchDialog(
     }
 
     override fun createAdapter(): CurrencyAdapter {
-        return CurrencyAdapter(
-            activity,
-            currencyArrayList,
-            object : ValueSelectListener {
-                override fun onItemSelected(value: Int) {
+        return CurrencyAdapter(activity, currencyArrayList) { value ->
 
-                    var isUpholdSupport = false
-                    var isLiquidSupport = false
+            var isUpholdSupport = false
+            var isLiquidSupport = false
 
-                    val item = currencyArrayList[value]
-                    if (item.type == "Liquid") {
-                        isLiquidSupport = true
-                    } else {
+            val item = currencyArrayList[value]
+            if (item.type == "Liquid") {
+                isLiquidSupport = true
+            } else {
+                isUpholdSupport = true
+            }
+
+            for (i in currencyArrayList.indices) {
+                if (isLiquidSupport) {
+                    if ((item.symbol.equals(
+                            currencyArrayList[i].symbol,
+                            ignoreCase = true
+                        )) and (currencyArrayList[i].type == "Uphold")
+                    ) {
                         isUpholdSupport = true
+                        break
                     }
-
-                    for (i in currencyArrayList.indices) {
-                        if (isLiquidSupport) {
-                            if ((item.symbol.equals(
-                                    currencyArrayList[i].symbol,
-                                    ignoreCase = true
-                                )) and (currencyArrayList[i].type == "Uphold")
-                            ) {
-                                isUpholdSupport = true
-                                break
-                            }
-                        } else if (isUpholdSupport) {
-                            if ((item.symbol.equals(
-                                    currencyArrayList[i].symbol,
-                                    ignoreCase = true
-                                )) and (currencyArrayList[i].type == "Liquid")
-                            ) {
-                                isLiquidSupport = true
-                                break
-                            }
-                        }
+                } else if (isUpholdSupport) {
+                    if ((item.symbol.equals(
+                            currencyArrayList[i].symbol,
+                            ignoreCase = true
+                        )) and (currencyArrayList[i].type == "Liquid")
+                    ) {
+                        isLiquidSupport = true
+                        break
                     }
-
-                    listener.onCurrencySelected(isLiquidSupport, isUpholdSupport, item)
-                    Timer().schedule(object : TimerTask() {
-                        override fun run() {
-                            dialog.dismiss()
-                        }
-                    }, 1000)
                 }
-            })
+            }
+
+            currencySelectListener(isLiquidSupport, isUpholdSupport, item)
+            Timer().schedule(object : TimerTask() {
+                override fun run() {
+                    dialog.dismiss()
+                }
+            }, 1000)
+        }
     }
 }

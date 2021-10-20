@@ -3,12 +3,11 @@ package org.dash.wallet.integration.liquid.dialog
 import android.content.Context
 import android.widget.ImageView
 import android.widget.LinearLayout
-import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import org.dash.wallet.integration.liquid.R
 
 
-class SelectBuyDashDialog(val contexts: Context, private val listener: ValueSelectListener) : BottomSheetDialog(contexts) {
+class SelectBuyDashDialog(val contexts: Context, private val valueSelectListener: (Int) -> Unit) : BottomSheetDialog(contexts) {
 
     init {
         setCancelable(true)
@@ -32,7 +31,7 @@ class SelectBuyDashDialog(val contexts: Context, private val listener: ValueSele
         llCreditCard.setOnClickListener {
             dialog.dismiss()
 
-            listener.onItemSelected(1)
+            valueSelectListener(1)
 
             // Commented for future to use enter amount screen
 
@@ -48,7 +47,7 @@ class SelectBuyDashDialog(val contexts: Context, private val listener: ValueSele
 
         llCryptocurrency.setOnClickListener {
             dialog.dismiss()
-            listener.onItemSelected(2)
+            valueSelectListener(2)
         }
 
         collapseButton.setOnClickListener {

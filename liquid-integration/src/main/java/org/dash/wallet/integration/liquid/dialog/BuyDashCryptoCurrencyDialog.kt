@@ -1,7 +1,6 @@
 package org.dash.wallet.integration.liquid.dialog
 
 import android.app.Activity
-import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.adapter.CurrencyAdapter
@@ -11,7 +10,7 @@ import java.util.*
 class BuyDashCryptoCurrencyDialog(
     activity: Activity,
     private val payload: List<PayloadItem>,
-    val listener: ValueSelectListener)
+    val listener: (Int) -> Unit)
     : CurrencySearchDialog(activity, null, R.string.select_sell_currency) {
 
     override fun generateList() {
@@ -19,16 +18,15 @@ class BuyDashCryptoCurrencyDialog(
     }
 
     override fun createAdapter(): CurrencyAdapter {
-        return CurrencyAdapter(activity, payload, object : ValueSelectListener {
-            override fun onItemSelected(value: Int) {
+        return CurrencyAdapter(activity, payload) {
                 // Showing timer for radio button selected currency
                 Timer().schedule(object : TimerTask() {
                     override fun run() {
-                        listener.onItemSelected(value)
+                        listener(it)
                         dialog.dismiss()
                     }
                 }, 1000)
             }
-        })
+
     }
 }

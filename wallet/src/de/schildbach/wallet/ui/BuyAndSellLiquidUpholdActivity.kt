@@ -53,7 +53,6 @@ import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
-import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.ui.LiquidPortalActivity
 import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidViewModel
@@ -504,7 +503,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         }
     }
 
-
     /**
      * Show dialog of currency list
      */
@@ -514,19 +512,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             this,
             liquidCurrencyArrayList,
             upholdCurrencyArrayList,
-            selectedFilterCurrencyItems,
-            object : CurrencySelectListener {
-                override fun onCurrencySelected(
-                    isLiquidSelcted: Boolean,
-                    isUpholdSelected: Boolean,
-                    selectedFilterCurrencyItem: PayloadItem?
-                ) {
-                    liquid_container.visibility = if (isLiquidSelcted) View.VISIBLE else View.GONE
-                    uphold_container.visibility = if (isUpholdSelected) View.VISIBLE else View.GONE
-                    selectedFilterCurrencyItems = selectedFilterCurrencyItem
-                    setSelectedCurrency()
-                }
-            }).create()
+            selectedFilterCurrencyItems) { isLiquidSelcted, isUpholdSelected, selectedFilterCurrencyItem ->
+                liquid_container.visibility = if (isLiquidSelcted) View.VISIBLE else View.GONE
+                uphold_container.visibility = if (isUpholdSelected) View.VISIBLE else View.GONE
+                selectedFilterCurrencyItems = selectedFilterCurrencyItem
+                setSelectedCurrency()
+            }.create()
     }
 
     /**

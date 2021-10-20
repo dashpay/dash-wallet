@@ -27,6 +27,7 @@ import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import androidx.core.view.isVisible
+import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import org.dash.wallet.integration.liquid.currency.PayloadItem
@@ -84,20 +85,22 @@ abstract class CurrencySearchDialog(
                     }
                 }
             }
-
-            currencySearch.addTextChangedListener(object : TextWatcher {
+            currencySearch.doOnTextChanged { text, _, _, _ ->
+                val query = Strings.emptyToNull(text.toString().trim { it <= ' ' }) ?: ""
+                updateView()
+                currencyAdapter.filter(query)
+            }
+            /*currencySearch.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
                 }
 
                 override fun onTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                    val query = Strings.emptyToNull(s.toString().trim { it <= ' ' }) ?: ""
-                    updateView()
-                    currencyAdapter.filter(query)
+
                 }
 
                 override fun afterTextChanged(view: Editable?) {
                 }
-            })
+            })*/
 
             currencySearch.setOnFocusChangeListener { view, hasFocus ->
                 if (hasFocus) {

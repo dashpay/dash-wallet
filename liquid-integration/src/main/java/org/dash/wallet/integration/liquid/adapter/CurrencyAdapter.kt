@@ -27,7 +27,6 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.github.twocoffeesoneteam.glidetovectoryou.GlideToVectorYou
 import org.dash.wallet.integration.liquid.R
-import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.databinding.ItemCurrencyBinding
 import org.dash.wallet.integration.liquid.databinding.ItemCurrencyEmptyBinding
@@ -39,7 +38,7 @@ class CurrencyItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 class CurrencyAdapter(
     val activity: Activity,
     private val currencyArrayList: List<PayloadItem>,
-    val listener: ValueSelectListener
+    val listener: (Int) -> Unit
 ) : RecyclerView.Adapter<CurrencyItemViewHolder>() {
 
     companion object {
@@ -129,7 +128,7 @@ class CurrencyAdapter(
                     notifyItemChanged(copyOfLastCheckedPosition)
                     notifyItemChanged(selectedPosition)
 
-                    listener.onItemSelected(position)
+                    listener(position)
                 }
                 // Does this load only SVG's?
                 GlideToVectorYou.justLoadImage(activity, Uri.parse(currencyItem.icon), currencyImage)
