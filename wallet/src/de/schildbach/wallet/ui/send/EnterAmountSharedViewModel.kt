@@ -44,6 +44,13 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
     var exchangeRate: org.bitcoinj.utils.ExchangeRate? = null
         get() = _nameLiveData.value?.run { org.bitcoinj.utils.ExchangeRate(Coin.COIN, _nameLiveData.value!!.fiat) }
 
+    private val dashToFiatDirectionData = MutableLiveData<Boolean>()
+    val dashToFiatDirectionLiveData: LiveData<Boolean>
+        get() = dashToFiatDirectionData
+    fun setDashToFiatDirection(isDashToFiat: Boolean) {
+        dashToFiatDirectionData.value = isDashToFiat
+    }
+
     val dashAmountData = MutableLiveData<Coin>()
 
     val dashAmount: Coin
