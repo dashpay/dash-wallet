@@ -128,9 +128,11 @@ public class CurrencyInfo {
 
     // convert a locale currency code to that which is used by the app
     public static String getOtherName(String currencyCode) {
-        for (Map.Entry<String, String> entry: useOtherNameMap.entrySet()) {
-            if (currencyCode.equals(entry.getValue())) {
-                return entry.getKey();
+        if (currencyCode != null) {
+            for (Map.Entry<String, String> entry : useOtherNameMap.entrySet()) {
+                if (currencyCode.equals(entry.getValue())) {
+                    return entry.getKey();
+                }
             }
         }
         return currencyCode;
