@@ -96,7 +96,8 @@ class ExchangeRatesRepository private constructor() {
             return exchangeRatesDao.all
         }
 
-    fun getRate(currencyCode: String): LiveData<ExchangeRate> {
+    // it is possible that the currencyCode could be null
+    fun getRate(currencyCode: String?): LiveData<ExchangeRate> {
         if (shouldRefresh()) {
             refreshRates()
         }
@@ -110,10 +111,6 @@ class ExchangeRatesRepository private constructor() {
     // This will return null if not found
     fun getExchangeRate(currencyCode: String): ExchangeRate? {
         return exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
-    }
-
-    interface GetExchangeRateCallback {
-        fun onExchangeRateLoaded(exchangeRate: ExchangeRate?)
     }
 
     companion object {
