@@ -76,7 +76,7 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
         repo = ExchangeRatesRepository.instance
         viewModelScope.launch(Dispatchers.Main) {
             val result = withContext(Dispatchers.IO) { repo.getExchangeRate(currencyCode) }
-            _nameLiveData.value = result
+            result.let { _nameLiveData.value = it } // do nothing if null
         }
     }
 
