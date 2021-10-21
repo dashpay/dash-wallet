@@ -25,22 +25,11 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
-import android.content.Intent
-import android.net.Uri
 import android.content.DialogInterface
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
-import android.provider.Settings
-import android.util.DisplayMetrics
 import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
@@ -50,15 +39,11 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.*
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -107,7 +92,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var bottomSheetWasExpanded: Boolean = false
     private var isKeyboardShowing: Boolean = false
     private var googleMap: GoogleMap? = null
-    private lateinit var adapter: MerchantsAtmsResultAdapter
     private lateinit var mCurrentUserLocation : LatLng
     private var currentLocationMarker: Marker? = null
     private var currentLocationCircle: Circle? = null
@@ -268,7 +252,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupSearchResults() {
-        adapter = MerchantsAtmsResultAdapter { item, _ ->
+        val adapter = MerchantsAtmsResultAdapter { item, _ ->
             hideKeyboard()
 
             if (item is Merchant) {
@@ -551,7 +535,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             } else {
                 permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
-            googleMap?.uiSettings?.isZoomControlsEnabled = true
         }
     }
 
