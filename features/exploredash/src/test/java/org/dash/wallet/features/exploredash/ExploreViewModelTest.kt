@@ -24,6 +24,7 @@ import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.UserLocationState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.Mockito.`when`
@@ -43,14 +44,14 @@ class ExploreViewModelTest {
 
     private val repositoryMock = mock(MerchantRepository::class.java)
     private val daoMock = mock(MerchantDao::class.java)
-
+    private val locationState = mock(UserLocationState::class.java)
     @Test
     fun filterByTerritoryIsCorrect() {
         runBlocking {
             val territory = "Texas"
             `when`(daoMock.observe(territory)).thenReturn(flow { emit(merchants.filter { it.territory == territory }) })
 
-            val viewModel = ExploreViewModel(repositoryMock, daoMock)
+            val viewModel = ExploreViewModel(repositoryMock, daoMock, locationState)
             viewModel.pickedTerritory = territory
             viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
 
@@ -71,7 +72,7 @@ class ExploreViewModelTest {
                 it.name?.lowercase()?.startsWith(query) ?: false
             }) })
 
-            val viewModel = ExploreViewModel(repositoryMock, daoMock)
+            val viewModel = ExploreViewModel(repositoryMock, daoMock, locationState)
             viewModel.setFilterMode(ExploreViewModel.FilterMode.Online)
             viewModel.submitSearchQuery(query)
 
@@ -99,7 +100,7 @@ class ExploreViewModelTest {
                 (it.name?.lowercase()?.startsWith(query) ?: false) && it.territory == territory
             }) })
 
-            val viewModel = ExploreViewModel(repositoryMock, daoMock)
+            val viewModel = ExploreViewModel(repositoryMock, daoMock, locationState)
             viewModel.pickedTerritory = territory
             viewModel.submitSearchQuery(query)
             viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
