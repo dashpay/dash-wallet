@@ -65,17 +65,15 @@ class AboutActivity : BaseMenuActivity() {
 
     private fun showFirebaseInstallationId() {
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            firebase_installation_id.apply {
-                isVisible = task.isSuccessful && BuildConfig.DEBUG
-                if (task.isSuccessful) {
-                    text = task.result
-                    setOnClickListener {
-                        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
-                            setPrimaryClip(ClipData.newPlainText("Firebase Installation ID", firebase_installation_id.text))
-                        }
-                        Toast(this@AboutActivity).toast("Copied")
-                    }
+            firebase_installation_id.isVisible = task.isSuccessful && BuildConfig.DEBUG
+            if (task.isSuccessful) {
+                firebase_installation_id.text = task.result
+            }
+            firebase_installation_id.setOnClickListener {
+                (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
+                    setPrimaryClip(ClipData.newPlainText("Firebase Installation ID", firebase_installation_id.text))
                 }
+                Toast(this@AboutActivity).toast("Copied")
             }
         }
     }
