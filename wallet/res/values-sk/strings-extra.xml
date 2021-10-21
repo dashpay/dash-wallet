@@ -220,6 +220,15 @@
     <string name="verify_seed_buttons_tip">Klepnite na slová z obnovovacej frázy v správnom poradí</string>
     <string name="verify_seed_success_title">Úspešne overené</string>
     <string name="verify_seed_success_message">Vaša peňaženka je zabezpečená. Frázu pre obnovenie môžete kedykoľvek použiť na obnovenie svojho účtu na inom zariadení.</string>
+    <string name="verify_no_screenshot_title">Nerobte snímku obrazovky</string>
+    <string name="verify_no_screenshot_message">Namiesto toho si zapíšte frázu na obnovenie na bezpečnom mieste.</string>
+    <string name="verify_why_no_screenshot">Prečo by som nemal robiť snímku obrazovky?</string>
+    <string name="verify_warning_title">Upozornenie</string>
+    <string name="verify_warning_message">Táto fráza pre obnovenie predstavuje prístup k finančným prostriedkom vo vašej peňaženke.</string>
+    <string name="verify_warning_screenshots_title">Nerobte snímky obrazovky</string>
+    <string name="verify_warning_screenshots_message">Snímky obrazovky sú viditeľné pre ostatné aplikácie a zariadenia.</string>
+    <string name="verify_warning_do_not_show">Nedovoľte nikomu vidieť vašu frázu na obnovenie.</string>
+    <string name="verify_warning_do_not_type">Nikdy nezadávajte svoju frázu na obnovenie do správcov hesiel ani inde.</string>
     <string name="view_seed_done">Hotovo</string>
     <string name="view_seed_title">Fráza pre obnovenie</string>
     <string name="transaction_result_view_on_explorer">Zobraziť v prehliadači blokov</string>

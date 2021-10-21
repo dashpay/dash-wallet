@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Sua carteira foi reiniciada!\nA recuperação levará um tempo.</string>
+    <string name="toast_start_storage_provider_selector_failed">Nenhum provedor compatível de armazenamento em nuvem está instalado.\nVocê precisa de algum como \"Nextcloud\" ou \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Use por sua conta e risco. Leia as &lt;u&gt;indicações de segurança&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Você precisa fazer backup da sua carteira!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d horas atrás</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Restaurar</string>
     <string name="restore_wallet_dialog_success">Carteira foi restaurada.</string>
     <string name="restore_wallet_dialog_success_replay">Sua carteira foi restaurada com sucesso. O saldo será determinado em seguida. Isso poderá levar algum tempo.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Aviso: Sua carteira está protegida por um código PIN. Certifique-se de que ainda lembra deste código antes de receber nesta carteira.</string>
     <string name="import_keys_dialog_failure">A carteira não pôde ser restaurada:\n\n%s\n\nSenha incorreta?</string>
     <string name="backup_wallet_permission_dialog_title">Falta permissão de escrita</string>
     <string name="backup_wallet_permission_dialog_message">Para pesquisar backups da carteira em seu armazenamento externo, você precisa conceder permissão de leitura.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Seu backup será criptografado com a senha escolhida e será salvo no armazenamento externo.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Sua carteira é protegida por um PIN. Certifique-se de que você se lembra do PIN, além da senha de backup!</string>
     <string name="export_keys_dialog_button_export">Exportar</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>O backup de sua carteira foi feito em <tt>%s</tt></p><p>Se o seu dispositivo possui um SD card removível, seu backup <i>deve</i> estar nesse cartão. Remova-o e mantenha-o em um local seguro. Se seu cartão <i>não</i> for removível, você precisa arquivar seu backup em outro lugar.</p><p><b>Se o único lugar que tem para fazer seu backup é seu dispositivo você corre o risco de perder tudo ao mesmo tempo!</b></p><p>De qualquer maneira, tenha certeza de que se lembra da sua senha de backup. Quer arquivar sua carteira agora?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Sua carteira foi copiada para <tt>%s</tt></p><p><b>Se o seu dispositivo for o único local de backup, há o risco de você perder os dois ao mesmo tempo!</b></p><p>Em qualquer caso, certifique-se de lembrar sua senha de backup.</p>]]></string>
     <string name="export_keys_dialog_failure">Sua carteira não pôde ser salva: \n%s</string>
     <string name="export_keys_dialog_button_archive">Arquivar</string>
     <string name="export_keys_dialog_mail_subject">Backup da carteira Dash</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">Selecione um serviço</string>
     <string name="activity_buy_and_sell_dash_filter">Filtro</string>
     <string name="clear_filter">Limpar Filtro</string>
+    <string name="select_currency">Selecione a moeda</string>
+
 </resources>

@@ -30,4 +30,14 @@
     <string name="uphold_api_error_identity">لم يتم التحقق من حساب Uphold الخاص بك حتى الآن. لا يمكن سحب الأموال.</string>
     <string name="uphold_api_error_403_description">تم وضع علامة على حساب Uphold الخاص بك للمراجعة.\n\n لقد قام Upold بتقييد حسابك مؤقتًا ولن تتمكن من سحب الأموال.\n\n ستتواصل Uphold لمساعدتك في حل هذه المشكلة بسرعة.</string>
     <string name="uphold_api_error_400_description">أموال Upholdمؤمنة لمدة 24 ساعة.\n\nسيكون لديك أموال كافية لهذا التحويل بحلول%s.</string>
+    <string name="uphold_api_error_400_locked">أموال Uphold (%1$s%2$s) مؤمنة لمدة تصل إلى 65 يومًا.\n\nسيكون لديك أموال كافية لهذا التحويل بحلول%3$s.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">ليس لديك أموال كافية لهذا التحويل</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">يجب أن تكون هذه القيمة أقل من أو تساوي%s.</string>
+    <string name="uphold_api_error_400_tx_validation">لا يمكن تحويل هذا المبلغ مع هذا التطبيق (بحد أقصى 3000 دولار)</string>
+    <string name="uphold_api_error_400_password_reset">تم قفل أموال Uphold بسبب تغيير كلمة المرور مؤخرًا.\n\nيجب عليك الانتظار حتى %sقبل أن تتمكن من تحويل الأموال.</string>
+    <string name="uphold_api_error_400_authentication_change">تم قفل الأموال الداعمة بسبب تغيير طريقة المصادقة الأخيرة\n\nيجب عليك الانتظار حتى%s قبل أن تتمكن من تحويل الأموال.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">لا يمكن نقل هذا المبلغ باستخدام هذا التطبيق (بحد أقصى 3000 دولار)\n\nالرجاء استخدام حساب Uphold الخاص بك لإجراء التحويل.</string>
+    <string name="uphold_api_error_400_required">لا يمكن نقل هذا المبلغ باستخدام هذا التطبيق (بحد أقصى 3000 دولار)\n\nالرجاء استخدام حساب Uphold الخاص بك لإجراء التحويل.</string>
+
 </resources>

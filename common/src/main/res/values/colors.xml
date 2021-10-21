@@ -73,5 +73,5 @@
     <color name="grey_liquid">#9B9B9B</color>
     <color name="warning_yellow">#FFFAF0</color>
     <color name="bg_explore">#003470</color>
-    <color name="divider_color">#EBEDF0</color> <!-- #F1F3F5-->
+    <color name="divider_color">#EBEDF0</color>
 </resources>

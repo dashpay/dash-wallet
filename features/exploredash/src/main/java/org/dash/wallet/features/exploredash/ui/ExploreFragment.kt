@@ -34,7 +34,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.titleBar.toolbar.title = "Explore"
+        binding.titleBar.toolbar.title = getString(R.string.explore_title)
         binding.titleBar.toolbar.setNavigationOnClickListener {
             requireActivity().finish()
         }

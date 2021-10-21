@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="explore_dash">Explore Dash</string>
+    <string name="explore_title">Explore</string>
     <string name="explore_subtitle">Easily shop with your DASH at over 155,000 locations and online merchants</string>
     <string name="explore_merchants_title">Where to Spend?</string>
     <string name="explore_merchants_subtitle">Find merchants who accept Dash as payment.</string>
@@ -18,6 +19,10 @@
     <string name="explore_select_state">Select the State</string>
     <string name="explore_all_states">All states</string>
     <string name="explore_no_results">No results</string>
+    <string name="explore_pay_with_dash">Pay with Dash</string>
+    <string name="explore_buy_gift_card">Buy a Gift Card</string>
+    <string name="explore_merchant_address">%1$s\n%2$s\n%3$s</string>
+    <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
     <string name="permission_required_title">Permission required</string>
     <string name="permission_required_message">We need to know your current location</string>
     <string name="goto_settings">Settings</string>

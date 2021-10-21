@@ -4,7 +4,9 @@
     <string name="loading">Φορτώνει...</string>
     <string name="loading_error">Παρουσιάστηκε σφάλμα. Παρακαλώ προσπαθήστε ξανά αργότερα.</string>
     <string name="dash_available">%1$s διαθέσιμα</string>
-
+    <string name="network_unavailable_title">Μη διαθέσιμο δίκτυο</string>
+    <string name="network_unavailable_check_connection">Ελέγξτε τη σύνδεση δικτύου σας</string>
+    <string name="network_unavailable_balance_not_accurate">Το υπόλοιπο ενδέχεται να μην είναι ακριβές λόγω της απώλειας σύνδεσης</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Γκέρνσεϊ Λίρα</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">Paxos Standard</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">Ματαίωση</string>
+    <string name="network_unavailable_return">Επιστροφή στο Πορτοφόλι</string>
+
 </resources>

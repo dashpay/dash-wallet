@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Il portafoglio è stato resettato!\nlt Occorrerà del tempo per ripristinarlo.</string>
+    <string name="toast_start_storage_provider_selector_failed">Non è installato alcun provider di archiviazione cloud adatto.\n Hai bisogno di qualcosa come \"Nextcloud\" o \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Usalo a tuo rischio. Leggi le &lt;u&gt;avvertenze per la sicurezza&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Hai bisogno di eseguire un backup del tuo portafoglio!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d ore indietro</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Ripristina</string>
     <string name="restore_wallet_dialog_success">Il portafoglio è stato recuperato.</string>
     <string name="restore_wallet_dialog_success_replay">Il tuo portafoglio è stato ripristinato correttamente. Il bilancio verrà determinato in un secondo momento. Questo potrebbe richiedere diverso tempo</string>
+    <string name="restore_wallet_dialog_success_encrypted">Attenzione: il tuo portafoglio è protetto da un PIN di spesa. Assicurati di ricordarlo ancora prima di ricevere su questo portafoglio.</string>
     <string name="import_keys_dialog_failure">Il portafoglio non può essere recuperato:\n\n%s\n\nPassword sbagliata?</string>
     <string name="backup_wallet_permission_dialog_title">Permesso di scrittura mancante.</string>
     <string name="backup_wallet_permission_dialog_message">Per eseguire il backup del tuo portafoglio su una memoria esterna, devi concedere il permesso di scrittura.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Il vostro backup sarà cifrato con la password scelta e salvato su una memoria esterna.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Il tuo portafoglio è protetto da un PIN di sicurezza. Assicurati di ricordare il PIN assieme alla password di backup!</string>
     <string name="export_keys_dialog_button_export">Backup</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Il tuo portafoglio è stato sottoposto a backup <tt>%s</tt></p><p> Se il tuo dispositivo ha una scheda SD rimovibile<i>dovrebbe</i> il tuo backup dovrebbe essere su di essa <i>non</i> Rimuovilo e conservalo in un posto sicuro.</p><p><b> Se la scheda non è rimovibile, potresti perdere i fondi in qualsiasi momento!</b></p><p>In ogni caso, assicurati di ricordare la tua Password. Vuoi archiviare il tuo portafoglio adesso?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[1<p>È stato eseguito il backup del tuo portafoglio su <tt>%s</tt></p><p><b>Se l\'unico posto in cui esiste il tuo backup è sul tuo dispositivo, corri il rischio di perderli entrambi contemporaneamente!</b></p><p>In ogni caso, assicurati di ricordare la password di backup.</p>]]></string>
     <string name="export_keys_dialog_failure">Non è stato possibile effettuare il backup del tuo portafoglio:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archivio</string>
     <string name="export_keys_dialog_mail_subject">Dash Wallet backup</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">Seleziona un servizio</string>
     <string name="activity_buy_and_sell_dash_filter">Filtro</string>
     <string name="clear_filter">Filtro pulito</string>
+    <string name="select_currency">Seleziona Valuta</string>
+
 </resources>

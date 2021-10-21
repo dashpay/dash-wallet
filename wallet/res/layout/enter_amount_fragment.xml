@@ -74,7 +74,7 @@
                     app:srcCompat="@drawable/ic_dash_d_black" />
 
                 <TextView
-                    android:id="@+id/input_symbol"
+                    android:id="@+id/left_input_symbol"
                     style="@style/MontserratRegular"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -93,6 +93,17 @@
                     android:ellipsize="middle"
                     android:hint="0"
                     android:singleLine="true"
+                    android:textColor="@color/gray_900"
+                    android:textSize="@dimen/pay_input_symbol_text_size" />
+
+                <TextView
+                    android:id="@+id/right_input_symbol"
+                    style="@style/MontserratRegular"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    tools:text="$"
+                    android:visibility="gone"
                     android:textColor="@color/gray_900"
                     android:textSize="@dimen/pay_input_symbol_text_size" />
 
@@ -126,7 +137,7 @@
                     app:srcCompat="@drawable/ic_dash_d_gray" />
 
                 <TextView
-                    android:id="@+id/calc_amount_symbol"
+                    android:id="@+id/left_calc_amount_symbol"
                     style="@style/MontserratRegular"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -142,6 +153,17 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0.00"
+                    android:textColor="@color/dash_gray"
+                    android:textSize="@dimen/pay_calc_amount_symbol_size" />
+
+                <TextView
+                    android:id="@+id/right_calc_amount_symbol"
+                    style="@style/MontserratRegular"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="4dp"
+                    android:hint="$"
+                    android:visibility="gone"
                     android:textColor="@color/dash_gray"
                     android:textSize="@dimen/pay_calc_amount_symbol_size" />
 
