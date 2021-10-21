@@ -16,15 +16,15 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
+import android.content.*
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
-import android.view.View
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import com.google.firebase.installations.FirebaseInstallations
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_about.*
@@ -60,12 +60,22 @@ class AboutActivity : BaseMenuActivity() {
             handleReportIssue()
         }
 
+        showFirebaseInstallationId()
+    }
+
+    private fun showFirebaseInstallationId() {
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            if (task.isSuccessful && BuildConfig.DEBUG) {
-                firebase_installation_id.visibility = View.VISIBLE
-                firebase_installation_id.text = task.result.toString()
-            } else {
-                firebase_installation_id.visibility = View.GONE
+            firebase_installation_id.apply {
+                isVisible = task.isSuccessful && BuildConfig.DEBUG
+                if (task.isSuccessful) {
+                    text = task.result
+                    setOnClickListener {
+                        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
+                            setPrimaryClip(ClipData.newPlainText("Firebase Installation ID", firebase_installation_id.text))
+                        }
+                        Toast(this@AboutActivity).toast("Copied")
+                    }
+                }
             }
         }
     }
