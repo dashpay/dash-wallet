@@ -28,7 +28,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.DisplayMetrics
 import android.view.View
+import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
@@ -50,12 +52,13 @@ import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.maps.android.collections.CircleManager
+import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.DialogBuilder
 import org.dash.wallet.common.ui.ListDividerDecorator
@@ -71,7 +74,7 @@ import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 @FlowPreview
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
-class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerClickListener {
+class SearchFragment : Fragment(R.layout.fragment_search) {
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private var googleMap: GoogleMap? = null
@@ -80,6 +83,11 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
     private var currentLocationMarker: Marker? = null
     private var currentLocationCircle: Circle? = null
     private val CURRENT_POSITION_MARKER_TAG = 0
+
+    private var markerManager: MarkerManager? = null
+    private var markerCollection: MarkerManager.Collection? = null
+    private var circleManager: CircleManager? = null
+    private var circleCollection: CircleManager.Collection? = null
 
     private val permissionRequestLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()) { isPermissionGranted ->
@@ -192,7 +200,8 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
         viewModel.searchResults.observe(viewLifecycleOwner) { results ->
             binding.noResultsText.isVisible = results.isEmpty()
             adapter.submitList(results)
-            renderMerchantAtmsOnMap(results)
+            renderMerchantsOnMap(results)
+            handleClickOnMerchantMarker(results)
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) {
@@ -218,33 +227,63 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
         }
     }
 
-    private suspend fun setUserLocationMarkerMovementState() {
-        googleMap?.markerDragEvents()?.collect { value: OnMarkerDragEvent ->
-            if (value is MarkerDragEndEvent) {
-                currentLocationMarker?.position = value.marker.position
-                currentLocationCircle?.center = value.marker.position
-                googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(value.marker.position, 7f))
+    private fun setUserLocationMarkerMovementState() {
+        markerCollection?.setOnMarkerDragListener(object : GoogleMap.OnMarkerDragListener {
+            override fun onMarkerDragStart(p0: Marker) {
             }
-        }
+
+            override fun onMarkerDrag(p0: Marker) {
+            }
+
+            override fun onMarkerDragEnd(marker: Marker) {
+                currentLocationMarker?.position = marker.position
+                currentLocationCircle?.center = marker.position
+                googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.position, calculateZoomLevel().toFloat()))
+            }
+        })
+
     }
 
-    private fun renderMerchantAtmsOnMap(results: List<SearchResult>) {
+    private fun renderMerchantsOnMap(results: List<SearchResult>) {
+        markerCollection?.markers?.forEach { if (it.tag != CURRENT_POSITION_MARKER_TAG) it.remove() }
         results.forEach {
             if (it is Merchant) {
-                googleMap?.addMarker {
+                markerCollection?.addMarker(MarkerOptions().apply {
                     position(LatLng(it.latitude!!, it.longitude!!))
                     anchor(0.5f, 0.5f)
                     val bitmap = getBitmapFromDrawable(R.drawable.merchant_marker)
                     icon(BitmapDescriptorFactory.fromBitmap(bitmap))
                     draggable(false)
-                }
+                })
             }
         }
-        googleMap?.setOnMarkerClickListener(this)
+    }
+
+    private fun handleClickOnMerchantMarker(results: List<SearchResult>) {
+        markerCollection?.setOnMarkerClickListener { marker ->
+            if (marker.tag == CURRENT_POSITION_MARKER_TAG) {
+                false
+            } else {
+                val atmItemCoordinates = marker.position
+                results.forEach {
+                    if (it is Merchant) {
+                        if ((it.latitude == atmItemCoordinates.latitude) && (it.longitude == atmItemCoordinates.longitude)) {
+                            viewModel.openMerchantDetails(it)
+                        }
+                    }
+                }
+                true
+            }
+        }
     }
 
     private fun checkPermissionOrShowMap() {
         if (isGooglePlayServicesAvailable()) {
+            markerManager = MarkerManager(googleMap)
+            markerCollection = markerManager?.newCollection()
+            circleManager = googleMap?.let { CircleManager(it) }
+            circleCollection = circleManager?.newCollection()
+
             if (isForegroundLocationPermissionGranted()) {
                 viewModel.monitorUserLocation()
                 viewModel.observeCurrentUserLocation.observe(viewLifecycleOwner) {
@@ -253,35 +292,38 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
             } else {
                 permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
+            googleMap?.uiSettings?.isZoomControlsEnabled = true
         }
     }
 
     private fun addCircleAroundCurrentPosition() {
-        currentLocationCircle = googleMap?.addCircle {
+        currentLocationCircle = circleCollection?.addCircle(CircleOptions().apply {
             center(mCurrentUserLocation)
-            radius(milesToMeters(50.0))
+            radius(1500.0)
             fillColor(Color.parseColor("#26008DE4"))
             strokeColor(Color.TRANSPARENT)
-        }
+        })
     }
 
     private fun addMarkerOnCurrentPosition() {
         val bitmap = getBitmapFromDrawable(R.drawable.user_location_map_marker)
-        currentLocationMarker = googleMap?.addMarker {
+        currentLocationMarker = markerCollection?.addMarker(MarkerOptions().apply {
             position(mCurrentUserLocation)
             anchor(0.5f, 0.5f)
             icon(BitmapDescriptorFactory.fromBitmap(bitmap))
             draggable(true)
-        }
+        })
         currentLocationMarker?.tag = CURRENT_POSITION_MARKER_TAG
     }
 
     private fun showLocationOnMap(userLocation: UserLocation) {
         mCurrentUserLocation = LatLng(userLocation.latitude, userLocation.longitude)
-        currentLocationCircle?.remove()
-        currentLocationMarker?.remove()
+        if (currentLocationCircle != null) circleCollection?.remove(currentLocationCircle)
+        if (currentLocationMarker != null) markerCollection?.remove(currentLocationMarker)
+
         addMarkerOnCurrentPosition()
         addCircleAroundCurrentPosition()
+        googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(mCurrentUserLocation, calculateZoomLevel().toFloat()))
     }
 
     private fun isForegroundLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),
@@ -303,23 +345,6 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
     }
 
-    override fun onMarkerClick(marker: Marker): Boolean {
-        return if (marker.tag == CURRENT_POSITION_MARKER_TAG) {
-            false
-        } else {
-            val atmItemCoordinates = marker.position
-            adapter.currentList.forEach {
-                if (it is Merchant) {
-                    if ((it.latitude == atmItemCoordinates.latitude) && (it.longitude == atmItemCoordinates.longitude)) {
-                        viewModel.openMerchantDetails(it)
-                    }
-                }
-            }
-
-            true
-        }
-    }
-
     private fun getBitmapFromDrawable(drawableId: Int): Bitmap {
         var drawable =  AppCompatResources.getDrawable(requireActivity(), drawableId)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
@@ -334,5 +359,33 @@ class SearchFragment : Fragment(R.layout.fragment_search), GoogleMap.OnMarkerCli
 
     private fun milesToMeters(miles: Double): Double {
         return miles * 1609.344
+    }
+
+    /**
+     * At zoom level 1, the equator of the Earth is 256 pixels long.
+     * Every step up in zoom level doubles the number of pixels needed to represent earth's equator
+     * The function below provides zoom level where the the screen will show an area of 50 mile radius
+     */
+    private fun calculateZoomLevel(): Int {
+        val equatorLength = 40075004.0
+        val displayMetrics = DisplayMetrics()
+
+        @Suppress("DEPRECATION")
+        val widthInPixels = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R){
+            requireActivity().windowManager.defaultDisplay.getMetrics(displayMetrics)
+            displayMetrics.widthPixels
+        } else {
+            val windowMetrics = requireActivity().windowManager.currentWindowMetrics
+            val insets = windowMetrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars())
+            windowMetrics.bounds.width().minus(insets.left).minus(insets.right)
+        }
+
+        var metersPerPixel = equatorLength / 256
+        var zoomLevel = 1
+        while ((metersPerPixel * widthInPixels) > milesToMeters(50.0 * 2)) {
+            metersPerPixel /= 2
+            ++zoomLevel
+        }
+        return zoomLevel
     }
 }
