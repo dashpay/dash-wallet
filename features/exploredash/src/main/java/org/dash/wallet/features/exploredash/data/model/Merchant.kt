@@ -38,7 +38,7 @@ data class Merchant(
     @get:PropertyName("record_id") @set:PropertyName("record_id")
     var recordId: Long? = null,
 
-    @PropertyName("plus_code")
+    @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
 
     @get:PropertyName("add_date") @set:PropertyName("add_date")
