@@ -90,13 +90,19 @@ class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
 
     override suspend fun get(tableName: String, startAt: Int, endBefore: Int): List<Merchant> {
         ensureAuthenticated()
-        return fbDatabase.getReference("explore/$tableName/data")
+        val dataSnapshot = fbDatabase.getReference("explore/$tableName/data")
             .orderByKey()
             .startAt(startAt.toString())
             .endBefore(endBefore.toString())
             .get()
             .await()
-            .getValue<List<Merchant>>()!!
+
+        val data = mutableListOf<Merchant>()
+        dataSnapshot.children.forEach {
+            val merchant = it.getValue(Merchant::class.java)!!
+            data.add(merchant)
+        }
+        return data
     }
 
     override suspend fun getDataSize(tableName: String): Int {
