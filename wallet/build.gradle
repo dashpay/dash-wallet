@@ -94,6 +94,10 @@ dependencies {
     // When using the BoM, you don't specify versions in Firebase library dependencies
     //implementation 'com.google.firebase:firebase-perf-ktx'
 
+    // Firebase
+    implementation 'com.google.firebase:firebase-database-ktx:20.0.2'
+    implementation 'com.google.firebase:firebase-auth-ktx'
+
     // Google Drive Dependencies
     implementation('com.google.api-client:google-api-client-android:1.26.0') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'

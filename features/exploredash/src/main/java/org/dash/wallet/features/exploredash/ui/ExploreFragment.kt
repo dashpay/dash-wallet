@@ -46,7 +46,5 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         binding.atmsBtn.setOnClickListener {
             findNavController().navigate(ExploreFragmentDirections.exploreToSearch())
         }
-
-        viewModel.dumbSync()
     }
 }

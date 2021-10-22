@@ -24,7 +24,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
         BlockchainState.class,
         Merchant.class,
         MerchantFTS.class
-    }, version = 3)
+    }, version = 4)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
