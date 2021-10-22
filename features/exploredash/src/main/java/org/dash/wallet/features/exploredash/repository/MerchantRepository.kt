@@ -45,6 +45,8 @@ interface MerchantRepository {
     fun observe(): Flow<List<Merchant>>
     suspend fun search(query: String): List<Merchant>?
 
+    suspend fun getLastUpdate(): Long
+    suspend fun getLastUpdate(tableName: String): Long
     suspend fun getDataSize(tableName: String): Int
     suspend fun get(tableName: String, startAt: Int, endBefore: Int): List<Merchant>
 }
@@ -111,6 +113,22 @@ class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
             .get()
             .await()
             .getValue<Int>()!!
+    }
+
+    override suspend fun getLastUpdate(): Long {
+        ensureAuthenticated()
+        return fbDatabase.getReference("explore/last_update")
+            .get()
+            .await()
+            .getValue<Long>()!!
+    }
+
+    override suspend fun getLastUpdate(tableName: String): Long {
+        ensureAuthenticated()
+        return fbDatabase.getReference("explore/$tableName/last_update")
+            .get()
+            .await()
+            .getValue<Long>()!!
     }
 
     private suspend fun ensureAuthenticated() {

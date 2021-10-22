@@ -43,9 +43,9 @@ import android.widget.Toast;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
-import androidx.work.WorkRequest;
 
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
@@ -63,11 +63,11 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
-import org.dash.wallet.integration.liquid.data.LiquidClient;
-import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.util.WalletDataProvider;
+import org.dash.wallet.integration.liquid.data.LiquidClient;
+import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.jetbrains.annotations.NotNull;
@@ -189,14 +189,15 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     private void syncExploreData() {
 
-        WorkRequest uploadWorkRequest =
+        OneTimeWorkRequest syncDataWorkRequest =
                 new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
                         .build();
 
-        WorkManager workManager = WorkManager.getInstance(this.getApplicationContext());
-        workManager.cancelAllWork();
-        workManager.pruneWork();
-        workManager.enqueue(uploadWorkRequest);
+        WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(
+                "Sync Explore Data",
+                ExistingWorkPolicy.REPLACE,
+                syncDataWorkRequest
+        );
     }
 
     public void fullInitialization() {

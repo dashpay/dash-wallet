@@ -29,13 +29,26 @@ import org.dash.wallet.features.exploredash.repository.DASH_DIRECT_TABLE
 import org.dash.wallet.features.exploredash.repository.MERCHANT_TABLE
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.slf4j.LoggerFactory
+import java.util.*
 import kotlin.math.ceil
 
-private const val PAGE_SIZE = 10000
+private const val PAGE_SIZE = 2000
+
+private const val SHARED_PREFS_NAME = "explore"
+private const val PREFS_LAST_SYNC_KEY = "last_sync"
+
 private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
 
 class ExploreSyncWorker constructor(val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
+
+    private val merchantRepository by lazy {
+        entryPoint.merchantRepository()
+    }
+
+    private val preferences by lazy {
+        appContext.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+    }
 
     @EntryPoint
     @InstallIn(SingletonComponent::class)
@@ -50,15 +63,22 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
     override suspend fun doWork(): Result {
         log.info("Sync Explore Dash started")
-        syncTable(MERCHANT_TABLE)
-        syncTable(DASH_DIRECT_TABLE)
-//        syncTable(ATM_TABLE)
-        log.info("Sync Explore Dash finished")
+        val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
+        val lastDataUpdate = merchantRepository.getLastUpdate()
+        if (lastSync < lastDataUpdate) {
+            log.info("Local data timestamp\t$lastSync (${Date(lastSync)})")
+            log.info("Remote data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
+            syncTable(MERCHANT_TABLE)
+            syncTable(DASH_DIRECT_TABLE)
+            preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
+            log.info("Sync Explore Dash finished")
+        } else {
+            log.info("Date timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+        }
         return Result.success()
     }
 
     private suspend fun syncTable(tableName: String) {
-        val merchantRepository = entryPoint.merchantRepository()
         val merchantDao = entryPoint.merchantDao()
 
         val dataSize = merchantRepository.getDataSize(tableName)
