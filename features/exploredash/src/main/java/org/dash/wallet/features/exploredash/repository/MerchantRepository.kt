@@ -31,21 +31,35 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.slf4j.LoggerFactory
+import java.io.IOException
 import javax.inject.Inject
+import kotlin.coroutines.suspendCoroutine
+
+const val DASH_DIRECT_TABLE = "dash_direct"
+const val MERCHANT_TABLE = "merchant"
+const val ATM_TABLE = "atm"
+
+private val log = LoggerFactory.getLogger(FirebaseMerchantTable::class.java)
 
 interface MerchantRepository {
     suspend fun get(): List<Merchant>?
     fun observe(): Flow<List<Merchant>>
     suspend fun search(query: String): List<Merchant>?
+
+    suspend fun getDataSize(tableName: String): Int
+    suspend fun get(tableName: String, startAt: Int, endBefore: Int): List<Merchant>
 }
 
 class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
+
     companion object {
         private const val merchantPath = "explore/merchant"
         private const val nameChild = "name"
     }
 
     private val auth = Firebase.auth
+    private val fbDatabase = Firebase.database
     private var tableRef = Firebase.database.getReference(merchantPath)
 
     override suspend fun get(): List<Merchant>? {
@@ -74,6 +88,53 @@ class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
         return tableRef.orderByChild(nameChild)
             .startAt(query)
             .endAt(query + "\uf8ff").get().await().getValue<List<Merchant>>()
+    }
+
+    override suspend fun get(tableName: String, startAt: Int, endBefore: Int): List<Merchant> {
+        ensureAuthenticated()
+        val query = fbDatabase.getReference("explore/$tableName/data")
+            .orderByKey()
+            .startAt(startAt.toString())
+            .endBefore(endBefore.toString())
+
+        return suspendCoroutine { continuation ->
+            query.addValueEventListener(object : ValueEventListener {
+
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    val data = mutableListOf<Merchant>()
+                    dataSnapshot.children.forEach {
+                        val merchant = it.getValue(Merchant::class.java)!!
+                        data.add(merchant)
+                    }
+                    continuation.resumeWith(Result.success(data))
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    log.error("Can't listen to query $query", databaseError.toException())
+                    continuation.resumeWith(Result.failure(IOException(databaseError.message)))
+                }
+            })
+        }
+    }
+
+    override suspend fun getDataSize(tableName: String): Int {
+        ensureAuthenticated()
+        val query = fbDatabase.getReference("explore/$tableName/data_size")
+
+        return suspendCoroutine { continuation ->
+            query.addValueEventListener(object : ValueEventListener {
+
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    val dataSize = dataSnapshot.value.toString().toInt()
+                    continuation.resumeWith(Result.success(dataSize))
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    log.error("Can't listen to query $query", databaseError.toException())
+                    continuation.resumeWith(Result.failure(IOException(databaseError.message)))
+                }
+            })
+        }
     }
 
     private suspend fun ensureAuthenticated() {

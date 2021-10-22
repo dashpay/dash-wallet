@@ -28,6 +28,6 @@ import org.dash.wallet.features.exploredash.repository.MerchantRepository
 abstract class ExploreDashModule {
     @Binds
     abstract fun bindMerchantRepository(
-        analyticsService: FirebaseMerchantTable
+        merchantRepository: FirebaseMerchantTable
     ): MerchantRepository
 }

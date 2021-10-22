@@ -22,7 +22,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
@@ -88,19 +87,6 @@ class ExploreViewModel @Inject constructor(
         searchFilterFlow
             .onEach(_searchResults::postValue)
             .launchIn(viewModelWorkerScope)
-    }
-
-    // TODO: replace with smart sync
-    fun dumbSync() {
-        viewModelScope.launch {
-            val merchants = try {
-                merchantRepository.get() ?: listOf()
-            } catch (ex: Exception) {
-                listOf()
-            }
-
-            merchantDao.save(merchants)
-        }
     }
 
     fun setFilterMode(mode: FilterMode) {
