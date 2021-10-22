@@ -140,19 +140,33 @@ public class GenericUtils {
     public static FiatAmountFormat formatFiatFromLocale(CharSequence fiatValue) {
         String valWithoutLetters = stripLettersFromString(fiatValue.toString());
         String valWithoutComma = formatFiatWithoutComma(valWithoutLetters);
-        Double fiatAsDouble = valWithoutComma.length() == 0 ? 0.00 : Double.parseDouble(valWithoutComma);
+        Double fiatAsDouble;
+        // we may get a NumberFormatException
+        try {
+            fiatAsDouble = valWithoutComma.length() == 0 ? 0.00 : Double.parseDouble(valWithoutComma);
+        } catch (NumberFormatException x) {
+            fiatAsDouble = 0.00;
+        }
         NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
         String formattedStringValue = numberFormat.format(fiatAsDouble);
-        return new FiatAmountFormat(Character.isDigit(formattedStringValue.charAt(0)), stripLettersFromString(formattedStringValue));
+        // get currency symbol and code to remove explicitly
+        String currencyCode = numberFormat.getCurrency().getCurrencyCode();
+        String currencySymbol = numberFormat.getCurrency().getSymbol();
+        return new FiatAmountFormat(Character.isDigit(formattedStringValue.charAt(0)), stripCurrencyFromString(formattedStringValue, currencySymbol, currencyCode));
     }
 
     /**
      * Keep numericals, minus, dot, comma
-     * @param st
-     * @return
      */
     private static String stripLettersFromString(String st) {
         return st.replaceAll("[^\\d,.-]", "");
+    }
+
+    /**
+     * Remove currency symbols and codes from the string
+     */
+    private static String stripCurrencyFromString(String st, String symbol, String code) {
+        return stripLettersFromString(st.replaceAll(symbol, "").replaceAll(code, ""));
     }
 
     /**

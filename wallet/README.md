@@ -194,14 +194,11 @@ Dash Wallet uses dashj for Dash specific logic.  This project is forked from [bi
 
 ### EXCHANGE RATES
 
-Dash Wallet reads this feed from "BitcoinAverage" for getting exchange rates:
-
-    https://apiv2.bitcoinaverage.com/indices/global/ticker/short?crypto=BTC
-
-I chose this feed because it is not dependent on a single exchange. However, you should keep in
-mind it's always the last price.  Previously the 24h average price had a lag and was not considered
-accurate compared to other services and apps.
-
+Dash Wallet has four sources for exchange rates
+- Source 1: Dash Retail - https://rates2.dashretail.org/rates?source=dashretail
+- Source 2: *Currently disabled* - Spark
+- Source 3: *Currently disabled* - BitcoinAverage (BTC/all), CryptoCompare(DASH/BTC), DashCasa(DASH/VES)
+- Source 4: BitPay (BTC/all), Dash Central(DASH/BTC), Poloniex (DASH/BTC), Local Bitcoins (BTC/VES)
 
 ### SWEEPING WALLETS
 

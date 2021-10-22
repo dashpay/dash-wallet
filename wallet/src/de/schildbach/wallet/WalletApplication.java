@@ -656,6 +656,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     }
 
     public boolean isLowRamDevice() {
+        if (activityManager == null)
+            return false;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
             return activityManager.isLowRamDevice();
         else
