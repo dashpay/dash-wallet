@@ -263,5 +263,4 @@ android {
 
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
-apply plugin: 'com.google.firebase.crashlytics'
 apply from: file("../gradle/google-services.gradle")
