@@ -26,7 +26,9 @@ data class AtmFTS(
     val name: String,
     val manufacturer: String,
     val address1: String,
-    val displayAddress: String,
+    val address2: String,
+    val address3: String,
+    val address4: String,
     val city: String,
     val territory: String
 )

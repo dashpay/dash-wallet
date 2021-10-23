@@ -16,6 +16,8 @@
 
 package org.dash.wallet.features.exploredash.repository
 
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
@@ -32,6 +34,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.SearchResult
 import javax.inject.Inject
 
 interface ExploreRepository {
@@ -41,11 +44,13 @@ interface ExploreRepository {
     suspend fun searchMerchants(query: String): List<Merchant>?
 }
 
-class FirebaseExploreTable @Inject constructor() : ExploreRepository {
+class FirebaseExploreTable @Inject constructor()
+    : ExploreRepository, PagingSource<Int, SearchResult>() {
+
     companion object {
         private const val explorePath = "explore"
-        private const val merchantChild = "merchant"
-        private const val atmChild = "atm"
+        private const val merchantChild = "merchant/data"
+        private const val atmChild = "atm/data"
         private const val nameChild = "name"
     }
 
@@ -97,5 +102,13 @@ class FirebaseExploreTable @Inject constructor() : ExploreRepository {
     private suspend fun signingAnonymously(): FirebaseUser {
         val result = auth.signInAnonymously().await()
         return result.user ?: throw FirebaseAuthException("-1", "User is null after anon sign in")
+    }
+
+    override fun getRefreshKey(state: PagingState<Int, SearchResult>): Int? {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, SearchResult> {
+        TODO("Not yet implemented")
     }
 }

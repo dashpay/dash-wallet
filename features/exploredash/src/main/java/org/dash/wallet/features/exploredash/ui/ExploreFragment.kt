@@ -20,9 +20,9 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
 
@@ -40,11 +40,11 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         }
 
         binding.merchantsBtn.setOnClickListener {
-            findNavController().navigate(ExploreFragmentDirections.exploreToSearch())
+            safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
         }
 
         binding.atmsBtn.setOnClickListener {
-            findNavController().navigate(ExploreFragmentDirections.exploreToSearch())
+            safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
         }
 
         viewModel.dumbSync()

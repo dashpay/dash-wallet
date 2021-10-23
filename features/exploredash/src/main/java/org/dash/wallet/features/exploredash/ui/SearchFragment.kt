@@ -46,11 +46,13 @@ import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 import androidx.core.view.ViewCompat.animate
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import org.dash.wallet.common.ui.observeOnDestroy
+import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import java.lang.StringBuilder
@@ -60,6 +62,8 @@ import java.lang.StringBuilder
 class SearchFragment : Fragment(R.layout.fragment_search) {
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
+    private val args by navArgs<SearchFragmentArgs>()
+
     private var bottomSheetWasExpanded: Boolean = false
     private var isKeyboardShowing: Boolean = false
 
@@ -102,6 +106,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             true
         }
 
+        val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
         bottomSheet.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback() {
@@ -120,30 +125,49 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         })
 
-        setupFilters(bottomSheet)
+        setupFilters(bottomSheet, args.type)
         setupSearchInput(bottomSheet)
         setupSearchResults()
         setupMerchantDetails()
 
-        viewModel.init()
+        viewModel.init(args.type)
     }
 
-    private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
-        binding.allOption.setOnClickListener {
+    private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
+        binding.merchantOptions.isVisible = topic == ExploreTopic.Merchants
+        binding.atmOptions.isVisible = topic == ExploreTopic.ATMs
+
+        binding.allMerchantsOption.setOnClickListener {
             viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
         }
 
-        binding.physicalOption.setOnClickListener {
+        binding.physicalMerchantsOption.setOnClickListener {
             viewModel.setFilterMode(ExploreViewModel.FilterMode.Physical)
         }
 
-        binding.onlineOption.setOnClickListener {
+        binding.onlineMerchantsOption.setOnClickListener {
             viewModel.setFilterMode(ExploreViewModel.FilterMode.Online)
+        }
+
+        binding.allAtmsOption.setOnClickListener {
+            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
+        }
+
+        binding.buyAtmsOption.setOnClickListener {
+            viewModel.setFilterMode(ExploreViewModel.FilterMode.Buy)
+        }
+
+        binding.sellAtmsOption.setOnClickListener {
+            viewModel.setFilterMode(ExploreViewModel.FilterMode.Sell)
+        }
+
+        binding.buySellAtmsOptions.setOnClickListener {
+            viewModel.setFilterMode(ExploreViewModel.FilterMode.BuySell)
         }
 
         binding.filterBtn.setOnClickListener {
             lifecycleScope.launch {
-                val territories = viewModel.getTerritoriesWithMerchants()
+                val territories = viewModel.getTerritoriesWithPOIs()
                 TerritoryFilterDialog(territories, viewModel.pickedTerritory) { name, dialog ->
                     lifecycleScope.launch {
                         delay(300)
@@ -155,12 +179,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) {
-            binding.allOption.isChecked = it == ExploreViewModel.FilterMode.All
-            binding.allOption.isEnabled = it != ExploreViewModel.FilterMode.All
-            binding.physicalOption.isChecked = it == ExploreViewModel.FilterMode.Physical
-            binding.physicalOption.isEnabled = it != ExploreViewModel.FilterMode.Physical
-            binding.onlineOption.isChecked = it == ExploreViewModel.FilterMode.Online
-            binding.onlineOption.isEnabled = it != ExploreViewModel.FilterMode.Online
+            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+                refreshMerchantOptions(it)
+            } else if (viewModel.exploreTopic == ExploreTopic.ATMs) {
+                refreshAtmsOptions(it)
+            }
 
             if (viewModel.selectedMerchant.value == null && it == ExploreViewModel.FilterMode.Online) {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
@@ -209,6 +232,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             if (item is Merchant) {
                 viewModel.openMerchantDetails(item)
+            } else if (item is Atm) {
+                viewModel.openAtmDetails(item)
             }
         }
 
@@ -223,9 +248,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.searchResultsList.addItemDecoration(decorator)
         binding.searchResultsList.adapter = adapter
 
-        viewModel.searchResults.observe(viewLifecycleOwner) { results ->
-            binding.noResultsText.isVisible = results.isEmpty()
-            adapter.submitList(results)
+        viewModel.pagingSearchResults.observe(viewLifecycleOwner) { results ->
+            adapter.submitData(viewLifecycleOwner.lifecycle, results)
         }
 
         viewLifecycleOwner.observeOnDestroy {
@@ -402,6 +426,26 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             startDelay = 200
             alpha(1f)
         }.start()
+    }
+
+    private fun refreshMerchantOptions(filterMode: ExploreViewModel.FilterMode) {
+        binding.allMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.All
+        binding.allMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.All
+        binding.physicalMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Physical
+        binding.physicalMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Physical
+        binding.onlineMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Online
+        binding.onlineMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Online
+    }
+
+    private fun refreshAtmsOptions(filterMode: ExploreViewModel.FilterMode) {
+        binding.allAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.All
+        binding.allAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.All
+        binding.buyAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Buy
+        binding.buyAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Buy
+        binding.sellAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Sell
+        binding.sellAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Sell
+        binding.buySellAtmsOptions.isChecked = filterMode == ExploreViewModel.FilterMode.BuySell
+        binding.buySellAtmsOptions.isEnabled = filterMode != ExploreViewModel.FilterMode.BuySell
     }
 
     private fun openMaps(latitude: Double, longitude: Double) {

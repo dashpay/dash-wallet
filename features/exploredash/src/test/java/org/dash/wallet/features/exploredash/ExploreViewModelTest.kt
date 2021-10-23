@@ -22,6 +22,7 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
+import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.junit.Assert.assertEquals
@@ -41,7 +42,7 @@ class ExploreViewModelTest {
         Merchant(plusCode = "", addDate = "2021-09-11 11:25", updateDate ="2021-09-11 12:25", address1 = "Address1 7", address2 = "Address2 7", address3 = "Address3 7", address4 = "Address4 7", latitude = 35.223312,	longitude = -119.130063, territory = "Louisiana",  website ="", deeplink = "",phone="",type="physical", logoLocation = "", paymentMethod = "dash").apply { id = 7; name = "Merchant 3"; active = true },
     )
 
-    private val repositoryMock = mock(MerchantRepository::class.java)
+    private val repositoryMock = mock(ExploreRepository::class.java)
     private val daoMock = mock(MerchantDao::class.java)
 
     @Test
@@ -57,7 +58,7 @@ class ExploreViewModelTest {
             // Should return a header and active Texas merchants
             val expected = listOf(SearchResult(territory.hashCode(), true, territory)) +
                     merchants.filter { it.territory == territory && it.active != false }
-            val actual = viewModel.searchFilterFlow.first()
+            val actual = viewModel.merchantsSearchFilterFlow.first()
 
             assertEquals(expected, actual)
         }
@@ -80,10 +81,11 @@ class ExploreViewModelTest {
             val f1 = merchants.filter {
                         it.name?.lowercase()?.startsWith(query) ?: false
                     }
+
             val f2 = f1.filter { (it.type == "online" || it.type == "both") }
             val f3 = f2.filter { it.active != false }
             val expected = headers + f3
-            val actual = viewModel.searchFilterFlow.first()
+            val actual = viewModel.merchantsSearchFilterFlow.first()
 
             assertEquals(expected, actual)
         }
@@ -110,7 +112,7 @@ class ExploreViewModelTest {
                         it.name?.lowercase()?.startsWith(query) ?: false &&
                                 it.territory == territory && it.active != false
                     }
-            val actual = viewModel.searchFilterFlow.first()
+            val actual = viewModel.merchantsSearchFilterFlow.first()
 
             assertEquals(expected, actual)
         }

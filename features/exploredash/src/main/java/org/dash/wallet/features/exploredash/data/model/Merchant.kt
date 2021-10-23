@@ -34,6 +34,9 @@ object MerchantType {
 @Keep
 @Entity(tableName = "merchant")
 data class Merchant(
+    var type: String? = "",
+    var deeplink: String? = "",
+
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
 
@@ -43,21 +46,9 @@ data class Merchant(
     @get:PropertyName("update_date") @set:PropertyName("update_date")
     var updateDate: String? = "",
 
-    var address1: String? = "",
-    var address2: String? = "",
-    var address3: String? = "",
-    var address4: String? = "",
-    var latitude: Double? = 0.0,
-    var longitude: Double? = 0.0,
-    var territory: String? = "",
-    var website: String? = "",
-    var deeplink: String? = "",
-    var phone: String? = "",
-    var type: String? = "",
-
-    @get:PropertyName("logo_location") @set:PropertyName("logo_location")
-    var logoLocation: String? = "",
-
     @get:PropertyName("payment_method") @set:PropertyName("payment_method")
-    var paymentMethod: String? = ""
+    var paymentMethod: String? = "",
+
+    @get:PropertyName("google_maps") @set:PropertyName("google_maps")
+    var googleMaps: String? = "",
 ) : SearchResult()

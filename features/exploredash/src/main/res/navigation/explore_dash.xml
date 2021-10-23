@@ -23,5 +23,11 @@
         android:id="@+id/searchFragment"
         android:name="org.dash.wallet.features.exploredash.ui.SearchFragment"
         android:label="fragment_search"
-        tools:layout="@layout/fragment_search"/>
+        tools:layout="@layout/fragment_search">
+
+        <argument
+            android:name="type"
+            android:defaultValue="Merchants"
+            app:argType="org.dash.wallet.features.exploredash.ui.ExploreTopic" />
+    </fragment>
 </navigation>

@@ -17,37 +17,26 @@
 package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.Entity
-import androidx.room.Ignore
 import com.google.firebase.database.PropertyName
 
 object AtmType {
-    const val BUY = "buy"
-    const val SELL = "sell"
-    const val BOTH = "both"
+    const val BUY = "Buy Only"
+    const val SELL = "Sell Only"
+    const val BOTH = "Buy and Sell"
 }
 
 @Entity(tableName = "atm")
 data class Atm(
     var city: String? = "",
-    var image: String? = "",
-    var phone: String? = "",
     var postcode: String? = "",
-    var website: String? = "",
-    var type: String? = "",
     var manufacturer: String? = "",
 
-    @get:PropertyName("address_line_1") @set:PropertyName("address_line_1")
-    var address1: String? = "",
-    @get:PropertyName("display_address") @set:PropertyName("display_address")
-    var displayAddress: String? = "",
-    @get:PropertyName("lat") @set:PropertyName("lat")
-//    var latitude: Double? = 0.0,
-    var latitude: String? = "",
-    @get:PropertyName("lng") @set:PropertyName("lng")
-//    var longitude: Double? = 0.0,
-    var longitude: String? = "",
+    @get:PropertyName("buy_sell") @set:PropertyName("buy_sell")
+    var type: String? = "",
+
+    @get:PropertyName("cover_image") @set:PropertyName("cover_image")
+    var coverImage: String? = "",
+
     @get:PropertyName("state") @set:PropertyName("state")
-    var territory: String? = "",
-    @get:PropertyName("logo_location") @set:PropertyName("logo_location")
-    var logoLocation: String? = "",
+    override var territory: String? = ""
 ) : SearchResult()

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "888d3d97e8eada512091ce035f956f24",
+    "identityHash": "e39b4b147c22347aa87990b629c1139f",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -94,8 +94,20 @@
       },
       {
         "tableName": "merchant",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `territory` TEXT, `website` TEXT, `deeplink` TEXT, `phone` TEXT, `type` TEXT, `logoLocation` TEXT, `paymentMethod` TEXT, `id` INTEGER NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`type` TEXT, `deeplink` TEXT, `plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `paymentMethod` TEXT, `googleMaps` TEXT, `id` INTEGER NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `territory` TEXT, `website` TEXT, `phone` TEXT, `logoLocation` TEXT, PRIMARY KEY(`id`))",
         "fields": [
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "deeplink",
+            "columnName": "deeplink",
+            "affinity": "TEXT",
+            "notNull": false
+          },
           {
             "fieldPath": "plusCode",
             "columnName": "plusCode",
@@ -111,6 +123,37 @@
           {
             "fieldPath": "updateDate",
             "columnName": "updateDate",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "paymentMethod",
+            "columnName": "paymentMethod",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "googleMaps",
+            "columnName": "googleMaps",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "active",
+            "columnName": "active",
+            "affinity": "INTEGER",
+            "notNull": false,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -163,51 +206,14 @@
             "notNull": false
           },
           {
-            "fieldPath": "deeplink",
-            "columnName": "deeplink",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
             "fieldPath": "phone",
             "columnName": "phone",
             "affinity": "TEXT",
             "notNull": false
           },
           {
-            "fieldPath": "type",
-            "columnName": "type",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
             "fieldPath": "logoLocation",
             "columnName": "logoLocation",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "paymentMethod",
-            "columnName": "paymentMethod",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "active",
-            "columnName": "active",
-            "affinity": "INTEGER",
-            "notNull": false,
-            "defaultValue": "1"
-          },
-          {
-            "fieldPath": "name",
-            "columnName": "name",
             "affinity": "TEXT",
             "notNull": false
           }
@@ -288,23 +294,11 @@
       },
       {
         "tableName": "atm",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`city` TEXT, `image` TEXT, `phone` TEXT, `postcode` TEXT, `website` TEXT, `type` TEXT, `manufacturer` TEXT, `address1` TEXT, `displayAddress` TEXT, `latitude` TEXT, `longitude` TEXT, `territory` TEXT, `logoLocation` TEXT, `id` INTEGER NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`city` TEXT, `postcode` TEXT, `manufacturer` TEXT, `type` TEXT, `coverImage` TEXT, `id` INTEGER NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `territory` TEXT, `website` TEXT, `phone` TEXT, `logoLocation` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "city",
             "columnName": "city",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "image",
-            "columnName": "image",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "phone",
-            "columnName": "phone",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -315,8 +309,8 @@
             "notNull": false
           },
           {
-            "fieldPath": "website",
-            "columnName": "website",
+            "fieldPath": "manufacturer",
+            "columnName": "manufacturer",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -327,44 +321,8 @@
             "notNull": false
           },
           {
-            "fieldPath": "manufacturer",
-            "columnName": "manufacturer",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "address1",
-            "columnName": "address1",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "displayAddress",
-            "columnName": "displayAddress",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "latitude",
-            "columnName": "latitude",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "longitude",
-            "columnName": "longitude",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "territory",
-            "columnName": "territory",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "logoLocation",
-            "columnName": "logoLocation",
+            "fieldPath": "coverImage",
+            "columnName": "coverImage",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -384,6 +342,66 @@
           {
             "fieldPath": "name",
             "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address1",
+            "columnName": "address1",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address2",
+            "columnName": "address2",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address3",
+            "columnName": "address3",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "address4",
+            "columnName": "address4",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "territory",
+            "columnName": "territory",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "website",
+            "columnName": "website",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "phone",
+            "columnName": "phone",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "logoLocation",
+            "columnName": "logoLocation",
             "affinity": "TEXT",
             "notNull": false
           }
@@ -412,11 +430,11 @@
         "contentSyncTriggers": [
           "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_BEFORE_UPDATE BEFORE UPDATE ON `atm` BEGIN DELETE FROM `atm_fts` WHERE `docid`=OLD.`rowid`; END",
           "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_BEFORE_DELETE BEFORE DELETE ON `atm` BEGIN DELETE FROM `atm_fts` WHERE `docid`=OLD.`rowid`; END",
-          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_AFTER_UPDATE AFTER UPDATE ON `atm` BEGIN INSERT INTO `atm_fts`(`docid`, `name`, `manufacturer`, `address1`, `displayAddress`, `city`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`manufacturer`, NEW.`address1`, NEW.`displayAddress`, NEW.`city`, NEW.`territory`); END",
-          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_AFTER_INSERT AFTER INSERT ON `atm` BEGIN INSERT INTO `atm_fts`(`docid`, `name`, `manufacturer`, `address1`, `displayAddress`, `city`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`manufacturer`, NEW.`address1`, NEW.`displayAddress`, NEW.`city`, NEW.`territory`); END"
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_AFTER_UPDATE AFTER UPDATE ON `atm` BEGIN INSERT INTO `atm_fts`(`docid`, `name`, `manufacturer`, `address1`, `address2`, `address3`, `address4`, `city`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`manufacturer`, NEW.`address1`, NEW.`address2`, NEW.`address3`, NEW.`address4`, NEW.`city`, NEW.`territory`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_atm_fts_AFTER_INSERT AFTER INSERT ON `atm` BEGIN INSERT INTO `atm_fts`(`docid`, `name`, `manufacturer`, `address1`, `address2`, `address3`, `address4`, `city`, `territory`) VALUES (NEW.`rowid`, NEW.`name`, NEW.`manufacturer`, NEW.`address1`, NEW.`address2`, NEW.`address3`, NEW.`address4`, NEW.`city`, NEW.`territory`); END"
         ],
         "tableName": "atm_fts",
-        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, `manufacturer` TEXT NOT NULL, `address1` TEXT NOT NULL, `displayAddress` TEXT NOT NULL, `city` TEXT NOT NULL, `territory` TEXT NOT NULL, content=`atm`)",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`name` TEXT NOT NULL, `manufacturer` TEXT NOT NULL, `address1` TEXT NOT NULL, `address2` TEXT NOT NULL, `address3` TEXT NOT NULL, `address4` TEXT NOT NULL, `city` TEXT NOT NULL, `territory` TEXT NOT NULL, content=`atm`)",
         "fields": [
           {
             "fieldPath": "name",
@@ -437,8 +455,20 @@
             "notNull": true
           },
           {
-            "fieldPath": "displayAddress",
-            "columnName": "displayAddress",
+            "fieldPath": "address2",
+            "columnName": "address2",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address3",
+            "columnName": "address3",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address4",
+            "columnName": "address4",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -466,7 +496,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '888d3d97e8eada512091ce035f956f24')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e39b4b147c22347aa87990b629c1139f')"
     ]
   }
 }
