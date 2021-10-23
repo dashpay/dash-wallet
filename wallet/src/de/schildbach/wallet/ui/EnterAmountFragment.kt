@@ -268,6 +268,11 @@ class EnterAmountFragment : Fragment() {
             }
         })
 
+        // changes to the active currency should be propagated to the viewModel
+        sharedViewModel.dashToFiatDirectionLiveData.observe(viewLifecycleOwner) {
+            viewModel.setDashToFiatDirection(it)
+        }
+
         viewModel.dashToFiatDirectionLiveData.observe(viewLifecycleOwner, Observer {
             if (it) {
                 val dashAmount = viewModel.dashAmountLiveData.value!!

@@ -237,9 +237,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        adapter.registerAdapterDataObserver(object: RecyclerView.AdapterDataObserver() {
+        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                binding.searchResultsList.scrollToPosition(0)
+                if (positionStart == 0 && itemCount != ExploreViewModel.PAGE_SIZE) {
+                    // Scrolling on top if user changed the filter option
+                    binding.searchResultsList.scrollToPosition(0)
+                }
             }
         })
 

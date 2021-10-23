@@ -46,7 +46,5 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         binding.atmsBtn.setOnClickListener {
             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
         }
-
-        viewModel.dumbSync()
     }
 }

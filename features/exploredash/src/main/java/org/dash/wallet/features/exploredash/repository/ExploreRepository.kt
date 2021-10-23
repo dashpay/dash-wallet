@@ -16,81 +16,82 @@
 
 package org.dash.wallet.features.exploredash.repository
 
-import androidx.paging.PagingSource
-import androidx.paging.PagingState
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.SearchResult
 import javax.inject.Inject
 
 interface ExploreRepository {
-    suspend fun getMerchants(): List<Merchant>?
-    suspend fun getAtms(): List<Atm>?
-    fun observeMerchants(): Flow<List<Merchant>>
-    suspend fun searchMerchants(query: String): List<Merchant>?
+    suspend fun getLastUpdate(): Long
+    suspend fun getLastUpdate(tableName: String): Long
+    suspend fun getDataSize(tableName: String): Int
+    suspend fun <T> get(
+        tableName: String,
+        startAt: Int,
+        endBefore: Int,
+        valueType: Class<T>
+    ): List<T>
 }
 
-class FirebaseExploreTable @Inject constructor()
-    : ExploreRepository, PagingSource<Int, SearchResult>() {
-
-    companion object {
-        private const val explorePath = "explore"
-        private const val merchantChild = "merchant/data"
-        private const val atmChild = "atm/data"
-        private const val nameChild = "name"
+class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
+    companion object Tables {
+        const val DASH_DIRECT_TABLE = "dash_direct"
+        const val MERCHANT_TABLE = "merchant"
+        const val ATM_TABLE = "atm"
     }
 
     private val auth = Firebase.auth
-    private var tableRef = Firebase.database.getReference(explorePath)
+    private val fbDatabase = Firebase.database
 
-    override suspend fun getMerchants(): List<Merchant>? {
+
+    override suspend fun <T> get(
+        tableName: String,
+        startAt: Int,
+        endBefore: Int,
+        valueType: Class<T>
+    ): List<T> {
         ensureAuthenticated()
-        return this.tableRef.child(merchantChild).get().await().getValue<List<Merchant>>()
-    }
+        val dataSnapshot = fbDatabase.getReference("explore/$tableName/data")
+            .orderByKey()
+            .startAt(startAt.toString())
+            .endBefore(endBefore.toString())
+            .get()
+            .await()
 
-    override suspend fun getAtms(): List<Atm>? {
-        ensureAuthenticated()
-        val result = this.tableRef.child(atmChild).get().await().getValue<List<Atm>>()
-        result?.forEachIndexed { index, atm -> atm.id = index }
-        return result
-    }
-
-    override fun observeMerchants(): Flow<List<Merchant>> = callbackFlow {
-        ensureAuthenticated()
-        val callback = object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                val client = dataSnapshot.getValue<List<Merchant>>()
-                client?.let { trySend(it) }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                cancel("Database Error", error.toException())
-            }
+        val data = mutableListOf<T>()
+        dataSnapshot.children.forEach {
+            val merchant = it.getValue(valueType)!!
+            data.add(merchant)
         }
-
-        tableRef.addValueEventListener(callback)
-        awaitClose { tableRef.removeEventListener(callback) }
+        return data
     }
 
-    override suspend fun searchMerchants(query: String): List<Merchant>? {
+    override suspend fun getDataSize(tableName: String): Int {
         ensureAuthenticated()
-        return tableRef.orderByChild(nameChild)
-            .startAt(query)
-            .endAt(query + "\uf8ff").get().await().getValue<List<Merchant>>()
+        return fbDatabase.getReference("explore/$tableName/data_size")
+            .get()
+            .await()
+            .getValue<Int>()!!
+    }
+
+    override suspend fun getLastUpdate(): Long {
+        ensureAuthenticated()
+        return fbDatabase.getReference("explore/last_update")
+            .get()
+            .await()
+            .getValue<Long>()!!
+    }
+
+    override suspend fun getLastUpdate(tableName: String): Long {
+        ensureAuthenticated()
+        return fbDatabase.getReference("explore/$tableName/last_update")
+            .get()
+            .await()
+            .getValue<Long>()!!
     }
 
     private suspend fun ensureAuthenticated() {
@@ -102,13 +103,5 @@ class FirebaseExploreTable @Inject constructor()
     private suspend fun signingAnonymously(): FirebaseUser {
         val result = auth.signInAnonymously().await()
         return result.user ?: throw FirebaseAuthException("-1", "User is null after anon sign in")
-    }
-
-    override fun getRefreshKey(state: PagingState<Int, SearchResult>): Int? {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, SearchResult> {
-        TODO("Not yet implemented")
     }
 }

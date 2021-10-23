@@ -40,7 +40,6 @@ enum class NavigationRequest {
 
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    private val exploreRepository: ExploreRepository,
     private val merchantDao: MerchantDao,
     private val atmDao: AtmDao
 ) : ViewModel() {
@@ -151,36 +150,6 @@ class ExploreViewModel @Inject constructor(
             atmsSearchFilterFlow
         }.onEach(_pagingSearchResults::postValue)
             .launchIn(viewModelWorkerScope)
-    }
-
-    private var isSynced = false
-    // TODO: replace with smart sync
-    fun dumbSync() {
-        if (!isSynced) {
-            viewModelScope.launch {
-                val merchants = try {
-                    exploreRepository.getMerchants() ?: listOf()
-                } catch (ex: Exception) {
-                    Log.e("EXPLOREDASH", ex.message ?: "null msg")
-                    listOf()
-                }
-
-                merchantDao.save(merchants)
-
-                val atms = try {
-                    exploreRepository.getAtms() ?: listOf()
-                } catch (ex: Exception) {
-                    Log.e("EXPLOREDASH", ex.message ?: "null msg")
-                    listOf()
-                }
-
-                atmDao.save(atms)
-
-                if (merchants.any() && atms.any()){
-                    isSynced = true
-                }
-            }
-        }
     }
 
     fun setFilterMode(mode: FilterMode) {

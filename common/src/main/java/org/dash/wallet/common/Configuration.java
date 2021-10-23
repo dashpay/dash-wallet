@@ -31,6 +31,7 @@ import com.google.common.base.Strings;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.data.CurrencyInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -305,7 +306,10 @@ public class Configuration {
     }
 
     public String getExchangeCurrencyCode() {
-        return prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
+        String currencyCode = prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
+        // previous versions of the app (prior to 7.3.3) may have stored an obsolete
+        // currency code in the preferences.  Let's change to the most up to date.
+        return CurrencyInfo.getOtherName(currencyCode);
     }
 
     public void setExchangeCurrencyCode(final String exchangeCurrencyCode) {

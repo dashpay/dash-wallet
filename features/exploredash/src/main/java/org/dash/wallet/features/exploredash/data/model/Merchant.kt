@@ -16,8 +16,8 @@
 
 package org.dash.wallet.features.exploredash.data.model
 
-import androidx.annotation.Keep
 import androidx.room.Entity
+import androidx.annotation.Keep
 import com.google.firebase.database.PropertyName
 
 object PaymentMethod {
@@ -34,8 +34,10 @@ object MerchantType {
 @Keep
 @Entity(tableName = "merchant")
 data class Merchant(
-    var type: String? = "",
     var deeplink: String? = "",
+
+    @get:PropertyName("record_id") @set:PropertyName("record_id")
+    var recordId: Long? = null,
 
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
@@ -51,4 +53,7 @@ data class Merchant(
 
     @get:PropertyName("google_maps") @set:PropertyName("google_maps")
     var googleMaps: String? = "",
+
+    @get:PropertyName("merchant_id") @set:PropertyName("merchant_id")
+    var merchantId: Long? = null
 ) : SearchResult()

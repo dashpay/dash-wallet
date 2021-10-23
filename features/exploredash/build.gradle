@@ -57,6 +57,7 @@ dependencies {
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
     implementation "androidx.navigation:navigation-ui-ktx:$navigationVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+    implementation 'androidx.work:work-runtime-ktx:2.4.0'
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"

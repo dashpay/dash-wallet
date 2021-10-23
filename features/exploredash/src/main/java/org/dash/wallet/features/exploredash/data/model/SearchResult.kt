@@ -36,7 +36,8 @@ open class SearchResult(
     var phone: String? = "",
     @get:PropertyName("logo_location") @set:PropertyName("logo_location")
     var logoLocation: String? = "",
-    open var territory: String? = ""
+    open var territory: String? = "",
+    open var type: String? = ""
 ) {
     override fun equals(other: Any?): Boolean {
         val second = other as SearchResult

@@ -21,13 +21,13 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
-import org.dash.wallet.features.exploredash.repository.FirebaseExploreTable
+import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
     @Binds
     abstract fun bindExploreRepository(
-        analyticsService: FirebaseExploreTable
+        exploreRepository: FirebaseExploreDatabase
     ): ExploreRepository
 }

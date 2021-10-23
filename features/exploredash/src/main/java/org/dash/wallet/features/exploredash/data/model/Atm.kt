@@ -31,11 +31,11 @@ data class Atm(
     var postcode: String? = "",
     var manufacturer: String? = "",
 
-    @get:PropertyName("buy_sell") @set:PropertyName("buy_sell")
-    var type: String? = "",
-
     @get:PropertyName("cover_image") @set:PropertyName("cover_image")
     var coverImage: String? = "",
+
+    @get:PropertyName("buy_sell") @set:PropertyName("buy_sell")
+    override var type: String? = "",
 
     @get:PropertyName("state") @set:PropertyName("state")
     override var territory: String? = ""
