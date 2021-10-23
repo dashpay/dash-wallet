@@ -289,10 +289,12 @@ class CreateIdentityService : LifecycleService() {
             // handle case of "InvalidIdentityAssetLockProofSignatureError", where we need to start over from scratch
             val isInvalidLockProof = try {
                 val errorMetadata =
-                    ErrorMetadata(blockchainIdentityData.creationStateErrorMessage!!)
+                    ErrorMetadata(blockchainIdentityData.getErrorMetadata()!!)
                 val exception = ConcensusException.create(errorMetadata)
                 exception is InvalidInstantAssetLockProofSignatureException
             } catch (e: IllegalArgumentException) {
+                false
+            } catch (e: Exception) {
                 false
             }
             if (blockchainIdentityData.creationState == CreationState.IDENTITY_REGISTERING &&
@@ -465,10 +467,12 @@ class CreateIdentityService : LifecycleService() {
             // handle case of "InvalidIdentityAssetLockProofSignatureError", where we need to start over from scratch
             val isInvalidLockProof = try {
                 val errorMetadata =
-                    ErrorMetadata(blockchainIdentityData.creationStateErrorMessage!!)
+                    ErrorMetadata(blockchainIdentityData.getErrorMetadata()!!)
                 val exception = ConcensusException.create(errorMetadata)
                 exception is InvalidInstantAssetLockProofSignatureException
             } catch (e: IllegalArgumentException) {
+                false
+            } catch (e: Exception) {
                 false
             }
             if (blockchainIdentityData.creationState == CreationState.IDENTITY_REGISTERING &&
