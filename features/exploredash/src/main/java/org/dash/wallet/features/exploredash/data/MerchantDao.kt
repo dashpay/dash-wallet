@@ -30,7 +30,7 @@ interface MerchantDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun save(list: List<Merchant>)
 
-    @Query("SELECT * FROM merchant WHERE :territoryFilter = '' OR territory = :territoryFilter")
+    @Query("SELECT * FROM merchant WHERE :territoryFilter = '' OR territory = :territoryFilter ORDER BY name ASC")
     fun pagingGet(territoryFilter: String): PagingSource<Int, Merchant>
 
     @Query("""
@@ -38,6 +38,7 @@ interface MerchantDao {
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+        ORDER BY name ASC
     """)
     fun pagingSearch(query: String, territoryFilter: String): PagingSource<Int, Merchant>
 
@@ -49,6 +50,7 @@ interface MerchantDao {
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+        ORDER BY name ASC
     """)
     fun observeSearchResults(query: String, territoryFilter: String): Flow<List<Merchant>>
 

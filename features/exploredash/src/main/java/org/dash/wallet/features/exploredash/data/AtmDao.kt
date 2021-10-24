@@ -29,7 +29,7 @@ interface AtmDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun save(list: List<Atm>)
 
-    @Query("SELECT * FROM atm WHERE :territoryFilter = '' OR territory = :territoryFilter")
+    @Query("SELECT * FROM atm WHERE :territoryFilter = '' OR territory = :territoryFilter ORDER BY name ASC")
     fun pagingGet(territoryFilter: String): PagingSource<Int, Atm>
 
     @Query("""
@@ -37,6 +37,7 @@ interface AtmDao {
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
         WHERE atm_fts MATCH :query AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+        ORDER BY name ASC
     """)
     fun pagingSearch(query: String, territoryFilter: String): PagingSource<Int, Atm>
 
@@ -48,6 +49,7 @@ interface AtmDao {
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
         WHERE atm_fts MATCH :query AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+        ORDER BY name ASC
     """)
     fun observeSearchResults(query: String, territoryFilter: String): Flow<List<Atm>>
 
