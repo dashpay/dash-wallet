@@ -75,8 +75,8 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             log.info("Remote data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
 
             syncTable(MERCHANT_TABLE, Merchant::class.java, entryPoint.merchantDao()::save)
-            syncTable(DASH_DIRECT_TABLE, Merchant::class.java, entryPoint.merchantDao()::save)
             syncTable(ATM_TABLE, Atm::class.java, entryPoint.atmDao()::save)
+            syncTable(DASH_DIRECT_TABLE, Merchant::class.java, entryPoint.merchantDao()::save)
 
             preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
             log.info("Sync Explore Dash finished")
