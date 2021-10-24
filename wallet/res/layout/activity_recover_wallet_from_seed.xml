@@ -39,13 +39,12 @@
             app:layout_constraintTop_toBottomOf="@id/label" />
 
         <LinearLayout
+            style="@style/ScreenshotWarningPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="15dp"
             android:layout_marginTop="10dp"
-            android:background="@drawable/rounded_background"
             android:orientation="horizontal"
-            android:theme="@style/ScreenshotWarningBackground"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/input" >
