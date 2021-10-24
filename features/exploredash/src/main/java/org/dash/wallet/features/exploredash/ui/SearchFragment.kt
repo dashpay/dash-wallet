@@ -24,6 +24,7 @@ import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -47,10 +48,12 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapt
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 import androidx.core.view.ViewCompat.animate
 import androidx.navigation.fragment.navArgs
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.MerchantType
@@ -233,6 +236,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (item is Merchant) {
                 viewModel.openMerchantDetails(item)
             } else if (item is Atm) {
+                Toast.makeText(requireContext(), "ATM details: ${item.address1}", Toast.LENGTH_SHORT).show()
                 viewModel.openAtmDetails(item)
             }
         }
@@ -247,7 +251,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         })
 
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
-        val decorator = ListDividerDecorator(divider, false, R.layout.group_header)
+        val decorator = ListDividerDecorator(divider, false)
         binding.searchResultsList.addItemDecoration(decorator)
         binding.searchResultsList.adapter = adapter
 

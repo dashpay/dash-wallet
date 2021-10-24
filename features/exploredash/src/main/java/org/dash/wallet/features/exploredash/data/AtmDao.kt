@@ -30,7 +30,7 @@ interface AtmDao {
     suspend fun save(list: List<Atm>)
 
     @Query("SELECT * FROM atm WHERE :territoryFilter = '' OR territory = :territoryFilter")
-    fun observe(territoryFilter: String): PagingSource<Int, Atm>
+    fun pagingGet(territoryFilter: String): PagingSource<Int, Atm>
 
     @Query("""
         SELECT *
@@ -38,7 +38,18 @@ interface AtmDao {
         JOIN atm_fts ON atm.id = atm_fts.docid
         WHERE atm_fts MATCH :query AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
     """)
-    fun observeSearchResults(query: String, territoryFilter: String): PagingSource<Int, Atm>
+    fun pagingSearch(query: String, territoryFilter: String): PagingSource<Int, Atm>
+
+    @Query("SELECT * FROM atm WHERE :territoryFilter = '' OR territory = :territoryFilter")
+    fun observe(territoryFilter: String): Flow<List<Atm>>
+
+    @Query("""
+        SELECT *
+        FROM atm
+        JOIN atm_fts ON atm.id = atm_fts.docid
+        WHERE atm_fts MATCH :query AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+    """)
+    fun observeSearchResults(query: String, territoryFilter: String): Flow<List<Atm>>
 
     @Query("SELECT * FROM atm WHERE id = :atmId LIMIT 1")
     suspend fun getAtm(atmId: Int): Atm?

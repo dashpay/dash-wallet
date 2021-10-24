@@ -31,7 +31,7 @@ interface MerchantDao {
     suspend fun save(list: List<Merchant>)
 
     @Query("SELECT * FROM merchant WHERE :territoryFilter = '' OR territory = :territoryFilter")
-    fun observe(territoryFilter: String): PagingSource<Int, Merchant>
+    fun pagingGet(territoryFilter: String): PagingSource<Int, Merchant>
 
     @Query("""
         SELECT *
@@ -39,7 +39,18 @@ interface MerchantDao {
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
     """)
-    fun observeSearchResults(query: String, territoryFilter: String): PagingSource<Int, Merchant>
+    fun pagingSearch(query: String, territoryFilter: String): PagingSource<Int, Merchant>
+
+    @Query("SELECT * FROM merchant WHERE :territoryFilter = '' OR territory = :territoryFilter")
+    fun observe(territoryFilter: String): Flow<List<Merchant>>
+
+    @Query("""
+        SELECT *
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+    """)
+    fun observeSearchResults(query: String, territoryFilter: String): Flow<List<Merchant>>
 
     @Query("SELECT * FROM merchant WHERE id = :merchantId LIMIT 1")
     suspend fun getMerchant(merchantId: Int): Merchant?

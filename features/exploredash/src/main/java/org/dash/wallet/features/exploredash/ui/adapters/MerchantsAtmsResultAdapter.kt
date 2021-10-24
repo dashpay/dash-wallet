@@ -28,9 +28,7 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
-import org.dash.wallet.features.exploredash.databinding.GroupHeaderBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
-import java.util.*
 
 class MerchantsAtmsResultAdapter(
     private val clickListener: (SearchResult, RecyclerView.ViewHolder) -> Unit
@@ -44,7 +42,7 @@ class MerchantsAtmsResultAdapter(
         return when (getItem(position)) {
             is Merchant -> R.layout.merchant_row
             is Atm -> R.layout.atm_row
-            else -> R.layout.group_header
+            else -> -1
         }
     }
 
@@ -61,8 +59,7 @@ class MerchantsAtmsResultAdapter(
                 AtmViewHolder(binding)
             }
             else -> {
-                val binding = GroupHeaderBinding.inflate(inflater, parent, false)
-                GroupHeaderViewHolder(binding)
+                throw IllegalArgumentException("viewType $viewType isn't recognized")
             }
         }
     }
@@ -79,9 +76,6 @@ class MerchantsAtmsResultAdapter(
                 holder.bind(item as Atm)
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, holder) }
             }
-            is GroupHeaderViewHolder -> {
-                holder.bind(item?.name)
-            }
         }
     }
 
@@ -92,16 +86,6 @@ class MerchantsAtmsResultAdapter(
 
         override fun areContentsTheSame(oldItem: SearchResult, newItem: SearchResult): Boolean {
             return oldItem == newItem
-        }
-    }
-}
-
-class GroupHeaderViewHolder(val binding: GroupHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
-    fun bind(header: String?) {
-        binding.header.text = if (header.isNullOrEmpty()) {
-            binding.root.resources.getString(R.string.explore_online_merchant)
-        } else {
-            header
         }
     }
 }
