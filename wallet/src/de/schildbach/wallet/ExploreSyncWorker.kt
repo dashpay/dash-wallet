@@ -75,9 +75,6 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
         val lastDataUpdate = exploreRepository.getLastUpdate()
         if (lastSync < lastDataUpdate) {
-            log.info("Local data timestamp\t$lastSync (${Date(lastSync)})")
-            log.info("Remote data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
-
             maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, {
                 entryPoint.merchantDao().save(it)
             }, {
