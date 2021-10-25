@@ -22,7 +22,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantFTS
 
 @Dao
 interface MerchantDao {
@@ -48,4 +47,7 @@ interface MerchantDao {
 
     @Query("SELECT DISTINCT territory FROM merchant")
     suspend fun getTerritories(): List<String>
+
+    @Query("DELETE FROM merchant WHERE source LIKE :source")
+    suspend fun clear(source: String): Int
 }

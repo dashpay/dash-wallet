@@ -26,7 +26,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.repository.DASH_DIRECT_TABLE
-import org.dash.wallet.features.exploredash.repository.MERCHANT_TABLE
+import org.dash.wallet.features.exploredash.repository.DCG_MERCHANT_TABLE
 import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -44,6 +44,10 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
     private val merchantRepository by lazy {
         entryPoint.merchantRepository()
+    }
+
+    private val merchantDao by lazy {
+        entryPoint.merchantDao()
     }
 
     private val preferences by lazy {
@@ -66,21 +70,31 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
         val lastDataUpdate = merchantRepository.getLastUpdate()
         if (lastSync < lastDataUpdate) {
-            log.info("Local data timestamp\t$lastSync (${Date(lastSync)})")
-            log.info("Remote data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
-            syncTable(MERCHANT_TABLE)
-            syncTable(DASH_DIRECT_TABLE)
-            preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
-            log.info("Sync Explore Dash finished")
+            maybeSyncTable(DCG_MERCHANT_TABLE, "DCG")
+            maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect")
         } else {
-            log.info("Date timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+            log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
         }
         return Result.success()
     }
 
-    private suspend fun syncTable(tableName: String) {
-        val merchantDao = entryPoint.merchantDao()
+    private suspend fun maybeSyncTable(tableName: String, source: String) {
+        val prefsLastSyncKey = "${PREFS_LAST_SYNC_KEY}_$tableName"
+        val lastSync = preferences.getLong(prefsLastSyncKey, 0)
+        val lastDataUpdate = merchantRepository.getLastUpdate(tableName)
+        if (lastSync < lastDataUpdate) {
+            log.info("Local $tableName data timestamp\t$lastSync (${Date(lastSync)})")
+            log.info("Remote $tableName data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
+            merchantDao.clear(source)
+            syncTable(tableName, source)
+            preferences.edit().putLong(prefsLastSyncKey, lastDataUpdate).apply()
+            log.info("Sync $tableName finished")
+        } else {
+            log.info("Data $tableName timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+        }
+    }
 
+    private suspend fun syncTable(tableName: String, source: String) {
         val dataSize = merchantRepository.getDataSize(tableName)
         val totalPages = ceil(dataSize.toDouble() / PAGE_SIZE).toInt()
         log.info("$tableName $dataSize records in $totalPages chunks")
