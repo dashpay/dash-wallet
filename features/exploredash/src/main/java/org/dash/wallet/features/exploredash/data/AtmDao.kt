@@ -61,4 +61,7 @@ interface AtmDao {
 
     @Query("SELECT DISTINCT territory FROM atm")
     suspend fun getTerritories(): List<String>
+
+    @Query("DELETE FROM atm WHERE source LIKE :source")
+    suspend fun clear(source: String): Int
 }

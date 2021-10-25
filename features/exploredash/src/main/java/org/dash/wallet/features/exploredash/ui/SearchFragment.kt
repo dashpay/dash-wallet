@@ -356,6 +356,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun bindMerchantDetails(merchant: Merchant) {
         binding.itemDetails.apply {
             buySellContainer.isVisible = false
+            locationHint.isVisible = false
 
             Glide.with(requireContext())
                 .load(merchant.logoLocation)

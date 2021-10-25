@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "b3c36f1cb7f7f1d0f7138af4d248a590",
+    "identityHash": "1df79cf53d936ab771db13d504b1ef69",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -94,23 +94,11 @@
       },
       {
         "tableName": "merchant",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deeplink` TEXT, `sourceId` INTEGER, `source` TEXT, `plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `paymentMethod` TEXT, `merchantId` INTEGER, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `logoLocation` TEXT, `googleMaps` TEXT, `territory` TEXT, `type` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deeplink` TEXT, `plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `paymentMethod` TEXT, `merchantId` INTEGER, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `territory` TEXT, `source` TEXT, `logoLocation` TEXT, `googleMaps` TEXT, `type` TEXT)",
         "fields": [
           {
             "fieldPath": "deeplink",
             "columnName": "deeplink",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "sourceId",
-            "columnName": "sourceId",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
-            "fieldPath": "source",
-            "columnName": "source",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -212,6 +200,18 @@
             "notNull": false
           },
           {
+            "fieldPath": "territory",
+            "columnName": "territory",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
             "fieldPath": "logoLocation",
             "columnName": "logoLocation",
             "affinity": "TEXT",
@@ -220,12 +220,6 @@
           {
             "fieldPath": "googleMaps",
             "columnName": "googleMaps",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "territory",
-            "columnName": "territory",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -312,7 +306,7 @@
       },
       {
         "tableName": "atm",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`city` TEXT, `postcode` TEXT, `manufacturer` TEXT, `coverImage` TEXT, `type` TEXT, `territory` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `logoLocation` TEXT, `googleMaps` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`city` TEXT, `postcode` TEXT, `manufacturer` TEXT, `coverImage` TEXT, `type` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `territory` TEXT, `source` TEXT, `logoLocation` TEXT, `googleMaps` TEXT)",
         "fields": [
           {
             "fieldPath": "city",
@@ -341,12 +335,6 @@
           {
             "fieldPath": "type",
             "columnName": "type",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "territory",
-            "columnName": "territory",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -414,6 +402,18 @@
           {
             "fieldPath": "phone",
             "columnName": "phone",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "territory",
+            "columnName": "territory",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -520,7 +520,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b3c36f1cb7f7f1d0f7138af4d248a590')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1df79cf53d936ab771db13d504b1ef69')"
     ]
   }
 }

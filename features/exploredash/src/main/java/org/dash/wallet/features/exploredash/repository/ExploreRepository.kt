@@ -40,13 +40,12 @@ interface ExploreRepository {
 class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
     companion object Tables {
         const val DASH_DIRECT_TABLE = "dash_direct"
-        const val MERCHANT_TABLE = "dcg_merchant"
+        const val DCG_MERCHANT_TABLE = "dcg_merchant"
         const val ATM_TABLE = "atm"
     }
 
     private val auth = Firebase.auth
     private val fbDatabase = Firebase.database
-
 
     override suspend fun <T> get(
         tableName: String,

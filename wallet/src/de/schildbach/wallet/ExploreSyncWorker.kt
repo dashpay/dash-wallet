@@ -31,7 +31,7 @@ import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.ATM_TABLE
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.DASH_DIRECT_TABLE
-import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.MERCHANT_TABLE
+import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.DCG_MERCHANT_TABLE
 import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.math.ceil
@@ -48,6 +48,10 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
     private val exploreRepository by lazy {
         entryPoint.exploreRepository()
+    }
+
+    private val merchantDao by lazy {
+        entryPoint.merchantDao()
     }
 
     private val preferences by lazy {
@@ -74,16 +78,50 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             log.info("Local data timestamp\t$lastSync (${Date(lastSync)})")
             log.info("Remote data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
 
-            syncTable(MERCHANT_TABLE, Merchant::class.java, entryPoint.merchantDao()::save)
-            syncTable(ATM_TABLE, Atm::class.java, entryPoint.atmDao()::save)
-            syncTable(DASH_DIRECT_TABLE, Merchant::class.java, entryPoint.merchantDao()::save)
+            maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, {
+                entryPoint.merchantDao().save(it)
+            }, {
+                entryPoint.merchantDao().clear(it)
+            })
+            maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, {
+                entryPoint.atmDao().save(it)
+            }, {
+                entryPoint.atmDao().clear(it)
+            })
+            maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, {
+                entryPoint.merchantDao().save(it)
+            }, {
+                entryPoint.merchantDao().clear(it)
+            })
 
             preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
             log.info("Sync Explore Dash finished")
         } else {
-            log.info("Date timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+            log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
         }
         return Result.success()
+    }
+
+    private suspend fun <T> maybeSyncTable(
+        tableName: String,
+        source: String,
+        valueType: Class<T>,
+        onSave: suspend (List<T>) -> Unit,
+        onClear: suspend (String) -> Unit
+    ) {
+        val prefsLastSyncKey = "${PREFS_LAST_SYNC_KEY}_$tableName"
+        val lastSync = preferences.getLong(prefsLastSyncKey, 0)
+        val lastDataUpdate = exploreRepository.getLastUpdate(tableName)
+        if (lastSync < lastDataUpdate) {
+            log.info("Local $tableName data timestamp\t$lastSync (${Date(lastSync)})")
+            log.info("Remote $tableName data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
+            onClear.invoke(source)
+            syncTable(tableName, valueType, onSave)
+            preferences.edit().putLong(prefsLastSyncKey, lastDataUpdate).apply()
+            log.info("Sync $tableName finished")
+        } else {
+            log.info("Data $tableName timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+        }
     }
 
     private suspend fun <T> syncTable(

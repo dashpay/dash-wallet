@@ -36,11 +36,6 @@ object MerchantType {
 data class Merchant(
     var deeplink: String? = "",
 
-    @get:PropertyName("source_id") @set:PropertyName("source_id")
-    var sourceId: Long? = null,
-
-    var source: String? = "",
-
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
 

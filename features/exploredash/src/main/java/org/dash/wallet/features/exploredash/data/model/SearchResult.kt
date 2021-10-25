@@ -35,6 +35,7 @@ open class SearchResult(
     var website: String? = "",
     var phone: String? = "",
     var territory: String? = "",
+    var source: String? = "",
     @get:PropertyName("logo_location") @set:PropertyName("logo_location")
     var logoLocation: String? = "",
     @get:PropertyName("google_maps") @set:PropertyName("google_maps")
