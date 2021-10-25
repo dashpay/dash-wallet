@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 const val DASH_DIRECT_TABLE = "dash_direct"
-const val MERCHANT_TABLE = "merchant"
+const val DCG_MERCHANT_TABLE = "dcg_merchant"
 const val ATM_TABLE = "atm"
 
 private val log = LoggerFactory.getLogger(FirebaseMerchantTable::class.java)

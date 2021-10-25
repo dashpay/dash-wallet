@@ -35,8 +35,10 @@ object MerchantType {
 @Entity(tableName = "merchant")
 data class Merchant(
 
-    @get:PropertyName("record_id") @set:PropertyName("record_id")
-    var recordId: Long? = null,
+    @get:PropertyName("source_id") @set:PropertyName("source_id")
+    var sourceId: Long? = null,
+
+    var source: String? = "",
 
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
