@@ -21,8 +21,8 @@ import androidx.room.PrimaryKey
 import com.google.firebase.database.PropertyName
 
 open class SearchResult(
-    @PrimaryKey
-    var id: Int = -1,
+    @PrimaryKey(autoGenerate = true)
+    var id: Int = 0,
     @ColumnInfo(name = "active", defaultValue = "1")
     var active: Boolean? = true,
     var name: String? = "",
@@ -34,9 +34,9 @@ open class SearchResult(
     var longitude: Double? = 0.0,
     var website: String? = "",
     var phone: String? = "",
+    var territory: String? = "",
     @get:PropertyName("logo_location") @set:PropertyName("logo_location")
     var logoLocation: String? = "",
-    open var territory: String? = "",
     open var type: String? = ""
 ) {
     override fun equals(other: Any?): Boolean {

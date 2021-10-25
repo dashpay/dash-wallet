@@ -36,7 +36,4 @@ data class Atm(
 
     @get:PropertyName("buy_sell") @set:PropertyName("buy_sell")
     override var type: String? = "",
-
-    @get:PropertyName("state") @set:PropertyName("state")
-    override var territory: String? = ""
 ) : SearchResult()
