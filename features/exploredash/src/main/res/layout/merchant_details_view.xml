@@ -5,7 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="280dp"
-    android:paddingHorizontal="15dp">
+    android:paddingHorizontal="15dp"
+    tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
 
     <ImageView
         android:id="@+id/merchant_logo"
@@ -51,7 +52,7 @@
         android:layout_marginTop="14dp"
         android:lineSpacingMultiplier="1.3"
         android:minLines="2"
-        android:maxLines="3"
+        android:maxLines="4"
         android:ellipsize="end"
         app:layout_constraintStart_toStartOf="@+id/merchant_name"
         app:layout_constraintTop_toBottomOf="@id/merchant_type"

@@ -980,6 +980,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     log.info("found obsolete currency: " + newCurrencyCode);
                     newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
                 }
+
+                // check to see if we use a different currency code for exchange rates
+                newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode);
+
                 log.info("Setting Local Currency: " + newCurrencyCode);
                 config.setExchangeCurrencyCode(newCurrencyCode);
 
@@ -1035,6 +1039,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     log.info("found obsolete currency: " + newCurrencyCode);
                     newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
                 }
+                // check to see if we use a different currency code for exchange rates
+                newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode);
+
                 log.info("Setting Local Currency: " + newCurrencyCode);
                 config.setExchangeCurrencyCodeDetected(true);
                 config.setExchangeCurrencyCode(newCurrencyCode);

@@ -21,7 +21,6 @@
     <string name="explore_no_results">No results</string>
     <string name="explore_pay_with_dash">Pay with Dash</string>
     <string name="explore_buy_gift_card">Buy a Gift Card</string>
-    <string name="explore_merchant_address">%1$s\n%2$s\n%3$s</string>
     <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
     <string name="permission_required_title">Permission required</string>
     <string name="permission_required_message">We need to know your current location</string>

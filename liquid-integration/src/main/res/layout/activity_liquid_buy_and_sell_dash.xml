@@ -64,7 +64,7 @@
                         android:layout_alignParentRight="true"
                         android:layout_marginTop="10dp"
                         android:layout_marginRight="10dp"
-                        android:drawableLeft="@drawable/drawable_green_round"
+                        app:drawableStartCompat="@drawable/drawable_green_round"
                         android:drawablePadding="5dp"
                         android:text="@string/connected"
                         android:textAllCaps="true"

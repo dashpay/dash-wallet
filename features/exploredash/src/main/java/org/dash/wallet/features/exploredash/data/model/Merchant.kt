@@ -34,6 +34,12 @@ object MerchantType {
 @Keep
 @Entity(tableName = "merchant")
 data class Merchant(
+
+    @get:PropertyName("source_id") @set:PropertyName("source_id")
+    var sourceId: Long? = null,
+
+    var source: String? = "",
+
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
 
@@ -43,6 +49,8 @@ data class Merchant(
     @get:PropertyName("update_date") @set:PropertyName("update_date")
     var updateDate: String? = "",
 
+    @get:PropertyName("merchant_id") @set:PropertyName("merchant_id")
+    var merchantId: Long? = null,
     var address1: String? = "",
     var address2: String? = "",
     var address3: String? = "",
@@ -60,4 +68,5 @@ data class Merchant(
 
     @get:PropertyName("payment_method") @set:PropertyName("payment_method")
     var paymentMethod: String? = ""
+
 ) : SearchResult()

@@ -54,7 +54,7 @@
         android:theme="@style/ExploreSearchResultsBackground"
         app:behavior_expandedOffset="40dp"
         app:behavior_fitToContents="false"
-        app:behavior_halfExpandedRatio="0.41"
+        app:behavior_halfExpandedRatio="0.44"
         app:behavior_peekHeight="24dp"
         app:layout_behavior="@string/bottom_sheet_behavior"
         tools:behavior_peekHeight="500dp">
@@ -202,7 +202,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:visibility="gone"
-            app:layout_constraintHeight_percent="0.44" />
+            app:layout_constraintHeight_percent="@dimen/merchant_details_height_ratio" />
 
         <View
             android:id="@+id/appbar_divider"

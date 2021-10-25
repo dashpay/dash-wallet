@@ -80,6 +80,15 @@ import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
+import androidx.core.view.ViewCompat.animate
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import org.dash.wallet.common.ui.observeOnDestroy
+import org.dash.wallet.features.exploredash.data.model.MerchantType
+import org.dash.wallet.features.exploredash.data.model.PaymentMethod
+import java.lang.StringBuilder
 
 
 @FlowPreview
@@ -341,34 +350,49 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 MerchantType.BOTH -> resources.getString(R.string.explore_both_types_merchant)
                 else -> ""
             }
-            merchantAddress.text = getString(
-                R.string.explore_merchant_address,
-                merchant.address1,
-                merchant.address2,
-                merchant.address3)
+
+            val addressBuilder = StringBuilder()
+            addressBuilder.append(merchant.address1)
+
+            if (!merchant.address2.isNullOrBlank()) {
+                addressBuilder.append("\n${merchant.address2}")
+            }
+
+            if (!merchant.address3.isNullOrBlank()) {
+                addressBuilder.append("\n${merchant.address3}")
+            }
+
+            if (!merchant.address4.isNullOrBlank()) {
+                addressBuilder.append("\n${merchant.address4}")
+            }
+
+            merchantAddress.text = addressBuilder.toString()
 
             val isOnline = merchant.type == MerchantType.ONLINE
-            val drawable = ResourcesCompat.getDrawable(resources,
-                if (isOnline) R.drawable.ic_gift_card_white else R.drawable.ic_dash, null)
-
-            payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
             merchantAddress.isVisible = !isOnline
 
-            if (isOnline) {
+            val isGiftCard = merchant.paymentMethod == PaymentMethod.GIFT_CARD
+            val drawable = ResourcesCompat.getDrawable(resources,
+                if (isGiftCard) R.drawable.ic_gift_card_white else R.drawable.ic_dash, null)
+            payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
+
+            if (isGiftCard) {
                 payBtn.isVisible = !merchant.deeplink.isNullOrBlank()
                 payBtn.text = getText(R.string.explore_buy_gift_card)
                 payBtn.setOnClickListener { openDeeplink(merchant.deeplink!!) }
+            } else {
+                payBtn.text = getText(R.string.explore_pay_with_dash)
+                payBtn.setOnClickListener { viewModel.sendDash() }
+            }
 
+            if (isOnline) {
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
                     matchConstraintPercentHeight = 1f
                 }
                 root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
             } else {
-                payBtn.text = getText(R.string.explore_pay_with_dash)
-                payBtn.setOnClickListener { viewModel.sendDash() }
-
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    matchConstraintPercentHeight = 0.44f
+                    matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
                 }
                 root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
             }

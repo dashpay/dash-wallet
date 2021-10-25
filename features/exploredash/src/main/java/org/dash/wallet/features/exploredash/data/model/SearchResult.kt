@@ -20,8 +20,8 @@ import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 
 open class SearchResult(
-    @PrimaryKey
-    var id: Int = -1,
+    @PrimaryKey(autoGenerate = true)
+    var id: Int = 0,
     @ColumnInfo(name = "active", defaultValue = "1")
     var active: Boolean? = true,
     var name: String? = ""

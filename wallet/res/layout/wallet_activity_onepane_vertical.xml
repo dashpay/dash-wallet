@@ -60,7 +60,7 @@
                 android:layout_gravity="bottom|end"
                 android:layout_marginBottom="16dp"
                 android:layout_marginRight="16dp"
-                android:src="@drawable/ic_qrcode"
+                app:srcCompat="@drawable/ic_qrcode"
                 app:backgroundTint="@color/colorPrimary" />
 
         </androidx.coordinatorlayout.widget.CoordinatorLayout>

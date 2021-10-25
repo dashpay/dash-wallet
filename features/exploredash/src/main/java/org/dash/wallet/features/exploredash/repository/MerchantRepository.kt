@@ -31,21 +31,35 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
+
+const val DASH_DIRECT_TABLE = "dash_direct"
+const val DCG_MERCHANT_TABLE = "dcg_merchant"
+const val ATM_TABLE = "atm"
+
+private val log = LoggerFactory.getLogger(FirebaseMerchantTable::class.java)
 
 interface MerchantRepository {
     suspend fun get(): List<Merchant>?
     fun observe(): Flow<List<Merchant>>
     suspend fun search(query: String): List<Merchant>?
+
+    suspend fun getLastUpdate(): Long
+    suspend fun getLastUpdate(tableName: String): Long
+    suspend fun getDataSize(tableName: String): Int
+    suspend fun get(tableName: String, startAt: Int, endBefore: Int): List<Merchant>
 }
 
 class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
+
     companion object {
         private const val merchantPath = "explore/dcg_merchant/data"
         private const val nameChild = "name"
     }
 
     private val auth = Firebase.auth
+    private val fbDatabase = Firebase.database
     private var tableRef = Firebase.database.getReference(merchantPath)
 
     override suspend fun get(): List<Merchant>? {
@@ -74,6 +88,47 @@ class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
         return tableRef.orderByChild(nameChild)
             .startAt(query)
             .endAt(query + "\uf8ff").get().await().getValue<List<Merchant>>()
+    }
+
+    override suspend fun get(tableName: String, startAt: Int, endBefore: Int): List<Merchant> {
+        ensureAuthenticated()
+        val dataSnapshot = fbDatabase.getReference("explore/$tableName/data")
+            .orderByKey()
+            .startAt(startAt.toString())
+            .endBefore(endBefore.toString())
+            .get()
+            .await()
+
+        val data = mutableListOf<Merchant>()
+        dataSnapshot.children.forEach {
+            val merchant = it.getValue(Merchant::class.java)!!
+            data.add(merchant)
+        }
+        return data
+    }
+
+    override suspend fun getDataSize(tableName: String): Int {
+        ensureAuthenticated()
+        return fbDatabase.getReference("explore/$tableName/data_size")
+            .get()
+            .await()
+            .getValue<Int>()!!
+    }
+
+    override suspend fun getLastUpdate(): Long {
+        ensureAuthenticated()
+        return fbDatabase.getReference("explore/last_update")
+            .get()
+            .await()
+            .getValue<Long>()!!
+    }
+
+    override suspend fun getLastUpdate(tableName: String): Long {
+        ensureAuthenticated()
+        return fbDatabase.getReference("explore/$tableName/last_update")
+            .get()
+            .await()
+            .getValue<Long>()!!
     }
 
     private suspend fun ensureAuthenticated() {

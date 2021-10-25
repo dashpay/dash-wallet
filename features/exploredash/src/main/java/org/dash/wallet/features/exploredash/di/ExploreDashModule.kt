@@ -36,7 +36,7 @@ import org.dash.wallet.features.exploredash.ui.UserLocationState
 abstract class ExploreDashModule {
     @Binds
     abstract fun bindMerchantRepository(
-        analyticsService: FirebaseMerchantTable
+        merchantRepository: FirebaseMerchantTable
     ): MerchantRepository
 }
 
