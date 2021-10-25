@@ -41,7 +41,7 @@ interface MerchantRepository {
 
 class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
     companion object {
-        private const val merchantPath = "explore/merchant"
+        private const val merchantPath = "explore/dcg_merchant/data"
         private const val nameChild = "name"
     }
 

@@ -18,6 +18,7 @@ package org.dash.wallet.features.exploredash.ui
 
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -25,41 +26,44 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
-import android.content.DialogInterface
 import android.os.Bundle
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
-import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.app.ActivityCompat
 import androidx.activity.OnBackPressedCallback
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.*
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
+import androidx.core.view.ViewCompat.animate
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.maps.*
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.maps.android.SphericalUtil
 import com.google.maps.android.collections.CircleManager
 import com.google.maps.android.collections.MarkerManager
-import com.google.maps.android.ktx.*
+import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -67,20 +71,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.DialogBuilder
 import org.dash.wallet.common.ui.ListDividerDecorator
+import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
-import androidx.core.view.ViewCompat.animate
-import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import org.dash.wallet.common.ui.observeOnDestroy
-import org.dash.wallet.features.exploredash.data.model.MerchantType
 
 
 @FlowPreview
@@ -92,7 +91,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var bottomSheetWasExpanded: Boolean = false
     private var isKeyboardShowing: Boolean = false
     private var googleMap: GoogleMap? = null
-    private lateinit var mCurrentUserLocation : LatLng
+    private lateinit var mCurrentUserLocation: LatLng
     private var currentLocationMarker: Marker? = null
     private var currentLocationCircle: Circle? = null
     private val CURRENT_POSITION_MARKER_TAG = 0
@@ -260,7 +259,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        adapter.registerAdapterDataObserver(object: RecyclerView.AdapterDataObserver() {
+        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                 binding.searchResultsList.scrollToPosition(0)
             }
@@ -419,7 +418,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         bottomSheet.state = if (bottomSheetWasExpanded) {
             BottomSheetBehavior.STATE_EXPANDED
-        } else  {
+        } else {
             BottomSheetBehavior.STATE_HALF_EXPANDED
         }
 
@@ -462,7 +461,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun hideKeyboard() {
         val inputManager = requireContext()
-                .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+            .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
 
@@ -479,9 +478,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
 
             override fun onMarkerDragEnd(marker: Marker) {
+                mCurrentUserLocation = marker.position
                 currentLocationMarker?.position = marker.position
                 currentLocationCircle?.center = marker.position
-                googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.position, calculateZoomLevel().toFloat()))
+                animateToMeters()
             }
         })
 
@@ -526,7 +526,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             markerCollection = markerManager?.newCollection()
             circleManager = googleMap?.let { CircleManager(it) }
             circleCollection = circleManager?.newCollection()
-
             if (isForegroundLocationPermissionGranted()) {
                 viewModel.monitorUserLocation()
                 viewModel.observeCurrentUserLocation.observe(viewLifecycleOwner) {
@@ -565,7 +564,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         addMarkerOnCurrentPosition()
         addCircleAroundCurrentPosition()
-        googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(mCurrentUserLocation, calculateZoomLevel().toFloat()))
+        animateToMeters()
     }
 
     private fun isForegroundLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),
@@ -588,7 +587,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun getBitmapFromDrawable(drawableId: Int): Bitmap {
-        var drawable =  AppCompatResources.getDrawable(requireActivity(), drawableId)
+        var drawable = AppCompatResources.getDrawable(requireActivity(), drawableId)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             drawable = (DrawableCompat.wrap(drawable!!)).mutate()
         }
@@ -603,31 +602,28 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         return miles * 1609.344
     }
 
-    /**
-     * At zoom level 1, the equator of the Earth is 256 pixels long.
-     * Every step up in zoom level doubles the number of pixels needed to represent earth's equator
-     * The function below provides zoom level where the the screen will show an area of 50 mile radius
-     */
-    private fun calculateZoomLevel(): Int {
-        val equatorLength = 40075004.0
-        val displayMetrics = DisplayMetrics()
+    private fun calculateBounds(center: LatLng, radius: Double): LatLngBounds {
+        return LatLngBounds.builder()
+            .include(SphericalUtil.computeOffset(center, radius, 0.0))
+            .include(SphericalUtil.computeOffset(center, radius, 90.0))
+            .include(SphericalUtil.computeOffset(center, radius, 180.0))
+            .include(SphericalUtil.computeOffset(center, radius, 270.0)).build()
+    }
 
-        @Suppress("DEPRECATION")
-        val widthInPixels = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R){
-            requireActivity().windowManager.defaultDisplay.getMetrics(displayMetrics)
-            displayMetrics.widthPixels
-        } else {
-            val windowMetrics = requireActivity().windowManager.currentWindowMetrics
-            val insets = windowMetrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars())
-            windowMetrics.bounds.width().minus(insets.left).minus(insets.right)
-        }
+    private fun animateToMeters() {
+        val heightInPixel = binding.exploreMap.height
+        val latLngBounds = calculateBounds(mCurrentUserLocation, milesToMeters(50.0))
+        googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(
+                latLngBounds,
+                heightInPixel,
+                heightInPixel,
+                dpToPx(5)
+            )
+        )
+    }
 
-        var metersPerPixel = equatorLength / 256
-        var zoomLevel = 1
-        while ((metersPerPixel * widthInPixels) > milesToMeters(50.0 * 2)) {
-            metersPerPixel /= 2
-            ++zoomLevel
-        }
-        return zoomLevel
+    private fun dpToPx(dp: Int): Int {
+        val displayMetrics = resources.displayMetrics
+        return dp * (displayMetrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT)
     }
 }
