@@ -93,19 +93,6 @@ class ExploreViewModel @Inject constructor(
             .launchIn(viewModelWorkerScope)
     }
 
-    // TODO: replace with smart sync
-    fun dumbSync() {
-        viewModelScope.launch {
-            val merchants = try {
-                merchantRepository.get() ?: listOf()
-            } catch (ex: Exception) {
-                listOf()
-            }
-
-            merchantDao.save(merchants)
-        }
-    }
-
     fun setFilterMode(mode: FilterMode) {
         _filterMode.value = mode
     }
