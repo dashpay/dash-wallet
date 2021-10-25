@@ -41,9 +41,15 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
     private lateinit var connectivityManagerCallback: ConnectivityManager.NetworkCallback
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-    private val networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
-        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+    private lateinit var networkRequestBuilder: NetworkRequest.Builder
+
+    init {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            networkRequestBuilder = NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+        }
+    }
 
     override fun onActive() {
         super.onActive()
