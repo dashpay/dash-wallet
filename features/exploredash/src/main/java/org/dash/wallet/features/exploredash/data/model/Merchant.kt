@@ -41,9 +41,6 @@ data class Merchant(
 
     var source: String? = "",
 
-    @get:PropertyName("record_id") @set:PropertyName("record_id")
-    var recordId: Long? = null,
-
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
 
@@ -55,9 +52,6 @@ data class Merchant(
 
     @get:PropertyName("payment_method") @set:PropertyName("payment_method")
     var paymentMethod: String? = "",
-
-    @get:PropertyName("google_maps") @set:PropertyName("google_maps")
-    var googleMaps: String? = "",
 
     @get:PropertyName("merchant_id") @set:PropertyName("merchant_id")
     var merchantId: Long? = null

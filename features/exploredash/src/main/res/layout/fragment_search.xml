@@ -48,7 +48,7 @@
         android:theme="@style/ExploreSearchResultsBackground"
         app:behavior_expandedOffset="40dp"
         app:behavior_fitToContents="false"
-        app:behavior_halfExpandedRatio="0.44"
+        app:behavior_halfExpandedRatio="@dimen/merchant_half_expanded_ratio"
         app:behavior_peekHeight="24dp"
         app:layout_behavior="@string/bottom_sheet_behavior"
         tools:behavior_peekHeight="500dp">
@@ -223,8 +223,8 @@
         </LinearLayout>
 
         <include
-            android:id="@+id/merchant_details"
-            layout="@layout/merchant_details_view"
+            android:id="@+id/item_details"
+            layout="@layout/item_details_view"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:visibility="gone"

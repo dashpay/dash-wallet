@@ -45,6 +45,8 @@
     <color name="search_light_gray">#6D7885</color>
     <color name="gray_300">#99A2AD</color>
     <color name="gray_100">#E1E3E6</color>
+    <color name="green_300">#3CB878</color>
+    <color name="green_700">#388E3C</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>

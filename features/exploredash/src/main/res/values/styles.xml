@@ -17,4 +17,16 @@
         <item name="android:background">@color/white</item>
         <item name="android:textColor">@color/gray_900</item>
     </style>
+
+    <style name="DashButton.Blue.Small" parent="DashButton.Blue">
+        <item name="android:background">@drawable/small_blue_button_background</item>
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:layout_height">40dp</item>
+    </style>
+
+    <style name="DashButton.Green.Small" parent="DashButton.Blue">
+        <item name="android:background">@drawable/small_green_button_background</item>
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:layout_height">40dp</item>
+    </style>
 </resources>

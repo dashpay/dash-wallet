@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 5,
-    "identityHash": "3858b6c0411f01f1b77d7957af21ba0c",
+    "version": 6,
+    "identityHash": "b3c36f1cb7f7f1d0f7138af4d248a590",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -94,7 +94,7 @@
       },
       {
         "tableName": "merchant",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deeplink` TEXT, `sourceId` INTEGER, `source` TEXT, `recordId` INTEGER, `plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `paymentMethod` TEXT, `googleMaps` TEXT, `merchantId` INTEGER, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `logoLocation` TEXT, `territory` TEXT, `type` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deeplink` TEXT, `sourceId` INTEGER, `source` TEXT, `plusCode` TEXT, `addDate` TEXT, `updateDate` TEXT, `paymentMethod` TEXT, `merchantId` INTEGER, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `logoLocation` TEXT, `googleMaps` TEXT, `territory` TEXT, `type` TEXT)",
         "fields": [
           {
             "fieldPath": "deeplink",
@@ -112,12 +112,6 @@
             "fieldPath": "source",
             "columnName": "source",
             "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "recordId",
-            "columnName": "recordId",
-            "affinity": "INTEGER",
             "notNull": false
           },
           {
@@ -141,12 +135,6 @@
           {
             "fieldPath": "paymentMethod",
             "columnName": "paymentMethod",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "googleMaps",
-            "columnName": "googleMaps",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -226,6 +214,12 @@
           {
             "fieldPath": "logoLocation",
             "columnName": "logoLocation",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "googleMaps",
+            "columnName": "googleMaps",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -318,7 +312,7 @@
       },
       {
         "tableName": "atm",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`city` TEXT, `postcode` TEXT, `manufacturer` TEXT, `coverImage` TEXT, `type` TEXT, `territory` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `logoLocation` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`city` TEXT, `postcode` TEXT, `manufacturer` TEXT, `coverImage` TEXT, `type` TEXT, `territory` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `active` INTEGER DEFAULT 1, `name` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, `address4` TEXT, `latitude` REAL, `longitude` REAL, `website` TEXT, `phone` TEXT, `logoLocation` TEXT, `googleMaps` TEXT)",
         "fields": [
           {
             "fieldPath": "city",
@@ -428,6 +422,12 @@
             "columnName": "logoLocation",
             "affinity": "TEXT",
             "notNull": false
+          },
+          {
+            "fieldPath": "googleMaps",
+            "columnName": "googleMaps",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -520,7 +520,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3858b6c0411f01f1b77d7957af21ba0c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b3c36f1cb7f7f1d0f7138af4d248a590')"
     ]
   }
 }

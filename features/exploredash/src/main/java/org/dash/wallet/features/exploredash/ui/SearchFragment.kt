@@ -24,7 +24,6 @@ import android.util.Log
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -42,22 +41,17 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 import androidx.core.view.ViewCompat.animate
 import androidx.navigation.fragment.navArgs
-import androidx.paging.LoadState
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.ui.observeOnDestroy
-import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.model.*
 import java.lang.StringBuilder
 
 
@@ -112,6 +106,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+        bottomSheet.halfExpandedRatio =
+            ResourcesCompat.getFloat(
+                resources, if (args.type == ExploreTopic.Merchants) {
+                    R.dimen.merchant_half_expanded_ratio
+                } else {
+                    R.dimen.atm_half_expanded_ratio
+                }
+            )
         bottomSheet.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback() {
             override fun onSlide(bottomSheet: View, slideOffset: Float) {}
 
@@ -131,7 +133,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         setupFilters(bottomSheet, args.type)
         setupSearchInput(bottomSheet)
         setupSearchResults()
-        setupMerchantDetails()
+        setupItemDetails()
 
         viewModel.init(args.type)
     }
@@ -188,7 +190,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 refreshAtmsOptions(it)
             }
 
-            if (viewModel.selectedMerchant.value == null && it == ExploreViewModel.FilterMode.Online) {
+            if (viewModel.selectedItem.value == null && it == ExploreViewModel.FilterMode.Online) {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 bottomSheetWasExpanded = true
                 binding.appbarDivider.alpha = 1f
@@ -236,7 +238,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (item is Merchant) {
                 viewModel.openMerchantDetails(item)
             } else if (item is Atm) {
-                Toast.makeText(requireContext(), "ATM details: ${item.address1}", Toast.LENGTH_SHORT).show()
                 viewModel.openAtmDetails(item)
             }
         }
@@ -264,18 +265,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupMerchantDetails() {
-        viewModel.selectedMerchant.observe(viewLifecycleOwner) { merchant ->
-            if (merchant != null) {
-                binding.toolbarTitle.text = merchant.name
-                bindMerchantDetails(merchant)
+    private fun setupItemDetails() {
+        viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
+            if (item != null) {
+                binding.toolbarTitle.text = item.name
+
+                if (item is Merchant) {
+                    bindMerchantDetails(item)
+                } else if (item is Atm) {
+                    bindAtmDetails(item)
+                }
 
                 lifecycleScope.launch {
                     if (isKeyboardShowing) {
                         delay(100)
                     }
 
-                    transitToDetails(merchant.type == MerchantType.ONLINE)
+                    transitToDetails(item.type == MerchantType.ONLINE)
                 }
             } else {
                 binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
@@ -286,7 +292,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun setupBackNavigation() {
         val onBackButtonAction = {
-            if (viewModel.selectedMerchant.value != null) {
+            if (viewModel.selectedItem.value != null) {
                 viewModel.openSearchResults()
                 transitToSearchResults()
             } else {
@@ -307,55 +313,80 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             })
     }
 
+    private fun bindCommonDetails(item: SearchResult, isOnline: Boolean) {
+        binding.itemDetails.apply {
+            itemName.text = item.name
+
+            val addressBuilder = StringBuilder()
+            addressBuilder.append(item.address1)
+
+            if (!item.address2.isNullOrBlank()) {
+                addressBuilder.append("\n${item.address2}")
+            }
+
+            if (!item.address3.isNullOrBlank()) {
+                addressBuilder.append("\n${item.address3}")
+            }
+
+            if (!item.address4.isNullOrBlank()) {
+                addressBuilder.append("\n${item.address4}")
+            }
+
+            itemAddress.text = addressBuilder.toString()
+
+            linkBtn.isVisible = !item.website.isNullOrEmpty()
+            linkBtn.setOnClickListener {
+                openWebsite(item.website!!)
+            }
+
+            directionBtn.isVisible = !isOnline &&
+                    ((item.latitude != null && item.longitude != null) ||
+                    !item.googleMaps.isNullOrBlank())
+            directionBtn.setOnClickListener {
+                openMaps(item)
+            }
+
+            callBtn.isVisible = !isOnline && !item.phone.isNullOrEmpty()
+            callBtn.setOnClickListener {
+                dialPhone(item.phone!!)
+            }
+        }
+    }
+
     private fun bindMerchantDetails(merchant: Merchant) {
-        binding.merchantDetails.apply {
+        binding.itemDetails.apply {
+            buySellContainer.isVisible = false
+
             Glide.with(requireContext())
                 .load(merchant.logoLocation)
                 .error(R.drawable.ic_merchant_placeholder)
                 .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
-                .into(merchantLogo)
+                .into(itemImage)
 
-            merchantName.text = merchant.name
-            merchantType.text = when (cleanValue(merchant.type)) {
+            itemType.text = when (cleanValue(merchant.type)) {
                 MerchantType.ONLINE -> resources.getString(R.string.explore_online_merchant)
                 MerchantType.PHYSICAL -> resources.getString(R.string.explore_physical_merchant)
                 MerchantType.BOTH -> resources.getString(R.string.explore_both_types_merchant)
                 else -> ""
             }
 
-            val addressBuilder = StringBuilder()
-            addressBuilder.append(merchant.address1)
-
-            if (!merchant.address2.isNullOrBlank()) {
-                addressBuilder.append("\n${merchant.address2}")
-            }
-
-            if (!merchant.address3.isNullOrBlank()) {
-                addressBuilder.append("\n${merchant.address3}")
-            }
-
-            if (!merchant.address4.isNullOrBlank()) {
-                addressBuilder.append("\n${merchant.address4}")
-            }
-
-            merchantAddress.text = addressBuilder.toString()
-
             val isOnline = merchant.type == MerchantType.ONLINE
-            merchantAddress.isVisible = !isOnline
+            itemAddress.isVisible = !isOnline
 
-            val isGiftCard = merchant.paymentMethod == PaymentMethod.GIFT_CARD
+            val isDash = merchant.paymentMethod == PaymentMethod.DASH
             val drawable = ResourcesCompat.getDrawable(resources,
-                if (isGiftCard) R.drawable.ic_gift_card_white else R.drawable.ic_dash, null)
+                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card_white, null)
             payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
 
-            if (isGiftCard) {
+            if (isDash) {
+                payBtn.isVisible = true
+                payBtn.text = getText(R.string.explore_pay_with_dash)
+                payBtn.setOnClickListener { viewModel.sendDash() }
+            } else {
                 payBtn.isVisible = !merchant.deeplink.isNullOrBlank()
                 payBtn.text = getText(R.string.explore_buy_gift_card)
                 payBtn.setOnClickListener { openDeeplink(merchant.deeplink!!) }
-            } else {
-                payBtn.text = getText(R.string.explore_pay_with_dash)
-                payBtn.setOnClickListener { viewModel.sendDash() }
             }
 
             if (isOnline) {
@@ -370,20 +401,59 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
             }
 
-            directionBtn.isVisible = !isOnline && merchant.latitude != null && merchant.longitude != null
-            directionBtn.setOnClickListener {
-                openMaps(merchant.latitude!!, merchant.longitude!!)
+            bindCommonDetails(merchant, isOnline)
+        }
+    }
+
+    private fun bindAtmDetails(atm: Atm) {
+        binding.itemDetails.apply {
+            payBtn.isVisible = false
+            manufacturer.text = atm.manufacturer?.replaceFirstChar { it.uppercase() }
+            itemType.isVisible = false
+
+            sellBtn.setOnClickListener {
+                viewModel.sendDash()
             }
 
-            callBtn.isVisible = !isOnline && !merchant.phone.isNullOrEmpty()
-            callBtn.setOnClickListener {
-                dialPhone(merchant.phone!!)
+            buyBtn.setOnClickListener {
+                viewModel.receiveDash()
             }
 
-            linkBtn.isVisible = !merchant.website.isNullOrEmpty()
-            linkBtn.setOnClickListener {
-                openWebsite(merchant.website!!)
+            when (cleanValue(atm.type)) {
+                AtmType.BUY -> {
+                    buyBtn.isVisible = true
+                    sellBtn.isVisible = false
+                }
+                AtmType.SELL -> {
+                    buyBtn.isVisible = false
+                    sellBtn.isVisible = true
+                }
+                AtmType.BOTH -> {
+                    buyBtn.isVisible = true
+                    sellBtn.isVisible = true
+                }
             }
+
+            root.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
+            }
+
+            Glide.with(requireContext())
+                .load(atm.logoLocation)
+                .error(R.drawable.ic_atm_placeholder)
+                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
+                .transition(DrawableTransitionOptions.withCrossFade(200))
+                .into(logoImg)
+
+            Glide.with(requireContext())
+                .load(atm.coverImage)
+                .placeholder(R.drawable.ic_atm_placeholder)
+                .error(R.drawable.ic_atm_placeholder)
+                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
+                .transition(DrawableTransitionOptions.withCrossFade(200))
+                .into(itemImage)
+
+            bindCommonDetails(atm, false)
         }
     }
 
@@ -400,9 +470,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.searchResults.isVisible = false
         }.start()
 
-        binding.merchantDetails.root.alpha = 0f
-        binding.merchantDetails.root.isVisible = true
-        animate(binding.merchantDetails.root).apply {
+        binding.itemDetails.root.alpha = 0f
+        binding.itemDetails.root.isVisible = true
+        animate(binding.itemDetails.root).apply {
             duration = 200
             startDelay = 200
             alpha(1f)
@@ -419,11 +489,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             BottomSheetBehavior.STATE_HALF_EXPANDED
         }
 
-        animate(binding.merchantDetails.root).apply {
+        animate(binding.itemDetails.root).apply {
             duration = 200
             alpha(0f)
         }.withEndAction {
-            binding.merchantDetails.root.isVisible = false
+            binding.itemDetails.root.isVisible = false
         }.start()
 
         binding.searchResults.isVisible = true
@@ -455,8 +525,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.buySellAtmsOptions.isEnabled = filterMode != ExploreViewModel.FilterMode.BuySell
     }
 
-    private fun openMaps(latitude: Double, longitude: Double) {
-        val uri = getString(R.string.explore_maps_intent_uri, latitude, longitude)
+    private fun openMaps(item: SearchResult) {
+        val uri = if (!item.googleMaps.isNullOrBlank()) {
+            item.googleMaps
+        } else {
+            getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
+        }
+
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
         startActivity(intent)
     }

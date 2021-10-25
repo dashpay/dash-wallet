@@ -16,7 +16,6 @@
 
 package org.dash.wallet.features.exploredash.ui
 
-import android.util.Log
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
@@ -34,7 +33,7 @@ enum class ExploreTopic {
 }
 
 enum class NavigationRequest {
-    SendDash, None
+    SendDash, ReceiveDash, None
 }
 
 @HiltViewModel
@@ -77,9 +76,9 @@ class ExploreViewModel @Inject constructor(
     val pagingSearchResults: LiveData<PagingData<SearchResult>>
         get() = _pagingSearchResults
 
-    private val _selectedMerchant = MutableLiveData<Merchant?>()
-    val selectedMerchant: LiveData<Merchant?>
-        get() = _selectedMerchant
+    private val _selectedItem = MutableLiveData<SearchResult?>()
+    val selectedItem: LiveData<SearchResult?>
+        get() = _selectedItem
 
     private val merchantsPagingFlow = searchQuery
         .debounce(QUERY_DEBOUNCE_VALUE)
@@ -200,19 +199,23 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant) {
-        _selectedMerchant.postValue(merchant)
+        _selectedItem.postValue(merchant)
     }
 
     fun openAtmDetails(atm: Atm) {
-        Log.i("EXPLOREDASH", "Atm details")
+        _selectedItem.postValue(atm)
     }
 
     fun openSearchResults() {
-        _selectedMerchant.postValue(null)
+        _selectedItem.postValue(null)
     }
 
     fun sendDash() {
         navigationCallback.postValue(NavigationRequest.SendDash)
+    }
+
+    fun receiveDash() {
+        navigationCallback.postValue(NavigationRequest.ReceiveDash)
     }
 
     private fun clearFilters(topic: ExploreTopic) {

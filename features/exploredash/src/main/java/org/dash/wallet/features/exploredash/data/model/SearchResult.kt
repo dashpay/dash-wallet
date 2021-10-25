@@ -37,6 +37,8 @@ open class SearchResult(
     var territory: String? = "",
     @get:PropertyName("logo_location") @set:PropertyName("logo_location")
     var logoLocation: String? = "",
+    @get:PropertyName("google_maps") @set:PropertyName("google_maps")
+    var googleMaps: String? = "",
     open var type: String? = ""
 ) {
     override fun equals(other: Any?): Boolean {

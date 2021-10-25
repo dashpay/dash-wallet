@@ -26,6 +26,10 @@ class ExploreActivity : BaseMenuActivity() {
                     val sendCoinsIntent = PaymentsActivity.createIntent(this, 0)
                     startActivity(sendCoinsIntent)
                 }
+                NavigationRequest.ReceiveDash -> {
+                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 1)
+                    startActivity(sendCoinsIntent)
+                }
                 else -> {}
             }
         }

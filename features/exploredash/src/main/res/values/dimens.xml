@@ -4,5 +4,8 @@
     <dimen name="details_physical_margin_top">20dp</dimen>
     <dimen name="details_online_margin_top">40dp</dimen>
     <dimen name="logo_corners_radius">8dp</dimen>
-    <dimen name="merchant_details_height_ratio">0.47</dimen>
+    <dimen name="merchant_half_expanded_ratio">0.45</dimen>
+    <dimen name="merchant_details_height_ratio">0.48</dimen>
+    <dimen name="atm_half_expanded_ratio">0.51</dimen>
+    <dimen name="atm_details_height_ratio">0.51</dimen>
 </resources>
