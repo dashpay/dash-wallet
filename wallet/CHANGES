@@ -1,4 +1,12 @@
 Dash Wallet
+v7.3.4
+* eliminate Android 4.4 related crashes
+* Fix crashes related to exchanges rates and fiat amounts
+* Fix crash when scanning QR code with amount
+* Fix crash on Lock Screen after fingerprints are changed
+* Fix crash on Backup Wallet Screen
+* Fix in app message links on Android 11
+
 v7.3.3
 * Use DashJ 0.17.9 (sync fixes for Android 6 and below)
 * Redesign Local Currency Screen
