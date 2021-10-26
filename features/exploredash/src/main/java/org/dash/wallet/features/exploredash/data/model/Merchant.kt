@@ -34,6 +34,7 @@ object MerchantType {
 @Keep
 @Entity(tableName = "merchant")
 data class Merchant(
+    @get:PropertyName("deep_link") @set:PropertyName("deep_link")
     var deeplink: String? = "",
 
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
