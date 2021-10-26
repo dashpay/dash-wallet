@@ -25,9 +25,7 @@ import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Atm
 
 @Dao
-interface AtmDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun save(list: List<Atm>)
+interface AtmDao : BaseDao<Atm> {
 
     @Query("SELECT * FROM atm WHERE :territoryFilter = '' OR territory = :territoryFilter ORDER BY name ASC")
     fun pagingGet(territoryFilter: String): PagingSource<Int, Atm>
@@ -61,7 +59,4 @@ interface AtmDao {
 
     @Query("SELECT DISTINCT territory FROM atm")
     suspend fun getTerritories(): List<String>
-
-    @Query("DELETE FROM atm WHERE source LIKE :source")
-    suspend fun clear(source: String): Int
 }
