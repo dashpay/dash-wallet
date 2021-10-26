@@ -18,8 +18,6 @@ package org.dash.wallet.features.exploredash.data
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Atm
@@ -59,4 +57,7 @@ interface AtmDao : BaseDao<Atm> {
 
     @Query("SELECT DISTINCT territory FROM atm")
     suspend fun getTerritories(): List<String>
+
+    @Query("DELETE FROM atm WHERE source LIKE :source")
+    override suspend fun deleteAll(source: String): Int
 }

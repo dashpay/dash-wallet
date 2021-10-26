@@ -96,7 +96,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         if (lastSync < lastDataUpdate) {
             log.info("Local $tableName data timestamp\t$lastSync (${Date(lastSync)})")
             log.info("Remote $tableName data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
-            dao.clear(source)
+            dao.deleteAll(source)
             syncTable(tableName, valueType, dao)
             preferences.edit().putLong(prefsLastSyncKey, lastDataUpdate).apply()
             log.info("Sync $tableName finished")

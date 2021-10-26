@@ -18,13 +18,12 @@ package org.dash.wallet.features.exploredash.data
 
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
-import androidx.room.Query
 
 interface BaseDao<T> {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun save(list: List<T>)
 
-    @Query("DELETE FROM atm WHERE source LIKE :source")
-    suspend fun clear(source: String): Int
+    // add @Query(...) in sub classes to avoid build failures
+    suspend fun deleteAll(source: String): Int
 }
