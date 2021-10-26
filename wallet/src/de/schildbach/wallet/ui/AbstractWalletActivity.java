@@ -47,8 +47,7 @@ public abstract class AbstractWalletActivity extends GlobalFooterActivity implem
     protected void onCreate(final Bundle savedInstanceState) {
         application = (WalletApplication) getApplication();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-            setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
+        setTaskDescription(new TaskDescription(null, null, getResources().getColor(R.color.bg_action_bar)));
 
         super.onCreate(savedInstanceState);
     }

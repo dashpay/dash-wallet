@@ -72,12 +72,8 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
         val freshReceiveAddress = walletDataProvider.freshReceiveAddress()
         walletAddress = freshReceiveAddress.toBase58()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            CookieManager.getInstance().removeAllCookies(null)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            CookieManager.getInstance().flush()
-        }
+        CookieManager.getInstance().removeAllCookies(null)
+        CookieManager.getInstance().flush()
 
         webview.clearCache(true)
         webview.clearFormData()
@@ -100,9 +96,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
         webview.settings.allowUniversalAccessFromFileURLs = true
         webview.settings.allowFileAccessFromFileURLs = true
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            webview.settings.mediaPlaybackRequiresUserGesture = false
-        }
+        webview.settings.mediaPlaybackRequiresUserGesture = false
 
         /**
          * This is for checking camera permission for selfie and upload document
@@ -354,12 +348,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
     fun executeJavascriptInWebview(rawJavascript: String) {
         log.info("liquid: execute script: $rawJavascript")
         runOnUiThread {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-                webview.evaluateJavascript(rawJavascript, null);
-            } else {
-                val javaScriptFunctionCall = "(function() { $rawJavascript })()";
-                webview.loadUrl("javascript:$javaScriptFunctionCall;")
-            }
+            webview.evaluateJavascript(rawJavascript, null);
         }
     }
 

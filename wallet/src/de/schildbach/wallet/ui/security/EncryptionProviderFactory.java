@@ -18,11 +18,7 @@ public class EncryptionProviderFactory {
         KeyStore keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
         keyStore.load(null);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return new ModernEncryptionProvider(securityPrefs, keyStore);
-        } else {
-            return new StaleEncryptionProvider(securityPrefs, keyStore);
-        }
+        return new ModernEncryptionProvider(securityPrefs, keyStore);
     }
 
     public interface EncryptionProvider {
