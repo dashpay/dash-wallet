@@ -260,7 +260,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+        adapter.registerAdapterDataObserver(object: RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                 binding.searchResultsList.scrollToPosition(0)
             }
@@ -434,7 +434,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         bottomSheet.state = if (bottomSheetWasExpanded) {
             BottomSheetBehavior.STATE_EXPANDED
-        } else {
+        } else  {
             BottomSheetBehavior.STATE_HALF_EXPANDED
         }
 
@@ -477,7 +477,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun hideKeyboard() {
         val inputManager = requireContext()
-            .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+                .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
 
