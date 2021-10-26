@@ -25,6 +25,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.data.AtmDao
+import org.dash.wallet.features.exploredash.data.BaseDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
@@ -50,10 +51,6 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         entryPoint.exploreRepository()
     }
 
-    private val merchantDao by lazy {
-        entryPoint.merchantDao()
-    }
-
     private val preferences by lazy {
         appContext.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -75,21 +72,9 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
         val lastDataUpdate = exploreRepository.getLastUpdate()
         if (lastSync < lastDataUpdate) {
-            maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, {
-                entryPoint.merchantDao().save(it)
-            }, {
-                entryPoint.merchantDao().clear(it)
-            })
-            maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, {
-                entryPoint.atmDao().save(it)
-            }, {
-                entryPoint.atmDao().clear(it)
-            })
-            maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, {
-                entryPoint.merchantDao().save(it)
-            }, {
-                entryPoint.merchantDao().clear(it)
-            })
+            maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, entryPoint.merchantDao())
+            maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, entryPoint.atmDao())
+            maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, entryPoint.merchantDao())
 
             preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
             log.info("Sync Explore Dash finished")
@@ -103,8 +88,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         tableName: String,
         source: String,
         valueType: Class<T>,
-        onSave: suspend (List<T>) -> Unit,
-        onClear: suspend (String) -> Unit
+        dao: BaseDao<T>
     ) {
         val prefsLastSyncKey = "${PREFS_LAST_SYNC_KEY}_$tableName"
         val lastSync = preferences.getLong(prefsLastSyncKey, 0)
@@ -112,8 +96,8 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         if (lastSync < lastDataUpdate) {
             log.info("Local $tableName data timestamp\t$lastSync (${Date(lastSync)})")
             log.info("Remote $tableName data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
-            onClear.invoke(source)
-            syncTable(tableName, valueType, onSave)
+            dao.clear(source)
+            syncTable(tableName, valueType, dao)
             preferences.edit().putLong(prefsLastSyncKey, lastDataUpdate).apply()
             log.info("Sync $tableName finished")
         } else {
@@ -124,7 +108,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
     private suspend fun <T> syncTable(
         tableName: String,
         valueType: Class<T>,
-        onSave: suspend (List<T>) -> Unit
+        dao: BaseDao<T>
     ) {
         val dataSize = exploreRepository.getDataSize(tableName)
         val totalPages = ceil(dataSize.toDouble() / PAGE_SIZE).toInt()
@@ -136,7 +120,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             val endAt = startAt + PAGE_SIZE
             log.info("$tableName chunk ${page + 1} of $totalPages ($startAt to $endAt)")
             val data = exploreRepository.get(tableName, startAt, endAt, valueType)
-            onSave.invoke(data)
+            dao.save(data)
         }
 
         tableSyncWatch.stop()
