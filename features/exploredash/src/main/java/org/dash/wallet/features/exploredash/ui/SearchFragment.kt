@@ -420,7 +420,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 viewModel.receiveDash()
             }
 
-            when (cleanValue(atm.type)) {
+            when (atm.type) {
                 AtmType.BUY -> {
                     buyBtn.isVisible = true
                     sellBtn.isVisible = false
