@@ -22,13 +22,10 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
 
 @Dao
-interface MerchantDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun save(list: List<Merchant>)
+interface MerchantDao : BaseDao<Merchant> {
 
     @Query("SELECT * FROM merchant WHERE :territoryFilter = '' OR territory = :territoryFilter ORDER BY name ASC")
     fun pagingGet(territoryFilter: String): PagingSource<Int, Merchant>
@@ -62,7 +59,4 @@ interface MerchantDao {
 
     @Query("SELECT DISTINCT territory FROM merchant")
     suspend fun getTerritories(): List<String>
-
-    @Query("DELETE FROM merchant WHERE source LIKE :source")
-    suspend fun clear(source: String): Int
 }
