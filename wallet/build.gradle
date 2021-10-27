@@ -89,6 +89,7 @@ dependencies {
 
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-inappmessaging-display'
+    implementation 'com.google.firebase:firebase-installations'
 
     // Declare the dependency for the Performance Monitoring library
     // When using the BoM, you don't specify versions in Firebase library dependencies
@@ -167,8 +168,8 @@ android {
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 30
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70330
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "7.3.3"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70340
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "7.3.4"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -295,5 +296,4 @@ android {
     }
 }
 
-apply plugin: 'com.google.firebase.crashlytics'
 apply from: file("../gradle/google-services.gradle")
