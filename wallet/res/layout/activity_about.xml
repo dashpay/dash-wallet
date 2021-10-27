@@ -54,6 +54,25 @@
         tools:text="DashJ 17.0.0" />
 
     <TextView
+        android:id="@+id/firebase_installation_id"
+        style="@style/MontserratRegular"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/selectable_background_dark"
+        android:gravity="center"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:textColor="@android:color/black"
+        android:textSize="12sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/library_version_name"
+        tools:text="Firebase Installation ID"
+        tools:visibility="visible" />
+
+    <TextView
         android:id="@+id/fork_disclaimer"
         style="@style/MontserratRegular.MG"
         android:layout_width="wrap_content"
