@@ -4,7 +4,9 @@
     <string name="loading">Laden...</string>
     <string name="loading_error">Ein Fehler ist aufgetreten. Bitte versuche es später noch einmal.</string>
     <string name="dash_available">%1$s verfügbar</string>
-
+    <string name="network_unavailable_title">Netzwerk nicht verfügbar</string>
+    <string name="network_unavailable_check_connection">Bitte überprüfe deine Netzwerksverbindung</string>
+    <string name="network_unavailable_balance_not_accurate">Die Guthabensanzeige ist möglicherweise inakkurat, da keine Verbindung besteht</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">Paxos Standard</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">Schließen</string>
+    <string name="network_unavailable_return">Zur Wallet zurückkehren</string>
+
 </resources>

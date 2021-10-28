@@ -20,17 +20,19 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
-import de.schildbach.wallet.rates.ExchangeRatesRepository.GetExchangeRateCallback
 import de.schildbach.wallet.ui.SingleLiveEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 
 class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(application) {
 
-    private lateinit var repo: ExchangeRatesRepository
+    private var repo: ExchangeRatesRepository
     private var _nameLiveData = MutableLiveData<ExchangeRate>()
     val exchangeRateData: LiveData<ExchangeRate>
         get() = _nameLiveData
@@ -41,9 +43,13 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
 
     var exchangeRate: org.bitcoinj.utils.ExchangeRate? = null
         get() = _nameLiveData.value?.run { org.bitcoinj.utils.ExchangeRate(Coin.COIN, _nameLiveData.value!!.fiat) }
-        set(value) {
-            field = value
-        }
+
+    private val dashToFiatDirectionData = MutableLiveData<Boolean>()
+    val dashToFiatDirectionLiveData: LiveData<Boolean>
+        get() = dashToFiatDirectionData
+    fun setDashToFiatDirection(isDashToFiat: Boolean) {
+        dashToFiatDirectionData.value = isDashToFiat
+    }
 
     val dashAmountData = MutableLiveData<Coin>()
 
@@ -73,14 +79,12 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
     val maxButtonClickEvent = SingleLiveEvent<Boolean>()
 
     init {
-        val currencyCode = (application as WalletApplication).configuration.getSendPaymentExchangeCurrencyCode()
-        repo = ExchangeRatesRepository.getInstance()
-        val callback: GetExchangeRateCallback = object : GetExchangeRateCallback {
-            override fun onExchangeRateLoaded(exchangeRate: ExchangeRate) {
-                _nameLiveData.value = exchangeRate
-            }
+        val currencyCode = (application as WalletApplication).configuration.exchangeCurrencyCode
+        repo = ExchangeRatesRepository.instance
+        viewModelScope.launch(Dispatchers.Main) {
+            val result = withContext(Dispatchers.IO) { repo.getExchangeRate(currencyCode) }
+            result.let { _nameLiveData.value = it } // do nothing if null
         }
-        repo.getExchangeRate(currencyCode, callback)
     }
 
     fun hasAmount(): Boolean {

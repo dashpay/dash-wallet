@@ -210,7 +210,7 @@
     <string name="verify_it_is_important">Je důležité</string>
     <string name="verify_it_is_important_subtitle">Ukážeme vám privátní klíč od vaší peněženky.</string>
     <string name="verify_info_text_1">Tato fráze pro obnovení slouží jako přístup k prostředkům na peněžence.</string>
-    <string name="verify_info_text_2">Neuschováváme tuto frázi pro obnovení.</string>
+    <string name="verify_info_text_2">Neuchováváme tuto frázi pro obnovení.</string>
     <string name="verify_info_text_3">Pokud toto zařízení ztratíte, poškodíte nebo odinstalujete Dash Wallet, budete potřebovat frázi pro obnovení, abyste mohli nakládat s vašimi prostředky.</string>
     <string name="verify_skip">Přeskočit</string>
     <string name="verify_secure_now_btn">Ihned zabezpečit</string>
@@ -220,6 +220,15 @@
     <string name="verify_seed_buttons_tip">Klepněte na slova z vaší fráze pro obnovení ve správném pořadí</string>
     <string name="verify_seed_success_title">Úspěšně verifikováno</string>
     <string name="verify_seed_success_message">Peněženka je teď zabezpečena. Frázi pro obnovení můžete kdykoliv použít pro obnovení na jiném zařízení.</string>
+    <string name="verify_no_screenshot_title">Nesnímejte obrazovku</string>
+    <string name="verify_no_screenshot_message">Raději si frázi pro obnovení uchovejte na bezpečném místě.</string>
+    <string name="verify_why_no_screenshot">Proč bych neměl pořizovat snímek obrazovky?</string>
+    <string name="verify_warning_title">Varování</string>
+    <string name="verify_warning_message">Fráze pro obnovení umožňuje přístup k prostředkům na vaší peněžence. </string>
+    <string name="verify_warning_screenshots_title">Nevytvářejte screenshoty</string>
+    <string name="verify_warning_screenshots_message">Screenshoty jsou dostupné pro jiné aplikace a zařízení.</string>
+    <string name="verify_warning_do_not_show">Nenechte nikoho aby uviděl vaši frázi pro obnovení.</string>
+    <string name="verify_warning_do_not_type">Nikdy nezadávejte svou frázi pro obnovení do správců hesel a jinam.</string>
     <string name="view_seed_done">Hotovo</string>
     <string name="view_seed_title">Fráze Pro Obnovení</string>
     <string name="transaction_result_view_on_explorer">Zobrazit ve vyhledávači</string>
@@ -310,6 +319,7 @@
     <string name="welcome_screen_subtitle_3">Měj naprostou kontrolu a přizpůsob si svojí peněženku</string>
 
     <string name="sync_status_wait">Počkejte na dokončení synchronizace</string>
+    <string name="sync_status_syncing_title">Synchronizace %1$d</string>
     <string name="sync_status_syncing_sub_title">s Dash blockchainem</string>
     <string name="sync_status_unable_to_connect">Nelze se připojit</string>
     <string name="sync_status_check_connection">Zkontrolujte vaše připojení</string>
@@ -338,6 +348,8 @@
     <string name="import_image_invalid_private">Neplatný privátní klíč</string>
 
     <string name="syncing">Synchronizace</string>
+    <string name="syncing_balance">Synchronizace zůstatku</string>
+
     <string name="all_transactions">Vše</string>
     <string name="received_transactions">Přijato</string>
     <string name="sent_transactions">Odesláno</string>

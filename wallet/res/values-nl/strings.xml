@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Uw portemonnee is gereset!\\nHerstel zal enige tijd duren.</string>
+    <string name="toast_start_storage_provider_selector_failed">Er is geen geschikte cloudopslagprovider geïnstalleerd.\nJe hebt iets nodig als \"Nextcloud\" of \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Gebruik op eigen risico. Lees de &lt;u&gt;veiligheidsvoorschriften&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">U moet uw portomonnee back-uppen!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d uur achter</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Herstellen</string>
     <string name="restore_wallet_dialog_success">Portemonnee is hersteld.</string>
     <string name="restore_wallet_dialog_success_replay">Uw portemonnee is met succes hersteld. Nu zal het saldo worden vastgesteld. Dit kan enige tijd duren.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Waarschuwing: uw portemonnee is beveiligd met een pincode. Zorg ervoor dat je deze onthoudt voordat je met deze portemonnee geld ontvangt.</string>
     <string name="import_keys_dialog_failure">Portemonnee kon niet hersteld worden:\n\n%s\n\nVerkeerd wachtwoord?</string>
     <string name="backup_wallet_permission_dialog_title">Schrijftoegang ontbreekt</string>
     <string name="backup_wallet_permission_dialog_message">U heeft schrijftoegang nodig om uw portemonnee op externe opslag op te slaan.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Uw back-up zal versleuteld worden met het gekozen wachtwoord en weggeschreven naar een externe opslag locatie.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Uw portemonnee is beveiligd met een pincode om te kunnen betalen. Onthoud deze pincode net als uw back-upwachtwoord! </string>
     <string name="export_keys_dialog_button_export">Back-up</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Er is een back-up van uw portemonnee gemaakt op <tt>%s</tt></p><p>Als uw apparaat een verwijderbare SD-geheugenkaart bevat dan zou de back-up hier op moeten staan. Verwijder de geheugenkaart en bewaar deze op een veilige plek. Als de geheugenkaart niet verwijderbaar is dan moet u uw back-up op een andere plek dan op uw apparaat zelf archiveren.</p><p><b>Als de back-up zich uitsluitend op uw apparaat bevindt, riskeert U het verlies van uw portemonnee en back-up tezamen !</b></p><p>Zorg er altijd voor dat U uw back-upwachtwoord goed onthoudt. Wilt U uw portemonnee nu archiveren?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Je portemonnee is gebackupt naar  <tt>%s</tt></p><p><b>Als er alleen een backup op dit apparaat is opgeslagen, loop je het gevaar zowel portemonnee als de backup te verliezen!</b></p><p>In elk geval, onthoud het wachtwoord van je backup.</p>]]></string>
     <string name="export_keys_dialog_failure">Uw portemonnee kan niet geback-upt worden:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archief</string>
     <string name="export_keys_dialog_mail_subject">Dash-portemonneeback-up</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">Kies een dienst</string>
     <string name="activity_buy_and_sell_dash_filter">Filteren</string>
     <string name="clear_filter">Maak filter leeg</string>
+    <string name="select_currency">Selecteer valuta</string>
+
 </resources>

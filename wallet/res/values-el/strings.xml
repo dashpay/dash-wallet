@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Έγινε επανεκκίνηση στο πορτοφόλι σας!\nΘα πάρει λίγο χρόνο μέχρι την ανάκτηση του,</string>
+    <string name="toast_start_storage_provider_selector_failed">Δεν έχει εγκατασταθεί κατάλληλος πάροχος αποθήκευσης στο cloud.\nΧρειάζεστε κάτι όπως το \"Nextcloud\" ή το \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Χρησιμοποιήστε με δική σας ευθύνη. Διαβάστε τις &lt;u&gt;επισημάνσεις ασφάλειας&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Χρειάζεται να πάρετε αντίγραφο ασφαλείας του πορτοφολιού σας!</string>
     <string name="blockchain_state_progress_hours">Απομένουν %1$s, %2$d ώρες</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Επαναφορά</string>
     <string name="restore_wallet_dialog_success">Το πορτοφόλι αποκαταστάθηκε.</string>
     <string name="restore_wallet_dialog_success_replay">Το πορτοφόλι σας αποκαταστάθηκε με επιτυχία. Το ποσό του θα καθοριστεί στη συνέχεια. Αυτό θα πάρει κάποιο χρόνο.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Προειδοποίηση: Το πορτοφόλι σας προστατεύεται από ένα PIN ξοδέματος. Βεβαιωθείτε ότι το θυμάστε ακόμα πριν να λάβετε σε αυτό το πορτοφόλι.</string>
     <string name="import_keys_dialog_failure">Το πορτοφόλι δεν θα μπορούσε να αποκατασταθεί:\n\n%s\n\nΛάθος κωδικός;</string>
     <string name="backup_wallet_permission_dialog_title">Δεν έχετε άδεια εγγραφής</string>
     <string name="backup_wallet_permission_dialog_message">Για να μπορέστε κάνετε backup του πορτοφολιού σας σε εξωτερική αποθηκευτική μονάδα, χρειάζεται να χορηγήσετε άδεια εγγραφής.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Το αντίγραφο ασφαλείας σας θα κρυπτογραφηθεί με τον επιλεγμένο κωδικό και θα αποθηκευτεί στον εξωτερικό χώρο αποθήκευσης.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Το πορτοφόλι σας προστατεύεται από PIN ξοδέματος. Βεβαιωθείτε ότι θυμάστε το PIN εκτός από τον εφεδρικό κωδικό πρόσβασης!</string>
     <string name="export_keys_dialog_button_export">Αντίγραφο ασφαλείας</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Έγινε αντίγραφο ασφαλείας του πορτοφολιού σας έως το <tt>%s</tt></p><p>Αν η συσκευή σας έχει αφαιρούμενη κάρτα SD, το αντίγραφο ασφαλείας <i>θα πρέπει </i> να βρίσκεται στην κάρτα. Αφαιρέστε την και φυλάξτε την σε ασφαλές μέρος. Εαν η SD κάρτα <i>δεν</i> είναι αφαιρούμενη, θα πρέπει να φυλάξετε το αντίγραφο ασφαλείας κάπου αλλού και όχι στην συσκευή σας.</p><p><b>Εάν το μόνο μέρος που έχετε το αντίγραφο ασφαλείας είναι στην συσκευή σας, τότε κινδυνεύετε να τα χάσετε και τα δύο μαζί!</b></p><p> Σε κάθε περίπτωση φρόντιστε να θυμάστε την κωδική φράση του αντίγραφου ασφαλείας σας. Είστε σίγουρος ότι θελετε να κρατήσετε αρχείο από το πορτοφόλι σας τώρα?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Έχει δημιουργηθεί αντίγραφο ασφαλείας για το πορτοφόλι σας στο <tt>%s</tt></p><p><b>Αν το μόνο μέρος όπου υπάρχει το αντίγραφο ασφαλείας σας είναι στη συσκευή σας, κινδυνεύετε να τα χάσετε και τα δύο ταυτόχρονα!</b></p><p>Σε κάθε περίπτωση, βεβαιωθείτε ότι θυμάστε τον κωδικό ασφαλείας σας.</p>]]></string>
     <string name="export_keys_dialog_failure">Δεν ήταν δυνατόν να δημιουργηθεί αντίγραφο ασφαλείας του πορτοφολιού σας:\n%s</string>
     <string name="export_keys_dialog_button_archive">Αρχειοθέτηση</string>
     <string name="export_keys_dialog_mail_subject">Αντίγραφο ασφαλείας Πορτοφολιού Dash</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">Επιλέξτε μια Υπηρεσία</string>
     <string name="activity_buy_and_sell_dash_filter">Φίλτρο</string>
     <string name="clear_filter">Καθαρισμός Φίλτρου</string>
+    <string name="select_currency">Επιλέξτε Νόμισμα</string>
+
 </resources>

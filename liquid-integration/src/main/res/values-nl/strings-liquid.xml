@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">Koop Dash met creditcard</string>
     <string name="liquid_logout">Log uit</string>
     <string name="liquid_logout_title">Log uit van Liquid</string>
+    <string name="liquid_forced_logout">De link met je Liquid account is verbroken. Kies Link Liquid Account op het volgende scherm.</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Ruil Dash met andere cryptovaluta\'s</string>
     <string name="transfer_dash_to_and_from_account">Maak Dash over naar en van je account op Liquid</string>
 
@@ -17,10 +18,12 @@
     <string name="button_cancel">Annuleer</string>
     <string name="choose_your_payment_method">Kies je betalingsmethode</string>
     <string name="crypto_support">Cryptoondersteuning</string>
+    <string name="credit_card_support">Ondersteuning voor creditcard</string>
     <string name="okay">Oké</string>
     <string name="close">Sluit</string>
-    <string name="list_of_countries">Bekijk lijst met landen die niet worden ondersteund</string>
-    <string name="buying_dash_not_supported">Kopen van Dash met cryptovaluta is in sommige landen niet ondersteund</string>
+    <string name="list_of_countries">Bekijk een lijst met niet-ondersteunde landen.</string>
+    <string name="buying_dash_not_supported_credit_cards">Dash kopen met een creditcard wordt in sommige landen niet ondersteund.</string>
+    <string name="buying_dash_not_supported_crypto">Het kopen van Dash met cryptocurrency wordt in sommige landen niet ondersteund.</string>
     <string name="buying_dash_success_message">Je kan dit scherm sluiten, jouw Dash wordt naar jouw portemonnee verstuurd.</string>
 
     <string name="confirm">Bevestig</string>
@@ -30,7 +33,8 @@
     <string name="total">Totaal</string>
     <string name="connect">Verbind</string>
     <string name="connected">Verbonden</string>
-    <string name="buy_sell_dash">Om Dash to kopen &amp; verkopen of een nieuw account aan te maken</string>
+    <string name="disconnected">Verbinding verbroken</string>
+    <string name="buy_sell_dash">Koop &amp; verkoop Dash of maak een nieuw account aan</string>
 
 
     <string name="transfer_to_liquid">Maak over aan Liquid</string>

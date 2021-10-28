@@ -147,6 +147,7 @@
     <string name="wallet_lock_wrong_pin">رقم سري خاطئ %s</string>
 
     <plurals name="wallet_lock_attempts_remaining">
+        <item quantity="zero">%dالمحاولات المتبقية</item>
         <item quantity="one">%dالمحاولات المتبقية</item>
         <item quantity="two">%dالمحاولات المتبقية</item>
         <item quantity="few">%dالمحاولات المتبقية</item>
@@ -155,6 +156,7 @@
     </plurals>
 
     <plurals name="minute">
+        <item quantity="zero">دقائق</item>
         <item quantity="one">دقائق</item>
         <item quantity="two">دقائق</item>
         <item quantity="few">دقائق</item>
@@ -163,6 +165,7 @@
     </plurals>
 
     <plurals name="hour">
+        <item quantity="zero">ساعات</item>
         <item quantity="one">ساعات</item>
         <item quantity="two">ساعات</item>
         <item quantity="few">ساعات</item>
@@ -223,6 +226,15 @@
     <string name="verify_seed_buttons_tip">يرجى النقر على الكلمات من عبارة الاسترداد بالترتيب الصحيح</string>
     <string name="verify_seed_success_title">تم التحقق بنجاح</string>
     <string name="verify_seed_success_message">محفظتك مؤمنة الآن. يمكنك استخدام عبارة الاسترداد في أي وقت لاسترداد حسابك على جهاز آخر.</string>
+    <string name="verify_no_screenshot_title">لا تأخذ لقطة شاشة</string>
+    <string name="verify_no_screenshot_message">بدلاً من ذلك ، اكتب عبارة الاسترداد في مكان آمن.</string>
+    <string name="verify_why_no_screenshot">لماذا لا يجب علي التقاط لقطة شاشة؟</string>
+    <string name="verify_warning_title">تحذير</string>
+    <string name="verify_warning_message">عبارة الاسترداد هذه هي وصولك إلى الأموال الموجودة في محفظتك.</string>
+    <string name="verify_warning_screenshots_title">لا تأخذ لقطة شاشة</string>
+    <string name="verify_warning_screenshots_message">تكون لقطات الشاشة مرئية للتطبيقات الأخرى والأجهزة</string>
+    <string name="verify_warning_do_not_show">لا تدع أي شخص يرى عبارة الاسترداد الخاصة بك.</string>
+    <string name="verify_warning_do_not_type">لا تكتب عبارة الاسترداد مطلقًا في مديري كلمات المرور أو في أي مكان آخر.</string>
     <string name="view_seed_done">تم</string>
     <string name="view_seed_title">عبارة الاسترداد</string>
     <string name="transaction_result_view_on_explorer">عرض في بلوك إكسبلورر</string>

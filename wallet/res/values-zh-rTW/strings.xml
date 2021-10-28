@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">錢包已經重置，\n更新恢復需要一點時間完成。</string>
+    <string name="toast_start_storage_provider_selector_failed">沒有安裝合適的雲存儲提供商。\n您需要類似於 \"Nextcloud\" 或 \"Google Drive\"之類的服務。</string>
     <string name="wallet_disclaimer_fragment_remind_safety">使用注意安全風險，請詳讀&lt;u&gt;安全提示&lt;/u&gt;。</string>
     <string name="wallet_disclaimer_fragment_remind_backup">你需要備份你的錢包!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d 小時延遲</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">復原</string>
     <string name="restore_wallet_dialog_success">錢包已經回覆</string>
     <string name="restore_wallet_dialog_success_replay">你的錢包已經成功恢復。下一步將會確定你的餘額，這將會花費一些時間。</string>
+    <string name="restore_wallet_dialog_success_encrypted">警告: 您的錢包受到支付密碼的保護。 確保您在使用此錢包之前還記得它。</string>
     <string name="import_keys_dialog_failure">錢包無法回復:\n\n%s\n\n密碼錯誤?</string>
     <string name="backup_wallet_permission_dialog_title">沒有寫入權限</string>
     <string name="backup_wallet_permission_dialog_message">為了將錢包備份到外部存儲，您需要授予寫入權限。</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">你的錢包將依照選取密碼加密並存到外部存放</string>
     <string name="backup_wallet_dialog_warning_encrypted">你的錢包受支付PIN碼保護。除了備份密碼以外，請確保你記住該PIN碼！</string>
     <string name="export_keys_dialog_button_export">備份</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>你的錢包已被備份到 <tt>%s</tt></p><p>如果你的裝置裡有可移除 SD 記憶卡，你的備份<i>應該</i>在卡裡面。移除該卡片並保管到安全地方。如果該卡片為<i>不可移除</i> ，你需要將該檔案歸檔取出到其他地方。</p><p><b>如果你只將備份放裝置裡面，你裝置遺失時一起遺失備份!</b></p><p>無論如何，請記得你的備份密碼，現在你確認要歸檔你的錢包 嗎？</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>您的錢包已被備份到 <tt>%s</tt></p><p><b>如果您的備份檔只存放在一個裝置上的話，當您丟失這個裝置時您將會把您備份一起弄丟!</b></p><p>在任何情況下，請確保您記住備份密碼。</p>]]></string>
     <string name="export_keys_dialog_failure">你的錢包無法備份 :\n%s</string>
     <string name="export_keys_dialog_button_archive">歸檔</string>
     <string name="export_keys_dialog_mail_subject">達世幣錢包備份</string>
@@ -382,4 +384,4 @@
     <string name="select_a_service">選擇服務</string>
     <string name="activity_buy_and_sell_dash_filter">篩選</string>
     <string name="clear_filter">清除篩選</string>
-</resources>
+    </resources>

@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">用信用卡來購買達世幣</string>
     <string name="liquid_logout">登出</string>
     <string name="liquid_logout_title">從 Liquid 帳戶中登出</string>
+    <string name="liquid_forced_logout">與您的 Liquid 賬戶的鏈接已被打斷。 請在下一個屏幕上選擇鏈接 Liquid 帳戶。</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">用其他加密貨幣來換取達世幣</string>
     <string name="transfer_dash_to_and_from_account">把達世幣轉到您的 liquid 帳戶或從帳戶裡轉出</string>
 
@@ -17,10 +18,12 @@
     <string name="button_cancel">取消</string>
     <string name="choose_your_payment_method">選擇你的付款方式</string>
     <string name="crypto_support">支援的加密貨幣</string>
+    <string name="credit_card_support">支援的信用卡</string>
     <string name="okay">好的</string>
     <string name="close">關閉</string>
-    <string name="list_of_countries">查看不受支援的國家或地區列表</string>
-    <string name="buying_dash_not_supported">某些國家不支援使用加密貨幣來購買達世幣</string>
+    <string name="list_of_countries">查看不支援的國家的列表。</string>
+    <string name="buying_dash_not_supported_credit_cards">一些國家不支援使用信用卡來購買達世幣。</string>
+    <string name="buying_dash_not_supported_crypto">在某些國家不支援使用加密貨幣來購買達世幣。</string>
     <string name="buying_dash_success_message">您可以關閉此屏幕，您的 達世幣將會發送到您的錢包。</string>
 
     <string name="confirm">確認:</string>
@@ -30,7 +33,8 @@
     <string name="total">總共</string>
     <string name="connect">連接</string>
     <string name="connected">已連接</string>
-    <string name="buy_sell_dash">購買 &amp;amp; 出售達世幣或創建一個新帳戶</string>
+    <string name="disconnected">斷開連接</string>
+    <string name="buy_sell_dash">買入 &amp; 賣出達世幣或創建一個新帳戶</string>
 
 
     <string name="transfer_to_liquid">轉帳到 Liquid</string>

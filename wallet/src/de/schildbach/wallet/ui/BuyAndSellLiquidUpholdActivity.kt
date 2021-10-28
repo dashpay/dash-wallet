@@ -52,6 +52,7 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
@@ -59,6 +60,7 @@ import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidViewModel
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import org.dash.wallet.integration.uphold.data.UpholdClient
+import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
 import org.slf4j.Logger
@@ -145,6 +147,13 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commitNow()
         network_status_container.isVisible = false
+
+        // check for missing keys from service.properties
+        if (!LiquidConstants.hasValidCredentials() || !UpholdConstants.hasValidCredentials()) {
+            keys_missing_error.isVisible = true
+            liquid_container.isEnabled = false
+            uphold_container.isEnabled = false
+        }
     }
 
     fun initViewModel() {
@@ -250,8 +259,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     fun setNetworkState(online: Boolean) {
         network_status_container.isVisible = !online
-        liquid_container.isEnabled = online
-        uphold_container.isEnabled = online
+        liquid_container.isEnabled = online && LiquidConstants.hasValidCredentials()
+        uphold_container.isEnabled = online && UpholdConstants.hasValidCredentials()
         setLoginStatus(online)
         if (!isNetworkOnline && online) {
             updateBalances()

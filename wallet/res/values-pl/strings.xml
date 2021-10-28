@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Portfel został zresetowany,\njego odtworzenie zajmie trochę czasu.</string>
+    <string name="toast_start_storage_provider_selector_failed">Nie masz zainstalowanego odpowiedniego oprogramowania do przechowywania danych w chmurze.\nPotrzujesz \"Nextcoud\" lub \"Google Drive\" </string>
     <string name="wallet_disclaimer_fragment_remind_safety">Używaj na własne ryzyko. Przeczytaj &lt;u&gt;instrukcję bezpieczeństwa&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Musisz zrobić kopię zapasową swojego portfela!</string>
     <string name="blockchain_state_progress_hours">%1$s, przestarzały o %2$d godzin</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Odzyskaj</string>
     <string name="restore_wallet_dialog_success">Portfel został przywrócony.</string>
     <string name="restore_wallet_dialog_success_replay">Twój portfel został przywrócony pomyślnie. Następnie zostanie określone jego saldo. Może to zająć chwilę.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Uwaga! Twój portfel jest zabezpieczony za pomocą kodu PIN. Upewnij się, że  pamiętasz swój PIN zanim wyślesz tam fundusze. </string>
     <string name="import_keys_dialog_failure">Nie udało się zaimportować kluczy prywatnych:\n\n%s\n\nBłędne hasło?</string>
     <string name="backup_wallet_permission_dialog_title">Brak zezwolenia na zapis</string>
     <string name="backup_wallet_permission_dialog_message">Aby móc wykonać kopię bezpieczeństwa, wymagane jest udzielenie pozwolenia na zapis.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Twoje prywatne klucze zostaną zaszyfrowane wybranym hasłem a następnie zapisane na zewnętrznym nośniku.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Twój portfel jest chroniony przez PIN do wydawania. Miej pewność, że pamiętasz PIN w dodatku hasło zapasowe!</string>
     <string name="export_keys_dialog_button_export">Kopia zapasowa</string>
-    <string name="export_keys_dialog_success">Twoje klucze prywatne zostały eksportowane do\n\n%s\n\nZabezpiecz je wraz z hasłem!\n\nCzy chcesz zabezpieczyć Twoje klucze za pomocą tej aplikacji?</string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Kopia zapasowa twojego portfela została stworzona i wysłana do <tt>%s</tt></p><p><b> Jeśli to urządzenie jest jedynym miejscem, w którym przechowujesz kopię zapasową, to ryzykujesz, że stracisz oba w tym samym czasie!</b></p><p>W każdym bądź razie upewnij się, że pamiętasz hasło kopii zapasowej portfela. </p>]]></string>
     <string name="export_keys_dialog_failure">Twoje prywatne klucze nie mogły być wyeksportowane:\n%s</string>
     <string name="export_keys_dialog_button_archive">Zrób kopię zapasową</string>
     <string name="export_keys_dialog_mail_subject">Przechowalnia kluczy prywatnych Dash Wallet</string>
@@ -382,4 +384,4 @@
     <string name="select_a_service">Wybierz usługę</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrowanie</string>
     <string name="clear_filter">Zresetuj Filtrowanie</string>
-</resources>
+    </resources>

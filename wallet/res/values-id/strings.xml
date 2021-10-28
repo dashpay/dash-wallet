@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Dompet diatur-ulang!\nIni akan memakan waktu untuk dipulihkan</string>
+    <string name="toast_start_storage_provider_selector_failed">Tidak ada penyedia penyimpanan cloud yang sesuai yang terpasang.\nAnda memerlukan sesuatu seperti \"Nextcloud\" atau \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Gunakan dlm resiko Anda. Baca &lt;u&gt;nota keamanan&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Anda seharusnya mencadangkan dompet Anda!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d jam terlambat</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Pulihkan</string>
     <string name="restore_wallet_dialog_success">Dompet dipulihkan.</string>
     <string name="restore_wallet_dialog_success_replay">Dompet Anda berhasil dipulihkan. Saldonya akan ditentukan selanjutnya. Ini akan memakan waktu.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Peringatan: Dompet Anda dilindungi oleh PIN. Pastikan Anda masih mengingatnya sebelum menerima dompet ini.</string>
     <string name="import_keys_dialog_failure">Kunci pribadi tidak dpt dipulihkan:\n\n%s\n\nKata sandi salah?</string>
     <string name="backup_wallet_permission_dialog_title">Izin menulis hilang</string>
     <string name="backup_wallet_permission_dialog_message">Untuk mencadangkan dompet Anda ke penyimpanan eksternal, Anda perlu memberikan izin menulis.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Kunci pribadi Anda akan dienkripsi dgn kata sandi terpilih dan akan disimpan ke penyimpanan eksternal.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Dompet Anda dilindungi oleh PIN pengiriman. Pastikan Anda mengingat PIN sebagai tambahan kata sandi cadangan!</string>
     <string name="export_keys_dialog_button_export">Cadangkan</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Dompet Anda telah dicadangkan<tt>%s</tt></p><p>Jika perangkat Anda memiliki kartu SD yang dapat dilepas, cadangan Anda<i>harus</i>berada di kartu tersebut. Buang dan simpan di tempat yang aman. Jika kartu itu<i>tidak</i>dapat dilepas, Anda perlu mengarsipkan cadangan Anda ke tempat lain selain perangkat Anda.</p><p><b>Jika satu-satunya tempat cadangan Anda ada di perangkat Anda, Anda berisiko kehilangan keduanya pada saat yang bersamaan!</b></p><p>Bagaimanapun, pastikan Anda mengingat kata sandi cadangan Anda. Apakah Anda ingin mengarsipkan dompet Anda sekarang?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Dompet Anda telah dicadangkan hingga <tt>%s</tt></p><p><b>Jika satu-satunya tempat cadangan Anda ada di perangkat Anda, Anda berisiko kehilangan keduanya sekaligus!</b></p><p>Bagaimanapun, pastikan Anda mengingat kata sandi cadangan Anda.</p>]]></string>
     <string name="export_keys_dialog_failure">Kunci pribadi Anda tidak dpt dicadangkan:\n%s</string>
     <string name="export_keys_dialog_button_archive">Arsip</string>
     <string name="export_keys_dialog_mail_subject">Pencadangan kunci pribadi Dash Wallet</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">Pilih Layanan</string>
     <string name="activity_buy_and_sell_dash_filter">Menyaring</string>
     <string name="clear_filter">Hapus Filter</string>
+    <string name="select_currency">Pilih mata uang</string>
+
 </resources>

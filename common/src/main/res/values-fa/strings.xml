@@ -4,7 +4,9 @@
     <string name="loading">در حال بارگذاری...</string>
     <string name="loading_error">خطایی روی داده است. لطفا دوباره تلاش کنید.</string>
     <string name="dash_available">%1$sموجود است</string>
-
+    <string name="network_unavailable_title">شبکه در دسترس نیست</string>
+    <string name="network_unavailable_check_connection">لطفا اتصال شبکه‌تان را بررسی کنید</string>
+    <string name="network_unavailable_balance_not_accurate">موجودی حساب‌تان شاید به دلیل قطع دسترسی به شبکه، دقیق نباشد</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">پاکسوس استاندارد</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">دلار جمینای</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">متوجه شدم!</string>
+    <string name="network_unavailable_return">بازگشت به کیف‌ پول</string>
+
 </resources>
