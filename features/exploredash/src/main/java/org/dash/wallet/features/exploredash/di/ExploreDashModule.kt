@@ -50,6 +50,6 @@ object LocationProvider {
 
     @ExperimentalCoroutinesApi
     @Provides
-    fun provideUserLocation(locationProviderClient: FusedLocationProviderClient):
-            UserLocationState = UserLocationState(locationProviderClient)
+    fun provideUserLocation(@ApplicationContext context: Context, locationProviderClient: FusedLocationProviderClient):
+            UserLocationState = UserLocationState(context, locationProviderClient)
 }

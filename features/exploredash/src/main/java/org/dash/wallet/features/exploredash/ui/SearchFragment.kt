@@ -51,8 +51,15 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.RequestManager
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.FutureTarget
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.Target
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -63,24 +70,19 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.maps.android.SphericalUtil
 import com.google.maps.android.collections.CircleManager
 import com.google.maps.android.collections.MarkerManager
-import com.google.maps.android.ktx.awaitMap
+import com.google.maps.android.ktx.*
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.dash.wallet.common.ui.DialogBuilder
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.PaymentMethod
-import org.dash.wallet.features.exploredash.data.model.SearchResult
+import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
+import java.lang.Exception
 
 
 @FlowPreview
@@ -101,6 +103,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var markerCollection: MarkerManager.Collection? = null
     private var circleManager: CircleManager? = null
     private var circleCollection: CircleManager.Collection? = null
+    private var futureTarget =  mutableListOf<FutureTarget<Bitmap>>()
+    private lateinit var markersGlideRequestManager: RequestManager
 
     private val permissionRequestLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()) { isPermissionGranted ->
@@ -168,6 +172,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         setupMerchantDetails()
 
         viewModel.init()
+        markersGlideRequestManager = Glide.with(this)
         val mapFragment = childFragmentManager.findFragmentById(R.id.explore_map) as SupportMapFragment
         lifecycleScope.launchWhenStarted {
             googleMap = mapFragment.awaitMap()
@@ -274,7 +279,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.searchResults.observe(viewLifecycleOwner) { results ->
             binding.noResultsText.isVisible = results.isEmpty()
             adapter.submitList(results)
-            renderMerchantsOnMap(results)
+            resetMap()
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                renderMerchantsOnMap(results)
+            }
+
             handleClickOnMerchantMarker(results)
         }
 
@@ -494,26 +504,26 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
 
             override fun onMarkerDragEnd(marker: Marker) {
-                mCurrentUserLocation = marker.position
-                currentLocationMarker?.position = marker.position
-                currentLocationCircle?.center = marker.position
-                animateToMeters()
+                if (marker.tag == CURRENT_POSITION_MARKER_TAG){
+                    mCurrentUserLocation = marker.position
+                    currentLocationMarker?.position = marker.position
+                    currentLocationCircle?.center = marker.position
+                    googleMap?.moveCamera(CameraUpdateFactory.newLatLng(marker.position))
+                }
             }
         })
 
     }
 
-    private fun renderMerchantsOnMap(results: List<SearchResult>) {
-        markerCollection?.markers?.forEach { if (it.tag != CURRENT_POSITION_MARKER_TAG) it.remove() }
-        results.forEach {
-            if (it is Merchant) {
-                markerCollection?.addMarker(MarkerOptions().apply {
-                    position(LatLng(it.latitude!!, it.longitude!!))
-                    anchor(0.5f, 0.5f)
-                    val bitmap = getBitmapFromDrawable(R.drawable.merchant_marker)
-                    icon(BitmapDescriptorFactory.fromBitmap(bitmap))
-                    draggable(false)
-                })
+    private suspend fun renderMerchantsOnMap(results: List<SearchResult>) {
+        withContext(Dispatchers.IO){
+            val merchants = results.filterIsInstance<Merchant>()
+            Log.e(this@SearchFragment::class.java.simpleName, "Merchant size: ${merchants.size}")
+            val chunkResult = merchants.chunked(10)
+            Log.e(this@SearchFragment::class.java.simpleName, "Chunk size: ${chunkResult.size}")
+
+            chunkResult.forEach {
+                loadMerchantMarkers(it)
             }
         }
     }
@@ -524,11 +534,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 false
             } else {
                 val atmItemCoordinates = marker.position
-                results.forEach {
-                    if (it is Merchant) {
-                        if ((it.latitude == atmItemCoordinates.latitude) && (it.longitude == atmItemCoordinates.longitude)) {
-                            viewModel.openMerchantDetails(it)
-                        }
+                val merchants = results.filterIsInstance<Merchant>()
+                merchants.forEach {
+                    if ((it.latitude == atmItemCoordinates.latitude) && (it.longitude == atmItemCoordinates.longitude)) {
+                        viewModel.openMerchantDetails(it)
                     }
                 }
                 true
@@ -567,20 +576,25 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         currentLocationMarker = markerCollection?.addMarker(MarkerOptions().apply {
             position(mCurrentUserLocation)
             anchor(0.5f, 0.5f)
-            icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+            if (bitmap != null) {
+                icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+            }
             draggable(true)
-        })
-        currentLocationMarker?.tag = CURRENT_POSITION_MARKER_TAG
+        }).apply {
+            this?.tag = CURRENT_POSITION_MARKER_TAG
+        }
     }
 
     private fun showLocationOnMap(userLocation: UserLocation) {
+        binding.searchTitle.text = userLocation.name
         mCurrentUserLocation = LatLng(userLocation.latitude, userLocation.longitude)
+        Log.e(this::class.java.simpleName, "Lat: ${mCurrentUserLocation.latitude}, Lng: ${mCurrentUserLocation.longitude}")
         if (currentLocationCircle != null) circleCollection?.remove(currentLocationCircle)
         if (currentLocationMarker != null) markerCollection?.remove(currentLocationMarker)
 
         addMarkerOnCurrentPosition()
         addCircleAroundCurrentPosition()
-        animateToMeters()
+        setMapDefaultViewLevel()
     }
 
     private fun isForegroundLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),
@@ -602,15 +616,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
     }
 
-    private fun getBitmapFromDrawable(drawableId: Int): Bitmap {
+    private fun getBitmapFromDrawable(drawableId: Int): Bitmap? {
         var drawable = AppCompatResources.getDrawable(requireActivity(), drawableId)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            drawable = (DrawableCompat.wrap(drawable!!)).mutate()
+            drawable = (drawable?.let { DrawableCompat.wrap(it) })?.mutate()
         }
-        val bitmap = Bitmap.createBitmap(drawable!!.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
+        val bitmap = drawable?.let { Bitmap.createBitmap(it.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888) }
+        val canvas = bitmap?.let { Canvas(it) }
+        canvas?.width?.let { drawable?.setBounds(0, 0, it, canvas.height) }
+        canvas?.let { drawable?.draw(it) }
         return bitmap
     }
 
@@ -626,20 +640,86 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             .include(SphericalUtil.computeOffset(center, radius, 270.0)).build()
     }
 
-    private fun animateToMeters() {
+    private fun setMapDefaultViewLevel() {
         val heightInPixel = binding.exploreMap.height
         val latLngBounds = calculateBounds(mCurrentUserLocation, milesToMeters(50.0))
-        googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(
-                latLngBounds,
-                heightInPixel,
-                heightInPixel,
-                dpToPx(5)
-            )
-        )
+        googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, dpToPx(5)))
     }
 
     private fun dpToPx(dp: Int): Int {
         val displayMetrics = resources.displayMetrics
         return dp * (displayMetrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT)
     }
+
+    private suspend fun loadMerchantMarkers(merchants: List<Merchant>) {
+        futureTarget = merchants.map {
+            markersGlideRequestManager
+                .asBitmap()
+                .load(it.logoLocation)
+                .placeholder(R.drawable.merchant_marker)
+                .error(R.drawable.merchant_marker)
+                .apply(RequestOptions().centerCrop().circleCrop())
+                .listener(object : RequestListener<Bitmap> {
+                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
+                        Log.i("GlideException" ,"${e?.message}")
+                        return false
+                    }
+
+                    override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                        Log.i(this@SearchFragment::class.java.simpleName, "Resource loaded")
+                        return false
+                    }
+                })
+                .submit(72, 72)
+        }.toMutableList()
+
+        val merchantMarkers = merchants.zip(futureTarget).map { pair ->
+            pair.first.latitude?.let {
+                pair.first.longitude?.let { it1 ->
+                    MerchantMarkerUI(it, it1,
+                        try {
+                            pair.second.get()
+                        } catch (e: Exception){
+                            markersGlideRequestManager.asBitmap().load(R.drawable.merchant_marker).submit(100, 100).get()
+                        }
+                    )
+                }
+            }
+        }
+
+        futureTarget.forEach { markersGlideRequestManager.clear(it) }
+
+        withContext(Dispatchers.Main){
+            merchantMarkers.forEach{
+                it?.let { it1 -> addMerchantMarkerToMap(it1.latitude, it.longitude, it.logoUrl) }
+            }
+        }
+
+    }
+
+    private fun addMerchantMarkerToMap(latitude: Double, longitude: Double, bitmap: Bitmap) {
+        markerCollection?.addMarker(MarkerOptions().apply {
+                position(LatLng(latitude, longitude))
+                anchor(0.5f, 0.5f)
+                icon(BitmapDescriptorFactory.fromBitmap(bitmap))
+                draggable(false)
+            }).apply {
+                this?.tag = null
+        }
+    }
+
+    private fun resetMap() {
+        futureTarget.forEach { markersGlideRequestManager.clear(it) }
+        markerCollection?.clear()
+        circleCollection?.clear()
+        googleMap?.clear()
+        addMarkerOnCurrentPosition()
+        addCircleAroundCurrentPosition()
+    }
+
+    data class MerchantMarkerUI(
+        val latitude: Double,
+        val longitude: Double,
+        val logoUrl: Bitmap
+    )
 }
