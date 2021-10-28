@@ -38,6 +38,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
+    //noinspection GradleDependency
     implementation "org.dashj.android:dashj-bls-android:0.17.5"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
