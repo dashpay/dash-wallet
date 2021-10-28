@@ -5,19 +5,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:paddingStart="15dp"
+    android:paddingEnd="10dp"
     android:background="?attr/selectableItemBackground"
-    android:paddingVertical="8dp"
+    android:paddingVertical="10dp"
     android:minHeight="56dp">
 
     <ImageView
         android:id="@+id/logo_img"
         android:layout_width="36dp"
         android:layout_height="36dp"
-        android:src="@drawable/ic_merchant_placeholder"
-        android:layout_marginStart="15dp"
+        android:src="@drawable/ic_atm_placeholder"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/title"
@@ -25,34 +25,47 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="10dp"
+        android:maxLines="3"
         android:lineSpacingExtra="5sp"
         app:layout_constraintStart_toEndOf="@id/logo_img"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_chainStyle="packed"
         app:layout_constraintBottom_toTopOf="@id/subtitle"
-        app:layout_constraintEnd_toStartOf="@id/method_img"
-        tools:text="Bark Box" />
+        app:layout_constraintEnd_toStartOf="@id/buy_icon"
+        tools:text="Liberty Store" />
 
     <TextView
         android:id="@+id/subtitle"
         style="@style/Caption.SteelGray"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginTop="2dp"
+        android:layout_marginEnd="10dp"
         app:layout_constraintStart_toStartOf="@id/title"
         app:layout_constraintTop_toBottomOf="@id/title"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/method_img"
-        tools:text="Physical Merchant"/>
+        app:layout_constraintEnd_toStartOf="@id/buy_icon"
+        tools:text="Coinflip"/>
 
     <ImageView
-        android:id="@+id/method_img"
+        android:id="@+id/buy_icon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:src="@drawable/ic_buy"
+        android:layout_marginEnd="5dp"
+        app:layout_constraintEnd_toStartOf="@id/sell_icon"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+    <ImageView
+        android:id="@+id/sell_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_sell"
+        android:layout_marginEnd="5dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:visibility="visible" />
 </androidx.constraintlayout.widget.ConstraintLayout>

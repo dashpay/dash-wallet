@@ -78,10 +78,18 @@ import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
+import androidx.core.view.ViewCompat.animate
+import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import org.dash.wallet.common.ui.observeOnDestroy
+import org.dash.wallet.features.exploredash.data.model.*
+import java.lang.StringBuilder
 import java.lang.Exception
 
 
@@ -91,6 +99,8 @@ import java.lang.Exception
 class SearchFragment : Fragment(R.layout.fragment_search) {
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
+    private val args by navArgs<SearchFragmentArgs>()
+
     private var bottomSheetWasExpanded: Boolean = false
     private var isKeyboardShowing: Boolean = false
     private var googleMap: GoogleMap? = null
@@ -148,8 +158,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             true
         }
 
+        val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+        bottomSheet.halfExpandedRatio =
+            ResourcesCompat.getFloat(
+                resources, if (args.type == ExploreTopic.Merchants) {
+                    R.dimen.merchant_half_expanded_ratio
+                } else {
+                    R.dimen.atm_half_expanded_ratio
+                }
+            )
         bottomSheet.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback() {
             override fun onSlide(bottomSheet: View, slideOffset: Float) {}
 
@@ -166,12 +185,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         })
 
-        setupFilters(bottomSheet)
+        setupFilters(bottomSheet, args.type)
         setupSearchInput(bottomSheet)
         setupSearchResults()
-        setupMerchantDetails()
+        setupItemDetails()
 
-        viewModel.init()
+        viewModel.init(args.type)
         markersGlideRequestManager = Glide.with(this)
         val mapFragment = childFragmentManager.findFragmentById(R.id.explore_map) as SupportMapFragment
         lifecycleScope.launchWhenStarted {
@@ -181,22 +200,41 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
-        binding.allOption.setOnClickListener {
+    private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
+        binding.merchantOptions.isVisible = topic == ExploreTopic.Merchants
+        binding.atmOptions.isVisible = topic == ExploreTopic.ATMs
+
+        binding.allMerchantsOption.setOnClickListener {
             viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
         }
 
-        binding.physicalOption.setOnClickListener {
+        binding.physicalMerchantsOption.setOnClickListener {
             viewModel.setFilterMode(ExploreViewModel.FilterMode.Physical)
         }
 
-        binding.onlineOption.setOnClickListener {
+        binding.onlineMerchantsOption.setOnClickListener {
             viewModel.setFilterMode(ExploreViewModel.FilterMode.Online)
+        }
+
+        binding.allAtmsOption.setOnClickListener {
+            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
+        }
+
+        binding.buyAtmsOption.setOnClickListener {
+            viewModel.setFilterMode(ExploreViewModel.FilterMode.Buy)
+        }
+
+        binding.sellAtmsOption.setOnClickListener {
+            viewModel.setFilterMode(ExploreViewModel.FilterMode.Sell)
+        }
+
+        binding.buySellAtmsOptions.setOnClickListener {
+            viewModel.setFilterMode(ExploreViewModel.FilterMode.BuySell)
         }
 
         binding.filterBtn.setOnClickListener {
             lifecycleScope.launch {
-                val territories = viewModel.getTerritoriesWithMerchants()
+                val territories = viewModel.getTerritoriesWithPOIs()
                 TerritoryFilterDialog(territories, viewModel.pickedTerritory) { name, dialog ->
                     lifecycleScope.launch {
                         delay(300)
@@ -208,14 +246,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) {
-            binding.allOption.isChecked = it == ExploreViewModel.FilterMode.All
-            binding.allOption.isEnabled = it != ExploreViewModel.FilterMode.All
-            binding.physicalOption.isChecked = it == ExploreViewModel.FilterMode.Physical
-            binding.physicalOption.isEnabled = it != ExploreViewModel.FilterMode.Physical
-            binding.onlineOption.isChecked = it == ExploreViewModel.FilterMode.Online
-            binding.onlineOption.isEnabled = it != ExploreViewModel.FilterMode.Online
+            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+                refreshMerchantOptions(it)
+            } else if (viewModel.exploreTopic == ExploreTopic.ATMs) {
+                refreshAtmsOptions(it)
+            }
 
-            if (viewModel.selectedMerchant.value == null && it == ExploreViewModel.FilterMode.Online) {
+            if (viewModel.selectedItem.value == null && it == ExploreViewModel.FilterMode.Online) {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 bottomSheetWasExpanded = true
                 binding.appbarDivider.alpha = 1f
@@ -262,22 +299,27 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             if (item is Merchant) {
                 viewModel.openMerchantDetails(item)
+            } else if (item is Atm) {
+                viewModel.openAtmDetails(item)
             }
         }
 
-        adapter.registerAdapterDataObserver(object: RecyclerView.AdapterDataObserver() {
+        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                binding.searchResultsList.scrollToPosition(0)
+                if (positionStart == 0 && itemCount != ExploreViewModel.PAGE_SIZE) {
+                    // Scrolling on top if user changed the filter option
+                    binding.searchResultsList.scrollToPosition(0)
+                }
             }
         })
 
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
-        val decorator = ListDividerDecorator(divider, false, R.layout.group_header)
+        val decorator = ListDividerDecorator(divider, false)
         binding.searchResultsList.addItemDecoration(decorator)
         binding.searchResultsList.adapter = adapter
 
-        viewModel.searchResults.observe(viewLifecycleOwner) { results ->
-            binding.noResultsText.isVisible = results.isEmpty()
+        viewModel.pagingSearchResults.observe(viewLifecycleOwner) { results ->
+            adapter.submitData(viewLifecycleOwner.lifecycle, results)
             adapter.submitList(results)
             resetMap()
 
@@ -293,18 +335,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupMerchantDetails() {
-        viewModel.selectedMerchant.observe(viewLifecycleOwner) { merchant ->
-            if (merchant != null) {
-                binding.toolbarTitle.text = merchant.name
-                bindMerchantDetails(merchant)
+    private fun setupItemDetails() {
+        viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
+            if (item != null) {
+                binding.toolbarTitle.text = item.name
+
+                if (item is Merchant) {
+                    bindMerchantDetails(item)
+                } else if (item is Atm) {
+                    bindAtmDetails(item)
+                }
 
                 lifecycleScope.launch {
                     if (isKeyboardShowing) {
                         delay(100)
                     }
 
-                    transitToDetails(merchant.type == MerchantType.ONLINE)
+                    transitToDetails(item.type == MerchantType.ONLINE)
                 }
             } else {
                 binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
@@ -315,7 +362,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun setupBackNavigation() {
         val onBackButtonAction = {
-            if (viewModel.selectedMerchant.value != null) {
+            if (viewModel.selectedItem.value != null) {
                 viewModel.openSearchResults()
                 transitToSearchResults()
             } else {
@@ -336,55 +383,81 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             })
     }
 
+    private fun bindCommonDetails(item: SearchResult, isOnline: Boolean) {
+        binding.itemDetails.apply {
+            itemName.text = item.name
+
+            val addressBuilder = StringBuilder()
+            addressBuilder.append(item.address1)
+
+            if (!item.address2.isNullOrBlank()) {
+                addressBuilder.append("\n${item.address2}")
+            }
+
+            if (!item.address3.isNullOrBlank()) {
+                addressBuilder.append("\n${item.address3}")
+            }
+
+            if (!item.address4.isNullOrBlank()) {
+                addressBuilder.append("\n${item.address4}")
+            }
+
+            itemAddress.text = addressBuilder.toString()
+
+            linkBtn.isVisible = !item.website.isNullOrEmpty()
+            linkBtn.setOnClickListener {
+                openWebsite(item.website!!)
+            }
+
+            directionBtn.isVisible = !isOnline &&
+                    ((item.latitude != null && item.longitude != null) ||
+                    !item.googleMaps.isNullOrBlank())
+            directionBtn.setOnClickListener {
+                openMaps(item)
+            }
+
+            callBtn.isVisible = !isOnline && !item.phone.isNullOrEmpty()
+            callBtn.setOnClickListener {
+                dialPhone(item.phone!!)
+            }
+        }
+    }
+
     private fun bindMerchantDetails(merchant: Merchant) {
-        binding.merchantDetails.apply {
+        binding.itemDetails.apply {
+            buySellContainer.isVisible = false
+            locationHint.isVisible = false
+
             Glide.with(requireContext())
                 .load(merchant.logoLocation)
                 .error(R.drawable.ic_merchant_placeholder)
                 .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
-                .into(merchantLogo)
+                .into(itemImage)
 
-            merchantName.text = merchant.name
-            merchantType.text = when (cleanValue(merchant.type)) {
+            itemType.text = when (cleanValue(merchant.type)) {
                 MerchantType.ONLINE -> resources.getString(R.string.explore_online_merchant)
                 MerchantType.PHYSICAL -> resources.getString(R.string.explore_physical_merchant)
                 MerchantType.BOTH -> resources.getString(R.string.explore_both_types_merchant)
                 else -> ""
             }
 
-            val addressBuilder = StringBuilder()
-            addressBuilder.append(merchant.address1)
-
-            if (!merchant.address2.isNullOrBlank()) {
-                addressBuilder.append("\n${merchant.address2}")
-            }
-
-            if (!merchant.address3.isNullOrBlank()) {
-                addressBuilder.append("\n${merchant.address3}")
-            }
-
-            if (!merchant.address4.isNullOrBlank()) {
-                addressBuilder.append("\n${merchant.address4}")
-            }
-
-            merchantAddress.text = addressBuilder.toString()
-
             val isOnline = merchant.type == MerchantType.ONLINE
-            merchantAddress.isVisible = !isOnline
+            itemAddress.isVisible = !isOnline
 
-            val isGiftCard = merchant.paymentMethod == PaymentMethod.GIFT_CARD
+            val isDash = merchant.paymentMethod == PaymentMethod.DASH
             val drawable = ResourcesCompat.getDrawable(resources,
-                if (isGiftCard) R.drawable.ic_gift_card_white else R.drawable.ic_dash, null)
+                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card_white, null)
             payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
 
-            if (isGiftCard) {
+            if (isDash) {
+                payBtn.isVisible = true
+                payBtn.text = getText(R.string.explore_pay_with_dash)
+                payBtn.setOnClickListener { viewModel.sendDash() }
+            } else {
                 payBtn.isVisible = !merchant.deeplink.isNullOrBlank()
                 payBtn.text = getText(R.string.explore_buy_gift_card)
                 payBtn.setOnClickListener { openDeeplink(merchant.deeplink!!) }
-            } else {
-                payBtn.text = getText(R.string.explore_pay_with_dash)
-                payBtn.setOnClickListener { viewModel.sendDash() }
             }
 
             if (isOnline) {
@@ -399,20 +472,59 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
             }
 
-            directionBtn.isVisible = !isOnline && merchant.latitude != null && merchant.longitude != null
-            directionBtn.setOnClickListener {
-                openMaps(merchant.latitude!!, merchant.longitude!!)
+            bindCommonDetails(merchant, isOnline)
+        }
+    }
+
+    private fun bindAtmDetails(atm: Atm) {
+        binding.itemDetails.apply {
+            payBtn.isVisible = false
+            manufacturer.text = atm.manufacturer?.replaceFirstChar { it.uppercase() }
+            itemType.isVisible = false
+
+            sellBtn.setOnClickListener {
+                viewModel.sendDash()
             }
 
-            callBtn.isVisible = !isOnline && !merchant.phone.isNullOrEmpty()
-            callBtn.setOnClickListener {
-                dialPhone(merchant.phone!!)
+            buyBtn.setOnClickListener {
+                viewModel.receiveDash()
             }
 
-            linkBtn.isVisible = !merchant.website.isNullOrEmpty()
-            linkBtn.setOnClickListener {
-                openWebsite(merchant.website!!)
+            when (atm.type) {
+                AtmType.BUY -> {
+                    buyBtn.isVisible = true
+                    sellBtn.isVisible = false
+                }
+                AtmType.SELL -> {
+                    buyBtn.isVisible = false
+                    sellBtn.isVisible = true
+                }
+                AtmType.BOTH -> {
+                    buyBtn.isVisible = true
+                    sellBtn.isVisible = true
+                }
             }
+
+            root.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
+            }
+
+            Glide.with(requireContext())
+                .load(atm.logoLocation)
+                .error(R.drawable.ic_atm_placeholder)
+                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
+                .transition(DrawableTransitionOptions.withCrossFade(200))
+                .into(logoImg)
+
+            Glide.with(requireContext())
+                .load(atm.coverImage)
+                .placeholder(R.drawable.ic_atm_placeholder)
+                .error(R.drawable.ic_atm_placeholder)
+                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
+                .transition(DrawableTransitionOptions.withCrossFade(200))
+                .into(itemImage)
+
+            bindCommonDetails(atm, false)
         }
     }
 
@@ -429,9 +541,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.searchResults.isVisible = false
         }.start()
 
-        binding.merchantDetails.root.alpha = 0f
-        binding.merchantDetails.root.isVisible = true
-        animate(binding.merchantDetails.root).apply {
+        binding.itemDetails.root.alpha = 0f
+        binding.itemDetails.root.isVisible = true
+        animate(binding.itemDetails.root).apply {
             duration = 200
             startDelay = 200
             alpha(1f)
@@ -448,11 +560,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             BottomSheetBehavior.STATE_HALF_EXPANDED
         }
 
-        animate(binding.merchantDetails.root).apply {
+        animate(binding.itemDetails.root).apply {
             duration = 200
             alpha(0f)
         }.withEndAction {
-            binding.merchantDetails.root.isVisible = false
+            binding.itemDetails.root.isVisible = false
         }.start()
 
         binding.searchResults.isVisible = true
@@ -464,8 +576,33 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }.start()
     }
 
-    private fun openMaps(latitude: Double, longitude: Double) {
-        val uri = getString(R.string.explore_maps_intent_uri, latitude, longitude)
+    private fun refreshMerchantOptions(filterMode: ExploreViewModel.FilterMode) {
+        binding.allMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.All
+        binding.allMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.All
+        binding.physicalMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Physical
+        binding.physicalMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Physical
+        binding.onlineMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Online
+        binding.onlineMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Online
+    }
+
+    private fun refreshAtmsOptions(filterMode: ExploreViewModel.FilterMode) {
+        binding.allAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.All
+        binding.allAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.All
+        binding.buyAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Buy
+        binding.buyAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Buy
+        binding.sellAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Sell
+        binding.sellAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Sell
+        binding.buySellAtmsOptions.isChecked = filterMode == ExploreViewModel.FilterMode.BuySell
+        binding.buySellAtmsOptions.isEnabled = filterMode != ExploreViewModel.FilterMode.BuySell
+    }
+
+    private fun openMaps(item: SearchResult) {
+        val uri = if (!item.googleMaps.isNullOrBlank()) {
+            item.googleMaps
+        } else {
+            getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
+        }
+
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
         startActivity(intent)
     }

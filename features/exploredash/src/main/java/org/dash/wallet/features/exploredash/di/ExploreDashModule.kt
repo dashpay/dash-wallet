@@ -25,9 +25,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.dash.wallet.features.exploredash.repository.FirebaseMerchantTable
-import org.dash.wallet.features.exploredash.repository.MerchantRepository
 import org.dash.wallet.features.exploredash.ui.UserLocationState
 
 
@@ -35,9 +35,9 @@ import org.dash.wallet.features.exploredash.ui.UserLocationState
 @InstallIn(SingletonComponent::class)
 abstract class ExploreDashModule {
     @Binds
-    abstract fun bindMerchantRepository(
-        merchantRepository: FirebaseMerchantTable
-    ): MerchantRepository
+    abstract fun bindExploreRepository(
+        exploreRepository: FirebaseExploreDatabase
+    ): ExploreRepository
 }
 
 @Module

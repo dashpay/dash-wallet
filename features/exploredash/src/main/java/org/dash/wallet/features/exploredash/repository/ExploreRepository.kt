@@ -19,78 +19,40 @@ package org.dash.wallet.features.exploredash.repository
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-const val DASH_DIRECT_TABLE = "dash_direct"
-const val DCG_MERCHANT_TABLE = "dcg_merchant"
-const val ATM_TABLE = "atm"
-
-private val log = LoggerFactory.getLogger(FirebaseMerchantTable::class.java)
-
-interface MerchantRepository {
-    suspend fun get(): List<Merchant>?
-    fun observe(): Flow<List<Merchant>>
-    suspend fun search(query: String): List<Merchant>?
-
+interface ExploreRepository {
     suspend fun getLastUpdate(): Long
     suspend fun getLastUpdate(tableName: String): Long
     suspend fun getDataSize(tableName: String): Int
-    suspend fun get(tableName: String, startAt: Int, endBefore: Int): List<Merchant>
+    suspend fun <T> get(
+        tableName: String,
+        startAt: Int,
+        endBefore: Int,
+        valueType: Class<T>
+    ): List<T>
 }
 
-class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
-
-    companion object {
-        private const val merchantPath = "explore/merchant"
-        private const val nameChild = "name"
+class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
+    companion object Tables {
+        const val DASH_DIRECT_TABLE = "dash_direct"
+        const val DCG_MERCHANT_TABLE = "dcg_merchant"
+        const val ATM_TABLE = "atm"
     }
 
     private val auth = Firebase.auth
     private val fbDatabase = Firebase.database
-    private var tableRef = Firebase.database.getReference(merchantPath)
 
-    override suspend fun get(): List<Merchant>? {
-        ensureAuthenticated()
-        return this.tableRef.get().await().getValue<List<Merchant>>()
-    }
-
-    override fun observe(): Flow<List<Merchant>> = callbackFlow {
-        ensureAuthenticated()
-        val callback = object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                val client = dataSnapshot.getValue<List<Merchant>>()
-                client?.let { trySend(it) }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                cancel("Database Error", error.toException())
-            }
-        }
-
-        tableRef.addValueEventListener(callback)
-        awaitClose { tableRef.removeEventListener(callback) }
-    }
-
-    override suspend fun search(query: String): List<Merchant>? {
-        return tableRef.orderByChild(nameChild)
-            .startAt(query)
-            .endAt(query + "\uf8ff").get().await().getValue<List<Merchant>>()
-    }
-
-    override suspend fun get(tableName: String, startAt: Int, endBefore: Int): List<Merchant> {
+    override suspend fun <T> get(
+        tableName: String,
+        startAt: Int,
+        endBefore: Int,
+        valueType: Class<T>
+    ): List<T> {
         ensureAuthenticated()
         val dataSnapshot = fbDatabase.getReference("explore/$tableName/data")
             .orderByKey()
@@ -99,9 +61,9 @@ class FirebaseMerchantTable @Inject constructor() : MerchantRepository {
             .get()
             .await()
 
-        val data = mutableListOf<Merchant>()
+        val data = mutableListOf<T>()
         dataSnapshot.children.forEach {
-            val merchant = it.getValue(Merchant::class.java)!!
+            val merchant = it.getValue(valueType)!!
             data.add(merchant)
         }
         return data
