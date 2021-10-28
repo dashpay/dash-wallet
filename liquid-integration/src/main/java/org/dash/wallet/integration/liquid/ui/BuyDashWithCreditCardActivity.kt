@@ -425,12 +425,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     private fun executeJavascriptInWebview(rawJavascript: String) {
         log.info("liquid: execute script: $rawJavascript")
         runOnUiThread {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                webview.evaluateJavascript(rawJavascript, null);
-            } else {
-                val javaScriptFunctionCall = "(function() { $rawJavascript })()";
-                webview.loadUrl("javascript:$javaScriptFunctionCall;");
-            }
+            webview.evaluateJavascript(rawJavascript, null);
         }
     }
 

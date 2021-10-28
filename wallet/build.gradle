@@ -43,7 +43,7 @@ dependencies {
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
-    implementation 'com.google.zxing:core:3.3.3' // 3.3.3 is the maximum to support Android 4.4 to 6.x
+    implementation 'com.google.zxing:core:3.4.1'
 
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
@@ -145,7 +145,7 @@ android {
         disable 'MissingTranslation'
     }
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 23
         targetSdkVersion 30
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70350
         versionName project.hasProperty('versionName') ? project.property('versionName') : "7.3.5"
