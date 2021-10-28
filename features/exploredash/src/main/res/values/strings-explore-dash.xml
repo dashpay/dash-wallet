@@ -9,11 +9,13 @@
     <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
     <string name="explore_search_hint">Search</string>
     <string name="explore_filter">Filter</string>
-    <string name="explore_option_all">All</string>
-    <string name="explore_option_physical">Physical Merchants</string>
     <string name="explore_physical_merchant">Physical Merchant</string>
     <string name="explore_online_merchant">Online</string>
     <string name="explore_both_types_merchant">Online, Physical Merchant</string>
+    <string name="explore_option_all">All</string>
+    <string name="explore_option_buy">Buy</string>
+    <string name="explore_option_sell">Sell</string>
+    <string name="explore_option_buy_sell">Buy &amp; Sell</string>
     <string name="explore_menu_info">info</string>
     <string name="explore_where_to_spend">Where to Spend</string>
     <string name="explore_select_state">Select the State</string>
@@ -21,5 +23,8 @@
     <string name="explore_no_results">No results</string>
     <string name="explore_pay_with_dash">Pay with Dash</string>
     <string name="explore_buy_gift_card">Buy a Gift Card</string>
+    <string name="explore_buy_dash">Buy Dash</string>
+    <string name="explore_sell_dash">Sell Dash</string>
+    <string name="explore_atm_location_hint">This ATM is located in the</string>
     <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
 </resources>

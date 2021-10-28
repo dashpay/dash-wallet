@@ -16,8 +16,8 @@
 
 package org.dash.wallet.features.exploredash.data.model
 
-import androidx.annotation.Keep
 import androidx.room.Entity
+import androidx.annotation.Keep
 import com.google.firebase.database.PropertyName
 
 object PaymentMethod {
@@ -34,11 +34,8 @@ object MerchantType {
 @Keep
 @Entity(tableName = "merchant")
 data class Merchant(
-
-    @get:PropertyName("source_id") @set:PropertyName("source_id")
-    var sourceId: Long? = null,
-
-    var source: String? = "",
+    @get:PropertyName("deep_link") @set:PropertyName("deep_link")
+    var deeplink: String? = "",
 
     @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
@@ -49,24 +46,9 @@ data class Merchant(
     @get:PropertyName("update_date") @set:PropertyName("update_date")
     var updateDate: String? = "",
 
-    @get:PropertyName("merchant_id") @set:PropertyName("merchant_id")
-    var merchantId: Long? = null,
-    var address1: String? = "",
-    var address2: String? = "",
-    var address3: String? = "",
-    var address4: String? = "",
-    var latitude: Double? = 0.0,
-    var longitude: Double? = 0.0,
-    var territory: String? = "",
-    var website: String? = "",
-    var deeplink: String? = "",
-    var phone: String? = "",
-    var type: String? = "",
-
-    @get:PropertyName("logo_location") @set:PropertyName("logo_location")
-    var logoLocation: String? = "",
-
     @get:PropertyName("payment_method") @set:PropertyName("payment_method")
-    var paymentMethod: String? = ""
+    var paymentMethod: String? = "",
 
+    @get:PropertyName("merchant_id") @set:PropertyName("merchant_id")
+    var merchantId: Long? = null
 ) : SearchResult()

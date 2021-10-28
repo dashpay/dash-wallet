@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.features.exploredash.di
+package org.dash.wallet.features.exploredash.data
 
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.features.exploredash.repository.ExploreRepository
-import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class ExploreDashModule {
-    @Binds
-    abstract fun bindExploreRepository(
-        exploreRepository: FirebaseExploreDatabase
-    ): ExploreRepository
+interface BaseDao<T> {
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun save(list: List<T>)
+
+    // add @Query(...) in sub classes to avoid build failures
+    suspend fun deleteAll(source: String): Int
 }

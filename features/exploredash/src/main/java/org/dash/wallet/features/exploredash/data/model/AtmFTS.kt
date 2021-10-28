@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.features.exploredash.di
+package org.dash.wallet.features.exploredash.data.model
 
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.features.exploredash.repository.ExploreRepository
-import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
+import androidx.room.Entity
+import androidx.room.Fts4
 
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class ExploreDashModule {
-    @Binds
-    abstract fun bindExploreRepository(
-        exploreRepository: FirebaseExploreDatabase
-    ): ExploreRepository
-}
+// Virtual table for Full-Text Search over Atm table
+@Entity(tableName = "atm_fts")
+@Fts4(contentEntity = Atm::class)
+data class AtmFTS(
+    val name: String,
+    val manufacturer: String,
+    val address1: String,
+    val address2: String,
+    val address3: String,
+    val address4: String,
+    val city: String,
+    val territory: String
+)

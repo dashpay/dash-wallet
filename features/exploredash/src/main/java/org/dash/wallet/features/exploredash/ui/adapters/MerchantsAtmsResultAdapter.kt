@@ -18,52 +18,64 @@ package org.dash.wallet.features.exploredash.ui.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.view.isVisible
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.databinding.GroupHeaderBinding
+import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.PaymentMethod
-import org.dash.wallet.features.exploredash.data.model.SearchResult
 
-class MerchantsAtmsResultAdapter(private val clickListener: (SearchResult, MerchantsViewHolder) -> Unit)
-    : ListAdapter<SearchResult, RecyclerView.ViewHolder>(DiffCallback()) {
+class MerchantsAtmsResultAdapter(
+    private val clickListener: (SearchResult, RecyclerView.ViewHolder) -> Unit
+) : PagingDataAdapter<SearchResult, RecyclerView.ViewHolder>(DiffCallback()) {
 
     override fun getItemViewType(position: Int): Int {
         if (position >= itemCount) {
             return -1
         }
 
-        val item = getItem(position)
-        return if (item is Merchant) R.layout.merchant_row else R.layout.group_header
+        return when (getItem(position)) {
+            is Merchant -> R.layout.merchant_row
+            is Atm -> R.layout.atm_row
+            else -> -1
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
 
-        return if (viewType == R.layout.merchant_row) {
-            val binding = MerchantRowBinding.inflate(inflater, parent, false)
-            MerchantsViewHolder(binding)
-        } else {
-            val binding = GroupHeaderBinding.inflate(inflater, parent, false)
-            GroupHeaderViewHolder(binding)
+        return when (viewType) {
+            R.layout.merchant_row -> {
+                val binding = MerchantRowBinding.inflate(inflater, parent, false)
+                MerchantViewHolder(binding)
+            }
+            R.layout.atm_row -> {
+                val binding = AtmRowBinding.inflate(inflater, parent, false)
+                AtmViewHolder(binding)
+            }
+            else -> {
+                throw IllegalArgumentException("viewType $viewType isn't recognized")
+            }
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = getItem(position)
 
-        if (holder is MerchantsViewHolder) {
-            holder.bind(item as Merchant)
-            holder.binding.root.setOnClickListener { clickListener.invoke(item, holder) }
-        } else if (holder is GroupHeaderViewHolder) {
-            holder.bind(item.name)
+        when (holder) {
+            is MerchantViewHolder -> {
+                holder.bind(item as Merchant)
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, holder) }
+            }
+            is AtmViewHolder -> {
+                holder.bind(item as Atm)
+                holder.binding.root.setOnClickListener { clickListener.invoke(item, holder) }
+            }
         }
     }
 
@@ -78,17 +90,7 @@ class MerchantsAtmsResultAdapter(private val clickListener: (SearchResult, Merch
     }
 }
 
-class GroupHeaderViewHolder(val binding: GroupHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
-    fun bind(header: String?) {
-        binding.header.text = if (header.isNullOrEmpty()) {
-            binding.root.resources.getString(R.string.explore_online_merchant)
-        } else {
-            header
-        }
-    }
-}
-
-class MerchantsViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHolder(binding.root) {
+class MerchantViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHolder(binding.root) {
     fun bind(merchant: Merchant?) {
         val resources = binding.root.resources
         binding.title.text = merchant?.name
@@ -104,8 +106,7 @@ class MerchantsViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHo
             .load(merchant?.logoLocation)
             .error(R.drawable.ic_merchant_placeholder)
             .transition(DrawableTransitionOptions.withCrossFade(200))
-            .transform(RoundedCorners(
-                    resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
+            .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
             .into(binding.logoImg)
 
         when(cleanValue(merchant?.paymentMethod)) {
@@ -116,5 +117,23 @@ class MerchantsViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHo
 
     private fun cleanValue(value: String?): String? {
         return value?.trim()?.lowercase()?.replace(" ", "_")
+    }
+}
+
+class AtmViewHolder(val binding: AtmRowBinding) : RecyclerView.ViewHolder(binding.root) {
+    fun bind(atm: Atm?) {
+        val resources = binding.root.resources
+        binding.title.text = atm?.name
+        binding.subtitle.text = atm?.manufacturer?.replaceFirstChar { it.titlecase() }
+
+        Glide.with(binding.root.context)
+            .load(atm?.logoLocation)
+            .error(R.drawable.ic_atm_placeholder)
+            .transition(DrawableTransitionOptions.withCrossFade(200))
+            .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
+            .into(binding.logoImg)
+
+        binding.buyIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.BUY
+        binding.sellIcon.isVisible = atm?.type == AtmType.BOTH || atm?.type == AtmType.SELL
     }
 }

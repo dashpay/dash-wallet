@@ -16,6 +16,7 @@
 
 package org.dash.wallet.features.exploredash.data
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -24,11 +25,21 @@ import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Merchant
 
 @Dao
-interface MerchantDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun save(list: List<Merchant>)
+interface MerchantDao : BaseDao<Merchant> {
 
-    @Query("SELECT * FROM Merchant WHERE :territoryFilter = '' OR territory = :territoryFilter")
+    @Query("SELECT * FROM merchant WHERE :territoryFilter = '' OR territory = :territoryFilter ORDER BY name ASC")
+    fun pagingGet(territoryFilter: String): PagingSource<Int, Merchant>
+
+    @Query("""
+        SELECT *
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+        ORDER BY name ASC
+    """)
+    fun pagingSearch(query: String, territoryFilter: String): PagingSource<Int, Merchant>
+
+    @Query("SELECT * FROM merchant WHERE :territoryFilter = '' OR territory = :territoryFilter")
     fun observe(territoryFilter: String): Flow<List<Merchant>>
 
     @Query("""
@@ -36,6 +47,7 @@ interface MerchantDao {
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+        ORDER BY name ASC
     """)
     fun observeSearchResults(query: String, territoryFilter: String): Flow<List<Merchant>>
 
@@ -49,5 +61,5 @@ interface MerchantDao {
     suspend fun getTerritories(): List<String>
 
     @Query("DELETE FROM merchant WHERE source LIKE :source")
-    suspend fun clear(source: String): Int
+    override suspend fun deleteAll(source: String): Int
 }

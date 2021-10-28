@@ -18,13 +18,29 @@ package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
+import com.google.firebase.database.PropertyName
 
 open class SearchResult(
     @PrimaryKey(autoGenerate = true)
     var id: Int = 0,
     @ColumnInfo(name = "active", defaultValue = "1")
     var active: Boolean? = true,
-    var name: String? = ""
+    var name: String? = "",
+    var address1: String? = "",
+    var address2: String? = "",
+    var address3: String? = "",
+    var address4: String? = "",
+    var latitude: Double? = 0.0,
+    var longitude: Double? = 0.0,
+    var website: String? = "",
+    var phone: String? = "",
+    var territory: String? = "",
+    var source: String? = "",
+    @get:PropertyName("logo_location") @set:PropertyName("logo_location")
+    var logoLocation: String? = "",
+    @get:PropertyName("google_maps") @set:PropertyName("google_maps")
+    var googleMaps: String? = "",
+    open var type: String? = ""
 ) {
     override fun equals(other: Any?): Boolean {
         val second = other as SearchResult

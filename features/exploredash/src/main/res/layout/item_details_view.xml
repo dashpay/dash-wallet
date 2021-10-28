@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="15dp"
+    android:orientation="vertical"
+    tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/buy_sell_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp">
+
+        <ImageView
+            android:id="@+id/logo_img"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="20dp"
+            android:src="@drawable/ic_atm_placeholder"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/manufacturer"
+            style="@style/Subtitle1.SemiBold"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="10dp"
+            android:maxLines="1"
+            app:layout_constraintStart_toEndOf="@id/logo_img"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/logo_img"
+            app:layout_constraintBottom_toBottomOf="@id/logo_img"
+            tools:text="Coinflip" />
+
+        <Button
+            android:id="@+id/buy_btn"
+            style="@style/DashButton.Green.Small"
+            android:layout_width="0dp"
+            android:layout_marginTop="20dp"
+            android:text="@string/explore_buy_dash"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/sell_btn"
+            app:layout_constraintTop_toBottomOf="@id/manufacturer" />
+
+        <Button
+            android:id="@+id/sell_btn"
+            style="@style/DashButton.Blue.Small"
+            android:layout_width="0dp"
+            android:layout_marginStart="7dp"
+            android:layout_marginTop="20dp"
+            android:text="@string/explore_sell_dash"
+            app:layout_constraintStart_toEndOf="@id/buy_btn"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/manufacturer" />
+
+        <View
+            android:id="@+id/separator"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="80dp"
+            android:background="@color/divider_color"
+            app:layout_constraintTop_toBottomOf="@id/manufacturer"  />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/location_hint"
+            style="@style/Caption.Gray400"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/explore_atm_location_hint"
+            app:layout_constraintStart_toStartOf="@+id/item_name"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <ImageView
+            android:id="@+id/item_image"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginTop="5dp"
+            android:scaleType="fitStart"
+            android:src="@drawable/ic_merchant_placeholder"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/location_hint" />
+
+        <TextView
+            android:id="@+id/item_name"
+            style="@style/Subtitle1.SemiBold"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            app:layout_constraintStart_toEndOf="@id/item_image"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/item_type"
+            app:layout_constraintTop_toBottomOf="@id/location_hint"
+            app:layout_constraintVertical_chainStyle="packed"
+            app:layout_constraintVertical_bias="0"
+            tools:text="Amazon" />
+
+        <TextView
+            android:id="@+id/item_type"
+            style="@style/Caption.Gray400"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            app:layout_constraintStart_toStartOf="@+id/item_name"
+            app:layout_constraintTop_toBottomOf="@id/item_name"
+            app:layout_constraintBottom_toTopOf="@id/item_address"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="Physical Merchant" />
+
+        <TextView
+            android:id="@+id/item_address"
+            style="@style/Body2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:lineSpacingMultiplier="1.3"
+            android:minLines="2"
+            android:maxLines="4"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="@+id/item_name"
+            app:layout_constraintTop_toBottomOf="@id/item_type"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="208 Regent Street\nLondon, United Kingdom\nW1B 5AH"
+            app:layout_constraintBottom_toTopOf="@id/actions"
+            app:layout_constrainedHeight="true" />
+
+        <LinearLayout
+            android:id="@+id/actions"
+            android:layout_width="136dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="8dp"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/item_address"
+            app:layout_constraintBottom_toTopOf="@id/pay_btn">
+
+            <ImageButton
+                android:id="@+id/call_btn"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginHorizontal="11dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_call" />
+
+            <ImageButton
+                android:id="@+id/direction_btn"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginHorizontal="11dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_direction" />
+
+            <ImageButton
+                android:id="@+id/link_btn"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginHorizontal="11dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_link" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/pay_btn"
+            style="@style/DashButton.Blue.SemiBold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:layout_marginBottom="20dp"
+            android:drawableStart="@drawable/ic_dash"
+            android:paddingStart="92dp"
+            android:paddingEnd="76dp"
+            android:text="@string/explore_pay_with_dash"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

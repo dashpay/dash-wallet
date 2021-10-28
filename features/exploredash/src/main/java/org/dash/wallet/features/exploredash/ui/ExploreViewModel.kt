@@ -17,33 +17,44 @@
 package org.dash.wallet.features.exploredash.ui
 
 import androidx.lifecycle.*
+import androidx.paging.*
+import androidx.paging.PagingData
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
-import org.dash.wallet.features.exploredash.repository.MerchantRepository
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.SearchResult
+import org.dash.wallet.features.exploredash.data.model.*
 import javax.inject.Inject
 
+enum class ExploreTopic {
+    Merchants, ATMs
+}
+
 enum class NavigationRequest {
-    SendDash, None
+    SendDash, ReceiveDash, None
 }
 
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    private val merchantRepository: MerchantRepository,
-    private val merchantDao: MerchantDao
+    private val merchantDao: MerchantDao,
+    private val atmDao: AtmDao
 ) : ViewModel() {
+    companion object {
+        const val QUERY_DEBOUNCE_VALUE = 300L
+        const val PAGE_SIZE = 100
+        const val MAX_ITEMS_IN_MEMORY = 300
+    }
+
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
 
+    var exploreTopic = ExploreTopic.Merchants
+        private set
+    private var filterJob: Job? = null
     private val searchQuery = MutableStateFlow("")
 
     private val _pickedTerritory = MutableStateFlow("")
@@ -61,11 +72,76 @@ class ExploreViewModel @Inject constructor(
     val searchResults: LiveData<List<SearchResult>>
         get() = _searchResults
 
-    private val _selectedMerchant = MutableLiveData<Merchant?>()
-    val selectedMerchant: LiveData<Merchant?>
-        get() = _selectedMerchant
+    private val _pagingSearchResults = MutableLiveData<PagingData<SearchResult>>()
+    val pagingSearchResults: LiveData<PagingData<SearchResult>>
+        get() = _pagingSearchResults
 
-    val searchFilterFlow = searchQuery
+    private val _selectedItem = MutableLiveData<SearchResult?>()
+    val selectedItem: LiveData<SearchResult?>
+        get() = _selectedItem
+
+    private val merchantsPagingFlow = searchQuery
+        .debounce(QUERY_DEBOUNCE_VALUE)
+        .flatMapLatest { query ->
+            _pickedTerritory
+                .flatMapLatest { territory ->
+                    Pager(
+                        PagingConfig(
+                            pageSize = PAGE_SIZE,
+                            enablePlaceholders = false,
+                            maxSize = MAX_ITEMS_IN_MEMORY
+                        )
+                    ) {
+                        if (query.isNotBlank()) {
+                            merchantDao.pagingSearch(sanitizeQuery(query), territory)
+                        } else {
+                            merchantDao.pagingGet(territory)
+                        }
+                    }.flow
+                        .cachedIn(viewModelScope)
+                        .flatMapLatest { data ->
+                            _filterMode.map { mode ->
+                                data.filter { shouldShow(it, mode) }
+                                    .map { it as SearchResult }
+                            }
+                        }
+                }
+        }
+
+
+    private val atmsPagingFlow = searchQuery
+        .debounce(QUERY_DEBOUNCE_VALUE)
+        .flatMapLatest { query ->
+            _pickedTerritory
+                .flatMapLatest { territory ->
+                    Pager(
+                        PagingConfig(
+                            pageSize = PAGE_SIZE,
+                            enablePlaceholders = false,
+                            maxSize = MAX_ITEMS_IN_MEMORY
+                        )
+                    ) {
+                        if (query.isNotBlank()) {
+                            atmDao.pagingSearch(sanitizeQuery(query), territory)
+                        } else {
+                            atmDao.pagingGet(territory)
+                        }
+                    }.flow
+                        .cachedIn(viewModelScope)
+                        .flatMapLatest { data ->
+                            _filterMode.map { mode ->
+                                data.filter { shouldShow(it, mode) }
+                                    .map { it as SearchResult }
+                            }
+                        }
+                }
+        }
+
+    // TODO (ashikhmin) this most likely will need to be used along with paging source
+    // since paging doesn't play well with showing POIs on a map. Paging sources might be
+    // only needed when the location is turned off or the user is searching Online merchants
+    // and therefore there is a lot of data to show. Will be resolved in NMA-1036
+    val merchantsSearchFilterFlow = searchQuery
         .debounce(300)
         .flatMapLatest { query ->
             _pickedTerritory
@@ -77,14 +153,31 @@ class ExploreViewModel @Inject constructor(
                     }.filterNotNull()
                         .flatMapLatest { merchants ->
                             _filterMode
-                                .map { filterByMode(merchants, it) }
-                                .map(::groupByTerritory)
+                                .map { mode ->
+                                    merchants.filter { shouldShow(it, mode) }
+                                }
                         }
                 }
         }
 
-    fun init() {
-        searchFilterFlow
+
+    fun init(exploreTopic: ExploreTopic) {
+        if (this.exploreTopic != exploreTopic) {
+            clearFilters(exploreTopic)
+            _pagingSearchResults.value = PagingData.from(listOf())
+        }
+
+        this.exploreTopic = exploreTopic
+        this.filterJob?.cancel(CancellationException())
+
+        this.filterJob = if (exploreTopic == ExploreTopic.Merchants) {
+            merchantsPagingFlow
+        } else {
+            atmsPagingFlow
+        }.onEach(_pagingSearchResults::postValue)
+            .launchIn(viewModelWorkerScope)
+
+        merchantsSearchFilterFlow
             .onEach(_searchResults::postValue)
             .launchIn(viewModelWorkerScope)
     }
@@ -97,42 +190,75 @@ class ExploreViewModel @Inject constructor(
         searchQuery.value = query
     }
 
-    suspend fun getTerritoriesWithMerchants(): List<String> {
-        return merchantDao.getTerritories().filter { it.isNotEmpty() }
+    suspend fun getTerritoriesWithPOIs(): List<String> {
+        return if (exploreTopic == ExploreTopic.Merchants) {
+            merchantDao.getTerritories().filter { it.isNotEmpty() }
+        } else {
+            atmDao.getTerritories().filter { it.isNotEmpty() }
+        }
     }
 
     fun openMerchantDetails(merchant: Merchant) {
-        _selectedMerchant.postValue(merchant)
+        _selectedItem.postValue(merchant)
+    }
+
+    fun openAtmDetails(atm: Atm) {
+        _selectedItem.postValue(atm)
     }
 
     fun openSearchResults() {
-        _selectedMerchant.postValue(null)
+        _selectedItem.postValue(null)
     }
 
     fun sendDash() {
         navigationCallback.postValue(NavigationRequest.SendDash)
     }
 
-    private fun filterByMode(merchants: List<Merchant>, mode: FilterMode): List<Merchant> {
-        return if (mode == FilterMode.All) {
-            // Showing all merchants
-            merchants.filter { it.active != false }
+    fun receiveDash() {
+        navigationCallback.postValue(NavigationRequest.ReceiveDash)
+    }
+
+    private fun clearFilters(topic: ExploreTopic) {
+        searchQuery.value = ""
+        _pickedTerritory.value = ""
+        _filterMode.value = if (topic == ExploreTopic.Merchants) {
+            FilterMode.Online
         } else {
-            // Showing merchants of specific type or both types
-            merchants.filter {
-                it.active != false && (it.type == MerchantType.BOTH ||
-                        it.type == mode.toString().lowercase())
-            }
+            FilterMode.All
         }
     }
 
-    private fun groupByTerritory(merchants: List<Merchant>): List<SearchResult> {
-        return merchants
-            .groupBy { it.territory ?: "" }
-            .toSortedMap()
-            .flatMap { kv ->
-                listOf(SearchResult(kv.key.hashCode(), true, kv.key)) + kv.value.sortedBy { it.name }
-            }
+    private fun shouldShow(item: SearchResult, mode: FilterMode): Boolean {
+        if (item is Merchant) {
+            return shouldShow(item, mode)
+        } else if (item is Atm) {
+            return shouldShow(item, mode)
+        }
+
+        return false
+    }
+
+    private fun shouldShow(merchant: Merchant, mode: FilterMode): Boolean {
+        return if (mode == FilterMode.All) {
+            // Showing all merchants
+            merchant.active != false
+        } else {
+            // Showing merchants of specific type or both types
+            merchant.active != false && (merchant.type == MerchantType.BOTH ||
+                    merchant.type == mode.toString().lowercase())
+        }
+    }
+
+    private fun shouldShow(atm: Atm, mode: FilterMode): Boolean {
+        return if (mode == FilterMode.All) {
+            // Showing all ATMs
+            atm.active != false
+        } else {
+            // Showing ATMs of specific type or both types
+            atm.active != false && (atm.type == AtmType.BOTH ||
+                    (atm.type == AtmType.BUY && mode == FilterMode.Buy) ||
+                    (atm.type == AtmType.SELL && mode == FilterMode.Sell))
+        }
     }
 
     private fun sanitizeQuery(query: String): String {
@@ -141,6 +267,6 @@ class ExploreViewModel @Inject constructor(
     }
 
     enum class FilterMode {
-        All, Online, Physical
+        All, Online, Physical, Buy, Sell, BuySell
     }
 }
