@@ -18,14 +18,10 @@
 package org.dash.wallet.common.livedata
 
 import android.annotation.TargetApi
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Context.CONNECTIVITY_SERVICE
-import android.content.Intent
-import android.content.IntentFilter
 import android.net.*
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 
 /**
@@ -49,9 +45,12 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
         updateConnection()
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.N -> connectivityManager.registerDefaultNetworkCallback(
-                getConnectivityMarshmallowManagerCallback()
+                getConnectivityManagerCallback()
             )
-            else -> marshmallowNetworkAvailableRequest()
+            else -> connectivityManager.registerNetworkCallback(
+                networkRequestBuilder.build(),
+                getConnectivityManagerCallback()
+            )
         }
     }
 
@@ -60,28 +59,7 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
         connectivityManager.unregisterNetworkCallback(connectivityManagerCallback)
     }
 
-    @TargetApi(Build.VERSION_CODES.M)
-    private fun marshmallowNetworkAvailableRequest() {
-        connectivityManager.registerNetworkCallback(
-            networkRequestBuilder.build(),
-            getConnectivityMarshmallowManagerCallback()
-        )
-    }
-
-    private fun getConnectivityLollipopManagerCallback(): ConnectivityManager.NetworkCallback {
-        connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network?) {
-                postValue(true)
-            }
-
-            override fun onLost(network: Network?) {
-                postValue(false)
-            }
-        }
-        return connectivityManagerCallback
-    }
-
-    private fun getConnectivityMarshmallowManagerCallback(): ConnectivityManager.NetworkCallback {
+    private fun getConnectivityManagerCallback(): ConnectivityManager.NetworkCallback {
         connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 postValue(true)
