@@ -274,21 +274,19 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     private fun initFingerprint() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            log.info("fingerprint setup for Android M and above")
-            fingerprintHelper = FingerprintHelper(activity)
-            fingerprintHelper?.run {
-                if (init()) {
-                    if (isFingerprintEnabled) {
-                        fingerprintFlow(true)
-                        startFingerprintListener()
-                    } else {
-                        positiveButton.visibility = View.GONE
-                    }
+        log.info("fingerprint setup for Android M and above")
+        fingerprintHelper = FingerprintHelper(activity)
+        fingerprintHelper?.run {
+            if (init()) {
+                if (isFingerprintEnabled) {
+                    fingerprintFlow(true)
+                    startFingerprintListener()
                 } else {
-                    fingerprintHelper = null
-                    fingerprintFlow(false)
+                    positiveButton.visibility = View.GONE
                 }
+            } else {
+                fingerprintHelper = null
+                fingerprintFlow(false)
             }
         }
     }

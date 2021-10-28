@@ -17,7 +17,6 @@ Thumbs.db
 production/
 lib/
 out/
-*.iml
 *.so
 .DS_Store
 .externalNativeBuild/

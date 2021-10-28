@@ -18,14 +18,10 @@
 package org.dash.wallet.common.livedata
 
 import android.annotation.TargetApi
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Context.CONNECTIVITY_SERVICE
-import android.content.Intent
-import android.content.IntentFilter
 import android.net.*
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 
 /**
@@ -40,100 +36,40 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
 
     private lateinit var connectivityManagerCallback: ConnectivityManager.NetworkCallback
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-    private lateinit var networkRequestBuilder: NetworkRequest.Builder
-
-    init {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            networkRequestBuilder = NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-        }
-    }
+    private var networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
+        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
 
     override fun onActive() {
         super.onActive()
         updateConnection()
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.N -> connectivityManager.registerDefaultNetworkCallback(
-                getConnectivityMarshmallowManagerCallback()
+                getConnectivityManagerCallback()
             )
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> marshmallowNetworkAvailableRequest()
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP -> lollipopNetworkAvailableRequest()
-            else -> {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                    context.registerReceiver(
-                        networkReceiver,
-                        IntentFilter("android.net.conn.CONNECTIVITY_CHANGE")
-                    ) // android.net.ConnectivityManager.CONNECTIVITY_ACTION
-                }
-            }
+            else -> connectivityManager.registerNetworkCallback(
+                networkRequestBuilder.build(),
+                getConnectivityManagerCallback()
+            )
         }
     }
 
     override fun onInactive() {
         super.onInactive()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            connectivityManager.unregisterNetworkCallback(connectivityManagerCallback)
-        } else {
-            context.unregisterReceiver(networkReceiver)
-        }
+        connectivityManager.unregisterNetworkCallback(connectivityManagerCallback)
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private fun lollipopNetworkAvailableRequest() {
-        connectivityManager.registerNetworkCallback(
-            networkRequestBuilder.build(),
-            getConnectivityLollipopManagerCallback()
-        )
-    }
-
-    @TargetApi(Build.VERSION_CODES.M)
-    private fun marshmallowNetworkAvailableRequest() {
-        connectivityManager.registerNetworkCallback(
-            networkRequestBuilder.build(),
-            getConnectivityMarshmallowManagerCallback()
-        )
-    }
-
-    private fun getConnectivityLollipopManagerCallback(): ConnectivityManager.NetworkCallback {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network?) {
-                    postValue(true)
-                }
-
-                override fun onLost(network: Network?) {
-                    postValue(false)
-                }
+    private fun getConnectivityManagerCallback(): ConnectivityManager.NetworkCallback {
+        connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                postValue(true)
             }
-            return connectivityManagerCallback
-        } else {
-            throw IllegalAccessError("Accessing wrong API version")
-        }
-    }
 
-    private fun getConnectivityMarshmallowManagerCallback(): ConnectivityManager.NetworkCallback {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    postValue(true)
-                }
-
-                override fun onLost(network: Network?) {
-                    postValue(false)
-                }
+            override fun onLost(network: Network?) {
+                postValue(false)
             }
-            return connectivityManagerCallback
-        } else {
-            throw IllegalAccessError("Accessing wrong API version")
         }
-    }
-
-    private val networkReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            updateConnection()
-        }
+        return connectivityManagerCallback
     }
 
     private fun updateConnection() {

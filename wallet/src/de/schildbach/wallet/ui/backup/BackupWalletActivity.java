@@ -36,9 +36,7 @@ public class BackupWalletActivity extends AbstractWalletActivity {
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-            log.info("Referrer: {}", getReferrer());
-        }
+        log.info("Referrer: {}", getReferrer());
         BackupWalletDialogFragment.show(getSupportFragmentManager());
     }
 }
