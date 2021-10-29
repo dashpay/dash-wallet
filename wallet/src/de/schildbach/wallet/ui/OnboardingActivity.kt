@@ -177,10 +177,8 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun hideSlogan() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
-            sloganDrawable.mutate().alpha = 0
-        }
+        val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
+        sloganDrawable.mutate().alpha = 0
     }
 
     private fun getStatusBarHeightPx(): Int {

@@ -210,7 +210,7 @@ public final class Constants {
 
     public static final long DELAYED_TRANSACTION_THRESHOLD_MS = 2 * DateUtils.HOUR_IN_MILLIS;
 
-    public static final int SDK_DEPRECATED_BELOW = Build.VERSION_CODES.JELLY_BEAN;
+    public static final int SDK_DEPRECATED_BELOW = Build.VERSION_CODES.M;
 
     public static final int MEMORY_CLASS_LOWEND = 64;
 

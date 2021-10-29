@@ -42,12 +42,7 @@ public class ExchangeRatesActivity extends AbstractBindServiceActivity {
 
     @Override
     public void finish() {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            super.finishAndRemoveTask();
-        }
-        else {
-            super.finish();
-        }
+        super.finishAndRemoveTask();
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
     }
 

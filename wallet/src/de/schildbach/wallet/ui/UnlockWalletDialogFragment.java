@@ -82,7 +82,7 @@ public class UnlockWalletDialogFragment extends AbstractPINDialogFragment {
 
                     dismissAllowingStateLoss();
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper != null) {
+                    if (fingerprintHelper != null) {
                         if (!fingerprintHelper.isFingerprintEnabled() && WalletApplication
                                 .getInstance().getConfiguration().getRemindEnableFingerprint()) {
                             EnableFingerprintDialog.show(password,
