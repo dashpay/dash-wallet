@@ -29,4 +29,18 @@
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:layout_height">40dp</item>
     </style>
+
+    <style name="ExploreTestBottomContentBackground" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="ExploreBottomContentBackground">
+        <item name="primaryColor">@color/gray_40</item>
+        <item name="secondaryColor">@color/gray_40</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="ExploreSearchResultsBackground" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
 </resources>

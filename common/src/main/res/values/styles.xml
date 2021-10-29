@@ -634,30 +634,27 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
-    <style name="ExploreTestBottomContentBackground" parent="WhiteBackground">
-        <item name="cornerRadius">8dp</item>
-    </style>
-
-    <style name="ExploreBottomContentBackground">
-        <item name="primaryColor">@color/gray_40</item>
-        <item name="secondaryColor">@color/gray_40</item>
-        <item name="cornerRadius">8dp</item>
-    </style>
-
-    <style name="ExploreSearchResultsBackground" parent="WhiteBackground">
-        <item name="cornerRadius">8dp</item>
-    </style>
-
     <style name="DragIndicatorBackground">
         <item name="primaryColor">@color/gray_100</item>
         <item name="secondaryColor">@color/gray_100</item>
         <item name="cornerRadius">2dp</item>
     </style>
 
-    <style name="SearchInputBackground">
+    <style name="GrayBackground">
         <item name="primaryColor">@color/gray_40</item>
         <item name="secondaryColor">@color/gray_40</item>
-        <item name="cornerRadius">4dp</item>
+    </style>
+
+    <style name="SearchInputBackground" parent="GrayBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="SegmentedPickerBackground" parent="GrayBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="SegmentedPickerThumb" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
     </style>
 
     <style name="CardViewRaised" parent="Base.CardView">

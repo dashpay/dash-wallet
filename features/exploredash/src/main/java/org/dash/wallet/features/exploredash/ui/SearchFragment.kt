@@ -120,13 +120,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 val isExpanded = newState == BottomSheetBehavior.STATE_EXPANDED
                 binding.appbarDivider.alpha = if (isExpanded) 1f else 0f
-                // TODO (ashikhmin): it's better to replace this with android:translationZ="0.1dp"
-                // (not supported on API 19) in the appbar to bring it
-                // on top of the search results while keeping the shadow off
-                animate(binding.dragIndicator).apply {
-                    duration = 100
-                    alpha(if (isExpanded) 0f else 1f)
-                }.start()
             }
         })
 

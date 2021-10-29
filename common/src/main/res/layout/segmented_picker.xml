@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="org.dash.wallet.common.ui.segmented_picker.SegmentedPicker">
+
+    <View
+        android:id="@+id/thumb"
+        android:layout_width="108dp"
+        android:layout_height="28dp"
+        android:layout_gravity="center_vertical"
+        android:elevation="5dp"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SegmentedPickerThumb" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/options"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:listitem="@layout/picker_option_view"
+        tools:orientation="horizontal"
+        android:translationZ="6dp" />
+</merge>
