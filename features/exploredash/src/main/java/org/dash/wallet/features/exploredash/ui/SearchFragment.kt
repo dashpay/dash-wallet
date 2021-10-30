@@ -691,7 +691,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             } else {
                 permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
-            googleMap?.uiSettings?.isZoomControlsEnabled = true
         }
     }
 
