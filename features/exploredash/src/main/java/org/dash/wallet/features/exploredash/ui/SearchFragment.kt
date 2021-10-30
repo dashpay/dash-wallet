@@ -81,13 +81,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
-import androidx.core.view.ViewCompat.animate
 import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.RoundedCorners
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.features.exploredash.data.model.*
 import java.lang.StringBuilder
 import java.lang.Exception
@@ -320,14 +314,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewModel.pagingSearchResults.observe(viewLifecycleOwner) { results ->
             adapter.submitData(viewLifecycleOwner.lifecycle, results)
-            adapter.submitList(results)
+        }
+
+        viewModel.searchResults.observe(viewLifecycleOwner){ results ->
             resetMap()
-
-            viewLifecycleOwner.lifecycleScope.launch {
-                renderMerchantsOnMap(results)
+            if (results.isNotEmpty()){
+                if (results.size < 20){
+                    setMarkers(results)
+                } else setMarkers(results.shuffled().subList(0, 20))
             }
-
-            handleClickOnMerchantMarker(results)
         }
 
         viewLifecycleOwner.observeOnDestroy {
@@ -696,6 +691,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             } else {
                 permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }
+            googleMap?.uiSettings?.isZoomControlsEnabled = true
         }
     }
 
@@ -817,7 +813,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         try {
                             pair.second.get()
                         } catch (e: Exception){
-                            markersGlideRequestManager.asBitmap().load(R.drawable.merchant_marker).submit(100, 100).get()
+                            markersGlideRequestManager.asBitmap().load(R.drawable.merchant_marker).submit(72, 72).get()
                         }
                     )
                 }
@@ -859,4 +855,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val longitude: Double,
         val logoUrl: Bitmap
     )
+
+    private fun setMarkers(items: List<SearchResult>) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            renderMerchantsOnMap(items)
+        }
+        handleClickOnMerchantMarker(items)
+    }
 }
