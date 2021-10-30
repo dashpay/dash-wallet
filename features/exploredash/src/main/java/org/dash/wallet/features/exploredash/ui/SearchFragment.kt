@@ -318,6 +318,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewModel.searchResults.observe(viewLifecycleOwner){ results ->
             resetMap()
+            // For the 1st iteration of this feature, we shall limit the number of markers to be displayed
             if (results.isNotEmpty()){
                 if (results.size < 20){
                     setMarkers(results)
