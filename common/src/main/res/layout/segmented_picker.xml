@@ -8,19 +8,20 @@
 
     <View
         android:id="@+id/thumb"
+        style="@style/SegmentedPickerThumb"
         android:layout_width="108dp"
         android:layout_height="28dp"
         android:layout_gravity="center_vertical"
-        android:elevation="5dp"
         android:background="@drawable/rounded_background"
-        android:theme="@style/SegmentedPickerThumb" />
+        android:theme="@style/SegmentedPickerThumbBackground" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/options"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
+        android:layout_marginHorizontal="2dp"
+        android:translationZ="7dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:listitem="@layout/picker_option_view"
-        tools:orientation="horizontal"
-        android:translationZ="6dp" />
+        tools:orientation="horizontal" />
 </merge>

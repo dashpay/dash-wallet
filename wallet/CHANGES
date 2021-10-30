@@ -1,4 +1,7 @@
 Dash Wallet
+v7.3.5
+* The 7.3.4 build on Google Play left out several fixes
+
 v7.3.4
 * eliminate Android 4.4 related crashes
 * Fix crashes related to exchanges rates and fiat amounts

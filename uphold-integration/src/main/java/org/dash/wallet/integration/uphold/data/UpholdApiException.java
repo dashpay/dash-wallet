@@ -273,7 +273,7 @@ public class UpholdApiException extends Exception {
         if (isIdentityError()) {
             return context.getString(R.string.uphold_api_error_identity);
         } else if (httpStatusCode == 400) {
-            HashMap arguments = new HashMap<String, String>(4);
+            HashMap<String, String> arguments = new HashMap<>(4);
             if (isValidationFailed(arguments)) {
                 switch ((String)arguments.get("code")) {
                     case "sufficient_unlocked_funds":

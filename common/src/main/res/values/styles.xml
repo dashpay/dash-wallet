@@ -653,8 +653,12 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
-    <style name="SegmentedPickerThumb" parent="WhiteBackground">
-        <item name="cornerRadius">8dp</item>
+    <style name="SegmentedPickerThumb">
+        <item name="android:elevation">6dp</item>
+    </style>
+
+    <style name="SegmentedPickerThumbBackground" parent="WhiteBackground">
+        <item name="cornerRadius">7dp</item>
     </style>
 
     <style name="CardViewRaised" parent="Base.CardView">

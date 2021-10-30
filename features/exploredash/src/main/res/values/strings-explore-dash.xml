@@ -27,4 +27,17 @@
     <string name="explore_sell_dash">Sell Dash</string>
     <string name="explore_atm_location_hint">This ATM is located in the</string>
     <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <string-array name="merchants_filter_options">
+        <item>Online</item>
+        <item>Physical</item>
+        <item>All</item>
+    </string-array>
+
+    <string-array name="atms_filter_options">
+        <item>All</item>
+        <item>Buy</item>
+        <item>Sell</item>
+        <item>Buy/Sell</item>
+    </string-array>
 </resources>

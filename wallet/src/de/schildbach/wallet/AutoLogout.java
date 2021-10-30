@@ -141,7 +141,7 @@ public class AutoLogout {
             @Override
             public void onReceive(Context context, Intent intent) {
                 KeyguardManager myKM = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-                deviceWasLocked |= Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 ? myKM.isDeviceLocked() : myKM.inKeyguardRestrictedInputMode();
+                deviceWasLocked |= myKM.isDeviceLocked();
             }
         }, filter);
     }

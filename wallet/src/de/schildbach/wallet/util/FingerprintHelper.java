@@ -89,12 +89,7 @@ public class FingerprintHelper {
         this.context = context;
     }
 
-    @TargetApi(Build.VERSION_CODES.M)
     public boolean init() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            log.info("This Android version does not support fingerprint authentication");
-            return false;
-        }
 
         KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
         fingerprintManager = FingerprintManagerCompat.from(context);
@@ -233,8 +228,7 @@ public class FingerprintHelper {
     }
 
     public void clear() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                && init() && isFingerprintEnabled()) {
+        if (init() && isFingerprintEnabled()) {
             WalletApplication.getInstance().getConfiguration().setRemindEnableFingerprint(true);
         }
         getSharedPreferences().edit().clear().commit();

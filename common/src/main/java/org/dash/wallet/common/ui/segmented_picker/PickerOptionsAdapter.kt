@@ -34,7 +34,7 @@ class PickerOptionsAdapter(
         val binding = PickerOptionViewBinding.inflate(
             LayoutInflater.from(parent.context), parent, false)
         binding.root.layoutParams = ViewGroup.LayoutParams(
-            parent.measuredWidth / 3, ViewGroup.LayoutParams.WRAP_CONTENT)
+            parent.measuredWidth / options.size, ViewGroup.LayoutParams.WRAP_CONTENT)
 
         return OptionViewHolder(binding)
     }

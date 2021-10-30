@@ -299,11 +299,8 @@ class LiquidClient private constructor(context: Context, private val encryptionK
     private fun getAuthToken(url: String): String {
 
         val path = url
-        val key: Key = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+        val key: Key =
             Keys.hmacShaKeyFor(storedSessionSecret!!.toByteArray(StandardCharsets.UTF_8))
-        } else {
-            Keys.hmacShaKeyFor(storedSessionSecret!!.toByteArray())
-        }
         val jwt: String = Jwts.builder()
                 .signWith(key)
                 .claim("path", path)

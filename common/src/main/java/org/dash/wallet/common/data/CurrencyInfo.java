@@ -26,7 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
-    @author: Eric Britten
+    @author Eric Britten
  */
 
 public class CurrencyInfo {
@@ -138,13 +138,8 @@ public class CurrencyInfo {
         return currencyCode;
     }
 
-    @TargetApi(Build.VERSION_CODES.KITKAT)
     public static String getCurrencyNameFromCode(String code) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            Currency oldCurrency = Currency.getInstance(code.toUpperCase());
-            return oldCurrency.getDisplayName();
-        } else {
-            return "";
-        }
+        Currency oldCurrency = Currency.getInstance(code.toUpperCase());
+        return oldCurrency.getDisplayName();
     }
 }

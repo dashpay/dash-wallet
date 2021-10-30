@@ -12,8 +12,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:theme="@style/Explore.AppBarOverlay"
-        app:elevation="0dp"
-        android:translationZ="0.1dp">
+        app:elevation="1dp"
+        android:translationZ="1dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -70,9 +70,11 @@
                 tools:background="@color/gray_100" />
 
             <org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+                android:id="@+id/filter_options"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginHorizontal="15dp"/>
+                android:layout_marginHorizontal="15dp"
+                tools:layout="@layout/segmented_picker" />
 
             <FrameLayout
                 android:layout_width="match_parent"
@@ -134,86 +136,6 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/merchant_options"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal">
-
-                <ToggleButton
-                    android:id="@+id/all_merchants_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:textOff="@string/explore_option_all"
-                    android:textOn="@string/explore_option_all" />
-
-                <ToggleButton
-                    android:id="@+id/physical_merchants_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_physical_merchant"
-                    android:textOn="@string/explore_physical_merchant" />
-
-                <ToggleButton
-                    android:id="@+id/online_merchants_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_online_merchant"
-                    android:textOn="@string/explore_online_merchant" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/atm_options"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <ToggleButton
-                    android:id="@+id/all_atms_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:textOff="@string/explore_option_all"
-                    android:textOn="@string/explore_option_all" />
-
-                <ToggleButton
-                    android:id="@+id/buy_atms_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_option_buy"
-                    android:textOn="@string/explore_option_buy" />
-
-                <ToggleButton
-                    android:id="@+id/sell_atms_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_option_sell"
-                    android:textOn="@string/explore_option_sell" />
-
-                <ToggleButton
-                    android:id="@+id/buy_sell_atms_options"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_option_buy_sell"
-                    android:textOn="@string/explore_option_buy_sell" />
-            </LinearLayout>
-
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/search_results_list"
                 android:layout_width="match_parent"
@@ -234,14 +156,5 @@
             android:layout_height="0dp"
             android:visibility="gone"
             app:layout_constraintHeight_percent="@dimen/merchant_details_height_ratio" />
-
-        <View
-            android:id="@+id/appbar_divider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="12dp"
-            android:alpha="0"
-            android:background="@color/divider_color"
-            app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

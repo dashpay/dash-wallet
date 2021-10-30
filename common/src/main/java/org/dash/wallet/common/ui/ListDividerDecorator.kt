@@ -6,7 +6,6 @@ import android.graphics.drawable.Drawable
 import androidx.annotation.LayoutRes
 import androidx.recyclerview.widget.RecyclerView
 
-
 class ListDividerDecorator(
     private val dividerDrawable: Drawable,
     private val showAfterLast: Boolean = false,
@@ -40,9 +39,9 @@ class ListDividerDecorator(
             val params = child.layoutParams as RecyclerView.LayoutParams
             val topBound = child.bottom + params.bottomMargin
             val bottomBound = topBound + dividerDrawable.intrinsicHeight
+
             dividerDrawable.setBounds(0, topBound, parent.width, bottomBound)
             dividerDrawable.draw(c)
-
         }
     }
 }

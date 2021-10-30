@@ -114,14 +114,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     R.dimen.atm_half_expanded_ratio
                 }
             )
-        bottomSheet.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback() {
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {}
-
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-                val isExpanded = newState == BottomSheetBehavior.STATE_EXPANDED
-                binding.appbarDivider.alpha = if (isExpanded) 1f else 0f
-            }
-        })
 
         setupFilters(bottomSheet, args.type)
         setupSearchInput(bottomSheet)
@@ -132,35 +124,28 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
-        binding.merchantOptions.isVisible = topic == ExploreTopic.Merchants
-        binding.atmOptions.isVisible = topic == ExploreTopic.ATMs
-
-        binding.allMerchantsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
-        }
-
-        binding.physicalMerchantsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Physical)
-        }
-
-        binding.onlineMerchantsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Online)
-        }
-
-        binding.allAtmsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
-        }
-
-        binding.buyAtmsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Buy)
-        }
-
-        binding.sellAtmsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Sell)
-        }
-
-        binding.buySellAtmsOptions.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.BuySell)
+        binding.filterOptions.provideOptions(resources.getStringArray(
+            if (topic == ExploreTopic.Merchants) {
+                R.array.merchants_filter_options
+            } else {
+                R.array.atms_filter_options
+            }).toList()
+        )
+        binding.filterOptions.setOnOptionPickedListener { _, index ->
+            if (topic == ExploreTopic.Merchants) {
+                viewModel.setFilterMode(when(index) {
+                    0 -> ExploreViewModel.FilterMode.Online
+                    1 -> ExploreViewModel.FilterMode.Physical
+                    else -> ExploreViewModel.FilterMode.All
+                })
+            } else {
+                viewModel.setFilterMode(when(index) {
+                    1 -> ExploreViewModel.FilterMode.Buy
+                    2 -> ExploreViewModel.FilterMode.Sell
+                    3 -> ExploreViewModel.FilterMode.BuySell
+                    else -> ExploreViewModel.FilterMode.All
+                })
+            }
         }
 
         binding.filterBtn.setOnClickListener {
@@ -177,17 +162,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) {
-            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
-                refreshMerchantOptions(it)
-            } else if (viewModel.exploreTopic == ExploreTopic.ATMs) {
-                refreshAtmsOptions(it)
-            }
-
             if (viewModel.selectedItem.value == null && it == ExploreViewModel.FilterMode.Online) {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 bottomSheetWasExpanded = true
-                binding.appbarDivider.alpha = 1f
-                binding.dragIndicator.alpha = 0f
             }
         }
     }
@@ -245,7 +222,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         })
 
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
-        val decorator = ListDividerDecorator(divider, false)
+        val decorator = ListDividerDecorator(divider, showAfterLast = false)
         binding.searchResultsList.addItemDecoration(decorator)
         binding.searchResultsList.adapter = adapter
 
@@ -497,26 +474,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             startDelay = 200
             alpha(1f)
         }.start()
-    }
-
-    private fun refreshMerchantOptions(filterMode: ExploreViewModel.FilterMode) {
-        binding.allMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.All
-        binding.allMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.All
-        binding.physicalMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Physical
-        binding.physicalMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Physical
-        binding.onlineMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Online
-        binding.onlineMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Online
-    }
-
-    private fun refreshAtmsOptions(filterMode: ExploreViewModel.FilterMode) {
-        binding.allAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.All
-        binding.allAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.All
-        binding.buyAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Buy
-        binding.buyAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Buy
-        binding.sellAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Sell
-        binding.sellAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Sell
-        binding.buySellAtmsOptions.isChecked = filterMode == ExploreViewModel.FilterMode.BuySell
-        binding.buySellAtmsOptions.isEnabled = filterMode != ExploreViewModel.FilterMode.BuySell
     }
 
     private fun openMaps(item: SearchResult) {
