@@ -462,7 +462,7 @@ class CreateIdentityService : LifecycleService() {
         var isRetry = false
         if (blockchainIdentityData.creationState != CreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {
             // if this happens, then the invite cannot be used
-            log.info("resuming identity creation process [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
+            log.info("resuming identity creation process from invitiation [${blockchainIdentityData.creationState}(${blockchainIdentityData.creationStateErrorMessage})]")
 
             // handle case of "InvalidIdentityAssetLockProofSignatureError", where we need to start over from scratch
             val isInvalidLockProof = try {
@@ -505,6 +505,9 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 2: Create and send the credit funding transaction
             //
+            platformRepo.obtainCreditFundingTransactionAsync(blockchainIdentity, blockchainIdentityData.invite!!)
+        } else {
+            // if we are retrying, then we need to initialize the credit funding tx
             platformRepo.obtainCreditFundingTransactionAsync(blockchainIdentity, blockchainIdentityData.invite!!)
         }
 
