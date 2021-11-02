@@ -17,6 +17,7 @@
 package org.dash.wallet.features.exploredash.ui
 
 import android.Manifest
+import android.animation.LayoutTransition
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
@@ -28,10 +29,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.transition.TransitionManager
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
-import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -44,11 +45,12 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.*
 import androidx.core.view.ViewCompat.animate
-import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestManager
@@ -78,19 +80,20 @@ import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
+import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
-import androidx.navigation.fragment.navArgs
-import org.dash.wallet.features.exploredash.data.model.*
-import java.lang.StringBuilder
-import java.lang.Exception
-
 
 @FlowPreview
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
+    companion object {
+        private const val SCROLL_OFFSET_FOR_UP = 700
+    }
+
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private val args by navArgs<SearchFragmentArgs>()
@@ -142,8 +145,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         super.onViewCreated(view, savedInstanceState)
 
         setupBackNavigation()
-        binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
-        binding.searchTitle.text = "United States" // TODO: use location to resolve
+        binding.toolbarTitle.text = getToolbarTitle()
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
@@ -164,9 +166,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             )
 
-        setupFilters(bottomSheet, args.type)
-        setupSearchInput(bottomSheet)
-        setupSearchResults()
+        val header = SearchHeaderAdapter(args.type)
+        setupFilters(header, bottomSheet, args.type)
+        setupSearchInput(header, bottomSheet)
+        setupSearchResults(header)
         setupItemDetails()
 
         viewModel.init(args.type)
@@ -179,32 +182,33 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
-        binding.filterOptions.provideOptions(resources.getStringArray(
+    private fun setupFilters(
+        header: SearchHeaderAdapter,
+        bottomSheet: BottomSheetBehavior<ConstraintLayout>,
+        topic: ExploreTopic
+    ) {
+        header.setOnFilterOptionChosen { _, index ->
             if (topic == ExploreTopic.Merchants) {
-                R.array.merchants_filter_options
+                viewModel.setFilterMode(
+                    when (index) {
+                        0 -> ExploreViewModel.FilterMode.Online
+                        1 -> ExploreViewModel.FilterMode.Physical
+                        else -> ExploreViewModel.FilterMode.All
+                    }
+                )
             } else {
-                R.array.atms_filter_options
-            }).toList()
-        )
-        binding.filterOptions.setOnOptionPickedListener { _, index ->
-            if (topic == ExploreTopic.Merchants) {
-                viewModel.setFilterMode(when(index) {
-                    0 -> ExploreViewModel.FilterMode.Online
-                    1 -> ExploreViewModel.FilterMode.Physical
-                    else -> ExploreViewModel.FilterMode.All
-                })
-            } else {
-                viewModel.setFilterMode(when(index) {
-                    1 -> ExploreViewModel.FilterMode.Buy
-                    2 -> ExploreViewModel.FilterMode.Sell
-                    3 -> ExploreViewModel.FilterMode.BuySell
-                    else -> ExploreViewModel.FilterMode.All
-                })
+                viewModel.setFilterMode(
+                    when (index) {
+                        1 -> ExploreViewModel.FilterMode.Buy
+                        2 -> ExploreViewModel.FilterMode.Sell
+                        3 -> ExploreViewModel.FilterMode.BuySell
+                        else -> ExploreViewModel.FilterMode.All
+                    }
+                )
             }
         }
 
-        binding.filterBtn.setOnClickListener {
+        header.setOnFilterButtonClicked {
             lifecycleScope.launch {
                 val territories = viewModel.getTerritoriesWithPOIs()
                 TerritoryFilterDialog(territories, viewModel.pickedTerritory) { name, dialog ->
@@ -225,22 +229,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupSearchInput(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
-        binding.search.doOnTextChanged { text, _, _, _ ->
-            binding.clearBtn.isVisible = !text.isNullOrEmpty()
-            viewModel.submitSearchQuery(text.toString())
+    private fun setupSearchInput(
+        header: SearchHeaderAdapter,
+        bottomSheet: BottomSheetBehavior<ConstraintLayout>
+    ) {
+        header.setOnSearchQueryChanged {
+            viewModel.submitSearchQuery(it)
         }
 
-        binding.search.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                hideKeyboard()
-            }
-
-            true
-        }
-
-        binding.clearBtn.setOnClickListener {
-            binding.search.text.clear()
+        header.setOnSearchQuerySubmitted {
+            hideKeyboard()
         }
 
         requireActivity().window?.decorView?.let { decor ->
@@ -257,7 +255,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupSearchResults() {
+    private fun setupSearchResults(header: SearchHeaderAdapter) {
         val adapter = MerchantsAtmsResultAdapter { item, _ ->
             hideKeyboard()
 
@@ -272,15 +270,27 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                 if (positionStart == 0 && itemCount != ExploreViewModel.PAGE_SIZE) {
                     // Scrolling on top if user changed the filter option
-                    binding.searchResultsList.scrollToPosition(0)
+                    binding.searchResults.scrollToPosition(0)
                 }
             }
         })
 
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
-        val decorator = ListDividerDecorator(divider, showAfterLast = false)
-        binding.searchResultsList.addItemDecoration(decorator)
-        binding.searchResultsList.adapter = adapter
+        val decorator = ListDividerDecorator(
+            divider,
+            showAfterLast = false,
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
+        )
+        binding.searchResults.addItemDecoration(decorator)
+        binding.searchResults.adapter = ConcatAdapter(header, adapter)
+
+        binding.searchResults.setOnScrollChangeListener { _, _, _, _, _ ->
+            binding.upButton.isVisible = shouldShowUpButton()
+        }
+
+        binding.upButton.setOnClickListener {
+            binding.searchResults.scrollToPosition(0)
+        }
 
         viewModel.pagingSearchResults.observe(viewLifecycleOwner) { results ->
             adapter.submitData(viewLifecycleOwner.lifecycle, results)
@@ -297,7 +307,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewLifecycleOwner.observeOnDestroy {
-            binding.searchResultsList.adapter = null
+            binding.searchResults.adapter = null
         }
     }
 
@@ -320,7 +330,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     transitToDetails(item.type == MerchantType.ONLINE)
                 }
             } else {
-                binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
+                binding.toolbarTitle.text = getToolbarTitle()
                 transitToSearchResults()
             }
         }
@@ -377,7 +387,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             directionBtn.isVisible = !isOnline &&
                     ((item.latitude != null && item.longitude != null) ||
-                    !item.googleMaps.isNullOrBlank())
+                            !item.googleMaps.isNullOrBlank())
             directionBtn.setOnClickListener {
                 openMaps(item)
             }
@@ -396,7 +406,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             Glide.with(requireContext())
                 .load(merchant.logoLocation)
-                .error(R.drawable.ic_merchant_placeholder)
+                .error(R.drawable.ic_image_placeholder)
                 .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
                 .into(itemImage)
@@ -412,8 +422,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             itemAddress.isVisible = !isOnline
 
             val isDash = merchant.paymentMethod == PaymentMethod.DASH
-            val drawable = ResourcesCompat.getDrawable(resources,
-                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card_white, null)
+            val drawable = ResourcesCompat.getDrawable(
+                resources,
+                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card_white, null
+            )
             payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
 
             if (isDash) {
@@ -433,7 +445,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
             } else {
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
+                    matchConstraintPercentHeight =
+                        ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
                 }
                 root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
             }
@@ -472,20 +485,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
 
             root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
+                matchConstraintPercentHeight =
+                    ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
             }
 
             Glide.with(requireContext())
                 .load(atm.logoLocation)
-                .error(R.drawable.ic_atm_placeholder)
+                .error(R.drawable.ic_image_placeholder)
                 .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
                 .into(logoImg)
 
             Glide.with(requireContext())
                 .load(atm.coverImage)
-                .placeholder(R.drawable.ic_atm_placeholder)
-                .error(R.drawable.ic_atm_placeholder)
+                .placeholder(R.drawable.ic_image_placeholder)
+                .error(R.drawable.ic_image_placeholder)
                 .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
                 .into(itemImage)
@@ -495,16 +509,25 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun transitToDetails(fullHeight: Boolean) {
+        binding.upButton.isVisible = false
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = false
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
-        bottomSheet.state = if (fullHeight) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_HALF_EXPANDED
+        bottomSheet.state =
+            if (fullHeight) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_HALF_EXPANDED
 
         animate(binding.searchResults).apply {
             duration = 200
             alpha(0f)
         }.withEndAction {
             binding.searchResults.isVisible = false
+        }.start()
+
+        animate(binding.dragIndicator).apply {
+            duration = 200
+            alpha(0f)
+        }.withEndAction {
+            binding.dragIndicator.isVisible = false
         }.start()
 
         binding.itemDetails.root.alpha = 0f
@@ -517,12 +540,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun transitToSearchResults() {
+        binding.upButton.isVisible = shouldShowUpButton()
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = true
 
         bottomSheet.state = if (bottomSheetWasExpanded) {
             BottomSheetBehavior.STATE_EXPANDED
-        } else  {
+        } else {
             BottomSheetBehavior.STATE_HALF_EXPANDED
         }
 
@@ -540,6 +564,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             startDelay = 200
             alpha(1f)
         }.start()
+
+        binding.dragIndicator.isVisible = true
+        binding.dragIndicator.alpha = 0f
+        animate(binding.dragIndicator).apply {
+            duration = 200
+            startDelay = 200
+            alpha(1f)
+        }.start()
+    }
+
+    private fun getToolbarTitle(): String {
+        return when (viewModel.exploreTopic) {
+            ExploreTopic.Merchants -> getString(R.string.explore_where_to_spend)
+            else -> getString(R.string.explore_atms)
+        }
     }
 
     private fun openMaps(item: SearchResult) {
@@ -570,7 +609,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun hideKeyboard() {
         val inputManager = requireContext()
-                .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+            .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
 
@@ -669,7 +708,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun showLocationOnMap(userLocation: UserLocation) {
-        binding.searchTitle.text = userLocation.name
+//        binding.searchTitle.text = userLocation.name TODO
         mCurrentUserLocation = LatLng(userLocation.latitude, userLocation.longitude)
         Log.e(this::class.java.simpleName, "Lat: ${mCurrentUserLocation.latitude}, Lng: ${mCurrentUserLocation.longitude}")
         if (currentLocationCircle != null) circleCollection?.remove(currentLocationCircle)
@@ -811,5 +850,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             renderMerchantsOnMap(items)
         }
         handleClickOnMerchantMarker(items)
+    }
+
+    private fun shouldShowUpButton(): Boolean {
+        val offset = binding.searchResults.computeVerticalScrollOffset()
+        return offset > SCROLL_OFFSET_FOR_UP
     }
 }

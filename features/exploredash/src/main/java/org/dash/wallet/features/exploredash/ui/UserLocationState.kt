@@ -89,8 +89,6 @@ class UserLocationState @Inject constructor(private val context: Context, privat
             Log.i("GeocoderException" ,"${e.message}")
             ""
         }
-
-
     }
 }
 

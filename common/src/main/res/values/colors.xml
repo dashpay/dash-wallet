@@ -36,6 +36,7 @@
     <color name="gray">#FF979797</color>
     <color name="medium_gray">#ff4a4a4a</color>
     <color name="gray_900">#0C0C0D</color>
+    <color name="gray_900_0.7">#B30C0C0D</color>
     <color name="steel_gray">#6D7885</color>
     <color name="black_text">#ff171717</color>
     <color name="gray_400">#818C99</color>

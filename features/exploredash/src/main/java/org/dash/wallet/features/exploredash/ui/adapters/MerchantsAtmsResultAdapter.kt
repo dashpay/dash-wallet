@@ -95,16 +95,9 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHol
         val resources = binding.root.resources
         binding.title.text = merchant?.name
 
-        binding.subtitle.text = when (cleanValue(merchant?.type)) {
-            MerchantType.ONLINE -> resources.getString(R.string.explore_online_merchant)
-            MerchantType.PHYSICAL -> resources.getString(R.string.explore_physical_merchant)
-            MerchantType.BOTH -> resources.getString(R.string.explore_both_types_merchant)
-            else -> ""
-        }
-
         Glide.with(binding.root.context)
             .load(merchant?.logoLocation)
-            .error(R.drawable.ic_merchant_placeholder)
+            .error(R.drawable.ic_image_placeholder)
             .transition(DrawableTransitionOptions.withCrossFade(200))
             .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
             .into(binding.logoImg)
@@ -128,7 +121,7 @@ class AtmViewHolder(val binding: AtmRowBinding) : RecyclerView.ViewHolder(bindin
 
         Glide.with(binding.root.context)
             .load(atm?.logoLocation)
-            .error(R.drawable.ic_atm_placeholder)
+            .error(R.drawable.ic_image_placeholder)
             .transition(DrawableTransitionOptions.withCrossFade(200))
             .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
             .into(binding.logoImg)
