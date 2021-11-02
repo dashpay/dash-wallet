@@ -36,10 +36,13 @@ enum class NavigationRequest {
     SendDash, ReceiveDash, None
 }
 
+@ExperimentalCoroutinesApi
+@FlowPreview
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
     private val merchantDao: MerchantDao,
-    private val atmDao: AtmDao
+    private val atmDao: AtmDao,
+    private val locationUpdatesUseCase: UserLocationState
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -56,6 +59,9 @@ class ExploreViewModel @Inject constructor(
         private set
     private var filterJob: Job? = null
     private val searchQuery = MutableStateFlow("")
+
+    private var currentUserLocationState = MutableStateFlow(UserLocation(0.0, 0.0))
+    val observeCurrentUserLocation = currentUserLocationState.asLiveData()
 
     private val _pickedTerritory = MutableStateFlow("")
     var pickedTerritory: String
@@ -269,4 +275,13 @@ class ExploreViewModel @Inject constructor(
     enum class FilterMode {
         All, Online, Physical, Buy, Sell, BuySell
     }
+
+    fun monitorUserLocation() {
+        viewModelScope.launch {
+            locationUpdatesUseCase.fetchUpdates().collect {
+                currentUserLocationState.value = it
+            }
+        }
+    }
+
 }

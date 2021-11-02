@@ -24,6 +24,7 @@ import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.UserLocationState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.Mockito.`when`
@@ -43,6 +44,7 @@ class ExploreViewModelTest {
 
     private val merchantDaoMock = mock(MerchantDao::class.java)
     private val atmDaoMock = mock(AtmDao::class.java)
+    private val locationState = mock(UserLocationState::class.java)
 
     @Test
     fun filterByTerritoryIsCorrect() {
@@ -50,7 +52,7 @@ class ExploreViewModelTest {
             val territory = "Texas"
             `when`(merchantDaoMock.observe(territory)).thenReturn(flow { emit(merchants.filter { it.territory == territory }) })
 
-            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock)
+            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
             viewModel.pickedTerritory = territory
             viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
 
@@ -70,7 +72,7 @@ class ExploreViewModelTest {
                 it.name?.lowercase()?.startsWith(query) ?: false
             }) })
 
-            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock)
+            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
             viewModel.setFilterMode(ExploreViewModel.FilterMode.Online)
             viewModel.submitSearchQuery(query)
 
@@ -95,7 +97,7 @@ class ExploreViewModelTest {
                 (it.name?.lowercase()?.startsWith(query) ?: false) && it.territory == territory
             }) })
 
-            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock)
+            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
             viewModel.pickedTerritory = territory
             viewModel.submitSearchQuery(query)
             viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
