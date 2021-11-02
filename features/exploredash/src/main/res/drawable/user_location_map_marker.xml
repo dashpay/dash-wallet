@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/white" />
+            <size android:width="24dp" android:height="24dp" />
+        </shape>
+    </item>
+
+    <item android:top="3dp"
+        android:left="3dp"
+        android:right="3dp"
+        android:bottom="3dp"
+        android:drawable="@drawable/ic_blue_circle"/>
+
+</layer-list>

@@ -31,13 +31,13 @@
         </androidx.appcompat.widget.Toolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <FrameLayout
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/explore_map"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="?attr/actionBarSize"
-        android:background="#ffe89c">
-
-    </FrameLayout>
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/content_panel"

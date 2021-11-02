@@ -98,7 +98,8 @@ jobs:
         gpg -d --passphrase "${{ secrets.SERVICE_PROPERTIES_KEY }}" --batch .deploy/service.properties.gpg > service.properties
         gpg -d --passphrase "${{ secrets.APP_DISTRIBUTION_KEY }}" --batch .deploy/app-distribution-key.json.gpg > .deploy/app-distribution-key.json
         gpg -d --passphrase "${{ secrets.KEYSTORE_KEY }}" --batch .deploy/keystore.jks.gpg > .deploy/keystore.jks
-    
+        gpg -d --passphrase "${{ secrets.LOCAL_PROPERTIES_KEY }}" --batch .deploy/local.properties.gpg > local.properties
+
     - name: Test
       run: bundle exec fastlane test flavor:"" type:"${{ github.event.inputs.type }}" version_code:"${{ env.build_number }}" store_pass:"${{ secrets.SIGNING_STORE_PASS }}"
       

@@ -40,4 +40,8 @@
         <item>Sell</item>
         <item>Buy/Sell</item>
     </string-array>
+
+    <string name="permission_required_title">Permission required</string>
+    <string name="permission_required_message">We need to know your current location</string>
+    <string name="goto_settings">Settings</string>
 </resources>

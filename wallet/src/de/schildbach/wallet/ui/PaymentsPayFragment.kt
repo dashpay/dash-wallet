@@ -72,13 +72,13 @@ class PaymentsPayFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        view!!.viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        view?.viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
         getClipboardManager().addPrimaryClipChangedListener(onPrimaryClipChangedListener)
     }
 
     override fun onPause() {
         super.onPause()
-        view!!.viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        view?.viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
         getClipboardManager().removePrimaryClipChangedListener(onPrimaryClipChangedListener)
     }
 
@@ -103,7 +103,7 @@ class PaymentsPayFragment : Fragment() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
             val input = intent!!.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
-            handleString(input, true, R.string.button_scan)
+            input?.let { handleString(it, true, R.string.button_scan) }
         } else {
             super.onActivityResult(requestCode, resultCode, intent)
         }

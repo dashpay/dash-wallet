@@ -16,12 +16,20 @@
 
 package org.dash.wallet.features.exploredash.di
 
+import android.content.Context
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.dash.wallet.features.exploredash.ui.UserLocationState
+
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -30,4 +38,18 @@ abstract class ExploreDashModule {
     abstract fun bindExploreRepository(
         exploreRepository: FirebaseExploreDatabase
     ): ExploreRepository
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object LocationProvider {
+    @Provides
+    fun provideFusedLocationProviderClient(@ApplicationContext context: Context): FusedLocationProviderClient {
+        return LocationServices.getFusedLocationProviderClient(context)
+    }
+
+    @ExperimentalCoroutinesApi
+    @Provides
+    fun provideUserLocation(@ApplicationContext context: Context, locationProviderClient: FusedLocationProviderClient):
+            UserLocationState = UserLocationState(context, locationProviderClient)
 }
