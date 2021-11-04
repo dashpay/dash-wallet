@@ -6,8 +6,6 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        jcenter()
-        maven { url 'https://dl.bintray.com/kotlin/kotlin-eap' }
     }
 
     dependencies {
@@ -25,6 +23,5 @@ allprojects {
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
-        jcenter()
     }
 }
