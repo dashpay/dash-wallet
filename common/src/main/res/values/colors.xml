@@ -74,4 +74,8 @@
     <color name="grey_liquid">#9B9B9B</color>
     <color name="warning_yellow">#FFFAF0</color>
     <color name="bg_explore">#003470</color>
+
+    <!--orbitview -->
+    <color name="orbit_color">#80FFFFFF</color>
+
 </resources>

@@ -36,7 +36,7 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'com.google.android:flexbox:1.1.0'
+    implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation 'androidx.preference:preference:1.1.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
@@ -65,9 +65,8 @@ dependencies {
     }
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
-    implementation 'com.tbuonomo.andrui:viewpagerdotsindicator:4.1.2'
-    implementation 'com.sambarboza:orbitview:0.2.0'
-    implementation 'com.amulyakhare:com.amulyakhare.textdrawable:1.0.1'
+    implementation 'com.tbuonomo:dotsindicator:4.2'
+    implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
     implementation project(path: ':common')
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
