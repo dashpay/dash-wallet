@@ -60,7 +60,7 @@ class ExploreViewModel @Inject constructor(
     private var filterJob: Job? = null
     private val searchQuery = MutableStateFlow("")
 
-    private var currentUserLocationState = MutableStateFlow(UserLocation(0.0, 0.0))
+    private var currentUserLocationState = MutableStateFlow(UserLocation(0.0, 0.0, 0.0))
     val observeCurrentUserLocation = currentUserLocationState.asLiveData()
 
     private val _pickedTerritory = MutableStateFlow("")
@@ -283,5 +283,4 @@ class ExploreViewModel @Inject constructor(
             }
         }
     }
-
 }

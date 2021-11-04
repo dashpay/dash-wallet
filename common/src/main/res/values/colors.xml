@@ -48,6 +48,7 @@
     <color name="gray_100">#E1E3E6</color>
     <color name="green_300">#3CB878</color>
     <color name="green_700">#388E3C</color>
+    <color name="shadow_color">#33000000</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
@@ -77,4 +78,5 @@
     <color name="warning_yellow">#FFFAF0</color>
     <color name="bg_explore">#003470</color>
     <color name="divider_color">#EBEDF0</color>
+    <color name="bg_accuracy_circle">#26008DE4</color>
 </resources>

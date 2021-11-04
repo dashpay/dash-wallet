@@ -38,7 +38,7 @@
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/explore_map"
-            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:name="org.dash.wallet.features.exploredash.ui.ExploreMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
@@ -46,8 +46,8 @@
             android:id="@+id/content_panel"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@drawable/rounded_background"
             android:paddingBottom="40dp"
+            android:background="@drawable/rounded_background"
             android:theme="@style/ExploreSearchResultsBackground"
             app:behavior_expandedOffset="42dp"
             app:behavior_fitToContents="false"

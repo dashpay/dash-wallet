@@ -9,4 +9,7 @@
     <dimen name="merchant_details_height_ratio">0.48</dimen>
     <dimen name="atm_half_expanded_ratio">0.51</dimen>
     <dimen name="atm_details_height_ratio">0.51</dimen>
+    <dimen name="explore_marker_size">35dp</dimen>
+    <dimen name="merchant_marker_size">44dp</dimen>
+    <dimen name="map_padding">5dp</dimen>
 </resources>

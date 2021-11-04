@@ -44,7 +44,7 @@ class UserLocationState @Inject constructor(private val context: Context, privat
                     previousLocation = Pair(location.latitude, location.longitude)
 
                     val cityName = getCurrentLocationName(location.latitude, location.longitude)
-                    trySend(UserLocation(previousLocation.first, previousLocation.second, cityName))
+                    trySend(UserLocation(previousLocation.first, previousLocation.second, location.accuracy.toDouble(), cityName))
                 }
 
             }
@@ -95,4 +95,5 @@ class UserLocationState @Inject constructor(private val context: Context, privat
 
 data class UserLocation(var latitude: Double,
                         var longitude: Double,
+                        var accuracy: Double,
                         var name: String = "")
