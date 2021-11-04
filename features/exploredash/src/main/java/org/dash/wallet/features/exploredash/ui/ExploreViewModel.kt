@@ -36,18 +36,23 @@ enum class NavigationRequest {
     SendDash, ReceiveDash, None
 }
 
+enum class FilterMode {
+    All, Online, Physical, Buy, Sell, BuySell
+}
+
 @ExperimentalCoroutinesApi
 @FlowPreview
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
     private val merchantDao: MerchantDao,
     private val atmDao: AtmDao,
-    private val locationUpdatesUseCase: UserLocationState
+    private val locationProvider: UserLocationState
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
         const val PAGE_SIZE = 100
         const val MAX_ITEMS_IN_MEMORY = 300
+        const val TEMP__RADIUS_IN_MILES = 50 // TODO
     }
 
     private val workerJob = SupervisorJob()
@@ -55,13 +60,14 @@ class ExploreViewModel @Inject constructor(
 
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
 
-    var exploreTopic = ExploreTopic.Merchants
-        private set
     private var filterJob: Job? = null
     private val searchQuery = MutableStateFlow("")
+    var exploreTopic = ExploreTopic.Merchants
+        private set
 
-    private var currentUserLocationState = MutableStateFlow(UserLocation(0.0, 0.0, 0.0))
-    val observeCurrentUserLocation = currentUserLocationState.asLiveData()
+    private var savedLocation: UserLocation? = null
+    private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
+    val currentUserLocation = currentUserLocationState.asLiveData()
 
     private val _pickedTerritory = MutableStateFlow("")
     var pickedTerritory: String
@@ -71,8 +77,9 @@ class ExploreViewModel @Inject constructor(
         }
 
     private val _filterMode = MutableStateFlow(FilterMode.Online)
-    val filterMode: LiveData<FilterMode>
-        get() = _filterMode.asLiveData()
+    var filterMode: LiveData<FilterMode> = MediatorLiveData<FilterMode>().apply {
+        addSource(_filterMode.asLiveData(), this::setValue)
+    }
 
     private val _searchResults = MutableLiveData<List<SearchResult>>()
     val searchResults: LiveData<List<SearchResult>>
@@ -82,9 +89,17 @@ class ExploreViewModel @Inject constructor(
     val pagingSearchResults: LiveData<PagingData<SearchResult>>
         get() = _pagingSearchResults
 
+    private val _searchResultsTitle = MutableLiveData<String>()
+    val searchResultsTitle: LiveData<String>
+        get() = _searchResultsTitle
+
     private val _selectedItem = MutableLiveData<SearchResult?>()
     val selectedItem: LiveData<SearchResult?>
         get() = _selectedItem
+
+    private val _isLocationEnabled = MutableLiveData(false)
+    val isLocationEnabled: LiveData<Boolean>
+        get() = _isLocationEnabled
 
     private val merchantsPagingFlow = searchQuery
         .debounce(QUERY_DEBOUNCE_VALUE)
@@ -272,13 +287,22 @@ class ExploreViewModel @Inject constructor(
         return "\"$escapedQuotes*\""
     }
 
-    enum class FilterMode {
-        All, Online, Physical, Buy, Sell, BuySell
-    }
-
     fun monitorUserLocation() {
         viewModelScope.launch {
-            locationUpdatesUseCase.fetchUpdates().collect {
+            _isLocationEnabled.value = true
+            locationProvider.observeUpdates().collect {
+                val savedLocation = savedLocation
+
+                if (savedLocation == null ||
+                    locationProvider.distanceBetween(savedLocation, it) > TEMP__RADIUS_IN_MILES / 2) {
+                    val locationName = locationProvider
+                        .getCurrentLocationName(it.latitude, it.longitude)
+
+                    if (locationName.isNotBlank()) {
+                        _searchResultsTitle.postValue(locationName)
+                    }
+                }
+
                 currentUserLocationState.value = it
             }
         }

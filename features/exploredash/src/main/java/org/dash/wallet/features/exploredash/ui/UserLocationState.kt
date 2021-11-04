@@ -19,12 +19,19 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.*
 
+// TODO: it would be better if the users of this class don't depend on the concrete
+// implementation, but on an interface instead. See dependency inversion principle.
 @ExperimentalCoroutinesApi
 class UserLocationState @Inject constructor(private val context: Context, private val client: FusedLocationProviderClient) {
+    companion object {
+        private const val UPDATE_INTERVAL_SECS = 10L
+        private const val FASTEST_UPDATE_INTERVAL_SECS = 2L
+    }
+
     private var previousLocation: Pair<Double, Double> = Pair(0.0, 0.0)
 
     @SuppressLint("MissingPermission")
-    fun fetchUpdates(): Flow<UserLocation> = callbackFlow {
+    fun observeUpdates(): Flow<UserLocation> = callbackFlow {
         val locationRequest: LocationRequest = LocationRequest.create()
             .apply {
                 interval = TimeUnit.SECONDS.toMillis(UPDATE_INTERVAL_SECS)
@@ -38,13 +45,11 @@ class UserLocationState @Inject constructor(private val context: Context, privat
                 val location = locationResult.lastLocation
                 val newLocation = Pair(location.latitude, location.longitude)
 
-                if (distance(previousLocation.first, previousLocation.second, newLocation.first, newLocation.second) < 0.1){
+                if (distanceBetween(previousLocation.first, previousLocation.second, newLocation.first, newLocation.second) < 0.1){
                     Log.i(this@UserLocationState::class.java.simpleName, "previous and latest locations are equal")
                 } else {
                     previousLocation = Pair(location.latitude, location.longitude)
-
-                    val cityName = getCurrentLocationName(location.latitude, location.longitude)
-                    trySend(UserLocation(previousLocation.first, previousLocation.second, location.accuracy.toDouble(), cityName))
+                    trySend(UserLocation(previousLocation.first, previousLocation.second, location.accuracy.toDouble()))
                 }
 
             }
@@ -53,12 +58,12 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         awaitClose { client.removeLocationUpdates(callback) }
     }
 
-    companion object {
-        private const val UPDATE_INTERVAL_SECS = 10L
-        private const val FASTEST_UPDATE_INTERVAL_SECS = 2L
+
+    fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {
+        return distanceBetween(location1.latitude, location1.longitude, location2.latitude, location2.longitude)
     }
 
-    private fun distance(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+    fun distanceBetween(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
         val earthRadius = 3958.75 // in miles, change to 6371 for kilometer output
 
         val dLat = Math.toRadians(lat2 - lat1)
@@ -75,13 +80,16 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         return earthRadius * c // output distance, in MILES
     }
 
-    private fun getCurrentLocationName(lat: Double, lng: Double): String {
+    fun getCurrentLocationName(lat: Double, lng: Double): String {
         return try {
             val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
             val addresses = geocoder.getFromLocation(lat, lng, 1)
+
             if (!addresses.isNullOrEmpty()){
-                Log.e(this::class.java.simpleName, "City name: ${addresses[0].locality}")
-                addresses[0].locality
+                val locality = addresses[0].locality
+                val cityName = if (locality.isNullOrEmpty()) addresses[0].adminArea else locality
+                Log.e(this::class.java.simpleName, "City name: $cityName")
+                cityName
             } else {
                 ""
             }
@@ -95,5 +103,6 @@ class UserLocationState @Inject constructor(private val context: Context, privat
 
 data class UserLocation(var latitude: Double,
                         var longitude: Double,
-                        var accuracy: Double,
-                        var name: String = "")
+                        var accuracy: Double)
+
+//data class UserAddress(var )

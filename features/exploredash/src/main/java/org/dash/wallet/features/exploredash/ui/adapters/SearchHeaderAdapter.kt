@@ -28,6 +28,7 @@ import org.dash.wallet.features.exploredash.ui.ExploreTopic
 
 class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: SearchHeaderViewBinding
+    private var searchResultsTitle: String = ""
     private var onFilterOptionChosen: ((String, Int) -> Unit)? = null
     private var onSearchQueryChanged: ((String) -> Unit)? = null
     private var onSearchQuerySubmitted: ((Unit) -> Unit)? = null
@@ -45,8 +46,6 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     }
 
     override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
-        binding.searchTitle.text = "United States" // TODO: use location to resolve
-
         binding.filterOptions.provideOptions(binding.root.resources.getStringArray(
             if (topic == ExploreTopic.Merchants) {
                 R.array.merchants_filter_options
@@ -77,6 +76,16 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
 
         binding.filterBtn.setOnClickListener {
             onFilterButtonClicked?.invoke(Unit)
+        }
+
+        binding.searchTitle.text = searchResultsTitle
+    }
+
+    fun setTitle(title: String) {
+        searchResultsTitle = title
+
+        if (::binding.isInitialized) {
+            binding.searchTitle.text = title
         }
     }
 

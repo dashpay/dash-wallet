@@ -18,23 +18,14 @@
 
 package org.dash.wallet.features.exploredash.ui
 
-import android.Manifest
-import android.content.DialogInterface
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.app.ActivityCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -56,7 +47,6 @@ import com.google.maps.android.collections.CircleManager
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import kotlinx.coroutines.*
-import org.dash.wallet.common.ui.DialogBuilder
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
@@ -89,27 +79,22 @@ class ExploreMapFragment: SupportMapFragment() {
     private var futureTarget =  mutableListOf<FutureTarget<Bitmap>>()
     private lateinit var markersGlideRequestManager: RequestManager
 
-    private val permissionRequestLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()) { isPermissionGranted ->
-
-        if (isPermissionGranted){
-            viewModel.monitorUserLocation()
-            viewModel.observeCurrentUserLocation.observe(viewLifecycleOwner) {
-                showLocationOnMap(it)
-            }
-        } else {
-            showPermissionDeniedDialog()
-        }
-    }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         markersGlideRequestManager = Glide.with(this)
 
         lifecycleScope.launchWhenStarted {
             googleMap = awaitMap()
-            checkPermissionOrShowMap()
-            setUserLocationMarkerMovementState()
+            showMap()
+//            setUserLocationMarkerMovementState() // TODO: why do we need to drag user location marker? That's weird
+        }
+
+        viewModel.currentUserLocation.observe(viewLifecycleOwner) { location ->
+            location?.let {
+                mCurrentUserLocation = LatLng(location.latitude, location.longitude)
+                currentAccuracy = location.accuracy
+                showLocationOnMap()
+            }
         }
 
         viewModel.searchResults.observe(viewLifecycleOwner) { results ->
@@ -123,20 +108,15 @@ class ExploreMapFragment: SupportMapFragment() {
         }
     }
 
-    private fun checkPermissionOrShowMap() {
+    private fun showMap() {
         if (isGooglePlayServicesAvailable()) {
             markerManager = MarkerManager(googleMap)
             markerCollection = markerManager?.newCollection()
             circleManager = googleMap?.let { CircleManager(it) }
             circleCollection = circleManager?.newCollection()
 
-            if (isForegroundLocationPermissionGranted()) {
-                viewModel.monitorUserLocation()
-                viewModel.observeCurrentUserLocation.observe(viewLifecycleOwner) {
-                    showLocationOnMap(it)
-                }
-            } else {
-                permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (::mCurrentUserLocation.isInitialized) {
+                showLocationOnMap()
             }
         }
     }
@@ -175,7 +155,7 @@ class ExploreMapFragment: SupportMapFragment() {
             if (marker.tag == CURRENT_POSITION_MARKER_TAG) {
                 false
             } else {
-                // TODO (ahikhmin): this can be moved to the viewModel.
+                // TODO: this can be moved to the viewModel, which will allow to write a test for it.
                 // Also, it might be better to set Id or Tag of the marker to the Id
                 // of the merchant/atm and use it for search instead of comparing lat/lng
                 val atmItemCoordinates = marker.position
@@ -214,10 +194,7 @@ class ExploreMapFragment: SupportMapFragment() {
         }
     }
 
-    private fun showLocationOnMap(userLocation: UserLocation) {
-//        binding.searchTitle.text = userLocation.name TODO
-        mCurrentUserLocation = LatLng(userLocation.latitude, userLocation.longitude)
-        currentAccuracy = userLocation.accuracy
+    private fun showLocationOnMap() {
         Log.e(this::class.java.simpleName, "Lat: ${mCurrentUserLocation.latitude}, Lng: ${mCurrentUserLocation.longitude}")
         if (currentLocationCircle != null) circleCollection?.remove(currentLocationCircle)
         if (currentLocationMarker != null) markerCollection?.remove(currentLocationMarker)
@@ -255,7 +232,7 @@ class ExploreMapFragment: SupportMapFragment() {
                 .asBitmap()
                 .load(it.logoLocation)
                 .placeholder(R.drawable.ic_merchant)
-                .error(R.drawable.ic_merchant)  // TODO (ashikhmin): do we need this here given that placeholder is set below? It's a bit confusing
+                .error(R.drawable.ic_merchant)  // TODO: do we need this here given that placeholder is set below? It's a bit confusing
                 .apply(RequestOptions().centerCrop().circleCrop())
                 .listener(object : RequestListener<Bitmap> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
@@ -312,8 +289,11 @@ class ExploreMapFragment: SupportMapFragment() {
         markerCollection?.clear()
         circleCollection?.clear()
         googleMap?.clear()
-        addMarkerOnCurrentPosition()
-        addCircleAroundCurrentPosition()
+
+        if (::mCurrentUserLocation.isInitialized) {
+            addMarkerOnCurrentPosition()
+            addCircleAroundCurrentPosition()
+        }
     }
 
     private suspend fun renderMerchantsOnMap(results: List<SearchResult>) {
@@ -329,9 +309,6 @@ class ExploreMapFragment: SupportMapFragment() {
         }
     }
 
-    private fun isForegroundLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),
-        Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-
     private fun setMarkers(items: List<SearchResult>) {
         viewLifecycleOwner.lifecycleScope.launch {
             renderMerchantsOnMap(items)
@@ -346,27 +323,5 @@ class ExploreMapFragment: SupportMapFragment() {
         canvas?.width?.let { drawable.setBounds(0, 0, it, canvas.height) }
         canvas?.let { drawable.draw(it) }
         return bitmap
-    }
-
-    private fun showPermissionDeniedDialog() {
-        val deniedPermissionDialog = DialogBuilder.warn(
-            requireActivity(),
-            R.string.permission_required_title,
-            R.string.permission_required_message
-        )
-        deniedPermissionDialog.setPositiveButton(R.string.goto_settings) { _, _ ->
-            val intent = createAppSettingsIntent()
-            startActivity(intent)
-        }
-        deniedPermissionDialog.setNegativeButton(R.string.button_dismiss) { dialog: DialogInterface, _ ->
-            dialog.dismiss()
-        }
-        deniedPermissionDialog.show()
-    }
-
-    private fun createAppSettingsIntent() = Intent().apply {
-        action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-        data = Uri.fromParts("package", requireContext().packageName, null)
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
     }
 }

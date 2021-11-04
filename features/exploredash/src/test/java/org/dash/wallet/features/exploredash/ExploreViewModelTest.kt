@@ -24,6 +24,7 @@ import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.FilterMode
 import org.dash.wallet.features.exploredash.ui.UserLocationState
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -54,7 +55,7 @@ class ExploreViewModelTest {
 
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
             viewModel.pickedTerritory = territory
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
+            viewModel.setFilterMode(FilterMode.All)
 
             // Should return a header and active Texas merchants
             val expected = merchants.filter { it.territory == territory && it.active != false }
@@ -73,7 +74,7 @@ class ExploreViewModelTest {
             }) })
 
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Online)
+            viewModel.setFilterMode(FilterMode.Online)
             viewModel.submitSearchQuery(query)
 
             // Should return active online merchants matching query
@@ -100,7 +101,7 @@ class ExploreViewModelTest {
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
             viewModel.pickedTerritory = territory
             viewModel.submitSearchQuery(query)
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
+            viewModel.setFilterMode(FilterMode.All)
 
             // Should return active merchants matching query and territory
             val expected = merchants.filter {
