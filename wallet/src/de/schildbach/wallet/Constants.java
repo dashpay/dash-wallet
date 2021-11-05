@@ -213,8 +213,8 @@ public final class Constants {
     public static final MonetaryFormat SEND_PAYMENT_LOCAL_FORMAT = new MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2).optionalDecimals();
     public static final BaseEncoding HEX = BaseEncoding.base16().lowerCase();
 
-    public static final String SOURCE_URL = "https://github.com/HashEngineering/" + CoinDefinition.coinName.toLowerCase() + "-wallet";
-    public static final String BINARY_URL = "https://github.com/HashEngineering/" + CoinDefinition.coinName.toLowerCase() + "-wallet/releases";
+    public static final String SOURCE_URL = "https://github.com/dashevo/dash-wallet";
+    public static final String BINARY_URL = "https://github.com/dashevo/dash-wallet/releases";
     public static final String MARKET_APP_URL = "market://details?id=%s";
     public static final String WEBMARKET_APP_URL = "https://play.google.com/store/apps/details?id=%s";
 
