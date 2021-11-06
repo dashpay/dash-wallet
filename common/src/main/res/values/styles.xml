@@ -664,6 +664,10 @@
         <item name="cornerRadius">7dp</item>
     </style>
 
+    <style name="ListViewButtonBackground" parent="WhiteBackground">
+        <item name="cornerRadius">10dp</item>
+    </style>
+
     <style name="CardViewRaised" parent="Base.CardView">
         <item name="android:background">@color/dash_white</item>
         <item name="cardCornerRadius">10dp</item>
@@ -712,7 +716,7 @@
     </style>
 
     <style name="Body2.SteelGray">
-        <item name="android:textColor">@color/steel_gray</item>
+        <item name="android:textColor">@color/steel_gray_900</item>
     </style>
 
     <style name="Body2.Medium">
@@ -744,7 +748,7 @@
     </style>
 
     <style name="Caption.SteelGray">
-        <item name="android:textColor">@color/steel_gray</item>
+        <item name="android:textColor">@color/steel_gray_900</item>
     </style>
 
     <style name="Caption.Gray400">

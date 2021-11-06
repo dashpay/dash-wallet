@@ -9,6 +9,7 @@
     <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
     <string name="explore_search_hint">Search</string>
     <string name="explore_filter">Filter</string>
+    <string name="explore_filters">Filters</string>
     <string name="explore_physical_merchant">Physical Merchant</string>
     <string name="explore_online_merchant">Online</string>
     <string name="explore_both_types_merchant">Online, Physical Merchant</string>
@@ -20,6 +21,8 @@
     <string name="explore_where_to_spend">Where to Spend</string>
     <string name="explore_atms">ATMs</string>
     <string name="explore_select_state">Select the State</string>
+    <string name="explore_radius">Radius</string>
+    <string name="explore_location">Location</string>
     <string name="explore_all_states">All states</string>
     <string name="explore_no_results">No results</string>
     <string name="explore_pay_with_dash">Pay with Dash</string>
@@ -40,6 +43,13 @@
         <item>Buy</item>
         <item>Sell</item>
         <item>Buy/Sell</item>
+    </string-array>
+
+    <string-array name="radius_filter_options">
+        <item>1 mile</item>
+        <item>5 miles</item>
+        <item>20 miles</item>
+        <item>50 miles</item>
     </string-array>
 
     <string name="permission_required_title">Permission required</string>

@@ -22,10 +22,9 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.SearchResult
+import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.FilterMode
-import org.dash.wallet.features.exploredash.ui.UserLocationState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.Mockito.`when`

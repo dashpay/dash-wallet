@@ -62,6 +62,7 @@ import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
+import org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 
 @FlowPreview
@@ -154,13 +155,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         header.setOnFilterButtonClicked {
             lifecycleScope.launch {
                 val territories = viewModel.getTerritoriesWithPOIs()
-                TerritoryFilterDialog(territories, viewModel.pickedTerritory) { name, dialog ->
-                    lifecycleScope.launch {
-                        delay(300)
-                        dialog.dismiss()
-                        viewModel.pickedTerritory = name
-                    }
-                }.show(parentFragmentManager, "territory_filter")
+                FiltersDialog(territories, viewModel.radius, viewModel.pickedTerritory, { territory, _ ->
+                    viewModel.pickedTerritory = territory
+                }, { radius, dialog ->
+                    dialog.dismiss()
+                    viewModel.radius = radius
+                }).show(parentFragmentManager, "filters_dialog")
             }
         }
 

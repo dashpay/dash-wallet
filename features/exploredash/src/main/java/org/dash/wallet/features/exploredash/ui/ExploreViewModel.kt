@@ -16,6 +16,7 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.util.Log
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
@@ -26,6 +27,8 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.services.UserLocation
+import org.dash.wallet.features.exploredash.services.UserLocationState
 import javax.inject.Inject
 
 enum class ExploreTopic {
@@ -74,6 +77,13 @@ class ExploreViewModel @Inject constructor(
         get() = _pickedTerritory.value
         set(value) {
             _pickedTerritory.value = value
+        }
+
+    private val _radius = MutableStateFlow(20)
+    var radius: Int
+        get() = _radius.value
+        set(value) {
+            _radius.value = value
         }
 
     private val _filterMode = MutableStateFlow(FilterMode.Online)
@@ -200,6 +210,10 @@ class ExploreViewModel @Inject constructor(
 
         merchantsSearchFilterFlow
             .onEach(_searchResults::postValue)
+            .launchIn(viewModelWorkerScope)
+
+        _radius
+            .onEach { Log.i("EXPLOREDASH", it.toString())}
             .launchIn(viewModelWorkerScope)
     }
 
