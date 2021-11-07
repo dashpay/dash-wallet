@@ -18,6 +18,7 @@ package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.Entity
 import androidx.annotation.Keep
+import androidx.room.Index
 import com.google.firebase.database.PropertyName
 
 object PaymentMethod {
@@ -32,7 +33,13 @@ object MerchantType {
 }
 
 @Keep
-@Entity(tableName = "merchant")
+@Entity(
+    tableName = "merchant",
+    indices = [
+        Index("latitude"),
+        Index("longitude"),
+    ]
+)
 data class Merchant(
     var deeplink: String? = "",
 

@@ -56,7 +56,7 @@ class FiltersDialog(
         setLocationName()
 
         val options = listOf(1, 5, 20, 50)
-        val optionNames = binding.root.resources.getStringArray(R.array.radius_filter_options).toList()
+        val optionNames = binding.root.resources.getStringArray(R.array.radius_filter_options).toList() // TODO metric
         val adapter = RadioGroupAdapter(options.indexOf(selectedRadius)) { _, optionIndex ->
             radiusPickedListener.invoke(options[optionIndex], this)
         }

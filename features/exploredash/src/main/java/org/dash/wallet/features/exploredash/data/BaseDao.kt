@@ -16,14 +16,23 @@
 
 package org.dash.wallet.features.exploredash.data
 
+import androidx.paging.PagingSource
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
+import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.features.exploredash.data.model.SearchResult
+import org.dash.wallet.features.exploredash.services.GeoBounds
 
-interface BaseDao<T> {
+interface BaseDao<T: SearchResult> {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun save(list: List<T>)
 
     // add @Query(...) in sub classes to avoid build failures
     suspend fun deleteAll(source: String): Int
+
+    fun sanitizeQuery(query: String): String {
+        val escapedQuotes = query.replace(Regex.fromLiteral("\""), "\"\"")
+        return "\"$escapedQuotes*\""
+    }
 }

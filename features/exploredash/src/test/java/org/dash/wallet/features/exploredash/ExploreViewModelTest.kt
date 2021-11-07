@@ -50,7 +50,7 @@ class ExploreViewModelTest {
     fun filterByTerritoryIsCorrect() {
         runBlocking {
             val territory = "Texas"
-            `when`(merchantDaoMock.observe(territory)).thenReturn(flow { emit(merchants.filter { it.territory == territory }) })
+            `when`(merchantDaoMock.observePhysical(territory)).thenReturn(flow { emit(merchants.filter { it.territory == territory }) })
 
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
             viewModel.pickedTerritory = territory
@@ -58,7 +58,7 @@ class ExploreViewModelTest {
 
             // Should return a header and active Texas merchants
             val expected = merchants.filter { it.territory == territory && it.active != false }
-            val actual = viewModel.merchantsSearchFilterFlow.first()
+            val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
         }
@@ -81,7 +81,7 @@ class ExploreViewModelTest {
                 .filter { it.name?.lowercase()?.startsWith(query) ?: false }
                 .filter { (it.type == "online" || it.type == "both") }
                 .filter { it.active != false }
-            val actual = viewModel.merchantsSearchFilterFlow.first()
+            val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
         }
@@ -107,7 +107,7 @@ class ExploreViewModelTest {
                 it.name?.lowercase()?.startsWith(query) ?: false &&
                         it.territory == territory && it.active != false
             }
-            val actual = viewModel.merchantsSearchFilterFlow.first()
+            val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
         }

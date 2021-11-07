@@ -123,6 +123,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.clearJobs()
+    }
+
     private fun setupFilters(
         header: SearchHeaderAdapter,
         bottomSheet: BottomSheetBehavior<ConstraintLayout>,
@@ -155,11 +160,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         header.setOnFilterButtonClicked {
             lifecycleScope.launch {
                 val territories = viewModel.getTerritoriesWithPOIs()
-                FiltersDialog(territories, viewModel.radius, viewModel.pickedTerritory, { territory, _ ->
+                FiltersDialog(territories, viewModel.selectedRadiusOption, viewModel.pickedTerritory, { territory, _ ->
                     viewModel.pickedTerritory = territory
                 }, { radius, dialog ->
                     dialog.dismiss()
-                    viewModel.radius = radius
+                    viewModel.selectedRadiusOption = radius
                 }).show(parentFragmentManager, "filters_dialog")
             }
         }
@@ -167,15 +172,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
             if (mode == FilterMode.Online) {
                 header.setTitle(getString(R.string.explore_online_merchant))
-                bottomSheet.isDraggable = false
 
                 if (viewModel.selectedItem.value == null) {
                     bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                     bottomSheetWasExpanded = true
                 }
             } else {
-                header.setTitle(viewModel.searchResultsTitle.value ?: getString(R.string.explore_physical_merchant))
-                bottomSheet.isDraggable = viewModel.isLocationEnabled.value ?: false
+                header.setTitle(viewModel.searchResultsTitle.value ?: getString(R.string.explore_search_results))
 
                 if (!isLocationPermissionGranted()) {
                     permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -183,13 +186,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        viewModel.isLocationEnabled.observe(viewLifecycleOwner) { isLocationEnabled ->
-            if (!isLocationEnabled || viewModel.filterMode.value == FilterMode.Online) {
+        viewModel.isLocationEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            if (isEnabled) {
+                bottomSheet.isDraggable = true
+
+                if (viewModel.filterMode.value != FilterMode.Online) {
+                    bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                }
+            } else {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 bottomSheet.isDraggable = false
-            } else {
-                bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-                bottomSheet.isDraggable = true
             }
         }
     }
@@ -325,23 +331,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun bindCommonDetails(item: SearchResult, isOnline: Boolean) {
         binding.itemDetails.apply {
             itemName.text = item.name
-
-            val addressBuilder = StringBuilder()
-            addressBuilder.append(item.address1)
-
-            if (!item.address2.isNullOrBlank()) {
-                addressBuilder.append("\n${item.address2}")
-            }
-
-            if (!item.address3.isNullOrBlank()) {
-                addressBuilder.append("\n${item.address3}")
-            }
-
-            if (!item.address4.isNullOrBlank()) {
-                addressBuilder.append("\n${item.address4}")
-            }
-
-            itemAddress.text = addressBuilder.toString()
+            itemAddress.text = item.displayAddress
 
             linkBtn.isVisible = !item.website.isNullOrEmpty()
             linkBtn.setOnClickListener {
@@ -499,8 +489,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.upButton.isVisible = shouldShowUpButton()
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true &&
-                viewModel.filterMode.value != FilterMode.Online
+        bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true
 
         bottomSheet.state = if (bottomSheetWasExpanded) {
             BottomSheetBehavior.STATE_EXPANDED

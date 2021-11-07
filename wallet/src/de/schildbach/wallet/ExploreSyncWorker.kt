@@ -29,6 +29,7 @@ import org.dash.wallet.features.exploredash.data.BaseDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.ATM_TABLE
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.DASH_DIRECT_TABLE
@@ -84,7 +85,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         return Result.success()
     }
 
-    private suspend fun <T> maybeSyncTable(
+    private suspend fun <T: SearchResult> maybeSyncTable(
         tableName: String,
         source: String,
         valueType: Class<T>,
@@ -105,7 +106,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         }
     }
 
-    private suspend fun <T> syncTable(
+    private suspend fun <T: SearchResult> syncTable(
         tableName: String,
         valueType: Class<T>,
         dao: BaseDao<T>

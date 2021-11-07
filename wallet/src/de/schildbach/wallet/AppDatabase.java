@@ -1,5 +1,7 @@
 package de.schildbach.wallet;
 
+import android.util.Log;
+
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
@@ -11,6 +13,8 @@ import org.dash.wallet.features.exploredash.data.model.Atm;
 import org.dash.wallet.features.exploredash.data.model.AtmFTS;
 import org.dash.wallet.features.exploredash.data.model.Merchant;
 import org.dash.wallet.features.exploredash.data.model.MerchantFTS;
+
+import java.util.concurrent.Executors;
 
 import de.schildbach.wallet.data.AppDatabaseMigrations;
 import de.schildbach.wallet.data.BlockchainState;
@@ -29,7 +33,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
         MerchantFTS.class,
         Atm.class,
         AtmFTS.class
-    }, version = 6)
+    }, version = 7)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 

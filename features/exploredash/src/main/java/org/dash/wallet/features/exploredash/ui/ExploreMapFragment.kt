@@ -42,7 +42,6 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
-import com.google.maps.android.SphericalUtil
 import com.google.maps.android.collections.CircleManager
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
@@ -50,6 +49,8 @@ import kotlinx.coroutines.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
+import org.dash.wallet.features.exploredash.services.GeoBounds
+import org.dash.wallet.features.exploredash.services.UserLocationState
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -87,6 +88,19 @@ class ExploreMapFragment: SupportMapFragment() {
             googleMap = awaitMap()
             showMap()
 //            setUserLocationMarkerMovementState() // TODO: why do we need to drag user location marker? That's weird
+
+            googleMap?.let { map ->
+                map.setOnCameraIdleListener {
+                    val bounds = map.projection.visibleRegion.latLngBounds
+                    viewModel.searchBounds = GeoBounds(
+                        bounds.northeast.latitude,
+                        bounds.northeast.longitude,
+                        bounds.southwest.latitude,
+                        bounds.southwest.longitude,
+                        bounds.center.latitude,
+                        bounds.center.longitude)
+                }
+            }
         }
 
         viewModel.currentUserLocation.observe(viewLifecycleOwner) { location ->
@@ -98,12 +112,23 @@ class ExploreMapFragment: SupportMapFragment() {
         }
 
         viewModel.searchResults.observe(viewLifecycleOwner) { results ->
+            // TODO: we probably shouldn't reset all markers but calculate the difference instead,
+            // otherwise when user pans the map, everything blinks
             resetMap()
+
             // TODO: For the 1st iteration of this feature, we shall limit the number of markers to be displayed
-            if (results.isNotEmpty()){
-                if (results.size < 20){
+            if (results.isNotEmpty()) {
+//                if (results.size < 20) {
                     setMarkers(results)
-                } else setMarkers(results.shuffled().subList(0, 20))
+//                } else setMarkers(results.shuffled().subList(0, 20))
+            }
+        }
+
+        viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
+            if (item?.latitude != null && item.longitude != null) {
+                // TODO: might be good to move back to the previous bounds on back navigation
+                val position = CameraPosition(LatLng(item.latitude!!, item.longitude!!), 16f, 0f, 0f)
+                googleMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))
             }
         }
     }
@@ -201,26 +226,14 @@ class ExploreMapFragment: SupportMapFragment() {
 
         addMarkerOnCurrentPosition()
         addCircleAroundCurrentPosition()
-        setMapDefaultViewLevel()
+        setMapDefaultViewLevel(viewModel.radius)
     }
 
-    private fun setMapDefaultViewLevel() {
+    private fun setMapDefaultViewLevel(radius: Double) {
         val heightInPixel = this.requireView().measuredHeight
-        val latLngBounds = calculateBounds(mCurrentUserLocation, milesToMeters(50.0))
+        val latLngBounds = UserLocationState.calculateBounds(mCurrentUserLocation, radius)
         val mapPadding = resources.getDimensionPixelOffset(R.dimen.map_padding)
         googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, mapPadding))
-    }
-
-    private fun calculateBounds(center: LatLng, radius: Double): LatLngBounds {
-        return LatLngBounds.builder()
-            .include(SphericalUtil.computeOffset(center, radius, 0.0))
-            .include(SphericalUtil.computeOffset(center, radius, 90.0))
-            .include(SphericalUtil.computeOffset(center, radius, 180.0))
-            .include(SphericalUtil.computeOffset(center, radius, 270.0)).build()
-    }
-
-    private fun milesToMeters(miles: Double): Double {
-        return miles * 1609.344
     }
 
     private suspend fun loadMerchantMarkers(merchants: List<Merchant>) {
