@@ -172,6 +172,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
             if (mode == FilterMode.Online) {
                 header.setTitle(getString(R.string.explore_online_merchant))
+                bottomSheet.isDraggable = false
 
                 if (viewModel.selectedItem.value == null) {
                     bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
@@ -179,20 +180,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             } else {
                 header.setTitle(viewModel.searchResultsTitle.value ?: getString(R.string.explore_search_results))
+                bottomSheet.isDraggable = true
 
-                if (!isLocationPermissionGranted()) {
+                if (isLocationPermissionGranted()) {
+                    bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                    bottomSheetWasExpanded = false
+                } else {
                     permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 }
             }
         }
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            if (isEnabled) {
+            if (isEnabled && viewModel.filterMode.value != FilterMode.Online) {
                 bottomSheet.isDraggable = true
-
-                if (viewModel.filterMode.value != FilterMode.Online) {
-                    bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-                }
+                bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
             } else {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 bottomSheet.isDraggable = false
@@ -489,7 +491,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.upButton.isVisible = shouldShowUpButton()
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true
+        bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true &&
+                viewModel.filterMode.value != FilterMode.Online
 
         bottomSheet.state = if (bottomSheetWasExpanded) {
             BottomSheetBehavior.STATE_EXPANDED

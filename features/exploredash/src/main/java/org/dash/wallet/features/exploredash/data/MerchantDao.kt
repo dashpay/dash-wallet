@@ -124,7 +124,11 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("DELETE FROM merchant WHERE source LIKE :source")
     override suspend fun deleteAll(source: String): Int
 
-    fun observePhysical(query: String, territory: String, bounds: GeoBounds): Flow<List<Merchant>> {
+    fun observePhysical(
+        query: String,
+        territory: String,
+        bounds: GeoBounds
+    ): Flow<List<Merchant>> {
         return if (query.isNotBlank()) {
             observeSearchResults(
                 sanitizeQuery(query),

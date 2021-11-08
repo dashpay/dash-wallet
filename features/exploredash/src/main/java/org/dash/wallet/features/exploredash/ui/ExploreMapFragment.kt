@@ -98,7 +98,9 @@ class ExploreMapFragment: SupportMapFragment() {
                         bounds.southwest.latitude,
                         bounds.southwest.longitude,
                         bounds.center.latitude,
-                        bounds.center.longitude)
+                        bounds.center.longitude,
+                        map.cameraPosition.zoom
+                    )
                 }
             }
         }

@@ -59,6 +59,7 @@ class ExploreViewModel @Inject constructor(
         const val MAX_ITEMS_IN_MEMORY = 300
         const val METERS_IN_MILE = 1609.344
         const val METERS_IN_KILOMETER = 1000.0
+        const val MIN_ZOOM_LEVEL = 8f
     }
 
     private val workerJob = SupervisorJob()
@@ -145,6 +146,10 @@ class ExploreViewModel @Inject constructor(
                                 .flatMapLatest { mode ->
                                     _searchBounds
                                         .filterNotNull()
+                                        .filter {
+                                            mode == FilterMode.Online ||
+                                            it.zoomLevel > MIN_ZOOM_LEVEL
+                                        }
                                         .map { bounds ->
                                             if (isLocationEnabled.value == true && mode != FilterMode.Online) {
                                                 locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
@@ -180,6 +185,7 @@ class ExploreViewModel @Inject constructor(
                         .flatMapLatest { territory ->
                             _searchBounds
                                 .filterNotNull()
+                                .filter { it.zoomLevel > MIN_ZOOM_LEVEL }
                                 .flatMapLatest { bounds ->
                                     _filterMode
                                         .filterNot { it == FilterMode.Online }
@@ -349,7 +355,8 @@ class ExploreViewModel @Inject constructor(
             min(original.eastLng, inRadius.eastLng),
             max(original.southLat, inRadius.southLat),
             max(original.westLng, inRadius.westLng),
-            original.centerLat, original.centerLng
+            original.centerLat, original.centerLng,
+            original.zoomLevel
         )
     }
 }

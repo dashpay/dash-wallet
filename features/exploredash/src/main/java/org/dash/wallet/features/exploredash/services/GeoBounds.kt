@@ -23,7 +23,9 @@ data class GeoBounds(val northLat: Double,
                      val southLat: Double,
                      val westLng: Double,
                      val centerLat: Double,
-                     val centerLng: Double) {
+                     val centerLng: Double,
+                     val zoomLevel: Float = 0f,
+) {
     companion object {
         val noBounds: GeoBounds
             get() = GeoBounds(90.0, 180.0, -90.0, -180.0, 0.0, 0.0)
@@ -39,7 +41,8 @@ data class GeoBounds(val northLat: Double,
                 southLat == other.southLat &&
                 westLng == other.westLng &&
                 centerLat == other.centerLng &&
-                centerLng == other.centerLng
+                centerLng == other.centerLng &&
+                zoomLevel == other.zoomLevel
     }
 
     override fun hashCode(): Int {
@@ -49,6 +52,7 @@ data class GeoBounds(val northLat: Double,
         result = 31 * result + westLng.hashCode()
         result = 31 * result + centerLat.hashCode()
         result = 31 * result + centerLng.hashCode()
+        result = 31 * result + zoomLevel.hashCode()
         return result
     }
 }
