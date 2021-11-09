@@ -15,7 +15,7 @@
         android:id="@+id/logo_img"
         android:layout_width="36dp"
         android:layout_height="36dp"
-        android:src="@drawable/ic_atm_placeholder"
+        android:src="@drawable/ic_image_placeholder"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

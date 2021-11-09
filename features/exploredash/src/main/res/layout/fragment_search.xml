@@ -1,63 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#40E78010"
+    android:animateLayoutChanges="true"
     tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appbar"
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:theme="@style/Explore.AppBarOverlay"
-        app:elevation="0dp">
+        android:layout_height="match_parent">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
+        <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/appbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:menu="@menu/info_menu"
-            app:navigationIcon="@drawable/ic_back_arrow">
+            android:layout_height="wrap_content"
+            android:theme="@style/Explore.AppBarOverlay"
+            android:translationZ="1dp"
+            app:elevation="1dp">
 
-            <TextView
-                android:id="@+id/toolbar_title"
-                style="@style/Subtitle1.SemiBold"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center" />
-        </androidx.appcompat.widget.Toolbar>
-    </com.google.android.material.appbar.AppBarLayout>
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                app:menu="@menu/info_menu"
+                app:navigationIcon="@drawable/ic_back_arrow">
+
+                <TextView
+                    android:id="@+id/toolbar_title"
+                    style="@style/Subtitle1.SemiBold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center" />
+            </androidx.appcompat.widget.Toolbar>
+        </com.google.android.material.appbar.AppBarLayout>
 
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/explore_map"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:name="com.google.android.gms.maps.SupportMapFragment"
-        />
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/explore_map"
+            android:name="org.dash.wallet.features.exploredash.ui.ExploreMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/content_panel"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/rounded_background"
-        android:paddingBottom="40dp"
-        android:theme="@style/ExploreSearchResultsBackground"
-        app:behavior_expandedOffset="40dp"
-        app:behavior_fitToContents="false"
-        app:behavior_halfExpandedRatio="@dimen/merchant_half_expanded_ratio"
-        app:behavior_peekHeight="24dp"
-        app:layout_behavior="@string/bottom_sheet_behavior"
-        tools:behavior_peekHeight="500dp">
-
-        <LinearLayout
-            android:id="@+id/search_results"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/content_panel"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:paddingBottom="40dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/ExploreSearchResultsBackground"
+            app:behavior_expandedOffset="42dp"
+            app:behavior_fitToContents="false"
+            app:behavior_halfExpandedRatio="@dimen/merchant_half_expanded_ratio"
+            app:behavior_peekHeight="24dp"
+            app:layout_behavior="@string/bottom_sheet_behavior"
+            tools:behavior_peekHeight="500dp">
 
             <View
                 android:id="@+id/drag_indicator"
@@ -67,176 +64,42 @@
                 android:layout_marginVertical="10dp"
                 android:background="@drawable/rounded_background"
                 android:theme="@style/DragIndicatorBackground"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
                 tools:background="@color/gray_100" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/search_title"
-                    style="@style/Headline6.Bold"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginHorizontal="15dp"
-                    android:layout_weight="1"
-                    tools:text="United States" />
-
-                <Button
-                    android:id="@+id/filter_btn"
-                    style="@style/Button.Borderless"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:drawableEnd="@drawable/ic_filter"
-                    android:drawablePadding="4dp"
-                    android:text="@string/explore_filter"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginHorizontal="15dp"
-                android:layout_marginTop="10dp">
-
-                <EditText
-                    android:id="@+id/search"
-                    style="@style/Body2"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@drawable/rounded_background"
-                    android:drawableStart="@drawable/ic_search"
-                    android:drawablePadding="7dp"
-                    android:hint="@string/explore_search_hint"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="40dp"
-                    android:textColor="@android:color/black"
-                    android:theme="@style/SearchInputBackground" />
-
-                <ImageButton
-                    android:id="@+id/clear_btn"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_gravity="end|center_vertical"
-                    android:background="@android:color/transparent"
-                    android:src="@drawable/ic_close"
-                    android:visibility="gone"
-                    tools:visibility="visible" />
-            </FrameLayout>
-
-            <LinearLayout
-                android:id="@+id/merchant_options"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal">
-
-                <ToggleButton
-                    android:id="@+id/all_merchants_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:textOff="@string/explore_option_all"
-                    android:textOn="@string/explore_option_all" />
-
-                <ToggleButton
-                    android:id="@+id/physical_merchants_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_physical_merchant"
-                    android:textOn="@string/explore_physical_merchant" />
-
-                <ToggleButton
-                    android:id="@+id/online_merchants_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_online_merchant"
-                    android:textOn="@string/explore_online_merchant" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/atm_options"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <ToggleButton
-                    android:id="@+id/all_atms_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:textOff="@string/explore_option_all"
-                    android:textOn="@string/explore_option_all" />
-
-                <ToggleButton
-                    android:id="@+id/buy_atms_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_option_buy"
-                    android:textOn="@string/explore_option_buy" />
-
-                <ToggleButton
-                    android:id="@+id/sell_atms_option"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_option_sell"
-                    android:textOn="@string/explore_option_sell" />
-
-                <ToggleButton
-                    android:id="@+id/buy_sell_atms_options"
-                    style="@style/ToggleButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:textOff="@string/explore_option_buy_sell"
-                    android:textOn="@string/explore_option_buy_sell" />
-            </LinearLayout>
-
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/search_results_list"
+                android:id="@+id/search_results"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="@color/dash_white"
+                android:layout_marginTop="12dp"
                 android:clipToPadding="false"
-                android:paddingTop="12dp"
                 android:paddingBottom="40dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 tools:itemCount="5"
                 tools:listitem="@layout/merchant_row" />
-        </LinearLayout>
 
-        <include
-            android:id="@+id/item_details"
-            layout="@layout/item_details_view"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:visibility="gone"
-            app:layout_constraintHeight_percent="@dimen/merchant_details_height_ratio" />
+            <include
+                android:id="@+id/item_details"
+                layout="@layout/item_details_view"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                app:layout_constraintHeight_percent="@dimen/merchant_details_height_ratio" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
-        <View
-            android:id="@+id/appbar_divider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="12dp"
-            android:alpha="0"
-            android:background="@color/divider_color"
-            app:layout_constraintTop_toTopOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    <ImageButton
+        android:id="@+id/up_button"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="end|bottom"
+        android:layout_margin="15dp"
+        android:src="@drawable/ic_up"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/UpButtonBackground"
+        android:visibility="gone"
+        tools:background="@color/gray_900_0.7"
+        tools:visibility="visible" />
+</FrameLayout>

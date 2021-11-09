@@ -28,7 +28,7 @@ import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.dash.wallet.features.exploredash.ui.UserLocationState
+import org.dash.wallet.features.exploredash.services.UserLocationState
 
 
 @Module

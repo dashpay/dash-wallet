@@ -28,5 +28,6 @@ data class MerchantFTS(
     val address2: String,
     val address3: String,
     val address4: String,
-    var territory: String,
+    val city: String,
+    var territory: String
 )

@@ -35,13 +35,38 @@ open class SearchResult(
     var website: String? = "",
     var phone: String? = "",
     var territory: String? = "",
+    var city: String? = "",
     var source: String? = "",
+    @get:PropertyName("source_id") @set:PropertyName("source_id")
+    var sourceId: Int? = -1,
     @get:PropertyName("logo_location") @set:PropertyName("logo_location")
     var logoLocation: String? = "",
     @get:PropertyName("google_maps") @set:PropertyName("google_maps")
     var googleMaps: String? = "",
+    @get:PropertyName("cover_image") @set:PropertyName("cover_image")
+    var coverImage: String? = "",
     open var type: String? = ""
 ) {
+    val displayAddress: String
+        get() {
+            val addressBuilder = StringBuilder()
+            addressBuilder.append(address1)
+
+            if (!address2.isNullOrBlank()) {
+                addressBuilder.append("\n${address2}")
+            }
+
+            if (!address3.isNullOrBlank()) {
+                addressBuilder.append("\n${address3}")
+            }
+
+            if (!address4.isNullOrBlank()) {
+                addressBuilder.append("\n${address4}")
+            }
+
+            return addressBuilder.toString()
+        }
+
     override fun equals(other: Any?): Boolean {
         val second = other as SearchResult
         return id == second.id &&

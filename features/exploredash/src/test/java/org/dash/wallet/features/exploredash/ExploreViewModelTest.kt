@@ -22,9 +22,9 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.SearchResult
+import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
-import org.dash.wallet.features.exploredash.ui.UserLocationState
+import org.dash.wallet.features.exploredash.ui.FilterMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.Mockito.`when`
@@ -50,15 +50,15 @@ class ExploreViewModelTest {
     fun filterByTerritoryIsCorrect() {
         runBlocking {
             val territory = "Texas"
-            `when`(merchantDaoMock.observe(territory)).thenReturn(flow { emit(merchants.filter { it.territory == territory }) })
+            `when`(merchantDaoMock.observePhysical(territory)).thenReturn(flow { emit(merchants.filter { it.territory == territory }) })
 
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
             viewModel.pickedTerritory = territory
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
+            viewModel.setFilterMode(FilterMode.All)
 
             // Should return a header and active Texas merchants
             val expected = merchants.filter { it.territory == territory && it.active != false }
-            val actual = viewModel.merchantsSearchFilterFlow.first()
+            val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
         }
@@ -73,7 +73,7 @@ class ExploreViewModelTest {
             }) })
 
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Online)
+            viewModel.setFilterMode(FilterMode.Online)
             viewModel.submitSearchQuery(query)
 
             // Should return active online merchants matching query
@@ -81,7 +81,7 @@ class ExploreViewModelTest {
                 .filter { it.name?.lowercase()?.startsWith(query) ?: false }
                 .filter { (it.type == "online" || it.type == "both") }
                 .filter { it.active != false }
-            val actual = viewModel.merchantsSearchFilterFlow.first()
+            val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
         }
@@ -100,14 +100,14 @@ class ExploreViewModelTest {
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
             viewModel.pickedTerritory = territory
             viewModel.submitSearchQuery(query)
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
+            viewModel.setFilterMode(FilterMode.All)
 
             // Should return active merchants matching query and territory
             val expected = merchants.filter {
                 it.name?.lowercase()?.startsWith(query) ?: false &&
                         it.territory == territory && it.active != false
             }
-            val actual = viewModel.merchantsSearchFilterFlow.first()
+            val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
         }

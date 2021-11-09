@@ -20,7 +20,7 @@
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_marginTop="20dp"
-            android:src="@drawable/ic_atm_placeholder"
+            android:src="@drawable/ic_image_placeholder"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
@@ -88,7 +88,7 @@
             android:layout_height="80dp"
             android:layout_marginTop="5dp"
             android:scaleType="fitStart"
-            android:src="@drawable/ic_merchant_placeholder"
+            android:src="@drawable/ic_image_placeholder"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/location_hint" />
 
