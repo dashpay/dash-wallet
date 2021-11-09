@@ -27,7 +27,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
@@ -64,13 +63,8 @@ import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog
-import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
-import androidx.navigation.fragment.navArgs
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.features.exploredash.data.model.*
-import java.lang.StringBuilder
-import java.lang.Exception
 
 
 @FlowPreview

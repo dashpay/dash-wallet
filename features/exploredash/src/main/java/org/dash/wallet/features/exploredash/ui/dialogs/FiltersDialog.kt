@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
@@ -38,7 +39,7 @@ class FiltersDialog(
     private var selectedTerritory: String = "",
     private val territoryPickedListener: (String, DialogFragment) -> Unit,
     private val radiusPickedListener: (Int, DialogFragment) -> Unit
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment<LinearLayout>() {
 
     private val binding by viewBinding(DialogFiltersBinding::bind)
 
