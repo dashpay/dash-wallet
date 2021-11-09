@@ -1,109 +1,243 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?><!--<FrameLayout-->
+<!--    xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
+<!--    xmlns:tools="http://schemas.android.com/tools"-->
+<!--    android:layout_width="match_parent"-->
+<!--    android:layout_height="match_parent">-->
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg_filter_dialog"
+    tools:background="@color/bg_filter_dialog"
     tools:context="org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog">
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp">
+        android:layout_marginTop="2dp">
+
+        <Button
+            android:id="@+id/collapse_button"
+            style="@style/Button.Small.Tertiary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@android:string/cancel" />
 
         <TextView
             android:id="@+id/search_title"
             style="@style/Subtitle1.SemiBold"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_gravity="center_vertical"
-            android:layout_marginHorizontal="15dp"
+            android:layout_gravity="center"
             android:text="@string/explore_filters" />
 
-        <ImageButton
-            android:id="@+id/collapse_button"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+        <Button
+            android:id="@+id/apply_button"
+            style="@style/Button.Small.Tertiary.Blue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_gravity="end"
-            android:layout_margin="10dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_popup_close"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:text="@string/explore_apply_filter" />
     </FrameLayout>
 
-    <TextView
-        style="@style/Caption.SteelGray"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="30dp"
-        android:layout_marginVertical="10dp"
-        android:text="@string/explore_location"/>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/location_btn"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="46dp"
-        android:paddingHorizontal="15dp"
-        android:layout_marginHorizontal="15dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:background="@drawable/rounded_ripple_background"
-        android:theme="@style/ListViewButtonBackground">
+        android:layout_height="match_parent">
 
-        <TextView
-            android:id="@+id/location_name"
-            style="@style/Body2.Medium"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
-            android:layout_gravity="center_vertical"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/checkmark"
-            tools:text="Alabama" />
-
-        <ImageView
-            android:id="@+id/checkmark"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
-            android:src="@drawable/ic_back_arrow"
-            android:rotation="180"
-            app:tint="@color/steel_gray_150"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            tools:tint="@color/steel_gray_150"/>
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <TextView
-        style="@style/Caption.SteelGray"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="30dp"
-        android:layout_marginTop="25dp"
-        android:layout_marginBottom="10dp"
-        android:text="@string/explore_radius"/>
-
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="15dp"
-        android:layout_marginBottom="20dp"
-        android:background="@color/white"
-        app:cardElevation="0dp"
-        app:cardCornerRadius="15dp">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/radius_filter"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:itemCount="5"
-            tools:listitem="@layout/radiobutton_row" />
-    </androidx.cardview.widget.CardView>
-</LinearLayout>
+            android:paddingHorizontal="15dp"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/payment_methods_label"
+                style="@style/Caption.SemiBold.SteelGray"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:text="@string/explore_payment_method" />
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/payment_methods"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="26dp"
+                android:background="@color/white"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+
+                    <CheckBox
+                        android:id="@+id/dash_option"
+                        style="@style/CheckBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:drawableEnd="@drawable/ic_dash_pay"
+                        android:text="@string/explore_payment_dash" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="54dp"
+                        android:background="@color/divider_color" />
+
+                    <CheckBox
+                        android:id="@+id/gift_card_option"
+                        style="@style/CheckBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:drawableEnd="@drawable/ic_gift_card"
+                        android:text="@string/explore_payment_gift_card" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <TextView
+                style="@style/Caption.SemiBold.SteelGray"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:text="@string/explore_location" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/location_btn"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="26dp"
+                android:background="@drawable/rounded_ripple_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingHorizontal="15dp"
+                android:theme="@style/ListViewButtonBackground">
+
+                <TextView
+                    android:id="@+id/location_name"
+                    style="@style/Body2.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginEnd="20dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="Alabama" />
+
+                <ImageView
+                    android:id="@+id/checkmark"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:rotation="180"
+                    android:src="@drawable/ic_back_arrow"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/steel_gray_150"
+                    tools:tint="@color/steel_gray_150" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <TextView
+                style="@style/Caption.SemiBold.SteelGray"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:text="@string/explore_radius" />
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="26dp"
+                android:background="@color/white"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/radius_filter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="5"
+                    tools:listitem="@layout/radiobutton_row" />
+            </androidx.cardview.widget.CardView>
+
+            <TextView
+                style="@style/Caption.SemiBold.SteelGray"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:text="@string/explore_location_settings" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/location_settings_btn"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="26dp"
+                android:background="@drawable/rounded_ripple_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingHorizontal="15dp"
+                android:theme="@style/ListViewButtonBackground">
+
+                <TextView
+                    android:id="@+id/location_status"
+                    style="@style/Body2.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginEnd="20dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="Allowed" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:rotation="180"
+                    android:src="@drawable/ic_back_arrow"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/steel_gray_150"
+                    tools:tint="@color/steel_gray_150" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <Button
+                android:id="@+id/reset_filters_btn"
+                style="@style/Button.Large.Tertiary.Red"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="28dp"
+                android:text="@string/explore_reset_filters" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout><!--    <ScrollView-->
+    <!--        android:id="@+id/screenshot"-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        android:layout_height="match_parent">-->
+
+    <!--        <ImageView-->
+    <!--            android:layout_width="match_parent"-->
+    <!--            android:layout_height="wrap_content"-->
+    <!--            android:alpha="0.5"-->
+    <!--            android:src="@drawable/explore" />-->
+    <!--    </ScrollView>-->
+    <!--</FrameLayout>-->

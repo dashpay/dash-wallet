@@ -102,14 +102,10 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHol
             .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
             .into(binding.logoImg)
 
-        when(cleanValue(merchant?.paymentMethod)) {
+        when(merchant?.paymentMethod?.trim()?.lowercase()) {
             PaymentMethod.DASH -> binding.methodImg.setImageResource(R.drawable.ic_dash_pay)
             PaymentMethod.GIFT_CARD -> binding.methodImg.setImageResource(R.drawable.ic_gift_card)
         }
-    }
-
-    private fun cleanValue(value: String?): String? {
-        return value?.trim()?.lowercase()?.replace(" ", "_")
     }
 }
 

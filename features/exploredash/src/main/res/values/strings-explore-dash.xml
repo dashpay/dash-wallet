@@ -7,10 +7,10 @@
     <string name="explore_merchants_subtitle">Find merchants who accept Dash as payment.</string>
     <string name="explore_atms_title">ATMs</string>
     <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
+
+    <!-- Search -->
     <string name="explore_search_hint">Search</string>
     <string name="explore_search_results">Search results</string>
-    <string name="explore_filter">Filter</string>
-    <string name="explore_filters">Filters</string>
     <string name="explore_physical_merchant">Physical Merchant</string>
     <string name="explore_online_merchant">Online</string>
     <string name="explore_both_types_merchant">Online, Physical Merchant</string>
@@ -21,17 +21,29 @@
     <string name="explore_menu_info">info</string>
     <string name="explore_where_to_spend">Where to Spend</string>
     <string name="explore_atms">ATMs</string>
-    <string name="explore_select_state">Select the State</string>
-    <string name="explore_radius">Radius</string>
-    <string name="explore_location">Location</string>
     <string name="explore_all_states">All states</string>
     <string name="explore_no_results">No results</string>
+
+    <!-- Details -->
     <string name="explore_pay_with_dash">Pay with Dash</string>
     <string name="explore_buy_gift_card">Buy a Gift Card</string>
     <string name="explore_buy_dash">Buy Dash</string>
     <string name="explore_sell_dash">Sell Dash</string>
     <string name="explore_atm_location_hint">This ATM is located in the</string>
     <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
+
+    <!-- Filters -->
+    <string name="explore_filter">Filter</string>
+    <string name="explore_filters">Filters</string>
+    <string name="explore_apply_filter">Apply</string>
+    <string name="explore_payment_method">Payment Method</string>
+    <string name="explore_payment_dash">Dash</string>
+    <string name="explore_payment_gift_card">Gift card</string>
+    <string name="explore_radius">Radius</string>
+    <string name="explore_location">Location</string>
+    <string name="explore_location_settings">Current Location Settings</string>
+    <string name="explore_select_state">Select the State</string>
+    <string name="explore_reset_filters">Reset Filters</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -46,13 +58,21 @@
         <item>Buy/Sell</item>
     </string-array>
 
-    <string-array name="radius_filter_options">
+    <string-array name="radius_filter_options_miles">
         <item>1 mile</item>
         <item>5 miles</item>
         <item>20 miles</item>
         <item>50 miles</item>
     </string-array>
 
+    <string-array name="radius_filter_options_kilometers">
+        <item>1 kilometer</item>
+        <item>5 kilometers</item>
+        <item>20 kilometers</item>
+        <item>50 kilometers</item>
+    </string-array>
+
+    <!-- Permissions -->
     <string name="permission_required_title">Permission required</string>
     <string name="permission_required_message">We need to know your current location</string>
     <string name="goto_settings">Settings</string>

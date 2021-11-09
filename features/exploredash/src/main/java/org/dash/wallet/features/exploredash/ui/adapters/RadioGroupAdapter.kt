@@ -22,6 +22,7 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.RadiobuttonRowBinding
 
 class RadioGroupAdapter(private var selectedIndex: Int = 0, private val clickListener: (String, Int) -> Unit)
@@ -63,6 +64,12 @@ class RadioGroupAdapter(private var selectedIndex: Int = 0, private val clickLis
 class RadioButtonViewHolder(val binding: RadiobuttonRowBinding) : RecyclerView.ViewHolder(binding.root) {
     fun bind(option: String, isSelected: Boolean) {
         binding.name.text = option
+        binding.name.setTextColor(
+            binding.root.resources.getColor(
+                if (isSelected) R.color.dash_blue else R.color.gray_900,
+                null
+            )
+        )
         binding.checkmark.isVisible = isSelected
     }
 }

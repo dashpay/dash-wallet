@@ -23,7 +23,7 @@ import com.google.firebase.database.PropertyName
 
 object PaymentMethod {
     const val DASH = "dash"
-    const val GIFT_CARD = "gift_card"
+    const val GIFT_CARD = "gift card"
 }
 
 object MerchantType {

@@ -43,7 +43,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
-import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -62,8 +61,8 @@ import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
+import org.dash.wallet.features.exploredash.ui.dialogs.FilterOptionSet
 import org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog
-import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -125,7 +124,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.clearJobs()
+        viewModel.onExitSearch()
     }
 
     private fun setupFilters(
@@ -159,13 +158,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         header.setOnFilterButtonClicked {
             lifecycleScope.launch {
-                val territories = viewModel.getTerritoriesWithPOIs()
-                FiltersDialog(territories, viewModel.selectedRadiusOption, viewModel.pickedTerritory, { territory, _ ->
-                    viewModel.pickedTerritory = territory
-                }, { radius, dialog ->
-                    dialog.dismiss()
-                    viewModel.selectedRadiusOption = radius
-                }).show(parentFragmentManager, "filters_dialog")
+                showFilterDialog()
             }
         }
 
@@ -200,6 +193,43 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 bottomSheet.isDraggable = false
             }
         }
+    }
+
+    private suspend fun showFilterDialog() {
+        val territories = viewModel.getTerritoriesWithPOIs()
+        val currentOptions = FilterOptionSet(
+            viewModel.pickedTerritory,
+            viewModel.selectedRadiusOption,
+            dashPaymentOn = viewModel.paymentMethodFilter.isEmpty() ||
+                    viewModel.paymentMethodFilter == PaymentMethod.DASH,
+            giftCardPaymentOn = viewModel.paymentMethodFilter.isEmpty() ||
+                    viewModel.paymentMethodFilter == PaymentMethod.GIFT_CARD
+        )
+        FiltersDialog(
+            territories,
+            showPaymentOptions = viewModel.exploreTopic == ExploreTopic.Merchants,
+            isMetric = viewModel.isMetric,
+            currentOptions
+        ) { options, dialog ->
+            viewModel.pickedTerritory = options.selectedTerritory
+            viewModel.selectedRadiusOption = options.selectedRadiusOption
+
+            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+                var paymentFilter = ""
+
+                if (!currentOptions.dashPaymentOn || !currentOptions.giftCardPaymentOn) {
+                    paymentFilter = if (currentOptions.dashPaymentOn) {
+                        PaymentMethod.DASH
+                    } else {
+                        PaymentMethod.GIFT_CARD
+                    }
+                }
+
+                viewModel.paymentMethodFilter = paymentFilter
+            }
+
+            dialog.dismiss()
+        }.show(parentFragmentManager, "filters_dialog")
     }
 
     private fun setupSearchInput(
@@ -238,15 +268,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 viewModel.openAtmDetails(item)
             }
         }
-
-        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                if (positionStart == 0 && itemCount != ExploreViewModel.PAGE_SIZE) {
-                    // Scrolling on top if user changed the filter option
-                    binding.searchResults.scrollToPosition(0)
-                }
-            }
-        })
 
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
         val decorator = ListDividerDecorator(
@@ -366,7 +387,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 .transition(DrawableTransitionOptions.withCrossFade(200))
                 .into(itemImage)
 
-            itemType.text = when (cleanValue(merchant.type)) {
+            itemType.text = when (cleanMerchantTypeValue(merchant.type)) {
                 MerchantType.ONLINE -> resources.getString(R.string.explore_online_merchant)
                 MerchantType.PHYSICAL -> resources.getString(R.string.explore_physical_merchant)
                 MerchantType.BOTH -> resources.getString(R.string.explore_both_types_merchant)
@@ -554,7 +575,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
 
-    private fun cleanValue(value: String?): String? {
+    private fun cleanMerchantTypeValue(value: String?): String? {
         return value?.trim()?.lowercase()?.replace(" ", "_")
     }
 

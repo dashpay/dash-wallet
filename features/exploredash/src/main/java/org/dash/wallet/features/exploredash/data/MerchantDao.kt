@@ -31,16 +31,52 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("""
         SELECT * 
         FROM merchant 
-        WHERE (:territoryFilter = '' OR territory = :territoryFilter) 
-            AND type IN (:types)
+        WHERE type IN (:types)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
         ORDER BY name ASC""")
-    fun pagingGet(
+    fun pagingGetByCoordinates(
+        types: List<String>,
+        paymentMethod: String,
+        northLat: Double,
+        eastLng: Double,
+        southLat: Double,
+        westLng: Double
+    ): PagingSource<Int, Merchant>
+
+    @Query("""
+        SELECT * 
+        FROM merchant 
+        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+        ORDER BY name ASC""")
+    fun pagingGetByTerritory(
         territoryFilter: String,
         types: List<String>,
+        paymentMethod: String
+    ): PagingSource<Int, Merchant>
+
+    @Query("""
+        SELECT *
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+            AND latitude < :northLat
+            AND latitude > :southLat
+            AND longitude < :eastLng
+            AND longitude > :westLng
+        ORDER BY name ASC
+    """)
+    fun pagingSearchByCoordinates(
+        query: String,
+        types: List<String>,
+        paymentMethod: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -51,38 +87,32 @@ interface MerchantDao : BaseDao<Merchant> {
         SELECT *
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
-        WHERE merchant_fts MATCH :query 
+        WHERE merchant_fts MATCH :query
             AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-            AND latitude < :northLat
-            AND latitude > :southLat
-            AND longitude < :eastLng
-            AND longitude > :westLng
         ORDER BY name ASC
     """)
-    fun pagingSearch(
+    fun pagingSearchByTerritory(
         query: String,
         territoryFilter: String,
         types: List<String>,
-        northLat: Double,
-        eastLng: Double,
-        southLat: Double,
-        westLng: Double
+        paymentMethod: String
     ): PagingSource<Int, Merchant>
 
     @Query("""
         SELECT * 
         FROM merchant
-        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
-            AND (:excludeType = '' OR type != :excludeType)
+        WHERE (:excludeType = '' OR type != :excludeType)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
         ORDER BY name ASC""")
     fun observe(
-        territoryFilter: String,
         excludeType: String,
+        paymentMethod: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -93,9 +123,9 @@ interface MerchantDao : BaseDao<Merchant> {
         SELECT *
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
-        WHERE merchant_fts MATCH :query 
-            AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+        WHERE merchant_fts MATCH :query
             AND (:excludeType = '' OR type != :excludeType)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
@@ -104,8 +134,8 @@ interface MerchantDao : BaseDao<Merchant> {
     """)
     fun observeSearchResults(
         query: String,
-        territoryFilter: String,
         excludeType: String,
+        paymentMethod: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -127,13 +157,16 @@ interface MerchantDao : BaseDao<Merchant> {
     fun observePhysical(
         query: String,
         territory: String,
+        paymentMethod: String,
         bounds: GeoBounds
     ): Flow<List<Merchant>> {
+        Log.i("EXPLOREDASH", "observePhysical: ${query}, ${paymentMethod}, ${territory}, ${bounds}")
+
         return if (query.isNotBlank()) {
             observeSearchResults(
                 sanitizeQuery(query),
-                territory,
                 MerchantType.ONLINE,
+                paymentMethod,
                 bounds.northLat,
                 bounds.eastLng,
                 bounds.southLat,
@@ -141,8 +174,8 @@ interface MerchantDao : BaseDao<Merchant> {
             )
         } else {
             observe(
-                territory,
                 MerchantType.ONLINE,
+                paymentMethod,
                 bounds.northLat,
                 bounds.eastLng,
                 bounds.southLat,
@@ -155,21 +188,23 @@ interface MerchantDao : BaseDao<Merchant> {
         query: String,
         territory: String,
         types: List<String>,
+        paymentMethod: String,
         bounds: GeoBounds
     ): PagingSource<Int, Merchant> {
+        Log.i("EXPLOREDASH", "observeAllPaging: ${query}, ${paymentMethod}, ${territory}, ${bounds}")
         return if (query.isNotBlank()) {
-            pagingSearch(
+            pagingSearchByCoordinates(
                 sanitizeQuery(query),
-                territory,
                 types,
+                paymentMethod,
                 bounds.northLat,
                 bounds.eastLng,
                 bounds.southLat,
                 bounds.westLng)
         } else {
-            pagingGet(
-                territory,
+            pagingGetByCoordinates(
                 types,
+                paymentMethod,
                 bounds.northLat,
                 bounds.eastLng,
                 bounds.southLat,
