@@ -23,6 +23,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
@@ -39,7 +40,7 @@ class TerritoryFilterDialog(
     private val territories: List<String>,
     private val selectedTerritory: String,
     private val clickListener: (String, DialogFragment) -> Unit
-) : OffsetDialogFragment() {
+) : OffsetDialogFragment<LinearLayout>() {
 
     private val binding by viewBinding(DialogTerritoryFilterBinding::bind)
 

@@ -27,6 +27,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
@@ -82,6 +83,8 @@ import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 import androidx.navigation.fragment.navArgs
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.data.model.*
 import java.lang.StringBuilder
 import java.lang.Exception
@@ -138,16 +141,24 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         deniedPermissionDialog.show()
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val configuration = Configuration(PreferenceManager.getDefaultSharedPreferences(requireContext()), resources)
+        if (!configuration.hasInfoScreenBeenShownAlready()) {
+            safeNavigate(SearchFragmentDirections.exploreToInfo())
+            configuration.setPrefsKeyHasInfoScreenBeenShownAlready(true)
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         setupBackNavigation()
         binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
         binding.searchTitle.text = "United States" // TODO: use location to resolve
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
-                Log.i("EXPLOREDASH", "info menu click")
+                safeNavigate(SearchFragmentDirections.exploreToInfo())
             }
             true
         }
@@ -178,7 +189,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }.start()
             }
         })
-
         setupFilters(bottomSheet, args.type)
         setupSearchInput(bottomSheet)
         setupSearchResults()

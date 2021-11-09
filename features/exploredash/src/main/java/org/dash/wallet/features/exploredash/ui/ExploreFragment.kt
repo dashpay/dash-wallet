@@ -25,7 +25,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
-import org.dash.wallet.features.exploredash.ui.dialogs.ExploreDashInfoDialog
 
 @AndroidEntryPoint
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
@@ -41,8 +40,7 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
         }
 
         binding.merchantsBtn.setOnClickListener {
-            ExploreDashInfoDialog.newInstance().show(childFragmentManager, "ExploreDashInfoDialog")
-            //safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
+            safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
         }
 
         binding.atmsBtn.setOnClickListener {
