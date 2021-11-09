@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="ToggleButton" parent="Button.Borderless">
+    <style name="ToggleButton" parent="Button.Small.Rect.Tertiary">
         <item name="android:minHeight">0dp</item>
         <item name="android:minWidth">0dp</item>
         <item name="android:paddingLeft">12dp</item>
@@ -28,5 +28,25 @@
         <item name="android:background">@drawable/small_green_button_background</item>
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:layout_height">40dp</item>
+    </style>
+
+    <style name="ExploreTestBottomContentBackground" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="ExploreBottomContentBackground">
+        <item name="primaryColor">@color/gray_40</item>
+        <item name="secondaryColor">@color/gray_40</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="ExploreSearchResultsBackground" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="UpButtonBackground">
+        <item name="primaryColor">@color/gray_900_0.7</item>
+        <item name="secondaryColor">@android:color/transparent</item>
+        <item name="cornerRadius">22dp</item>
     </style>
 </resources>

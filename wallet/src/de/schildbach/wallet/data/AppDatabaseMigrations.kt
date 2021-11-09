@@ -18,6 +18,7 @@ package de.schildbach.wallet.data
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.google.firebase.database.PropertyName
 
 class AppDatabaseMigrations {
     companion object {
@@ -28,19 +29,20 @@ class AppDatabaseMigrations {
                         "`updateDate` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, " +
                         "`address4` TEXT, `latitude` REAL, `longitude` REAL, `territory` TEXT, " +
                         "`phone` TEXT, `website` TEXT, `type` TEXT, `logoLocation` TEXT, " +
-                        "`deeplink` TEXT, `paymentMethod` TEXT, PRIMARY KEY(`id`))")
+                        "`deeplink` TEXT, `paymentMethod` TEXT, `source` TEXT, `sourceId` INTEGER, " +
+                        "`coverImage` TEXT, `city` TEXT, PRIMARY KEY(`id`))")
 
                 database.execSQL("CREATE TABLE `atm` (`id` INTEGER NOT NULL, `name` TEXT, " +
                         "`active` INTEGER DEFAULT 1, `city` TEXT, `coverImage` TEXT, `phone` TEXT, " +
                         "`postcode` TEXT, `website` TEXT, `type` TEXT, `manufacturer` TEXT, " +
                         "`latitude` REAL, `longitude` REAL, `territory` TEXT, `address1` TEXT, " +
                         "`address2` TEXT, `address3` TEXT, `address4` TEXT, `logoLocation` TEXT, " +
-                        "PRIMARY KEY(`id`))")
+                        "`source` TEXT, `sourceId` INTEGER, PRIMARY KEY(`id`))")
 
 
                 database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `merchant_fts` " +
                         "USING FTS4(`name`, `address1`, `address2`, `address3`, `address4`, " +
-                        "`territory`, content=`merchant`)")
+                        "`territory`, `city`, content=`merchant`)")
 
                 database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `atm_fts` " +
                         "USING FTS4(`name`, `manufacturer`, `address1`, `address2`, `address3`, " +

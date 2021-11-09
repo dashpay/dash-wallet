@@ -17,70 +17,53 @@
 package org.dash.wallet.features.exploredash.ui
 
 import android.Manifest
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.provider.Settings
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
-import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.animation.doOnEnd
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.*
-import androidx.core.view.ViewCompat.animate
-import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.RequestManager
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import com.bumptech.glide.request.FutureTarget
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.Target
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.maps.android.SphericalUtil
-import com.google.maps.android.collections.CircleManager
-import com.google.maps.android.collections.MarkerManager
-import com.google.maps.android.ktx.*
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.DialogBuilder
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
+import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
+import org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog
 import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
 import androidx.navigation.fragment.navArgs
 import org.dash.wallet.common.Configuration
@@ -94,51 +77,25 @@ import java.lang.Exception
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
+    companion object {
+        private const val SCROLL_OFFSET_FOR_UP = 700
+    }
+
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private val args by navArgs<SearchFragmentArgs>()
 
     private var bottomSheetWasExpanded: Boolean = false
     private var isKeyboardShowing: Boolean = false
-    private var googleMap: GoogleMap? = null
-    private lateinit var mCurrentUserLocation: LatLng
-    private var currentLocationMarker: Marker? = null
-    private var currentLocationCircle: Circle? = null
-    private val CURRENT_POSITION_MARKER_TAG = 0
-
-    private var markerManager: MarkerManager? = null
-    private var markerCollection: MarkerManager.Collection? = null
-    private var circleManager: CircleManager? = null
-    private var circleCollection: CircleManager.Collection? = null
-    private var futureTarget =  mutableListOf<FutureTarget<Bitmap>>()
-    private lateinit var markersGlideRequestManager: RequestManager
 
     private val permissionRequestLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()) { isPermissionGranted ->
-        if (isPermissionGranted){
+
+        if (isPermissionGranted) {
             viewModel.monitorUserLocation()
-            viewModel.observeCurrentUserLocation.observe(viewLifecycleOwner) {
-                showLocationOnMap(it)
-            }
         } else {
             showPermissionDeniedDialog()
         }
-    }
-
-    private fun showPermissionDeniedDialog() {
-        val deniedPermissionDialog = DialogBuilder.warn(
-            requireActivity(),
-            R.string.permission_required_title,
-            R.string.permission_required_message
-        )
-        deniedPermissionDialog.setPositiveButton(R.string.goto_settings) { _, _ ->
-            val intent = createAppSettingsIntent()
-            startActivity(intent)
-        }
-        deniedPermissionDialog.setNegativeButton(R.string.button_dismiss) { dialog: DialogInterface, _ ->
-            dialog.dismiss()
-        }
-        deniedPermissionDialog.show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -153,8 +110,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupBackNavigation()
-        binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
-        binding.searchTitle.text = "United States" // TODO: use location to resolve
+        binding.toolbarTitle.text = getToolbarTitle()
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
@@ -165,122 +121,113 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-        bottomSheet.halfExpandedRatio =
-            ResourcesCompat.getFloat(
-                resources, if (args.type == ExploreTopic.Merchants) {
-                    R.dimen.merchant_half_expanded_ratio
-                } else {
-                    R.dimen.atm_half_expanded_ratio
-                }
-            )
-        bottomSheet.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback() {
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {}
+        bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
+        bottomSheet.halfExpandedRatio = ResourcesCompat.getFloat(resources,
+            if (args.type == ExploreTopic.Merchants) R.dimen.merchant_half_expanded_ratio else R.dimen.atm_half_expanded_ratio
+        )
 
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-                val isExpanded = newState == BottomSheetBehavior.STATE_EXPANDED
-                binding.appbarDivider.alpha = if (isExpanded) 1f else 0f
-                // TODO (ashikhmin): it's better to replace this with android:translationZ="0.1dp"
-                // (not supported on API 19) in the appbar to bring it
-                // on top of the search results while keeping the shadow off
-                animate(binding.dragIndicator).apply {
-                    duration = 100
-                    alpha(if (isExpanded) 0f else 1f)
-                }.start()
-            }
-        })
-        setupFilters(bottomSheet, args.type)
-        setupSearchInput(bottomSheet)
-        setupSearchResults()
+        val header = SearchHeaderAdapter(args.type)
+        setupFilters(header, bottomSheet, args.type)
+        setupSearchInput(header, bottomSheet)
+        setupSearchResults(header)
         setupItemDetails()
 
         viewModel.init(args.type)
-        markersGlideRequestManager = Glide.with(this)
-        val mapFragment = childFragmentManager.findFragmentById(R.id.explore_map) as SupportMapFragment
-        lifecycleScope.launchWhenStarted {
-            googleMap = mapFragment.awaitMap()
-            checkPermissionOrShowMap()
-            setUserLocationMarkerMovementState()
+
+        if (isLocationPermissionGranted()) {
+            viewModel.monitorUserLocation()
         }
     }
 
-    private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
-        binding.merchantOptions.isVisible = topic == ExploreTopic.Merchants
-        binding.atmOptions.isVisible = topic == ExploreTopic.ATMs
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.clearJobs()
+    }
 
-        binding.allMerchantsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
+    private fun setupFilters(
+        header: SearchHeaderAdapter,
+        bottomSheet: BottomSheetBehavior<ConstraintLayout>,
+        topic: ExploreTopic
+    ) {
+        val defaultMode = if (topic == ExploreTopic.Merchants) FilterMode.Online else FilterMode.All
+        viewModel.setFilterMode(defaultMode)
+
+        header.setOnFilterOptionChosen { _, index ->
+            if (topic == ExploreTopic.Merchants) {
+                viewModel.setFilterMode(
+                    when (index) {
+                        0 -> FilterMode.Online
+                        1 -> FilterMode.Physical
+                        else -> FilterMode.All
+                    }
+                )
+            } else {
+                viewModel.setFilterMode(
+                    when (index) {
+                        1 -> FilterMode.Buy
+                        2 -> FilterMode.Sell
+                        3 -> FilterMode.BuySell
+                        else -> FilterMode.All
+                    }
+                )
+            }
         }
 
-        binding.physicalMerchantsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Physical)
-        }
-
-        binding.onlineMerchantsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Online)
-        }
-
-        binding.allAtmsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.All)
-        }
-
-        binding.buyAtmsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Buy)
-        }
-
-        binding.sellAtmsOption.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.Sell)
-        }
-
-        binding.buySellAtmsOptions.setOnClickListener {
-            viewModel.setFilterMode(ExploreViewModel.FilterMode.BuySell)
-        }
-
-        binding.filterBtn.setOnClickListener {
+        header.setOnFilterButtonClicked {
             lifecycleScope.launch {
                 val territories = viewModel.getTerritoriesWithPOIs()
-                TerritoryFilterDialog(territories, viewModel.pickedTerritory) { name, dialog ->
-                    lifecycleScope.launch {
-                        delay(300)
-                        dialog.dismiss()
-                        viewModel.pickedTerritory = name
-                    }
-                }.show(parentFragmentManager, "territory_filter")
+                FiltersDialog(territories, viewModel.selectedRadiusOption, viewModel.pickedTerritory, { territory, _ ->
+                    viewModel.pickedTerritory = territory
+                }, { radius, dialog ->
+                    dialog.dismiss()
+                    viewModel.selectedRadiusOption = radius
+                }).show(parentFragmentManager, "filters_dialog")
             }
         }
 
-        viewModel.filterMode.observe(viewLifecycleOwner) {
-            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
-                refreshMerchantOptions(it)
-            } else if (viewModel.exploreTopic == ExploreTopic.ATMs) {
-                refreshAtmsOptions(it)
-            }
+        viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
+            if (mode == FilterMode.Online) {
+                header.setTitle(getString(R.string.explore_online_merchant))
+                bottomSheet.isDraggable = false
 
-            if (viewModel.selectedItem.value == null && it == ExploreViewModel.FilterMode.Online) {
+                if (viewModel.selectedItem.value == null) {
+                    bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
+                    bottomSheetWasExpanded = true
+                }
+            } else {
+                header.setTitle(viewModel.searchResultsTitle.value ?: getString(R.string.explore_search_results))
+                bottomSheet.isDraggable = true
+
+                if (isLocationPermissionGranted()) {
+                    bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                    bottomSheetWasExpanded = false
+                } else {
+                    permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+            }
+        }
+
+        viewModel.isLocationEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            if (isEnabled && viewModel.filterMode.value != FilterMode.Online) {
+                bottomSheet.isDraggable = true
+                bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+            } else {
                 bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
-                bottomSheetWasExpanded = true
-                binding.appbarDivider.alpha = 1f
-                binding.dragIndicator.alpha = 0f
+                bottomSheet.isDraggable = false
             }
         }
     }
 
-    private fun setupSearchInput(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
-        binding.search.doOnTextChanged { text, _, _, _ ->
-            binding.clearBtn.isVisible = !text.isNullOrEmpty()
-            viewModel.submitSearchQuery(text.toString())
+    private fun setupSearchInput(
+        header: SearchHeaderAdapter,
+        bottomSheet: BottomSheetBehavior<ConstraintLayout>
+    ) {
+        header.setOnSearchQueryChanged {
+            viewModel.submitSearchQuery(it)
         }
 
-        binding.search.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                hideKeyboard()
-            }
-
-            true
-        }
-
-        binding.clearBtn.setOnClickListener {
-            binding.search.text.clear()
+        header.setOnSearchQuerySubmitted {
+            hideKeyboard()
         }
 
         requireActivity().window?.decorView?.let { decor ->
@@ -297,7 +244,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupSearchResults() {
+    private fun setupSearchResults(header: SearchHeaderAdapter) {
         val adapter = MerchantsAtmsResultAdapter { item, _ ->
             hideKeyboard()
 
@@ -312,32 +259,42 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
                 if (positionStart == 0 && itemCount != ExploreViewModel.PAGE_SIZE) {
                     // Scrolling on top if user changed the filter option
-                    binding.searchResultsList.scrollToPosition(0)
+                    binding.searchResults.scrollToPosition(0)
                 }
             }
         })
 
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
-        val decorator = ListDividerDecorator(divider, false)
-        binding.searchResultsList.addItemDecoration(decorator)
-        binding.searchResultsList.adapter = adapter
+        val decorator = ListDividerDecorator(
+            divider,
+            showAfterLast = false,
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
+        )
+        binding.searchResults.addItemDecoration(decorator)
+        binding.searchResults.adapter = ConcatAdapter(header, adapter)
+
+        binding.searchResults.setOnScrollChangeListener { _, _, _, _, _ ->
+            binding.upButton.isVisible = shouldShowUpButton()
+        }
+
+        binding.upButton.setOnClickListener {
+            binding.searchResults.scrollToPosition(0)
+        }
 
         viewModel.pagingSearchResults.observe(viewLifecycleOwner) { results ->
             adapter.submitData(viewLifecycleOwner.lifecycle, results)
         }
 
-        viewModel.searchResults.observe(viewLifecycleOwner){ results ->
-            resetMap()
-            // For the 1st iteration of this feature, we shall limit the number of markers to be displayed
-            if (results.isNotEmpty()){
-                if (results.size < 20){
-                    setMarkers(results)
-                } else setMarkers(results.shuffled().subList(0, 20))
+        viewModel.searchResultsTitle.observe(viewLifecycleOwner) {
+            if (viewModel.filterMode.value == FilterMode.Online) {
+                header.setTitle(getString(R.string.explore_online_merchant))
+            } else {
+                header.setTitle(it)
             }
         }
 
         viewLifecycleOwner.observeOnDestroy {
-            binding.searchResultsList.adapter = null
+            binding.searchResults.adapter = null
         }
     }
 
@@ -360,7 +317,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     transitToDetails(item.type == MerchantType.ONLINE)
                 }
             } else {
-                binding.toolbarTitle.text = getString(R.string.explore_where_to_spend)
+                binding.toolbarTitle.text = getToolbarTitle()
                 transitToSearchResults()
             }
         }
@@ -392,23 +349,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun bindCommonDetails(item: SearchResult, isOnline: Boolean) {
         binding.itemDetails.apply {
             itemName.text = item.name
-
-            val addressBuilder = StringBuilder()
-            addressBuilder.append(item.address1)
-
-            if (!item.address2.isNullOrBlank()) {
-                addressBuilder.append("\n${item.address2}")
-            }
-
-            if (!item.address3.isNullOrBlank()) {
-                addressBuilder.append("\n${item.address3}")
-            }
-
-            if (!item.address4.isNullOrBlank()) {
-                addressBuilder.append("\n${item.address4}")
-            }
-
-            itemAddress.text = addressBuilder.toString()
+            itemAddress.text = item.displayAddress
 
             linkBtn.isVisible = !item.website.isNullOrEmpty()
             linkBtn.setOnClickListener {
@@ -417,7 +358,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             directionBtn.isVisible = !isOnline &&
                     ((item.latitude != null && item.longitude != null) ||
-                    !item.googleMaps.isNullOrBlank())
+                            !item.googleMaps.isNullOrBlank())
             directionBtn.setOnClickListener {
                 openMaps(item)
             }
@@ -436,7 +377,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             Glide.with(requireContext())
                 .load(merchant.logoLocation)
-                .error(R.drawable.ic_merchant_placeholder)
+                .error(R.drawable.ic_image_placeholder)
                 .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
                 .into(itemImage)
@@ -452,8 +393,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             itemAddress.isVisible = !isOnline
 
             val isDash = merchant.paymentMethod == PaymentMethod.DASH
-            val drawable = ResourcesCompat.getDrawable(resources,
-                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card_white, null)
+            val drawable = ResourcesCompat.getDrawable(
+                resources,
+                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card_white, null
+            )
             payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
 
             if (isDash) {
@@ -473,7 +416,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
             } else {
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
+                    matchConstraintPercentHeight =
+                        ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
                 }
                 root.updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
             }
@@ -512,20 +456,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
 
             root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
+                matchConstraintPercentHeight =
+                    ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
             }
 
             Glide.with(requireContext())
                 .load(atm.logoLocation)
-                .error(R.drawable.ic_atm_placeholder)
+                .error(R.drawable.ic_image_placeholder)
                 .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
                 .into(logoImg)
 
             Glide.with(requireContext())
                 .load(atm.coverImage)
-                .placeholder(R.drawable.ic_atm_placeholder)
-                .error(R.drawable.ic_atm_placeholder)
+                .placeholder(R.drawable.ic_image_placeholder)
+                .error(R.drawable.ic_image_placeholder)
                 .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
                 .transition(DrawableTransitionOptions.withCrossFade(200))
                 .into(itemImage)
@@ -535,71 +480,62 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun transitToDetails(fullHeight: Boolean) {
+        binding.upButton.isVisible = false
+
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = false
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
-        bottomSheet.state = if (fullHeight) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_HALF_EXPANDED
+        bottomSheet.state =
+            if (fullHeight) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_HALF_EXPANDED
 
-        animate(binding.searchResults).apply {
-            duration = 200
-            alpha(0f)
-        }.withEndAction {
-            binding.searchResults.isVisible = false
-        }.start()
-
-        binding.itemDetails.root.alpha = 0f
         binding.itemDetails.root.isVisible = true
-        animate(binding.itemDetails.root).apply {
+
+        val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 0f)
+        val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
+        val animDetails = ObjectAnimator.ofFloat(binding.itemDetails.root, View.ALPHA, 1f)
+        AnimatorSet().apply {
+            playTogether(animResults, animDrag, animDetails)
             duration = 200
-            startDelay = 200
-            alpha(1f)
+            doOnEnd {
+                binding.searchResults.isVisible = false
+                binding.dragIndicator.isVisible = false
+            }
         }.start()
     }
 
     private fun transitToSearchResults() {
+        binding.upButton.isVisible = shouldShowUpButton()
+
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        bottomSheet.isDraggable = true
+        bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true &&
+                viewModel.filterMode.value != FilterMode.Online
 
         bottomSheet.state = if (bottomSheetWasExpanded) {
             BottomSheetBehavior.STATE_EXPANDED
-        } else  {
+        } else {
             BottomSheetBehavior.STATE_HALF_EXPANDED
         }
 
-        animate(binding.itemDetails.root).apply {
-            duration = 200
-            alpha(0f)
-        }.withEndAction {
-            binding.itemDetails.root.isVisible = false
-        }.start()
-
         binding.searchResults.isVisible = true
-        binding.searchResults.alpha = 0f
-        animate(binding.searchResults).apply {
+        binding.dragIndicator.isVisible = true
+
+        val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 1f)
+        val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 1f)
+        val animDetails = ObjectAnimator.ofFloat(binding.itemDetails.root, View.ALPHA, 0f)
+        AnimatorSet().apply {
+            playTogether(animResults, animDrag, animDetails)
             duration = 200
-            startDelay = 200
-            alpha(1f)
+            doOnEnd {
+                binding.itemDetails.root.isVisible = false
+            }
         }.start()
     }
 
-    private fun refreshMerchantOptions(filterMode: ExploreViewModel.FilterMode) {
-        binding.allMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.All
-        binding.allMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.All
-        binding.physicalMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Physical
-        binding.physicalMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Physical
-        binding.onlineMerchantsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Online
-        binding.onlineMerchantsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Online
-    }
-
-    private fun refreshAtmsOptions(filterMode: ExploreViewModel.FilterMode) {
-        binding.allAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.All
-        binding.allAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.All
-        binding.buyAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Buy
-        binding.buyAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Buy
-        binding.sellAtmsOption.isChecked = filterMode == ExploreViewModel.FilterMode.Sell
-        binding.sellAtmsOption.isEnabled = filterMode != ExploreViewModel.FilterMode.Sell
-        binding.buySellAtmsOptions.isChecked = filterMode == ExploreViewModel.FilterMode.BuySell
-        binding.buySellAtmsOptions.isEnabled = filterMode != ExploreViewModel.FilterMode.BuySell
+    private fun getToolbarTitle(): String {
+        return when (viewModel.exploreTopic) {
+            ExploreTopic.Merchants -> getString(R.string.explore_where_to_spend)
+            else -> getString(R.string.explore_atms)
+        }
     }
 
     private fun openMaps(item: SearchResult) {
@@ -630,7 +566,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun hideKeyboard() {
         val inputManager = requireContext()
-                .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+            .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
 
@@ -638,238 +574,33 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         return value?.trim()?.lowercase()?.replace(" ", "_")
     }
 
-    private fun setUserLocationMarkerMovementState() {
-        markerCollection?.setOnMarkerDragListener(object : GoogleMap.OnMarkerDragListener {
-            override fun onMarkerDragStart(p0: Marker) {
-            }
-
-            override fun onMarkerDrag(p0: Marker) {
-            }
-
-            override fun onMarkerDragEnd(marker: Marker) {
-                if (marker.tag == CURRENT_POSITION_MARKER_TAG){
-                    mCurrentUserLocation = marker.position
-                    currentLocationMarker?.position = marker.position
-                    currentLocationCircle?.center = marker.position
-                    googleMap?.moveCamera(CameraUpdateFactory.newLatLng(marker.position))
-                }
-            }
-        })
-
+    private fun shouldShowUpButton(): Boolean {
+        val offset = binding.searchResults.computeVerticalScrollOffset()
+        return offset > SCROLL_OFFSET_FOR_UP
     }
 
-    private suspend fun renderMerchantsOnMap(results: List<SearchResult>) {
-        withContext(Dispatchers.IO){
-            val merchants = results.filterIsInstance<Merchant>()
-            Log.e(this@SearchFragment::class.java.simpleName, "Merchant size: ${merchants.size}")
-            val chunkResult = merchants.chunked(10)
-            Log.e(this@SearchFragment::class.java.simpleName, "Chunk size: ${chunkResult.size}")
-
-            chunkResult.forEach {
-                loadMerchantMarkers(it)
-            }
-        }
-    }
-
-    private fun handleClickOnMerchantMarker(results: List<SearchResult>) {
-        markerCollection?.setOnMarkerClickListener { marker ->
-            if (marker.tag == CURRENT_POSITION_MARKER_TAG) {
-                false
-            } else {
-                val atmItemCoordinates = marker.position
-                val merchants = results.filterIsInstance<Merchant>()
-                merchants.forEach {
-                    if ((it.latitude == atmItemCoordinates.latitude) && (it.longitude == atmItemCoordinates.longitude)) {
-                        viewModel.openMerchantDetails(it)
-                    }
-                }
-                true
-            }
-        }
-    }
-
-    private fun checkPermissionOrShowMap() {
-        if (isGooglePlayServicesAvailable()) {
-            markerManager = MarkerManager(googleMap)
-            markerCollection = markerManager?.newCollection()
-            circleManager = googleMap?.let { CircleManager(it) }
-            circleCollection = circleManager?.newCollection()
-            if (isForegroundLocationPermissionGranted()) {
-                viewModel.monitorUserLocation()
-                viewModel.observeCurrentUserLocation.observe(viewLifecycleOwner) {
-                    showLocationOnMap(it)
-                }
-            } else {
-                permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            }
-        }
-    }
-
-    private fun addCircleAroundCurrentPosition() {
-        currentLocationCircle = circleCollection?.addCircle(CircleOptions().apply {
-            center(mCurrentUserLocation)
-            radius(1500.0)
-            fillColor(Color.parseColor("#26008DE4"))
-            strokeColor(Color.TRANSPARENT)
-        })
-    }
-
-    private fun addMarkerOnCurrentPosition() {
-        val bitmap = getBitmapFromDrawable(R.drawable.user_location_map_marker)
-        currentLocationMarker = markerCollection?.addMarker(MarkerOptions().apply {
-            position(mCurrentUserLocation)
-            anchor(0.5f, 0.5f)
-            if (bitmap != null) {
-                icon(BitmapDescriptorFactory.fromBitmap(bitmap))
-            }
-            draggable(true)
-        }).apply {
-            this?.tag = CURRENT_POSITION_MARKER_TAG
-        }
-    }
-
-    private fun showLocationOnMap(userLocation: UserLocation) {
-        binding.searchTitle.text = userLocation.name
-        mCurrentUserLocation = LatLng(userLocation.latitude, userLocation.longitude)
-        Log.e(this::class.java.simpleName, "Lat: ${mCurrentUserLocation.latitude}, Lng: ${mCurrentUserLocation.longitude}")
-        if (currentLocationCircle != null) circleCollection?.remove(currentLocationCircle)
-        if (currentLocationMarker != null) markerCollection?.remove(currentLocationMarker)
-
-        addMarkerOnCurrentPosition()
-        addCircleAroundCurrentPosition()
-        setMapDefaultViewLevel()
-    }
-
-    private fun isForegroundLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),
+    private fun isLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),
         Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-    private fun isGooglePlayServicesAvailable(): Boolean {
-        val googleApiAvailability: GoogleApiAvailability = GoogleApiAvailability.getInstance()
-        val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(requireActivity())
-        if (ConnectionResult.SUCCESS === status) return true else {
-            if (googleApiAvailability.isUserResolvableError(status))
-                Toast.makeText(requireActivity(), R.string.common_google_play_services_install_title, Toast.LENGTH_LONG).show()
+    private fun showPermissionDeniedDialog() {
+        val deniedPermissionDialog = DialogBuilder.warn(
+            requireActivity(),
+            R.string.permission_required_title,
+            R.string.permission_required_message
+        )
+        deniedPermissionDialog.setPositiveButton(R.string.goto_settings) { _, _ ->
+            val intent = createAppSettingsIntent()
+            startActivity(intent)
         }
-        return false
+        deniedPermissionDialog.setNegativeButton(R.string.button_dismiss) { dialog: DialogInterface, _ ->
+            dialog.dismiss()
+        }
+        deniedPermissionDialog.show()
     }
 
     private fun createAppSettingsIntent() = Intent().apply {
         action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
         data = Uri.fromParts("package", requireContext().packageName, null)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    }
-
-    private fun getBitmapFromDrawable(drawableId: Int): Bitmap? {
-        var drawable = AppCompatResources.getDrawable(requireActivity(), drawableId)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            drawable = (drawable?.let { DrawableCompat.wrap(it) })?.mutate()
-        }
-        val bitmap = drawable?.let { Bitmap.createBitmap(it.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888) }
-        val canvas = bitmap?.let { Canvas(it) }
-        canvas?.width?.let { drawable?.setBounds(0, 0, it, canvas.height) }
-        canvas?.let { drawable?.draw(it) }
-        return bitmap
-    }
-
-    private fun milesToMeters(miles: Double): Double {
-        return miles * 1609.344
-    }
-
-    private fun calculateBounds(center: LatLng, radius: Double): LatLngBounds {
-        return LatLngBounds.builder()
-            .include(SphericalUtil.computeOffset(center, radius, 0.0))
-            .include(SphericalUtil.computeOffset(center, radius, 90.0))
-            .include(SphericalUtil.computeOffset(center, radius, 180.0))
-            .include(SphericalUtil.computeOffset(center, radius, 270.0)).build()
-    }
-
-    private fun setMapDefaultViewLevel() {
-        val heightInPixel = binding.exploreMap.height
-        val latLngBounds = calculateBounds(mCurrentUserLocation, milesToMeters(50.0))
-        googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, dpToPx(5)))
-    }
-
-    private fun dpToPx(dp: Int): Int {
-        val displayMetrics = resources.displayMetrics
-        return dp * (displayMetrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT)
-    }
-
-    private suspend fun loadMerchantMarkers(merchants: List<Merchant>) {
-        futureTarget = merchants.map {
-            markersGlideRequestManager
-                .asBitmap()
-                .load(it.logoLocation)
-                .placeholder(R.drawable.merchant_marker)
-                .error(R.drawable.merchant_marker)
-                .apply(RequestOptions().centerCrop().circleCrop())
-                .listener(object : RequestListener<Bitmap> {
-                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
-                        Log.i("GlideException" ,"${e?.message}")
-                        return false
-                    }
-
-                    override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-                        Log.i(this@SearchFragment::class.java.simpleName, "Resource loaded")
-                        return false
-                    }
-                })
-                .submit(72, 72)
-        }.toMutableList()
-
-        val merchantMarkers = merchants.zip(futureTarget).map { pair ->
-            pair.first.latitude?.let {
-                pair.first.longitude?.let { it1 ->
-                    MerchantMarkerUI(it, it1,
-                        try {
-                            pair.second.get()
-                        } catch (e: Exception){
-                            markersGlideRequestManager.asBitmap().load(R.drawable.merchant_marker).submit(72, 72).get()
-                        }
-                    )
-                }
-            }
-        }
-
-        futureTarget.forEach { markersGlideRequestManager.clear(it) }
-
-        withContext(Dispatchers.Main){
-            merchantMarkers.forEach{
-                it?.let { it1 -> addMerchantMarkerToMap(it1.latitude, it.longitude, it.logoUrl) }
-            }
-        }
-
-    }
-
-    private fun addMerchantMarkerToMap(latitude: Double, longitude: Double, bitmap: Bitmap) {
-        markerCollection?.addMarker(MarkerOptions().apply {
-                position(LatLng(latitude, longitude))
-                anchor(0.5f, 0.5f)
-                icon(BitmapDescriptorFactory.fromBitmap(bitmap))
-                draggable(false)
-            }).apply {
-                this?.tag = null
-        }
-    }
-
-    private fun resetMap() {
-        futureTarget.forEach { markersGlideRequestManager.clear(it) }
-        markerCollection?.clear()
-        circleCollection?.clear()
-        googleMap?.clear()
-        addMarkerOnCurrentPosition()
-        addCircleAroundCurrentPosition()
-    }
-
-    data class MerchantMarkerUI(
-        val latitude: Double,
-        val longitude: Double,
-        val logoUrl: Bitmap
-    )
-
-    private fun setMarkers(items: List<SearchResult>) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            renderMerchantsOnMap(items)
-        }
-        handleClickOnMerchantMarker(items)
     }
 }

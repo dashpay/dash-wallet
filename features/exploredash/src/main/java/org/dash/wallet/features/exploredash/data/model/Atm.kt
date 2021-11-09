@@ -17,6 +17,7 @@
 package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.Entity
+import androidx.room.Index
 import com.google.firebase.database.PropertyName
 
 object AtmType {
@@ -25,14 +26,15 @@ object AtmType {
     const val BOTH = "Buy and Sell"
 }
 
-@Entity(tableName = "atm")
+@Entity(
+    tableName = "atm",
+    indices = [
+        Index("latitude"),
+        Index("longitude"),
+    ])
 data class Atm(
-    var city: String? = "",
     var postcode: String? = "",
     var manufacturer: String? = "",
-
-    @get:PropertyName("cover_image") @set:PropertyName("cover_image")
-    var coverImage: String? = "",
 
     @get:PropertyName("buy_sell") @set:PropertyName("buy_sell")
     override var type: String? = "",

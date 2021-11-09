@@ -6,4 +6,9 @@
         <item name="cardElevation">20dp</item>
         <item name="android:outlineSpotShadowColor">#1AB8C1CC</item>
     </style>
+
+    <style name="SegmentedPickerThumb">
+        <item name="android:elevation">6dp</item>
+        <item name="android:outlineSpotShadowColor">#1AB8C1CC</item>
+    </style>
 </resources>

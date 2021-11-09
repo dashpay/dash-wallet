@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+        android:id="@+id/filter_options"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:layout_marginHorizontal="15dp"
+        tools:layout="@layout/segmented_picker" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginTop="20dp">
+
+        <EditText
+            android:id="@+id/search"
+            style="@style/Body2"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/rounded_background"
+            android:drawableStart="@drawable/ic_search"
+            android:drawablePadding="7dp"
+            android:hint="@string/explore_search_hint"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:paddingStart="8dp"
+            android:paddingEnd="40dp"
+            android:textColor="@android:color/black"
+            android:theme="@style/SearchInputBackground" />
+
+        <ImageButton
+            android:id="@+id/clear_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end|center_vertical"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_close"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp">
+
+        <TextView
+            android:id="@+id/search_title"
+            style="@style/Headline6.Bold"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="15dp"
+            android:layout_weight="1"
+            tools:text="United States" />
+
+        <Button
+            android:id="@+id/filter_btn"
+            style="@style/Button.Small.Rect.Tertiary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:drawableEnd="@drawable/ic_filter"
+            android:drawablePadding="4dp"
+            android:text="@string/explore_filter"
+            android:textSize="13sp" />
+    </LinearLayout>
+</LinearLayout>

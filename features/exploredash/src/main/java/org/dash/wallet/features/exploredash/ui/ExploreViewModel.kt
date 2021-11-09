@@ -26,7 +26,12 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.*
+import org.dash.wallet.features.exploredash.services.GeoBounds
+import org.dash.wallet.features.exploredash.services.UserLocation
+import org.dash.wallet.features.exploredash.services.UserLocationState
 import javax.inject.Inject
+import kotlin.math.max
+import kotlin.math.min
 
 enum class ExploreTopic {
     Merchants, ATMs
@@ -36,18 +41,25 @@ enum class NavigationRequest {
     SendDash, ReceiveDash, None
 }
 
+enum class FilterMode {
+    All, Online, Physical, Buy, Sell, BuySell
+}
+
 @ExperimentalCoroutinesApi
 @FlowPreview
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
     private val merchantDao: MerchantDao,
     private val atmDao: AtmDao,
-    private val locationUpdatesUseCase: UserLocationState
+    private val locationProvider: UserLocationState
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
         const val PAGE_SIZE = 100
         const val MAX_ITEMS_IN_MEMORY = 300
+        const val METERS_IN_MILE = 1609.344
+        const val METERS_IN_KILOMETER = 1000.0
+        const val MIN_ZOOM_LEVEL = 8f
     }
 
     private val workerJob = SupervisorJob()
@@ -55,13 +67,16 @@ class ExploreViewModel @Inject constructor(
 
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
 
+    private var boundedFilterJob: Job? = null
+    private var pagingFilterJob: Job? = null
+
+    private val searchQuery = MutableStateFlow("")
     var exploreTopic = ExploreTopic.Merchants
         private set
-    private var filterJob: Job? = null
-    private val searchQuery = MutableStateFlow("")
 
-    private var currentUserLocationState = MutableStateFlow(UserLocation(0.0, 0.0))
-    val observeCurrentUserLocation = currentUserLocationState.asLiveData()
+    private var savedLocation: UserLocation? = null
+    private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
+    val currentUserLocation = currentUserLocationState.asLiveData()
 
     private val _pickedTerritory = MutableStateFlow("")
     var pickedTerritory: String
@@ -70,9 +85,33 @@ class ExploreViewModel @Inject constructor(
             _pickedTerritory.value = value
         }
 
+    var isMetric = false // TODO
+        private set
+
+    // Can be miles or kilometers, see isMetric
+    private val _selectedRadiusOption = MutableStateFlow(20)
+    var selectedRadiusOption: Int
+        get() = _selectedRadiusOption.value
+        set(value) {
+            _selectedRadiusOption.value = value
+        }
+
+    val radius: Double
+        get() = if (isMetric) selectedRadiusOption * METERS_IN_KILOMETER else selectedRadiusOption * METERS_IN_MILE
+
+    private val _searchBounds = MutableStateFlow<GeoBounds?>(null)
+    var searchBounds: GeoBounds?
+        get() = _searchBounds.value
+        set(value) {
+            value?.let {
+                _searchBounds.value = ceilByRadius(value, radius)
+            }
+        }
+
     private val _filterMode = MutableStateFlow(FilterMode.Online)
-    val filterMode: LiveData<FilterMode>
-        get() = _filterMode.asLiveData()
+    var filterMode: LiveData<FilterMode> = MediatorLiveData<FilterMode>().apply {
+        addSource(_filterMode.asLiveData(), this::setValue)
+    }
 
     private val _searchResults = MutableLiveData<List<SearchResult>>()
     val searchResults: LiveData<List<SearchResult>>
@@ -82,85 +121,77 @@ class ExploreViewModel @Inject constructor(
     val pagingSearchResults: LiveData<PagingData<SearchResult>>
         get() = _pagingSearchResults
 
+    private val _searchResultsTitle = MutableLiveData<String>()
+    val searchResultsTitle: LiveData<String>
+        get() = _searchResultsTitle
+
     private val _selectedItem = MutableLiveData<SearchResult?>()
     val selectedItem: LiveData<SearchResult?>
         get() = _selectedItem
 
-    private val merchantsPagingFlow = searchQuery
+    private val _isLocationEnabled = MutableLiveData(false)
+    val isLocationEnabled: LiveData<Boolean>
+        get() = _isLocationEnabled
+
+
+    // Used for the list of search results
+    private val pagingSearchFlow: Flow<PagingData<SearchResult>> = searchQuery
         .debounce(QUERY_DEBOUNCE_VALUE)
         .flatMapLatest { query ->
-            _pickedTerritory
-                .flatMapLatest { territory ->
-                    Pager(
-                        PagingConfig(
-                            pageSize = PAGE_SIZE,
-                            enablePlaceholders = false,
-                            maxSize = MAX_ITEMS_IN_MEMORY
-                        )
-                    ) {
-                        if (query.isNotBlank()) {
-                            merchantDao.pagingSearch(sanitizeQuery(query), territory)
-                        } else {
-                            merchantDao.pagingGet(territory)
-                        }
-                    }.flow
-                        .cachedIn(viewModelScope)
-                        .flatMapLatest { data ->
-                            _filterMode.map { mode ->
-                                data.filter { shouldShow(it, mode) }
-                                    .map { it as SearchResult }
-                            }
-                        }
-                }
-        }
-
-
-    private val atmsPagingFlow = searchQuery
-        .debounce(QUERY_DEBOUNCE_VALUE)
-        .flatMapLatest { query ->
-            _pickedTerritory
-                .flatMapLatest { territory ->
-                    Pager(
-                        PagingConfig(
-                            pageSize = PAGE_SIZE,
-                            enablePlaceholders = false,
-                            maxSize = MAX_ITEMS_IN_MEMORY
-                        )
-                    ) {
-                        if (query.isNotBlank()) {
-                            atmDao.pagingSearch(sanitizeQuery(query), territory)
-                        } else {
-                            atmDao.pagingGet(territory)
-                        }
-                    }.flow
-                        .cachedIn(viewModelScope)
-                        .flatMapLatest { data ->
-                            _filterMode.map { mode ->
-                                data.filter { shouldShow(it, mode) }
-                                    .map { it as SearchResult }
-                            }
-                        }
-                }
-        }
-
-    // TODO (ashikhmin) this most likely will need to be used along with paging source
-    // since paging doesn't play well with showing POIs on a map. Paging sources might be
-    // only needed when the location is turned off or the user is searching Online merchants
-    // and therefore there is a lot of data to show. Will be resolved in NMA-1036
-    val merchantsSearchFilterFlow = searchQuery
-        .debounce(300)
-        .flatMapLatest { query ->
-            _pickedTerritory
-                .flatMapLatest { territory ->
-                    if (query.isNotBlank()) {
-                        merchantDao.observeSearchResults(sanitizeQuery(query), territory)
-                    } else {
-                        merchantDao.observe(territory)
-                    }.filterNotNull()
-                        .flatMapLatest { merchants ->
+            _selectedRadiusOption
+                .flatMapLatest { _ ->
+                    _pickedTerritory
+                        .flatMapLatest { territory ->
                             _filterMode
-                                .map { mode ->
-                                    merchants.filter { shouldShow(it, mode) }
+                                .flatMapLatest { mode ->
+                                    _searchBounds
+                                        .filterNotNull()
+                                        .filter {
+                                            mode == FilterMode.Online ||
+                                            it.zoomLevel > MIN_ZOOM_LEVEL
+                                        }
+                                        .map { bounds ->
+                                            if (isLocationEnabled.value == true && mode != FilterMode.Online) {
+                                                locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
+                                            } else {
+                                                GeoBounds.noBounds
+                                            }
+                                        }
+                                        .distinctUntilChanged()
+                                        .flatMapLatest { bounds ->
+                                            Pager(
+                                                PagingConfig(
+                                                    pageSize = PAGE_SIZE,
+                                                    enablePlaceholders = false,
+                                                    maxSize = MAX_ITEMS_IN_MEMORY
+                                                )
+                                            ) {
+                                                getPagingSource(query, territory, mode, bounds)
+                                            }.flow
+                                                .cachedIn(viewModelScope)
+                                        }
+                                }
+                        }
+                }
+        }
+
+    // Used for the map
+    val boundedSearchFlow = searchQuery
+        .debounce(QUERY_DEBOUNCE_VALUE)
+        .flatMapLatest { query ->
+            _selectedRadiusOption
+                .flatMapLatest { _ ->
+                    _pickedTerritory
+                        .flatMapLatest { territory ->
+                            _searchBounds
+                                .filterNotNull()
+                                .filter { it.zoomLevel > MIN_ZOOM_LEVEL }
+                                .flatMapLatest { bounds ->
+                                    _filterMode
+                                        .filterNot { it == FilterMode.Online }
+                                        .flatMapLatest { mode ->
+                                            getBoundedFlow(query, territory, mode, bounds)
+                                        }
                                 }
                         }
                 }
@@ -171,21 +202,33 @@ class ExploreViewModel @Inject constructor(
         if (this.exploreTopic != exploreTopic) {
             clearFilters(exploreTopic)
             _pagingSearchResults.value = PagingData.from(listOf())
+            _searchResults.value = listOf()
         }
 
         this.exploreTopic = exploreTopic
-        this.filterJob?.cancel(CancellationException())
 
-        this.filterJob = if (exploreTopic == ExploreTopic.Merchants) {
-            merchantsPagingFlow
-        } else {
-            atmsPagingFlow
-        }.onEach(_pagingSearchResults::postValue)
+        this.pagingFilterJob?.cancel(CancellationException())
+        this.pagingFilterJob = pagingSearchFlow
+            .distinctUntilChanged()
+            .onEach(_pagingSearchResults::postValue)
             .launchIn(viewModelWorkerScope)
 
-        merchantsSearchFilterFlow
-            .onEach(_searchResults::postValue)
-            .launchIn(viewModelWorkerScope)
+        _isLocationEnabled.observeForever { locationEnabled ->
+            this.boundedFilterJob?.cancel(CancellationException())
+
+            if (locationEnabled) {
+                this.boundedFilterJob = boundedSearchFlow
+                    .distinctUntilChanged()
+                    .onEach(_searchResults::postValue)
+                    .launchIn(viewModelWorkerScope)
+            }
+            // Right now we don't show the map at all while location is disabled
+        }
+    }
+
+    fun clearJobs() {
+        this.boundedFilterJob?.cancel(CancellationException())
+        this.pagingFilterJob?.cancel(CancellationException())
     }
 
     fun setFilterMode(mode: FilterMode) {
@@ -224,6 +267,58 @@ class ExploreViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.ReceiveDash)
     }
 
+    fun monitorUserLocation() {
+        viewModelScope.launch {
+            _isLocationEnabled.value = true
+            locationProvider.observeUpdates().collect {
+                val savedLocation = savedLocation
+
+                if (savedLocation == null ||
+                    locationProvider.distanceBetween(savedLocation, it) > radius / 2
+                ) {
+                    val locationName = locationProvider
+                        .getCurrentLocationName(it.latitude, it.longitude)
+
+                    if (locationName.isNotBlank()) {
+                        _searchResultsTitle.postValue(locationName)
+                    }
+                }
+
+                currentUserLocationState.value = it
+            }
+        }
+    }
+
+    private fun getBoundedFlow(
+        query: String,
+        territory: String,
+        filterMode: FilterMode,
+        bounds: GeoBounds
+    ): Flow<List<SearchResult>> {
+        return if (exploreTopic == ExploreTopic.Merchants) {
+            merchantDao.observePhysical(query, territory, bounds)
+        } else {
+            val atms = getAtmTypes(filterMode)
+            atmDao.observePhysical(query, territory, atms, bounds)
+        }
+    }
+
+    private fun getPagingSource(
+        query: String,
+        territory: String,
+        filterMode: FilterMode,
+        bounds: GeoBounds
+    ): PagingSource<Int, SearchResult> {
+        @Suppress("UNCHECKED_CAST")
+        return if (exploreTopic == ExploreTopic.Merchants) {
+            val types = getMerchantTypes(filterMode)
+            merchantDao.observeAllPaging(query, territory, types, bounds)
+        } else {
+            val types = getAtmTypes(filterMode)
+            atmDao.observeAllPaging(query, territory, types, bounds)
+        } as PagingSource<Int, SearchResult>
+    }
+
     private fun clearFilters(topic: ExploreTopic) {
         searchQuery.value = ""
         _pickedTerritory.value = ""
@@ -234,54 +329,34 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    private fun shouldShow(item: SearchResult, mode: FilterMode): Boolean {
-        if (item is Merchant) {
-            return shouldShow(item, mode)
-        } else if (item is Atm) {
-            return shouldShow(item, mode)
-        }
-
-        return false
-    }
-
-    private fun shouldShow(merchant: Merchant, mode: FilterMode): Boolean {
-        return if (mode == FilterMode.All) {
-            // Showing all merchants
-            merchant.active != false
-        } else {
-            // Showing merchants of specific type or both types
-            merchant.active != false && (merchant.type == MerchantType.BOTH ||
-                    merchant.type == mode.toString().lowercase())
+    private fun getMerchantTypes(filterMode: FilterMode): List<String> {
+        return when (filterMode) {
+            FilterMode.Online -> listOf(MerchantType.ONLINE, MerchantType.BOTH)
+            FilterMode.Physical -> listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+            else -> listOf(MerchantType.ONLINE, MerchantType.PHYSICAL, MerchantType.BOTH)
         }
     }
 
-    private fun shouldShow(atm: Atm, mode: FilterMode): Boolean {
-        return if (mode == FilterMode.All) {
-            // Showing all ATMs
-            atm.active != false
-        } else {
-            // Showing ATMs of specific type or both types
-            atm.active != false && (atm.type == AtmType.BOTH ||
-                    (atm.type == AtmType.BUY && mode == FilterMode.Buy) ||
-                    (atm.type == AtmType.SELL && mode == FilterMode.Sell))
+    private fun getAtmTypes(filterMode: FilterMode): List<String> {
+        return when (filterMode) {
+            FilterMode.Buy -> listOf(AtmType.BUY, AtmType.BOTH)
+            FilterMode.Sell -> listOf(AtmType.SELL, AtmType.BOTH)
+            FilterMode.BuySell -> listOf(AtmType.BOTH)
+            else -> listOf(AtmType.BUY, AtmType.SELL, AtmType.BOTH)
         }
     }
 
-    private fun sanitizeQuery(query: String): String {
-        val escapedQuotes = query.replace(Regex.fromLiteral("\""), "\"\"")
-        return "\"$escapedQuotes*\""
-    }
+    private fun ceilByRadius(original: GeoBounds, radius: Double): GeoBounds {
+        val inRadius =
+            locationProvider.getRadiusBounds(original.centerLat, original.centerLng, radius)
 
-    enum class FilterMode {
-        All, Online, Physical, Buy, Sell, BuySell
+        return GeoBounds(
+            min(original.northLat, inRadius.northLat),
+            min(original.eastLng, inRadius.eastLng),
+            max(original.southLat, inRadius.southLat),
+            max(original.westLng, inRadius.westLng),
+            original.centerLat, original.centerLng,
+            original.zoomLevel
+        )
     }
-
-    fun monitorUserLocation() {
-        viewModelScope.launch {
-            locationUpdatesUseCase.fetchUpdates().collect {
-                currentUserLocationState.value = it
-            }
-        }
-    }
-
 }
