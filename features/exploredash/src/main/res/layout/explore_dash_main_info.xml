@@ -28,8 +28,7 @@
         android:layout_marginTop="40dp"
         android:textSize="28sp"
         android:text="@string/explore_info_header_text"
-        android:fontFamily="@font/montserrat_bold"
-        android:textColor="@color/gray_900"
+        style="@style/Body2.Bold"
         />
 
     <ImageView
@@ -51,8 +50,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dash_logo_blue"
         android:layout_marginTop="12dp"
-        android:fontFamily="@font/montserrat_bold"
-        android:textColor="@color/gray_900"
+        style="@style/Body2.Bold"
         android:textSize="16sp"
         android:text="@string/accept_dash_text"
         android:paddingBottom="2dp"
@@ -67,8 +65,7 @@
         app:layout_constraintTop_toBottomOf="@id/accept_dash_label"
         android:layout_marginTop="2dp"
         android:paddingTop="2dp"
-        android:fontFamily="@font/montserrat_regular"
-        android:textColor="@color/steel_gray_500"
+        style="@style/Body2.SteelGray500"
         android:text="@string/pay_with_dash_text"
         />
 
@@ -91,8 +88,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dash_gift_card_orange_icon"
         android:layout_marginTop="12dp"
-        android:fontFamily="@font/montserrat_bold"
-        android:textColor="@color/gray_900"
+        style="@style/Body2.Bold"
         android:textSize="16sp"
         android:text="@string/buy_gift_card_text"
         android:paddingBottom="2dp"
@@ -111,8 +107,7 @@
         app:layout_constraintTop_toBottomOf="@id/buy_gift_card_label"
         android:layout_marginTop="2dp"
         android:paddingTop="2dp"
-        android:fontFamily="@font/montserrat_regular"
-        android:textColor="@color/steel_gray_500"
+        style="@style/Body2.SteelGray500"
         android:text="@string/buy_gift_card_desc_text"
         />
 
@@ -126,8 +121,7 @@
         android:text="@string/learn_more_text"
         android:layout_marginTop="10dp"
         android:paddingTop="4dp"
-        android:fontFamily="@font/montserrat_semibold"
-        android:textColor="@color/blue_300"
+        style="@style/Body2.Blue300"
         />
 
     <TextView
@@ -141,7 +135,7 @@
         android:gravity="center"
         android:textColor="@color/dash_white"
         android:textSize="15sp"
-        android:fontFamily="@font/montserrat_semibold"
+        style="@style/MontserratSemiBold"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
         android:layout_marginLeft="16dp"

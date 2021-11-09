@@ -745,4 +745,21 @@
     <style name="Caption.Gray400">
         <item name="android:textColor">@color/gray_400</item>
     </style>
+
+    <style name="Body2.Bold" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="fontFamily">@font/montserrat_bold</item>
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColorHint">@color/gray_300</item>
+    </style>
+
+    <style name="Body2.SteelGray500" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Body2.Blue300" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/blue_300</item>
+    </style>
+
 </resources>
