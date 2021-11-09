@@ -32,8 +32,4 @@ class ExploreDashInfoDialog : OffsetDialogFragment<ConstraintLayout>(){
             dismissAllowingStateLoss()
         }
     }
-
-    companion object {
-        fun newInstance() = ExploreDashInfoDialog()
-    }
 }
