@@ -98,7 +98,7 @@ open class LockScreenActivity : SecureActivity() {
         intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
-    protected var isLocked: Boolean = true
+    protected var isLocked: Boolean = autoLogout.shouldLogout()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -204,6 +204,7 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
+            isLocked = true
             lockScreenViewModel.activatingLockScreen.call()
             setLockState(State.USE_DEFAULT)
             autoLogout.setAppWentBackground(false)
