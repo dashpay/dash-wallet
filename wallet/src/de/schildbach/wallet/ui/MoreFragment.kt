@@ -20,6 +20,7 @@ import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.view.View
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
@@ -46,7 +47,9 @@ import kotlinx.android.synthetic.main.update_profile_network_unavailable.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
@@ -59,6 +62,9 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
     private val walletApplication = WalletApplication.getInstance()
     private var showInviteSection = false
+
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     companion object {
         const val PROFILE_VIEW = 0
@@ -90,6 +96,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             })
         }
         buy_and_sell.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_MORE, bundleOf())
             startBuyAndSellActivity()
         }
         security.setOnClickListener {

@@ -635,4 +635,5 @@
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
+    <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND LIQUID in README.md for more information.</string>
 </resources>

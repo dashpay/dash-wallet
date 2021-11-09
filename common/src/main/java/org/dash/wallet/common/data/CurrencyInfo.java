@@ -23,9 +23,10 @@ import org.dash.wallet.common.R;
 
 import java.util.Currency;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
-    @author: Eric Britten
+    @author Eric Britten
  */
 
 public class CurrencyInfo {
@@ -125,13 +126,20 @@ public class CurrencyInfo {
         return currencyName;
     }
 
-    @TargetApi(Build.VERSION_CODES.KITKAT)
-    public static String getCurrencyNameFromCode(String code) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            Currency oldCurrency = Currency.getInstance(code.toUpperCase());
-            return oldCurrency.getDisplayName();
-        } else {
-            return "";
+    // convert a locale currency code to that which is used by the app
+    public static String getOtherName(String currencyCode) {
+        if (currencyCode != null) {
+            for (Map.Entry<String, String> entry : useOtherNameMap.entrySet()) {
+                if (currencyCode.equals(entry.getValue())) {
+                    return entry.getKey();
+                }
+            }
         }
+        return currencyCode;
+    }
+
+    public static String getCurrencyNameFromCode(String code) {
+        Currency oldCurrency = Currency.getInstance(code.toUpperCase());
+        return oldCurrency.getDisplayName();
     }
 }

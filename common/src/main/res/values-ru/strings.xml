@@ -4,7 +4,9 @@
     <string name="loading">Загрузка…</string>
     <string name="loading_error">Произошла ошибка. Попробуйте ещё раз позже.</string>
     <string name="dash_available">%1$s доступно</string>
-
+    <string name="network_unavailable_title">Сеть недоступна</string>
+    <string name="network_unavailable_check_connection">Пожалуйста, проверьте ваше подключение к сети</string>
+    <string name="network_unavailable_balance_not_accurate">Из-за потери соединения баланс может отображаться некорректно</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсийский фунт</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">Paxos Standard</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">Отклонить</string>
+    <string name="network_unavailable_return">Вернуться в кошелёк</string>
+
 </resources>

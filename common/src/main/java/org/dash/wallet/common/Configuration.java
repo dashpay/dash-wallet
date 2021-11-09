@@ -31,6 +31,7 @@ import com.google.common.base.Strings;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.data.CurrencyInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,6 +101,10 @@ public class Configuration {
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
+    public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
+    public static final String PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY = "send_payment_exchange_currency";
+    public static final String PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED = "fiat_currency_changed";
+    public static final String PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED = "current_fiat_currency_changed";
 
     private static final long DISABLE_NOTIFICATIONS = -1;
 
@@ -314,13 +319,15 @@ public class Configuration {
     }
 
     public String getExchangeCurrencyCode() {
-        return prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
+        String currencyCode = prefs.getString(PREFS_KEY_EXCHANGE_CURRENCY, null);
+        // previous versions of the app (prior to 7.3.3) may have stored an obsolete
+        // currency code in the preferences.  Let's change to the most up to date.
+        return CurrencyInfo.getOtherName(currencyCode);
     }
 
     public void setExchangeCurrencyCode(final String exchangeCurrencyCode) {
         prefs.edit().putString(PREFS_KEY_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
     }
-
     public boolean getExchangeCurrencyCodeDetected() {
         return prefs.getBoolean(PREFS_KEY_EXCHANGE_CURRENCY_DETECTED, false);
     }
@@ -569,5 +576,40 @@ public class Configuration {
     @NonNull
     public String getLastUpholdBalance() {
         return prefs.getString(PREFS_KEY_LAST_UPHOLD_BALANCE, "0.00");
+    }
+
+    public Boolean isDashToFiatDirection() {
+        return prefs.getBoolean(PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION, true);
+    }
+
+    public void setDashToFiatDirection(final Boolean isDashToFiatDirection) {
+        prefs.edit().putBoolean(PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION, isDashToFiatDirection).apply();
+    }
+
+    /*
+     * If no sendPayment currency code is found, set the local currency as the default
+     */
+    public String getSendPaymentExchangeCurrencyCode() {
+        return prefs.getString(PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY, getExchangeCurrencyCode());
+    }
+
+    public void setSendPaymentExchangeCurrencyCode(final String exchangeCurrencyCode) {
+        prefs.edit().putString(PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY, exchangeCurrencyCode).apply();
+    }
+
+    public boolean isDefaultFiatCurrencyChanged() {
+        return prefs.getBoolean(PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED, false);
+    }
+
+    public void setDefaultFiatCurrencyChanged(boolean isChanged) {
+        prefs.edit().putBoolean(PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED, isChanged).apply();
+    }
+
+    public boolean isCurrentFiatCurrencyChanged() {
+        return prefs.getBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, false);
+    }
+
+    public void setCurrentFiatCurrencyChanged(boolean isChanged) {
+        prefs.edit().putBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, isChanged).apply();
     }
 }

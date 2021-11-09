@@ -200,7 +200,6 @@
     <string name="verify_it_is_important">Важно е</string>
     <string name="verify_it_is_important_subtitle">Предстои да Ви покажем секретния ключ на портфейла ви.</string>
     <string name="verify_info_text_1">Тази фраза за възстановяване е Ви дава достъп до средствата в този портфейл.</string>
-    <string name="verify_info_text_2">Ние не съхраняваме тази фраза за възстановяване.</string>
     <string name="verify_info_text_3">Тази фраза за възстановяване ще ви трябва за достъп до вашите средства, ако това устройство е загубено, повредено или ако Dash Wallet някога случайно бъде деинсталиран от това устройство.</string>
     <string name="verify_skip">Пропусни</string>
     <string name="verify_secure_now_btn">Подсигури сега</string>
@@ -210,6 +209,7 @@
     <string name="verify_seed_buttons_tip">Моля, докоснете думите от фразата за възстановяване в правилния ред</string>
     <string name="verify_seed_success_title">Проверено успешно</string>
     <string name="verify_seed_success_message">Вашият портфейл сега е защитен. Можете да използвате вашата фраза за възстановяване по всяко време, за да възстановите акаунта си на друго устройство.</string>
+    <string name="verify_warning_title">Внимание</string>
     <string name="view_seed_done">Завършено</string>
     <string name="view_seed_title">Фраза за възстановяване</string>
     <string name="transaction_result_view_on_explorer">Преглед в Block Explorer</string>

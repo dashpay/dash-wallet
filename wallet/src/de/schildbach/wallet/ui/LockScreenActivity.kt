@@ -424,32 +424,29 @@ open class LockScreenActivity : SecureActivity() {
      * @return true if fingerprints are initialized, false if not
      */
     private fun initFingerprint(forceInit: Boolean): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            log.info("initializing finger print on Android M and above(force: $forceInit)")
-            if (fingerprintHelper == null) {
-                fingerprintHelper = FingerprintHelper(this)
-            }
-            var result = false
-            fingerprintHelper?.run {
-                if (::fingerprintCancellationSignal.isInitialized && !fingerprintCancellationSignal.isCanceled) {
-                    // we already initialized the fingerprint listener
-                    log.info("fingerprint already initialized: $fingerprintCancellationSignal")
-                    fingerprintCancellationSignal.cancel()
-                }
-
-                if (init() && isFingerprintEnabled) {
-                    startFingerprintListener()
-                    result = true
-                } else {
-                    log.info("fingerprint was disabled")
-                    fingerprintHelper = null
-                    action_login_with_fingerprint.isEnabled = false
-                    action_login_with_fingerprint.alpha = 0f
-                }
-            }
-            return result
+        log.info("initializing finger print on Android M and above(force: $forceInit)")
+        if (fingerprintHelper == null) {
+            fingerprintHelper = FingerprintHelper(this)
         }
-        return false
+        var result = false
+        fingerprintHelper?.run {
+            if (::fingerprintCancellationSignal.isInitialized && !fingerprintCancellationSignal.isCanceled) {
+                // we already initialized the fingerprint listener
+                log.info("fingerprint already initialized: $fingerprintCancellationSignal")
+                fingerprintCancellationSignal.cancel()
+            }
+
+            if (init() && isFingerprintEnabled) {
+                startFingerprintListener()
+                result = true
+            } else {
+                log.info("fingerprint was disabled")
+                fingerprintHelper = null
+                action_login_with_fingerprint.isEnabled = false
+                action_login_with_fingerprint.alpha = 0f
+            }
+        }
+        return result
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -461,7 +458,6 @@ open class LockScreenActivity : SecureActivity() {
         }
 
         log.info("start fingerprint listener: $fingerprintCancellationSignal")
-        //fingerprintListening = true
         fingerprintHelper!!.getPassword(fingerprintCancellationSignal, object : FingerprintHelper.Callback {
             override fun onSuccess(savedPass: String) {
                 log.info("fingerprint scan successful")
@@ -473,6 +469,7 @@ open class LockScreenActivity : SecureActivity() {
                 log.info("fingerprint scan failure (canceled: $canceled, max attempts: $exceededMaxAttempts): $message")
                 if (!canceled) {
                     if (fingerprintHelper!!.hasFingerprintKeyChanged()) {
+                        fingerprintHelper!!.resetFingerprintKeyChanged()
                         showFingerprintKeyChangedDialog()
                         action_login_with_fingerprint.isEnabled = false
                     } else {
@@ -503,7 +500,6 @@ open class LockScreenActivity : SecureActivity() {
         dialogBuilder.setTitle(R.string.fingerprint_changed_title)
         dialogBuilder.setMessage(R.string.fingerprint_changed_message)
         dialogBuilder.setPositiveButton(android.R.string.ok) { _, _ ->
-            fingerprintHelper!!.resetFingerprintKeyChanged()
             setLockState(State.ENTER_PIN)
         }
         dialogBuilder.show()

@@ -375,6 +375,13 @@ public class SendCoinsFragment extends Fragment {
         handler.post(new Runnable() {
             @Override
             public void run() {
+
+                // If an amount is specified (in Dash), then set the active currency to Dash
+                // If amount is 0 Dash or not specified, then don't change the active currency
+                Coin amount = paymentIntent.getAmount();
+                if (amount != null && !amount.isZero()) {
+                    enterAmountSharedViewModel.setDashToFiatDirection(true);
+                }
                 enterAmountSharedViewModel.getChangeDashAmountEvent().setValue(paymentIntent.getAmount());
                 viewModel.state.setValue(SendCoinsViewModel.State.INPUT);
                 handler.post(dryrunRunnable);

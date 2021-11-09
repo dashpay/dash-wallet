@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">Ang iyong pitaka ay na-reset!\nIto ay maantala ng ilang minuto bago maibalik sa dati.</string>
+    <string name="toast_start_storage_provider_selector_failed">Walang naka-install na angkop na cloud storage provider. \ N Kailangan mo ng isang bagay tulad ng \"Nextcloud\" o \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Unawain ang posibleng panganib. Basahin ang &lt;u&gt;talaang pangkaligtasan&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Kailangan mong i-back up ang iyong pitaka!</string>
     <string name="blockchain_state_progress_hours">Huli ng %1$s, %2$d oras</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Ibalik</string>
     <string name="restore_wallet_dialog_success">Naibalik na ang pitaka.</string>
     <string name="restore_wallet_dialog_success_replay">Ang iyong pitaka ay matagumpay na naibalik. Ang balanse nito ay sunod na malalaman. Ito ay maaaring tumagal.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Babala: Ang iyong pitaka ay protektado ng isang paggastos na PIN. Tiyaking naaalala mo pa ito bago mo matanggap sa wallet na ito.</string>
     <string name="import_keys_dialog_failure">Ang wallet ay hindi pwedeng ibalik:\n\n%s\n\nMaling password?</string>
     <string name="backup_wallet_permission_dialog_title">Nawawala ang pagsulat ng pahintulot</string>
     <string name="backup_wallet_permission_dialog_message">Para ma-back up ang pitaka sa external storage, kinakailangang aprobahan ang pagsulat sa pahintulot.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Ang iyong backup ay mae-encrypt sa piniling password at masusulat sa external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ang iyong wallet ay protektado ng spending PIN. Siguraduhin na naalala mo ang iyong PIN at saka ang iyong backup password!</string>
     <string name="export_keys_dialog_button_export">Back up</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Ang iyong wallet ay nakaback-up sa <tt>%s</tt></p><p>Kung ang iyong device ay may naaalis na SD card, ang iyong backup <i>ay dapat</i> nasa card. Tanggalin ito at itago sa ligtas na lugar. Kung ang card ay <i>hindi</i> naaalis, kailangan mong i-archive ang iyong backup sa ibang lugar kaysa sa iyong device.</p><p><b>Kung ang tanging lugar ng iyong backup ay nasa iyong device lamang, may posibilidad na mawala ito ng sabay!</b></p><p>Sa kung anupaman, siguraduhin na naaalala mo ang iyong backup password. Gusto mo na bang i-archive ngayon ang iyong pitaka?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Ang iyong pitaka ay nai-back up sa <tt>%s</tt></p><p><b>Kung ang tanging lugar na mayroon ang iyong backup ay nasa iyong aparato, pinapamahalaan mo ang panganib na mawala ang pareho nang sabay!</b></p><p>Sa anumang kaso, tiyaking naaalala mo ang iyong backup na password.</p>]]></string>
     <string name="export_keys_dialog_failure">Ang iyong pitaka ay maaaring hindi na-backup:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archive</string>
     <string name="export_keys_dialog_mail_subject">Dash Wallet backup</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">Pumili ng isang Serbisyo</string>
     <string name="activity_buy_and_sell_dash_filter">Salain</string>
     <string name="clear_filter">I-clear ang Filter</string>
+    <string name="select_currency">Piliin ang Pera</string>
+
 </resources>

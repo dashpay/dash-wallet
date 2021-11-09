@@ -688,10 +688,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         if (activityManager == null)
             return false;
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
-            return activityManager.isLowRamDevice();
-        else
-            return activityManager.getMemoryClass() <= Constants.MEMORY_CLASS_LOWEND;
+        return activityManager.isLowRamDevice();
     }
 
     public int maxConnectedPeers() {
@@ -705,7 +702,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
      * @return The number of scrypt interations
      */
     public int scryptIterationsTarget() {
-        boolean is64bitABI = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? Build.SUPPORTED_64_BIT_ABIS.length != 0 : false;
+        boolean is64bitABI = Build.SUPPORTED_64_BIT_ABIS.length != 0;
         return (isLowRamDevice() || !is64bitABI) ? Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM : Constants.SCRYPT_ITERATIONS_TARGET;
     }
 

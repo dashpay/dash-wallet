@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">¡Tu billetera se ha reiniciado!\nTardará un tiempo en recuperarse.</string>
+    <string name="toast_start_storage_provider_selector_failed">No hay un proveedor de almacenamiento en la nube adecuado instalado. \nNecesitas algo como \"Nextcloud\" o \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Utilízalo bajo tu propio riesgo. Lee las &lt;u&gt;notas de seguridad&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">Necesitas hacer backup de tu billetera!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d horas atrás</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">Restaurar</string>
     <string name="restore_wallet_dialog_success">La billetera ha sido restaurada.</string>
     <string name="restore_wallet_dialog_success_replay">Tu billetera fue restaurada satisfactoriamente. El balance será determinado a continuación. Esto llevará algún tiempo.</string>
+    <string name="restore_wallet_dialog_success_encrypted">Advertencia: tu billetera está protegida por un PIN. Asegúrate de recordarlo antes de recibir fondos en esta billetera.</string>
     <string name="import_keys_dialog_failure">La billetera no pudo ser restaurada:\n\n%s\n\n¿Contraseña errónea?</string>
     <string name="backup_wallet_permission_dialog_title">Permisos de escritura no encontrados</string>
     <string name="backup_wallet_permission_dialog_message">Para respaldar tu billetera a un medio externo, necesitas dar permisos de escritura.</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">Tu copia de seguridad será encriptada con la contraseña que elijas y guardada en una unidad de almacenamiento externo.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Tu cartera está protegida con un PIN de pagos. ¡Asegúrate de recordar el PIN, además de la contraseña de tu copia de seguridad!</string>
     <string name="export_keys_dialog_button_export">Copia de seguridad</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Tu billetera ha sido copiada en <tt>%s</tt></p><p>Si tu dispositivo tiene una tarjeta SD, la copia <i>debería</i> estar ahí. Extraela y manténla en un sitio seguro. Si la tarjeta <i>no</i> es extraíble, necesitas guardar la copia en otro lugar distinto a tu dispositivo.</p><p><b>Si el único sitio en el que existe una copia es en tu dispositivo, ¡corres el riesgo de perder las dos al mismo tiempo!</b></p><p>En cualquier caso, asegúrate de recordar la contraseña de la copia. ¿Deseas archivar tu billetera ahora?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>Se ha realizado una copia de seguridad de tu billetera en <tt>%s</tt></p><p><b>Si el único lugar donde existe tu copia de seguridad es en tu dispositivo, corres el riesgo de perder ambos al mismo tiempo.</b></p><p>En cualquier caso, asegúrate de recordar tu contraseña de respaldo.</p>]]></string>
     <string name="export_keys_dialog_failure">No se pudo realizar la copia de seguridad de tu billetera:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archivo</string>
     <string name="export_keys_dialog_mail_subject">Copia de seguridad de Dash Wallet</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">Seleccionar un servicio</string>
     <string name="activity_buy_and_sell_dash_filter">Filtrar</string>
     <string name="clear_filter">Borrar filtro</string>
+    <string name="select_currency">Selecciona el tipo de moneda</string>
+
 </resources>

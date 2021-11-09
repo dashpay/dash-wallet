@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">wallet ของคุณถูกรีเซ็ตแล้ว ใช้เวลาสักครู่ในการกู้คืน</string>
+    <string name="toast_start_storage_provider_selector_failed">ไม่มีการติดตั้งผู้ให้บริการเก็บข้อมูลบนคลาวด์ที่เหมาะสม \nคุณต้องติดตั้งบางอย่างเช่น \"NextCloud\" หรือ \"Google Drive\"</string>
     <string name="wallet_disclaimer_fragment_remind_safety">ใช้ความเสี่ยงด้วยตัวคุณเอง!  โปรดอ่าน &lt;u&gt;safety notes&lt;/u&gt;.</string>
     <string name="wallet_disclaimer_fragment_remind_backup">คุณจำเป็นต้อง สำรองข้อมูล wallet ของคุณ!</string>
     <string name="blockchain_state_progress_hours">%1$s,%2$d ชั่วโมงที่ผ่านมา</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">กู้คืน</string>
     <string name="restore_wallet_dialog_success">wallet ถูกกู้คืนแล้ว</string>
     <string name="restore_wallet_dialog_success_replay">wallet ของคุณกู้คืนเรียบร้อยแล้ว ยอดคงเหลือจะถูกกำหนดในครั้งต่อไป การดำเนินการนี้จะใช้เวลาสักครู่ </string>
+    <string name="restore_wallet_dialog_success_encrypted">คำเตือน: กระเป๋าเงินของคุณได้รับการปกป้องโดย PIN การใช้จ่าย ตรวจสอบให้แน่ใจว่าคุณยังจำมันได้ก่อนที่คุณจะได้รับกระเป๋าเงินนี้</string>
     <string name="import_keys_dialog_failure">ไม่สามารถกู้คืน wallet ได้ :\n\n%s\n\n รหัสไม่ถูกต้อง?</string>
     <string name="backup_wallet_permission_dialog_title">ไม่พบสิทธิ์ในการเขียน</string>
     <string name="backup_wallet_permission_dialog_message">เพื่อให้สามารถค้นหา wallet ในที่จัดเก็บข้อมูลภายนอกได้ คุณต้องให้สิทธิ์ในการเขียน</string>
@@ -212,7 +214,7 @@
     <string name="backup_wallet_dialog_message">การสำรองของคุณจะได้รับการเข้ารหัสด้วยรหัสผ่านที่คุณเลือกและที่ถูกเขียนไว้ในพื้นที่เก็บข้อมูลภายนอก</string>
     <string name="backup_wallet_dialog_warning_encrypted">wallet ของคุณถูกป้องกันโดยการใช้ PIN  ตรวจสอบให้แน่ใจว่าคุณได้จำรหัส PIN ไว้นอกเหนือกจากรหัสสำรอง</string>
     <string name="export_keys_dialog_button_export">สำรองข้อมูล</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>wallet ของคุณได้สำรองข้อมูลไปยัง <tt>%s</tt></p><p> หากอุปกรณ์ของคุณมีการ์ด SD แบบถอดได้ การสำรองข้อมูลของคุณ <i>ควรจะ</i>อยู่ในการ์ดนั้น  ถอดการ์ดออกและเก็บไว้ในที่ปลอดภัย  หากการ์ด<i>ไม่</i>สามารถถอดออกได้ คุณต้องเก็บข้อมูลสำรองไว้ในที่อื่นนอกเหนือจากอุปกรณ์ของคุณ </p><p><b> หากพื้นที่สำรองของคุณอยู่ในอุปกรณ์ของคุณทั้งหมด คุณจะเสี่ยงต่อการสูญเสียทั้งสองอย่างในเวลาเดียวกัน! </b></p><p> ไม่ว่ากรณีใดก็ตาม ต้องแน่ใจว่าคุณจำรหัสการสำรองข้อมูลของคุณได้ คุณต้องการเก็บ wallet ของคุณตอนนี้หรือไม่?</p>]]></string>
+    <string name="export_keys_dialog_success"><![CDATA[<p> กระเป๋าเงินของคุณได้รับการสำรองไว้ <tt>%s</tt></p><p><b>หากจุดที่สำรองข้อมูลของคุณอยู่ในอุปกรณ์ของคุณเพียงที่เดียวคุณจะเสี่ยงต่อการสูญเสียทั้งสองในเวลาเดียวกัน!</b></p><p>ไม่ว่าในกรณีใด ๆ ตรวจสอบให้แน่ใจว่าคุณจำรหัสผ่านสำรองของคุณ</p>]]></string>
     <string name="export_keys_dialog_failure">wallet ของคุณไม่สามารถสำรองข้อมูลได้ :\n%s</string>
     <string name="export_keys_dialog_button_archive">เอกสารสำคัญ</string>
     <string name="export_keys_dialog_mail_subject">การสำรองข้อมูล Wallet Dash</string>
@@ -382,4 +384,6 @@
     <string name="select_a_service">เลือกบริการ</string>
     <string name="activity_buy_and_sell_dash_filter">กรอง</string>
     <string name="clear_filter">ล้างตัวกรอง</string>
+    <string name="select_currency">เลือกสกุลเงิน</string>
+
 </resources>

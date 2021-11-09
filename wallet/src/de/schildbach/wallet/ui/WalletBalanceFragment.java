@@ -103,7 +103,6 @@ public final class WalletBalanceFragment extends Fragment {
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         setHasOptionsMenu(true);
-
         super.onCreate(savedInstanceState);
     }
 

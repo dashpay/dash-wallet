@@ -211,6 +211,15 @@
     <string name="verify_seed_buttons_tip">당신의 복원 문구의 단어를 올바른 순서로 탭하십시오</string>
     <string name="verify_seed_success_title">성공적으로 인증되었습니다</string>
     <string name="verify_seed_success_message">이제 당신의 지갑은 안전합니다. 언제든 당신의 복원 문구를 사용하셔서 당신의 계정을 다른 기기에서 복원하실 수 있습니다.</string>
+    <string name="verify_no_screenshot_title">스크린샷을 찍지 마세요</string>
+    <string name="verify_no_screenshot_message">그러니, 복원 문구를 안전한 장소에 적어 두십시오.</string>
+    <string name="verify_why_no_screenshot">왜 스크린샷을 찍으면 안되나요?</string>
+    <string name="verify_warning_title">경고</string>
+    <string name="verify_warning_message">당신의 지갑 내 자금에 접근하기 위해서는 이 복원 문구가 필요합니다.</string>
+    <string name="verify_warning_screenshots_title">스크린샷을 찍지 마세요.</string>
+    <string name="verify_warning_screenshots_message">다른 기기나 앱에서 이 스크린샷을 읽을 수도 있습니다.</string>
+    <string name="verify_warning_do_not_show">누구도 당신의 복원 문구를 볼 수 없도록 주의하세요.</string>
+    <string name="verify_warning_do_not_type">복원 문구를 암호 관리자 등에 절대로 입력하지 마세요.</string>
     <string name="view_seed_done">완료</string>
     <string name="view_seed_title">복원 문구</string>
     <string name="transaction_result_view_on_explorer">블록 탐색기에서 보기</string>

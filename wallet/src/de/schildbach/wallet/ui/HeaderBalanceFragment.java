@@ -38,10 +38,14 @@ import androidx.lifecycle.ViewModelProvider;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.AnalyticsService;
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
@@ -82,6 +86,8 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
 
     @Nullable
     private ExchangeRate exchangeRate = null;
+    @Inject
+    AnalyticsService analytics;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -161,6 +167,13 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
             @Override
             public void onClick(View v) {
                 hideBalance = !hideBalance;
+
+                if (hideBalance) {
+                    analytics.logEvent(AnalyticsConstants.Home.HIDE_BALANCE, Bundle.EMPTY);
+                } else {
+                    analytics.logEvent(AnalyticsConstants.Home.SHOW_BALANCE, Bundle.EMPTY);
+                }
+
                 updateView();
             }
         });

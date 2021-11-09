@@ -32,4 +32,6 @@ public interface ExchangeRatesDao {
     @Query("SELECT count(*) FROM exchange_rates")
     int count();
 
+    @Query("SELECT * FROM exchange_rates WHERE currencyCode = :currencyCode LIMIT 1")
+    ExchangeRate getExchangeRateForCurrency(String currencyCode);
 }

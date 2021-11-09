@@ -36,7 +36,7 @@ android {
         exclude 'org/bitcoinj/crypto/cacerts'
     }
     defaultConfig {
-        minSdkVersion 15
+        minSdkVersion 23
         multiDexEnabled true
     }
     compileOptions {

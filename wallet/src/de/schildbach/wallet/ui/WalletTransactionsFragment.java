@@ -42,6 +42,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

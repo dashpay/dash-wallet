@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">شراء داش ببطاقة الائتمان</string>
     <string name="liquid_logout">تسجيل الخروج</string>
     <string name="liquid_logout_title">تسجيل الخروج من Liquid</string>
+    <string name="liquid_forced_logout">تم كسر الارتباط بحسابك في Liquid. الرجاء اختيار ربط الحساب السائل في الشاشة التالية.</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">استبدل داش بعملات مشفرة أخرى</string>
     <string name="transfer_dash_to_and_from_account">قم بتحويل داش من وإلى حساب liquid </string>
 
@@ -17,10 +18,12 @@
     <string name="button_cancel">إلغاء</string>
     <string name="choose_your_payment_method">اختر طريقتك في الدفع</string>
     <string name="crypto_support">دعم التشفير</string>
+    <string name="credit_card_support">دعم بطاقة الائتمان</string>
     <string name="okay">اوك</string>
     <string name="close">اغلاق</string>
-    <string name="list_of_countries">اعرض قائمة البلدان غير المدعومة</string>
-    <string name="buying_dash_not_supported">شراء داش بالعملات المشفرة غير مدعوم في بعض البلدان</string>
+    <string name="list_of_countries">راجع قائمة البلدان غير المدعومة.</string>
+    <string name="buying_dash_not_supported_credit_cards">شراء داش ببطاقة ائتمان غير مدعوم في بعض البلدان.</string>
+    <string name="buying_dash_not_supported_crypto">شراء داش بالعملات المشفرة غير مدعوم في بعض البلدان.</string>
     <string name="buying_dash_success_message">يمكنك إغلاق هذه الشاشة ، سيتم إرسال داش الخاص بك إلى محفظتك.</string>
 
     <string name="confirm">تأكيد</string>
@@ -30,7 +33,8 @@
     <string name="total">المجموع</string>
     <string name="connect">اتصال</string>
     <string name="connected">تم الاتصال</string>
-    <string name="buy_sell_dash">لشراء &amp;amp; بيع داش أو إنشاء حساب جديد</string>
+    <string name="disconnected">تم قطع الاتصال</string>
+    <string name="buy_sell_dash">لشراء &amp; بيع داش أو إنشاء حساب جديد</string>
 
 
     <string name="transfer_to_liquid">تحويل إلى Liquid</string>

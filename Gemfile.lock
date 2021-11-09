@@ -7,8 +7,8 @@ GEM
     artifactory (3.0.15)
     atomos (0.1.3)
     aws-eventstream (1.2.0)
-    aws-partitions (1.494.0)
-    aws-sdk-core (3.120.0)
+    aws-partitions (1.495.0)
+    aws-sdk-core (3.121.0)
       aws-eventstream (~> 1, >= 1.0.2)
       aws-partitions (~> 1, >= 1.239.0)
       aws-sigv4 (~> 1.1)
@@ -16,11 +16,11 @@ GEM
     aws-sdk-kms (1.48.0)
       aws-sdk-core (~> 3, >= 3.120.0)
       aws-sigv4 (~> 1.1)
-    aws-sdk-s3 (1.101.0)
+    aws-sdk-s3 (1.102.0)
       aws-sdk-core (~> 3, >= 3.120.0)
       aws-sdk-kms (~> 1)
-      aws-sigv4 (~> 1.1)
-    aws-sigv4 (1.3.0)
+      aws-sigv4 (~> 1.4)
+    aws-sigv4 (1.4.0)
       aws-eventstream (~> 1, >= 1.0.2)
     babosa (1.0.4)
     claide (1.0.3)
@@ -61,7 +61,7 @@ GEM
     faraday_middleware (1.1.0)
       faraday (~> 1.0)
     fastimage (2.2.5)
-    fastlane (2.193.0)
+    fastlane (2.193.1)
       CFPropertyList (>= 2.3, < 4.0.0)
       addressable (>= 2.8, < 3.0.0)
       artifactory (~> 3.0)
@@ -212,4 +212,4 @@ DEPENDENCIES
   fastlane-plugin-firebase_app_distribution
 
 BUNDLED WITH
-   2.2.26
+   2.2.27

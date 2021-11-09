@@ -20,19 +20,37 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.DashPayProfile
 import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.ui.SingleLiveEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 
 class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(application) {
 
+    private var repo: ExchangeRatesRepository
+    private var _nameLiveData = MutableLiveData<ExchangeRate>()
     val exchangeRateData: LiveData<ExchangeRate>
+        get() = _nameLiveData
 
-    val exchangeRate: org.bitcoinj.utils.ExchangeRate?
-        get() = exchangeRateData.value?.run { org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRateData.value!!.fiat) }
+    fun setCurrentExchangeRate(selectedExchangeRate: ExchangeRate) {
+        _nameLiveData.value = selectedExchangeRate
+    }
+
+    var exchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+        get() = _nameLiveData.value?.run { org.bitcoinj.utils.ExchangeRate(Coin.COIN, _nameLiveData.value!!.fiat) }
+
+    private val dashToFiatDirectionData = MutableLiveData<Boolean>()
+    val dashToFiatDirectionLiveData: LiveData<Boolean>
+        get() = dashToFiatDirectionData
+    fun setDashToFiatDirection(isDashToFiat: Boolean) {
+        dashToFiatDirectionData.value = isDashToFiat
+    }
 
     val dashAmountData = MutableLiveData<Coin>()
 
@@ -65,7 +83,11 @@ class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(ap
 
     init {
         val currencyCode = (application as WalletApplication).configuration.exchangeCurrencyCode
-        exchangeRateData = ExchangeRatesRepository.getInstance().getRate(currencyCode)
+        repo = ExchangeRatesRepository.instance
+        viewModelScope.launch(Dispatchers.Main) {
+            val result = withContext(Dispatchers.IO) { repo.getExchangeRate(currencyCode) }
+            result.let { _nameLiveData.value = it } // do nothing if null
+        }
     }
 
     fun hasAmount(): Boolean {
