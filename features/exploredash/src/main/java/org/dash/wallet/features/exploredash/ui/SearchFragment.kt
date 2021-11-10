@@ -120,6 +120,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         if (isLocationPermissionGranted()) {
             viewModel.monitorUserLocation()
         }
+
+        viewModel.isLocationEnabled.observe(viewLifecycleOwner) { isEnabled ->
+            if (isEnabled && viewModel.filterMode.value != FilterMode.Online) {
+                bottomSheet.isDraggable = true
+                bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+            } else {
+                bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
+                bottomSheet.isDraggable = false
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -181,16 +191,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 } else {
                     permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 }
-            }
-        }
-
-        viewModel.isLocationEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            if (isEnabled && viewModel.filterMode.value != FilterMode.Online) {
-                bottomSheet.isDraggable = true
-                bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-            } else {
-                bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
-                bottomSheet.isDraggable = false
             }
         }
     }

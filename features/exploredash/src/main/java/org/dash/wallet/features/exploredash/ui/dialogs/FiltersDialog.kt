@@ -88,14 +88,6 @@ class FiltersDialog(
         }
     }
 
-    private fun setLocationName() {
-        binding.locationName.text = if (currentOptions.selectedTerritory.isEmpty()) {
-            getString(R.string.explore_all_states)
-        } else {
-            currentOptions.selectedTerritory
-        }
-    }
-
     private fun setupPaymentMethods() {
         binding.dashOption.isChecked = currentOptions.dashPaymentOn
         binding.dashOption.setOnCheckedChangeListener { _, isChecked ->
@@ -135,6 +127,15 @@ class FiltersDialog(
         binding.radiusFilter.addItemDecoration(decorator)
         binding.radiusFilter.adapter = adapter
         adapter.submitList(optionNames)
+    }
+        
+
+     private fun setLocationName() {
+        binding.locationName.text = if (currentOptions.selectedTerritory.isEmpty()) {
+            getString(R.string.explore_all_states)
+        } else {
+            currentOptions.selectedTerritory
+        }
     }
 
     override fun dismiss() {
