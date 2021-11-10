@@ -81,4 +81,6 @@
     <color name="divider_color">#EBEDF0</color>
     <color name="bg_accuracy_circle">#26008DE4</color>
     <color name="bg_filter_dialog">#eff0f4</color>
+    <color name="steel_gray_500">#6D7885</color>
+    <color name="blue_300">#3CA9EE</color>
 </resources>

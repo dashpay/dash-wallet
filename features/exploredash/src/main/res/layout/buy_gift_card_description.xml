@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/collapse_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="15dp"
+        android:layout_marginRight="15dp"
+        app:srcCompat="@drawable/ic_top_navigation_close_button"
+        />
+
+    <TextView
+        android:id="@+id/buy_card_header_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:layout_constraintEnd_toEndOf="@id/right_guideline"
+        app:layout_constraintTop_toBottomOf="@id/collapse_button"
+        android:layout_marginTop="40dp"
+        android:textSize="28sp"
+        android:gravity="center"
+        android:text="@string/buy_card_header_text"
+        style="@style/Body2.Bold"
+        android:paddingBottom="2dp"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        />
+
+    <TextView
+        android:id="@+id/buy_card_desc_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:layout_constraintEnd_toEndOf="@id/right_guideline"
+        app:layout_constraintTop_toBottomOf="@id/buy_card_header_label"
+        android:gravity="left|center"
+        android:text="@string/buy_card_desc_text"
+        style="@style/Body2"
+        android:layout_marginTop="10dp"
+        android:paddingTop="2dp"
+        android:lineSpacingMultiplier="1.3"
+        />
+
+
+    <ImageView
+        android:id="@+id/find_merchant_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/buy_card_desc_label"
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:srcCompat="@drawable/ic_explore_info_screen_map_blue"
+        android:layout_marginTop="40dp"
+        />
+
+    <TextView
+        android:id="@+id/find_merchant_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toEndOf="@id/find_merchant_icon"
+        app:layout_constraintEnd_toEndOf="@id/right_guideline"
+        app:layout_constraintTop_toTopOf="@id/find_merchant_icon"
+        app:layout_constraintBottom_toBottomOf="@id/find_merchant_icon"
+        android:text="@string/find_merchant_text"
+        style="@style/Body2"
+        android:layout_marginLeft="20dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        />
+
+
+    <ImageView
+        android:id="@+id/buy_gift_card_blue_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/find_merchant_icon"
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:srcCompat="@drawable/ic_explore_info_screen_gift_card_blue"
+        android:layout_marginTop="40dp"
+        />
+
+    <TextView
+        android:id="@+id/buy_gift_card_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toEndOf="@id/buy_gift_card_blue_icon"
+        app:layout_constraintEnd_toEndOf="@id/right_guideline"
+        app:layout_constraintTop_toTopOf="@id/buy_gift_card_blue_icon"
+        app:layout_constraintBottom_toBottomOf="@id/buy_gift_card_blue_icon"
+        android:text="@string/buy_gift_card_with_dash_text"
+        style="@style/Body2"
+        android:layout_marginLeft="20dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        />
+
+    <ImageView
+        android:id="@+id/redeem_gift_card_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/buy_gift_card_blue_icon"
+        app:layout_constraintStart_toStartOf="@id/left_guideline"
+        app:srcCompat="@drawable/ic_explore_info_screen_power_blue"
+        android:layout_marginTop="40dp"
+        />
+
+    <TextView
+        android:id="@+id/redeem_gift_card_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="@id/redeem_gift_card_icon"
+        app:layout_constraintBottom_toBottomOf="@id/redeem_gift_card_icon"
+        android:text="@string/redeem_gift_card_text"
+        style="@style/Body2"
+        android:layout_marginLeft="30dp"
+        android:lineSpacingMultiplier="1.3"
+        app:layout_constraintStart_toEndOf="@id/redeem_gift_card_icon"
+        app:layout_constraintEnd_toEndOf="@id/right_guideline"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/left_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintGuide_begin="32dp"
+        android:orientation="vertical"
+        />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/right_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintGuide_end="32dp"
+        android:orientation="vertical"
+        />
+
+    <View
+        android:layout_width="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/horizontal_guideline"
+        android:layout_height="wrap_content"/>
+
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/horizontal_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintGuide_percent="0.91"
+        android:orientation="horizontal"
+        />
+</androidx.constraintlayout.widget.ConstraintLayout>

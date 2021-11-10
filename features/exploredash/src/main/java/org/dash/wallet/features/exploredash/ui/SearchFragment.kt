@@ -25,8 +25,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
@@ -63,7 +63,9 @@ import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog
-import org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.util.safeNavigate
+
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -90,15 +92,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val configuration = Configuration(PreferenceManager.getDefaultSharedPreferences(requireContext()), resources)
+        if (!configuration.hasInfoScreenBeenShownAlready()) {
+            safeNavigate(SearchFragmentDirections.exploreToInfo())
+            configuration.setPrefsKeyHasInfoScreenBeenShownAlready(true)
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         setupBackNavigation()
         binding.toolbarTitle.text = getToolbarTitle()
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
-                Log.i("EXPLOREDASH", "info menu click")
+                safeNavigate(SearchFragmentDirections.exploreToInfo())
             }
             true
         }
