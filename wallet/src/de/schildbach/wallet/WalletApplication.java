@@ -35,6 +35,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
@@ -175,6 +176,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
 
+            int activityCount = 0;
+            int foregroundActivityCount = 0;
+            int visibleActivityCount = 0;
+            final String logName = "activity lifecycle";
             @Override
             protected void onStartedFirst(Activity activity) {
 
@@ -196,6 +201,47 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 if (config.getAutoLogoutEnabled() && config.getAutoLogoutMinutes() == 0) {
                     sendBroadcast(new Intent(InteractionAwareActivity.FORCE_FINISH_ACTION));
                 }
+            }
+
+            public void onActivityCreated(@NonNull Activity activity, Bundle bundle) {
+                if (activityCount == 0)
+                    log.info("{}: app started", logName);
+                activityCount++;
+                log.info("{}: activity {} created", logName, activity.getClass().getSimpleName());
+                logState();
+            }
+
+            public void onActivityDestroyed(@NonNull Activity activity) {
+                log.info("{}: activity {} destroyed", logName, activity.getClass().getSimpleName());
+                activityCount--;
+                logState();
+                if (activityCount == 0)
+                    log.info("{}: app closed", logName);
+            }
+
+            public void onActivityResumed(@NonNull Activity activity) {
+                foregroundActivityCount++;
+                logState();
+            }
+
+            public void onActivityPaused(@NonNull Activity activity) {
+                foregroundActivityCount--;
+                logState();
+            }
+
+            public void onActivityStarted(@NonNull Activity activity) {
+                visibleActivityCount++;
+                logState();
+            }
+
+            public void onActivityStopped(Activity activity) {
+                visibleActivityCount--;
+                logState();
+            }
+
+            private void logState() {
+                log.info("{}: activities: {} visible: {} foreground: {}", logName,
+                        activityCount, visibleActivityCount, foregroundActivityCount);
             }
         });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
