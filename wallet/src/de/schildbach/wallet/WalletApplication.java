@@ -47,6 +47,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import androidx.work.WorkManager;
 
@@ -150,6 +151,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     @Inject
     HiltWorkerFactory workerFactory;
+
+    @Inject
+    protected AnalyticsService analyticsService;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -822,6 +826,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });
+    }
+
+    public AnalyticsService getAnalyticsService() {
+        return analyticsService;
     }
 
     public static WalletApplication getInstance() {
