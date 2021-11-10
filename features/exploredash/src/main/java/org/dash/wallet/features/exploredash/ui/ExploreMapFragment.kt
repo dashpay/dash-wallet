@@ -120,9 +120,10 @@ class ExploreMapFragment: SupportMapFragment() {
 
             // TODO: For the 1st iteration of this feature, we shall limit the number of markers to be displayed
             if (results.isNotEmpty()) {
-//                if (results.size < 20) {
+                Log.i("EXPLOREDASH", "markers: " + viewModel.maxMarkers.toString())
+                if (results.size < viewModel.maxMarkers) {
                     setMarkers(results)
-//                } else setMarkers(results.shuffled().subList(0, 20))
+                } else setMarkers(results.shuffled().take(viewModel.maxMarkers))
             }
         }
 
@@ -315,12 +316,12 @@ class ExploreMapFragment: SupportMapFragment() {
         withContext(Dispatchers.IO){
             val merchants = results.filterIsInstance<Merchant>()
             Log.e(this@ExploreMapFragment::class.java.simpleName, "Merchant size: ${merchants.size}")
-            val chunkResult = merchants.chunked(10)
-            Log.e(this@ExploreMapFragment::class.java.simpleName, "Chunk size: ${chunkResult.size}")
+//            val chunkResult = merchants.chunked(10)
+//            Log.e(this@ExploreMapFragment::class.java.simpleName, "Chunk size: ${chunkResult.size}")
 
-            chunkResult.forEach {
-                loadMerchantMarkers(it)
-            }
+//            merchants.forEach {
+                loadMerchantMarkers(merchants)
+//            }
         }
     }
 

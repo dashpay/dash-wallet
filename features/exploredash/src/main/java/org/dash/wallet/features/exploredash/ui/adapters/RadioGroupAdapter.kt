@@ -18,15 +18,18 @@ package org.dash.wallet.features.exploredash.ui.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.RadiobuttonRowBinding
+import org.dash.wallet.features.exploredash.ui.viewitems.IconifiedViewItem
 
-class RadioGroupAdapter(private var selectedIndex: Int = 0, private val clickListener: (String, Int) -> Unit)
-    : ListAdapter<String, RadioButtonViewHolder>(DiffCallback()) {
+class RadioGroupAdapter(
+    private var selectedIndex: Int = 0,
+    private val clickListener: (IconifiedViewItem, Int) -> Unit
+): ListAdapter<IconifiedViewItem, RadioButtonViewHolder>(DiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RadioButtonViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -36,6 +39,7 @@ class RadioGroupAdapter(private var selectedIndex: Int = 0, private val clickLis
     }
 
     override fun onBindViewHolder(holder: RadioButtonViewHolder, position: Int) {
+        holder.itemView.isSelected = position == selectedIndex
         val item = getItem(position)
         holder.bind(item, position == selectedIndex)
 
@@ -50,26 +54,37 @@ class RadioGroupAdapter(private var selectedIndex: Int = 0, private val clickLis
         }
     }
 
-    class DiffCallback : DiffUtil.ItemCallback<String>() {
-        override fun areItemsTheSame(oldItem: String, newItem: String): Boolean {
+    class DiffCallback : DiffUtil.ItemCallback<IconifiedViewItem>() {
+        override fun areItemsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
             return oldItem == newItem
         }
 
-        override fun areContentsTheSame(oldItem: String, newItem: String): Boolean {
-            return oldItem == newItem
+        override fun areContentsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
+            return oldItem.name == newItem.name &&
+                    oldItem.icon == newItem.icon
         }
     }
 }
 
 class RadioButtonViewHolder(val binding: RadiobuttonRowBinding) : RecyclerView.ViewHolder(binding.root) {
-    fun bind(option: String, isSelected: Boolean) {
-        binding.name.text = option
-        binding.name.setTextColor(
-            binding.root.resources.getColor(
-                if (isSelected) R.color.dash_blue else R.color.gray_900,
-                null
+    fun bind(option: IconifiedViewItem, isSelected: Boolean) {
+        val resources = binding.root.resources
+        binding.name.text = option.name
+        binding.icon.isVisible = option.icon != null
+        option.icon?.let {
+            binding.icon.setImageDrawable(
+                ResourcesCompat.getDrawable(
+                    resources, option.icon, null
+                )
             )
-        )
+        }
+
+//        binding.name.setTextColor(
+//            resources.getColor(
+//                if (isSelected) R.color.dash_blue else R.color.gray_900,
+//                null
+//            )
+//        )
         binding.checkmark.isVisible = isSelected
     }
 }

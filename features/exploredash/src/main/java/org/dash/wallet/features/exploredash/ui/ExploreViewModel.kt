@@ -80,6 +80,8 @@ class ExploreViewModel @Inject constructor(
     private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = currentUserLocationState.asLiveData()
 
+    var maxMarkers: Int = 100
+
     private val _pickedTerritory = MutableStateFlow("")
     var pickedTerritory: String
         get() = _pickedTerritory.value
@@ -96,6 +98,7 @@ class ExploreViewModel @Inject constructor(
     var selectedRadiusOption: Int
         get() = _selectedRadiusOption.value
         set(value) {
+            Log.i("EXPLOREDASH", "radius value: ${value}")
             _selectedRadiusOption.value = value
         }
 
@@ -253,7 +256,10 @@ class ExploreViewModel @Inject constructor(
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
                     .distinctUntilChanged()
-                    .onEach(_searchResults::postValue)
+                    .onEach {
+                        Log.i("EXPLOREDASH", "results count: ${it.size}")
+                        _searchResults.postValue(it)
+                    }
                     .launchIn(viewModelWorkerScope)
             }
             // Right now we don't show the map at all while location is disabled

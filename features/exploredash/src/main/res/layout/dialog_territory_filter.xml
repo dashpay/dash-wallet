@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_layout"
@@ -20,7 +21,7 @@
             android:layout_height="match_parent"
             android:layout_gravity="center_vertical"
             android:layout_marginHorizontal="15dp"
-            android:text="@string/explore_select_state" />
+            tools:text="@string/explore_location" />
 
         <ImageButton
             android:id="@+id/collapse_button"
@@ -41,7 +42,7 @@
         android:layout_marginTop="5dp">
 
         <EditText
-            android:id="@+id/search"
+            android:id="@+id/search_query"
             style="@style/Body2"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -68,11 +69,11 @@
     </FrameLayout>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/territories"
+        android:id="@+id/content_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:clipToPadding="false"
-        android:paddingTop="10dp"
+        android:paddingTop="24dp"
         android:paddingBottom="30dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:itemCount="5"

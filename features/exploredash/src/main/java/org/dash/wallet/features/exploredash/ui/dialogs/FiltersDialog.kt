@@ -16,39 +16,45 @@
 
 package org.dash.wallet.features.exploredash.ui.dialogs
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
+import org.dash.wallet.features.exploredash.ui.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.adapters.RadioGroupAdapter
+import org.dash.wallet.features.exploredash.ui.viewitems.IconifiedViewItem
 
-data class FilterOptionSet(
-    var selectedTerritory: String,
-    var selectedRadiusOption: Int,
-    var dashPaymentOn: Boolean,
-    var giftCardPaymentOn: Boolean
-)
+@FlowPreview
+@ExperimentalCoroutinesApi
+class FiltersDialog: OffsetDialogFragment(R.drawable.gray_background_rounded) {
 
-class FiltersDialog(
-    private val territories: List<String>,
-    private val showPaymentOptions: Boolean,
-    private val isMetric: Boolean,
-    private var currentOptions: FilterOptionSet,
-    private val filtersAppliedListener: (FilterOptionSet, DialogFragment) -> Unit
-) : OffsetDialogFragment(R.drawable.gray_background_rounded) {
+    private var selectedTerritory: String = ""
+    private var selectedRadiusOption: Int = 20
+    private var dashPaymentOn: Boolean = true
+    private var giftCardPaymentOn: Boolean = true
 
     private val binding by viewBinding(DialogFiltersBinding::bind)
+    private val viewModel: ExploreViewModel by activityViewModels()
+    private var territoriesJob: Deferred<List<String>>? = null
+
+    private val isLocationPermissionGranted: Boolean
+        get() = ActivityCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -61,26 +67,37 @@ class FiltersDialog(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setLocationName()
         setupRadiusOptions()
 
-        if (showPaymentOptions) {
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             setupPaymentMethods()
         } else {
             binding.paymentMethods.isVisible = false
             binding.paymentMethodsLabel.isVisible = false
         }
 
-        binding.locationBtn.setOnClickListener {
-            TerritoryFilterDialog(territories, currentOptions.selectedTerritory) { name, dialog ->
-                dialog.dismiss()
-                currentOptions.selectedTerritory = name
-                setLocationName()
-            }.show(parentFragmentManager, "territory_filter")
-        }
+        setupTerritoryFilter()
+        setupLocationPermission()
 
         binding.applyButton.setOnClickListener {
-            filtersAppliedListener.invoke(currentOptions, this)
+            viewModel.pickedTerritory = selectedTerritory
+            viewModel.selectedRadiusOption = selectedRadiusOption
+
+            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+                var paymentFilter = ""
+
+                if (!dashPaymentOn || !giftCardPaymentOn) {
+                    paymentFilter = if (dashPaymentOn) {
+                        PaymentMethod.DASH
+                    } else {
+                        PaymentMethod.GIFT_CARD
+                    }
+                }
+
+                viewModel.paymentMethodFilter = paymentFilter
+            }
+
+            dismiss()
         }
 
         binding.resetFiltersBtn.setOnClickListener {
@@ -89,34 +106,43 @@ class FiltersDialog(
     }
 
     private fun setupPaymentMethods() {
-        binding.dashOption.isChecked = currentOptions.dashPaymentOn
+        val isDashOn = viewModel.paymentMethodFilter.isEmpty() ||
+                    viewModel.paymentMethodFilter == PaymentMethod.DASH
+        dashPaymentOn = isDashOn
+        binding.dashOption.isChecked = isDashOn
         binding.dashOption.setOnCheckedChangeListener { _, isChecked ->
             if (!isChecked && !binding.giftCardOption.isChecked) {
                 // shouldn't allow to uncheck both options
                 binding.giftCardOption.isChecked = true
             }
 
-            currentOptions.dashPaymentOn = isChecked
+            dashPaymentOn = isChecked
         }
 
-        binding.giftCardOption.isChecked = currentOptions.giftCardPaymentOn
+        val isGiftCardOn = viewModel.paymentMethodFilter.isEmpty() ||
+                viewModel.paymentMethodFilter == PaymentMethod.GIFT_CARD
+        giftCardPaymentOn = isGiftCardOn
+        binding.giftCardOption.isChecked = isGiftCardOn
         binding.giftCardOption.setOnCheckedChangeListener { _, isChecked ->
             if (!isChecked && !binding.dashOption.isChecked) {
                 binding.dashOption.isChecked = true
             }
 
-            currentOptions.giftCardPaymentOn = isChecked
+            giftCardPaymentOn = isChecked
         }
     }
 
     private fun setupRadiusOptions() {
+        selectedRadiusOption = viewModel.selectedRadiusOption
+
         val options = listOf(1, 5, 20, 50)
         val optionNames = binding.root.resources.getStringArray(
-            if (isMetric) R.array.radius_filter_options_kilometers else R.array.radius_filter_options_miles
-        ).toList()
-        val radiusOption = currentOptions.selectedRadiusOption
+            if (viewModel.isMetric) R.array.radius_filter_options_kilometers else R.array.radius_filter_options_miles
+        ).map { IconifiedViewItem(it, null) }
+
+        val radiusOption = viewModel.selectedRadiusOption
         val adapter = RadioGroupAdapter(options.indexOf(radiusOption)) { _, optionIndex ->
-            currentOptions.selectedRadiusOption = options[optionIndex]
+            selectedRadiusOption = options[optionIndex]
         }
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
         val decorator = ListDividerDecorator(
@@ -127,21 +153,72 @@ class FiltersDialog(
         binding.radiusFilter.addItemDecoration(decorator)
         binding.radiusFilter.adapter = adapter
         adapter.submitList(optionNames)
-    }
-        
 
-     private fun setLocationName() {
-        binding.locationName.text = if (currentOptions.selectedTerritory.isEmpty()) {
+/// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        val options1 = listOf(20, 50, 100, 500)
+        val optionNames1 = options1.map { IconifiedViewItem("${it} markers") }
+
+        val adapter1 = RadioGroupAdapter(options1.indexOf(viewModel.maxMarkers)) { _, optionIndex ->
+            viewModel.maxMarkers = options1[optionIndex]
+        }
+        val divider1 = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
+        val decorator1 = ListDividerDecorator(
+            divider1,
+            showAfterLast = false,
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
+        )
+        binding.markerAmount.addItemDecoration(decorator1)
+        binding.markerAmount.adapter = adapter1
+        adapter1.submitList(optionNames1)
+    }
+
+     private fun setTerritoryName(territory: String) {
+        binding.locationName.text = if (territory.isEmpty()) {
             getString(R.string.explore_all_states)
         } else {
-            currentOptions.selectedTerritory
+            territory
+        }
+         selectedTerritory = territory
+    }
+
+    private fun setupTerritoryFilter() {
+        setTerritoryName(viewModel.pickedTerritory)
+
+        lifecycleScope.launch {
+            territoriesJob = async {
+                viewModel.getTerritoriesWithPOIs().sorted()
+            }
+        }
+
+        binding.locationBtn.setOnClickListener {
+            val firstOption = if (viewModel.isLocationEnabled.value == true) {
+                IconifiedViewItem(getString(R.string.explore_current_location), R.drawable.ic_current_location)
+            } else {
+                IconifiedViewItem(getString(R.string.explore_all_states))
+            }
+
+            lifecycleScope.launch {
+                val territories = territoriesJob?.await() ?: listOf()
+                val fullTerritoryList = listOf(firstOption) + territories.map { IconifiedViewItem(it) }
+
+                val selectedIndex = if (selectedTerritory.isEmpty()) {
+                    0
+                } else {
+                    territories.indexOf(selectedTerritory) + 1
+                }
+                TerritoryFilterDialog(fullTerritoryList, selectedIndex) { item, _, dialog ->
+                    dialog.dismiss()
+                    setTerritoryName(item.name)
+                }.show(parentFragmentManager, "territory_filter")
+            }
         }
     }
 
-    override fun dismiss() {
-        lifecycleScope.launch {
-            delay(300)
-            super.dismiss()
-        }
+    private fun setupLocationPermission() {
+        binding.locationStatus.text = getString(if (isLocationPermissionGranted) {
+            R.string.explore_location_allowed
+        } else {
+            R.string.explore_location_denied
+        })
     }
 }

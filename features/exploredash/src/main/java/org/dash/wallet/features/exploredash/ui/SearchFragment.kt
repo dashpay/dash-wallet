@@ -56,13 +56,12 @@ import org.dash.wallet.common.ui.DialogBuilder
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
-import org.dash.wallet.features.exploredash.ui.dialogs.FilterOptionSet
-import org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -167,9 +166,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         header.setOnFilterButtonClicked {
-            lifecycleScope.launch {
-                showFilterDialog()
-            }
+            safeNavigate(SearchFragmentDirections.searchToFilters())
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
@@ -193,43 +190,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             }
         }
-    }
-
-    private suspend fun showFilterDialog() {
-        val territories = viewModel.getTerritoriesWithPOIs()
-        val currentOptions = FilterOptionSet(
-            viewModel.pickedTerritory,
-            viewModel.selectedRadiusOption,
-            dashPaymentOn = viewModel.paymentMethodFilter.isEmpty() ||
-                    viewModel.paymentMethodFilter == PaymentMethod.DASH,
-            giftCardPaymentOn = viewModel.paymentMethodFilter.isEmpty() ||
-                    viewModel.paymentMethodFilter == PaymentMethod.GIFT_CARD
-        )
-        FiltersDialog(
-            territories,
-            showPaymentOptions = viewModel.exploreTopic == ExploreTopic.Merchants,
-            isMetric = viewModel.isMetric,
-            currentOptions
-        ) { options, dialog ->
-            viewModel.pickedTerritory = options.selectedTerritory
-            viewModel.selectedRadiusOption = options.selectedRadiusOption
-
-            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
-                var paymentFilter = ""
-
-                if (!currentOptions.dashPaymentOn || !currentOptions.giftCardPaymentOn) {
-                    paymentFilter = if (currentOptions.dashPaymentOn) {
-                        PaymentMethod.DASH
-                    } else {
-                        PaymentMethod.GIFT_CARD
-                    }
-                }
-
-                viewModel.paymentMethodFilter = paymentFilter
-            }
-
-            dialog.dismiss()
-        }.show(parentFragmentManager, "filters_dialog")
     }
 
     private fun setupSearchInput(

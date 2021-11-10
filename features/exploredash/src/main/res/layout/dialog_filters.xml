@@ -1,10 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><!--<FrameLayout-->
-<!--    xmlns:android="http://schemas.android.com/apk/res/android"-->
-<!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
-<!--    xmlns:tools="http://schemas.android.com/tools"-->
-<!--    android:layout_width="match_parent"-->
-<!--    android:layout_height="match_parent">-->
-
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -166,14 +160,56 @@
                 app:cardCornerRadius="10dp"
                 app:cardElevation="0dp">
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/radius_filter"
+                <LinearLayout
+                    android:orientation="vertical"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false"
-                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                    tools:itemCount="5"
-                    tools:listitem="@layout/radiobutton_row" />
+                    android:layout_height="wrap_content">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/radius_filter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                        tools:itemCount="5"
+                        tools:listitem="@layout/radiobutton_row" />
+
+<!--                    <TextView-->
+<!--                        style="@style/Body2"-->
+<!--                        android:layout_width="match_parent"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:layout_marginHorizontal="20dp"-->
+<!--                        android:layout_marginTop="20dp"-->
+<!--                        android:gravity="center"-->
+<!--                        android:text="@string/explore_location_request"/>-->
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+
+            <TextView
+                style="@style/Caption.SemiBold.SteelGray"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:text="Amount of markers" />
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="26dp"
+                android:background="@color/white"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/marker_amount"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                        tools:itemCount="5"
+                        tools:listitem="@layout/radiobutton_row" />
             </androidx.cardview.widget.CardView>
 
             <TextView
@@ -229,15 +265,4 @@
                 android:text="@string/explore_reset_filters" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-</LinearLayout><!--    <ScrollView-->
-    <!--        android:id="@+id/screenshot"-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="match_parent">-->
-
-    <!--        <ImageView-->
-    <!--            android:layout_width="match_parent"-->
-    <!--            android:layout_height="wrap_content"-->
-    <!--            android:alpha="0.5"-->
-    <!--            android:src="@drawable/explore" />-->
-    <!--    </ScrollView>-->
-    <!--</FrameLayout>-->
+</LinearLayout>

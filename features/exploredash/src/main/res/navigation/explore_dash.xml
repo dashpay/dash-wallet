@@ -29,5 +29,15 @@
             android:name="type"
             android:defaultValue="Merchants"
             app:argType="org.dash.wallet.features.exploredash.ui.ExploreTopic" />
+
+        <action
+            android:id="@+id/search_to_filters"
+            app:destination="@id/filtersDialog" />
     </fragment>
+
+    <dialog
+        android:id="@+id/filtersDialog"
+        android:name="org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog"
+        android:label="explore_filters"
+        tools:layout="@layout/dialog_filters"/>
 </navigation>

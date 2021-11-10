@@ -17,7 +17,6 @@
 package org.dash.wallet.features.exploredash.ui.dialogs
 
 import android.content.Context
-import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -36,12 +35,12 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogTerritoryFilterBinding
 import org.dash.wallet.features.exploredash.ui.adapters.RadioGroupAdapter
-
+import org.dash.wallet.features.exploredash.ui.viewitems.IconifiedViewItem
 
 class TerritoryFilterDialog(
-    private val territories: List<String>,
-    private val selectedTerritory: String,
-    private val clickListener: (String, DialogFragment) -> Unit
+    private val itemList: List<IconifiedViewItem>,
+    private val selectedIndex: Int,
+    private val clickListener: (IconifiedViewItem, Int, DialogFragment) -> Unit
 ) : OffsetDialogFragment() {
 
     private val binding by viewBinding(DialogTerritoryFilterBinding::bind)
@@ -57,12 +56,10 @@ class TerritoryFilterDialog(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val allStatesName = getString(R.string.explore_all_states)
-        val fullTerritoryList = listOf(allStatesName) + territories.sorted()
-        val selectedIndex = if (selectedTerritory.isEmpty()) 0 else fullTerritoryList.indexOf(selectedTerritory)
+        binding.searchTitle.text = getString(R.string.explore_location)
 
-        val adapter = RadioGroupAdapter(selectedIndex) { item, _ ->
-            clickListener.invoke(if (item == allStatesName) "" else item, this)
+        val adapter = RadioGroupAdapter(selectedIndex) { item, index ->
+            clickListener.invoke(item, index, this)
         }
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
         val decorator = ListDividerDecorator(
@@ -70,23 +67,24 @@ class TerritoryFilterDialog(
             showAfterLast = false,
             marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
         )
-        binding.territories.addItemDecoration(decorator)
-        binding.territories.adapter = adapter
-        adapter.submitList(fullTerritoryList)
+        binding.contentList.addItemDecoration(decorator)
+        binding.contentList.adapter = adapter
+        adapter.submitList(itemList)
+        binding.contentList.scrollToPosition(selectedIndex)
 
-        binding.search.doOnTextChanged { text, _, _, _ ->
+        binding.searchQuery.doOnTextChanged { text, _, _, _ ->
             binding.clearBtn.isVisible = !text.isNullOrEmpty()
             if (text.isNullOrBlank()) {
-                adapter.submitList(fullTerritoryList)
+                adapter.submitList(itemList)
             } else {
-                val filteredList = fullTerritoryList.filter {
-                    it.lowercase().contains(text.toString().lowercase())
+                val filteredList = itemList.filter {
+                    it.name.lowercase().contains(text.toString().lowercase())
                 }
                 adapter.submitList(filteredList)
             }
         }
 
-        binding.search.setOnEditorActionListener { _, actionId, _ ->
+        binding.searchQuery.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 val inputManager = requireContext()
                     .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -97,7 +95,7 @@ class TerritoryFilterDialog(
         }
 
         binding.clearBtn.setOnClickListener {
-            binding.search.text.clear()
+            binding.searchQuery.text.clear()
         }
     }
 

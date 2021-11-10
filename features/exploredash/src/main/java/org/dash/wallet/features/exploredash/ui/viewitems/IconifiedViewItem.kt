@@ -18,9 +18,8 @@ package org.dash.wallet.features.exploredash.ui.viewitems
 
 import androidx.annotation.DrawableRes
 
-data class SelectableViewItem(
+data class IconifiedViewItem(
     val name: String,
     @DrawableRes
-    val icon: Int,
-    var isSelected: Boolean
+    val icon: Int? = null
 )

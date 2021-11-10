@@ -41,8 +41,8 @@
     <string name="explore_payment_gift_card">Gift card</string>
     <string name="explore_radius">Radius</string>
     <string name="explore_location">Location</string>
+    <string name="explore_current_location">Current Location</string>
     <string name="explore_location_settings">Current Location Settings</string>
-    <string name="explore_select_state">Select the State</string>
     <string name="explore_reset_filters">Reset Filters</string>
 
     <string-array name="merchants_filter_options">
@@ -72,8 +72,15 @@
         <item>50 kilometers</item>
     </string-array>
 
-    <!-- Permissions -->
+    <!-- Permissions TODO remove-->
     <string name="permission_required_title">Permission required</string>
     <string name="permission_required_message">We need to know your current location</string>
     <string name="goto_settings">Settings</string>
+
+    <!-- Location Permission -->
+    <string name="explore_location_allowed">Allowed</string>
+    <string name="explore_location_denied">Denied</string>
+    <string name="explore_manager_permissions">Manage GPS Permission</string>
+    <string name="explore_location_request">Grant GPS permissions so we can show you locations near you.</string>
+    <string name="explore_location_explainer">Your location is used to show your position on the map, merchants in the selected radius and improve search results.</string>
 </resources>

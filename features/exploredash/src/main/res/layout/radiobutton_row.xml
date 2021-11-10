@@ -7,6 +7,20 @@
     android:layout_height="46dp"
     android:paddingHorizontal="15dp">
 
+    <ImageView
+        android:id="@+id/icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="11dp"
+        android:visibility="gone"
+        app:tint="@color/radiobutton_text_color"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/name"
+        tools:src="@drawable/ic_current_location"
+        tools:visibility="visible" />
+
     <TextView
         android:id="@+id/name"
         style="@style/Body2.Medium"
@@ -14,9 +28,10 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="32dp"
         android:layout_gravity="center_vertical"
+        android:textColor="@color/radiobutton_text_color"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@id/icon"
         app:layout_constraintEnd_toEndOf="parent"
         tools:text="Alabama" />
 
