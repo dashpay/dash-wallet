@@ -29,6 +29,7 @@ import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.features.exploredash.services.UserLocationState
+import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 
 
 @Module
@@ -38,18 +39,22 @@ abstract class ExploreDashModule {
     abstract fun bindExploreRepository(
         exploreRepository: FirebaseExploreDatabase
     ): ExploreRepository
+
+    @ExperimentalCoroutinesApi
+    @Binds
+    abstract fun bindUserLocationState(userLocationState: UserLocationState): UserLocationStateInt
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
 object LocationProvider {
     @Provides
+    fun provideContext(@ApplicationContext context: Context): Context {
+        return context
+    }
+
+    @Provides
     fun provideFusedLocationProviderClient(@ApplicationContext context: Context): FusedLocationProviderClient {
         return LocationServices.getFusedLocationProviderClient(context)
     }
-
-    @ExperimentalCoroutinesApi
-    @Provides
-    fun provideUserLocation(@ApplicationContext context: Context, locationProviderClient: FusedLocationProviderClient):
-            UserLocationState = UserLocationState(context, locationProviderClient)
 }

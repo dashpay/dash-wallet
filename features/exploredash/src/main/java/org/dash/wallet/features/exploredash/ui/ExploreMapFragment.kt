@@ -45,15 +45,19 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.collections.CircleManager
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.services.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocationState
+import org.dash.wallet.features.exploredash.services.UserLocationStateInt
+import javax.inject.Inject
 
 @FlowPreview
 @ExperimentalCoroutinesApi
+@AndroidEntryPoint
 class ExploreMapFragment: SupportMapFragment() {
     companion object {
         private const val CURRENT_POSITION_MARKER_TAG = 0
@@ -79,7 +83,7 @@ class ExploreMapFragment: SupportMapFragment() {
     private var circleCollection: CircleManager.Collection? = null
     private var futureTarget =  mutableListOf<FutureTarget<Bitmap>>()
     private lateinit var markersGlideRequestManager: RequestManager
-
+    @Inject lateinit var userLocationState: UserLocationStateInt
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         markersGlideRequestManager = Glide.with(this)
@@ -233,7 +237,7 @@ class ExploreMapFragment: SupportMapFragment() {
 
     private fun setMapDefaultViewLevel(radius: Double) {
         val heightInPixel = this.requireView().measuredHeight
-        val latLngBounds = UserLocationState.calculateBounds(mCurrentUserLocation, radius)
+        val latLngBounds = userLocationState.calculateBounds(mCurrentUserLocation, radius)
         val mapPadding = resources.getDimensionPixelOffset(R.dimen.map_padding)
         googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, mapPadding))
     }

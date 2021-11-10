@@ -28,7 +28,7 @@ import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.services.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocation
-import org.dash.wallet.features.exploredash.services.UserLocationState
+import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.math.min
@@ -51,7 +51,7 @@ enum class FilterMode {
 class ExploreViewModel @Inject constructor(
     private val merchantDao: MerchantDao,
     private val atmDao: AtmDao,
-    private val locationProvider: UserLocationState
+    private val locationProvider: UserLocationStateInt
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L

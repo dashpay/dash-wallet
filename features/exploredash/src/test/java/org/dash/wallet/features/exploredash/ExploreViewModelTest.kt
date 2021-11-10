@@ -22,7 +22,7 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.services.UserLocationState
+import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.FilterMode
 import org.junit.Assert.assertEquals
@@ -44,7 +44,7 @@ class ExploreViewModelTest {
 
     private val merchantDaoMock = mock(MerchantDao::class.java)
     private val atmDaoMock = mock(AtmDao::class.java)
-    private val locationState = mock(UserLocationState::class.java)
+    private val locationState = mock(UserLocationStateInt::class.java)
 
     @Test
     fun filterByTerritoryIsCorrect() {
