@@ -1,7 +1,7 @@
 buildscript {
     ext.kotlin_version = '1.4.31'
     ext.ok_http_version = '3.12.12'
-    ext.dashjVersion = "0.17.11-SNAPSHOT"
+    ext.dashjVersion = "0.18-SNAPSHOT"
     ext.firebaseVersion = '28.4.2'
     repositories {
         google()
