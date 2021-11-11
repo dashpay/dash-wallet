@@ -50,7 +50,6 @@ import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
@@ -217,7 +216,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         Threading.uncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(final Thread thread, final Throwable throwable) {
-                log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
+                log.info("dashj uncaught exception", throwable);
                 CrashReporter.saveBackgroundTrace(throwable, packageInfo);
             }
         };
@@ -246,7 +245,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     }
 
     public void finalizeInitialization() {
-        wallet.getContext().initDash(true, true);
+        wallet.getContext().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
         if (config.versionCodeCrossed(packageInfo.versionCode, VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {

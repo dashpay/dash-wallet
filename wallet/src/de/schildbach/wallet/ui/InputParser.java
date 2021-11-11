@@ -33,7 +33,6 @@ import org.bitcoin.protocols.payments.Protos;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Base58;
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
@@ -42,6 +41,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.crypto.TrustStoreLoader;
+import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
@@ -82,7 +82,7 @@ public abstract class InputParser {
                 // replaces Anypay scheme with the Dash one
                 // ie "pay:?r=https://(...)" become "dash:?r=https://(...)"
                 if (input.startsWith(SendCoinsActivity.ANYPAY_SCHEME + ":")) {
-                    this.input = input.replaceFirst(SendCoinsActivity.ANYPAY_SCHEME, CoinDefinition.coinURIScheme);
+                    this.input = input.replaceFirst(SendCoinsActivity.ANYPAY_SCHEME, SendCoinsActivity.DASH_SCHEME);
                     return;
                 }
             }
@@ -91,7 +91,7 @@ public abstract class InputParser {
 
         @Override
         public void parse() {
-            if (input.startsWith(CoinDefinition.coinURIScheme.toUpperCase() + ":-")) {
+            if (input.startsWith(SendCoinsActivity.DASH_SCHEME.toUpperCase() + ":-")) {
                 try {
                     final byte[] serializedPaymentRequest = Qr.decodeBinary(input.substring(9));
 
@@ -109,7 +109,7 @@ public abstract class InputParser {
 
                     error(x, R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
-            } else if (input.startsWith(CoinDefinition.coinURIScheme + ":")) {
+            } else if (input.startsWith(SendCoinsActivity.DASH_SCHEME + ":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
                     final Address address = AddressUtil.getCorrectAddress(bitcoinUri);
@@ -438,10 +438,10 @@ public abstract class InputParser {
     private static final Pattern PATTERN_BITCOIN_ADDRESS = Pattern
             .compile("[" + new String(Base58.ALPHABET) + "]{20,40}");
     private static final Pattern PATTERN_DUMPED_PRIVATE_KEY_UNCOMPRESSED = Pattern
-            .compile((Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? CoinDefinition.PATTERN_PRIVATE_KEY_START_UNCOMPRESSED : "9") + "["
+            .compile((Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? "X" : "9") + "["
                     + new String(Base58.ALPHABET) + "]{50}");
     private static final Pattern PATTERN_DUMPED_PRIVATE_KEY_COMPRESSED = Pattern
-            .compile((Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? CoinDefinition.PATTERN_PRIVATE_KEY_START_COMPRESSED : "c") + "["
+            .compile((Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? "7" : "c") + "["
                     + new String(Base58.ALPHABET) + "]{51}");
     private static final Pattern PATTERN_BIP38_PRIVATE_KEY = Pattern
             .compile("6P" + "[" + new String(Base58.ALPHABET) + "]{56}");
