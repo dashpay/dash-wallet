@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Explore screen -->
     <string name="explore_dash">Explore Dash</string>
     <string name="explore_title">Explore</string>
     <string name="explore_subtitle">Easily shop with your DASH at over 155,000 locations and online merchants</string>
@@ -83,4 +84,18 @@
     <string name="explore_manager_permissions">Manage GPS Permission</string>
     <string name="explore_location_request">Grant GPS permissions so we can show you locations near you.</string>
     <string name="explore_location_explainer">Your location is used to show your position on the map, merchants in the selected radius and improve search results.</string>
+
+    <!-- Info screens -->
+    <string name="explore_info_header_text">We have 2 types of merchants</string>
+    <string name="accept_dash_text">Accepts DASH  directly</string>
+    <string name="pay_with_dash_text">Pay with the DASH wallet.</string>
+    <string name="buy_gift_card_text">Buy gift cards with your Dash</string>
+    <string name="buy_gift_card_desc_text">Buy gift cards with your Dash for the exact amount of your purchase.</string>
+    <string name="learn_more_text">Learn More</string>
+    <string name="continue_text">Continue</string>
+    <string name="buy_card_header_text">How to Use a Gift Card</string>
+    <string name="buy_card_desc_text">Not all of the stores accept DASH directly, but you can buy a gift card with your Dash.</string>
+    <string name="find_merchant_text">Find a merchant.</string>
+    <string name="buy_gift_card_with_dash_text">Buy a gift card with Dash.</string>
+    <string name="redeem_gift_card_text">Redeem your gift card online within seconds or at the cashier.</string>
 </resources>

@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.app.ActivityCompat
+import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
@@ -40,8 +41,9 @@ import org.dash.wallet.features.exploredash.ui.viewitems.IconifiedViewItem
 
 @FlowPreview
 @ExperimentalCoroutinesApi
-class FiltersDialog: OffsetDialogFragment(R.drawable.gray_background_rounded) {
-
+class FiltersDialog: OffsetDialogFragment<LinearLayout>(
+    R.drawable.gray_background_rounded
+) {
     private var selectedTerritory: String = ""
     private var selectedRadiusOption: Int = 20
     private var dashPaymentOn: Boolean = true

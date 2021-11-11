@@ -31,13 +31,34 @@
             app:argType="org.dash.wallet.features.exploredash.ui.ExploreTopic" />
 
         <action
+            android:id="@+id/explore_to_info"
+            app:destination="@id/infoDialog" />
+
+        <action
             android:id="@+id/search_to_filters"
             app:destination="@id/filtersDialog" />
     </fragment>
 
     <dialog
+        android:id="@+id/infoDialog"
+        android:name="org.dash.wallet.features.exploredash.ui.dialogs.ExploreDashInfoDialog"
+        android:label="explore_dash_info"
+        tools:layout="@layout/explore_dash_main_info">
+
+        <action
+            android:id="@+id/info_to_gift_card_detail"
+            app:destination="@id/buyGiftCardInfoDialog" />
+    </dialog>
+
+    <dialog
+        android:id="@+id/buyGiftCardInfoDialog"
+        android:name="org.dash.wallet.features.exploredash.ui.dialogs.BuyGiftCardDescriptionDialog"
+        android:label="buy_gift_card_info"
+        tools:layout="@layout/buy_gift_card_description" />
+
+    <dialog
         android:id="@+id/filtersDialog"
         android:name="org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog"
         android:label="explore_filters"
-        tools:layout="@layout/dialog_filters"/>
+        tools:layout="@layout/dialog_filters" />
 </navigation>

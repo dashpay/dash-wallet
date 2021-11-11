@@ -18,8 +18,8 @@ package org.dash.wallet.features.exploredash.ui.dialogs
 
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import androidx.annotation.DrawableRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -28,7 +28,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.dash.wallet.features.exploredash.R
 
 
-open class OffsetDialogFragment(
+open class OffsetDialogFragment<T: ViewGroup>(
     @DrawableRes private val background: Int = R.drawable.white_background_rounded
 ) : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -40,7 +40,7 @@ open class OffsetDialogFragment(
             bottomSheet?.let {
                 bottomSheet.setBackgroundResource(background)
                 
-                val rootLayout = view.findViewById<LinearLayout>(R.id.root_layout)
+                val rootLayout = view.findViewById<T>(R.id.root_layout)
                 rootLayout.layoutParams = FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT, bottomSheet.height)
 
