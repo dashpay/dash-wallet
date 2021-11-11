@@ -59,7 +59,7 @@
 }
 ```
 
-Uphold Cooldown Period
+# Uphold Cooldown Period
 ```json
 {
    "code":"validation_failed",
@@ -87,7 +87,7 @@ Uphold Cooldown Period
 # Insufficent Funds
 This is probably avoided since the integration queries the balance before allowing a transfer.
 ```json
-      {
+{
   "code": "validation_failed",
   "errors": {
     "denomination": {
@@ -141,5 +141,35 @@ Error: 403
       "user-status-not-valid"
     ]
   }
+}
+```
+
+# User needs to submit answers to more questions
+The following is an example of the error message when creating the transaction:
+
+HTTP 403
+```json
+{
+"capability": "trades",
+"code": "forbidden",
+"message": "Quote not allowed due to capability constraints",
+"requirements": [ "user-must-submit-enhanced-due-diligence" ],
+"restrictions": []
+}
+```
+The capability may be different, depending on the type of transaction.
+
+# Identity Not Verified
+Uphold is also asking existing EU/UK users who haven’t verified their identity to do so. 
+Some actions like pulling funds from user’s accounts will trigger the following error:
+
+HTTP 403
+```json
+{
+"capability": "sends",
+"code": "forbidden",
+"message": "Quote not allowed due to capability constraints",
+"requirements": ["user-must-submit-identity"],
+"restrictions": []
 }
 ```
