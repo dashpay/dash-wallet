@@ -41,6 +41,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.crypto.BIP38PrivateKey;
 import org.bitcoinj.crypto.TrustStoreLoader;
+import org.bitcoinj.params.AbstractBitcoinNetParams;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
 import org.bitcoinj.protocols.payments.PaymentProtocolException;
@@ -90,7 +91,7 @@ public abstract class InputParser {
 
         @Override
         public void parse() {
-            if (input.startsWith("DASH:-")) {
+            if (input.startsWith(SendCoinsActivity.DASH_SCHEME + ":-")) {
                 try {
                     final byte[] serializedPaymentRequest = Qr.decodeBinary(input.substring(9));
 
@@ -108,7 +109,7 @@ public abstract class InputParser {
 
                     error(x, R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
-            } else if (input.startsWith("dash:")) {
+            } else if (input.startsWith(SendCoinsActivity.DASH_SCHEME + ":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
                     final Address address = AddressUtil.getCorrectAddress(bitcoinUri);
