@@ -28,7 +28,10 @@
     <string name="uphold_general_error_title">Error</string>
     <string name="uphold_api_error_title">Uphold error</string>
     <string name="uphold_api_error_identity">Your Uphold account isn’t verified yet. Funds cannot be withdrawn.</string>
-    <string name="uphold_api_error_403_description">Your Uphold account has been flagged for review.\n\nUphold has temporarily restricted your account and you won’t be able to withdraw funds.\n\nUphold will be in touch to help you sort this out quickly.</string>
+    <string name="uphold_api_error_403_description">Your Uphold account has been flagged for review.\n\nUphold has temporarily restricted your account and you won’t be able to withdraw funds.\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Uphold will be in touch to help you sort this out quickly.</string>
+    <string name="uphold_api_error_403_due_diligence">Please go to your Uphold account to answer some questions about yourself.</string>
+    <string name="uphold_api_error_403_identity">Please go to your Uphold account to verify your identity.</string>
     <string name="uphold_api_error_400_description">Uphold funds are locked for 24 hours.\n\nYou will have sufficient funds for this transfer by %s.</string>
     <string name="uphold_api_error_400_locked">Uphold funds (%1$s %2$s) are locked for up to 65 days.\n\nYou will have sufficient funds for this transfer by %3$s.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">You do not have sufficient funds for this transfer</string>

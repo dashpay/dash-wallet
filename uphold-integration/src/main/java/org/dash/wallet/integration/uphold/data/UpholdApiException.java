@@ -46,6 +46,17 @@ public class UpholdApiException extends Exception {
         this.httpStatusCode = httpStatusCode;
     }
 
+    // for testing
+    public UpholdApiException(String errorResponse, int httpStatusCode) {
+        this.httpStatusCode = httpStatusCode;
+        try {
+            errorBody = new JSONObject(errorResponse);
+        } catch (JSONException x) {
+            errorBody = null;
+        }
+
+    }
+
     public String getErrorCode() {
         if (errorBody != null) {
             try {
@@ -128,7 +139,7 @@ public class UpholdApiException extends Exception {
         return (errors != null) && errors.has(LOCKED_FUNDS_ERROR);
     }
 
-    private boolean isValidationFailed(HashMap<String, String> arguments) {
+    public boolean isValidationFailed(HashMap<String, String> arguments) {
         try {
             JSONObject errors = getErrorsWithException();
             if (errors.has("denomination")) {
@@ -191,7 +202,7 @@ public class UpholdApiException extends Exception {
                     } else if (user.get("code").equals("restricted_by_authentication_method_reset")) {
                         if (user.has("args")) {
                             JSONObject args = (JSONObject) user.get("args");
-                            Date date = convertISO8601Date(args.getString("recentPasswordRestrictionEndDate"));
+                            Date date = convertISO8601Date(args.getString("recentAuthenticationRestrictionEndDate"));
                             arguments.put("code", "restricted_by_authentication_method_reset");
                             arguments.put("recentAuthenticationRestrictionEndDate", formatter.format(date));
                             return true;
@@ -225,11 +236,13 @@ public class UpholdApiException extends Exception {
     //       "restrictions":["user-status-not-valid"]
     //  }
 
-    private boolean isForbiddenError() {
+    public boolean isForbiddenError(HashMap<String, String> arguments) {
         JSONObject errors = errorBody;
         try {
             if (errors != null && errors.has("code")) {
                 if (errors.get("code").equals(FORBIDDEN_ERROR)) {
+                    JSONArray requirements = errors.getJSONArray("requirements");
+                    arguments.put("requirements", (String)requirements.get(0));
                     return true;
                 }
             }
@@ -270,10 +283,10 @@ public class UpholdApiException extends Exception {
 
     public String getDescription(Context context) {
         StringBuilder stringBuilder = new StringBuilder();
+        HashMap<String, String> arguments = new HashMap<>(4);
         if (isIdentityError()) {
             return context.getString(R.string.uphold_api_error_identity);
         } else if (httpStatusCode == 400) {
-            HashMap<String, String> arguments = new HashMap<>(4);
             if (isValidationFailed(arguments)) {
                 switch ((String)arguments.get("code")) {
                     case "sufficient_unlocked_funds":
@@ -307,8 +320,23 @@ public class UpholdApiException extends Exception {
                 return context.getString(R.string.loading_error);
             }
         } else if (httpStatusCode == 403) {
-            if (isForbiddenError()) {
-                return context.getString(R.string.uphold_api_error_403_description);
+            if (isForbiddenError(arguments)) {
+                String requirements = arguments.get("requirements");
+                int moreInfoId = R.string.uphold_api_error_403_generic;
+                if (requirements != null) {
+                    switch (requirements) {
+                        case "user-must-submit-enhanced-due-diligence":
+                            moreInfoId = 0;
+                            break;
+                        case "user-must-submit-identity":
+                            moreInfoId = 1;
+                            break;
+                        default:
+                            moreInfoId = R.string.uphold_api_error_403_generic;
+                            break;
+                    }
+                }
+                return context.getString(R.string.uphold_api_error_403_description, context.getString(moreInfoId));
             } else {
                 return context.getString(R.string.loading_error);
             }
