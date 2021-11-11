@@ -20,20 +20,16 @@ import android.Manifest
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.provider.Settings
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.*
@@ -52,7 +48,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.ui.DialogBuilder
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
@@ -125,7 +120,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewModel.init(args.type)
 
-        if (isLocationPermissionGranted()) {
+        if (isLocationPermissionGranted) {
             viewModel.monitorUserLocation()
         }
 
@@ -191,7 +186,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 header.setTitle(viewModel.searchResultsTitle.value ?: getString(R.string.explore_search_results))
                 bottomSheet.isDraggable = true
 
-                if (isLocationPermissionGranted()) {
+                if (isLocationPermissionGranted) {
                     bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
                     bottomSheetWasExpanded = false
                 } else {
@@ -551,30 +546,5 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowUpButton(): Boolean {
         val offset = binding.searchResults.computeVerticalScrollOffset()
         return offset > SCROLL_OFFSET_FOR_UP
-    }
-
-    private fun isLocationPermissionGranted() = ActivityCompat.checkSelfPermission(requireActivity(),
-        Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-
-    private fun showPermissionDeniedDialog() {
-        val deniedPermissionDialog = DialogBuilder.warn(
-            requireActivity(),
-            R.string.permission_required_title,
-            R.string.permission_required_message
-        )
-        deniedPermissionDialog.setPositiveButton(R.string.goto_settings) { _, _ ->
-            val intent = createAppSettingsIntent()
-            startActivity(intent)
-        }
-        deniedPermissionDialog.setNegativeButton(R.string.button_dismiss) { dialog: DialogInterface, _ ->
-            dialog.dismiss()
-        }
-        deniedPermissionDialog.show()
-    }
-
-    private fun createAppSettingsIntent() = Intent().apply {
-        action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-        data = Uri.fromParts("package", requireContext().packageName, null)
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
     }
 }

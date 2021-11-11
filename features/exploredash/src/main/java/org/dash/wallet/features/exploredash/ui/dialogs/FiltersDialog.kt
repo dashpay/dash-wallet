@@ -16,13 +16,10 @@
 
 package org.dash.wallet.features.exploredash.ui.dialogs
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.app.ActivityCompat
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
@@ -37,6 +34,7 @@ import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.adapters.RadioGroupAdapter
+import org.dash.wallet.features.exploredash.ui.isLocationPermissionGranted
 import org.dash.wallet.features.exploredash.ui.viewitems.IconifiedViewItem
 
 @FlowPreview
@@ -52,11 +50,6 @@ class FiltersDialog: OffsetDialogFragment<LinearLayout>(
     private val binding by viewBinding(DialogFiltersBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private var territoriesJob: Deferred<List<String>>? = null
-
-    private val isLocationPermissionGranted: Boolean
-        get() = ActivityCompat.checkSelfPermission(
-            requireContext(),
-            Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     override fun onCreateView(
         inflater: LayoutInflater,
