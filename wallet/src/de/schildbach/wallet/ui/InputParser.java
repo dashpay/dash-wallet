@@ -91,7 +91,7 @@ public abstract class InputParser {
 
         @Override
         public void parse() {
-            if (input.startsWith(SendCoinsActivity.DASH_SCHEME + ":-")) {
+            if (input.startsWith(SendCoinsActivity.DASH_SCHEME.toUpperCase() + ":-")) {
                 try {
                     final byte[] serializedPaymentRequest = Qr.decodeBinary(input.substring(9));
 
