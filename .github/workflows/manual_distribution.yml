@@ -104,5 +104,5 @@ jobs:
       
     - name: Build and Firebase Distribution
       env:
-        SUPPORT_EMAIL: "myemail${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
+        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
       run: bundle exec fastlane build_distribute flavor:"${{ github.event.inputs.flavor }}" type:"${{ github.event.inputs.type }}" version_code:"${{ env.build_number }}" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" comment:"${{ github.event.inputs.taskID }}" app_id:"${{ env.firebase_app_id }}" test_group:"qa"

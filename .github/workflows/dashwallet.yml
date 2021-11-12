@@ -75,6 +75,8 @@ jobs:
       run: bundle exec fastlane build flavor:"_testNet3" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}"
       
     - name: TestNet Build and Firebase Distribution
+      env:
+        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
       if: github.event_name == 'push'
       run: bundle exec fastlane build_distribute flavor:"_testNet3" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}" comment:"Up to date Dash Wallet TestNet build" app_id:"1:1039839682638:android:3202b16d460a1a88" test_group:"qa" SUPPORT_EMAIL:"${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
 

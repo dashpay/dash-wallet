@@ -172,9 +172,9 @@ android {
 
         def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
         if (supportEmail != null) {
-            buildConfigField("String", "SUPPORT_EMAIL", supportEmail)
+            buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
         } else if(System.getenv("SUPPORT_EMAIL") != null) {
-            buildConfigField("String", "SUPPORT_EMAIL", System.getenv("SUPPORT_EMAIL"))
+            buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
         }
     }
 
@@ -188,9 +188,9 @@ android {
             debuggable true
             def supportEmail = localProps.getProperty("INTERNAL_SUPPORT_EMAIL")
             if (supportEmail != null) {
-                buildConfigField("String", "SUPPORT_EMAIL", supportEmail)
+                buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
             } else if(System.getenv('INTERNAL_SUPPORT_EMAIL') != null) {
-                buildConfigField("String", "SUPPORT_EMAIL", System.getenv('INTERNAL_SUPPORT_EMAIL'))
+                buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv('INTERNAL_SUPPORT_EMAIL')}\"")
             }
         }
     }
