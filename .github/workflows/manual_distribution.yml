@@ -51,7 +51,9 @@ jobs:
     - name: Get the support email
       env:
         SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
-    
+      run: |
+        echo "support email obtained from GitHub Actions"
+
     - uses: actions/checkout@v2    
     - name: set up JDK 8
       uses: actions/setup-java@v2
