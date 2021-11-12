@@ -52,7 +52,7 @@ jobs:
       env:
         SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
       run: |
-        echo "support email obtained from GitHub Actions"
+        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2    
     - name: set up JDK 8
