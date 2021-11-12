@@ -242,7 +242,13 @@ public class UpholdApiException extends Exception {
             if (errors != null && errors.has("code")) {
                 if (errors.get("code").equals(FORBIDDEN_ERROR)) {
                     JSONArray requirements = errors.getJSONArray("requirements");
-                    arguments.put("requirements", (String)requirements.get(0));
+                    if (requirements.length() != 0) {
+                        // get the first requirement only
+                        arguments.put("requirements", (String) requirements.get(0));
+                    } else {
+                        // if there are no requirements, specify null
+                        arguments.put("requirements", null);
+                    }
                     return true;
                 }
             }
@@ -322,6 +328,7 @@ public class UpholdApiException extends Exception {
         } else if (httpStatusCode == 403) {
             if (isForbiddenError(arguments)) {
                 String requirements = arguments.get("requirements");
+                // if requirements == null, then use the generic more info message
                 int moreInfoId = R.string.uphold_api_error_403_generic;
                 if (requirements != null) {
                     switch (requirements) {
