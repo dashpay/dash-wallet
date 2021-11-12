@@ -19,7 +19,8 @@ class UpholdErrorsTest {
         """.trimIndent()
         val firstException = UpholdApiException(firstError, 403);
         val arguments = HashMap<String, String>()
-        firstException.isForbiddenError(arguments)
+        assertTrue(firstException.isForbiddenError(arguments))
+        assertEquals(403, firstException.code)
         assertEquals("user-must-submit-identity", arguments["requirements"])
 
         val secondError = """
@@ -33,7 +34,8 @@ class UpholdErrorsTest {
         """.trimIndent()
         val secondException = UpholdApiException(secondError, 403);
         arguments.clear()
-        secondException.isForbiddenError(arguments)
+        assertTrue(secondException.isForbiddenError(arguments))
+        assertEquals(403, secondException.code)
         assertEquals("user-must-submit-enhanced-due-diligence", arguments["requirements"])
 
         val thirdError = """
@@ -50,7 +52,8 @@ class UpholdErrorsTest {
 
         val thirdException = UpholdApiException(thirdError, 403);
         arguments.clear()
-        thirdException.isForbiddenError(arguments)
+        assertTrue(thirdException.isForbiddenError(arguments))
+        assertEquals(403, thirdException.code)
         assertEquals(null, arguments["requirements"])
     }
 
@@ -75,7 +78,7 @@ class UpholdErrorsTest {
         """.trimIndent()
         val exception = UpholdApiException(error, 400);
         val arguments = HashMap<String, String>()
-        exception.isValidationFailed(arguments)
+        assertTrue(exception.isValidationFailed(arguments))
         assertEquals("restricted_by_authentication_method_reset", arguments["code"])
         assertEquals(400, exception.code)
     }
@@ -102,7 +105,7 @@ class UpholdErrorsTest {
         """.trimIndent()
         val exception = UpholdApiException(error, 400);
         val arguments = HashMap<String, String>()
-        exception.isValidationFailed(arguments)
+        assertTrue(exception.isValidationFailed(arguments))
         assertEquals("password_reset_restriction", arguments["code"])
         assertEquals(400, exception.code)
     }
@@ -130,7 +133,7 @@ class UpholdErrorsTest {
         """.trimIndent()
         val exception = UpholdApiException(error, 400);
         val arguments = HashMap<String, String>()
-        exception.isValidationFailed(arguments)
+        assertTrue(exception.isValidationFailed(arguments))
         assertEquals("required", arguments["code"])
         assertEquals(400, exception.code)
     }
@@ -163,7 +166,7 @@ class UpholdErrorsTest {
         """.trimIndent()
         val exception = UpholdApiException(error, 400);
         val arguments = HashMap<String, String>()
-        exception.isValidationFailed(arguments)
+        assertTrue(exception.isValidationFailed(arguments))
         assertEquals("sufficient_unlocked_funds", arguments["code"])
         assertEquals("6.21186161", arguments["missing"])
         assertEquals("DASH", arguments["currency"])
@@ -192,7 +195,7 @@ class UpholdErrorsTest {
         """.trimIndent()
         val exception = UpholdApiException(error, 400);
         val arguments = HashMap<String, String>()
-        exception.isValidationFailed(arguments)
+        assertTrue(exception.isValidationFailed(arguments))
         assertEquals("sufficient_funds", arguments["code"])
         assertEquals(400, exception.code)
     }
@@ -222,7 +225,7 @@ class UpholdErrorsTest {
         """.trimIndent()
         val exception = UpholdApiException(error, 400);
         val arguments = HashMap<String, String>()
-        exception.isValidationFailed(arguments)
+        assertTrue(exception.isValidationFailed(arguments))
         assertEquals("less_than_or_equal_to", arguments["code"])
         assertEquals("25", arguments["threshold"])
         assertEquals(400, exception.code)
