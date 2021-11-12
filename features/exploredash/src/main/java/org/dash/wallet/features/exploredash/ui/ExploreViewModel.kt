@@ -78,6 +78,8 @@ class ExploreViewModel @Inject constructor(
     private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = currentUserLocationState.asLiveData()
 
+    var maxMarkers: Int = 100
+
     private val _pickedTerritory = MutableStateFlow("")
     var pickedTerritory: String
         get() = _pickedTerritory.value

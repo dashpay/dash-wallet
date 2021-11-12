@@ -54,7 +54,7 @@ object LocationProvider {
     }
 
     @Provides
-    fun provideFusedLocationProviderClient(@ApplicationContext context: Context): FusedLocationProviderClient {
+    fun provideFusedLocationProviderClient(context: Context): FusedLocationProviderClient {
         return LocationServices.getFusedLocationProviderClient(context)
     }
 }

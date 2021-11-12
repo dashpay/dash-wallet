@@ -48,10 +48,10 @@ import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.services.GeoBounds
-import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import javax.inject.Inject
 
@@ -63,7 +63,8 @@ class ExploreMapFragment: SupportMapFragment() {
         private const val CURRENT_POSITION_MARKER_TAG = 0
     }
 
-    data class MerchantMarkerUI(
+    data class ExploreMarkerItemUI(
+        val id: Int,
         val latitude: Double,
         val longitude: Double,
         val logoUrl: Bitmap
@@ -84,6 +85,7 @@ class ExploreMapFragment: SupportMapFragment() {
     private var futureTarget =  mutableListOf<FutureTarget<Bitmap>>()
     private lateinit var markersGlideRequestManager: RequestManager
     @Inject lateinit var userLocationState: UserLocationStateInt
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         markersGlideRequestManager = Glide.with(this)
@@ -91,8 +93,6 @@ class ExploreMapFragment: SupportMapFragment() {
         lifecycleScope.launchWhenStarted {
             googleMap = awaitMap()
             showMap()
-//            setUserLocationMarkerMovementState() // TODO: why do we need to drag user location marker? That's weird
-
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
                     val bounds = map.projection.visibleRegion.latLngBounds
@@ -124,9 +124,10 @@ class ExploreMapFragment: SupportMapFragment() {
 
             // TODO: For the 1st iteration of this feature, we shall limit the number of markers to be displayed
             if (results.isNotEmpty()) {
-//                if (results.size < 20) {
+                Log.i("EXPLOREDASH", "markers: " + viewModel.maxMarkers.toString())
+                if (results.size < viewModel.maxMarkers) {
                     setMarkers(results)
-//                } else setMarkers(results.shuffled().subList(0, 20))
+                } else setMarkers(results.shuffled().take(viewModel.maxMarkers))
             }
         }
 
@@ -162,38 +163,18 @@ class ExploreMapFragment: SupportMapFragment() {
         return false
     }
 
-    private fun setUserLocationMarkerMovementState() {
-        markerCollection?.setOnMarkerDragListener(object : GoogleMap.OnMarkerDragListener {
-            override fun onMarkerDragStart(p0: Marker) {
-            }
-
-            override fun onMarkerDrag(p0: Marker) {
-            }
-
-            override fun onMarkerDragEnd(marker: Marker) {
-                if (marker.tag == CURRENT_POSITION_MARKER_TAG){
-                    mCurrentUserLocation = marker.position
-                    currentLocationMarker?.position = marker.position
-                    currentLocationCircle?.center = marker.position
-                    googleMap?.moveCamera(CameraUpdateFactory.newLatLng(marker.position))
-                }
-            }
-        })
-    }
-
-    private fun handleClickOnMerchantMarker(results: List<SearchResult>) {
+    private fun handleClickOnMarkerItem(results: List<SearchResult>) {
         markerCollection?.setOnMarkerClickListener { marker ->
             if (marker.tag == CURRENT_POSITION_MARKER_TAG) {
                 false
             } else {
                 // TODO: this can be moved to the viewModel, which will allow to write a test for it.
-                // Also, it might be better to set Id or Tag of the marker to the Id
-                // of the merchant/atm and use it for search instead of comparing lat/lng
-                val atmItemCoordinates = marker.position
-                val merchants = results.filterIsInstance<Merchant>()
-                merchants.forEach {
-                    if ((it.latitude == atmItemCoordinates.latitude) && (it.longitude == atmItemCoordinates.longitude)) {
-                        viewModel.openMerchantDetails(it)
+                val item = results.firstOrNull { it.id == marker.tag }
+                if (item != null) {
+                    if (results.any { it is Merchant }) {
+                        viewModel.openMerchantDetails(item as Merchant)
+                    } else {
+                        viewModel.openAtmDetails(item as Atm)
                     }
                 }
                 true
@@ -242,16 +223,15 @@ class ExploreMapFragment: SupportMapFragment() {
         googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, mapPadding))
     }
 
-    private suspend fun loadMerchantMarkers(merchants: List<Merchant>) {
+    private suspend fun loadMarkers(items: List<SearchResult>) {
         val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
-        val merchantMarkerSize = resources.getDimensionPixelSize(R.dimen.merchant_marker_size)
+        val exploreMarkerSize = resources.getDimensionPixelSize(R.dimen.merchant_marker_size)
 
-        futureTarget = merchants.map {
+        futureTarget = items.map {
             markersGlideRequestManager
                 .asBitmap()
                 .load(it.logoLocation)
                 .placeholder(R.drawable.ic_merchant)
-                .error(R.drawable.ic_merchant)  // TODO: do we need this here given that placeholder is set below? It's a bit confusing
                 .apply(RequestOptions().centerCrop().circleCrop())
                 .listener(object : RequestListener<Bitmap> {
                     override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
@@ -267,16 +247,17 @@ class ExploreMapFragment: SupportMapFragment() {
                 .submit(markerSize, markerSize)
         }.toMutableList()
 
-        val merchantMarkers = merchants.zip(futureTarget).map { pair ->
+        val exploreMarkers = items.zip(futureTarget).map { pair ->
             pair.first.latitude?.let {
                 pair.first.longitude?.let { it1 ->
-                    MerchantMarkerUI(
+                    ExploreMarkerItemUI(
+                        pair.first.id,
                         it, it1,
                         try {
                             pair.second.get()
                         } catch (e: Exception) {
                             markersGlideRequestManager.asBitmap().load(R.drawable.ic_merchant)
-                                .submit(merchantMarkerSize, merchantMarkerSize).get()
+                                .submit(exploreMarkerSize, exploreMarkerSize).get()
                         }
                     )
                 }
@@ -286,20 +267,20 @@ class ExploreMapFragment: SupportMapFragment() {
         futureTarget.forEach { markersGlideRequestManager.clear(it) }
 
         withContext(Dispatchers.Main){
-            merchantMarkers.forEach{
-                it?.let { it1 -> addMerchantMarkerToMap(it1.latitude, it.longitude, it.logoUrl) }
+            exploreMarkers.forEach{
+                it?.let { it1 -> addMarkerItemToMap(it1.latitude, it.longitude, it.logoUrl, it.id) }
             }
         }
     }
 
-    private fun addMerchantMarkerToMap(latitude: Double, longitude: Double, bitmap: Bitmap) {
+    private fun addMarkerItemToMap(latitude: Double, longitude: Double, bitmap: Bitmap, itemId: Int) {
         markerCollection?.addMarker(MarkerOptions().apply {
             position(LatLng(latitude, longitude))
             anchor(0.5f, 0.5f)
             icon(BitmapDescriptorFactory.fromBitmap(bitmap))
             draggable(false)
         }).apply {
-            this?.tag = null
+            this?.tag = itemId
         }
     }
 
@@ -315,24 +296,17 @@ class ExploreMapFragment: SupportMapFragment() {
         }
     }
 
-    private suspend fun renderMerchantsOnMap(results: List<SearchResult>) {
+    private suspend fun renderItemsOnMap(results: List<SearchResult>) {
         withContext(Dispatchers.IO){
-            val merchants = results.filterIsInstance<Merchant>()
-            Log.e(this@ExploreMapFragment::class.java.simpleName, "Merchant size: ${merchants.size}")
-            val chunkResult = merchants.chunked(10)
-            Log.e(this@ExploreMapFragment::class.java.simpleName, "Chunk size: ${chunkResult.size}")
-
-            chunkResult.forEach {
-                loadMerchantMarkers(it)
-            }
+            loadMarkers(results)
         }
     }
 
     private fun setMarkers(items: List<SearchResult>) {
         viewLifecycleOwner.lifecycleScope.launch {
-            renderMerchantsOnMap(items)
+            renderItemsOnMap(items)
         }
-        handleClickOnMerchantMarker(items)
+        handleClickOnMarkerItem(items)
     }
 
     private fun getBitmapFromDrawable(drawableId: Int): Bitmap? {
