@@ -173,7 +173,7 @@ android {
         def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
         if (supportEmail != null) {
             buildConfigField("String", "SUPPORT_EMAIL", supportEmail)
-        } else if(project.hasProperty('SUPPORT_EMAIL') != null) {
+        } else if(project.hasProperty('SUPPORT_EMAIL')) {
             buildConfigField("String", "SUPPORT_EMAIL", project.property('SUPPORT_EMAIL'))
         }
     }
@@ -189,7 +189,7 @@ android {
             def supportEmail = localProps.getProperty("INTERNAL_SUPPORT_EMAIL")
             if (supportEmail != null) {
                 buildConfigField("String", "SUPPORT_EMAIL", supportEmail)
-            } else if(project.hasProperty('INTERNAL_SUPPORT_EMAIL') != null) {
+            } else if(project.hasProperty('INTERNAL_SUPPORT_EMAIL')) {
                 buildConfigField("String", "SUPPORT_EMAIL", project.hasProperty('INTERNAL_SUPPORT_EMAIL'))
             }
         }
