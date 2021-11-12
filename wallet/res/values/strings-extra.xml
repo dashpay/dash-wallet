@@ -635,4 +635,8 @@
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
+
+    <string name="serious_error_title">Serious Error</string>
+    <string name="serious_error_unknown">Please contact support.</string>
+    <string name="serious_error_security_missing_iv" translatable="false">Invalid security state detected.\n\nSee if you can view your recovery phrase under the Security Settings. After that send a report to the support desk with Contact Support.\n\nLastly, restart this app and try again.</string>
 </resources>

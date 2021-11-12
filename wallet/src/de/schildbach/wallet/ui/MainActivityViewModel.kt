@@ -9,9 +9,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -84,4 +86,7 @@ class MainActivityViewModel @Inject constructor(
             platformRepo.doneAndDismiss()
         }
     }
+
+    val seriousErrorLiveData = SeriousErrorLiveData(PlatformRepo.getInstance())
+    var processingSeriousError = false
 }
