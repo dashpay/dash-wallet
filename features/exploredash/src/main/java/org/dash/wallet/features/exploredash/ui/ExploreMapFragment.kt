@@ -122,7 +122,6 @@ class ExploreMapFragment: SupportMapFragment() {
             // otherwise when user pans the map, everything blinks
             resetMap()
 
-            // TODO: For the 1st iteration of this feature, we shall limit the number of markers to be displayed
             if (results.isNotEmpty()) {
                 Log.i("EXPLOREDASH", "markers: " + viewModel.maxMarkers.toString())
                 if (results.size < viewModel.maxMarkers) {
