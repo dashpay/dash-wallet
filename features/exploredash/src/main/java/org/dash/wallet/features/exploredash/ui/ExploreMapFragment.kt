@@ -123,10 +123,10 @@ class ExploreMapFragment: SupportMapFragment() {
             resetMap()
 
             if (results.isNotEmpty()) {
-                Log.i("EXPLOREDASH", "markers: " + viewModel.maxMarkers.toString())
-                if (results.size < viewModel.maxMarkers) {
+                Log.i("EXPLOREDASH", "markers: " + ExploreViewModel.MAX_MARKERS)
+                if (results.size < ExploreViewModel.MAX_MARKERS) {
                     setMarkers(results)
-                } else setMarkers(results.shuffled().take(viewModel.maxMarkers))
+                } else setMarkers(results.shuffled().take(ExploreViewModel.MAX_MARKERS))
             }
         }
 

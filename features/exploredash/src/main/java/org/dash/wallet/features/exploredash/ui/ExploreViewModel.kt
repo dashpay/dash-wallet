@@ -60,6 +60,7 @@ class ExploreViewModel @Inject constructor(
         const val METERS_IN_MILE = 1609.344
         const val METERS_IN_KILOMETER = 1000.0
         const val MIN_ZOOM_LEVEL = 8f
+        const val MAX_MARKERS = 100
     }
 
     private val workerJob = SupervisorJob()
@@ -77,8 +78,6 @@ class ExploreViewModel @Inject constructor(
     private var savedLocation: UserLocation? = null
     private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = currentUserLocationState.asLiveData()
-
-    val maxMarkers: Int = 100
 
     private val _pickedTerritory = MutableStateFlow("")
     var pickedTerritory: String
