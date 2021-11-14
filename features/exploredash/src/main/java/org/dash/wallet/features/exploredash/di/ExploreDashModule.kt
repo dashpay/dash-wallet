@@ -17,6 +17,8 @@
 package org.dash.wallet.features.exploredash.di
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.preference.PreferenceManager
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import dagger.Binds
@@ -28,7 +30,9 @@ import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.features.exploredash.services.UserLocationState
+import javax.inject.Singleton
 
 
 @Module

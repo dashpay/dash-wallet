@@ -1,20 +1,22 @@
 /*
- * Copyright 2021 Dash Core Group
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  * Copyright 2021 Dash Core Group
+ *  *
+ *  * Licensed under the Apache License, Version 2.0 (the "License");
+ *  * you may not use this file except in compliance with the License.
+ *  * You may obtain a copy of the License at
+ *  *
+ *  *    http://www.apache.org/licenses/LICENSE-2.0
+ *  *
+ *  * Unless required by applicable law or agreed to in writing, software
+ *  * distributed under the License is distributed on an "AS IS" BASIS,
+ *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  * See the License for the specific language governing permissions and
+ *  * limitations under the License.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
-package org.dash.wallet.features.exploredash.ui.dialogs
+package org.dash.wallet.common.ui.radio_group
 
 import android.content.Context
 import android.os.Bundle
@@ -31,32 +33,32 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.R
+import org.dash.wallet.common.databinding.DialogOptionPickerBinding
 import org.dash.wallet.common.ui.ListDividerDecorator
+import org.dash.wallet.common.ui.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.databinding.DialogTerritoryFilterBinding
-import org.dash.wallet.features.exploredash.ui.adapters.RadioGroupAdapter
-import org.dash.wallet.features.exploredash.ui.viewitems.IconifiedViewItem
 
-class TerritoryFilterDialog(
+class OptionPickerDialog(
+    private val dialogTitle: String,
     private val itemList: List<IconifiedViewItem>,
     private val selectedIndex: Int,
     private val clickListener: (IconifiedViewItem, Int, DialogFragment) -> Unit
 ) : OffsetDialogFragment<LinearLayout>() {
-    private val binding by viewBinding(DialogTerritoryFilterBinding::bind)
+    private val binding by viewBinding(DialogOptionPickerBinding::bind)
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.dialog_territory_filter, container, false)
+        return inflater.inflate(R.layout.dialog_option_picker, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.searchTitle.text = getString(R.string.explore_location)
+        binding.searchTitle.text = dialogTitle
 
         val adapter = RadioGroupAdapter(selectedIndex) { item, index ->
             clickListener.invoke(item, index, this)

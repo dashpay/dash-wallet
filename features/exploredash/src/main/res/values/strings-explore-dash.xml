@@ -10,7 +10,6 @@
     <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
 
     <!-- Search -->
-    <string name="explore_search_hint">Search</string>
     <string name="explore_search_results">Search results</string>
     <string name="explore_physical_merchant">Physical Merchant</string>
     <string name="explore_online_merchant">Online</string>
@@ -45,6 +44,8 @@
     <string name="explore_current_location">Current Location</string>
     <string name="explore_location_settings">Current Location Settings</string>
     <string name="explore_reset_filters">Reset Filters</string>
+    <string name="explore_filtered_by">Filtered by:</string>
+    <string name="explore_pay_gift_card">Pay with gift card</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -73,10 +74,8 @@
         <item>50 kilometers</item>
     </string-array>
 
-    <!-- Permissions TODO remove-->
-    <string name="permission_required_title">Permission required</string>
-    <string name="permission_required_message">We need to know your current location</string>
-    <string name="goto_settings">Settings</string>
+    <string name="radius_miles">%d miles</string>
+    <string name="radius_kilometers">%d kilometers</string>
 
     <!-- Location Permission -->
     <string name="explore_location_allowed">Allowed</string>
@@ -84,6 +83,10 @@
     <string name="explore_manager_permissions">Manage GPS Permission</string>
     <string name="explore_location_request">Grant GPS permissions so we can show you locations near you.</string>
     <string name="explore_location_explainer">Your location is used to show your position on the map, merchants in the selected radius and improve search results.</string>
+    <string name="explore_merchant_location_explainer_title">Merchant search works better with Location Services turned on.</string>
+    <string name="explore_merchant_location_explainer_message">Your location is used to show your position on the map, merchants in the selected radius and improve search results.</string>
+    <string name="explore_atm_location_explainer_title">ATM search works better with Location Services turned on.</string>
+    <string name="explore_atm_location_explainer_message">Your location is used to show your position on the map, ATMs in the selected radius and improve search results.</string>
 
     <!-- Info screens -->
     <string name="explore_info_header_text">We have 2 types of merchants</string>

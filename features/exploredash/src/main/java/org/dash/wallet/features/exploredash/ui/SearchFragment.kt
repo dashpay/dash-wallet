@@ -16,18 +16,15 @@
 
 package org.dash.wallet.features.exploredash.ui
 
-import android.Manifest
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.preference.PreferenceManager
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
@@ -57,7 +54,9 @@ import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
+import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
+import javax.inject.Inject
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -67,29 +66,27 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         private const val SCROLL_OFFSET_FOR_UP = 700
     }
 
+    @Inject
+    lateinit var configuration: Configuration
+
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private val args by navArgs<SearchFragmentArgs>()
 
     private var bottomSheetWasExpanded: Boolean = false
     private var isKeyboardShowing: Boolean = false
+    private var hasLocationBeenRequested: Boolean = false
 
-    private val permissionRequestLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()) { isPermissionGranted ->
-
-        if (isPermissionGranted) {
-            viewModel.monitorUserLocation()
-        } else {
-            showPermissionDeniedDialog()
-        }
+    private val permissionRequestLauncher = registerPermissionLauncher {
+        viewModel.monitorUserLocation()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val configuration = Configuration(PreferenceManager.getDefaultSharedPreferences(requireContext()), resources)
-        if (!configuration.hasInfoScreenBeenShownAlready()) {
+
+        if (!configuration.hasExploreDashInfoScreenBeenShown()) {
             safeNavigate(SearchFragmentDirections.exploreToInfo())
-            configuration.setPrefsKeyHasInfoScreenBeenShownAlready(true)
+            configuration.setHasExploreDashInfoScreenBeenShown(true)
         }
     }
 
@@ -133,6 +130,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 bottomSheet.isDraggable = false
             }
         }
+
+        viewModel.appliedFilters.observe(viewLifecycleOwner) { filters ->
+            resolveAppliedFilters(filters)
+        }
     }
 
     override fun onDestroy() {
@@ -173,6 +174,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             safeNavigate(SearchFragmentDirections.searchToFilters())
         }
 
+        binding.filterPanel.setOnClickListener {
+            safeNavigate(SearchFragmentDirections.searchToFilters())
+        }
+
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
             if (mode == FilterMode.Online) {
                 header.setTitle(getString(R.string.explore_online_merchant))
@@ -184,13 +189,19 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             } else {
                 header.setTitle(viewModel.searchResultsTitle.value ?: getString(R.string.explore_search_results))
-                bottomSheet.isDraggable = true
 
                 if (isLocationPermissionGranted) {
                     bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
                     bottomSheetWasExpanded = false
-                } else {
-                    permissionRequestLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    bottomSheet.isDraggable = true
+                } else if (!hasLocationBeenRequested) {
+                    requestLocationPermission(
+                        viewModel.exploreTopic,
+                        configuration,
+                        permissionRequestLauncher
+                    )
+                    // Shouldn't show location request on filter option switch more than once per session
+                    hasLocationBeenRequested = true
                 }
             }
         }
@@ -283,7 +294,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         delay(100)
                     }
 
-                    transitToDetails(item.type == MerchantType.ONLINE)
+                    transitToDetails(viewModel.filterMode.value == FilterMode.Online ||
+                            item.type == MerchantType.ONLINE)
                 }
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
@@ -358,7 +370,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 else -> ""
             }
 
-            val isOnline = merchant.type == MerchantType.ONLINE
+            val isOnline = viewModel.filterMode.value == FilterMode.Online ||
+                    merchant.type == MerchantType.ONLINE
             itemAddress.isVisible = !isOnline
 
             val isDash = merchant.paymentMethod == PaymentMethod.DASH
@@ -450,6 +463,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun transitToDetails(fullHeight: Boolean) {
         binding.upButton.isVisible = false
+        binding.filterPanel.isVisible = false
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = false
@@ -474,6 +488,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun transitToSearchResults() {
         binding.upButton.isVisible = shouldShowUpButton()
+        binding.filterPanel.isVisible = shouldShowFiltersPanel()
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true &&
@@ -505,6 +520,47 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             ExploreTopic.Merchants -> getString(R.string.explore_where_to_spend)
             else -> getString(R.string.explore_atms)
         }
+    }
+
+    private fun resolveAppliedFilters(filters: FilterOptions?) {
+        var isVisible = false
+        val appliedFilterNames = mutableListOf<String>()
+
+        filters?.let {
+            if (filters.territory.isNotEmpty()) {
+                isVisible = true
+                appliedFilterNames.add(filters.territory)
+            }
+
+            if (filters.payment.isNotEmpty()) {
+                isVisible = true
+                appliedFilterNames.add(getString(
+                    if (filters.payment == PaymentMethod.DASH) {
+                        R.string.explore_pay_with_dash
+                    } else {
+                        R.string.explore_pay_gift_card
+                    }
+                ))
+            }
+
+            if (filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION) {
+                isVisible = true
+                appliedFilterNames.add(getString(
+                    if (viewModel.isMetric) R.string.radius_kilometers else R.string.radius_kilometers,
+                    filters.radius
+                ))
+            }
+        }
+
+        binding.filterPanel.isVisible = isVisible && viewModel.selectedItem.value == null
+        binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
+    }
+
+    private fun shouldShowFiltersPanel(): Boolean {
+        return viewModel.appliedFilters.value != null &&
+                (viewModel.paymentMethodFilter.isNotEmpty() ||
+                 viewModel.pickedTerritory.isNotEmpty() ||
+                 viewModel.selectedRadiusOption != ExploreViewModel.DEFAULT_RADIUS_OPTION)
     }
 
     private fun openMaps(item: SearchResult) {

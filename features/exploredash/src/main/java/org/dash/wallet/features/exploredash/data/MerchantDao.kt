@@ -101,6 +101,37 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
+        SELECT *
+        FROM merchant
+        WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+        GROUP BY merchantId
+        HAVING Id = MIN(Id)
+        ORDER BY name ASC
+    """)
+    fun pagingGroupByMerchantId(
+        types: List<String>,
+        paymentMethod: String
+    ): PagingSource<Int, Merchant>
+
+    @Query("""
+        SELECT *
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+        GROUP BY merchantId
+        HAVING Id = MIN(Id)
+        ORDER BY name ASC
+    """)
+    fun pagingSearchGroupByMerchantId(
+        query: String,
+        types: List<String>,
+        paymentMethod: String
+    ): PagingSource<Int, Merchant>
+
+    @Query("""
         SELECT * 
         FROM merchant
         WHERE (:excludeType = '' OR type != :excludeType)
@@ -187,29 +218,42 @@ interface MerchantDao : BaseDao<Merchant> {
     fun observeAllPaging(
         query: String,
         territory: String,
-        types: List<String>,
+        type: String,
         paymentMethod: String,
         bounds: GeoBounds
     ): PagingSource<Int, Merchant> {
         Log.i("EXPLOREDASH", "observeAllPaging: ${query}, ${paymentMethod}, ${territory}, ${bounds}")
-        return if (query.isNotBlank()) {
-            pagingSearchByCoordinates(
-                sanitizeQuery(query),
-                types,
-                paymentMethod,
-                bounds.northLat,
-                bounds.eastLng,
-                bounds.southLat,
-                bounds.westLng)
-        } else {
-            pagingGetByCoordinates(
-                types,
-                paymentMethod,
-                bounds.northLat,
-                bounds.eastLng,
-                bounds.southLat,
-                bounds.westLng
-            )
+
+        return when (type) {
+            MerchantType.ONLINE -> {
+                val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
+
+                if (query.isNotBlank()) {
+                    pagingSearchGroupByMerchantId(query, types, paymentMethod)
+                } else {
+                    pagingGroupByMerchantId(types, paymentMethod)
+                }
+            }
+            MerchantType.PHYSICAL -> {
+                val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+
+                if (query.isNotBlank()) {
+                    pagingSearchByCoordinates(sanitizeQuery(query), types, paymentMethod,
+                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                } else {
+                    pagingGetByCoordinates(types, paymentMethod,
+                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                }
+            }
+            else -> {
+                val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
+
+                if (query.isNotBlank()) {
+                    pagingSearchByTerritory(sanitizeQuery(query), territory, types, paymentMethod)
+                } else {
+                    pagingGetByTerritory(territory, types, paymentMethod)
+                }
+            }
         }
     }
 }

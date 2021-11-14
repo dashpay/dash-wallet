@@ -16,7 +16,6 @@
 
 package org.dash.wallet.features.exploredash.ui
 
-import android.util.Log
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
@@ -47,6 +46,12 @@ enum class FilterMode {
     All, Online, Physical, Buy, Sell, BuySell
 }
 
+data class FilterOptions(
+    val territory: String,
+    val payment: String,
+    val radius: Int
+)
+
 @ExperimentalCoroutinesApi
 @FlowPreview
 @HiltViewModel
@@ -62,6 +67,7 @@ class ExploreViewModel @Inject constructor(
         const val METERS_IN_MILE = 1609.344
         const val METERS_IN_KILOMETER = 1000.0
         const val MIN_ZOOM_LEVEL = 8f
+        const val DEFAULT_RADIUS_OPTION = 20
     }
 
     private val workerJob = SupervisorJob()
@@ -80,8 +86,6 @@ class ExploreViewModel @Inject constructor(
     private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = currentUserLocationState.asLiveData()
 
-    var maxMarkers: Int = 100
-
     private val _pickedTerritory = MutableStateFlow("")
     var pickedTerritory: String
         get() = _pickedTerritory.value
@@ -89,18 +93,14 @@ class ExploreViewModel @Inject constructor(
             _pickedTerritory.value = value
         }
 
-    var isMetric = !Locale.getDefault().isO3Country.equals("usa", true) &&
+    val isMetric = !Locale.getDefault().isO3Country.equals("usa", true) &&
             !Locale.getDefault().isO3Country.equals("mmr", true)
-        private set
 
     // Can be miles or kilometers, see isMetric
-    private val _selectedRadiusOption = MutableStateFlow(20)
+    private val _selectedRadiusOption = MutableStateFlow(DEFAULT_RADIUS_OPTION)
     var selectedRadiusOption: Int
         get() = _selectedRadiusOption.value
-        set(value) {
-            Log.i("EXPLOREDASH", "radius value: ${value}")
-            _selectedRadiusOption.value = value
-        }
+        set(value) { _selectedRadiusOption.value = value }
 
     val radius: Double
         get() = if (isMetric) selectedRadiusOption * METERS_IN_KILOMETER else selectedRadiusOption * METERS_IN_MILE
@@ -147,6 +147,10 @@ class ExploreViewModel @Inject constructor(
     private val _isLocationEnabled = MutableLiveData(false)
     val isLocationEnabled: LiveData<Boolean>
         get() = _isLocationEnabled
+
+    private val _appliedFilters = MutableLiveData<FilterOptions?>(null)
+    val appliedFilters: LiveData<FilterOptions?>
+        get() = _appliedFilters
 
 
     // Used for the list of search results
@@ -256,10 +260,7 @@ class ExploreViewModel @Inject constructor(
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
                     .distinctUntilChanged()
-                    .onEach {
-                        Log.i("EXPLOREDASH", "results count: ${it.size}")
-                        _searchResults.postValue(it)
-                    }
+                    .onEach(_searchResults::postValue)
                     .launchIn(viewModelWorkerScope)
             }
             // Right now we don't show the map at all while location is disabled
@@ -352,10 +353,14 @@ class ExploreViewModel @Inject constructor(
         filterMode: FilterMode,
         bounds: GeoBounds
     ): PagingSource<Int, SearchResult> {
+        _appliedFilters.postValue(FilterOptions(
+            territory, payment, selectedRadiusOption
+        ))
+
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
-            val types = getMerchantTypes(filterMode)
-            merchantDao.observeAllPaging(query, territory, types, payment, bounds)
+            val type = getMerchantType(filterMode)
+            merchantDao.observeAllPaging(query, territory, type, payment, bounds)
         } else {
             val types = getAtmTypes(filterMode)
             atmDao.observeAllPaging(query, territory, types, bounds)
@@ -372,11 +377,11 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    private fun getMerchantTypes(filterMode: FilterMode): List<String> {
+    private fun getMerchantType(filterMode: FilterMode): String {
         return when (filterMode) {
-            FilterMode.Online -> listOf(MerchantType.ONLINE, MerchantType.BOTH)
-            FilterMode.Physical -> listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
-            else -> listOf(MerchantType.ONLINE, MerchantType.PHYSICAL, MerchantType.BOTH)
+            FilterMode.Online -> MerchantType.ONLINE
+            FilterMode.Physical -> MerchantType.PHYSICAL
+            else -> MerchantType.BOTH
         }
     }
 

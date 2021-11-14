@@ -178,10 +178,6 @@
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="MontserratRegular.MG.15">
-        <item name="android:textSize">15sp</item>
-    </style>
-
     <style name="MontserratRegular.G900">
         <item name="android:textColor">@color/gray_900</item>
     </style>
@@ -233,34 +229,6 @@
     <style name="Button.Secondary" parent="MontserratButton">
         <item name="android:textColor">@color/secondary_button</item>
         <item name="android:background">@drawable/secondary_button</item>
-    </style>
-
-    <style name="Button.Small.Tertiary" parent="Widget.AppCompat.Button.Borderless">
-        <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:textColor">@color/gray_900</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:textSize">13sp</item>
-        <item name="android:paddingStart">12dp</item>
-        <item name="android:paddingEnd">12dp</item>
-    </style>
-
-    <style name="Button.Small.Tertiary.Blue">
-        <item name="android:textColor">@color/dash_blue</item>
-    </style>
-
-    <style name="Button.Large.Tertiary" parent="Widget.AppCompat.Button.Borderless">
-        <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:textColor">@color/gray_900</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:paddingTop">18dp</item>
-        <item name="android:paddingBottom">18dp</item>
-        <item name="android:paddingStart">12dp</item>
-        <item name="android:paddingEnd">12dp</item>
-    </style>
-
-    <style name="Button.Large.Tertiary.Red">
-        <item name="android:textColor">@color/red_tertiary_button</item>
     </style>
 
     <style name="NewMontserratButton.Secondary.Inverted" parent="MontserratButton">
@@ -645,9 +613,12 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+
+    <!-- Design System styles -->
+
     <style name="WhiteBackground">
-        <item name="primaryColor">@android:color/white</item>
-        <item name="secondaryColor">@android:color/white</item>
+        <item name="backgroundColor">@android:color/white</item>
+        <item name="strokeColor">@android:color/white</item>
     </style>
 
     <style name="ScreenshotWarningBackground" parent="WhiteBackground">
@@ -659,14 +630,14 @@
     </style>
 
     <style name="DragIndicatorBackground">
-        <item name="primaryColor">@color/gray_100</item>
-        <item name="secondaryColor">@color/gray_100</item>
+        <item name="backgroundColor">@color/gray_100</item>
+        <item name="strokeColor">@color/gray_100</item>
         <item name="cornerRadius">2dp</item>
     </style>
 
     <style name="GrayBackground">
-        <item name="primaryColor">@color/gray_40</item>
-        <item name="secondaryColor">@color/gray_40</item>
+        <item name="backgroundColor">@color/gray_40</item>
+        <item name="strokeColor">@color/gray_40</item>
     </style>
 
     <style name="SearchInputBackground" parent="GrayBackground">
@@ -694,6 +665,8 @@
         <item name="cardCornerRadius">10dp</item>
         <item name="cardElevation">5dp</item>
     </style>
+
+    <!-- Typography -->
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/montserrat_regular</item>
@@ -730,6 +703,7 @@
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
         <item name="android:textColorHint">@color/gray_300</item>
+        <item name="android:lineSpacingExtra">5sp</item>
     </style>
 
     <style name="Body2.White">
@@ -746,7 +720,14 @@
 
     <style name="Body2.SemiBold">
         <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:lineSpacingExtra">5sp</item>
+    </style>
+
+    <style name="Body2.SemiBold.Blue300">
+        <item name="android:textColor">@color/blue_300</item>
+    </style>
+
+    <style name="Body2.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
     </style>
 
     <style name="Subtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
@@ -770,6 +751,7 @@
     <style name="Caption" parent="TextAppearance.MaterialComponents.Caption">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
+        <item name="android:lineSpacingExtra">3sp</item>
     </style>
 
     <style name="Caption.SemiBold">
@@ -784,24 +766,127 @@
         <item name="android:textColor">@color/steel_gray_500</item>
     </style>
 
+    <style name="Caption.Gray600">
+        <item name="android:textColor">@color/gray_600</item>
+    </style>
+
     <style name="Caption.Gray400">
         <item name="android:textColor">@color/gray_400</item>
     </style>
 
-    <style name="Body2.Bold" parent="TextAppearance.MaterialComponents.Body2">
-        <item name="fontFamily">@font/montserrat_bold</item>
-        <item name="android:textColor">@color/gray_900</item>
-        <item name="android:textColorHint">@color/gray_300</item>
-    </style>
-
-    <style name="Body2.SteelGray500" parent="TextAppearance.MaterialComponents.Body2">
+    <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/steel_gray_500</item>
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:lineSpacingExtra">4sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
-    <style name="Body2.Blue300" parent="TextAppearance.MaterialComponents.Body2">
+    <style name="Overline.SemiBold">
         <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:textColor">@color/blue_300</item>
     </style>
 
+    <style name="Overline.SemiBold.Blue">
+        <item name="android:textColor">@color/dash_blue</item>
+    </style>
+
+    <!-- Buttons -->
+
+    <style name="TertiaryButtonTheme">
+        <item name="cornerRadius">8dp</item>
+        <item name="titleTextColor">@color/gray_900</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Blue">
+        <item name="titleTextColor">@color/dash_blue</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Red">
+        <item name="titleTextColor">@color/red_300</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Small">
+        <item name="cornerRadius">6dp</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Small.Blue">
+        <item name="titleTextColor">@color/dash_blue</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Large">
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Large.Red">
+        <item name="titleTextColor">@color/red_300</item>
+    </style>
+
+    <style name="Button.Primary.Medium" parent="Widget.AppCompat.Button.Borderless">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <style name="Button.Primary.Blue" parent="Button.Primary.Medium">
+        <item name="android:background">@drawable/blue_button_background</item>
+    </style>
+
+    <style name="Button.Primary.Large" parent="Button.Primary.Medium">
+        <item name="android:textSize">15sp</item>
+        <item name="android:minHeight">46dp</item>
+    </style>
+
+    <style name="Button.Primary.Large.Blue">
+        <item name="android:background">@drawable/blue_button_background</item>
+    </style>
+
+    <style name="Button.Tertiary" parent="Widget.AppCompat.Button.Borderless">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="android:background">@drawable/rounded_ripple_transparent</item>
+        <item name="android:theme">@style/TertiaryButtonTheme</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <style name="Button.Tertiary.Blue">
+        <item name="android:theme">@style/TertiaryButtonTheme.Blue</item>
+    </style>
+
+    <style name="Button.Tertiary.Small">
+        <item name="android:textSize">13sp</item>
+        <item name="android:minHeight">36dp</item>
+        <item name="android:theme">@style/TertiaryButtonTheme.Small</item>
+    </style>
+
+    <style name="Button.Tertiary.Small.Blue">
+        <item name="android:theme">@style/TertiaryButtonTheme.Small.Blue</item>
+    </style>
+
+    <style name="Button.Tertiary.Large">
+        <item name="android:textSize">15sp</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:theme">@style/TertiaryButtonTheme.Large</item>
+    </style>
+
+    <style name="Button.Tertiary.Large.Red">
+        <item name="android:theme">@style/TertiaryButtonTheme.Large.Red</item>
+    </style>
+
+    <style name="DialogCloseButton">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_gravity">end</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:layout_marginEnd">15dp</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:src">@drawable/ic_popup_close</item>
+    </style>
 </resources>

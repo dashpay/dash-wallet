@@ -48,6 +48,7 @@ import com.google.maps.android.ktx.awaitMap
 import kotlinx.coroutines.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.services.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocationState
@@ -120,15 +121,16 @@ class ExploreMapFragment: SupportMapFragment() {
 
             // TODO: For the 1st iteration of this feature, we shall limit the number of markers to be displayed
             if (results.isNotEmpty()) {
-                Log.i("EXPLOREDASH", "markers: " + viewModel.maxMarkers.toString())
-                if (results.size < viewModel.maxMarkers) {
+//                if (results.size < 100) {
                     setMarkers(results)
-                } else setMarkers(results.shuffled().take(viewModel.maxMarkers))
+//                } else setMarkers(results.shuffled().take(viewModel.maxMarkers))
             }
         }
 
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
-            if (item?.latitude != null && item.longitude != null) {
+            if (viewModel.filterMode.value != FilterMode.Online &&
+                item?.type != MerchantType.ONLINE &&
+                item?.latitude != null && item.longitude != null) {
                 // TODO: might be good to move back to the previous bounds on back navigation
                 val position = CameraPosition(LatLng(item.latitude!!, item.longitude!!), 16f, 0f, 0f)
                 googleMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))

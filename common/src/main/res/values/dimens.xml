@@ -32,5 +32,6 @@
     <dimen name="dialog_label_text_size">12sp</dimen>
 
     <dimen name="space_medium">20dp</dimen>
-
+    <dimen name="offset_dialog_margin_top">20dp</dimen>
+    <dimen name="divider_margin_start">15dp</dimen>
 </resources>

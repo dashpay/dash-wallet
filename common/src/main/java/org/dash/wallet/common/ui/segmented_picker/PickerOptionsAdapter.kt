@@ -19,7 +19,7 @@ package org.dash.wallet.common.ui.segmented_picker
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import org.dash.wallet.common.databinding.PickerOptionViewBinding
+import org.dash.wallet.common.databinding.SegmentedPickerOptionViewBinding
 
 class PickerOptionsAdapter(
     private val options: List<String>,
@@ -31,7 +31,7 @@ class PickerOptionsAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): OptionViewHolder {
-        val binding = PickerOptionViewBinding.inflate(
+        val binding = SegmentedPickerOptionViewBinding.inflate(
             LayoutInflater.from(parent.context), parent, false)
         binding.root.layoutParams = ViewGroup.LayoutParams(
             parent.measuredWidth / options.size, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -48,7 +48,7 @@ class PickerOptionsAdapter(
     }
 }
 
-class OptionViewHolder(val binding: PickerOptionViewBinding): RecyclerView.ViewHolder(binding.root) {
+class OptionViewHolder(val binding: SegmentedPickerOptionViewBinding): RecyclerView.ViewHolder(binding.root) {
     fun bind(option: String) {
         binding.name.text = option
     }

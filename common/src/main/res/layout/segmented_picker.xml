@@ -22,6 +22,6 @@
         android:layout_marginHorizontal="2dp"
         android:translationZ="7dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        tools:listitem="@layout/picker_option_view"
+        tools:listitem="@layout/segmented_picker_option_view"
         tools:orientation="horizontal" />
 </merge>
