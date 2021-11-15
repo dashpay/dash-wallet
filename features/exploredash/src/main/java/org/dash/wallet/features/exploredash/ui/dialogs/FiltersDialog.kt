@@ -69,8 +69,12 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
     @Inject
     lateinit var configuration: Configuration
 
-    private val permissionRequestLauncher = registerPermissionLauncher {
-        viewModel.monitorUserLocation()
+    private val permissionRequestLauncher = registerPermissionLauncher { isGranted ->
+        if (isGranted) {
+            viewModel.monitorUserLocation()
+        } else {
+            openAppSettings()
+        }
     }
 
     override fun onCreateView(
@@ -107,7 +111,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         }
 
         binding.applyButton.setOnClickListener {
-            viewModel.pickedTerritory = selectedTerritory
+            viewModel.selectedTerritory = selectedTerritory
             viewModel.selectedRadiusOption = selectedRadiusOption
 
             if (viewModel.exploreTopic == ExploreTopic.Merchants) {
@@ -220,7 +224,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
     }
 
     private fun setupTerritoryFilter() {
-        setTerritoryName(viewModel.pickedTerritory)
+        setTerritoryName(viewModel.selectedTerritory)
 
         lifecycleScope.launch {
             territoriesJob = async {
@@ -246,9 +250,9 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
                 }
 
                 val dialogTitle = getString(R.string.explore_location)
-                OptionPickerDialog(dialogTitle, allTerritories, index) { item, _, dialog ->
+                OptionPickerDialog(dialogTitle, allTerritories, index) { item, index, dialog ->
                     dialog.dismiss()
-                    setTerritoryName(item.name)
+                    setTerritoryName(if (index == 0) "" else item.name)
                 }.show(parentFragmentManager, "territory_filter")
             }
         }
@@ -314,15 +318,11 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         if (isLocationPermissionGranted) {
             openAppSettings()
         } else {
-            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                openAppSettings()
-            } else {
-                requestLocationPermission(
-                    viewModel.exploreTopic,
-                    configuration,
-                    permissionRequestLauncher
-                )
-            }
+            requestLocationPermission(
+                viewModel.exploreTopic,
+                configuration,
+                permissionRequestLauncher
+            )
         }
     }
 

@@ -16,14 +16,13 @@
 
 package org.dash.wallet.features.exploredash.data
 
-import android.util.Log
 import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.services.GeoBounds
+import org.dash.wallet.features.exploredash.data.model.GeoBounds
 
 @Dao
 interface MerchantDao : BaseDao<Merchant> {
@@ -48,19 +47,6 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
-        SELECT * 
-        FROM merchant 
-        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
-            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND type IN (:types)
-        ORDER BY name ASC""")
-    fun pagingGetByTerritory(
-        territoryFilter: String,
-        types: List<String>,
-        paymentMethod: String
-    ): PagingSource<Int, Merchant>
-
-    @Query("""
         SELECT *
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -81,6 +67,19 @@ interface MerchantDao : BaseDao<Merchant> {
         eastLng: Double,
         southLat: Double,
         westLng: Double
+    ): PagingSource<Int, Merchant>
+
+    @Query("""
+        SELECT * 
+        FROM merchant 
+        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+        ORDER BY name ASC""")
+    fun pagingGetByTerritory(
+        territoryFilter: String,
+        types: List<String>,
+        paymentMethod: String
     ): PagingSource<Int, Merchant>
 
     @Query("""
@@ -173,11 +172,35 @@ interface MerchantDao : BaseDao<Merchant> {
         westLng: Double
     ): Flow<List<Merchant>>
 
-    @Query("SELECT * FROM merchant WHERE id = :merchantId LIMIT 1")
-    suspend fun getMerchant(merchantId: Int): Merchant?
+    @Query("""
+        SELECT * 
+        FROM merchant 
+        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND (:excludeType = '' OR type != :excludeType)
+        ORDER BY name ASC""")
+    fun observeByTerritory(
+        territoryFilter: String,
+        excludeType: String,
+        paymentMethod: String
+    ): Flow<List<Merchant>>
 
-    @Query("SELECT * FROM merchant WHERE id = :merchantId LIMIT 1")
-    fun observeMerchant(merchantId: Int): Flow<Merchant?>
+    @Query("""
+        SELECT *
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query
+            AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND (:excludeType = '' OR type != :excludeType)
+        ORDER BY name ASC
+    """)
+    fun searchByTerritory(
+        query: String,
+        territoryFilter: String,
+        excludeType: String,
+        paymentMethod: String
+    ): Flow<List<Merchant>>
 
     @Query("SELECT DISTINCT territory FROM merchant")
     suspend fun getTerritories(): List<String>
@@ -191,27 +214,20 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String,
         bounds: GeoBounds
     ): Flow<List<Merchant>> {
-        Log.i("EXPLOREDASH", "observePhysical: ${query}, ${paymentMethod}, ${territory}, ${bounds}")
-
-        return if (query.isNotBlank()) {
-            observeSearchResults(
-                sanitizeQuery(query),
-                MerchantType.ONLINE,
-                paymentMethod,
-                bounds.northLat,
-                bounds.eastLng,
-                bounds.southLat,
-                bounds.westLng
-            )
+        return if (territory.isNotBlank()) {
+            if (query.isNotBlank()) {
+                searchByTerritory(sanitizeQuery(query), territory, MerchantType.ONLINE, paymentMethod)
+            } else {
+                observeByTerritory(territory, MerchantType.ONLINE, paymentMethod)
+            }
         } else {
-            observe(
-                MerchantType.ONLINE,
-                paymentMethod,
-                bounds.northLat,
-                bounds.eastLng,
-                bounds.southLat,
-                bounds.westLng
-            )
+            if (query.isNotBlank()) {
+                observeSearchResults(sanitizeQuery(query), MerchantType.ONLINE, paymentMethod,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            } else {
+                observe(MerchantType.ONLINE, paymentMethod,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            }
         }
     }
 
@@ -222,10 +238,10 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String,
         bounds: GeoBounds
     ): PagingSource<Int, Merchant> {
-        Log.i("EXPLOREDASH", "observeAllPaging: ${query}, ${paymentMethod}, ${territory}, ${bounds}")
-
-        return when (type) {
-            MerchantType.ONLINE -> {
+        return when {
+            type == MerchantType.ONLINE -> {
+                // For Online merchants, need to get everything that can be used online
+                // and group by merchant ID to avoid duplicates
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
@@ -234,7 +250,9 @@ interface MerchantDao : BaseDao<Merchant> {
                     pagingGroupByMerchantId(types, paymentMethod)
                 }
             }
-            MerchantType.PHYSICAL -> {
+            type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
+                // For physical merchants we search by coordinates (nearby)
+                // if location services are enabled
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
@@ -242,10 +260,12 @@ interface MerchantDao : BaseDao<Merchant> {
                         bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
                 } else {
                     pagingGetByCoordinates(types, paymentMethod,
-                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                            bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
                 }
             }
             else -> {
+                // If location services are disabled or user picked a territory
+                // or filter is All, we search everything and filter by territory
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {

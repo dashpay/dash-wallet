@@ -16,7 +16,7 @@
  *
  */
 
-package org.dash.wallet.features.exploredash.services
+package org.dash.wallet.features.exploredash.data.model
 
 data class GeoBounds(val northLat: Double,
                      val eastLng: Double,

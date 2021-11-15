@@ -16,12 +16,9 @@
 
 package org.dash.wallet.features.exploredash.data
 
-import androidx.paging.PagingSource
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
-import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.SearchResult
-import org.dash.wallet.features.exploredash.services.GeoBounds
 
 interface BaseDao<T: SearchResult> {
 

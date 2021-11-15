@@ -77,8 +77,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var isKeyboardShowing: Boolean = false
     private var hasLocationBeenRequested: Boolean = false
 
-    private val permissionRequestLauncher = registerPermissionLauncher {
-        viewModel.monitorUserLocation()
+    private val permissionRequestLauncher = registerPermissionLauncher { isGranted ->
+        if (isGranted) {
+            viewModel.monitorUserLocation()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,8 +94,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         setupBackNavigation()
-        binding.toolbarTitle.text = getToolbarTitle()
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
@@ -116,10 +118,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         setupItemDetails()
 
         viewModel.init(args.type)
-
-        if (isLocationPermissionGranted) {
-            viewModel.monitorUserLocation()
-        }
+        binding.toolbarTitle.text = getToolbarTitle()
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) { isEnabled ->
             if (isEnabled && viewModel.filterMode.value != FilterMode.Online) {
@@ -134,6 +133,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.appliedFilters.observe(viewLifecycleOwner) { filters ->
             resolveAppliedFilters(filters)
             header.subtitle = getSearchSubtitle()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        if (isLocationPermissionGranted) {
+            viewModel.monitorUserLocation()
         }
     }
 
@@ -527,12 +534,20 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             if (viewModel.filterMode.value == FilterMode.Online) {
                 return getString(R.string.explore_online_merchant)
-            } else if (viewModel.filterMode.value == FilterMode.All) {
+            }
+
+            if (viewModel.filterMode.value == FilterMode.All) {
                 return getString(R.string.explore_all_merchants)
             }
         }
 
-        return viewModel.searchLocationName.value ?: getString(R.string.explore_search_results)
+        val locationName = viewModel.searchLocationName.value
+
+        return if (locationName.isNullOrEmpty()) {
+            getString(R.string.explore_search_results)
+        } else {
+            locationName
+        }
     }
 
     private fun getSearchSubtitle(): String {
@@ -542,13 +557,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             return ""
         }
 
-        val resultSize = viewModel.physicalSearchResults.value?.size ?: 0
-        val radiusOption = viewModel.selectedRadiusOption
-        val radiusStr = resources.getQuantityString(
-            if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
-            radiusOption, radiusOption
-        )
+        val searchLocation = if (viewModel.selectedTerritory.isNotEmpty()) {
+            viewModel.selectedTerritory
+        } else {
+            val radiusOption = viewModel.selectedRadiusOption
+            resources.getQuantityString(
+                if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
+                radiusOption, radiusOption
+            )
+        }
 
+        val resultSize = viewModel.physicalSearchResults.value?.size ?: 0
         val quantityStr = if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             if (resultSize == 0) {
                 getString(R.string.explore_no_merchants)
@@ -563,7 +582,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        return getString(R.string.explore_in_radius, quantityStr, radiusStr)
+        return getString(R.string.explore_in_radius, quantityStr, searchLocation)
     }
 
     private fun resolveAppliedFilters(filters: FilterOptions?) {
@@ -608,7 +627,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowFiltersPanel(): Boolean {
         return viewModel.appliedFilters.value != null &&
                 (viewModel.paymentMethodFilter.isNotEmpty() ||
-                 viewModel.pickedTerritory.isNotEmpty() ||
+                 viewModel.selectedTerritory.isNotEmpty() ||
                  viewModel.selectedRadiusOption != ExploreViewModel.DEFAULT_RADIUS_OPTION)
     }
 

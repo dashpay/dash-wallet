@@ -47,15 +47,12 @@ val Fragment.isLocationPermissionGranted: Boolean
     }
 
 fun Fragment.registerPermissionLauncher(
-    onGranted: (Unit) -> Unit
+    onResult: (Boolean) -> Unit
 ): ActivityResultLauncher<Array<String>> {
     return registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()) { permissionResults ->
-
-        if (permissionResults.any { it.value }) {
-            onGranted.invoke(Unit)
+            onResult.invoke(permissionResults.any { it.value })
         }
-    }
 }
 
 fun Fragment.requestLocationPermission(

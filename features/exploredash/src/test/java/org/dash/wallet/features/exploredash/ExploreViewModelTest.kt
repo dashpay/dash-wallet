@@ -26,7 +26,6 @@ import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.FilterMode
 import org.junit.Assert.assertEquals
-import org.junit.Ignore
 import org.junit.Test
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
@@ -54,7 +53,7 @@ class ExploreViewModelTest {
             `when`(merchantDaoMock.observePhysical(territory)).thenReturn(flow { emit(merchants.filter { it.territory == territory }) })
 
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
-            viewModel.pickedTerritory = territory
+            viewModel.selectedTerritory = territory
             viewModel.setFilterMode(FilterMode.All)
 
             // Should return a header and active Texas merchants
@@ -99,7 +98,7 @@ class ExploreViewModelTest {
             }) })
 
             val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
-            viewModel.pickedTerritory = territory
+            viewModel.selectedTerritory = territory
             viewModel.submitSearchQuery(query)
             viewModel.setFilterMode(FilterMode.All)
 

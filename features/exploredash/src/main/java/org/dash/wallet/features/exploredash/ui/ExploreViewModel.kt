@@ -16,6 +16,7 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.util.Log
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
@@ -26,7 +27,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.*
-import org.dash.wallet.features.exploredash.services.GeoBounds
+import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import java.util.*
@@ -86,11 +87,11 @@ class ExploreViewModel @Inject constructor(
     private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = currentUserLocationState.asLiveData()
 
-    private val _pickedTerritory = MutableStateFlow("")
-    var pickedTerritory: String
-        get() = _pickedTerritory.value
+    private val _selectedTerritory = MutableStateFlow("")
+    var selectedTerritory: String
+        get() = _selectedTerritory.value
         set(value) {
-            _pickedTerritory.value = value
+            _selectedTerritory.value = value
         }
 
     val isMetric = !Locale.getDefault().isO3Country.equals("usa", true) &&
@@ -162,7 +163,7 @@ class ExploreViewModel @Inject constructor(
                 .flatMapLatest { payment ->
                     _selectedRadiusOption
                         .flatMapLatest { _ ->
-                            _pickedTerritory
+                            _selectedTerritory
                                 .flatMapLatest { territory ->
                                     _filterMode
                                         .flatMapLatest { mode ->
@@ -170,6 +171,8 @@ class ExploreViewModel @Inject constructor(
                                                 .filterNotNull()
                                                 .filter {
                                                     mode == FilterMode.Online ||
+                                                            isLocationEnabled.value != true ||
+                                                            territory.isNotBlank() ||
                                                             it.zoomLevel > MIN_ZOOM_LEVEL
                                                 }
                                                 .map { bounds ->
@@ -192,6 +195,11 @@ class ExploreViewModel @Inject constructor(
                                                             maxSize = MAX_ITEMS_IN_MEMORY
                                                         )
                                                     ) {
+                                                        _appliedFilters.postValue(
+                                                            FilterOptions(
+                                                                territory, payment, selectedRadiusOption
+                                                            )
+                                                        )
                                                         getPagingSource(
                                                             query,
                                                             territory,
@@ -216,11 +224,14 @@ class ExploreViewModel @Inject constructor(
                 .flatMapLatest { payment ->
                     _selectedRadiusOption
                         .flatMapLatest { _ ->
-                            _pickedTerritory
+                            _selectedTerritory
                                 .flatMapLatest { territory ->
                                     _searchBounds
                                         .filterNotNull()
-                                        .filter { it.zoomLevel > MIN_ZOOM_LEVEL }
+                                        .filter {
+                                            territory.isNotBlank() ||
+                                            it.zoomLevel > MIN_ZOOM_LEVEL
+                                        }
                                         .flatMapLatest { bounds ->
                                             _filterMode
                                                 .filterNot { it == FilterMode.Online }
@@ -271,15 +282,25 @@ class ExploreViewModel @Inject constructor(
             .filterNotNull()
             .filter {
                 val lastResolved = lastResolvedAddress
-                lastResolved == null ||
-                locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
+                isLocationEnabled.value == true &&
+                (selectedTerritory.isEmpty() || lastResolved == null ||
+                locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2)
             }
-            .onEach {
-                val address = locationProvider
-                    .getCurrentLocationAddress(it.centerLat, it.centerLng)
+            .onEach(::resolveAddress)
+            .launchIn(viewModelWorkerScope)
 
-                address?.let {
-                    _searchLocationName.postValue("${address.country}, ${address.city}")
+        _selectedTerritory
+            .onEach { territory ->
+                when {
+                    territory.isNotEmpty() -> {
+                        _searchLocationName.postValue(territory)
+                    }
+                    lastResolvedAddress != null -> {
+                        resolveAddress(lastResolvedAddress!!)
+                    }
+                    else -> {
+                        _searchLocationName.postValue("")
+                    }
                 }
             }
             .launchIn(viewModelWorkerScope)
@@ -358,10 +379,6 @@ class ExploreViewModel @Inject constructor(
         filterMode: FilterMode,
         bounds: GeoBounds
     ): PagingSource<Int, SearchResult> {
-        _appliedFilters.postValue(FilterOptions(
-            territory, payment, selectedRadiusOption
-        ))
-
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
             val type = getMerchantType(filterMode)
@@ -378,10 +395,12 @@ class ExploreViewModel @Inject constructor(
         } else {
             FilterMode.All
         }
+
         searchQuery.value = ""
-        _pickedTerritory.value = ""
+        _selectedTerritory.value = ""
         _paymentMethodFilter.value = ""
         _selectedRadiusOption.value = DEFAULT_RADIUS_OPTION
+        _searchLocationName.value = ""
     }
 
     private fun getMerchantType(filterMode: FilterMode): String {
@@ -413,5 +432,15 @@ class ExploreViewModel @Inject constructor(
             original.centerLat, original.centerLng,
             original.zoomLevel
         )
+    }
+
+    private fun resolveAddress(bounds: GeoBounds) {
+        lastResolvedAddress = bounds
+        val address = locationProvider
+            .getCurrentLocationAddress(bounds.centerLat, bounds.centerLng)
+        address?.let {
+            val name = "${address.country}, ${address.city}"
+            _searchLocationName.postValue(name)
+        }
     }
 }

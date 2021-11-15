@@ -35,6 +35,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject

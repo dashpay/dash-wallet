@@ -67,7 +67,7 @@
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
-        <item>Physical</item>
+        <item>Nearby</item>
         <item>All</item>
     </string-array>
 
