@@ -230,4 +230,35 @@ class UpholdErrorsTest {
         assertEquals("25", arguments["threshold"])
         assertEquals(400, exception.code)
     }
+
+    @Test
+    fun greaterThanOrEqual() {
+        val error = """
+            {
+              "code":"validation_failed",
+              "errors":{
+                "denomination":{
+                  "code":"validation_failed",
+                  "errors":{
+                    "amount":[
+                      {
+                        "code":"greater_than_or_equal_to",
+                        "message":"This value should be greater than or equal to 0",
+                        "args":{
+                          "threshold":"0"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+        """.trimIndent()
+        val exception = UpholdApiException(error, 400);
+        val arguments = HashMap<String, String>()
+        assertTrue(exception.isValidationFailed(arguments))
+        assertEquals("greater_than_or_equal_to", arguments["code"])
+        assertEquals("0", arguments["threshold"])
+        assertEquals(400, exception.code)
+    }
 }

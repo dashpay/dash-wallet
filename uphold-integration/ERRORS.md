@@ -127,6 +127,27 @@ The cause for this error is not known.
   }
 }
 ```
+```json
+{
+  "code":"validation_failed",
+  "errors":{
+    "denomination":{
+      "code":"validation_failed",
+      "errors":{
+        "amount":[
+          {
+            "code":"greater_than_or_equal_to",
+            "message":"This value should be greater than or equal to 0",
+            "args":{
+              "threshold":"0"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
 
 # Uphold Account is Under Review
 Error: 403

@@ -160,6 +160,16 @@ public class UpholdApiException extends Exception {
                     } else if (firstAmount.has("code") && firstAmount.get("code").equals("sufficient_funds")) {
                         arguments.put("code", "sufficient_funds");
                         return true;
+                    } else if (firstAmount.has("code") && firstAmount.get("code").equals("less_than_or_equal_to")) {
+                        JSONObject args = (JSONObject) firstAmount.get("args");
+                        arguments.put("code", "less_than_or_equal_to");
+                        arguments.put("threshold", args.getString("threshold"));
+                        return true;
+                    } else if (firstAmount.has("code") && firstAmount.get("code").equals("greater_than_or_equal_to")) {
+                        JSONObject args = (JSONObject) firstAmount.get("args");
+                        arguments.put("code", "greater_than_or_equal_to");
+                        arguments.put("threshold", args.getString("threshold"));
+                        return true;
                     }
                 }
             } else if (errors.has("destination")) {
@@ -304,6 +314,8 @@ public class UpholdApiException extends Exception {
                         return context.getString(R.string.uphold_api_error_400_tx_insufficentfunds);
                     case "less_than_or_equal_to":
                         return context.getString(R.string.uphold_api_error_400_less_than_or_equal_to, arguments.get("threshold"));
+                    case "greater_than_or_equal_to":
+                        return context.getString(R.string.uphold_api_error_400_greater_than_or_equal_to, arguments.get("threshold"));
                     case "invalid_beneficiary":
                         return context.getString(R.string.uphold_api_error_400_invalid_beneficiary);
                     case "required":
