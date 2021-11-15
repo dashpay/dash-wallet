@@ -19,6 +19,7 @@
     <color name="dash_green">#27C509</color>
     <color name="ripple_light">#60ffffff</color>
     <color name="ripple_dark">#80012060</color>
+    <color name="list_view_btn_ripple">#1f000000</color>
     <color name="success_green">#92D048</color>
     <color name="error_red">#BF2827</color>
     <!-- added for transaction status -->
@@ -36,7 +37,19 @@
     <color name="gray">#FF979797</color>
     <color name="medium_gray">#ff4a4a4a</color>
     <color name="gray_900">#0C0C0D</color>
+    <color name="gray_900_0.7">#B30C0C0D</color>
+    <color name="steel_gray_900">#6D7885</color>
+    <color name="steel_gray_150">#B8C1CC</color>
     <color name="black_text">#ff171717</color>
+    <color name="gray_400">#818C99</color>
+    <color name="gray_40">#F2F3F5</color>
+    <color name="gray_white">#C4C8CC</color>
+    <color name="close_btn_dark_gray">#5D5F61</color>
+    <color name="gray_300">#99A2AD</color>
+    <color name="gray_100">#E1E3E6</color>
+    <color name="green_300">#3CB878</color>
+    <color name="green_700">#388E3C</color>
+    <color name="shadow_color">#33000000</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
@@ -64,11 +77,10 @@
     <color name="black_liquid">#171717</color>
     <color name="grey_liquid">#9B9B9B</color>
     <color name="warning_yellow">#FFFAF0</color>
-    <color name="gray_400">#818C99</color>
-    <color name="gray_40">#F2F3F5</color>
-    <color name="gray_white">#C4C8CC</color>
-    <color name="close_btn_dark_gray">#5D5F61</color>
-    <color name="search_light_gray">#6D7885</color>
-    <color name="gray_300">#99A2AD</color>
-
+    <color name="bg_explore">#003470</color>
+    <color name="divider_color">#EBEDF0</color>
+    <color name="bg_accuracy_circle">#26008DE4</color>
+    <color name="bg_filter_dialog">#eff0f4</color>
+    <color name="steel_gray_500">#6D7885</color>
+    <color name="blue_300">#3CA9EE</color>
 </resources>
