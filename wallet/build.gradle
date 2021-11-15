@@ -1,9 +1,12 @@
 apply plugin: 'com.android.application'
 apply plugin: 'project-report'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'dagger.hilt.android.plugin'
 
 ext {
     archivesBaseName = 'dash-wallet'
-    lifecycleVersion = "2.2.0"
 }
 repositories {
     mavenLocal()
@@ -65,7 +68,7 @@ dependencies {
     def room_version = "2.3.0"
     implementation "androidx.room:room-ktx:$room_version"
     implementation "androidx.room:room-runtime:$room_version"
-    annotationProcessor "androidx.room:room-compiler:$room_version"
+    kapt "androidx.room:room-compiler:$room_version"
 
     //Uphold Integration
     implementation project(path: ':uphold-integration')
@@ -77,7 +80,7 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
 
     implementation 'com.github.bumptech.glide:glide:4.11.0'
-    annotationProcessor 'com.github.bumptech.glide:compiler:4.11.0'
+    kapt 'com.github.bumptech.glide:compiler:4.11.0'
 
     implementation 'com.github.MikeOrtiz:TouchImageView:3.0.3'
 
@@ -104,10 +107,13 @@ dependencies {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
 
-    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation 'com.jakewharton:process-phoenix:2.0.0'
+
+    // DI
+    implementation "com.google.dagger:hilt-android:$hiltVersion"
+    kapt "com.google.dagger:hilt-compiler:$hiltVersion"
 
     testImplementation 'junit:junit:4.13.2'
     //Espresso
@@ -128,9 +134,6 @@ dependencies {
 ext {
     archivesBaseName = 'dash-wallet'
 }
-
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 
 def props = new Properties()
 if (file("../service.properties").exists()) {
@@ -162,7 +165,7 @@ android {
 
         javaCompileOptions {
             annotationProcessorOptions {
-                arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
+                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
             }
         }
         buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
@@ -282,6 +285,4 @@ android {
     }
 }
 
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 apply from: file("../gradle/google-services.gradle")
