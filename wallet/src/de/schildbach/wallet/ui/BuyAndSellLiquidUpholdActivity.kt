@@ -49,6 +49,7 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.coinbase_integration.CoinbaseSplashActivity
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -66,6 +67,7 @@ import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.util.ArrayList
 
 class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
@@ -139,10 +141,13 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             )
         }
 
+        coinbase.setOnClickListener {
+            startActivity(Intent(this, CoinbaseSplashActivity::class.java))
+        }
+
         uphold_container.setOnClickListener {
             startActivity(UpholdAccountActivity.createIntent(this))
         }
-
         supportFragmentManager.beginTransaction()
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commitNow()
