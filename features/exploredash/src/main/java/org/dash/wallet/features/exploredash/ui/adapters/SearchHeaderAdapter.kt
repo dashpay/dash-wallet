@@ -28,11 +28,30 @@ import org.dash.wallet.features.exploredash.ui.ExploreTopic
 
 class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: SearchHeaderViewBinding
-    private var searchResultsTitle: String = ""
+
     private var onFilterOptionChosen: ((String, Int) -> Unit)? = null
     private var onSearchQueryChanged: ((String) -> Unit)? = null
     private var onSearchQuerySubmitted: ((Unit) -> Unit)? = null
     private var onFilterButtonClicked: ((Unit) -> Unit)? = null
+
+    var title: String = ""
+        set(value) {
+            field = value
+
+            if (::binding.isInitialized) {
+                binding.searchTitle.text = value
+            }
+        }
+
+    var subtitle: String = ""
+        set(value) {
+            field = value
+
+            if (::binding.isInitialized) {
+                binding.searchSubtitle.isVisible = value.isNotEmpty()
+                binding.searchSubtitle.text = value
+            }
+        }
 
     override fun getItemCount() = 1
 
@@ -78,15 +97,9 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
             onFilterButtonClicked?.invoke(Unit)
         }
 
-        binding.searchTitle.text = searchResultsTitle
-    }
-
-    fun setTitle(title: String) {
-        searchResultsTitle = title
-
-        if (::binding.isInitialized) {
-            binding.searchTitle.text = title
-        }
+        binding.searchTitle.text = title
+        binding.searchSubtitle.text = subtitle
+        binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
     }
 
     fun setOnFilterOptionChosen(listener: (String, Int) -> Unit) {

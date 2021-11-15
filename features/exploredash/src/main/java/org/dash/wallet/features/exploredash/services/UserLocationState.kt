@@ -89,7 +89,7 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         awaitClose { client.removeLocationUpdates(callback) }
     }
 
-    fun getCurrentLocationName(lat: Double, lng: Double): String {
+    fun getCurrentLocationAddress(lat: Double, lng: Double): Address? {
         return try {
             val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
             val addresses = geocoder.getFromLocation(lat, lng, 1)
@@ -98,14 +98,18 @@ class UserLocationState @Inject constructor(private val context: Context, privat
                 val locality = addresses[0].locality
                 val cityName = if (locality.isNullOrEmpty()) addresses[0].adminArea else locality
                 Log.e(this::class.java.simpleName, "City name: $cityName")
-                cityName
+                Address(addresses[0].countryName, cityName)
             } else {
-                ""
+                null
             }
-        } catch (e: Exception){
+        } catch (e: Exception) {
             Log.i("GeocoderException" ,"${e.message}")
-            ""
+            null
         }
+    }
+
+    fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double {
+        return distanceBetween(bounds1.centerLat, bounds1.centerLng, bounds2.centerLat, bounds2.centerLng)
     }
 
     fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {

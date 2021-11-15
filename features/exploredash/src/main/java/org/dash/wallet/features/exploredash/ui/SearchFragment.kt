@@ -133,6 +133,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewModel.appliedFilters.observe(viewLifecycleOwner) { filters ->
             resolveAppliedFilters(filters)
+            header.subtitle = getSearchSubtitle()
         }
     }
 
@@ -171,16 +172,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         header.setOnFilterButtonClicked {
-            safeNavigate(SearchFragmentDirections.searchToFilters())
+            openFilters()
         }
 
         binding.filterPanel.setOnClickListener {
-            safeNavigate(SearchFragmentDirections.searchToFilters())
+            openFilters()
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
+            header.title = getSearchTitle()
+            header.subtitle = getSearchSubtitle()
+
             if (mode == FilterMode.Online) {
-                header.setTitle(getString(R.string.explore_online_merchant))
                 bottomSheet.isDraggable = false
 
                 if (viewModel.selectedItem.value == null) {
@@ -188,8 +191,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     bottomSheetWasExpanded = true
                 }
             } else {
-                header.setTitle(viewModel.searchResultsTitle.value ?: getString(R.string.explore_search_results))
-
                 if (isLocationPermissionGranted) {
                     bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
                     bottomSheetWasExpanded = false
@@ -265,12 +266,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             adapter.submitData(viewLifecycleOwner.lifecycle, results)
         }
 
-        viewModel.searchResultsTitle.observe(viewLifecycleOwner) {
-            if (viewModel.filterMode.value == FilterMode.Online) {
-                header.setTitle(getString(R.string.explore_online_merchant))
-            } else {
-                header.setTitle(it)
-            }
+        viewModel.searchLocationName.observe(viewLifecycleOwner) {
+            header.title = getSearchTitle()
+        }
+
+        viewModel.physicalSearchResults.observe(viewLifecycleOwner) {
+            header.subtitle = getSearchSubtitle()
         }
 
         viewLifecycleOwner.observeOnDestroy {
@@ -522,18 +523,54 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
+    private fun getSearchTitle(): String {
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            if (viewModel.filterMode.value == FilterMode.Online) {
+                return getString(R.string.explore_online_merchant)
+            } else if (viewModel.filterMode.value == FilterMode.All) {
+                return getString(R.string.explore_all_merchants)
+            }
+        }
+
+        return viewModel.searchLocationName.value ?: getString(R.string.explore_search_results)
+    }
+
+    private fun getSearchSubtitle(): String {
+        if (viewModel.isLocationEnabled.value != true ||
+            (viewModel.exploreTopic == ExploreTopic.Merchants &&
+                    viewModel.filterMode.value != FilterMode.Physical)) {
+            return ""
+        }
+
+        val resultSize = viewModel.physicalSearchResults.value?.size ?: 0
+        val radiusOption = viewModel.selectedRadiusOption
+        val radiusStr = resources.getQuantityString(
+            if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
+            radiusOption, radiusOption
+        )
+
+        val quantityStr = if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            if (resultSize == 0) {
+                getString(R.string.explore_no_merchants)
+            } else {
+                resources.getQuantityString(R.plurals.explore_merchant_amount, resultSize, resultSize)
+            }
+        } else {
+            if (resultSize == 0) {
+                getString(R.string.explore_no_atms)
+            } else {
+                resources.getQuantityString(R.plurals.explore_atm_amount, resultSize, resultSize)
+            }
+        }
+
+        return getString(R.string.explore_in_radius, quantityStr, radiusStr)
+    }
+
     private fun resolveAppliedFilters(filters: FilterOptions?) {
-        var isVisible = false
         val appliedFilterNames = mutableListOf<String>()
 
         filters?.let {
-            if (filters.territory.isNotEmpty()) {
-                isVisible = true
-                appliedFilterNames.add(filters.territory)
-            }
-
             if (filters.payment.isNotEmpty()) {
-                isVisible = true
                 appliedFilterNames.add(getString(
                     if (filters.payment == PaymentMethod.DASH) {
                         R.string.explore_pay_with_dash
@@ -543,17 +580,29 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 ))
             }
 
+            if (filters.territory.isNotEmpty()) {
+                appliedFilterNames.add(filters.territory)
+            }
+
             if (filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION) {
-                isVisible = true
-                appliedFilterNames.add(getString(
-                    if (viewModel.isMetric) R.string.radius_kilometers else R.string.radius_kilometers,
-                    filters.radius
+                appliedFilterNames.add(resources.getQuantityString(
+                    if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
+                    filters.radius, filters.radius
                 ))
             }
         }
 
-        binding.filterPanel.isVisible = isVisible && viewModel.selectedItem.value == null
+        binding.filterPanel.isVisible = appliedFilterNames.any() && viewModel.selectedItem.value == null
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
+
+        val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
+        val bottomSheetPeekHeight = resources.getDimensionPixelOffset(R.dimen.search_content_peek_height)
+
+        if (appliedFilterNames.any()) {
+            bottomSheet.peekHeight = binding.filterPanel.measuredHeight + bottomSheetPeekHeight
+        } else {
+            bottomSheet.peekHeight = bottomSheetPeekHeight
+        }
     }
 
     private fun shouldShowFiltersPanel(): Boolean {
@@ -561,6 +610,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 (viewModel.paymentMethodFilter.isNotEmpty() ||
                  viewModel.pickedTerritory.isNotEmpty() ||
                  viewModel.selectedRadiusOption != ExploreViewModel.DEFAULT_RADIUS_OPTION)
+    }
+
+    private fun openFilters() {
+        safeNavigate(SearchFragmentDirections.searchToFilters())
     }
 
     private fun openMaps(item: SearchResult) {

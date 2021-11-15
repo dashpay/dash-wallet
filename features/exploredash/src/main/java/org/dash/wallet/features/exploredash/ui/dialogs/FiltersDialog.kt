@@ -64,6 +64,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
     private val binding by viewBinding(DialogFiltersBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private var territoriesJob: Deferred<List<String>>? = null
+    private var radiusOptionsAdapter: RadioGroupAdapter? = null
 
     @Inject
     lateinit var configuration: Configuration
@@ -90,17 +91,19 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
             binding.paymentMethodsLabel.isVisible = false
         }
 
-        if (viewModel.filterMode.value != FilterMode.Online) {
-            setupTerritoryFilter()
-            setupRadiusOptions()
-            setupLocationPermission()
-        } else {
-            binding.locationLabel.isVisible = false
-            binding.locationBtn.isVisible = false
-            binding.radiusLabel.isVisible = false
-            binding.radiusCard.isVisible = false
-            binding.locationSettingsLabel.isVisible = false
-            binding.locationSettingsBtn.isVisible = false
+        viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
+            if (viewModel.filterMode.value != FilterMode.Online) {
+                setupRadiusOptions()
+                setupTerritoryFilter()
+                setupLocationPermission()
+            } else {
+                binding.locationLabel.isVisible = false
+                binding.locationBtn.isVisible = false
+                binding.radiusLabel.isVisible = false
+                binding.radiusCard.isVisible = false
+                binding.locationSettingsLabel.isVisible = false
+                binding.locationSettingsBtn.isVisible = false
+            }
         }
 
         binding.applyButton.setOnClickListener {
@@ -177,8 +180,9 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
             ).map { IconifiedViewItem(it, null) }
 
             val radiusOption = viewModel.selectedRadiusOption
-            val adapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->
+            radiusOptionsAdapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->
                 selectedRadiusOption = radiusOptions[optionIndex]
+                checkResetButton()
             }
             val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
             val decorator = ListDividerDecorator(
@@ -187,8 +191,8 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
                 marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
             )
             binding.radiusFilter.addItemDecoration(decorator)
-            binding.radiusFilter.adapter = adapter
-            adapter.submitList(optionNames)
+            binding.radiusFilter.adapter = radiusOptionsAdapter
+            radiusOptionsAdapter?.submitList(optionNames)
         } else {
             binding.radiusFilter.isVisible = false
             binding.managePermissionsBtn.isVisible = true
@@ -212,6 +216,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
          }
 
          selectedTerritory = territory
+         checkResetButton()
     }
 
     private fun setupTerritoryFilter() {
@@ -275,6 +280,14 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
             isEnabled = true
         }
 
+        if (selectedTerritory.isNotEmpty()) {
+            isEnabled = true
+        }
+
+        if (selectedRadiusOption != DEFAULT_RADIUS_OPTION) {
+            isEnabled = true
+        }
+
         binding.resetFiltersBtn.isEnabled = isEnabled
     }
 
@@ -284,7 +297,17 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         giftCardPaymentOn = true
         binding.giftCardOption.isChecked = true
 
-        checkResetButton()
+        selectedTerritory = ""
+        binding.locationName.text = if (viewModel.isLocationEnabled.value == true) {
+            getString(R.string.explore_current_location)
+        } else {
+            getString(R.string.explore_all_states)
+        }
+
+        selectedRadiusOption = DEFAULT_RADIUS_OPTION
+        radiusOptionsAdapter?.selectedIndex = radiusOptions.indexOf(DEFAULT_RADIUS_OPTION)
+
+        binding.resetFiltersBtn.isEnabled = false
     }
 
     private fun runLocationFlow() {

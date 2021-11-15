@@ -52,7 +52,7 @@
             app:behavior_expandedOffset="42dp"
             app:behavior_fitToContents="false"
             app:behavior_halfExpandedRatio="@dimen/merchant_half_expanded_ratio"
-            app:behavior_peekHeight="24dp"
+            app:behavior_peekHeight="@dimen/search_content_peek_height"
             app:layout_behavior="@string/bottom_sheet_behavior"
             tools:behavior_peekHeight="500dp">
 
@@ -129,8 +129,9 @@
                 android:layout_width="26dp"
                 android:layout_height="26dp"
                 android:layout_marginStart="15dp"
-                android:layout_marginVertical="10dp"
-                android:padding="2dp"
+                android:layout_marginVertical="12dp"
+                android:paddingHorizontal="2dp"
+                android:paddingTop="3dp"
                 android:layout_gravity="start"
                 android:background="@drawable/rounded_background"
                 android:theme="@style/FilterIconBackground"
@@ -143,7 +144,7 @@
                 style="@style/Overline.SemiBold"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="7dp"
+                android:layout_marginTop="10dp"
                 android:layout_gravity="center_horizontal|top"
                 android:text="@string/explore_filtered_by" />
 
@@ -153,7 +154,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal|bottom"
-                android:layout_marginBottom="7dp"
+                android:layout_marginBottom="10dp"
                 tools:text="California, 5 miles" />
         </FrameLayout>
     </LinearLayout>

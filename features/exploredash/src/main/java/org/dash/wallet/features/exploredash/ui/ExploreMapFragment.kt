@@ -114,16 +114,16 @@ class ExploreMapFragment: SupportMapFragment() {
             }
         }
 
-        viewModel.searchResults.observe(viewLifecycleOwner) { results ->
+        viewModel.physicalSearchResults.observe(viewLifecycleOwner) { results ->
             // TODO: we probably shouldn't reset all markers but calculate the difference instead,
             // otherwise when user pans the map, everything blinks
             resetMap()
 
             // TODO: For the 1st iteration of this feature, we shall limit the number of markers to be displayed
             if (results.isNotEmpty()) {
-//                if (results.size < 100) {
+                if (results.size < 100) {
                     setMarkers(results)
-//                } else setMarkers(results.shuffled().take(viewModel.maxMarkers))
+                } else setMarkers(results.take(100))
             }
         }
 

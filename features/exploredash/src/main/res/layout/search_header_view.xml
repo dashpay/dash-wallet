@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context="org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter">
 
     <org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
@@ -44,10 +45,11 @@
             android:background="@android:color/transparent"
             android:src="@drawable/ic_close"
             android:visibility="gone"
+            app:tint="@color/gray_600"
             tools:visibility="visible" />
     </FrameLayout>
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -61,8 +63,26 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginHorizontal="15dp"
-            android:layout_weight="1"
-            tools:text="United States" />
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/filter_btn"
+            tools:text="United States, New York" />
+
+        <TextView
+            android:id="@+id/search_subtitle"
+            style="@style/Caption.SteelGray"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="15dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/filter_btn"
+            app:layout_constraintTop_toBottomOf="@id/search_title"
+            tools:text="105 ATMs in 20 miles" />
 
         <Button
             android:id="@+id/filter_btn"
@@ -73,6 +93,9 @@
             android:drawableEnd="@drawable/ic_filter"
             android:drawablePadding="4dp"
             android:text="@string/explore_filter"
-            android:textSize="13sp" />
-    </LinearLayout>
+            android:textSize="13sp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </LinearLayout>

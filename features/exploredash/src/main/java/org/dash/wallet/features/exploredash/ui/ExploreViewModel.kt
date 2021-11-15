@@ -82,7 +82,7 @@ class ExploreViewModel @Inject constructor(
     var exploreTopic = ExploreTopic.Merchants
         private set
 
-    private var savedLocation: UserLocation? = null
+    private var lastResolvedAddress: GeoBounds? = null
     private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = currentUserLocationState.asLiveData()
 
@@ -102,6 +102,7 @@ class ExploreViewModel @Inject constructor(
         get() = _selectedRadiusOption.value
         set(value) { _selectedRadiusOption.value = value }
 
+    // In meters
     val radius: Double
         get() = if (isMetric) selectedRadiusOption * METERS_IN_KILOMETER else selectedRadiusOption * METERS_IN_MILE
 
@@ -128,17 +129,17 @@ class ExploreViewModel @Inject constructor(
         addSource(_filterMode.asLiveData(), this::setValue)
     }
 
-    private val _searchResults = MutableLiveData<List<SearchResult>>()
-    val searchResults: LiveData<List<SearchResult>>
-        get() = _searchResults
+    private val _physicalSearchResults = MutableLiveData<List<SearchResult>>()
+    val physicalSearchResults: LiveData<List<SearchResult>>
+        get() = _physicalSearchResults
 
     private val _pagingSearchResults = MutableLiveData<PagingData<SearchResult>>()
     val pagingSearchResults: LiveData<PagingData<SearchResult>>
         get() = _pagingSearchResults
 
-    private val _searchResultsTitle = MutableLiveData<String>()
-    val searchResultsTitle: LiveData<String>
-        get() = _searchResultsTitle
+    private val _searchLocationName = MutableLiveData<String>()
+    val searchLocationName: LiveData<String>
+        get() = _searchLocationName
 
     private val _selectedItem = MutableLiveData<SearchResult?>()
     val selectedItem: LiveData<SearchResult?>
@@ -243,7 +244,7 @@ class ExploreViewModel @Inject constructor(
         if (this.exploreTopic != exploreTopic) {
             clearFilters(exploreTopic)
             _pagingSearchResults.value = PagingData.from(listOf())
-            _searchResults.value = listOf()
+            _physicalSearchResults.value = listOf()
         }
 
         this.exploreTopic = exploreTopic
@@ -260,11 +261,28 @@ class ExploreViewModel @Inject constructor(
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
                     .distinctUntilChanged()
-                    .onEach(_searchResults::postValue)
+                    .onEach(_physicalSearchResults::postValue)
                     .launchIn(viewModelWorkerScope)
             }
             // Right now we don't show the map at all while location is disabled
         }
+
+        _searchBounds
+            .filterNotNull()
+            .filter {
+                val lastResolved = lastResolvedAddress
+                lastResolved == null ||
+                locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2
+            }
+            .onEach {
+                val address = locationProvider
+                    .getCurrentLocationAddress(it.centerLat, it.centerLng)
+
+                address?.let {
+                    _searchLocationName.postValue("${address.country}, ${address.city}")
+                }
+            }
+            .launchIn(viewModelWorkerScope)
     }
 
     fun onExitSearch() {
@@ -313,19 +331,6 @@ class ExploreViewModel @Inject constructor(
         viewModelScope.launch {
             _isLocationEnabled.value = true
             locationProvider.observeUpdates().collect {
-                val savedLocation = savedLocation
-
-                if (savedLocation == null ||
-                    locationProvider.distanceBetween(savedLocation, it) > radius / 2
-                ) {
-                    val locationName = locationProvider
-                        .getCurrentLocationName(it.latitude, it.longitude)
-
-                    if (locationName.isNotBlank()) {
-                        _searchResultsTitle.postValue(locationName)
-                    }
-                }
-
                 currentUserLocationState.value = it
             }
         }
@@ -368,13 +373,15 @@ class ExploreViewModel @Inject constructor(
     }
 
     private fun clearFilters(topic: ExploreTopic) {
-        searchQuery.value = ""
-        _pickedTerritory.value = ""
         _filterMode.value = if (topic == ExploreTopic.Merchants) {
             FilterMode.Online
         } else {
             FilterMode.All
         }
+        searchQuery.value = ""
+        _pickedTerritory.value = ""
+        _paymentMethodFilter.value = ""
+        _selectedRadiusOption.value = DEFAULT_RADIUS_OPTION
     }
 
     private fun getMerchantType(filterMode: FilterMode): String {

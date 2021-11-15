@@ -11,4 +11,5 @@
     <dimen name="merchant_marker_size">44dp</dimen>
     <dimen name="map_padding">5dp</dimen>
     <dimen name="dialog_horizontal_inset">15dp</dimen>
+    <dimen name="search_content_peek_height">24dp</dimen>
 </resources>

@@ -33,10 +33,12 @@ class RadioGroupAdapter(
 ): ListAdapter<IconifiedViewItem, RadioButtonViewHolder>(DiffCallback()) {
 
     var selectedIndex: Int = defaultSelectedIndex
-        set(value) {
-            if (field != value) {
-                field = value
-                notifyItemChanged(value)
+        set(newIndex) {
+            if (field != newIndex) {
+                val oldIndex = field
+                field = newIndex
+                notifyItemChanged(oldIndex)
+                notifyItemChanged(newIndex)
             }
         }
 
