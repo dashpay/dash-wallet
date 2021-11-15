@@ -243,14 +243,14 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
                 val territories = territoriesJob?.await() ?: listOf()
                 val allTerritories = listOf(firstOption) + territories.map { IconifiedViewItem(it) }
 
-                val index = if (selectedTerritory.isEmpty()) {
+                val currentIndex = if (selectedTerritory.isEmpty()) {
                     0
                 } else {
                     territories.indexOf(selectedTerritory) + 1
                 }
 
                 val dialogTitle = getString(R.string.explore_location)
-                OptionPickerDialog(dialogTitle, allTerritories, index) { item, index, dialog ->
+                OptionPickerDialog(dialogTitle, allTerritories, currentIndex) { item, index, dialog ->
                     dialog.dismiss()
                     setTerritoryName(if (index == 0) "" else item.name)
                 }.show(parentFragmentManager, "territory_filter")
