@@ -25,7 +25,7 @@ dependencies {
     //Uphold Integration
     implementation project(path: ':uphold-integration')
     //coinbase integration
-    implementation project(path: ':coinbase-integration')
+    implementation project(path: ":integrations:coinbase-integration")
 
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
