@@ -244,12 +244,12 @@
         <item name="android:paddingEnd">12dp</item>
     </style>
 
-    <style name="NewMontserratButton.Secondary.Inverted" parent="MontserratButton">
+    <style name="Button.Secondary.Inverted" parent="MontserratButton">
         <item name="android:background">@drawable/secondary_inverted_button</item>
         <item name="fontFamily">@font/montserrat_regular</item>
     </style>
 
-    <style name="NewMontserratButton.Secondary.Inverted.Large" parent="NewMontserratButton.Secondary.Inverted">
+    <style name="Button.Secondary.Inverted.Large" parent="Button.Secondary.Inverted">
         <item name="android:textSize">18sp</item>
     </style>
 

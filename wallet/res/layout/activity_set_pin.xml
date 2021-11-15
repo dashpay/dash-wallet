@@ -59,7 +59,7 @@
 
         <Button
             android:id="@+id/btn_confirm"
-            style="@style/NewMontserratButton.Secondary.Inverted"
+            style="@style/Button.Secondary.Inverted"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"

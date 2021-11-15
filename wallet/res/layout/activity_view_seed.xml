@@ -55,7 +55,7 @@
 
     <Button
         android:id="@+id/confirm_btn"
-        style="@style/NewMontserratButton.Primary.SemiBold"
+        style="@style/DashButton.Blue.SemiBold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"

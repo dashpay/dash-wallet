@@ -37,7 +37,7 @@
             android:text="@string/verify_seed_success_message" />
 
         <Button
-            style="@style/NewMontserratButton.Primary"
+            style="@style/Button.Primary"
             android:text="@string/verify_continue"
             android:textSize="12sp"
             android:layout_width="98sp"

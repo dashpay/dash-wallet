@@ -130,7 +130,7 @@
 
     <Button
         android:id="@+id/verify_show_recovery_phrase_button"
-        style="@style/NewMontserratButton.Primary.SemiBold"
+        style="@style/DashButton.Blue.SemiBold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"

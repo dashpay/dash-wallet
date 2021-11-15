@@ -83,7 +83,7 @@
 
     <Button
         android:id="@+id/view_on_explorer"
-        style="@style/NewMontserratButton.Primary"
+        style="@style/Button.Primary"
         android:layout_width="match_parent"
         android:layout_height="54dp"
         android:layout_marginLeft="15dp"
