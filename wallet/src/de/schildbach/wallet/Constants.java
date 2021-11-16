@@ -176,7 +176,7 @@ public final class Constants {
     public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
 
     /** Recipient e-mail address for reports. */
-    public static final String REPORT_EMAIL = "support@dash.org";
+    public static final String REPORT_EMAIL = BuildConfig.SUPPORT_EMAIL;
 
     /** Subject line for manually reported issues. */
     public static final String REPORT_SUBJECT_BEGIN = "Android Dash Wallet:  ";
