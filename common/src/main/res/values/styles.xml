@@ -722,30 +722,19 @@
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>
 
-    <style name="Body2.SemiBold">
-        <item name="fontFamily">@font/montserrat_semibold</item>
-    </style>
-
-    <style name="Body2.SemiBold.Blue300">
-        <item name="android:textColor">@color/blue_300</item>
-    </style>
-
-    <style name="Body2.Bold">
-        <item name="fontFamily">@font/montserrat_bold</item>
-    </style>
-
     <style name="Subtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
-        <item name="fontFamily">@font/montserrat_medium</item>
         <item name="android:textColor">@color/gray_900</item>
+        <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
 
-    <style name="Subtitle1.SemiBold">
-        <item name="fontFamily">@font/montserrat_semibold</item>
+    <style name="Subtitle1.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
     </style>
 
     <style name="Subtitle2" parent="TextAppearance.MaterialComponents.Subtitle2">
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:textColor">@color/gray_900</item>
+        <item name="android:lineSpacingExtra">5sp</item>
     </style>
 
     <style name="Subtitle2.Red">
