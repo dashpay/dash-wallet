@@ -16,9 +16,7 @@
   ~  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   ~  */
   -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-
-    <solid android:color="@color/gray_40" />
-    <corners android:radius="8dp" />
-</shape>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/steel_gray_200" android:state_enabled="false" />
+    <item android:color="?attr/titleTextColor" />
+</selector>

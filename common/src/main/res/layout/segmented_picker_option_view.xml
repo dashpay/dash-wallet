@@ -16,9 +16,18 @@
   ~  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   ~  */
   -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    tools:layout_width="130dp">
 
-    <solid android:color="@color/gray_40" />
-    <corners android:radius="8dp" />
-</shape>
+    <TextView
+        android:id="@+id/name"
+        style="@style/Body2.Medium"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:gravity="center"
+        tools:text="Option 1" />
+</FrameLayout>
