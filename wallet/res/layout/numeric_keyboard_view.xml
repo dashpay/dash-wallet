@@ -14,7 +14,7 @@
 
         <Button
             android:id="@+id/btn_1"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="1"
@@ -23,7 +23,7 @@
 
         <Button
             android:id="@+id/btn_2"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="2"
@@ -32,7 +32,7 @@
 
         <Button
             android:id="@+id/btn_3"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="3"
@@ -44,7 +44,7 @@
 
         <Button
             android:id="@+id/btn_4"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="4"
@@ -53,7 +53,7 @@
 
         <Button
             android:id="@+id/btn_5"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="5"
@@ -62,7 +62,7 @@
 
         <Button
             android:id="@+id/btn_6"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="6"
@@ -74,7 +74,7 @@
 
         <Button
             android:id="@+id/btn_7"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="7"
@@ -83,7 +83,7 @@
 
         <Button
             android:id="@+id/btn_8"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="8"
@@ -92,7 +92,7 @@
 
         <Button
             android:id="@+id/btn_9"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="9"
@@ -104,7 +104,7 @@
 
         <Button
             android:id="@+id/btn_function"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/button_cancel"
@@ -112,7 +112,7 @@
 
         <Button
             android:id="@+id/btn_0"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:tag="0"
@@ -121,7 +121,7 @@
 
         <ImageButton
             android:id="@+id/btn_back"
-            style="@style/Button.Secondary.Inverted.Large"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:srcCompat="@drawable/ic_backspace"
