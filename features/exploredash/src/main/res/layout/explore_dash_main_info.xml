@@ -40,7 +40,7 @@
         android:layout_marginTop="40dp"
         android:textSize="28sp"
         android:text="@string/explore_info_header_text"
-        style="@style/Body2.Bold"
+        style="@style/Headline4.Bold"
         android:lineSpacingExtra="0sp"
         />
 
@@ -63,7 +63,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dash_logo_blue"
         android:layout_marginTop="12dp"
-        style="@style/Body2.Bold"
+        style="@style/Subtitle1.Bold"
         android:textSize="16sp"
         android:text="@string/accept_dash_text"
         android:paddingBottom="2dp"
@@ -101,7 +101,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dash_gift_card_orange_icon"
         android:layout_marginTop="12dp"
-        style="@style/Body2.Bold"
+        style="@style/Subtitle1.Bold"
         android:textSize="16sp"
         android:text="@string/buy_gift_card_text"
         android:paddingBottom="2dp"
@@ -134,7 +134,7 @@
         android:text="@string/learn_more_text"
         android:layout_marginTop="10dp"
         android:paddingTop="4dp"
-        style="@style/Body2.SemiBold.Blue300"
+        style="@style/Button.Tertiary.Small.Blue"
         />
 
     <TextView

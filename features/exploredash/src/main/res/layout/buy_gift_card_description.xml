@@ -40,7 +40,7 @@
         android:textSize="28sp"
         android:gravity="center"
         android:text="@string/buy_card_header_text"
-        style="@style/Body2.Bold"
+        style="@style/Headline4.Bold"
         android:lineSpacingExtra="0sp"
         android:paddingBottom="2dp"
         android:paddingLeft="8dp"

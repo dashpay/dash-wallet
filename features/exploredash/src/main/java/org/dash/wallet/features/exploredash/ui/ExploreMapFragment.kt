@@ -319,12 +319,12 @@ class ExploreMapFragment: SupportMapFragment() {
         withContext(Dispatchers.IO){
             val merchants = results.filterIsInstance<Merchant>()
             Log.e(this@ExploreMapFragment::class.java.simpleName, "Merchant size: ${merchants.size}")
-//            val chunkResult = merchants.chunked(10)
-//            Log.e(this@ExploreMapFragment::class.java.simpleName, "Chunk size: ${chunkResult.size}")
+            val chunkResult = merchants.chunked(10)
+            Log.e(this@ExploreMapFragment::class.java.simpleName, "Chunk size: ${chunkResult.size}")
 
-//            merchants.forEach {
-                loadMerchantMarkers(merchants)
-//            }
+            chunkResult.forEach {
+                loadMerchantMarkers(it)
+            }
         }
     }
 

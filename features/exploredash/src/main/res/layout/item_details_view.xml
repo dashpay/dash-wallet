@@ -43,7 +43,7 @@
 
         <TextView
             android:id="@+id/manufacturer"
-            style="@style/Subtitle1.SemiBold"
+            style="@style/Subtitle1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="14dp"
@@ -111,7 +111,7 @@
 
         <TextView
             android:id="@+id/item_name"
-            style="@style/Subtitle1.SemiBold"
+            style="@style/Subtitle1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="15dp"
