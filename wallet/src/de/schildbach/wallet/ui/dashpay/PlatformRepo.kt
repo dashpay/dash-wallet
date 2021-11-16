@@ -658,7 +658,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
             cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
 
-            val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock))
+            // TODO: when all instantsend locks are deterministic, we don't need the catch block
+            val instantSendLock = try {
+                InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
+            } catch (e: Exception) {
+                InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISLOCK_VERSION)
+            }
 
             cftx.confidence.setInstantSendLock(instantSendLock)
             blockchainIdentity.initializeCreditFundingTransaction(cftx)
@@ -1628,7 +1633,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 }
                 return try {
                     DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
-                    InstantSendLock(Constants.NETWORK_PARAMETERS, Utils.HEX.decode(invite.instantSendLock))
+                    // TODO: when all instantsend locks are deterministic, we don't need the catch block
+                    try {
+                        InstantSendLock(
+                            Constants.NETWORK_PARAMETERS,
+                            Utils.HEX.decode(invite.instantSendLock),
+                            InstantSendLock.ISDLOCK_VERSION
+                        )
+                    } catch (e: Exception) {
+                        InstantSendLock(
+                            Constants.NETWORK_PARAMETERS,
+                            Utils.HEX.decode(invite.instantSendLock),
+                            InstantSendLock.ISLOCK_VERSION
+                        )
+                    }
                     log.info("Invite is valid and took $stopWatch")
                     true
                 } catch (e: AddressFormatException.WrongNetwork) {
