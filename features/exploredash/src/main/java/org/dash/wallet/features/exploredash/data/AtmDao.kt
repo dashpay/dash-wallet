@@ -46,6 +46,23 @@ interface AtmDao : BaseDao<Atm> {
     ): PagingSource<Int, Atm>
 
     @Query("""
+        SELECT COUNT(*)
+        FROM atm 
+        WHERE type IN (:types)
+            AND latitude < :northLat
+            AND latitude > :southLat
+            AND longitude < :eastLng
+            AND longitude > :westLng
+    """)
+    fun getByCoordinatesResultCount(
+        types: List<String>,
+        northLat: Double,
+        eastLng: Double,
+        southLat: Double,
+        westLng: Double
+    ): Int
+
+    @Query("""
         SELECT *
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
@@ -67,6 +84,26 @@ interface AtmDao : BaseDao<Atm> {
     ): PagingSource<Int, Atm>
 
     @Query("""
+        SELECT COUNT(*)
+        FROM atm
+        JOIN atm_fts ON atm.id = atm_fts.docid
+        WHERE atm_fts MATCH :query
+            AND type IN (:types)
+            AND latitude < :northLat
+            AND latitude > :southLat
+            AND longitude < :eastLng
+            AND longitude > :westLng
+    """)
+    fun searchByCoordinatesResultCount(
+        query: String,
+        types: List<String>,
+        northLat: Double,
+        eastLng: Double,
+        southLat: Double,
+        westLng: Double
+    ): Int
+
+    @Query("""
         SELECT * 
         FROM atm 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
@@ -76,6 +113,17 @@ interface AtmDao : BaseDao<Atm> {
         territoryFilter: String,
         types: List<String>
     ): PagingSource<Int, Atm>
+
+    @Query("""
+        SELECT COUNT(*) 
+        FROM atm 
+        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
+            AND type IN (:types)
+    """)
+    fun getByTerritoryResultCount(
+        territoryFilter: String,
+        types: List<String>
+    ): Int
 
     @Query("""
         SELECT *
@@ -91,6 +139,20 @@ interface AtmDao : BaseDao<Atm> {
         territoryFilter: String,
         types: List<String>
     ): PagingSource<Int, Atm>
+
+    @Query("""
+        SELECT COUNT(*)
+        FROM atm
+        JOIN atm_fts ON atm.id = atm_fts.docid
+        WHERE atm_fts MATCH :query
+            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+            AND type IN (:types)
+    """)
+    fun searchByTerritoryResultCount(
+        query: String,
+        territoryFilter: String,
+        types: List<String>
+    ): Int
 
     @Query("""
         SELECT * 
@@ -206,6 +268,29 @@ interface AtmDao : BaseDao<Atm> {
                 pagingSearchByTerritory(sanitizeQuery(query), territory, types)
             } else {
                 pagingGetByTerritory(territory, types)
+            }
+        }
+    }
+
+    suspend fun getPhysicalResultsCount(
+        query: String,
+        types: List<String>,
+        territoryFilter: String,
+        bounds: GeoBounds
+    ): Int {
+        return if (territoryFilter.isNotBlank()) {
+            if (query.isNotBlank()) {
+                searchByTerritoryResultCount(sanitizeQuery(query), territoryFilter, types)
+            } else {
+                getByTerritoryResultCount(territoryFilter, types)
+            }
+        } else {
+            if (query.isNotBlank()) {
+                searchByCoordinatesResultCount(sanitizeQuery(query), types,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            } else {
+                getByCoordinatesResultCount(types,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
             }
         }
     }

@@ -108,7 +108,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
-        bottomSheet.halfExpandedRatio = ResourcesCompat.getFloat(resources,
+        bottomSheet.halfExpandedRatio = ResourcesCompat.getFloat(
+            resources,
             if (args.type == ExploreTopic.Merchants) R.dimen.merchant_half_expanded_ratio else R.dimen.atm_half_expanded_ratio
         )
 
@@ -190,6 +191,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
             header.title = getSearchTitle()
             header.subtitle = getSearchSubtitle()
+            binding.filterPanel.isVisible = shouldShowFiltersPanel()
 
             if (mode == FilterMode.Online) {
                 bottomSheet.isDraggable = false
@@ -278,7 +280,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             header.title = getSearchTitle()
         }
 
-        viewModel.physicalSearchResults.observe(viewLifecycleOwner) {
+        viewModel.pagingSearchResultsCount.observe(viewLifecycleOwner) {
             header.subtitle = getSearchSubtitle()
         }
 
@@ -303,8 +305,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         delay(100)
                     }
 
-                    transitToDetails(viewModel.filterMode.value == FilterMode.Online ||
-                            item.type == MerchantType.ONLINE)
+                    transitToDetails(
+                        viewModel.filterMode.value == FilterMode.Online ||
+                                item.type == MerchantType.ONLINE
+                    )
                 }
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
@@ -554,7 +558,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun getSearchSubtitle(): String {
         if (viewModel.isLocationEnabled.value != true ||
             (viewModel.exploreTopic == ExploreTopic.Merchants &&
-                    viewModel.filterMode.value != FilterMode.Physical)) {
+                    viewModel.filterMode.value != FilterMode.Physical)
+        ) {
             return ""
         }
 
@@ -568,12 +573,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             )
         }
 
-        val resultSize = viewModel.physicalSearchResults.value?.size ?: 0
+        val resultSize = viewModel.pagingSearchResultsCount.value ?: 0
         val quantityStr = if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             if (resultSize == 0) {
                 getString(R.string.explore_no_merchants)
             } else {
-                resources.getQuantityString(R.plurals.explore_merchant_amount, resultSize, resultSize)
+                resources.getQuantityString(
+                    R.plurals.explore_merchant_amount,
+                    resultSize,
+                    resultSize
+                )
             }
         } else {
             if (resultSize == 0) {
@@ -586,37 +595,41 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         return getString(R.string.explore_in_radius, quantityStr, searchLocation)
     }
 
-    private fun resolveAppliedFilters(filters: FilterOptions?) {
+    private fun resolveAppliedFilters(filters: FilterOptions) {
         val appliedFilterNames = mutableListOf<String>()
 
-        filters?.let {
-            if (filters.payment.isNotEmpty()) {
-                appliedFilterNames.add(getString(
+        if (filters.payment.isNotEmpty()) {
+            appliedFilterNames.add(
+                getString(
                     if (filters.payment == PaymentMethod.DASH) {
                         R.string.explore_pay_with_dash
                     } else {
                         R.string.explore_pay_gift_card
                     }
-                ))
-            }
-
-            if (filters.territory.isNotEmpty()) {
-                appliedFilterNames.add(filters.territory)
-            }
-
-            if (filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION) {
-                appliedFilterNames.add(resources.getQuantityString(
-                    if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
-                    filters.radius, filters.radius
-                ))
-            }
+                )
+            )
         }
 
-        binding.filterPanel.isVisible = appliedFilterNames.any() && viewModel.selectedItem.value == null
+        if (filters.territory.isNotEmpty()) {
+            appliedFilterNames.add(filters.territory)
+        }
+
+        if (viewModel.filterMode.value == FilterMode.Physical) {
+            appliedFilterNames.add(
+                resources.getQuantityString(
+                    if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
+                    filters.radius, filters.radius
+                )
+            )
+        }
+
+        binding.filterPanel.isVisible =
+            appliedFilterNames.any() && viewModel.selectedItem.value == null
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        val bottomSheetPeekHeight = resources.getDimensionPixelOffset(R.dimen.search_content_peek_height)
+        val bottomSheetPeekHeight =
+            resources.getDimensionPixelOffset(R.dimen.search_content_peek_height)
 
         if (appliedFilterNames.any()) {
             bottomSheet.peekHeight = binding.filterPanel.measuredHeight + bottomSheetPeekHeight
@@ -626,10 +639,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun shouldShowFiltersPanel(): Boolean {
-        return viewModel.appliedFilters.value != null &&
-                (viewModel.paymentMethodFilter.isNotEmpty() ||
-                 viewModel.selectedTerritory.isNotEmpty() ||
-                 viewModel.selectedRadiusOption != ExploreViewModel.DEFAULT_RADIUS_OPTION)
+        return viewModel.selectedItem.value == null &&
+                (viewModel.filterMode.value == FilterMode.Physical ||
+                viewModel.paymentMethodFilter.isNotEmpty() ||
+                viewModel.selectedTerritory.isNotEmpty())
     }
 
     private fun openFilters() {

@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash.ui
 
-import android.util.Log
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
@@ -108,6 +107,8 @@ class ExploreViewModel @Inject constructor(
     val radius: Double
         get() = if (isMetric) selectedRadiusOption * METERS_IN_KILOMETER else selectedRadiusOption * METERS_IN_MILE
 
+    private var radiusBounds: GeoBounds? = null
+
     private val _searchBounds = MutableStateFlow<GeoBounds?>(null)
     var searchBounds: GeoBounds?
         get() = _searchBounds.value
@@ -139,6 +140,10 @@ class ExploreViewModel @Inject constructor(
     val pagingSearchResults: LiveData<PagingData<SearchResult>>
         get() = _pagingSearchResults
 
+    private val _pagingSearchResultsCount = MutableLiveData<Int>()
+    val pagingSearchResultsCount: LiveData<Int>
+        get() = _pagingSearchResultsCount
+
     private val _searchLocationName = MutableLiveData<String>()
     val searchLocationName: LiveData<String>
         get() = _searchLocationName
@@ -151,8 +156,8 @@ class ExploreViewModel @Inject constructor(
     val isLocationEnabled: LiveData<Boolean>
         get() = _isLocationEnabled
 
-    private val _appliedFilters = MutableLiveData<FilterOptions?>(null)
-    val appliedFilters: LiveData<FilterOptions?>
+    private val _appliedFilters = MutableLiveData(FilterOptions("", "", DEFAULT_RADIUS_OPTION))
+    val appliedFilters: LiveData<FilterOptions>
         get() = _appliedFilters
 
 
@@ -177,13 +182,19 @@ class ExploreViewModel @Inject constructor(
                                                             it.zoomLevel > MIN_ZOOM_LEVEL
                                                 }
                                                 .map { bounds ->
-                                                    if (isLocationEnabled.value == true && mode != FilterMode.Online) {
-                                                        locationProvider.getRadiusBounds(
+                                                    if (isLocationEnabled.value == true &&
+                                                        (exploreTopic == ExploreTopic.ATMs ||
+                                                         mode == FilterMode.Physical)
+                                                    ) {
+                                                        val radiusBounds = locationProvider.getRadiusBounds(
                                                             bounds.centerLat,
                                                             bounds.centerLng,
                                                             radius
                                                         )
+                                                        this.radiusBounds = radiusBounds
+                                                        radiusBounds
                                                     } else {
+                                                        radiusBounds = null
                                                         GeoBounds.noBounds
                                                     }
                                                 }
@@ -201,6 +212,7 @@ class ExploreViewModel @Inject constructor(
                                                                 territory, payment, selectedRadiusOption
                                                             )
                                                         )
+
                                                         getPagingSource(
                                                             query,
                                                             territory,
@@ -265,6 +277,7 @@ class ExploreViewModel @Inject constructor(
         this.pagingFilterJob = pagingSearchFlow
             .distinctUntilChanged()
             .onEach(_pagingSearchResults::postValue)
+            .onEach { countPagedPhysicalResults() }
             .launchIn(viewModelWorkerScope)
 
         _isLocationEnabled.observeForever { locationEnabled ->
@@ -284,6 +297,7 @@ class ExploreViewModel @Inject constructor(
             .filter {
                 val lastResolved = lastResolvedAddress
                 isLocationEnabled.value == true &&
+                it.zoomLevel > MIN_ZOOM_LEVEL &&
                 (selectedTerritory.isEmpty() || lastResolved == null ||
                 locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2)
             }
@@ -368,8 +382,8 @@ class ExploreViewModel @Inject constructor(
         return if (exploreTopic == ExploreTopic.Merchants) {
             merchantDao.observePhysical(query, territory, payment, bounds)
         } else {
-            val atms = getAtmTypes(filterMode)
-            atmDao.observePhysical(query, territory, atms, bounds)
+            val types = getAtmTypes(filterMode)
+            atmDao.observePhysical(query, territory, types, bounds)
         }
     }
 
@@ -388,6 +402,38 @@ class ExploreViewModel @Inject constructor(
             val types = getAtmTypes(filterMode)
             atmDao.observeAllPaging(query, territory, types, bounds)
         } as PagingSource<Int, SearchResult>
+    }
+
+    private fun countPagedPhysicalResults() {
+        val bounds = radiusBounds
+
+        if ((exploreTopic == ExploreTopic.ATMs ||
+            filterMode.value == FilterMode.Physical) &&
+            (selectedTerritory.isNotBlank() || bounds != null)
+        ) {
+            viewModelWorkerScope.launch {
+                val radiusBounds = bounds?.let {
+                    locationProvider.getRadiusBounds(
+                        bounds.centerLat,
+                        bounds.centerLng,
+                        radius
+                    )
+                }
+                val result = if (exploreTopic == ExploreTopic.Merchants) {
+                    merchantDao.getPhysicalResultsCount(
+                        searchQuery.value, paymentMethodFilter,
+                        selectedTerritory, radiusBounds ?: GeoBounds.noBounds
+                    )
+                } else {
+                    val types = getAtmTypes(filterMode.value ?: FilterMode.All)
+                    atmDao.getPhysicalResultsCount(
+                        searchQuery.value, types,
+                        selectedTerritory, radiusBounds ?: GeoBounds.noBounds
+                    )
+                }
+                _pagingSearchResultsCount.postValue(result)
+            }
+        }
     }
 
     private fun clearFilters(topic: ExploreTopic) {

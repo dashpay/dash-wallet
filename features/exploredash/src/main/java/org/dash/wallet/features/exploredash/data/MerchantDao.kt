@@ -37,7 +37,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-        ORDER BY name ASC""")
+        ORDER BY name COLLATE NOCASE ASC""")
     fun pagingGetByCoordinates(
         types: List<String>,
         paymentMethod: String,
@@ -46,6 +46,25 @@ interface MerchantDao : BaseDao<Merchant> {
         southLat: Double,
         westLng: Double
     ): PagingSource<Int, Merchant>
+
+    @Query("""
+        SELECT COUNT(*)
+        FROM merchant 
+        WHERE type IN (:types)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND latitude < :northLat
+            AND latitude > :southLat
+            AND longitude < :eastLng
+            AND longitude > :westLng
+    """)
+    suspend fun getByCoordinatesResultCount(
+        types: List<String>,
+        paymentMethod: String,
+        northLat: Double,
+        eastLng: Double,
+        southLat: Double,
+        westLng: Double
+    ): Int
 
     @Query("""
         SELECT *
@@ -58,7 +77,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
     """)
     fun pagingSearchByCoordinates(
         query: String,
@@ -71,17 +90,53 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
+        SELECT COUNT(*)
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+            AND latitude < :northLat
+            AND latitude > :southLat
+            AND longitude < :eastLng
+            AND longitude > :westLng
+    """)
+    suspend fun searchByCoordinatesResultCount(
+        query: String,
+        types: List<String>,
+        paymentMethod: String,
+        northLat: Double,
+        eastLng: Double,
+        southLat: Double,
+        westLng: Double
+    ): Int
+
+    @Query("""
         SELECT * 
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-        ORDER BY name ASC""")
+        ORDER BY name COLLATE NOCASE ASC
+    """)
     fun pagingGetByTerritory(
         territoryFilter: String,
         types: List<String>,
         paymentMethod: String
     ): PagingSource<Int, Merchant>
+
+    @Query("""
+        SELECT COUNT(*)
+        FROM merchant 
+        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+    """)
+    fun getByTerritoryResultCount(
+        territoryFilter: String,
+        types: List<String>,
+        paymentMethod: String
+    ): Int
 
     @Query("""
         SELECT *
@@ -91,7 +146,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
     """)
     fun pagingSearchByTerritory(
         query: String,
@@ -101,13 +156,29 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
+        SELECT COUNT(*)
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query
+            AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+    """)
+    suspend fun searchByTerritoryResultCount(
+        query: String,
+        territoryFilter: String,
+        types: List<String>,
+        paymentMethod: String
+    ): Int
+
+    @Query("""
         SELECT *
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
         GROUP BY merchantId
         HAVING Id = MIN(Id)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
     """)
     fun pagingGroupByMerchantId(
         types: List<String>,
@@ -123,7 +194,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
         GROUP BY merchantId
         HAVING Id = MIN(Id)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
     """)
     fun pagingSearchGroupByMerchantId(
         query: String,
@@ -140,7 +211,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-        ORDER BY name ASC""")
+        ORDER BY name COLLATE NOCASE ASC""")
     fun observe(
         excludeType: String,
         paymentMethod: String,
@@ -161,7 +232,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
     """)
     fun observeSearchResults(
         query: String,
@@ -179,7 +250,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:excludeType = '' OR type != :excludeType)
-        ORDER BY name ASC""")
+        ORDER BY name COLLATE NOCASE ASC""")
     fun observeByTerritory(
         territoryFilter: String,
         excludeType: String,
@@ -194,7 +265,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:excludeType = '' OR type != :excludeType)
-        ORDER BY name ASC
+        ORDER BY name COLLATE NOCASE ASC
     """)
     fun searchByTerritory(
         query: String,
@@ -274,6 +345,31 @@ interface MerchantDao : BaseDao<Merchant> {
                 } else {
                     pagingGetByTerritory(territory, types, paymentMethod)
                 }
+            }
+        }
+    }
+
+    suspend fun getPhysicalResultsCount(
+        query: String,
+        paymentMethod: String,
+        territoryFilter: String,
+        bounds: GeoBounds
+    ): Int {
+        val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+
+        return if (territoryFilter.isNotBlank()) {
+            if (query.isNotBlank()) {
+                searchByTerritoryResultCount(sanitizeQuery(query), territoryFilter, types, paymentMethod)
+            } else {
+                getByTerritoryResultCount(territoryFilter, types, paymentMethod)
+            }
+        } else {
+            if (query.isNotBlank()) {
+                searchByCoordinatesResultCount(sanitizeQuery(query), types, paymentMethod,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            } else {
+                getByCoordinatesResultCount(types, paymentMethod,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
             }
         }
     }
