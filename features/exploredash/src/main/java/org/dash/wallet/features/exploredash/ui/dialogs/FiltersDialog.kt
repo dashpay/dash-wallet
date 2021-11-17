@@ -1,25 +1,22 @@
 /*
+ * Copyright 2021 Dash Core Group.
  *
- *  * Copyright 2021 Dash Core Group.
- *  *
- *  * This program is free software: you can redistribute it and/or modify
- *  * it under the terms of the GNU General Public License as published by
- *  * the Free Software Foundation, either version 3 of the License, or
- *  * (at your option) any later version.
- *  *
- *  * This program is distributed in the hope that it will be useful,
- *  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  * GNU General Public License for more details.
- *  *
- *  * You should have received a copy of the GNU General Public License
- *  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.features.exploredash.ui.dialogs
 
-import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -37,18 +34,20 @@ import kotlinx.coroutines.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.OffsetDialogFragment
+import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
+import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
-import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
-import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
-import org.dash.wallet.features.exploredash.ui.FilterMode
-import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel.Companion.DEFAULT_RADIUS_OPTION
+import org.dash.wallet.features.exploredash.ui.FilterMode
+import org.dash.wallet.features.exploredash.ui.extensions.isLocationPermissionGranted
+import org.dash.wallet.features.exploredash.ui.extensions.registerPermissionLauncher
+import org.dash.wallet.features.exploredash.ui.extensions.requestLocationPermission
 import javax.inject.Inject
 
 @FlowPreview
