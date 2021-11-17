@@ -1487,6 +1487,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
             : CreditFundingTransaction {
+        // dashj Context does not work with coroutines well, so we need to call Context.propogate
+        // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet.context)
         val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
