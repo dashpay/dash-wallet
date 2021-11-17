@@ -814,7 +814,7 @@
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
-    <style name="Button.Primary.Medium" parent="Widget.AppCompat.Button.Borderless">
+    <style name="Button.Primary" parent="Widget.AppCompat.Button.Borderless">
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:textColor">@color/white</item>
         <item name="android:textSize">14sp</item>
@@ -824,11 +824,11 @@
         <item name="android:minHeight">40dp</item>
     </style>
 
-    <style name="Button.Primary.Blue" parent="Button.Primary.Medium">
+    <style name="Button.Primary.Blue">
         <item name="android:background">@drawable/blue_button_background</item>
     </style>
 
-    <style name="Button.Primary.Large" parent="Button.Primary.Medium">
+    <style name="Button.Primary.Large">
         <item name="android:textSize">15sp</item>
         <item name="android:minHeight">46dp</item>
     </style>
