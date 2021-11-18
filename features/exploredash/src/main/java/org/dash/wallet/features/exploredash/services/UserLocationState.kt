@@ -40,9 +40,6 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.*
 
-// TODO: it would be better if the users of this class don't depend on the concrete
-// implementation, but on an interface instead. We might have a different
-// implementation which does not use google play services.
 @ExperimentalCoroutinesApi
 class UserLocationState @Inject constructor(private val context: Context, private val client: FusedLocationProviderClient): UserLocationStateInt  {
     companion object {
