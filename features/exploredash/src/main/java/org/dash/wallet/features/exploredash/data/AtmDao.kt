@@ -1,17 +1,18 @@
 /*
- * Copyright 2021 Dash Core Group
+ * Copyright 2021 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.features.exploredash.data
@@ -21,7 +22,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.services.GeoBounds
+import org.dash.wallet.features.exploredash.data.model.GeoBounds
 
 @Dao
 interface AtmDao : BaseDao<Atm> {
@@ -29,29 +30,43 @@ interface AtmDao : BaseDao<Atm> {
     @Query("""
         SELECT * 
         FROM atm 
-        WHERE (:territoryFilter = '' OR territory = :territoryFilter) 
-            AND type IN (:types)
+        WHERE type IN (:types)
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
         ORDER BY name ASC
     """)
-    fun pagingGet(
-        territoryFilter: String,
+    fun pagingGetByCoordinates(
         types: List<String>,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
         westLng: Double
     ): PagingSource<Int, Atm>
+
+    @Query("""
+        SELECT COUNT(*)
+        FROM atm 
+        WHERE type IN (:types)
+            AND latitude < :northLat
+            AND latitude > :southLat
+            AND longitude < :eastLng
+            AND longitude > :westLng
+    """)
+    fun getByCoordinatesResultCount(
+        types: List<String>,
+        northLat: Double,
+        eastLng: Double,
+        southLat: Double,
+        westLng: Double
+    ): Int
 
     @Query("""
         SELECT *
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
-        WHERE atm_fts MATCH :query 
-            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+        WHERE atm_fts MATCH :query
             AND type IN (:types)
             AND latitude < :northLat
             AND latitude > :southLat
@@ -59,9 +74,8 @@ interface AtmDao : BaseDao<Atm> {
             AND longitude > :westLng
         ORDER BY name ASC
     """)
-    fun pagingSearch(
+    fun pagingSearchByCoordinates(
         query: String,
-        territoryFilter: String,
         types: List<String>,
         northLat: Double,
         eastLng: Double,
@@ -70,10 +84,80 @@ interface AtmDao : BaseDao<Atm> {
     ): PagingSource<Int, Atm>
 
     @Query("""
+        SELECT COUNT(*)
+        FROM atm
+        JOIN atm_fts ON atm.id = atm_fts.docid
+        WHERE atm_fts MATCH :query
+            AND type IN (:types)
+            AND latitude < :northLat
+            AND latitude > :southLat
+            AND longitude < :eastLng
+            AND longitude > :westLng
+    """)
+    fun searchByCoordinatesResultCount(
+        query: String,
+        types: List<String>,
+        northLat: Double,
+        eastLng: Double,
+        southLat: Double,
+        westLng: Double
+    ): Int
+
+    @Query("""
         SELECT * 
         FROM atm 
-        WHERE (:territoryFilter = '' OR territory = :territoryFilter) 
+        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
+        ORDER BY name ASC""")
+    fun pagingGetByTerritory(
+        territoryFilter: String,
+        types: List<String>
+    ): PagingSource<Int, Atm>
+
+    @Query("""
+        SELECT COUNT(*) 
+        FROM atm 
+        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
+            AND type IN (:types)
+    """)
+    fun getByTerritoryResultCount(
+        territoryFilter: String,
+        types: List<String>
+    ): Int
+
+    @Query("""
+        SELECT *
+        FROM atm
+        JOIN atm_fts ON atm.id = atm_fts.docid
+        WHERE atm_fts MATCH :query
+            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+            AND type IN (:types)
+        ORDER BY name ASC
+    """)
+    fun pagingSearchByTerritory(
+        query: String,
+        territoryFilter: String,
+        types: List<String>
+    ): PagingSource<Int, Atm>
+
+    @Query("""
+        SELECT COUNT(*)
+        FROM atm
+        JOIN atm_fts ON atm.id = atm_fts.docid
+        WHERE atm_fts MATCH :query
+            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+            AND type IN (:types)
+    """)
+    fun searchByTerritoryResultCount(
+        query: String,
+        territoryFilter: String,
+        types: List<String>
+    ): Int
+
+    @Query("""
+        SELECT * 
+        FROM atm 
+        WHERE type IN (:types)
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
@@ -81,7 +165,6 @@ interface AtmDao : BaseDao<Atm> {
         ORDER BY name ASC
     """)
     fun observe(
-        territoryFilter: String,
         types: List<String>,
         northLat: Double,
         eastLng: Double,
@@ -93,8 +176,7 @@ interface AtmDao : BaseDao<Atm> {
         SELECT *
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
-        WHERE atm_fts MATCH :query 
-            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+        WHERE atm_fts MATCH :query
             AND type IN (:types)
             AND latitude < :northLat
             AND latitude > :southLat
@@ -104,7 +186,6 @@ interface AtmDao : BaseDao<Atm> {
     """)
     fun observeSearchResults(
         query: String,
-        territoryFilter: String,
         types: List<String>,
         northLat: Double,
         eastLng: Double,
@@ -112,11 +193,31 @@ interface AtmDao : BaseDao<Atm> {
         westLng: Double
     ): Flow<List<Atm>>
 
-    @Query("SELECT * FROM atm WHERE id = :atmId LIMIT 1")
-    suspend fun getAtm(atmId: Int): Atm?
+    @Query("""
+        SELECT * 
+        FROM atm 
+        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
+            AND type IN (:types)
+        ORDER BY name ASC""")
+    fun observeByTerritory(
+        territoryFilter: String,
+        types: List<String>
+    ): Flow<List<Atm>>
 
-    @Query("SELECT * FROM atm WHERE id = :atmId LIMIT 1")
-    fun observeAtm(atmId: Int): Flow<Atm?>
+    @Query("""
+        SELECT *
+        FROM atm
+        JOIN atm_fts ON atm.id = atm_fts.docid
+        WHERE atm_fts MATCH :query
+            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+            AND type IN (:types)
+        ORDER BY name ASC
+    """)
+    fun searchByTerritory(
+        query: String,
+        territoryFilter: String,
+        types: List<String>
+    ): Flow<List<Atm>>
 
     @Query("SELECT DISTINCT territory FROM atm")
     suspend fun getTerritories(): List<String>
@@ -130,25 +231,19 @@ interface AtmDao : BaseDao<Atm> {
         types: List<String>,
         bounds: GeoBounds
     ): Flow<List<Atm>> {
-        return if (query.isNotBlank()) {
-            observeSearchResults(
-                sanitizeQuery(query),
-                territory,
-                types,
-                bounds.northLat,
-                bounds.eastLng,
-                bounds.southLat,
-                bounds.westLng
-            )
+        return if (territory.isNotBlank()) {
+            if (query.isNotBlank()) {
+                searchByTerritory(sanitizeQuery(query), territory, types)
+            } else {
+                observeByTerritory(territory, types)
+            }
         } else {
-            observe(
-                territory,
-                types,
-                bounds.northLat,
-                bounds.eastLng,
-                bounds.southLat,
-                bounds.westLng
-            )
+            if (query.isNotBlank()) {
+                observeSearchResults(sanitizeQuery(query), types, bounds.northLat,
+                    bounds.eastLng, bounds.southLat, bounds.westLng)
+            } else {
+                observe(types, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            }
         }
     }
 
@@ -158,25 +253,45 @@ interface AtmDao : BaseDao<Atm> {
         types: List<String>,
         bounds: GeoBounds
     ): PagingSource<Int, Atm> {
-        return if (query.isNotBlank()) {
-            pagingSearch(
-                sanitizeQuery(query),
-                territory,
-                types,
-                bounds.northLat,
-                bounds.eastLng,
-                bounds.southLat,
-                bounds.westLng
-            )
+        return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
+            // Search by coordinates (nearby) if territory isn't specified
+            if (query.isNotBlank()) {
+                pagingSearchByCoordinates(sanitizeQuery(query), types,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            } else {
+                pagingGetByCoordinates(types, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            }
         } else {
-            pagingGet(
-                territory,
-                types,
-                bounds.northLat,
-                bounds.eastLng,
-                bounds.southLat,
-                bounds.westLng
-            )
+            // If location services are disabled or user picked a territory
+            // we search everything and filter by territory
+            if (query.isNotBlank()) {
+                pagingSearchByTerritory(sanitizeQuery(query), territory, types)
+            } else {
+                pagingGetByTerritory(territory, types)
+            }
+        }
+    }
+
+    suspend fun getPhysicalResultsCount(
+        query: String,
+        types: List<String>,
+        territoryFilter: String,
+        bounds: GeoBounds
+    ): Int {
+        return if (territoryFilter.isNotBlank()) {
+            if (query.isNotBlank()) {
+                searchByTerritoryResultCount(sanitizeQuery(query), territoryFilter, types)
+            } else {
+                getByTerritoryResultCount(territoryFilter, types)
+            }
+        } else {
+            if (query.isNotBlank()) {
+                searchByCoordinatesResultCount(sanitizeQuery(query), types,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            } else {
+                getByCoordinatesResultCount(types,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            }
         }
     }
 }

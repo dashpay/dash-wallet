@@ -1,17 +1,18 @@
 /*
- * Copyright 2021 Dash Core Group
+ * Copyright 2021 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.features.exploredash.ui.adapters
@@ -28,11 +29,30 @@ import org.dash.wallet.features.exploredash.ui.ExploreTopic
 
 class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: SearchHeaderViewBinding
-    private var searchResultsTitle: String = ""
+
     private var onFilterOptionChosen: ((String, Int) -> Unit)? = null
     private var onSearchQueryChanged: ((String) -> Unit)? = null
     private var onSearchQuerySubmitted: ((Unit) -> Unit)? = null
     private var onFilterButtonClicked: ((Unit) -> Unit)? = null
+
+    var title: String = ""
+        set(value) {
+            field = value
+
+            if (::binding.isInitialized) {
+                binding.searchTitle.text = value
+            }
+        }
+
+    var subtitle: String = ""
+        set(value) {
+            field = value
+
+            if (::binding.isInitialized) {
+                binding.searchSubtitle.isVisible = value.isNotEmpty()
+                binding.searchSubtitle.text = value
+            }
+        }
 
     override fun getItemCount() = 1
 
@@ -78,15 +98,9 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
             onFilterButtonClicked?.invoke(Unit)
         }
 
-        binding.searchTitle.text = searchResultsTitle
-    }
-
-    fun setTitle(title: String) {
-        searchResultsTitle = title
-
-        if (::binding.isInitialized) {
-            binding.searchTitle.text = title
-        }
+        binding.searchTitle.text = title
+        binding.searchSubtitle.text = subtitle
+        binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
     }
 
     fun setOnFilterOptionChosen(listener: (String, Int) -> Unit) {

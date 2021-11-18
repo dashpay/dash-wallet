@@ -1,18 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
 <resources>
-    <style name="ToggleButton" parent="Button.Small.Rect.Tertiary">
-        <item name="android:minHeight">0dp</item>
-        <item name="android:minWidth">0dp</item>
-        <item name="android:paddingLeft">12dp</item>
-        <item name="android:paddingRight">13dp</item>
-        <item name="android:paddingTop">7dp</item>
-        <item name="android:paddingBottom">12dp</item>
-        <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:textSize">13sp</item>
-        <item name="android:background">@drawable/toggle_state_selector</item>
-        <item name="android:textColor">@color/toggle_color_selector</item>
-    </style>
-
     <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
         <item name="android:background">@color/white</item>
         <item name="android:textColor">@color/gray_900</item>
@@ -35,8 +37,8 @@
     </style>
 
     <style name="ExploreBottomContentBackground">
-        <item name="primaryColor">@color/gray_40</item>
-        <item name="secondaryColor">@color/gray_40</item>
+        <item name="backgroundColor">@color/gray_40</item>
+        <item name="strokeColor">@color/gray_40</item>
         <item name="cornerRadius">8dp</item>
     </style>
 
@@ -44,9 +46,21 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
+    <style name="DialogIconBackground">
+        <item name="backgroundColor">@color/blue_50</item>
+        <item name="strokeColor">@color/blue_50</item>
+        <item name="cornerRadius">25dp</item>
+    </style>
+
     <style name="UpButtonBackground">
-        <item name="primaryColor">@color/gray_900_0.7</item>
-        <item name="secondaryColor">@android:color/transparent</item>
+        <item name="backgroundColor">@color/gray_900_0.7</item>
+        <item name="strokeColor">@android:color/transparent</item>
         <item name="cornerRadius">22dp</item>
+    </style>
+
+    <style name="FilterIconBackground">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@color/dash_blue</item>
+        <item name="cornerRadius">13dp</item>
     </style>
 </resources>
