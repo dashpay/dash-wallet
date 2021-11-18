@@ -41,7 +41,7 @@
             android:name="org.dash.wallet.features.exploredash.ui.ExploreMapFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:layout_behavior="org.dash.wallet.features.exploredash.ui.ExploreMapBottomSheetBehavior"
+            app:layout_behavior="org.dash.wallet.features.exploredash.ui.bottomsheetbehavior.ExploreMapBottomSheetBehavior"
             />
 
         <androidx.constraintlayout.widget.ConstraintLayout

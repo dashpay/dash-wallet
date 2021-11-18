@@ -1,4 +1,4 @@
-package org.dash.wallet.features.exploredash.ui
+package org.dash.wallet.features.exploredash.ui.bottomsheetbehavior
 
 import android.content.Context
 import android.util.AttributeSet
