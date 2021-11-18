@@ -167,7 +167,6 @@ class ExploreMapFragment: SupportMapFragment() {
             if (marker.tag == CURRENT_POSITION_MARKER_TAG) {
                 false
             } else {
-                // TODO: this can be moved to the viewModel, which will allow to write a test for it.
                 val item = results.firstOrNull { it.id == marker.tag }
                 if (item != null) {
                     if (results.any { it is Merchant }) {
