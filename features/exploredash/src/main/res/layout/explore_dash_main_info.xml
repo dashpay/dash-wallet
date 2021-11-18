@@ -1,4 +1,19 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -6,16 +21,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ImageView
+    <ImageButton
         android:id="@+id/collapse_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
+        style="@style/DialogCloseButton"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="15dp"
-        android:layout_marginRight="15dp"
-        app:srcCompat="@drawable/ic_top_navigation_close_button"
-        />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/info_header_label"
@@ -28,7 +38,8 @@
         android:layout_marginTop="40dp"
         android:textSize="28sp"
         android:text="@string/explore_info_header_text"
-        style="@style/Body2.Bold"
+        style="@style/Headline4.Bold"
+        android:lineSpacingExtra="0sp"
         />
 
     <ImageView
@@ -50,7 +61,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dash_logo_blue"
         android:layout_marginTop="12dp"
-        style="@style/Body2.Bold"
+        style="@style/Subtitle1.Bold"
         android:textSize="16sp"
         android:text="@string/accept_dash_text"
         android:paddingBottom="2dp"
@@ -65,7 +76,7 @@
         app:layout_constraintTop_toBottomOf="@id/accept_dash_label"
         android:layout_marginTop="2dp"
         android:paddingTop="2dp"
-        style="@style/Body2.SteelGray500"
+        style="@style/Body2.SteelGray"
         android:text="@string/pay_with_dash_text"
         />
 
@@ -88,7 +99,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/dash_gift_card_orange_icon"
         android:layout_marginTop="12dp"
-        style="@style/Body2.Bold"
+        style="@style/Subtitle1.Bold"
         android:textSize="16sp"
         android:text="@string/buy_gift_card_text"
         android:paddingBottom="2dp"
@@ -107,7 +118,7 @@
         app:layout_constraintTop_toBottomOf="@id/buy_gift_card_label"
         android:layout_marginTop="2dp"
         android:paddingTop="2dp"
-        style="@style/Body2.SteelGray500"
+        style="@style/Body2.SteelGray"
         android:text="@string/buy_gift_card_desc_text"
         />
 
@@ -121,25 +132,18 @@
         android:text="@string/learn_more_text"
         android:layout_marginTop="10dp"
         android:paddingTop="4dp"
-        style="@style/Body2.Blue300"
+        style="@style/Button.Tertiary.Small.Blue"
         />
 
     <TextView
         android:id="@+id/explore_dash_info_continue_btn"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@+id/horizontal_guideline"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:background="@drawable/round_corners_bgd_blue"
         android:layout_marginBottom="48dp"
-        android:gravity="center"
-        android:textColor="@color/dash_white"
-        android:textSize="15sp"
-        style="@style/MontserratSemiBold"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginRight="16dp"
+        android:layout_marginHorizontal="16dp"
         android:text="@string/continue_text"
         />
 

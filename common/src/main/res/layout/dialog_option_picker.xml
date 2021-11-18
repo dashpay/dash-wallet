@@ -1,35 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  ~ /*
+  ~  * Copyright 2021 Dash Core Group
+  ~  *
+  ~  * Licensed under the Apache License, Version 2.0 (the "License");
+  ~  * you may not use this file except in compliance with the License.
+  ~  * You may obtain a copy of the License at
+  ~  *
+  ~  *    http://www.apache.org/licenses/LICENSE-2.0
+  ~  *
+  ~  * Unless required by applicable law or agreed to in writing, software
+  ~  * distributed under the License is distributed on an "AS IS" BASIS,
+  ~  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  * See the License for the specific language governing permissions and
+  ~  * limitations under the License.
+  ~  */
+  -->
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="org.dash.wallet.features.exploredash.ui.dialogs.TerritoryFilterDialog">
+    tools:context="org.dash.wallet.common.ui.radio_group.OptionPickerDialog">
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp">
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="4dp">
 
         <TextView
             android:id="@+id/search_title"
-            style="@style/Subtitle1.SemiBold"
+            style="@style/Subtitle1"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="center_vertical"
             android:layout_marginHorizontal="15dp"
-            android:text="@string/explore_select_state" />
+            tools:text="Dialog Title" />
 
         <ImageButton
             android:id="@+id/collapse_button"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_gravity="end"
-            android:layout_margin="10dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_popup_close"
+            style="@style/DialogCloseButton"
+            android:layout_marginTop="0dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
     </FrameLayout>
@@ -41,19 +57,18 @@
         android:layout_marginTop="5dp">
 
         <EditText
-            android:id="@+id/search"
+            android:id="@+id/search_query"
             style="@style/Body2"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/rounded_background"
             android:drawableStart="@drawable/ic_search"
             android:drawablePadding="7dp"
-            android:hint="@string/explore_search_hint"
+            android:hint="@string/search_hint"
             android:inputType="text"
             android:imeOptions="actionSearch"
             android:paddingStart="8dp"
             android:paddingEnd="40dp"
-            android:textColor="@android:color/black"
             android:theme="@style/SearchInputBackground" />
 
         <ImageButton
@@ -68,11 +83,11 @@
     </FrameLayout>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/territories"
+        android:id="@+id/content_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:clipToPadding="false"
-        android:paddingTop="10dp"
+        android:paddingTop="24dp"
         android:paddingBottom="30dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:itemCount="5"

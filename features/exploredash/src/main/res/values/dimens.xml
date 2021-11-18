@@ -1,10 +1,23 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
 <resources>
-    <dimen name="dialog_margin_top">20dp</dimen>
     <dimen name="details_physical_margin_top">20dp</dimen>
     <dimen name="details_online_margin_top">40dp</dimen>
     <dimen name="logo_corners_radius">8dp</dimen>
-    <dimen name="divider_margin_start">15dp</dimen>
     <dimen name="merchant_half_expanded_ratio">0.45</dimen>
     <dimen name="merchant_details_height_ratio">0.48</dimen>
     <dimen name="atm_half_expanded_ratio">0.51</dimen>
@@ -12,4 +25,6 @@
     <dimen name="explore_marker_size">35dp</dimen>
     <dimen name="merchant_marker_size">44dp</dimen>
     <dimen name="map_padding">5dp</dimen>
+    <dimen name="dialog_horizontal_inset">15dp</dimen>
+    <dimen name="search_content_peek_height">24dp</dimen>
 </resources>

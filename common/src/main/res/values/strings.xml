@@ -33,4 +33,8 @@
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Search</string>
+    <string name="permission_allow">Allow</string>
+    <string name="permission_deny">Deny</string>
 </resources>

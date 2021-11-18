@@ -1,19 +1,18 @@
 /*
+ * Copyright 2021 Dash Core Group.
  *
- *  * Copyright 2021 Dash Core Group
- *  *
- *  * Licensed under the Apache License, Version 2.0 (the "License");
- *  * you may not use this file except in compliance with the License.
- *  * You may obtain a copy of the License at
- *  *
- *  *    http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.features.exploredash.services
@@ -35,6 +34,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -89,7 +89,7 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         awaitClose { client.removeLocationUpdates(callback) }
     }
 
-    fun getCurrentLocationName(lat: Double, lng: Double): String {
+    fun getCurrentLocationAddress(lat: Double, lng: Double): Address? {
         return try {
             val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
             val addresses = geocoder.getFromLocation(lat, lng, 1)
@@ -98,14 +98,18 @@ class UserLocationState @Inject constructor(private val context: Context, privat
                 val locality = addresses[0].locality
                 val cityName = if (locality.isNullOrEmpty()) addresses[0].adminArea else locality
                 Log.e(this::class.java.simpleName, "City name: $cityName")
-                cityName
+                Address(addresses[0].countryName, cityName)
             } else {
-                ""
+                null
             }
-        } catch (e: Exception){
+        } catch (e: Exception) {
             Log.i("GeocoderException" ,"${e.message}")
-            ""
+            null
         }
+    }
+
+    fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double {
+        return distanceBetween(bounds1.centerLat, bounds1.centerLng, bounds2.centerLat, bounds2.centerLng)
     }
 
     fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {

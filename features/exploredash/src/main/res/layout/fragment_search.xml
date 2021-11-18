@@ -1,4 +1,19 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -28,7 +43,7 @@
 
                 <TextView
                     android:id="@+id/toolbar_title"
-                    style="@style/Subtitle1.SemiBold"
+                    style="@style/Subtitle1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center" />
@@ -46,13 +61,13 @@
             android:id="@+id/content_panel"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingBottom="40dp"
             android:background="@drawable/rounded_background"
+            android:paddingBottom="40dp"
             android:theme="@style/ExploreSearchResultsBackground"
             app:behavior_expandedOffset="42dp"
             app:behavior_fitToContents="false"
             app:behavior_halfExpandedRatio="@dimen/merchant_half_expanded_ratio"
-            app:behavior_peekHeight="24dp"
+            app:behavior_peekHeight="@dimen/search_content_peek_height"
             app:layout_behavior="@string/bottom_sheet_behavior"
             tools:behavior_peekHeight="500dp">
 
@@ -75,7 +90,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginTop="12dp"
                 android:clipToPadding="false"
-                android:paddingBottom="40dp"
+                android:paddingBottom="44dp"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 tools:itemCount="5"
                 tools:listitem="@layout/merchant_row" />
@@ -90,16 +105,72 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
-    <ImageButton
-        android:id="@+id/up_button"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:layout_gravity="end|bottom"
-        android:layout_margin="15dp"
-        android:src="@drawable/ic_up"
-        android:background="@drawable/rounded_background"
-        android:theme="@style/UpButtonBackground"
-        android:visibility="gone"
-        tools:background="@color/gray_900_0.7"
-        tools:visibility="visible" />
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom">
+
+        <ImageButton
+            android:id="@+id/up_button"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_margin="15dp"
+            android:background="@drawable/rounded_background"
+            android:src="@drawable/ic_up"
+            android:theme="@style/UpButtonBackground"
+            android:layout_gravity="end"
+            android:visibility="gone"
+            tools:background="@color/gray_900_0.7"
+            tools:visibility="visible" />
+
+        <FrameLayout
+            android:id="@+id/filter_panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:layout_gravity="start">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider_color" />
+
+            <ImageView
+                android:id="@+id/icon"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="15dp"
+                android:layout_marginVertical="12dp"
+                android:paddingHorizontal="2dp"
+                android:paddingTop="3dp"
+                android:layout_gravity="start"
+                android:background="@drawable/rounded_background"
+                android:theme="@style/FilterIconBackground"
+                android:src="@drawable/ic_filter"
+                app:tint="@color/white"
+                tools:background="@color/dash_blue"
+                tools:tint="@color/white" />
+
+            <TextView
+                style="@style/Overline.SemiBold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_gravity="center_horizontal|top"
+                android:text="@string/explore_filtered_by" />
+
+            <TextView
+                android:id="@+id/filtered_by_txt"
+                style="@style/Overline.SemiBold.Blue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal|bottom"
+                android:layout_marginBottom="10dp"
+                tools:text="California, 5 miles" />
+        </FrameLayout>
+    </LinearLayout>
 </FrameLayout>

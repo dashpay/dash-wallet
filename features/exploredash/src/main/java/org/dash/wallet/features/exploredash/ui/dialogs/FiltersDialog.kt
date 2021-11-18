@@ -1,47 +1,83 @@
 /*
- * Copyright 2021 Dash Core Group
+ * Copyright 2021 Dash Core Group.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.features.exploredash.ui.dialogs
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.DialogFragment
+import androidx.core.view.isVisible
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.*
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.ListDividerDecorator
+import org.dash.wallet.common.ui.OffsetDialogFragment
+import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
+import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
+import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
-import org.dash.wallet.features.exploredash.ui.adapters.RadioGroupAdapter
+import org.dash.wallet.features.exploredash.ui.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.ExploreViewModel.Companion.DEFAULT_RADIUS_OPTION
+import org.dash.wallet.features.exploredash.ui.FilterMode
+import org.dash.wallet.features.exploredash.ui.extensions.isLocationPermissionGranted
+import org.dash.wallet.features.exploredash.ui.extensions.registerPermissionLauncher
+import org.dash.wallet.features.exploredash.ui.extensions.requestLocationPermission
+import javax.inject.Inject
 
+@FlowPreview
+@ExperimentalCoroutinesApi
+@AndroidEntryPoint
+class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
+    override val background: Int
+        get() = R.drawable.gray_background_rounded
 
-class FiltersDialog(
-    private val territories: List<String>,
-    private var selectedRadius: Int = 1,
-    private var selectedTerritory: String = "",
-    private val territoryPickedListener: (String, DialogFragment) -> Unit,
-    private val radiusPickedListener: (Int, DialogFragment) -> Unit
-) : OffsetDialogFragment<LinearLayout>() {
+    private val radiusOptions = listOf(1, 5, 20, 50)
+    private var selectedRadiusOption: Int = DEFAULT_RADIUS_OPTION
+    private var selectedTerritory: String = ""
+    private var dashPaymentOn: Boolean = true
+    private var giftCardPaymentOn: Boolean = true
 
     private val binding by viewBinding(DialogFiltersBinding::bind)
+    private val viewModel: ExploreViewModel by activityViewModels()
+    private var territoriesJob: Deferred<List<String>>? = null
+    private var radiusOptionsAdapter: RadioGroupAdapter? = null
+
+    @Inject
+    lateinit var configuration: Configuration
+
+    private val permissionRequestLauncher = registerPermissionLauncher { isGranted ->
+        if (isGranted) {
+            viewModel.monitorUserLocation()
+        } else {
+            openAppSettings()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -54,41 +90,251 @@ class FiltersDialog(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setLocationName()
-
-        val options = listOf(1, 5, 20, 50)
-        val optionNames = binding.root.resources.getStringArray(R.array.radius_filter_options).toList() // TODO metric
-        val adapter = RadioGroupAdapter(options.indexOf(selectedRadius)) { _, optionIndex ->
-            radiusPickedListener.invoke(options[optionIndex], this)
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            setupPaymentMethods()
+        } else {
+            binding.paymentMethods.isVisible = false
+            binding.paymentMethodsLabel.isVisible = false
         }
-        val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
-        val decorator = ListDividerDecorator(
-            divider,
-            showAfterLast = false,
-            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
-        )
-        binding.radiusFilter.addItemDecoration(decorator)
-        binding.radiusFilter.adapter = adapter
-        adapter.submitList(optionNames)
+
+        viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
+            if (viewModel.filterMode.value != FilterMode.Online) {
+                setupRadiusOptions()
+                setupTerritoryFilter()
+                setupLocationPermission()
+            } else {
+                binding.locationLabel.isVisible = false
+                binding.locationBtn.isVisible = false
+                binding.radiusLabel.isVisible = false
+                binding.radiusCard.isVisible = false
+                binding.locationSettingsLabel.isVisible = false
+                binding.locationSettingsBtn.isVisible = false
+            }
+        }
+
+        binding.applyButton.setOnClickListener {
+            viewModel.selectedTerritory = selectedTerritory
+            viewModel.selectedRadiusOption = selectedRadiusOption
+
+            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+                var paymentFilter = ""
+
+                if (!dashPaymentOn || !giftCardPaymentOn) {
+                    paymentFilter = if (dashPaymentOn) {
+                        PaymentMethod.DASH
+                    } else {
+                        PaymentMethod.GIFT_CARD
+                    }
+                }
+
+                viewModel.paymentMethodFilter = paymentFilter
+            }
+
+            dismiss()
+        }
+
+        checkResetButton()
+
+        binding.resetFiltersBtn.setOnClickListener {
+            resetFilters()
+        }
+    }
+
+    private fun setupPaymentMethods() {
+        val isDashOn = viewModel.paymentMethodFilter.isEmpty() ||
+                    viewModel.paymentMethodFilter == PaymentMethod.DASH
+        dashPaymentOn = isDashOn
+        binding.dashOption.isChecked = isDashOn
+        binding.dashOption.setOnCheckedChangeListener { _, isChecked ->
+            if (!isChecked && !binding.giftCardOption.isChecked) {
+                // shouldn't allow to uncheck both options
+                binding.giftCardOption.isChecked = true
+            }
+
+            dashPaymentOn = isChecked
+            checkResetButton()
+        }
+
+        val isGiftCardOn = viewModel.paymentMethodFilter.isEmpty() ||
+                viewModel.paymentMethodFilter == PaymentMethod.GIFT_CARD
+        giftCardPaymentOn = isGiftCardOn
+        binding.giftCardOption.isChecked = isGiftCardOn
+        binding.giftCardOption.setOnCheckedChangeListener { _, isChecked ->
+            if (!isChecked && !binding.dashOption.isChecked) {
+                binding.dashOption.isChecked = true
+            }
+
+            giftCardPaymentOn = isChecked
+            checkResetButton()
+        }
+    }
+
+    private fun setupRadiusOptions() {
+        binding.radiusLabel.isVisible = true
+        binding.radiusCard.isVisible = true
+
+        selectedRadiusOption = viewModel.selectedRadiusOption
+
+        if (viewModel.isLocationEnabled.value == true) {
+            binding.radiusFilter.isVisible = true
+            binding.managePermissionsBtn.isVisible = false
+            binding.locationRequestTxt.isVisible = false
+            binding.locationExplainerTxt.isVisible = false
+
+            val optionNames = binding.root.resources.getStringArray(
+                if (viewModel.isMetric) R.array.radius_filter_options_kilometers else R.array.radius_filter_options_miles
+            ).map { IconifiedViewItem(it, null) }
+
+            val radiusOption = viewModel.selectedRadiusOption
+            radiusOptionsAdapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->
+                selectedRadiusOption = radiusOptions[optionIndex]
+                checkResetButton()
+            }
+            val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
+            val decorator = ListDividerDecorator(
+                divider,
+                showAfterLast = false,
+                marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
+            )
+            binding.radiusFilter.addItemDecoration(decorator)
+            binding.radiusFilter.adapter = radiusOptionsAdapter
+            radiusOptionsAdapter?.submitList(optionNames)
+        } else {
+            binding.radiusFilter.isVisible = false
+            binding.managePermissionsBtn.isVisible = true
+            binding.locationRequestTxt.isVisible = true
+            binding.locationExplainerTxt.isVisible = true
+        }
+    }
+
+     private fun setTerritoryName(territory: String) {
+         binding.locationLabel.isVisible = true
+         binding.locationBtn.isVisible = true
+
+         binding.locationName.text = if (territory.isEmpty()) {
+            if (viewModel.isLocationEnabled.value == true) {
+                getString(R.string.explore_current_location)
+            } else {
+                getString(R.string.explore_all_states)
+            }
+         } else {
+             territory
+         }
+
+         selectedTerritory = territory
+         checkResetButton()
+    }
+
+    private fun setupTerritoryFilter() {
+        setTerritoryName(viewModel.selectedTerritory)
+
+        lifecycleScope.launch {
+            territoriesJob = async {
+                viewModel.getTerritoriesWithPOIs().sorted()
+            }
+        }
 
         binding.locationBtn.setOnClickListener {
-            TerritoryFilterDialog(territories, selectedTerritory) { name, dialog ->
-                dialog.dismiss()
-                selectedTerritory = name
-                setLocationName()
-                territoryPickedListener.invoke(name, this@FiltersDialog)
-            }.show(parentFragmentManager, "territory_filter")
+            val firstOption = if (viewModel.isLocationEnabled.value == true) {
+                IconifiedViewItem(getString(R.string.explore_current_location), R.drawable.ic_current_location)
+            } else {
+                IconifiedViewItem(getString(R.string.explore_all_states))
+            }
+
+            lifecycleScope.launch {
+                val territories = territoriesJob?.await() ?: listOf()
+                val allTerritories = listOf(firstOption) + territories.map { IconifiedViewItem(it) }
+
+                val currentIndex = if (selectedTerritory.isEmpty()) {
+                    0
+                } else {
+                    territories.indexOf(selectedTerritory) + 1
+                }
+
+                val dialogTitle = getString(R.string.explore_location)
+                OptionPickerDialog(dialogTitle, allTerritories, currentIndex) { item, index, dialog ->
+                    dialog.dismiss()
+                    setTerritoryName(if (index == 0) "" else item.name)
+                }.show(parentFragmentManager, "territory_filter")
+            }
         }
     }
 
-    private fun setLocationName() {
-        binding.locationName.text = if (selectedTerritory.isEmpty()) territories.first() else selectedTerritory
+    private fun setupLocationPermission() {
+        binding.locationSettingsLabel.isVisible = true
+        binding.locationSettingsBtn.isVisible = true
+
+        binding.locationStatus.text = getString(if (isLocationPermissionGranted) {
+            R.string.explore_location_allowed
+        } else {
+            R.string.explore_location_denied
+        })
+
+        binding.locationSettingsBtn.setOnClickListener {
+            runLocationFlow()
+        }
+
+        binding.managePermissionsBtn.setOnClickListener {
+            runLocationFlow()
+        }
     }
 
-    override fun dismiss() {
-        lifecycleScope.launch {
-            delay(300)
-            super.dismiss()
+    private fun checkResetButton() {
+        var isEnabled = false
+
+        if (!dashPaymentOn || !giftCardPaymentOn) {
+            isEnabled = true
         }
+
+        if (selectedTerritory.isNotEmpty()) {
+            isEnabled = true
+        }
+
+        if (selectedRadiusOption != DEFAULT_RADIUS_OPTION) {
+            isEnabled = true
+        }
+
+        binding.resetFiltersBtn.isEnabled = isEnabled
+    }
+
+    private fun resetFilters() {
+        dashPaymentOn = true
+        binding.dashOption.isChecked = true
+        giftCardPaymentOn = true
+        binding.giftCardOption.isChecked = true
+
+        selectedTerritory = ""
+        binding.locationName.text = if (viewModel.isLocationEnabled.value == true) {
+            getString(R.string.explore_current_location)
+        } else {
+            getString(R.string.explore_all_states)
+        }
+
+        selectedRadiusOption = DEFAULT_RADIUS_OPTION
+        radiusOptionsAdapter?.selectedIndex = radiusOptions.indexOf(DEFAULT_RADIUS_OPTION)
+
+        binding.resetFiltersBtn.isEnabled = false
+    }
+
+    private fun runLocationFlow() {
+        if (isLocationPermissionGranted) {
+            openAppSettings()
+        } else {
+            requestLocationPermission(
+                viewModel.exploreTopic,
+                configuration,
+                permissionRequestLauncher
+            )
+        }
+    }
+
+    private fun openAppSettings() {
+        val intent = Intent().apply {
+            action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+            data = Uri.fromParts("package", requireContext().packageName, null)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+
+        startActivity(intent)
     }
 }
