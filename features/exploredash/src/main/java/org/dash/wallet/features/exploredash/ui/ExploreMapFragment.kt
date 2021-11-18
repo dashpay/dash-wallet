@@ -1,19 +1,18 @@
 /*
+ * Copyright 2021 Dash Core Group.
  *
- *  * Copyright 2021 Dash Core Group
- *  *
- *  * Licensed under the Apache License, Version 2.0 (the "License");
- *  * you may not use this file except in compliance with the License.
- *  * You may obtain a copy of the License at
- *  *
- *  *    http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.dash.wallet.features.exploredash.ui
@@ -50,8 +49,9 @@ import kotlinx.coroutines.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
-import org.dash.wallet.features.exploredash.services.GeoBounds
+import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import javax.inject.Inject
 
@@ -117,21 +117,22 @@ class ExploreMapFragment: SupportMapFragment() {
             }
         }
 
-        viewModel.searchResults.observe(viewLifecycleOwner) { results ->
+        viewModel.physicalSearchResults.observe(viewLifecycleOwner) { results ->
             // TODO: we probably shouldn't reset all markers but calculate the difference instead,
             // otherwise when user pans the map, everything blinks
             resetMap()
 
             if (results.isNotEmpty()) {
-                Log.i("EXPLOREDASH", "markers: " + ExploreViewModel.MAX_MARKERS)
                 if (results.size < ExploreViewModel.MAX_MARKERS) {
                     setMarkers(results)
-                } else setMarkers(results.shuffled().take(ExploreViewModel.MAX_MARKERS))
+                } else setMarkers(results.take(ExploreViewModel.MAX_MARKERS))
             }
         }
 
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
-            if (item?.latitude != null && item.longitude != null) {
+            if (viewModel.filterMode.value != FilterMode.Online &&
+                item?.type != MerchantType.ONLINE &&
+                item?.latitude != null && item.longitude != null) {
                 // TODO: might be good to move back to the previous bounds on back navigation
                 val position = CameraPosition(LatLng(item.latitude!!, item.longitude!!), 16f, 0f, 0f)
                 googleMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))

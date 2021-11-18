@@ -108,11 +108,11 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         }
     }
 
-    fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double {
+    override fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double {
         return distanceBetween(bounds1.centerLat, bounds1.centerLng, bounds2.centerLat, bounds2.centerLng)
     }
 
-    override fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {
+    private fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {
         return distanceBetween(location1.latitude, location1.longitude, location2.latitude, location2.longitude)
     }
 
@@ -156,6 +156,6 @@ interface UserLocationStateInt {
     fun calculateBounds(center: LatLng, radius: Double): LatLngBounds
     fun observeUpdates(): Flow<UserLocation>
     fun getCurrentLocationAddress(lat: Double, lng: Double): Address?
-    fun distanceBetween(location1: UserLocation, location2: UserLocation): Double
+    fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double
     fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds
 }
