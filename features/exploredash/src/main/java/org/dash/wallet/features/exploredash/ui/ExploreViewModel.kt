@@ -29,7 +29,7 @@ import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocation
-import org.dash.wallet.features.exploredash.services.UserLocationState
+import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import java.util.*
 import javax.inject.Inject
 import kotlin.math.max
@@ -59,7 +59,7 @@ data class FilterOptions(
 class ExploreViewModel @Inject constructor(
     private val merchantDao: MerchantDao,
     private val atmDao: AtmDao,
-    private val locationProvider: UserLocationState
+    private val locationProvider: UserLocationStateInt
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -69,6 +69,7 @@ class ExploreViewModel @Inject constructor(
         const val METERS_IN_KILOMETER = 1000.0
         const val MIN_ZOOM_LEVEL = 8f
         const val DEFAULT_RADIUS_OPTION = 20
+        const val MAX_MARKERS = 100
     }
 
     private val workerJob = SupervisorJob()
