@@ -174,8 +174,8 @@ android {
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 30
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80109
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "5.0-dashpay"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80114
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "5.1.2-dashpay"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
