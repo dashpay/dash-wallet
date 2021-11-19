@@ -40,29 +40,26 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.*
 
-// TODO: it would be better if the users of this class don't depend on the concrete
-// implementation, but on an interface instead. We might have a different
-// implementation which does not use google play services.
 @ExperimentalCoroutinesApi
-class UserLocationState @Inject constructor(private val context: Context, private val client: FusedLocationProviderClient) {
+class UserLocationState @Inject constructor(private val context: Context, private val client: FusedLocationProviderClient): UserLocationStateInt  {
     companion object {
         private const val UPDATE_INTERVAL_SECS = 10L
         private const val FASTEST_UPDATE_INTERVAL_SECS = 2L
         private const val EARTH_RADIUS = 6371009 // in meters
-
-        fun calculateBounds(center: LatLng, radius: Double): LatLngBounds {
-            return LatLngBounds.builder()
-                .include(SphericalUtil.computeOffset(center, radius, 0.0))
-                .include(SphericalUtil.computeOffset(center, radius, 90.0))
-                .include(SphericalUtil.computeOffset(center, radius, 180.0))
-                .include(SphericalUtil.computeOffset(center, radius, 270.0)).build()
-        }
     }
 
     private var previousLocation: Pair<Double, Double> = Pair(0.0, 0.0)
 
+    override fun calculateBounds(center: LatLng, radius: Double): LatLngBounds {
+        return LatLngBounds.builder()
+            .include(SphericalUtil.computeOffset(center, radius, 0.0))
+            .include(SphericalUtil.computeOffset(center, radius, 90.0))
+            .include(SphericalUtil.computeOffset(center, radius, 180.0))
+            .include(SphericalUtil.computeOffset(center, radius, 270.0)).build()
+    }
+
     @SuppressLint("MissingPermission")
-    fun observeUpdates(): Flow<UserLocation> = callbackFlow {
+    override fun observeUpdates(): Flow<UserLocation> = callbackFlow {
         val locationRequest: LocationRequest = LocationRequest.create()
             .apply {
                 interval = TimeUnit.SECONDS.toMillis(UPDATE_INTERVAL_SECS)
@@ -89,7 +86,7 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         awaitClose { client.removeLocationUpdates(callback) }
     }
 
-    fun getCurrentLocationAddress(lat: Double, lng: Double): Address? {
+   override fun getCurrentLocationAddress(lat: Double, lng: Double): Address? {
         return try {
             val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
             val addresses = geocoder.getFromLocation(lat, lng, 1)
@@ -108,15 +105,15 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         }
     }
 
-    fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double {
+    override fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double {
         return distanceBetween(bounds1.centerLat, bounds1.centerLng, bounds2.centerLat, bounds2.centerLng)
     }
 
-    fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {
+    private fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {
         return distanceBetween(location1.latitude, location1.longitude, location2.latitude, location2.longitude)
     }
 
-    fun distanceBetween(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+    private fun distanceBetween(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLng = Math.toRadians(lng2 - lng1)
 
@@ -131,7 +128,7 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         return EARTH_RADIUS * c // output distance, in METERS
     }
 
-    fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds {
+    override fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds {
         val latLng = LatLng(centerLat, centerLng)
         val latLngBounds = calculateBounds(latLng, radius)
 
@@ -150,3 +147,12 @@ class UserLocationState @Inject constructor(private val context: Context, privat
 data class UserLocation(var latitude: Double,
                         var longitude: Double,
                         var accuracy: Double)
+
+
+interface UserLocationStateInt {
+    fun calculateBounds(center: LatLng, radius: Double): LatLngBounds
+    fun observeUpdates(): Flow<UserLocation>
+    fun getCurrentLocationAddress(lat: Double, lng: Double): Address?
+    fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double
+    fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds
+}
