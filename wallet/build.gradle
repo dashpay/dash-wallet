@@ -38,7 +38,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation "org.dashj.android:dashj-bls-android:0.18"
+    implementation "org.dashj.android:dashj-bls-android:0.18.1"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
@@ -147,7 +147,7 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 30
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70351
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70352
         versionName project.hasProperty('versionName') ? project.property('versionName') : "7.3.5-core-18"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
