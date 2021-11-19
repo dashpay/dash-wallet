@@ -118,7 +118,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val invitationsDaoAsync = AppDatabase.getAppDatabase().invitationsDaoAsync()
     private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
 
-    private val securityGuard = SecurityGuard()
     private lateinit var blockchainIdentity: BlockchainIdentity
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
@@ -528,6 +527,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     @Throws(Exception::class)
     suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
         if (walletApplication.wallet.isEncrypted) {
+            // always create a SecurityGuard when it is required
+            val securityGuard = SecurityGuard()
             val password = securityGuard.retrievePassword()
             // Don't bother with DeriveKeyTask here, just call deriveKey
             val encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
@@ -966,8 +967,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
                     val password = try {
+                        // always create a SecurityGuard when it is required
+                        val securityGuard = SecurityGuard()
                         securityGuard.retrievePassword()
                     } catch (e: IllegalArgumentException) {
+                        log.error("There was an error retrieving the wallet password", e)
                         analytics.logError(e, "There was an error retrieving the wallet password")
                         fireSeriousErrorListeners(SeriousError.MissingEncryptionIV)
                         null
@@ -997,8 +1001,11 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
                     val password = try {
+                        // always create a SecurityGuard when it is required
+                        val securityGuard = SecurityGuard()
                         securityGuard.retrievePassword()
                     } catch (e: IllegalArgumentException) {
+                        log.error("There was an error retrieving the wallet password", e)
                         analytics.logError(e, "There was an error retrieving the wallet password")
                         fireSeriousErrorListeners(SeriousError.MissingEncryptionIV)
                         null
