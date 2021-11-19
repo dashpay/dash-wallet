@@ -126,7 +126,7 @@ class SendInviteWorker @AssistedInject constructor(
         // in each suspend method that uses the dashj Context
         org.bitcoinj.core.Context.propagate(wallet.context)
         val username = dashPayProfile.username
-        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
+        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
         return FirebaseDynamicLinks.getInstance()
                 .createDynamicLink().apply {
                     link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, cftx, aesKeyParameter).link
