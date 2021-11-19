@@ -251,7 +251,10 @@ interface AtmDao : BaseDao<Atm> {
         query: String,
         territory: String,
         types: List<String>,
-        bounds: GeoBounds
+        bounds: GeoBounds,
+        sortByDistance: Boolean,
+        userLat: Double,
+        userLng: Double
     ): PagingSource<Int, Atm> {
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
             // Search by coordinates (nearby) if territory isn't specified

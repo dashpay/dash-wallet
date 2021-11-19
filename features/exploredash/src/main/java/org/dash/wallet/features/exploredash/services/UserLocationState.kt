@@ -40,6 +40,21 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.*
 
+
+data class UserLocation(var latitude: Double,
+                        var longitude: Double,
+                        var accuracy: Double)
+
+interface UserLocationStateInt {
+    fun calculateBounds(center: LatLng, radius: Double): LatLngBounds
+    fun observeUpdates(): Flow<UserLocation>
+    fun getCurrentLocationAddress(lat: Double, lng: Double): Address?
+    fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double
+    fun distanceBetween(location1: UserLocation, location2: UserLocation): Double
+    fun distanceBetween(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double
+    fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds
+}
+
 @ExperimentalCoroutinesApi
 class UserLocationState @Inject constructor(private val context: Context, private val client: FusedLocationProviderClient): UserLocationStateInt  {
     companion object {
@@ -109,11 +124,11 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         return distanceBetween(bounds1.centerLat, bounds1.centerLng, bounds2.centerLat, bounds2.centerLng)
     }
 
-    private fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {
+    override fun distanceBetween(location1: UserLocation, location2: UserLocation): Double {
         return distanceBetween(location1.latitude, location1.longitude, location2.latitude, location2.longitude)
     }
 
-    private fun distanceBetween(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+    override fun distanceBetween(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLng = Math.toRadians(lng2 - lng1)
 
@@ -141,18 +156,4 @@ class UserLocationState @Inject constructor(private val context: Context, privat
             latLngBounds.center.longitude
         )
     }
-}
-
-
-data class UserLocation(var latitude: Double,
-                        var longitude: Double,
-                        var accuracy: Double)
-
-
-interface UserLocationStateInt {
-    fun calculateBounds(center: LatLng, radius: Double): LatLngBounds
-    fun observeUpdates(): Flow<UserLocation>
-    fun getCurrentLocationAddress(lat: Double, lng: Double): Address?
-    fun distanceBetweenCenters(bounds1: GeoBounds, bounds2: GeoBounds): Double
-    fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds
 }

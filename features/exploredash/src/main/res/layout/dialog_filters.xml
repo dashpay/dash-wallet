@@ -84,7 +84,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:layout_marginBottom="26dp"
                 android:background="@color/white"
                 app:cardCornerRadius="10dp"
                 app:cardElevation="0dp">
@@ -121,11 +120,40 @@
             </androidx.cardview.widget.CardView>
 
             <TextView
+                android:id="@+id/sort_by_label"
+                style="@style/Caption.SemiBold.SteelGray"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="26dp"
+                android:text="@string/explore_sort_by" />
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/sort_by_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@color/white"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/sort_by_filter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:itemCount="5"
+                    tools:listitem="@layout/radiobutton_row" />
+            </androidx.cardview.widget.CardView>
+
+            <TextView
                 android:id="@+id/location_label"
                 style="@style/Caption.SemiBold.SteelGray"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="26dp"
                 android:text="@string/explore_location" />
 
             <androidx.constraintlayout.widget.ConstraintLayout

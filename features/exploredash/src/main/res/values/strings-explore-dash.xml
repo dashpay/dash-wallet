@@ -79,6 +79,7 @@
     <string name="explore_reset_filters">Reset Filters</string>
     <string name="explore_filtered_by">Filtered by:</string>
     <string name="explore_pay_gift_card">Pay with gift card</string>
+    <string name="explore_sort_by">Sort by</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -105,6 +106,11 @@
         <item>5 kilometers</item>
         <item>20 kilometers</item>
         <item>50 kilometers</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>Name</item>
+        <item>Distance</item>
     </string-array>
 
     <plurals name="radius_miles">

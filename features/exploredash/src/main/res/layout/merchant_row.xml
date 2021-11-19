@@ -47,6 +47,19 @@
         app:layout_constraintEnd_toStartOf="@id/method_img"
         tools:text="Bark Box" />
 
+    <TextView
+        android:id="@+id/subtitle"
+        style="@style/Caption.SteelGray"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintStart_toEndOf="@id/logo_img"
+        app:layout_constraintTop_toBottomOf="@id/title"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/method_img"
+        tools:text="Bark Box" />
+
     <ImageView
         android:id="@+id/method_img"
         android:layout_width="wrap_content"
