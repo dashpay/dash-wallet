@@ -232,7 +232,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-        ORDER BY name COLLATE NOCASE ASC""")
+    """)
     fun observe(
         excludeType: String,
         paymentMethod: String,
@@ -253,7 +253,6 @@ interface MerchantDao : BaseDao<Merchant> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-        ORDER BY name COLLATE NOCASE ASC
     """)
     fun observeSearchResults(
         query: String,
@@ -316,14 +315,17 @@ interface MerchantDao : BaseDao<Merchant> {
         } else {
             if (query.isNotBlank()) {
                 observeSearchResults(sanitizeQuery(query), MerchantType.ONLINE, paymentMethod,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
             } else {
-                observe(MerchantType.ONLINE, paymentMethod,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                observe(MerchantType.ONLINE, paymentMethod, bounds.northLat,
+                        bounds.eastLng, bounds.southLat, bounds.westLng)
             }
         }
     }
 
+    // Sorting by distance is approximate - it's done using "flat-earth" Pythagorean formula.
+    // It's good enough for our purposes, but if there is a need to display the distance
+    // in UI it should be done using map APIs.
     fun observeAllPaging(
         query: String,
         territory: String,
@@ -352,12 +354,13 @@ interface MerchantDao : BaseDao<Merchant> {
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    pagingSearchByCoordinates(sanitizeQuery(query), types,
-                        paymentMethod, bounds.northLat, bounds.eastLng,
-                        bounds.southLat, bounds.westLng, sortByDistance, userLat, userLng)
+                    pagingSearchByCoordinates(sanitizeQuery(query), types, paymentMethod,
+                            bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
+                            sortByDistance, userLat, userLng)
                 } else {
-                    pagingGetByCoordinates(types, paymentMethod, bounds.northLat, bounds.eastLng,
-                        bounds.southLat, bounds.westLng, sortByDistance, userLat, userLng)
+                    pagingGetByCoordinates(types, paymentMethod, bounds.northLat,
+                            bounds.eastLng, bounds.southLat, bounds.westLng,
+                            sortByDistance, userLat, userLng)
                 }
             }
             else -> {

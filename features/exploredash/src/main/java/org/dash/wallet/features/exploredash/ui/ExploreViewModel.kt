@@ -227,7 +227,7 @@ class ExploreViewModel @Inject constructor(
 //                                                    val userLng = currentUserLocation.value?.longitude ?: 0.0
                                                     it.distance = locationProvider.distanceBetween(
                                                         userLat, userLng, it.latitude ?: 0.0, it.longitude ?: 0.0
-                                                    ).toString()
+                                                    )
                                                     it
                                                 }
                                             }
@@ -355,6 +355,17 @@ class ExploreViewModel @Inject constructor(
 
     fun openSearchResults() {
         _selectedItem.postValue(null)
+    }
+
+    fun onMapMarkerSelected(id: Int) {
+        val item = _physicalSearchResults.value?.firstOrNull { it.id == id }
+        item?.let {
+            if (item is Merchant) {
+                openMerchantDetails(item)
+            } else {
+                openAtmDetails(item as Atm)
+            }
+        }
     }
 
     fun sendDash() {

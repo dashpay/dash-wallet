@@ -50,7 +50,7 @@ open class SearchResult(
     open var type: String? = "",
 
     @Ignore
-    var distance: String? = ""
+    var distance: Double? = 0.0
 ) {
     val displayAddress: String
         get() {
