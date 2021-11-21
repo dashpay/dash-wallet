@@ -66,7 +66,7 @@ class ExploreMapFragment: SupportMapFragment() {
     private var currentMapItems: List<SearchResult> = listOf()
     private var markerCollection: MarkerManager.Collection? = null
 
-    private var futureTarget =  mutableListOf<FutureTarget<Bitmap>>()
+    private var futureTarget = listOf<FutureTarget<Bitmap>>()
     private lateinit var markersGlideRequestManager: RequestManager
     private var markerDrawable: Bitmap? = null
 
@@ -83,16 +83,18 @@ class ExploreMapFragment: SupportMapFragment() {
             showMap()
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
-                    val bounds = map.projection.visibleRegion.latLngBounds
-                    viewModel.searchBounds = GeoBounds(
-                        bounds.northeast.latitude,
-                        bounds.northeast.longitude,
-                        bounds.southwest.latitude,
-                        bounds.southwest.longitude,
-                        bounds.center.latitude,
-                        bounds.center.longitude,
-                        map.cameraPosition.zoom
-                    )
+                    if (viewModel.selectedItem.value == null) {
+                        val bounds = map.projection.visibleRegion.latLngBounds
+                        viewModel.searchBounds = GeoBounds(
+                                bounds.northeast.latitude,
+                                bounds.northeast.longitude,
+                                bounds.southwest.latitude,
+                                bounds.southwest.longitude,
+                                bounds.center.latitude,
+                                bounds.center.longitude,
+                                map.cameraPosition.zoom
+                        )
+                    }
                 }
             }
         }
@@ -111,17 +113,13 @@ class ExploreMapFragment: SupportMapFragment() {
                     futureTarget.forEach { markersGlideRequestManager.clear(it) }
                     markerCollection?.clear()
                 } else {
-                    var sortedMax: List<SearchResult> = listOf()
-                    val total = measureNanoTime {
-                        val center = map.projection.visibleRegion.latLngBounds.center
-                        sortedMax = results.sortedBy {
-                            userLocationState.distanceBetween(
-                                    center.latitude, center.longitude,
-                                    it.latitude ?: 0.0, it.longitude ?: 0.0
-                            )
-                        }.take(ExploreViewModel.MAX_MARKERS)
-                    }
-
+                    val center = map.projection.visibleRegion.latLngBounds.center
+                    val sortedMax = results.sortedBy {
+                        userLocationState.distanceBetween(
+                                center.latitude, center.longitude,
+                                it.latitude ?: 0.0, it.longitude ?: 0.0
+                        )
+                    }.take(ExploreViewModel.MAX_MARKERS)
                     setMarkers(sortedMax)
                 }
             }
@@ -222,9 +220,11 @@ class ExploreMapFragment: SupportMapFragment() {
             markersGlideRequestManager
                     .asBitmap()
                     .load(item.logoLocation)
+                    .error(R.drawable.ic_merchant)
                     .apply(RequestOptions().centerCrop().circleCrop())
                     .listener(object : RequestListener<Bitmap> {
-                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
+                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?,
+                                                  isFirstResource: Boolean): Boolean {
                             Log.i("GlideException","${e?.message}")
                             if (item.latitude != null && item.longitude != null && markerDrawable != null) {
                                 lifecycleScope.launch {
@@ -234,7 +234,8 @@ class ExploreMapFragment: SupportMapFragment() {
                             return false
                         }
 
-                        override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                        override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?,
+                                                     dataSource: DataSource?, isFirstResource: Boolean): Boolean {
                             Log.i(this@ExploreMapFragment::class.java.simpleName, "Resource loaded")
 
                             if (item.latitude != null && item.longitude != null && resource != null) {
@@ -244,9 +245,8 @@ class ExploreMapFragment: SupportMapFragment() {
                             }
                             return false
                         }
-                    })
-                    .submit(markerSize, markerSize)
-        }.toMutableList()
+                    }).submit(markerSize, markerSize)
+        }
     }
 
     private fun removeOldMarkers(newItems: List<SearchResult>) {

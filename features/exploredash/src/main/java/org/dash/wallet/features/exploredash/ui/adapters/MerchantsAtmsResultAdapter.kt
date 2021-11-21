@@ -95,7 +95,6 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHol
     fun bind(merchant: Merchant?) {
         val resources = binding.root.resources
         binding.title.text = merchant?.name
-        binding.subtitle.text = merchant?.distance?.toString() ?: "null"
 
         Glide.with(binding.root.context)
             .load(merchant?.logoLocation)

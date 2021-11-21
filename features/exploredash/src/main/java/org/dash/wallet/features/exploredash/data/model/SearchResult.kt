@@ -48,9 +48,6 @@ open class SearchResult(
     @get:PropertyName("cover_image") @set:PropertyName("cover_image")
     var coverImage: String? = "",
     open var type: String? = "",
-
-    @Ignore
-    var distance: Double? = 0.0
 ) {
     val displayAddress: String
         get() {

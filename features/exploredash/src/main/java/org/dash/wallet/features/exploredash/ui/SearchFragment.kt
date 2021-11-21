@@ -159,25 +159,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val defaultMode = if (topic == ExploreTopic.Merchants) FilterMode.Online else FilterMode.All
         viewModel.setFilterMode(defaultMode)
 
-        header.setOnFilterOptionChosen { _, index ->
-            if (topic == ExploreTopic.Merchants) {
-                viewModel.setFilterMode(
-                    when (index) {
-                        0 -> FilterMode.Online
-                        1 -> FilterMode.Physical
-                        else -> FilterMode.All
-                    }
-                )
-            } else {
-                viewModel.setFilterMode(
-                    when (index) {
-                        1 -> FilterMode.Buy
-                        2 -> FilterMode.Sell
-                        3 -> FilterMode.BuySell
-                        else -> FilterMode.All
-                    }
-                )
-            }
+        header.setOnFilterOptionChosen { mode ->
+            viewModel.setFilterMode(mode)
         }
 
         header.setOnFilterButtonClicked {
@@ -276,12 +259,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             adapter.submitData(viewLifecycleOwner.lifecycle, results)
         }
 
-        viewModel.searchLocationName.observe(viewLifecycleOwner) {
-            header.title = getSearchTitle()
-        }
-
         viewModel.pagingSearchResultsCount.observe(viewLifecycleOwner) {
             header.subtitle = getSearchSubtitle()
+        }
+
+        viewModel.searchLocationName.observe(viewLifecycleOwner) {
+            header.title = getSearchTitle()
         }
 
         viewLifecycleOwner.observeOnDestroy {

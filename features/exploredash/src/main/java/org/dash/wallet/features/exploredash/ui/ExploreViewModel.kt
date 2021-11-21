@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash.ui
 
-import android.util.Log
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
@@ -90,8 +89,8 @@ class ExploreViewModel @Inject constructor(
         private set
 
     private var lastResolvedAddress: GeoBounds? = null
-    private var currentUserLocationState: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
-    val currentUserLocation = currentUserLocationState.asLiveData()
+    private var _currentUserLocation: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
+    val currentUserLocation = _currentUserLocation.asLiveData()
 
     private val _selectedTerritory = MutableStateFlow("")
     var selectedTerritory: String
@@ -220,18 +219,6 @@ class ExploreViewModel @Inject constructor(
 
                                             getPagingSource(query, territory, payment, mode, bounds, sortByDistance)
                                         }.flow
-                                            .map { data ->
-                                                data.map {
-                                                    val userLat = bounds.centerLat
-                                                    val userLng = bounds.centerLng
-//                                                    val userLat = currentUserLocation.value?.latitude ?: 0.0
-//                                                    val userLng = currentUserLocation.value?.longitude ?: 0.0
-                                                    it.distance = locationProvider.distanceBetween(
-                                                        userLat, userLng, it.latitude ?: 0.0, it.longitude ?: 0.0
-                                                    )
-                                                    it
-                                                }
-                                            }
                                             .cachedIn(viewModelScope)
                                     }
                             }
@@ -381,7 +368,7 @@ class ExploreViewModel @Inject constructor(
         viewModelScope.launch {
             _isLocationEnabled.value = true
             locationProvider.observeUpdates().collect {
-                currentUserLocationState.value = it
+                _currentUserLocation.value = it
             }
         }
     }
@@ -409,21 +396,22 @@ class ExploreViewModel @Inject constructor(
         bounds: GeoBounds,
         sortByDistance: Boolean
     ): PagingSource<Int, SearchResult> {
-//        val userLat = currentUserLocation.value?.latitude ?: 0.0
-//        val userLng = currentUserLocation.value?.longitude ?: 0.0
-        val userLat = bounds.centerLat
-        val userLng = bounds.centerLng
+        val userLat = currentUserLocation.value?.latitude
+        val userLng = currentUserLocation.value?.longitude
         val byDistance = _filterMode.value != FilterMode.Online &&
                          _isLocationEnabled.value == true &&
+                         userLat != null && userLng != null &&
                          sortByDistance
 
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
             val type = getMerchantType(filterMode)
-            merchantDao.observeAllPaging(query, territory, type, payment, bounds, byDistance, userLat, userLng)
+            merchantDao.observeAllPaging(query, territory, type, payment, bounds,
+                    byDistance, userLat ?: 0.0, userLng ?: 0.0)
         } else {
             val types = getAtmTypes(filterMode)
-            atmDao.observeAllPaging(query, territory, types, bounds, byDistance, userLat, userLng)
+            atmDao.observeAllPaging(query, territory, types, bounds,
+                    byDistance, userLat ?: 0.0, userLng ?: 0.0)
         } as PagingSource<Int, SearchResult>
     }
 
