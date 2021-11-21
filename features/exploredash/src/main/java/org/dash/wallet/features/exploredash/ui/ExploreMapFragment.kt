@@ -37,9 +37,7 @@ import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.*
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
@@ -51,18 +49,12 @@ import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import javax.inject.Inject
+import kotlin.system.measureNanoTime
 
 @FlowPreview
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class ExploreMapFragment: SupportMapFragment() {
-    data class ExploreMarkerItemUI(
-        val id: Int,
-        val latitude: Double,
-        val longitude: Double,
-        val logoUrl: Bitmap
-    )
-
     private val viewModel: ExploreViewModel by activityViewModels()
     private var googleMap: GoogleMap? = null
 
@@ -76,12 +68,15 @@ class ExploreMapFragment: SupportMapFragment() {
 
     private var futureTarget =  mutableListOf<FutureTarget<Bitmap>>()
     private lateinit var markersGlideRequestManager: RequestManager
+    private var markerDrawable: Bitmap? = null
 
     @Inject lateinit var userLocationState: UserLocationStateInt
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         markersGlideRequestManager = Glide.with(this)
+        markerDrawable = getBitmapFromDrawable(R.drawable.ic_merchant)
 
         lifecycleScope.launchWhenStarted {
             googleMap = awaitMap()
@@ -116,25 +111,34 @@ class ExploreMapFragment: SupportMapFragment() {
                     futureTarget.forEach { markersGlideRequestManager.clear(it) }
                     markerCollection?.clear()
                 } else {
-                    val center = map.projection.visibleRegion.latLngBounds.center
-                    val sortedMax = results.sortedBy {
-                        userLocationState.distanceBetween(
-                                center.latitude, center.longitude,
-                                it.latitude ?: 0.0, it.longitude ?: 0.0
-                        )
-                    }.take(ExploreViewModel.MAX_MARKERS)
+                    var sortedMax: List<SearchResult> = listOf()
+                    val total = measureNanoTime {
+                        val center = map.projection.visibleRegion.latLngBounds.center
+                        sortedMax = results.sortedBy {
+                            userLocationState.distanceBetween(
+                                    center.latitude, center.longitude,
+                                    it.latitude ?: 0.0, it.longitude ?: 0.0
+                            )
+                        }.take(ExploreViewModel.MAX_MARKERS)
+                    }
+
                     setMarkers(sortedMax)
                 }
             }
         }
 
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
-            if (viewModel.filterMode.value != FilterMode.Online &&
+            val map = googleMap
+
+            if (map != null &&
+                viewModel.filterMode.value != FilterMode.Online &&
                 item?.type != MerchantType.ONLINE &&
-                item?.latitude != null && item.longitude != null) {
+                item?.latitude != null && item.longitude != null
+            ) {
                 // TODO: might be good to move back to the previous bounds on back navigation
-                val position = CameraPosition(LatLng(item.latitude!!, item.longitude!!), 16f, 0f, 0f)
-                googleMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+                val zoom = if (map.cameraPosition.zoom > 16f) map.cameraPosition.zoom else 16f
+                val position = CameraPosition(LatLng(item.latitude!!, item.longitude!!), zoom, 0f, 0f)
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
             }
         }
     }
@@ -210,50 +214,47 @@ class ExploreMapFragment: SupportMapFragment() {
         googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, mapPadding))
     }
 
-    private suspend fun loadMarkers(items: Collection<SearchResult>): List<ExploreMarkerItemUI> {
-        return withContext(Dispatchers.IO) {
-            val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
-            val exploreMarkerSize = resources.getDimensionPixelSize(R.dimen.merchant_marker_size)
+    private fun loadMarkers(items: List<SearchResult>) {
+        val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
 
-            futureTarget = items.map {
-                markersGlideRequestManager
-                        .asBitmap()
-                        .load(it.logoLocation)
-                        .placeholder(R.drawable.ic_merchant)
-                        .apply(RequestOptions().centerCrop().circleCrop())
-                        .listener(object : RequestListener<Bitmap> {
-                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
-                                Log.i("GlideException","${e?.message}")
-                                return false
-                            }
-
-                            override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
-                                Log.i(this@ExploreMapFragment::class.java.simpleName, "Resource loaded")
-                                return false
-                            }
-                        })
-                        .submit(markerSize, markerSize)
-            }.toMutableList()
-
-            val exploreMarkers = items.zip(futureTarget).map { pair ->
-                pair.first.latitude?.let {
-                    pair.first.longitude?.let { it1 ->
-                        ExploreMarkerItemUI(
-                                pair.first.id,
-                                it, it1,
-                                try {
-                                    pair.second.get()
-                                } catch (e: Exception) {
-                                    markersGlideRequestManager.asBitmap().load(R.drawable.ic_merchant)
-                                            .submit(exploreMarkerSize, exploreMarkerSize).get()
+        futureTarget.forEach { markersGlideRequestManager.clear(it) }
+        futureTarget = items.map { item ->
+            markersGlideRequestManager
+                    .asBitmap()
+                    .load(item.logoLocation)
+                    .apply(RequestOptions().centerCrop().circleCrop())
+                    .listener(object : RequestListener<Bitmap> {
+                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
+                            Log.i("GlideException","${e?.message}")
+                            if (item.latitude != null && item.longitude != null && markerDrawable != null) {
+                                lifecycleScope.launch {
+                                    addMarkerItemToMap(item.latitude!!, item.longitude!!, markerDrawable!!, item.id)
                                 }
-                        )
-                    }
-                }
-            }
+                            }
+                            return false
+                        }
 
-            futureTarget.forEach { markersGlideRequestManager.clear(it) }
-            exploreMarkers.filterNotNull()
+                        override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                            Log.i(this@ExploreMapFragment::class.java.simpleName, "Resource loaded")
+
+                            if (item.latitude != null && item.longitude != null && resource != null) {
+                                lifecycleScope.launch {
+                                    addMarkerItemToMap(item.latitude!!, item.longitude!!, resource, item.id)
+                                }
+                            }
+                            return false
+                        }
+                    })
+                    .submit(markerSize, markerSize)
+        }.toMutableList()
+    }
+
+    private fun removeOldMarkers(newItems: List<SearchResult>) {
+        val newMarkerIds = newItems.map { it.id }.toSet()
+        markerCollection?.markers?.toTypedArray()?.forEach { marker ->
+            if (marker.tag !in newMarkerIds) {
+                markerCollection?.remove(marker)
+            }
         }
     }
 
@@ -263,33 +264,16 @@ class ExploreMapFragment: SupportMapFragment() {
             anchor(0.5f, 0.5f)
             icon(BitmapDescriptorFactory.fromBitmap(bitmap))
             draggable(false)
-            snippet(itemId.toString())
         })?.apply {
             tag = itemId
-            showInfoWindow()
         }
     }
 
     private fun setMarkers(newItems: List<SearchResult>) {
         val currentIds = currentMapItems.map { it.id }.toSet()
         val toAdd = newItems.filterNot { it.id in currentIds }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val exploreMarkers = loadMarkers(toAdd)
-            exploreMarkers.forEach {
-                addMarkerItemToMap(it.latitude, it.longitude, it.logoUrl, it.id)
-            }
-        }
-
-        val allMarkerIds = newItems.map { it.id }.toSet()
-        markerCollection?.markers?.let { markers ->
-            markers.toTypedArray().forEach { marker ->
-                if (marker.tag !in allMarkerIds) {
-                    markerCollection?.remove(marker)
-                }
-            }
-        }
-
+        loadMarkers(toAdd)
+        removeOldMarkers(newItems)
         currentMapItems = newItems
     }
 
