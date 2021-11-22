@@ -49,7 +49,6 @@ import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import javax.inject.Inject
-import kotlin.system.measureNanoTime
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -60,6 +59,8 @@ class ExploreMapFragment: SupportMapFragment() {
 
     private lateinit var mCurrentUserLocation: LatLng
     private var currentAccuracy = 0.0
+    private var lastFocusedUserLocation: LatLng? = null
+
     private var currentLocationMarker: Marker? = null
     private var currentLocationCircle: Circle? = null
 
@@ -202,7 +203,19 @@ class ExploreMapFragment: SupportMapFragment() {
         currentLocationCircle?.center = mCurrentUserLocation
         currentLocationCircle?.radius = currentAccuracy
 
-        setMapDefaultViewLevel(viewModel.radius)
+        val userLat = mCurrentUserLocation.latitude
+        val userLng = mCurrentUserLocation.longitude
+        val lastLat = lastFocusedUserLocation?.latitude
+        val lastLng = lastFocusedUserLocation?.longitude
+        val radius = viewModel.radius
+
+        if (lastFocusedUserLocation == null ||
+                userLocationState.distanceBetween(
+                        userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0) > radius / 2
+        ) {
+            lastFocusedUserLocation = mCurrentUserLocation
+            setMapDefaultViewLevel(radius)
+        }
     }
 
     private fun setMapDefaultViewLevel(radius: Double) {
