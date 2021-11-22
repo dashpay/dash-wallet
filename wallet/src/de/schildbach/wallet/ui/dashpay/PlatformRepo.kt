@@ -470,12 +470,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return msg
     }
 
+    /**
+     * returns true if:
+     *  1. Invites have been not been sent previously
+     *  2. Identity Creation is not in progress
+     *  3. The balance is high enough
+     */
+
     suspend fun shouldShowAlert(): Boolean {
         val hasSentInvites = invitationsDao.count() > 0
         val blockchainIdentityData = blockchainIdentityDataDao.load()
         val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
         val canAffordIdentityCreation = walletApplication.wallet.canAffordIdentityCreation()
-        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
+        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || !hasSentInvites)
     }
 
 
