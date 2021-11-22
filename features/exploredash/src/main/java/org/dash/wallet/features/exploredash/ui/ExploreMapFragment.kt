@@ -213,16 +213,18 @@ class ExploreMapFragment: SupportMapFragment() {
                 userLocationState.distanceBetween(
                         userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0) > radius / 2
         ) {
-            lastFocusedUserLocation = mCurrentUserLocation
             setMapDefaultViewLevel(radius)
         }
     }
 
     private fun setMapDefaultViewLevel(radius: Double) {
-        val heightInPixel = this.requireView().measuredHeight
-        val latLngBounds = userLocationState.calculateBounds(mCurrentUserLocation, radius)
-        val mapPadding = resources.getDimensionPixelOffset(R.dimen.map_padding)
-        googleMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, mapPadding))
+        googleMap?.let { map ->
+            val heightInPixel = this.requireView().measuredHeight
+            val latLngBounds = userLocationState.calculateBounds(mCurrentUserLocation, radius)
+            val mapPadding = resources.getDimensionPixelOffset(R.dimen.map_padding)
+            map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, mapPadding))
+            lastFocusedUserLocation = mCurrentUserLocation
+        }
     }
 
     private fun loadMarkers(items: List<SearchResult>) {
