@@ -207,6 +207,19 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
+        SELECT COUNT(*)
+        FROM merchant
+        WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+        GROUP BY merchantId
+        HAVING Id = MIN(Id)
+    """)
+    fun groupByMerchantIdResultCount(
+        types: List<String>,
+        paymentMethod: String
+    ): Int
+
+    @Query("""
         SELECT *
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
@@ -222,6 +235,22 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String
     ): PagingSource<Int, Merchant>
+
+    @Query("""
+        SELECT COUNT(*)
+        FROM merchant
+        JOIN merchant_fts ON merchant.id = merchant_fts.docid
+        WHERE merchant_fts MATCH :query
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+        GROUP BY merchantId
+        HAVING Id = MIN(Id)
+    """)
+    fun searchGroupByMerchantIdResultCount(
+        query: String,
+        types: List<String>,
+        paymentMethod: String
+    ): Int
 
     @Query("""
         SELECT * 
@@ -378,27 +407,42 @@ interface MerchantDao : BaseDao<Merchant> {
         }
     }
 
-    suspend fun getPhysicalResultsCount(
+    suspend fun getPagingResultsCount(
         query: String,
+        territory: String,
+        type: String,
         paymentMethod: String,
-        territoryFilter: String,
         bounds: GeoBounds
     ): Int {
-        val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+        return when {
+            type == MerchantType.ONLINE -> {
+                val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
-        return if (territoryFilter.isNotBlank()) {
-            if (query.isNotBlank()) {
-                searchByTerritoryResultCount(sanitizeQuery(query), territoryFilter, types, paymentMethod)
-            } else {
-                getByTerritoryResultCount(territoryFilter, types, paymentMethod)
+                if (query.isNotBlank()) {
+                    searchGroupByMerchantIdResultCount(query, types, paymentMethod)
+                } else {
+                    groupByMerchantIdResultCount(types, paymentMethod)
+                }
             }
-        } else {
-            if (query.isNotBlank()) {
-                searchByCoordinatesResultCount(sanitizeQuery(query), types, paymentMethod,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
-            } else {
-                getByCoordinatesResultCount(types, paymentMethod,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+            type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
+                val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+
+                if (query.isNotBlank()) {
+                    searchByCoordinatesResultCount(sanitizeQuery(query), types, paymentMethod,
+                            bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                } else {
+                    getByCoordinatesResultCount(types, paymentMethod, bounds.northLat,
+                            bounds.eastLng, bounds.southLat, bounds.westLng)
+                }
+            }
+            else -> {
+                val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
+
+                if (query.isNotBlank()) {
+                    searchByTerritoryResultCount(sanitizeQuery(query), territory, types, paymentMethod)
+                } else {
+                    getByTerritoryResultCount(territory, types, paymentMethod)
+                }
             }
         }
     }

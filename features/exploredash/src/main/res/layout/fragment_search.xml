@@ -97,6 +97,35 @@
                 tools:itemCount="5"
                 tools:listitem="@layout/merchant_row" />
 
+            <LinearLayout
+                android:id="@+id/no_results_panel"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="140dp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                tools:visibility="visible">
+
+                <TextView
+                    style="@style/Subtitle1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/explore_no_results" />
+
+                <Button
+                    android:id="@+id/reset_filters_btn"
+                    style="@style/Button.Tertiary.Small.Red"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="@string/explore_reset_all_filters" />
+            </LinearLayout>
+
             <include
                 android:id="@+id/item_details"
                 layout="@layout/item_details_view"
@@ -111,6 +140,7 @@
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
         android:layout_gravity="bottom">
 
         <ImageButton

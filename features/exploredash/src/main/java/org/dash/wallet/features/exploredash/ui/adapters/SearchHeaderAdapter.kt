@@ -107,7 +107,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         }
 
         binding.clearBtn.setOnClickListener {
-            binding.search.text.clear()
+            clearSearchQuery()
         }
 
         binding.filterBtn.setOnClickListener {
@@ -117,6 +117,10 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         binding.searchTitle.text = title
         binding.searchSubtitle.text = subtitle
         binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
+    }
+
+    fun clearSearchQuery() {
+        binding.search.text.clear()
     }
 
     fun setOnFilterOptionChosen(listener: (FilterMode) -> Unit) {
