@@ -22,7 +22,8 @@
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
     android:paddingVertical="8dp"
-    android:minHeight="56dp">
+    android:minHeight="56dp"
+    tools:context="org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter">
 
     <ImageView
         android:id="@+id/logo_img"

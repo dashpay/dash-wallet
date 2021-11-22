@@ -451,7 +451,7 @@ class ExploreViewModel @Inject constructor(
                 )
             } else {
                 val types = getAtmTypes(filterMode.value ?: FilterMode.All)
-                atmDao.getPhysicalResultsCount(
+                atmDao.getPagingResultsCount(
                         searchQuery.value, types,
                         selectedTerritory, radiusBounds ?: GeoBounds.noBounds
                 )
