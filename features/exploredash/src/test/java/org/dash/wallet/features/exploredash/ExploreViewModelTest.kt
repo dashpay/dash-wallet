@@ -88,8 +88,7 @@ class ExploreViewModelTest {
 
             assertEquals(expected, actual)
             verify(merchantDaoMock).observePhysical("", territory, "", GeoBounds.noBounds)
-            verify(locationState).getRadiusBounds(0.0, 0.0,
-                    ExploreViewModel.DEFAULT_RADIUS_OPTION * ExploreViewModel.METERS_IN_MILE)
+            verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(merchantDaoMock)
         }
     }
@@ -131,8 +130,7 @@ class ExploreViewModelTest {
 
             assertEquals(expected, actual)
             verify(merchantDaoMock).observePhysical(query, "", PaymentMethod.DASH, bounds)
-            verify(locationState).getRadiusBounds(0.0, 0.0,
-                    ExploreViewModel.DEFAULT_RADIUS_OPTION * ExploreViewModel.METERS_IN_MILE)
+            verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(merchantDaoMock)
         }
     }
@@ -173,8 +171,7 @@ class ExploreViewModelTest {
 
             assertEquals(expected, actual)
             verify(merchantDaoMock).observePhysical(query, territory, "", GeoBounds.noBounds)
-            verify(locationState).getRadiusBounds(0.0, 0.0,
-                    ExploreViewModel.DEFAULT_RADIUS_OPTION * ExploreViewModel.METERS_IN_MILE)
+            verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(merchantDaoMock)
         }
     }
@@ -223,8 +220,7 @@ class ExploreViewModelTest {
 
             assertEquals(expected, actual)
             verify(merchantDaoMock).observePhysical("", "", "", bounds)
-            verify(locationMock).getRadiusBounds(userLat, userLng,
-                    ExploreViewModel.DEFAULT_RADIUS_OPTION * ExploreViewModel.METERS_IN_MILE)
+            verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
             verifyNoMoreInteractions(merchantDaoMock)
         }
     }

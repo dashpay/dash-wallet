@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.ColumnInfo
-import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import com.google.firebase.database.PropertyName
 
@@ -47,7 +46,7 @@ open class SearchResult(
     var googleMaps: String? = "",
     @get:PropertyName("cover_image") @set:PropertyName("cover_image")
     var coverImage: String? = "",
-    open var type: String? = "",
+    open var type: String? = ""
 ) {
     val displayAddress: String
         get() {
