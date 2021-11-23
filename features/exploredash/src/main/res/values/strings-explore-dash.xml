@@ -37,7 +37,7 @@
     <string name="explore_where_to_spend">Where to Spend</string>
     <string name="explore_atms">ATMs</string>
     <string name="explore_all_states">All states</string>
-    <string name="explore_no_results">No results</string>
+    <string name="explore_no_results">No Results Found</string>
     <string name="explore_all_merchants">All Merchants</string>
     <string name="explore_in_radius">%1$s in %2$s</string>
     <string name="explore_no_merchants">No merchants</string>
@@ -77,8 +77,10 @@
     <string name="explore_current_location">Current Location</string>
     <string name="explore_location_settings">Current Location Settings</string>
     <string name="explore_reset_filters">Reset Filters</string>
+    <string name="explore_reset_all_filters">Reset All Filters</string>
     <string name="explore_filtered_by">Filtered by:</string>
     <string name="explore_pay_gift_card">Pay with gift card</string>
+    <string name="explore_sort_by">Sort by</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -105,6 +107,11 @@
         <item>5 kilometers</item>
         <item>20 kilometers</item>
         <item>50 kilometers</item>
+    </string-array>
+
+    <string-array name="sort_by_options_names">
+        <item>Name</item>
+        <item>Distance</item>
     </string-array>
 
     <plurals name="radius_miles">

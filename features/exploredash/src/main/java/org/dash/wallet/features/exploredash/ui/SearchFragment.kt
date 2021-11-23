@@ -131,11 +131,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 bottomSheet.isDraggable = false
             }
         }
-
-        viewModel.appliedFilters.observe(viewLifecycleOwner) { filters ->
-            resolveAppliedFilters(filters)
-            header.subtitle = getSearchSubtitle()
-        }
     }
 
     override fun onResume() {
@@ -159,25 +154,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val defaultMode = if (topic == ExploreTopic.Merchants) FilterMode.Online else FilterMode.All
         viewModel.setFilterMode(defaultMode)
 
-        header.setOnFilterOptionChosen { _, index ->
-            if (topic == ExploreTopic.Merchants) {
-                viewModel.setFilterMode(
-                    when (index) {
-                        0 -> FilterMode.Online
-                        1 -> FilterMode.Physical
-                        else -> FilterMode.All
-                    }
-                )
-            } else {
-                viewModel.setFilterMode(
-                    when (index) {
-                        1 -> FilterMode.Buy
-                        2 -> FilterMode.Sell
-                        3 -> FilterMode.BuySell
-                        else -> FilterMode.All
-                    }
-                )
-            }
+        header.setOnFilterOptionChosen { mode ->
+            viewModel.setFilterMode(mode)
         }
 
         header.setOnFilterButtonClicked {
@@ -189,6 +167,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
+            binding.noResultsPanel.isVisible = false
             header.title = getSearchTitle()
             header.subtitle = getSearchSubtitle()
             binding.filterPanel.isVisible = shouldShowFiltersPanel()
@@ -223,6 +202,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet: BottomSheetBehavior<ConstraintLayout>
     ) {
         header.setOnSearchQueryChanged {
+            binding.noResultsPanel.isVisible = false
             viewModel.submitSearchQuery(it)
         }
 
@@ -272,16 +252,31 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.searchResults.scrollToPosition(0)
         }
 
+        binding.resetFiltersBtn.setOnClickListener {
+            viewModel.clearFilters()
+            header.clearSearchQuery()
+            binding.resetFiltersBtn.isEnabled = false
+        }
+
         viewModel.pagingSearchResults.observe(viewLifecycleOwner) { results ->
             adapter.submitData(viewLifecycleOwner.lifecycle, results)
+        }
+
+        viewModel.pagingSearchResultsCount.observe(viewLifecycleOwner) {
+            header.subtitle = getSearchSubtitle()
+            binding.noResultsPanel.isVisible = it <= 0
         }
 
         viewModel.searchLocationName.observe(viewLifecycleOwner) {
             header.title = getSearchTitle()
         }
 
-        viewModel.pagingSearchResultsCount.observe(viewLifecycleOwner) {
+        viewModel.appliedFilters.observe(viewLifecycleOwner) { filters ->
+            resolveAppliedFilters(filters)
             header.subtitle = getSearchSubtitle()
+            binding.resetFiltersBtn.isEnabled = filters.query.isNotEmpty() ||
+                    filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION ||
+                    filters.payment.isNotEmpty() || filters.territory.isNotEmpty()
         }
 
         viewLifecycleOwner.observeOnDestroy {
@@ -628,8 +623,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        val bottomSheetPeekHeight =
-            resources.getDimensionPixelOffset(R.dimen.search_content_peek_height)
+        val bottomSheetPeekHeight = resources.getDimensionPixelOffset(R.dimen.search_content_peek_height)
 
         if (appliedFilterNames.any()) {
             bottomSheet.peekHeight = binding.filterPanel.measuredHeight + bottomSheetPeekHeight

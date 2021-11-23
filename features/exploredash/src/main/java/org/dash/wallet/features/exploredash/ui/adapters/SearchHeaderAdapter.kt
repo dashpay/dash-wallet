@@ -26,11 +26,12 @@ import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.SearchHeaderViewBinding
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.FilterMode
 
 class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: SearchHeaderViewBinding
 
-    private var onFilterOptionChosen: ((String, Int) -> Unit)? = null
+    private var onFilterOptionChosen: ((FilterMode) -> Unit)? = null
     private var onSearchQueryChanged: ((String) -> Unit)? = null
     private var onSearchQuerySubmitted: ((Unit) -> Unit)? = null
     private var onFilterButtonClicked: ((Unit) -> Unit)? = null
@@ -62,19 +63,34 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         val inflater = LayoutInflater.from(parent.context)
         binding = SearchHeaderViewBinding.inflate(inflater, parent, false)
 
-        return object : RecyclerView.ViewHolder(binding.root) { }
+        return object : RecyclerView.ViewHolder(binding.root) {}
     }
 
     override fun onBindViewHolder(viewHolder: RecyclerView.ViewHolder, position: Int) {
         binding.filterOptions.provideOptions(binding.root.resources.getStringArray(
-            if (topic == ExploreTopic.Merchants) {
-                R.array.merchants_filter_options
-            } else {
-                R.array.atms_filter_options
-            }).toList()
+                if (topic == ExploreTopic.Merchants) {
+                    R.array.merchants_filter_options
+                } else {
+                    R.array.atms_filter_options
+                }).toList()
         )
-        binding.filterOptions.setOnOptionPickedListener { option, index ->
-            onFilterOptionChosen?.invoke(option, index)
+        binding.filterOptions.setOnOptionPickedListener { _, index ->
+            onFilterOptionChosen?.invoke(
+                    if (topic == ExploreTopic.Merchants) {
+                        when (index) {
+                            0 -> FilterMode.Online
+                            1 -> FilterMode.Physical
+                            else -> FilterMode.All
+                        }
+                    } else {
+                        when (index) {
+                            1 -> FilterMode.Buy
+                            2 -> FilterMode.Sell
+                            3 -> FilterMode.BuySell
+                            else -> FilterMode.All
+                        }
+                    }
+            )
         }
 
         binding.search.doOnTextChanged { text, _, _, _ ->
@@ -91,7 +107,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         }
 
         binding.clearBtn.setOnClickListener {
-            binding.search.text.clear()
+            clearSearchQuery()
         }
 
         binding.filterBtn.setOnClickListener {
@@ -103,7 +119,11 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
     }
 
-    fun setOnFilterOptionChosen(listener: (String, Int) -> Unit) {
+    fun clearSearchQuery() {
+        binding.search.text.clear()
+    }
+
+    fun setOnFilterOptionChosen(listener: (FilterMode) -> Unit) {
         onFilterOptionChosen = listener
     }
 

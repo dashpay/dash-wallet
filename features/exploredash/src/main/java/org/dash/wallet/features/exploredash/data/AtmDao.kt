@@ -35,14 +35,19 @@ interface AtmDao : BaseDao<Atm> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-        ORDER BY name ASC
+        ORDER BY
+            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
+            CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
     """)
     fun pagingGetByCoordinates(
         types: List<String>,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
-        westLng: Double
+        westLng: Double,
+        sortByDistance: Boolean,
+        anchorLat: Double,
+        anchorLng: Double
     ): PagingSource<Int, Atm>
 
     @Query("""
@@ -72,7 +77,9 @@ interface AtmDao : BaseDao<Atm> {
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
-        ORDER BY name ASC
+        ORDER BY
+            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
+            CASE WHEN :sortByDistance = 0 THEN atm.name END COLLATE NOCASE ASC
     """)
     fun pagingSearchByCoordinates(
         query: String,
@@ -80,7 +87,10 @@ interface AtmDao : BaseDao<Atm> {
         northLat: Double,
         eastLng: Double,
         southLat: Double,
-        westLng: Double
+        westLng: Double,
+        sortByDistance: Boolean,
+        anchorLat: Double,
+        anchorLng: Double
     ): PagingSource<Int, Atm>
 
     @Query("""
@@ -108,10 +118,16 @@ interface AtmDao : BaseDao<Atm> {
         FROM atm 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
-        ORDER BY name ASC""")
+        ORDER BY
+            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
+            CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
+    """)
     fun pagingGetByTerritory(
         territoryFilter: String,
-        types: List<String>
+        types: List<String>,
+        sortByDistance: Boolean,
+        anchorLat: Double,
+        anchorLng: Double
     ): PagingSource<Int, Atm>
 
     @Query("""
@@ -132,12 +148,17 @@ interface AtmDao : BaseDao<Atm> {
         WHERE atm_fts MATCH :query
             AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
             AND type IN (:types)
-        ORDER BY name ASC
+        ORDER BY
+            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
+            CASE WHEN :sortByDistance = 0 THEN atm.name END COLLATE NOCASE ASC
     """)
     fun pagingSearchByTerritory(
         query: String,
         territoryFilter: String,
-        types: List<String>
+        types: List<String>,
+        sortByDistance: Boolean,
+        anchorLat: Double,
+        anchorLng: Double
     ): PagingSource<Int, Atm>
 
     @Query("""
@@ -251,46 +272,50 @@ interface AtmDao : BaseDao<Atm> {
         query: String,
         territory: String,
         types: List<String>,
-        bounds: GeoBounds
+        bounds: GeoBounds,
+        sortByDistance: Boolean,
+        userLat: Double,
+        userLng: Double
     ): PagingSource<Int, Atm> {
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
             // Search by coordinates (nearby) if territory isn't specified
             if (query.isNotBlank()) {
-                pagingSearchByCoordinates(sanitizeQuery(query), types,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                pagingSearchByCoordinates(sanitizeQuery(query), types, bounds.northLat, bounds.eastLng,
+                        bounds.southLat, bounds.westLng, sortByDistance, userLat, userLng)
             } else {
-                pagingGetByCoordinates(types, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                pagingGetByCoordinates(types, bounds.northLat, bounds.eastLng, bounds.southLat,
+                        bounds.westLng, sortByDistance, userLat, userLng)
             }
         } else {
             // If location services are disabled or user picked a territory
             // we search everything and filter by territory
             if (query.isNotBlank()) {
-                pagingSearchByTerritory(sanitizeQuery(query), territory, types)
+                pagingSearchByTerritory(sanitizeQuery(query), territory,
+                        types, sortByDistance, userLat, userLng)
             } else {
-                pagingGetByTerritory(territory, types)
+                pagingGetByTerritory(territory, types, sortByDistance, userLat, userLng)
             }
         }
     }
 
-    suspend fun getPhysicalResultsCount(
+    suspend fun getPagingResultsCount(
         query: String,
         types: List<String>,
-        territoryFilter: String,
+        territory: String,
         bounds: GeoBounds
     ): Int {
-        return if (territoryFilter.isNotBlank()) {
+        return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
             if (query.isNotBlank()) {
-                searchByTerritoryResultCount(sanitizeQuery(query), territoryFilter, types)
+                searchByCoordinatesResultCount(sanitizeQuery(query), types,
+                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
             } else {
-                getByTerritoryResultCount(territoryFilter, types)
+                getByCoordinatesResultCount(types, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
             }
         } else {
             if (query.isNotBlank()) {
-                searchByCoordinatesResultCount(sanitizeQuery(query), types,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                searchByTerritoryResultCount(sanitizeQuery(query), territory, types)
             } else {
-                getByCoordinatesResultCount(types,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                getByTerritoryResultCount(territory, types)
             }
         }
     }

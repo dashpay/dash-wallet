@@ -802,6 +802,10 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
+    <style name="TertiaryButtonTheme.Small.Red">
+        <item name="titleTextColor">@color/red_300</item>
+    </style>
+
     <style name="TertiaryButtonTheme.Large">
         <item name="cornerRadius">10dp</item>
     </style>
@@ -857,6 +861,10 @@
 
     <style name="Button.Tertiary.Small.Blue">
         <item name="android:theme">@style/TertiaryButtonTheme.Small.Blue</item>
+    </style>
+
+    <style name="Button.Tertiary.Small.Red">
+        <item name="android:theme">@style/TertiaryButtonTheme.Small.Red</item>
     </style>
 
     <style name="Button.Tertiary.Large">

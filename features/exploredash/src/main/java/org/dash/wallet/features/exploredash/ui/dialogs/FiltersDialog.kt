@@ -25,25 +25,23 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.ui.ListDividerDecorator
 import org.dash.wallet.common.ui.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
+import org.dash.wallet.common.ui.radio_group.setupRadioGroup
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
 import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
-import org.dash.wallet.features.exploredash.ui.ExploreViewModel.Companion.DEFAULT_RADIUS_OPTION
 import org.dash.wallet.features.exploredash.ui.FilterMode
 import org.dash.wallet.features.exploredash.ui.extensions.isLocationPermissionGranted
 import org.dash.wallet.features.exploredash.ui.extensions.registerPermissionLauncher
@@ -58,15 +56,18 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         get() = R.drawable.gray_background_rounded
 
     private val radiusOptions = listOf(1, 5, 20, 50)
-    private var selectedRadiusOption: Int = DEFAULT_RADIUS_OPTION
+    private var selectedRadiusOption: Int = ExploreViewModel.DEFAULT_RADIUS_OPTION
+    private var sortByDistance = ExploreViewModel.DEFAULT_SORT_BY_DISTANCE
     private var selectedTerritory: String = ""
     private var dashPaymentOn: Boolean = true
     private var giftCardPaymentOn: Boolean = true
 
     private val binding by viewBinding(DialogFiltersBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
+
     private var territoriesJob: Deferred<List<String>>? = null
     private var radiusOptionsAdapter: RadioGroupAdapter? = null
+    private var sortByOptionsAdapter: RadioGroupAdapter? = null
 
     @Inject
     lateinit var configuration: Configuration
@@ -99,10 +100,13 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
             if (viewModel.filterMode.value != FilterMode.Online) {
+                setupSortByOptions()
                 setupRadiusOptions()
                 setupTerritoryFilter()
                 setupLocationPermission()
             } else {
+                binding.sortByLabel.isVisible = false
+                binding.sortByCard.isVisible = false
                 binding.locationLabel.isVisible = false
                 binding.locationBtn.isVisible = false
                 binding.radiusLabel.isVisible = false
@@ -113,23 +117,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         }
 
         binding.applyButton.setOnClickListener {
-            viewModel.selectedTerritory = selectedTerritory
-            viewModel.selectedRadiusOption = selectedRadiusOption
-
-            if (viewModel.exploreTopic == ExploreTopic.Merchants) {
-                var paymentFilter = ""
-
-                if (!dashPaymentOn || !giftCardPaymentOn) {
-                    paymentFilter = if (dashPaymentOn) {
-                        PaymentMethod.DASH
-                    } else {
-                        PaymentMethod.GIFT_CARD
-                    }
-                }
-
-                viewModel.paymentMethodFilter = paymentFilter
-            }
-
+            applyFilters()
             dismiss()
         }
 
@@ -169,6 +157,31 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         }
     }
 
+    private fun setupSortByOptions() {
+        sortByDistance = viewModel.sortByDistance
+
+        if (viewModel.isLocationEnabled.value == true) {
+            binding.sortByLabel.isVisible = true
+            binding.sortByCard.isVisible = true
+
+            val optionNames = binding.root.resources.getStringArray(
+                R.array.sort_by_options_names
+            ).map { IconifiedViewItem(it, null) }
+
+            val initialIndex = if (sortByDistance) 1 else 0
+            val adapter = RadioGroupAdapter(initialIndex) { _, optionIndex ->
+                sortByDistance = optionIndex == 1
+                checkResetButton()
+            }
+            binding.sortByFilter.setupRadioGroup(adapter)
+            adapter.submitList(optionNames)
+            sortByOptionsAdapter = adapter
+        } else {
+            binding.sortByLabel.isVisible = false
+            binding.sortByCard.isVisible = false
+        }
+    }
+
     private fun setupRadiusOptions() {
         binding.radiusLabel.isVisible = true
         binding.radiusCard.isVisible = true
@@ -185,20 +198,14 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
                 if (viewModel.isMetric) R.array.radius_filter_options_kilometers else R.array.radius_filter_options_miles
             ).map { IconifiedViewItem(it, null) }
 
-            val radiusOption = viewModel.selectedRadiusOption
-            radiusOptionsAdapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->
+            val radiusOption = selectedRadiusOption
+            val adapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->
                 selectedRadiusOption = radiusOptions[optionIndex]
                 checkResetButton()
             }
-            val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!
-            val decorator = ListDividerDecorator(
-                divider,
-                showAfterLast = false,
-                marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
-            )
-            binding.radiusFilter.addItemDecoration(decorator)
-            binding.radiusFilter.adapter = radiusOptionsAdapter
-            radiusOptionsAdapter?.submitList(optionNames)
+            binding.radiusFilter.setupRadioGroup(adapter)
+            adapter.submitList(optionNames)
+            radiusOptionsAdapter = adapter
         } else {
             binding.radiusFilter.isVisible = false
             binding.managePermissionsBtn.isVisible = true
@@ -279,6 +286,26 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         }
     }
 
+    private fun applyFilters() {
+        viewModel.selectedTerritory = selectedTerritory
+        viewModel.selectedRadiusOption = selectedRadiusOption
+        viewModel.sortByDistance = sortByDistance
+
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            var paymentFilter = ""
+
+            if (!dashPaymentOn || !giftCardPaymentOn) {
+                paymentFilter = if (dashPaymentOn) {
+                    PaymentMethod.DASH
+                } else {
+                    PaymentMethod.GIFT_CARD
+                }
+            }
+
+            viewModel.paymentMethodFilter = paymentFilter
+        }
+    }
+
     private fun checkResetButton() {
         var isEnabled = false
 
@@ -290,7 +317,11 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
             isEnabled = true
         }
 
-        if (selectedRadiusOption != DEFAULT_RADIUS_OPTION) {
+        if (sortByDistance != ExploreViewModel.DEFAULT_SORT_BY_DISTANCE) {
+            isEnabled = true
+        }
+
+        if (selectedRadiusOption != ExploreViewModel.DEFAULT_RADIUS_OPTION) {
             isEnabled = true
         }
 
@@ -310,8 +341,11 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
             getString(R.string.explore_all_states)
         }
 
-        selectedRadiusOption = DEFAULT_RADIUS_OPTION
-        radiusOptionsAdapter?.selectedIndex = radiusOptions.indexOf(DEFAULT_RADIUS_OPTION)
+        selectedRadiusOption = ExploreViewModel.DEFAULT_RADIUS_OPTION
+        radiusOptionsAdapter?.selectedIndex = radiusOptions.indexOf(ExploreViewModel.DEFAULT_RADIUS_OPTION)
+
+        sortByDistance = ExploreViewModel.DEFAULT_SORT_BY_DISTANCE
+        sortByOptionsAdapter?.selectedIndex = if (sortByDistance) 1 else 0
 
         binding.resetFiltersBtn.isEnabled = false
     }
