@@ -75,6 +75,8 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
     private var direction = UsernameSortOrderBy.DATE_ADDED
     private var mode = MODE_NOTIFICATIONS
     private var lastSeenNotificationTime = 0L
+    private var isBlockchainSynced = true
+    var userAlertItem: NotificationItemUserAlert? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -136,6 +138,7 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
                     val results = arrayListOf<NotificationItem>()
                     results.addAll(it.data)
                     processResults(results)
+                    showHideAlert()
                 }
             }
         }
@@ -146,6 +149,12 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         dashPayViewModel.recentlyModifiedContactsLiveData.observe(this) {
             notificationsAdapter.recentlyModifiedContacts = it
         }
+        dashPayViewModel.blockchainStateData.observe(this) {
+            if (it != null) {
+                isBlockchainSynced = it.percentageSync == 100
+                showHideAlert()
+            }
+        }
     }
 
     private fun processResults(data: ArrayList<NotificationItem>) {
@@ -155,7 +164,6 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         // get the last seen date from the configuration
         val newDate = walletApplication.configuration.lastSeenNotificationTime
 
-        var userAlertItem: NotificationItemUserAlert? = null
 
         // find the most recent notification timestamp
         var lastNotificationTime = 0L
@@ -174,7 +182,9 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
         log.info("New contacts at ${Date(newDate)} = ${newItems.size} - NotificationActivity")
 
         userAlertItem?.apply {
-            results.add(NotificationsAdapter.NotificationViewItem(this))
+            if (isBlockchainSynced) {
+                results.add(NotificationsAdapter.NotificationViewItem(this))
+            }
         }
 
         results.add(NotificationsAdapter.HeaderViewItem(1, R.string.notifications_new))
@@ -194,6 +204,22 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
 
         notificationsAdapter.results = results
         lastSeenNotificationTime = lastNotificationTime
+    }
+
+    private fun showHideAlert() {
+        if (notificationsAdapter.results.isNotEmpty()) {
+            val firstItem = notificationsAdapter.results[0]
+            if (!isBlockchainSynced && userAlertItem != null && firstItem.notificationItem is NotificationItemUserAlert) {
+                val newResults = notificationsAdapter.results.toMutableList()
+                newResults.remove(notificationsAdapter.results[0])
+                notificationsAdapter.results = newResults
+            } else if (isBlockchainSynced && userAlertItem != null && firstItem.notificationItem !is NotificationItemUserAlert) {
+                val newResults = arrayListOf<NotificationsAdapter.NotificationViewItem>()
+                newResults.add(NotificationsAdapter.NotificationViewItem(userAlertItem!!))
+                newResults.addAll(notificationsAdapter.results)
+                notificationsAdapter.results = newResults
+            }
+        }
     }
 
     private fun searchContacts() {
@@ -221,6 +247,8 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
             }
             is NotificationItemUserAlert -> {
                 dashPayViewModel.inviteHistory.observeOnce(this) {
+                    userAlertItem = null
+                    dashPayViewModel.dismissUserAlert(R.string.invitation_notification_text)
                     if (it == null || it.isEmpty()) {
                         InviteFriendActivity.startOrError(this)
                     } else {
@@ -264,6 +292,7 @@ class NotificationsActivity : LockScreenActivity(), NotificationsAdapter.OnItemC
     }
 
     override fun onUserAlertDismiss(alertId: Int) {
+        userAlertItem = null
         dashPayViewModel.dismissUserAlert(alertId)
     }
 

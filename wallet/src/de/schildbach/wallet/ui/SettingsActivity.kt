@@ -77,6 +77,7 @@ class SettingsActivity : BaseMenuActivity() {
             WalletApplication.getInstance().resetBlockchain()
             WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
             val intent = MainActivity.createIntent(this)
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             intent.putExtra(MainActivity.EXTRA_RESET_BLOCKCHAIN, true)
             startActivity(intent)
         }

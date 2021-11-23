@@ -81,4 +81,8 @@
     <color name="gray_300">#99A2AD</color>
 
     <color name="bg_explore">#003470</color>
+
+    <!--orbitview -->
+    <color name="orbit_color">#80FFFFFF</color>
+
 </resources>

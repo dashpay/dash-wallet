@@ -8,6 +8,9 @@ import android.util.Base64;
 
 import androidx.annotation.RequiresApi;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -20,6 +23,7 @@ import javax.crypto.spec.GCMParameterSpec;
 
 @RequiresApi(api = Build.VERSION_CODES.M)
 public class ModernEncryptionProvider implements EncryptionProviderFactory.EncryptionProvider {
+    private static Logger log = LoggerFactory.getLogger(ModernEncryptionProvider.class);
 
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
 
@@ -31,6 +35,7 @@ public class ModernEncryptionProvider implements EncryptionProviderFactory.Encry
         this.securityPrefs = securityPrefs;
         this.keyStore = keyStore;
         encryptionIv = restoreIv();
+        log.info("encryption: iv size {} bytes", encryptionIv != null ? encryptionIv.length : 0);
     }
 
     @Override
@@ -62,6 +67,9 @@ public class ModernEncryptionProvider implements EncryptionProviderFactory.Encry
 
     @Override
     public String decrypt(String keyAlias, byte[] encryptedData) throws GeneralSecurityException {
+        log.info("decryption: iv size {} bytes , data size: {} bytes",
+                encryptionIv != null ? encryptionIv.length : 0,
+                encryptedData != null ? encryptedData.length : 0);
         final Cipher cipher = Cipher.getInstance(TRANSFORMATION);
         SecretKey secretKey = getSecretKey(keyAlias);
         GCMParameterSpec spec = new GCMParameterSpec(128, encryptionIv);

@@ -23,7 +23,6 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.util.KeyboardUtil
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_payments.toolbar
@@ -68,6 +67,7 @@ class InviteCreatedFragment : InvitationFragment(R.layout.fragment_invite_create
             shareInvitation(false)
         }
         maybe_later_button.setOnClickListener {
+            viewModel.saveTag(tag_edit.text.toString())
             viewModel.logEvent(AnalyticsConstants.Invites.CREATED_LATER)
             finishActivity()
         }

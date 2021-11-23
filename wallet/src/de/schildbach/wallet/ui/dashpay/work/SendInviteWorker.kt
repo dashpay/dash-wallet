@@ -80,13 +80,13 @@ class SendInviteWorker @AssistedInject constructor(
     }
 
     private val platformRepo = PlatformRepo.getInstance()
+    private val wallet = platformRepo.walletApplication.wallet!!
 
     override suspend fun doWorkWithBaseProgress(): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
 
         val encryptionKey: KeyParameter
-        val wallet = WalletApplication.getInstance().wallet!!
         org.bitcoinj.core.Context.propagate(wallet.context)
         try {
             encryptionKey = wallet.keyCrypter!!.deriveKey(password)
@@ -122,8 +122,11 @@ class SendInviteWorker @AssistedInject constructor(
 
     private fun createDynamicLink(dashPayProfile: DashPayProfile, cftx: CreditFundingTransaction, aesKeyParameter: KeyParameter): DynamicLink {
         log.info("creating dynamic link for invitation")
+        // dashj Context does not work with coroutines well, so we need to call Context.propogate
+        // in each suspend method that uses the dashj Context
+        org.bitcoinj.core.Context.propagate(wallet.context)
         val username = dashPayProfile.username
-        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
+        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
         return FirebaseDynamicLinks.getInstance()
                 .createDynamicLink().apply {
                     link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, cftx, aesKeyParameter).link
@@ -138,7 +141,7 @@ class SendInviteWorker @AssistedInject constructor(
                 .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
                     title = applicationContext.getString(R.string.invitation_preview_title)
                     val nameLabel = dashPayProfile.nameLabel
-                    val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.toString())
+                    val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
                     imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
                     description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
                 }.build())
