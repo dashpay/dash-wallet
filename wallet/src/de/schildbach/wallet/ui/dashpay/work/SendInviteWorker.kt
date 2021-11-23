@@ -126,7 +126,7 @@ class SendInviteWorker @AssistedInject constructor(
         // in each suspend method that uses the dashj Context
         org.bitcoinj.core.Context.propagate(wallet.context)
         val username = dashPayProfile.username
-        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.toString())
+        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
         return FirebaseDynamicLinks.getInstance()
                 .createDynamicLink().apply {
                     link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, cftx, aesKeyParameter).link
@@ -141,7 +141,7 @@ class SendInviteWorker @AssistedInject constructor(
                 .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
                     title = applicationContext.getString(R.string.invitation_preview_title)
                     val nameLabel = dashPayProfile.nameLabel
-                    val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.toString())
+                    val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
                     imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
                     description = applicationContext.getString(R.string.invitation_preview_message, nameLabel)
                 }.build())
