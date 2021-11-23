@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
@@ -367,8 +368,9 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun monitorUserLocation() {
+        _isLocationEnabled.value = true
+
         viewModelScope.launch {
-            _isLocationEnabled.value = true
             locationProvider.observeUpdates().collect {
                 _currentUserLocation.value = it
             }
@@ -499,5 +501,10 @@ class ExploreViewModel @Inject constructor(
             val name = "${address.country}, ${address.city}"
             _searchLocationName.postValue(name)
         }
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun setPhysicalResults(results: List<SearchResult>) {
+        _physicalSearchResults.value = results
     }
 }
