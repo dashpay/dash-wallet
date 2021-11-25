@@ -609,7 +609,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             appliedFilterNames.add(filters.territory)
         }
 
-        if (viewModel.filterMode.value == FilterMode.Physical) {
+        if (viewModel.exploreTopic == ExploreTopic.ATMs ||
+            viewModel.filterMode.value == FilterMode.Physical
+        ) {
             appliedFilterNames.add(
                 resources.getQuantityString(
                     if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
@@ -634,7 +636,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowFiltersPanel(): Boolean {
         return viewModel.selectedItem.value == null &&
                viewModel.isLocationEnabled.value == true &&
-               (viewModel.filterMode.value == FilterMode.Physical ||
+               (viewModel.exploreTopic == ExploreTopic.ATMs ||
+               viewModel.filterMode.value == FilterMode.Physical ||
                viewModel.paymentMethodFilter.isNotEmpty() ||
                viewModel.selectedTerritory.isNotEmpty())
     }
