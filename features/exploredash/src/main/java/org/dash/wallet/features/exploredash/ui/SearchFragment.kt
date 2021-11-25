@@ -618,8 +618,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             )
         }
 
-        binding.filterPanel.isVisible =
-            appliedFilterNames.any() && viewModel.selectedItem.value == null
+        binding.filterPanel.isVisible = shouldShowFiltersPanel()
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
@@ -634,9 +633,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun shouldShowFiltersPanel(): Boolean {
         return viewModel.selectedItem.value == null &&
-                (viewModel.filterMode.value == FilterMode.Physical ||
-                viewModel.paymentMethodFilter.isNotEmpty() ||
-                viewModel.selectedTerritory.isNotEmpty())
+               viewModel.isLocationEnabled.value == true &&
+               (viewModel.filterMode.value == FilterMode.Physical ||
+               viewModel.paymentMethodFilter.isNotEmpty() ||
+               viewModel.selectedTerritory.isNotEmpty())
     }
 
     private fun openFilters() {

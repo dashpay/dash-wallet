@@ -206,7 +206,6 @@ class ExploreViewModel @Inject constructor(
                                             GeoBounds.noBounds
                                         }
                                     }
-                                    .distinctUntilChanged()
                                     .flatMapLatest { bounds ->
                                         Pager(
                                             PagingConfig(
@@ -421,12 +420,13 @@ class ExploreViewModel @Inject constructor(
                          _isLocationEnabled.value == true &&
                          userLat != null && userLng != null &&
                          sortByDistance
+        val onlineFirst = _isLocationEnabled.value != true
 
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
             val type = getMerchantType(filterMode)
             merchantDao.observeAllPaging(query, territory, type, payment, bounds,
-                    byDistance, userLat ?: 0.0, userLng ?: 0.0)
+                    byDistance, userLat ?: 0.0, userLng ?: 0.0, onlineFirst)
         } else {
             val types = getAtmTypes(filterMode)
             atmDao.observeAllPaging(query, territory, types, bounds,
