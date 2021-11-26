@@ -128,7 +128,7 @@ class MerchantAtmDaoAccessor @Inject constructor(
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.pagingSearchGrouped(query, types, paymentMethod)
+                    merchantDao.pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod)
                 } else {
                     merchantDao.pagingGetGrouped(types, paymentMethod)
                 }
@@ -176,7 +176,7 @@ class MerchantAtmDaoAccessor @Inject constructor(
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.searchGroupedResultCount(query, types, paymentMethod)
+                    merchantDao.searchGroupedResultCount(sanitizeQuery(query), types, paymentMethod)
                 } else {
                     merchantDao.getGroupedResultCount(types, paymentMethod)
                 }
