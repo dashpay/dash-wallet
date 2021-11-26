@@ -27,7 +27,9 @@ import org.dash.wallet.features.exploredash.data.model.GeoBounds
 
 @Dao
 interface MerchantDao : BaseDao<Merchant> {
-
+    // Sorting by distance is approximate - it's done using "flat-earth" Pythagorean formula.
+    // It's good enough for our purposes, but if there is a need to display the distance
+    // in UI it should be done using map APIs.
     @Query("""
         SELECT * 
         FROM merchant 
@@ -347,124 +349,4 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query("DELETE FROM merchant WHERE source LIKE :source")
     override suspend fun deleteAll(source: String): Int
-
-    fun observePhysical(
-        query: String,
-        territory: String,
-        paymentMethod: String,
-        bounds: GeoBounds
-    ): Flow<List<Merchant>> {
-        return if (territory.isNotBlank()) {
-            if (query.isNotBlank()) {
-                searchByTerritory(sanitizeQuery(query), territory, MerchantType.ONLINE, paymentMethod)
-            } else {
-                observeByTerritory(territory, MerchantType.ONLINE, paymentMethod)
-            }
-        } else {
-            if (query.isNotBlank()) {
-                observeSearchResults(sanitizeQuery(query), MerchantType.ONLINE, paymentMethod,
-                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
-            } else {
-                observe(MerchantType.ONLINE, paymentMethod, bounds.northLat,
-                        bounds.eastLng, bounds.southLat, bounds.westLng)
-            }
-        }
-    }
-
-    // Sorting by distance is approximate - it's done using "flat-earth" Pythagorean formula.
-    // It's good enough for our purposes, but if there is a need to display the distance
-    // in UI it should be done using map APIs.
-    fun observeAllPaging(
-        query: String,
-        territory: String,
-        type: String,
-        paymentMethod: String,
-        bounds: GeoBounds,
-        sortByDistance: Boolean,
-        userLat: Double,
-        userLng: Double,
-        onlineFirst: Boolean
-    ): PagingSource<Int, Merchant> {
-        return when {
-            type == MerchantType.ONLINE -> {
-                // For Online merchants, need to get everything that can be used online
-                // and group by merchant ID to avoid duplicates
-                val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
-
-                if (query.isNotBlank()) {
-                    pagingSearchGrouped(query, types, paymentMethod)
-                } else {
-                    pagingGetGrouped(types, paymentMethod)
-                }
-            }
-            type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
-                // For physical merchants we search by coordinates (nearby)
-                // if location services are enabled
-                val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
-
-                if (query.isNotBlank()) {
-                    pagingSearchByCoordinates(sanitizeQuery(query), types, paymentMethod,
-                            bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
-                            sortByDistance, userLat, userLng)
-                } else {
-                    pagingGetByCoordinates(types, paymentMethod, bounds.northLat,
-                            bounds.eastLng, bounds.southLat, bounds.westLng,
-                            sortByDistance, userLat, userLng)
-                }
-            }
-            else -> {
-                // If location services are disabled or user picked a territory
-                // or filter is All, we search everything and filter by territory
-                val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
-                val onlineOrder = if (onlineFirst) 0 else 2
-
-                if (query.isNotBlank()) {
-                    pagingSearchByTerritory(sanitizeQuery(query), territory,
-                        types, paymentMethod, sortByDistance, userLat, userLng, onlineOrder)
-                } else {
-                    pagingGetByTerritory(territory, types, paymentMethod, sortByDistance, userLat, userLng, onlineOrder)
-                }
-            }
-        }
-    }
-
-    suspend fun getPagingResultsCount(
-        query: String,
-        territory: String,
-        type: String,
-        paymentMethod: String,
-        bounds: GeoBounds
-    ): Int {
-        return when {
-            type == MerchantType.ONLINE -> {
-                val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
-
-                if (query.isNotBlank()) {
-                    searchGroupedResultCount(query, types, paymentMethod)
-                } else {
-                    getGroupedResultCount(types, paymentMethod)
-                }
-            }
-            type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
-                val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
-
-                if (query.isNotBlank()) {
-                    searchByCoordinatesResultCount(sanitizeQuery(query), types, paymentMethod,
-                            bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
-                } else {
-                    getByCoordinatesResultCount(types, paymentMethod, bounds.northLat,
-                            bounds.eastLng, bounds.southLat, bounds.westLng)
-                }
-            }
-            else -> {
-                val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
-
-                if (query.isNotBlank()) {
-                    searchByTerritoryResultCount(sanitizeQuery(query), territory, types, paymentMethod)
-                } else {
-                    getByTerritoryResultCount(territory, types, paymentMethod)
-                }
-            }
-        }
-    }
 }

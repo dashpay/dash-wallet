@@ -25,6 +25,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
@@ -77,6 +78,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var bottomSheetWasExpanded: Boolean = false
     private var isKeyboardShowing: Boolean = false
     private var hasLocationBeenRequested: Boolean = false
+
+    private val isPhysicalSearch: Boolean
+        get() = viewModel.exploreTopic == ExploreTopic.ATMs ||
+                viewModel.filterMode.value == FilterMode.Physical
 
     private val permissionRequestLauncher = registerPermissionLauncher { isGranted ->
         if (isGranted) {
@@ -363,13 +368,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.itemDetails.apply {
             buySellContainer.isVisible = false
             locationHint.isVisible = false
-
-            Glide.with(requireContext())
-                .load(merchant.logoLocation)
-                .error(R.drawable.ic_image_placeholder)
-                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-                .transition(DrawableTransitionOptions.withCrossFade(200))
-                .into(itemImage)
+            
+            loadImage(merchant.logoLocation, itemImage)
 
             itemType.text = when (cleanMerchantTypeValue(merchant.type)) {
                 MerchantType.ONLINE -> resources.getString(R.string.explore_online_merchant)
@@ -430,40 +430,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 viewModel.receiveDash()
             }
 
-            when (atm.type) {
-                AtmType.BUY -> {
-                    buyBtn.isVisible = true
-                    sellBtn.isVisible = false
-                }
-                AtmType.SELL -> {
-                    buyBtn.isVisible = false
-                    sellBtn.isVisible = true
-                }
-                AtmType.BOTH -> {
-                    buyBtn.isVisible = true
-                    sellBtn.isVisible = true
-                }
-            }
+            buyBtn.isVisible = atm.type != AtmType.SELL
+            sellBtn.isVisible = atm.type != AtmType.BUY
 
             root.updateLayoutParams<ConstraintLayout.LayoutParams> {
                 matchConstraintPercentHeight =
                     ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
             }
 
-            Glide.with(requireContext())
-                .load(atm.logoLocation)
-                .error(R.drawable.ic_image_placeholder)
-                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-                .transition(DrawableTransitionOptions.withCrossFade(200))
-                .into(logoImg)
-
-            Glide.with(requireContext())
-                .load(atm.coverImage)
-                .placeholder(R.drawable.ic_image_placeholder)
-                .error(R.drawable.ic_image_placeholder)
-                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
-                .transition(DrawableTransitionOptions.withCrossFade(200))
-                .into(itemImage)
+            loadImage(atm.logoLocation, logoImg)
+            loadImage(atm.coverImage, itemImage)
 
             bindCommonDetails(atm, false)
         }
@@ -551,10 +527,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun getSearchSubtitle(): String {
-        if (viewModel.isLocationEnabled.value != true ||
-            (viewModel.exploreTopic == ExploreTopic.Merchants &&
-                    viewModel.filterMode.value != FilterMode.Physical)
-        ) {
+        if (viewModel.isLocationEnabled.value != true || !isPhysicalSearch) {
             return ""
         }
 
@@ -609,9 +582,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             appliedFilterNames.add(filters.territory)
         }
 
-        if (viewModel.exploreTopic == ExploreTopic.ATMs ||
-            viewModel.filterMode.value == FilterMode.Physical
-        ) {
+        if (isPhysicalSearch) {
             appliedFilterNames.add(
                 resources.getQuantityString(
                     if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
@@ -636,8 +607,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowFiltersPanel(): Boolean {
         return viewModel.selectedItem.value == null &&
                viewModel.isLocationEnabled.value == true &&
-               (viewModel.exploreTopic == ExploreTopic.ATMs ||
-               viewModel.filterMode.value == FilterMode.Physical ||
+               (isPhysicalSearch ||
                viewModel.paymentMethodFilter.isNotEmpty() ||
                viewModel.selectedTerritory.isNotEmpty())
     }
@@ -685,5 +655,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowUpButton(): Boolean {
         val offset = binding.searchResults.computeVerticalScrollOffset()
         return offset > SCROLL_OFFSET_FOR_UP
+    }
+
+    private fun loadImage(image: String?, into: ImageView) {
+        Glide.with(requireContext())
+                .load(image)
+                .placeholder(R.drawable.ic_image_placeholder)
+                .error(R.drawable.ic_image_placeholder)
+                .transform(RoundedCorners(resources.getDimensionPixelSize(R.dimen.logo_corners_radius)))
+                .transition(DrawableTransitionOptions.withCrossFade(200))
+                .into(into)
     }
 }

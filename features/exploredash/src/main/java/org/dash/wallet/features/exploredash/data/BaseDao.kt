@@ -28,9 +28,4 @@ interface BaseDao<T: SearchResult> {
 
     // add @Query(...) in sub classes to avoid build failures
     suspend fun deleteAll(source: String): Int
-
-    fun sanitizeQuery(query: String): String {
-        val escapedQuotes = query.replace(Regex.fromLiteral("\""), "\"\"")
-        return "\"$escapedQuotes*\""
-    }
 }

@@ -25,8 +25,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.features.exploredash.data.AtmDao
-import org.dash.wallet.features.exploredash.data.MerchantDao
+import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocation
@@ -59,8 +58,7 @@ data class FilterOptions(
 @FlowPreview
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    private val merchantDao: MerchantDao,
-    private val atmDao: AtmDao,
+    private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt
 ) : ViewModel() {
     companion object {
@@ -329,9 +327,9 @@ class ExploreViewModel @Inject constructor(
 
     suspend fun getTerritoriesWithPOIs(): List<String> {
         return if (exploreTopic == ExploreTopic.Merchants) {
-            merchantDao.getTerritories().filter { it.isNotEmpty() }
+            exploreData.getMerchantTerritories().filter { it.isNotEmpty() }
         } else {
-            atmDao.getTerritories().filter { it.isNotEmpty() }
+            exploreData.getAtmTerritories().filter { it.isNotEmpty() }
         }
     }
 
@@ -399,10 +397,10 @@ class ExploreViewModel @Inject constructor(
         bounds: GeoBounds
     ): Flow<List<SearchResult>> {
         return if (exploreTopic == ExploreTopic.Merchants) {
-            merchantDao.observePhysical(query, territory, payment, bounds)
+            exploreData.observePhysicalMerchants(query, territory, payment, bounds)
         } else {
             val types = getAtmTypes(filterMode)
-            atmDao.observePhysical(query, territory, types, bounds)
+            exploreData.observePhysicalAtms(query, territory, types, bounds)
         }
     }
 
@@ -425,11 +423,11 @@ class ExploreViewModel @Inject constructor(
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
             val type = getMerchantType(filterMode)
-            merchantDao.observeAllPaging(query, territory, type, payment, bounds,
+            exploreData.observeMerchantsPaging(query, territory, type, payment, bounds,
                     byDistance, userLat ?: 0.0, userLng ?: 0.0, onlineFirst)
         } else {
             val types = getAtmTypes(filterMode)
-            atmDao.observeAllPaging(query, territory, types, bounds,
+            exploreData.observeAtmsPaging(query, territory, types, bounds,
                     byDistance, userLat ?: 0.0, userLng ?: 0.0)
         } as PagingSource<Int, SearchResult>
     }
@@ -447,13 +445,13 @@ class ExploreViewModel @Inject constructor(
             }
             val result = if (exploreTopic == ExploreTopic.Merchants) {
                 val type = getMerchantType(filterMode.value ?: FilterMode.Online)
-                merchantDao.getPagingResultsCount(
+                exploreData.getMerchantsResultCount(
                         searchQuery.value, selectedTerritory, type,
                         paymentMethodFilter, radiusBounds ?: GeoBounds.noBounds
                 )
             } else {
                 val types = getAtmTypes(filterMode.value ?: FilterMode.All)
-                atmDao.getPagingResultsCount(
+                exploreData.getAtmsResultsCount(
                         searchQuery.value, types,
                         selectedTerritory, radiusBounds ?: GeoBounds.noBounds
                 )
