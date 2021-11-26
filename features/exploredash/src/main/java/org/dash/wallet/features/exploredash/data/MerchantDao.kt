@@ -392,7 +392,7 @@ interface MerchantDao : BaseDao<Merchant> {
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    pagingSearchGrouped(query, types, paymentMethod)
+                    pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod)
                 } else {
                     pagingGetGrouped(types, paymentMethod)
                 }
@@ -440,7 +440,7 @@ interface MerchantDao : BaseDao<Merchant> {
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    searchGroupedResultCount(query, types, paymentMethod)
+                    searchGroupedResultCount(sanitizeQuery(query), types, paymentMethod)
                 } else {
                     getGroupedResultCount(types, paymentMethod)
                 }
