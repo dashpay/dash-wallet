@@ -58,8 +58,8 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
-        SELECT COUNT(*)
-        FROM merchant 
+        SELECT COUNT(DISTINCT merchantId)
+        FROM merchant
         WHERE type IN (:types)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND latitude < :northLat
@@ -107,7 +107,7 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -156,7 +156,7 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT merchantId)
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -199,7 +199,7 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -229,12 +229,10 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-        GROUP BY merchantId
-        HAVING Id = MIN(Id)
     """)
     fun getGroupedResultCount(
         types: List<String>,
@@ -259,14 +257,12 @@ interface MerchantDao : BaseDao<Merchant> {
     ): PagingSource<Int, Merchant>
 
     @Query("""
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
-        GROUP BY merchantId
-        HAVING Id = MIN(Id)
     """)
     fun searchGroupedResultCount(
         query: String,
