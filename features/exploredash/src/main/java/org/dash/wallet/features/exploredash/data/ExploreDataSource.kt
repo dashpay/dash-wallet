@@ -82,7 +82,7 @@ interface ExploreDataSource {
     fun sanitizeQuery(query: String): String
 }
 
-class MerchantAtmDaoAccessor @Inject constructor(
+open class MerchantAtmDataSource @Inject constructor(
     private val merchantDao: MerchantDao,
     private val atmDao: AtmDao
 ): ExploreDataSource {

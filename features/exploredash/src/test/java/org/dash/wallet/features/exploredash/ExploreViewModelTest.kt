@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.features.exploredash.data.AtmDao
+import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.Merchant
@@ -61,11 +62,9 @@ class ExploreViewModelTest {
     fun filterByTerritoryIsCorrect() {
         runBlocking {
             val territory = "Texas"
-
-            val atmDaoMock = mock<AtmDao>()
-            val merchantDaoMock = mock<MerchantDao> {
+            val dataSource = mock<ExploreDataSource> {
                 on {
-                    observePhysical(eq(""), eq(territory), eq(""), any())
+                    observePhysicalMerchants(eq(""), eq(territory), eq(""), any())
                 } doReturn flow { emit(merchants.filter { it.territory == territory }) }
             }
 
@@ -73,7 +72,7 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
+            val viewModel = ExploreViewModel(dataSource, locationState)
             viewModel.selectedTerritory = territory
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
@@ -87,9 +86,9 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(merchantDaoMock).observePhysical("", territory, "", GeoBounds.noBounds)
+            verify(dataSource).observePhysicalMerchants("", territory, "", GeoBounds.noBounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
-            verifyNoMoreInteractions(merchantDaoMock)
+            verifyNoMoreInteractions(dataSource)
         }
     }
 
@@ -99,10 +98,9 @@ class ExploreViewModelTest {
             val query = "merch"
             val bounds = GeoBounds.noBounds.apply { zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1 }
 
-            val atmDaoMock = mock<AtmDao>()
-            val merchantDaoMock = mock<MerchantDao> {
+            val dataSource = mock<ExploreDataSource> {
                 on {
-                    observePhysical(eq(query), eq(""), eq(PaymentMethod.DASH), any())
+                    observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any())
                 } doReturn flow { emit(merchants
                         .filter { it.name?.lowercase()?.startsWith(query) ?: false }
                         .filter { it.type != MerchantType.ONLINE }
@@ -114,7 +112,7 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
+            val viewModel = ExploreViewModel(dataSource, locationState)
             viewModel.setFilterMode(FilterMode.Physical)
             viewModel.searchBounds = bounds
             viewModel.paymentMethodFilter = PaymentMethod.DASH
@@ -129,9 +127,9 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(merchantDaoMock).observePhysical(query, "", PaymentMethod.DASH, bounds)
+            verify(dataSource).observePhysicalMerchants(query, "", PaymentMethod.DASH, bounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
-            verifyNoMoreInteractions(merchantDaoMock)
+            verifyNoMoreInteractions(dataSource)
         }
     }
 
@@ -141,10 +139,9 @@ class ExploreViewModelTest {
             val query = "mer"
             val territory = "Louisiana"
 
-            val atmDaoMock = mock<AtmDao>()
-            val merchantDaoMock = mock<MerchantDao> {
+            val dataSource = mock<ExploreDataSource> {
                 on {
-                    observePhysical(eq(query), eq(territory), eq(""), any())
+                    observePhysicalMerchants(eq(query), eq(territory), eq(""), any())
                 } doReturn flow {
                     emit(merchants.filter {
                         (it.name?.lowercase()?.startsWith(query) ?: false) && it.territory == territory
@@ -156,7 +153,7 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationState)
+            val viewModel = ExploreViewModel(dataSource, locationState)
             viewModel.selectedTerritory = territory
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
@@ -170,9 +167,9 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(merchantDaoMock).observePhysical(query, territory, "", GeoBounds.noBounds)
+            verify(dataSource).observePhysicalMerchants(query, territory, "", GeoBounds.noBounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
-            verifyNoMoreInteractions(merchantDaoMock)
+            verifyNoMoreInteractions(dataSource)
         }
     }
 
@@ -183,10 +180,9 @@ class ExploreViewModelTest {
             val userLng = -84.4951037
             val bounds = GeoBounds(northLat = 34.002174157200685, eastLng = -84.14712188964452, southLat = 33.423247842799306, westLng = -84.8430855103555, centerLat = userLat, centerLng = userLng, zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1)
 
-            val atmDaoMock = mock<AtmDao>()
-            val merchantDaoMock = mock<MerchantDao> {
+            val dataSource = mock<ExploreDataSource> {
                 on {
-                    observePhysical(eq(""), eq(""), eq(""), any())
+                    observePhysicalMerchants(eq(""), eq(""), eq(""), any())
                 } doReturn flow {
                     emit(merchants
                             .filter { it.type != MerchantType.ONLINE }
@@ -202,7 +198,7 @@ class ExploreViewModelTest {
             val locationMock = mock<UserLocationStateInt> {
                 on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn bounds
             }
-            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationMock)
+            val viewModel = ExploreViewModel(dataSource, locationMock)
             viewModel.searchBounds = GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng)
                     .apply { zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1 }
             viewModel.setFilterMode(FilterMode.Physical)
@@ -219,20 +215,19 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(merchantDaoMock).observePhysical("", "", "", bounds)
+            verify(dataSource).observePhysicalMerchants("", "", "", bounds)
             verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
-            verifyNoMoreInteractions(merchantDaoMock)
+            verifyNoMoreInteractions(dataSource)
         }
     }
 
     @Test
     fun onMapMarkerSelected_CorrectSelectedItem() {
         runBlocking {
-            val atmDaoMock = mock<AtmDao>()
             val locationMock = mock<UserLocationStateInt>()
-            val merchantDaoMock = mock<MerchantDao>()
+            val dataSource = mock<ExploreDataSource>()
 
-            val viewModel = ExploreViewModel(merchantDaoMock, atmDaoMock, locationMock)
+            val viewModel = ExploreViewModel(dataSource, locationMock)
             viewModel.setPhysicalResults(merchants)
             viewModel.onMapMarkerSelected(5)
 
@@ -241,9 +236,8 @@ class ExploreViewModelTest {
 
             assertEquals(expected, actual)
 
-            verifyNoMoreInteractions(merchantDaoMock)
+            verifyNoMoreInteractions(dataSource)
             verifyNoMoreInteractions(locationMock)
-            verifyNoMoreInteractions(atmDaoMock)
         }
     }
 }

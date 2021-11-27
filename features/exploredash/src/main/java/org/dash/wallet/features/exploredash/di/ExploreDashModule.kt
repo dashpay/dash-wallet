@@ -28,7 +28,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
-import org.dash.wallet.features.exploredash.data.MerchantAtmDaoAccessor
+import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
 import org.dash.wallet.features.exploredash.services.UserLocationState
@@ -50,7 +50,7 @@ abstract class ExploreDashModule {
 
     @Binds
     abstract fun bindExploreDataSource(
-        exploreDatabase: MerchantAtmDaoAccessor
+        exploreDatabase: MerchantAtmDataSource
     ): ExploreDataSource
 }
 
