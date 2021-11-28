@@ -19,7 +19,7 @@
     <color name="dash_green">#27C509</color>
     <color name="ripple_light">#60ffffff</color>
     <color name="ripple_dark">#80012060</color>
-    <color name="list_view_btn_ripple">#1f000000</color>
+    <color name="button_ripple_color">#1f000000</color>
     <color name="success_green">#92D048</color>
     <color name="error_red">#BF2827</color>
     <!-- added for transaction status -->
@@ -84,4 +84,5 @@
     <color name="divider_color">#EBEDF0</color>
     <color name="bg_accuracy_circle">#26008DE4</color>
     <color name="bg_filter_dialog">#eff0f4</color>
+    <color name="disabled_button_bg">#eeeeee</color>
 </resources>
