@@ -19,10 +19,7 @@ package org.dash.wallet.features.exploredash.data
 
 import androidx.paging.PagingSource
 import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantType
+import org.dash.wallet.features.exploredash.data.model.*
 import javax.inject.Inject
 
 interface ExploreDataSource {
@@ -43,7 +40,7 @@ interface ExploreDataSource {
         userLat: Double,
         userLng: Double,
         onlineFirst: Boolean
-    ): PagingSource<Int, Merchant>
+    ): PagingSource<Int, MerchantInfo>
 
     suspend fun getMerchantsResultCount(
         query: String,
@@ -120,7 +117,7 @@ open class MerchantAtmDataSource @Inject constructor(
         userLat: Double,
         userLng: Double,
         onlineFirst: Boolean
-    ): PagingSource<Int, Merchant> {
+    ): PagingSource<Int, MerchantInfo> {
         return when {
             type == MerchantType.ONLINE -> {
                 // For Online merchants, need to get everything that can be used online
@@ -143,8 +140,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
                         sortByDistance, userLat, userLng)
                 } else {
-                    merchantDao.pagingGetByCoordinates(types, paymentMethod, bounds.northLat,
-                        bounds.eastLng, bounds.southLat, bounds.westLng,
+                    merchantDao.pagingGetByCoordinates(types, paymentMethod,
+                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
                         sortByDistance, userLat, userLng)
                 }
             }

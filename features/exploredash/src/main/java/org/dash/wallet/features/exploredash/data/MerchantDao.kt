@@ -20,18 +20,21 @@ package org.dash.wallet.features.exploredash.data
 import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
+import org.dash.wallet.features.exploredash.data.model.MerchantInfo
 
 @Dao
 interface MerchantDao : BaseDao<Merchant> {
     // Sorting by distance is approximate - it's done using "flat-earth" Pythagorean formula.
     // It's good enough for our purposes, but if there is a need to display the distance
     // in UI it should be done using map APIs.
+    @Transaction
     @Query("""
-        SELECT * 
+        SELECT *, COUNT(*) AS physical_amount
         FROM merchant 
         WHERE type IN (:types)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -55,7 +58,7 @@ interface MerchantDao : BaseDao<Merchant> {
         sortByDistance: Boolean,
         anchorLat: Double,
         anchorLng: Double
-    ): PagingSource<Int, Merchant>
+    ): PagingSource<Int, MerchantInfo>
 
     @Query("""
         SELECT COUNT(DISTINCT merchantId)
@@ -76,8 +79,9 @@ interface MerchantDao : BaseDao<Merchant> {
         westLng: Double
     ): Int
 
+    @Transaction
     @Query("""
-        SELECT *
+        SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -104,7 +108,7 @@ interface MerchantDao : BaseDao<Merchant> {
         sortByDistance: Boolean,
         anchorLat: Double,
         anchorLng: Double
-    ): PagingSource<Int, Merchant>
+    ): PagingSource<Int, MerchantInfo>
 
     @Query("""
         SELECT COUNT(DISTINCT merchantId)
@@ -128,8 +132,9 @@ interface MerchantDao : BaseDao<Merchant> {
         westLng: Double
     ): Int
 
+    @Transaction
     @Query("""
-        SELECT * 
+        SELECT *, COUNT(*) AS physical_amount
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -153,7 +158,7 @@ interface MerchantDao : BaseDao<Merchant> {
         anchorLat: Double,
         anchorLng: Double,
         onlineOrder: Int
-    ): PagingSource<Int, Merchant>
+    ): PagingSource<Int, MerchantInfo>
 
     @Query("""
         SELECT COUNT(DISTINCT merchantId)
@@ -168,8 +173,9 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String
     ): Int
 
+    @Transaction
     @Query("""
-        SELECT *
+        SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -196,7 +202,7 @@ interface MerchantDao : BaseDao<Merchant> {
         anchorLat: Double,
         anchorLng: Double,
         onlineOrder: Int
-    ): PagingSource<Int, Merchant>
+    ): PagingSource<Int, MerchantInfo>
 
     @Query("""
         SELECT COUNT(DISTINCT merchantId)
@@ -214,19 +220,19 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String
     ): Int
 
+    @Transaction
     @Query("""
-        SELECT *
+        SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
         GROUP BY merchantId
-        HAVING Id = MIN(Id)
         ORDER BY name COLLATE NOCASE ASC
     """)
     fun pagingGetGrouped(
         types: List<String>,
         paymentMethod: String
-    ): PagingSource<Int, Merchant>
+    ): PagingSource<Int, MerchantInfo>
 
     @Query("""
         SELECT COUNT(DISTINCT merchantId)
@@ -239,22 +245,22 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String
     ): Int
 
+    @Transaction
     @Query("""
-        SELECT *
+        SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
         GROUP BY merchantId
-        HAVING Id = MIN(Id)
         ORDER BY name COLLATE NOCASE ASC
     """)
     fun pagingSearchGrouped(
         query: String,
         types: List<String>,
         paymentMethod: String
-    ): PagingSource<Int, Merchant>
+    ): PagingSource<Int, MerchantInfo>
 
     @Query("""
         SELECT COUNT(DISTINCT merchantId)

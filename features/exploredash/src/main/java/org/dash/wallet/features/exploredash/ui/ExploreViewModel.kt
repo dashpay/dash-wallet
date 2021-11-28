@@ -205,19 +205,10 @@ class ExploreViewModel @Inject constructor(
                                         }
                                     }
                                     .flatMapLatest { bounds ->
-                                        Pager(
-                                            PagingConfig(
-                                                pageSize = PAGE_SIZE,
-                                                enablePlaceholders = false,
-                                                maxSize = MAX_ITEMS_IN_MEMORY
-                                            )
-                                        ) {
-                                            _appliedFilters.postValue(
-                                                FilterOptions(query, territory, payment, selectedRadiusOption)
-                                            )
-
-                                            getPagingSource(query, territory, payment, mode, bounds, sortByDistance)
-                                        }.flow
+                                        _appliedFilters.postValue(
+                                            FilterOptions(query, territory, payment, selectedRadiusOption)
+                                        )
+                                        getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
                                             .cachedIn(viewModelScope)
                                     }
                             }
@@ -255,8 +246,7 @@ class ExploreViewModel @Inject constructor(
 
     fun init(exploreTopic: ExploreTopic) {
         if (this.exploreTopic != exploreTopic) {
-            _pagingSearchResults.value = PagingData.from(listOf())
-            _physicalSearchResults.value = listOf()
+            clearSearchResults()
         }
 
         this.exploreTopic = exploreTopic
@@ -334,7 +324,9 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant) {
-        _selectedItem.postValue(merchant)
+        if (isLocationEnabled.value == true || merchant.physicalAmount <= 1) {
+            _selectedItem.postValue(merchant)
+        }
     }
 
     fun openAtmDetails(atm: Atm) {
@@ -381,12 +373,9 @@ class ExploreViewModel @Inject constructor(
         _selectedRadiusOption.value = DEFAULT_RADIUS_OPTION
     }
 
-    private fun resetFilterMode() {
-        _filterMode.value = if (exploreTopic == ExploreTopic.Merchants) {
-            FilterMode.Online
-        } else {
-            FilterMode.All
-        }
+    private fun clearSearchResults() {
+        _pagingSearchResults.value = PagingData.from(listOf())
+        _physicalSearchResults.value = listOf()
     }
 
     private fun getBoundedFlow(
@@ -404,32 +393,58 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    private fun getPagingSource(
+    private fun getPagingFlow(
         query: String,
         territory: String,
         payment: String,
         filterMode: FilterMode,
         bounds: GeoBounds,
         sortByDistance: Boolean
-    ): PagingSource<Int, SearchResult> {
+    ): Flow<PagingData<SearchResult>> {
         val userLat = currentUserLocation.value?.latitude
         val userLng = currentUserLocation.value?.longitude
         val byDistance = _filterMode.value != FilterMode.Online &&
-                         _isLocationEnabled.value == true &&
-                         userLat != null && userLng != null &&
-                         sortByDistance
+                _isLocationEnabled.value == true &&
+                userLat != null && userLng != null &&
+                sortByDistance
         val onlineFirst = _isLocationEnabled.value != true
+
+        val pagerConfig = PagingConfig(
+            pageSize = PAGE_SIZE,
+            enablePlaceholders = false,
+            maxSize = MAX_ITEMS_IN_MEMORY
+        )
 
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
-            val type = getMerchantType(filterMode)
-            exploreData.observeMerchantsPaging(query, territory, type, payment, bounds,
-                    byDistance, userLat ?: 0.0, userLng ?: 0.0, onlineFirst)
+            Pager(pagerConfig) {
+                val type = getMerchantType(filterMode)
+                exploreData.observeMerchantsPaging(
+                    query, territory, type, payment, bounds,
+                    byDistance, userLat ?: 0.0, userLng ?: 0.0, onlineFirst
+                )
+            }.flow.map { data ->
+                data.filter { it.merchant != null }
+                    .map {
+                        it.merchant!!.apply {
+                            this.physicalAmount =
+                                if (filterMode != FilterMode.Online) {
+                                    it.physicalAmount ?: 1
+                                } else {
+                                    0
+                                }
+                        }
+                    }
+            }
         } else {
-            val types = getAtmTypes(filterMode)
-            exploreData.observeAtmsPaging(query, territory, types, bounds,
-                    byDistance, userLat ?: 0.0, userLng ?: 0.0)
-        } as PagingSource<Int, SearchResult>
+            Pager(pagerConfig) {
+                val types = getAtmTypes(filterMode)
+                exploreData.observeAtmsPaging(
+                    query, territory, types, bounds,
+                    byDistance, userLat ?: 0.0, userLng ?: 0.0
+                )
+            }.flow
+        } as Flow<PagingData<SearchResult>>
     }
 
     private fun countPagedResults() {
@@ -458,6 +473,20 @@ class ExploreViewModel @Inject constructor(
             }
             _pagingSearchResultsCount.postValue(result)
         }
+    }
+
+    private fun resetFilterMode() {
+        val defaultMode = if (exploreTopic == ExploreTopic.Merchants) {
+            FilterMode.Online
+        } else {
+            FilterMode.All
+        }
+
+        if (defaultMode != _filterMode.value) {
+            clearSearchResults()
+        }
+
+        _filterMode.value = defaultMode
     }
 
     private fun getMerchantType(filterMode: FilterMode): String {

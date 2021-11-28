@@ -29,6 +29,7 @@
     <string name="explore_physical_merchant">Physical Merchant</string>
     <string name="explore_online_merchant">Online</string>
     <string name="explore_both_types_merchant">Online, Physical Merchant</string>
+    <string name="explore_multiple_locations">+ multiple locations</string>
     <string name="explore_option_all">All</string>
     <string name="explore_option_buy">Buy</string>
     <string name="explore_option_sell">Sell</string>

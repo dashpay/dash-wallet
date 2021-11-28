@@ -24,18 +24,19 @@ import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.MerchantInfo
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.junit.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.kotlin.*
 
-class TestPagingSource : PagingSource<Int, Merchant>() {
-    override fun getRefreshKey(state: PagingState<Int, Merchant>): Int? {
+class TestPagingSource : PagingSource<Int, MerchantInfo>() {
+    override fun getRefreshKey(state: PagingState<Int, MerchantInfo>): Int? {
         return 0
     }
 
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Merchant> {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, MerchantInfo> {
         return LoadResult.Page(listOf(), 0, 1)
     }
 }
