@@ -115,7 +115,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:checked="true"
-                        android:drawableEnd="@drawable/ic_gift_card"
+                        android:drawableEnd="@drawable/ic_gift_card_rounded"
                         android:text="@string/explore_payment_gift_card" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

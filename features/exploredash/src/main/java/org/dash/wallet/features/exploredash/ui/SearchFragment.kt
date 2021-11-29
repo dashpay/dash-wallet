@@ -386,7 +386,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             val isDash = merchant.paymentMethod == PaymentMethod.DASH
             val drawable = ResourcesCompat.getDrawable(
                 resources,
-                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card_white, null
+                if (isDash) R.drawable.ic_dash else R.drawable.ic_gift_card, null
             )
             payBtn.setCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null)
 
