@@ -55,18 +55,21 @@
 
         <Button
             android:id="@+id/buy_btn"
-            style="@style/DashButton.Green.Small"
+            style="@style/Button.Primary.Green"
             android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:text="@string/explore_buy_dash"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/sell_btn"
-            app:layout_constraintTop_toBottomOf="@id/manufacturer" />
+            app:layout_constraintTop_toBottomOf="@id/manufacturer"
+            tools:background="@color/green_300"/>
 
         <Button
             android:id="@+id/sell_btn"
-            style="@style/DashButton.Blue.Small"
+            style="@style/Button.Primary.Blue"
             android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="7dp"
             android:layout_marginTop="20dp"
             android:text="@string/explore_sell_dash"
@@ -123,7 +126,7 @@
 
         <TextView
             android:id="@+id/item_type"
-            style="@style/Caption.Gray400"
+            style="@style/Body2.Gray400"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="1dp"
@@ -139,60 +142,82 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:minLines="2"
+            android:minLines="1"
             android:maxLines="4"
             android:ellipsize="end"
             app:layout_constraintStart_toStartOf="@+id/item_name"
             app:layout_constraintTop_toBottomOf="@id/item_type"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:text="208 Regent Street\nLondon, United Kingdom\nW1B 5AH"
             app:layout_constraintBottom_toTopOf="@id/actions"
-            app:layout_constrainedHeight="true" />
+            app:layout_constrainedHeight="true"
+            tools:text="208 Regent Street\nLondon, United Kingdom\nW1B 5AH"/>
+
 
         <LinearLayout
             android:id="@+id/actions"
-            android:layout_width="136dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:orientation="vertical"
             android:layout_marginBottom="8dp"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/item_address"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toTopOf="@id/pay_btn">
 
-            <ImageButton
-                android:id="@+id/call_btn"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginHorizontal="11dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_call" />
+            <Button
+                android:id="@+id/show_all_btn"
+                style="@style/Button.Primary.ExtraSmall.Blue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/explore_show_all"
+                android:drawablePadding="8dp"
+                android:drawableRight="@drawable/ic_show_all"
+                android:visibility="gone"
+                android:layout_gravity="center_horizontal"
+                tools:background="@color/extra_small_btn_bg"
+                tools:visibility="visible" />
 
-            <ImageButton
-                android:id="@+id/direction_btn"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginHorizontal="11dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_direction" />
+            <LinearLayout
+                android:layout_width="136dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal">
 
-            <ImageButton
-                android:id="@+id/link_btn"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginHorizontal="11dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_link" />
+                <ImageButton
+                    android:id="@+id/call_btn"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginHorizontal="11dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_call" />
+
+                <ImageButton
+                    android:id="@+id/direction_btn"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginHorizontal="11dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_direction" />
+
+                <ImageButton
+                    android:id="@+id/link_btn"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginHorizontal="11dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_link" />
+            </LinearLayout>
         </LinearLayout>
 
         <Button
             android:id="@+id/pay_btn"
-            style="@style/DashButton.Blue.SemiBold"
+            style="@style/Button.Primary.Large.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="18dp"
             android:drawableStart="@drawable/ic_dash"
             android:paddingStart="92dp"
             android:paddingEnd="76dp"

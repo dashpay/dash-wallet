@@ -63,6 +63,7 @@
     <string name="explore_buy_gift_card">Buy a Gift Card</string>
     <string name="explore_buy_dash">Buy Dash</string>
     <string name="explore_sell_dash">Sell Dash</string>
+    <string name="explore_show_all">Show All Locations</string>
     <string name="explore_atm_location_hint">This ATM is located in the</string>
     <string name="explore_maps_intent_uri">http://maps.google.com/maps?daddr=%1$f,%2$f</string>
 

@@ -381,6 +381,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             val isOnline = viewModel.filterMode.value == FilterMode.Online ||
                     merchant.type == MerchantType.ONLINE
             itemAddress.isVisible = !isOnline
+            showAllBtn.isVisible = !isOnline && merchant.physicalAmount > 1
 
             val isDash = merchant.paymentMethod == PaymentMethod.DASH
             val drawable = ResourcesCompat.getDrawable(
@@ -421,6 +422,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             payBtn.isVisible = false
             manufacturer.text = atm.manufacturer?.replaceFirstChar { it.uppercase() }
             itemType.isVisible = false
+            showAllBtn.isVisible = false
 
             sellBtn.setOnClickListener {
                 viewModel.sendDash()
