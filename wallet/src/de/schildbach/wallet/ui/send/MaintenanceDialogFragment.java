@@ -38,14 +38,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
-import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnShowListener;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -59,7 +57,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -141,7 +138,7 @@ public class MaintenanceDialogFragment extends DialogFragment {
 
         badPasswordView = view.findViewById(R.id.maintenance_dialog_bad_password);
 
-        final AlertDialogBuilder maintenanceAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder maintenanceAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         maintenanceAlertDialogBuilder.setTitle(getString(R.string.maintenance_dialog_title));
         maintenanceAlertDialogBuilder.setView(view);
         maintenanceAlertDialogBuilder.setPositiveText(getString(R.string.maintenance_dialog_button_move));

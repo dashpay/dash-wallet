@@ -118,7 +118,7 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
         final TextView viewLabel = (TextView) view.findViewById(R.id.edit_address_book_entry_label);
         viewLabel.setText(label != null ? label : suggestedAddressLabel);
 
-        final AlertDialogBuilder editAddressBookEntryAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder editAddressBookEntryAlertDialogBuilder = new AlertDialogBuilder(activity, EditAddressBookEntryFragment.this.getLifecycle());
         if (isOwn){
             editAddressBookEntryAlertDialogBuilder.setTitle(isAdd ? getString(R.string.edit_address_book_entry_dialog_title_add_receive):getString(R.string.edit_address_book_entry_dialog_title_edit_receive));
         } else {

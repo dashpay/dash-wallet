@@ -2,17 +2,22 @@ package org.dash.wallet.common.util
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.OnLifecycleEvent
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 /**
- * Some string resources undergo some transformation before being added to the components of the alert dialog built
+ * Some string resources undergo some transformation before being added to the components of the alert dialog to be built.
  * So for simplicity we shall have all the text components be of type CharSequence
  */
 
-open class AlertDialogBuilder(private val appContext: Context) {
+ class AlertDialogBuilder(private val appContext: Context,
+                         lifecycle: Lifecycle): LifecycleObserver {
     var title: CharSequence? = null
     var message: CharSequence? = null
     var positiveText: CharSequence? = null
@@ -28,6 +33,12 @@ open class AlertDialogBuilder(private val appContext: Context) {
     var cancelable: Boolean = true
     var showIcon: Boolean = false
     var isCancelableOnTouchOutside: Boolean = true
+    lateinit var alertDialog: AlertDialog
+
+    init {
+        lifecycle.addObserver(this)
+    }
+
 
     private fun initDialogBuilder(): AlertDialog.Builder
          = AlertDialog.Builder(appContext, R.style.My_Theme_Dialog)
@@ -52,7 +63,8 @@ open class AlertDialogBuilder(private val appContext: Context) {
     }
 
     fun createAlertDialog(): AlertDialog {
-        return initDialogBuilder().create().apply {
+        alertDialog = initDialogBuilder().create()
+        alertDialog.apply {
             if (showIcon){
                 setIcon(R.drawable.ic_warning_grey600_24dp)
             }
@@ -61,5 +73,13 @@ open class AlertDialogBuilder(private val appContext: Context) {
                 appContext as Activity?
             )
         }
+        return alertDialog
+    }
+
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+    fun stop() {
+        alertDialog.dismiss()
+        Log.e("TAG", "================================>>>> lifecycle owner STOPED")
     }
 }

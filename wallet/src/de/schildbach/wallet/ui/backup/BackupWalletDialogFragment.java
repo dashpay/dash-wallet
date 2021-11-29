@@ -167,7 +167,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
 
         warningView = view.findViewById(R.id.backup_wallet_dialog_warning_encrypted);
 
-        final AlertDialogBuilder backUpWalletAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder backUpWalletAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         backUpWalletAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
         backUpWalletAlertDialogBuilder.setView(view);
         backUpWalletAlertDialogBuilder.setPositiveText(getString(R.string.export_keys_dialog_button_export));
@@ -426,7 +426,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final String target = getArguments().getString(KEY_TARGET);
-            AlertDialogBuilder walletBackUpSuccessAlertDialogBuilder = new AlertDialogBuilder(activity);
+            AlertDialogBuilder walletBackUpSuccessAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
             walletBackUpSuccessAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
             walletBackUpSuccessAlertDialogBuilder.setMessage(Html.fromHtml(getString(R.string.export_keys_dialog_success, target)));
             walletBackUpSuccessAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
@@ -463,7 +463,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final String exceptionMessage = getArguments().getString(KEY_EXCEPTION_MESSAGE);
-            AlertDialogBuilder walletBackupFailureAlertDialogBuilder = new AlertDialogBuilder(activity);
+            AlertDialogBuilder walletBackupFailureAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
             walletBackupFailureAlertDialogBuilder.setTitle(getString( R.string.import_export_keys_dialog_failure_title));
             walletBackupFailureAlertDialogBuilder.setMessage(walletBackupFailureAlertDialogBuilder.formatString(R.string.export_keys_dialog_failure, exceptionMessage));
             walletBackupFailureAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));

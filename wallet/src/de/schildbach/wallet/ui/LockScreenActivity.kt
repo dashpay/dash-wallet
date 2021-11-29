@@ -26,12 +26,14 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
@@ -48,7 +50,7 @@ import org.dash.wallet.common.util.AlertDialogBuilder
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
-
+@AndroidEntryPoint
 open class LockScreenActivity : SecureActivity() {
 
     companion object {
@@ -59,8 +61,8 @@ open class LockScreenActivity : SecureActivity() {
     val walletApplication: WalletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
     private val autoLogout: AutoLogout = walletApplication.autoLogout
+    protected val lockScreenViewModel: LockScreenViewModel by viewModels()
 
-    protected lateinit var lockScreenViewModel: LockScreenViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
     private var pinLength = configuration.pinLength
@@ -253,7 +255,6 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun initViewModel() {
-        lockScreenViewModel = ViewModelProvider(this)[LockScreenViewModel::class.java]
         checkPinViewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
         checkPinViewModel.checkPinLiveData.observe(this, Observer {
             when (it.status) {
@@ -469,7 +470,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun showFingerprintKeyChangedDialog() {
-        AlertDialogBuilder(this).apply {
+        AlertDialogBuilder(this, lifecycle).apply {
             title = getString(R.string.fingerprint_changed_title)
             message = getString(R.string.fingerprint_changed_message)
             positiveText = getString(android.R.string.ok)

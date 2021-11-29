@@ -23,6 +23,9 @@ import android.content.DialogInterface.OnClickListener;
 import android.net.Uri;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ViewModelStoreOwner;
 
 import com.google.common.hash.Hashing;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -423,14 +426,20 @@ public abstract class InputParser {
         error(null, R.string.input_parser_cannot_classify, input);
     }
 
-    public static void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
+    public static void dialog(final Context context,
+                              final Lifecycle lifecycle,
+                              @Nullable final OnClickListener dismissListener,
+                              final int titleResId,
                               final int messageResId, final Object... messageArgs) {
-        dialog(context, dismissListener, titleResId, context.getString(messageResId, messageArgs));
+        dialog(context, lifecycle, dismissListener, titleResId, context.getString(messageResId, messageArgs));
     }
 
-    public static void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
+    public static void dialog(final Context context,
+                              final Lifecycle lifecycle,
+                              @Nullable final OnClickListener dismissListener,
+                              final int titleResId,
                               String message) {
-        final AlertDialogBuilder inputParserAlertDialogBuilder = new AlertDialogBuilder(context);
+        final AlertDialogBuilder inputParserAlertDialogBuilder = new AlertDialogBuilder(context, lifecycle);
         if (titleResId != 0){
             inputParserAlertDialogBuilder.setTitle(context.getString(titleResId));
         }

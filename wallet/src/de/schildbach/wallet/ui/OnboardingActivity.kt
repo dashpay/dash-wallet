@@ -156,7 +156,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 else -> it.message!!
             }
 
-            AlertDialogBuilder(this).apply {
+            AlertDialogBuilder(this, lifecycle).apply {
                 title = getString(R.string.import_export_keys_dialog_failure_title)
                 this.message = getString(R.string.import_keys_dialog_failure, message)
                 positiveText = getString(R.string.button_dismiss)

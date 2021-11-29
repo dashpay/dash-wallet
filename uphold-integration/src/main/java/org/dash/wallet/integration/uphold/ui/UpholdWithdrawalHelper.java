@@ -23,6 +23,8 @@ import android.net.Uri;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ViewModelStoreOwner;
 
 import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.dash.wallet.integration.uphold.R;
@@ -106,7 +108,7 @@ public class UpholdWithdrawalHelper {
     }
 
     private void showSuccessDialog(final AppCompatActivity activity, final String txId) {
-        final AlertDialogBuilder upholdWithdrawSuccessAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder upholdWithdrawSuccessAlertDialogBuilder = new AlertDialogBuilder(activity, activity.getLifecycle());
         upholdWithdrawSuccessAlertDialogBuilder.setTitle(activity.getString(R.string.uphold_withdrawal_success_title));
         upholdWithdrawSuccessAlertDialogBuilder.setMessage(activity.getString(R.string.uphold_withdrawal_success_message, txId));
         upholdWithdrawSuccessAlertDialogBuilder.setPositiveText(activity.getString(android.R.string.ok));
@@ -147,17 +149,17 @@ public class UpholdWithdrawalHelper {
     }
 
     private void showLoadingError(AppCompatActivity activity, Exception e) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-        if (e instanceof UpholdApiException) {
-            builder.setTitle(R.string.uphold_api_error_title);
+        AlertDialogBuilder loadingErrorAlertDialogBuilder = new AlertDialogBuilder(activity, activity.getLifecycle());
+        if (e instanceof UpholdApiException){
+            loadingErrorAlertDialogBuilder.setTitle(activity.getString(R.string.uphold_api_error_title));
             UpholdApiException upholdApiException = (UpholdApiException) e;
-            builder.setMessage(upholdApiException.getDescription(activity));
+            loadingErrorAlertDialogBuilder.setMessage(upholdApiException.getDescription(activity));
         } else {
-            builder.setTitle(R.string.uphold_general_error_title);
-            builder.setMessage(R.string.loading_error);
+            loadingErrorAlertDialogBuilder.setTitle(activity.getString(R.string.uphold_general_error_title));
+            loadingErrorAlertDialogBuilder.setMessage(activity.getString(R.string.loading_error));
         }
-        builder.setPositiveButton(android.R.string.ok, null);
-        builder.show();
+        loadingErrorAlertDialogBuilder.setPositiveText(activity.getString(android.R.string.ok));
+        loadingErrorAlertDialogBuilder.createAlertDialog().show();
     }
 
     public interface OnTransferListener {

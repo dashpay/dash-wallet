@@ -53,7 +53,7 @@ public class UpholdOtpDialog extends DialogFragment {
 
         final TextView otpCodeView = (TextView) view.findViewById(R.id.otp_code);
 
-        final AlertDialogBuilder upholdOtpAlertDialogBuilder = new AlertDialogBuilder(requireActivity());
+        final AlertDialogBuilder upholdOtpAlertDialogBuilder = new AlertDialogBuilder(requireActivity(), getLifecycle());
         upholdOtpAlertDialogBuilder.setTitle(getString(R.string.uphold_otp_dialog_title));
         upholdOtpAlertDialogBuilder.setView(view);
         upholdOtpAlertDialogBuilder.setPositiveText(getString(android.R.string.ok));

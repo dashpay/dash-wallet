@@ -143,7 +143,8 @@ public class SendCoinsFragment extends Fragment {
                     }
                     case ERROR: {
                         String errorMessage = paymentIntentResource.getMessage();
-                        InputParser.dialog(activity, activityDismissListener, 0, errorMessage);
+                        InputParser.dialog(activity, SendCoinsFragment.this.getLifecycle(),
+                                activityDismissListener, 0, errorMessage);
                         break;
                     }
                 }
@@ -384,7 +385,7 @@ public class SendCoinsFragment extends Fragment {
         if (viewModel.getBasePaymentIntentValue().mayEditAmount())
             msg.append("\n\n").append(getString(R.string.send_coins_fragment_insufficient_money_msg2));
 
-        final AlertDialogBuilder insufficientMoneyAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder insufficientMoneyAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         insufficientMoneyAlertDialogBuilder.setTitle(getString(R.string.send_coins_fragment_insufficient_money_title));
         insufficientMoneyAlertDialogBuilder.setMessage(msg);
         if (viewModel.getBasePaymentIntentValue().mayEditAmount()){
@@ -404,7 +405,7 @@ public class SendCoinsFragment extends Fragment {
     }
 
     private void showEmptyWalletFailedDialog() {
-        final AlertDialogBuilder emptyWalletAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder emptyWalletAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         emptyWalletAlertDialogBuilder.setTitle(getString(R.string.send_coins_fragment_empty_wallet_failed_title));
         emptyWalletAlertDialogBuilder.setMessage(getString(R.string.send_coins_fragment_hint_empty_wallet_failed));
         emptyWalletAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
@@ -413,7 +414,7 @@ public class SendCoinsFragment extends Fragment {
     }
 
     private void showFailureDialog(Exception exception) {
-        final AlertDialogBuilder sendCoinsFailedAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder sendCoinsFailedAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         sendCoinsFailedAlertDialogBuilder.setTitle(getString(R.string.send_coins_error_msg));
         sendCoinsFailedAlertDialogBuilder.setMessage(exception.toString());
         sendCoinsFailedAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));

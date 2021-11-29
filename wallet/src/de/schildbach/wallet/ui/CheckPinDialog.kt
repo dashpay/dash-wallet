@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.AlertDialog
 import android.app.Dialog
 import android.content.*
 import android.graphics.Color
@@ -33,8 +32,10 @@ import androidx.annotation.RequiresApi
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -43,9 +44,10 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
-import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.util.AlertDialogBuilder
 import org.slf4j.LoggerFactory
 
+@AndroidEntryPoint
 open class CheckPinDialog : DialogFragment() {
 
     companion object {
@@ -84,7 +86,7 @@ open class CheckPinDialog : DialogFragment() {
 
     protected lateinit var viewModel: CheckPinViewModel
     protected lateinit var sharedModel: CheckPinSharedModel
-    protected lateinit var lockScreenViewModel: LockScreenViewModel
+    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
     protected val pinRetryController = PinRetryController.getInstance()
     protected var fingerprintHelper: FingerprintHelper? = null
@@ -218,7 +220,6 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected fun initLockScreenViewModel(activity: FragmentActivity) {
-        lockScreenViewModel = ViewModelProvider(activity)[LockScreenViewModel::class.java]
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner) {
             sharedModel.onCancelCallback.call()
             dismiss()
@@ -332,10 +333,10 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected open fun showLockedAlert(context: Context) {
-        val dialogBuilder = AlertDialog.Builder(context)
-        dialogBuilder.setTitle(R.string.wallet_lock_wallet_disabled)
-        dialogBuilder.setMessage(pinRetryController.getWalletTemporaryLockedMessage(context))
-        dialogBuilder.setPositiveButton(android.R.string.ok, null)
-        dialogBuilder.show()
+        AlertDialogBuilder(requireContext(), lifecycle).apply {
+            title = getString(R.string.wallet_lock_wallet_disabled)
+            message = pinRetryController.getWalletTemporaryLockedMessage(context)
+            positiveText = getString(android.R.string.ok)
+        }.createAlertDialog().show()
     }
 }

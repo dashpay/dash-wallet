@@ -183,7 +183,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
         showView = (CheckBox) view.findViewById(R.id.encrypt_keys_dialog_show);
 
-        final AlertDialogBuilder encryptKeysAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder encryptKeysAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         encryptKeysAlertDialogBuilder.setTitle(getString(R.string.encrypt_keys_dialog_title));
         encryptKeysAlertDialogBuilder.setView(view);
         encryptKeysAlertDialogBuilder.setPositiveText(getString(R.string.button_ok));

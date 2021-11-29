@@ -42,6 +42,7 @@ import kotlin.Unit;
 /**
  * @author Andreas Schildbach
  */
+//TODO:  Dialog fragment unused, to be removed ??
 public class ArchiveBackupDialogFragment extends DialogFragment {
     private static final String FRAGMENT_TAG = ArchiveBackupDialogFragment.class.getName();
 
@@ -86,7 +87,7 @@ public class ArchiveBackupDialogFragment extends DialogFragment {
         else
             path = backupPath;
 
-        final AlertDialogBuilder archiveBackUpAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder archiveBackUpAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         archiveBackUpAlertDialogBuilder.setMessage(Html.fromHtml(getString(R.string.export_keys_dialog_success, path)));
         archiveBackUpAlertDialogBuilder.setPositiveText(WholeStringBuilder.bold(getString(R.string.export_keys_dialog_button_archive)));
         archiveBackUpAlertDialogBuilder.setPositiveAction(

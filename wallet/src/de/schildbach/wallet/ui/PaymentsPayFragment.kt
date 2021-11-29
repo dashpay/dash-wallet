@@ -72,13 +72,13 @@ class PaymentsPayFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        view!!.viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        requireView().viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
         getClipboardManager().addPrimaryClipChangedListener(onPrimaryClipChangedListener)
     }
 
     override fun onPause() {
         super.onPause()
-        view!!.viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        requireView().viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
         getClipboardManager().removePrimaryClipChangedListener(onPrimaryClipChangedListener)
     }
 
@@ -102,8 +102,8 @@ class PaymentsPayFragment : Fragment() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
-            val input = intent!!.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
-            handleString(input, true, R.string.button_scan)
+            val input = intent?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
+            input?.let { handleString(it, true, R.string.button_scan) }
         } else {
             super.onActivityResult(requestCode, resultCode, intent)
         }
@@ -144,7 +144,8 @@ class PaymentsPayFragment : Fragment() {
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
+                    dialog(context, this@PaymentsPayFragment.lifecycle,
+                        null, errorDialogTitleResId, messageResId, *messageArgs)
                 } else {
                     manageStateOfPayToAddressButton(null)
                 }

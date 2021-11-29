@@ -166,10 +166,14 @@ public final class SendingAddressesFragment extends FancyListFragment
                                 if (!wallet.isPubKeyHashMine(address.getHash160()))
                                     EditAddressBookEntryFragment.edit(getFragmentManager(), address);
                                 else
-                                    dialog(activity, null, R.string.address_book_options_scan_title,
+                                    dialog(activity,
+                                            SendingAddressesFragment.this.getLifecycle(),
+                                            null, R.string.address_book_options_scan_title,
                                             R.string.address_book_options_scan_own_address);
                             } else {
-                                dialog(activity, null, R.string.address_book_options_scan_title,
+                                dialog(activity,
+                                        SendingAddressesFragment.this.getLifecycle(),
+                                        null, R.string.address_book_options_scan_title,
                                         R.string.address_book_options_scan_invalid);
                             }
                         }
@@ -183,7 +187,9 @@ public final class SendingAddressesFragment extends FancyListFragment
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    dialog(activity, null, R.string.address_book_options_scan_title, messageResId, messageArgs);
+                    dialog(activity,
+                            SendingAddressesFragment.this.getLifecycle(),
+                            null, R.string.address_book_options_scan_title, messageResId, messageArgs);
                 }
             }.parse();
         }
@@ -224,7 +230,7 @@ public final class SendingAddressesFragment extends FancyListFragment
 
     private void handlePasteClipboard() {
         final Address address = getAddressFromPrimaryClip();
-        final AlertDialogBuilder pasteClipboardAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder pasteClipboardAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         pasteClipboardAlertDialogBuilder.setTitle(getString(R.string.address_book_options_paste_from_clipboard_title));
         pasteClipboardAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
 

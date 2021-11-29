@@ -23,6 +23,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.net.Uri;
 
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ViewModelStoreOwner;
+
 import com.google.common.base.Charsets;
 
 import org.bitcoinj.wallet.Wallet;
@@ -51,8 +54,8 @@ public class RestoreFromFileHelper {
     protected static final Logger log = LoggerFactory.getLogger(RestoreFromFileHelper.class);
 
 
-    public static Dialog createRestoreWalletPermissionDialog(Context context) {
-        final AlertDialogBuilder restoreWalletPermAlertDialogBuilder = new AlertDialogBuilder(context);
+    public static Dialog createRestoreWalletPermissionDialog(Context context, ViewModelStoreOwner viewModelStoreOwner, LifecycleOwner lifecycleOwner) {
+        final AlertDialogBuilder restoreWalletPermAlertDialogBuilder = new AlertDialogBuilder(context, lifecycleOwner.getLifecycle());
         restoreWalletPermAlertDialogBuilder.setTitle(context.getString(R.string.restore_wallet_permission_dialog_title));
         restoreWalletPermAlertDialogBuilder.setMessage(context.getString(R.string.restore_wallet_permission_dialog_message));
         restoreWalletPermAlertDialogBuilder.setNeutralText(context.getString(R.string.button_dismiss));
@@ -60,13 +63,15 @@ public class RestoreFromFileHelper {
     }
 
     @SuppressLint("StringFormatInvalid")
-    public static void restoreWalletFromProtobuf(final Activity activity, final Uri walletUri, final InputStream is, final OnRestoreWalletListener listener) {
+    public static void restoreWalletFromProtobuf(final Activity activity,
+                                                 ViewModelStoreOwner viewModelStoreOwner, LifecycleOwner lifecycleOwner,
+                                                 final Uri walletUri, final InputStream is, final OnRestoreWalletListener listener) {
         try {
             listener.onRestoreWallet(WalletUtils.restoreWalletFromProtobuf(is, Constants.NETWORK_PARAMETERS));
 
             log.info("successfully restored unencrypted wallet: {}", walletUri);
         } catch (final IOException x) {
-            final AlertDialogBuilder restoreWalletFromProtobufAlertDialogBuilder = new AlertDialogBuilder(activity);
+            final AlertDialogBuilder restoreWalletFromProtobufAlertDialogBuilder = new AlertDialogBuilder(activity, lifecycleOwner.getLifecycle());
             restoreWalletFromProtobufAlertDialogBuilder.setTitle(activity.getString(R.string.import_export_keys_dialog_failure_title));
             restoreWalletFromProtobufAlertDialogBuilder.setMessage(activity.getString(R.string.import_keys_dialog_failure, x.getMessage()));
             restoreWalletFromProtobufAlertDialogBuilder.setPositiveText(activity.getString(R.string.button_dismiss));
@@ -91,7 +96,9 @@ public class RestoreFromFileHelper {
         }
     }
 
-    public static void restorePrivateKeysFromBase58(final Activity activity, final Uri walletUri, final InputStream is, final OnRestoreWalletListener listener) {
+    public static void restorePrivateKeysFromBase58(final Activity activity,
+                                                    ViewModelStoreOwner viewModelStoreOwner, LifecycleOwner lifecycleOwner,
+                                                    final Uri walletUri, final InputStream is, final OnRestoreWalletListener listener) {
         try {
             listener.onRestoreWallet(WalletUtils.restorePrivateKeysFromBase58(is, Constants.NETWORK_PARAMETERS));
             //remind user to backup since the key backup file does not have an HD seed
@@ -101,7 +108,7 @@ public class RestoreFromFileHelper {
             config.armBackupSeedReminder();
             log.info("successfully restored unencrypted private keys: {}", walletUri);
         } catch (final IOException x) {
-            final AlertDialogBuilder restorePrivateKeyFailedAlertDialogBuilder = new AlertDialogBuilder(activity);
+            final AlertDialogBuilder restorePrivateKeyFailedAlertDialogBuilder = new AlertDialogBuilder(activity, lifecycleOwner.getLifecycle());
             restorePrivateKeyFailedAlertDialogBuilder.setTitle(activity.getString(R.string.import_export_keys_dialog_failure_title));
             restorePrivateKeyFailedAlertDialogBuilder.setMessage(activity.getString(R.string.import_keys_dialog_failure, x.getMessage()));
             restorePrivateKeyFailedAlertDialogBuilder.setPositiveText(activity.getString(R.string.button_dismiss));
@@ -127,7 +134,10 @@ public class RestoreFromFileHelper {
         }
     }
 
-    public static void restoreWalletFromEncrypted(final Activity activity, final Uri walletUri, final InputStream isFile,
+    public static void restoreWalletFromEncrypted(final Activity activity,
+                                                  final ViewModelStoreOwner viewModelStoreOwner,
+                                                  final LifecycleOwner lifecycleOwner,
+                                                  final Uri walletUri, final InputStream isFile,
                                                    final String password, final OnRestoreWalletListener listener) {
         try {
             final BufferedReader cipherIn = new BufferedReader(
@@ -144,7 +154,7 @@ public class RestoreFromFileHelper {
             log.info("successfully restored encrypted wallet: {}", walletUri);
         } catch (final IOException x) {
 
-            final AlertDialogBuilder restoreWalletFromEncryptAlertDialogBuilder = new AlertDialogBuilder(activity);
+            final AlertDialogBuilder restoreWalletFromEncryptAlertDialogBuilder = new AlertDialogBuilder(activity, lifecycleOwner.getLifecycle());
             restoreWalletFromEncryptAlertDialogBuilder.setTitle(activity.getString(R.string.import_export_keys_dialog_failure_title));
             restoreWalletFromEncryptAlertDialogBuilder.setMessage(activity.getString(R.string.import_keys_dialog_failure, x.getMessage()));
             restoreWalletFromEncryptAlertDialogBuilder.setPositiveText(activity.getString(R.string.button_dismiss));

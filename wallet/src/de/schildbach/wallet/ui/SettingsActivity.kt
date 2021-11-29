@@ -69,7 +69,7 @@ class SettingsActivity : BaseMenuActivity() {
     private fun resetBlockchain() {
         var isFinished = false
 
-        AlertDialogBuilder(this).apply {
+        AlertDialogBuilder(this, lifecycle).apply {
             title = getString(R.string.preferences_initiate_reset_title)
             message = getString(R.string.preferences_initiate_reset_dialog_message)
             positiveText = getString(R.string.preferences_initiate_reset_dialog_positive)

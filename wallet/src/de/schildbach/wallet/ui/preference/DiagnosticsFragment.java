@@ -39,19 +39,19 @@ import android.content.Intent;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceScreen;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
 
 /**
  * @author Andreas Schildbach
+ * Extending from PreferenceFragment doesn't allow us to get the lifecycleowner
  */
-public final class DiagnosticsFragment extends PreferenceFragment {
+public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 	private Activity activity;
 	private WalletApplication application;
 
@@ -70,14 +70,12 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 	}
 
 	@Override
-	public void onCreate(final Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-
-		addPreferencesFromResource(R.xml.preference_diagnostics);
+	public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+		setPreferencesFromResource(R.xml.preference_diagnostics, rootKey);
 	}
 
 	@Override
-	public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
+	public boolean onPreferenceTreeClick(Preference preference) {
 		final String key = preference.getKey();
 
 		if (PREFS_KEY_REPORT_ISSUE.equals(key)) {
@@ -137,7 +135,7 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 		alertDialog.getWindow().setCallback(new UserInteractionAwareCallback(alertDialog.getWindow().getCallback(), getActivity()));
 	}
     private void handleInitiateReset() {
-		final AlertDialogBuilder resetBlockChainAlertDialogBuilder = new AlertDialogBuilder(activity);
+		final AlertDialogBuilder resetBlockChainAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
 		resetBlockChainAlertDialogBuilder.setTitle(getString(R.string.preferences_initiate_reset_title));
 		resetBlockChainAlertDialogBuilder.setMessage(getString(R.string.preferences_initiate_reset_dialog_message));
 		resetBlockChainAlertDialogBuilder.setPositiveText(getString(R.string.preferences_initiate_reset_dialog_positive));
@@ -168,7 +166,7 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 		final ImageView imageView = (ImageView) view.findViewById(R.id.extended_public_key_dialog_image);
 		imageView.setImageDrawable(bitmap);
 
-		final AlertDialogBuilder extendPublicKeyAlertDialogBuilder = new AlertDialogBuilder(activity);
+		final AlertDialogBuilder extendPublicKeyAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle() );
 		extendPublicKeyAlertDialogBuilder.setView(view);
 		extendPublicKeyAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
 		extendPublicKeyAlertDialogBuilder.setPositiveText(getString(R.string.button_share));

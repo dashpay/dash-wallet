@@ -68,7 +68,9 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
                     case ERROR: {
                         String message = paymentIntentResource.getMessage();
                         if (message != null) {
-                            AlertDialogBuilder paymentMessageAlertDialogBuilder = new AlertDialogBuilder(SendCoinsActivity.this);
+                            AlertDialogBuilder paymentMessageAlertDialogBuilder = new AlertDialogBuilder(
+                                    SendCoinsActivity.this,
+                                    SendCoinsActivity.this.getLifecycle());
                             paymentMessageAlertDialogBuilder.setMessage(message);
                             paymentMessageAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
                             paymentMessageAlertDialogBuilder.setNeutralAction(neutralActionListener);

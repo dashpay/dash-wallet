@@ -71,7 +71,7 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
                 else -> it.message!!
             }
 
-            AlertDialogBuilder(this).apply {
+            AlertDialogBuilder(this, lifecycle).apply {
                 title = getString(R.string.import_export_keys_dialog_failure_title)
                 this.message = getString(R.string.import_keys_dialog_failure, message)
                 positiveText = getString(R.string.button_dismiss)
@@ -114,8 +114,7 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
 
     private fun createRestoreWalletPermissionDialog(): Dialog {
         return RestoreFromFileHelper.createRestoreWalletPermissionDialog(
-            this
-        )
+            this, this, this)
     }
 
     override fun getWallet(): Wallet {

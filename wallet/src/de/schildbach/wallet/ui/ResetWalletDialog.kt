@@ -25,25 +25,28 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.util.AlertDialogBuilder
 
 class ResetWalletDialog : DialogFragment() {
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialogBuilder = AlertDialog.Builder(requireContext(), R.style.My_Theme_Dialog)
-        dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title)
-        dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message)
-        //Inverting dialog answers to prevent accidental wallet reset
-        dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title) { _, _ ->
-            analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
-            (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
-            WalletApplication.getInstance().triggerWipe(context)
-        }
-        dialogBuilder.setPositiveButton(android.R.string.no, null)
-        dialogBuilder.setCancelable(false)
-        val dialog = dialogBuilder.create()
-        dialog.setCanceledOnTouchOutside(false)
-        return dialog
+        val builder = AlertDialogBuilder(this.requireActivity(), lifecycle)
+        //builder.registerLifecycle(lifecycle)
+        return builder
+            .apply {
+                title = getString(R.string.wallet_lock_reset_wallet_title)
+                message = getString(R.string.wallet_lock_reset_wallet_message)
+                negativeText = getString(R.string.wallet_lock_reset_wallet_title)
+                negativeAction = {
+                    analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
+                    (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
+                    WalletApplication.getInstance().triggerWipe(context)
+                }
+                positiveText = getString(android.R.string.no)
+                cancelable = false
+                isCancelableOnTouchOutside = false
+            }.createAlertDialog()
     }
 
     companion object {

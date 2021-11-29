@@ -273,7 +273,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    dialog(WalletActivity.this, null, 0, messageResId, messageArgs);
+                    dialog(WalletActivity.this,
+                            WalletActivity.this.getLifecycle(),
+                            null, 0, messageResId, messageArgs);
                 }
             }.parse();
         }
@@ -325,7 +327,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             @Override
             protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                dialog(WalletActivity.this, null, errorDialogTitleResId, messageResId, messageArgs);
+                dialog(WalletActivity.this,
+                        WalletActivity.this.getLifecycle(),
+                        null, errorDialogTitleResId, messageResId, messageArgs);
             }
 
             @Override
@@ -503,7 +507,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (input != null) {
             handleString(input, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message);
         } else {
-            InputParser.dialog(this, null, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message_no_data);
+            InputParser.dialog(this,
+                    WalletActivity.this.getLifecycle(),
+                    null, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message_no_data);
         }
     }
 
@@ -537,7 +543,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }*/
 
     private Dialog createBackupWalletPermissionDialog() {
-        AlertDialogBuilder backUpWalletPermissionDialog = new AlertDialogBuilder(this);
+        AlertDialogBuilder backUpWalletPermissionDialog = new AlertDialogBuilder(this, getLifecycle());
         backUpWalletPermissionDialog.setTitle(getString(R.string.backup_wallet_permission_dialog_title));
         backUpWalletPermissionDialog.setMessage(getString(R.string.backup_wallet_permission_dialog_message));
         backUpWalletPermissionDialog.setNeutralText(getString(R.string.button_dismiss));
@@ -545,7 +551,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private Dialog createRestoreWalletPermissionDialog() {
-        return RestoreFromFileHelper.createRestoreWalletPermissionDialog(this);
+        return RestoreFromFileHelper.createRestoreWalletPermissionDialog(this, this, this);
     }
 
     private void showRestoreWalletFromSeedDialog() {
@@ -559,7 +565,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private Dialog createLowStorageAlertDialog() {
-        final AlertDialogBuilder lowStorageAlertDialog = new AlertDialogBuilder(this);
+        final AlertDialogBuilder lowStorageAlertDialog = new AlertDialogBuilder(this, getLifecycle());
         lowStorageAlertDialog.setTitle(getString(R.string.wallet_low_storage_dialog_title));
         lowStorageAlertDialog.setMessage(getString(R.string.wallet_low_storage_dialog_msg));
         lowStorageAlertDialog.setPositiveText(getString(R.string.wallet_low_storage_dialog_button_apps));
@@ -695,7 +701,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         final PackageManager pm = getPackageManager();
         final Intent settingsIntent = new Intent(android.provider.Settings.ACTION_DATE_SETTINGS);
 
-        final AlertDialogBuilder timeSkewAlertDialogBuilder = new AlertDialogBuilder(this);
+        final AlertDialogBuilder timeSkewAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
         timeSkewAlertDialogBuilder.setTitle(getString(R.string.wallet_timeskew_dialog_title));
         timeSkewAlertDialogBuilder.setMessage(getString(R.string.wallet_timeskew_dialog_msg, diffMinutes));
         if (pm.resolveActivity(settingsIntent, 0) != null){
@@ -722,7 +728,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (Build.VERSION.SDK_INT < Constants.SDK_DEPRECATED_BELOW)
             message.append("\n\n").append(getString(R.string.wallet_version_dialog_msg_deprecated));
 
-        final AlertDialogBuilder appVersionAlertDialogBuilder = new AlertDialogBuilder(this);
+        final AlertDialogBuilder appVersionAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
         appVersionAlertDialogBuilder.setTitle(getString(R.string.wallet_version_dialog_title));
         appVersionAlertDialogBuilder.setMessage(message);
         if (pm.resolveActivity(marketIntent, 0) != null){
@@ -761,7 +767,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void resetBlockchain() {
         isRestoringBackup = false;
-        AlertDialogBuilder resetBlockChainAlertDialogBuilder = new AlertDialogBuilder(this);
+        AlertDialogBuilder resetBlockChainAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
         resetBlockChainAlertDialogBuilder.setTitle(getString(R.string.restore_wallet_dialog_success));
         resetBlockChainAlertDialogBuilder.setMessage(getString(R.string.restore_wallet_dialog_success_replay));
         resetBlockChainAlertDialogBuilder.setNeutralText(getString(R.string.button_ok));
@@ -1039,24 +1045,26 @@ public final class WalletActivity extends AbstractBindServiceActivity
      */
     private void showFiatCurrencyChangeDetectedDialog(final String currentCurrencyCode,
                                                       final String newCurrencyCode) {
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
-        dialogBuilder.setMessage(getString(R.string.change_exchange_currency_code_message,
+        AlertDialogBuilder fiatCurrencyChangeAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
+        fiatCurrencyChangeAlertDialogBuilder.setMessage(getString(R.string.change_exchange_currency_code_message,
                 newCurrencyCode, currentCurrencyCode));
-        dialogBuilder.setPositiveButton(getString(R.string.change_to, newCurrencyCode), new OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                config.setExchangeCurrencyCodeDetected(true);
-                config.setExchangeCurrencyCode(newCurrencyCode);
-                WalletBalanceWidgetProvider.updateWidgets(WalletActivity.this, wallet);
-            }
-        });
-        dialogBuilder.setNegativeButton(getString(R.string.leave_as, currentCurrencyCode), new OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                config.setExchangeCurrencyCodeDetected(true);
-            }
-        });
-        dialogBuilder.show();
+        fiatCurrencyChangeAlertDialogBuilder.setPositiveText(getString(R.string.change_to, newCurrencyCode));
+        fiatCurrencyChangeAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    config.setExchangeCurrencyCodeDetected(true);
+                    config.setExchangeCurrencyCode(newCurrencyCode);
+                    WalletBalanceWidgetProvider.updateWidgets(WalletActivity.this, wallet);
+                    return Unit.INSTANCE;
+                }
+        );
+        fiatCurrencyChangeAlertDialogBuilder.setNegativeText(getString(R.string.leave_as, currentCurrencyCode));
+        fiatCurrencyChangeAlertDialogBuilder.setNegativeAction(
+                () -> {
+                    config.setExchangeCurrencyCodeDetected(true);
+                    return Unit.INSTANCE;
+                }
+        );
+        fiatCurrencyChangeAlertDialogBuilder.createAlertDialog().show();
     }
 
     private void updateSyncPaneVisibility(int id, boolean visible) {

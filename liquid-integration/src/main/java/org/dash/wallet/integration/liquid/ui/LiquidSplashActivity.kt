@@ -17,8 +17,6 @@
 package org.dash.wallet.integration.liquid.ui
 
 import android.app.Activity
-import android.app.AlertDialog
-import android.app.Dialog
 import android.app.ProgressDialog
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -26,7 +24,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.preference.PreferenceManager
 import android.view.MenuItem
 import android.view.View
@@ -41,6 +38,7 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.util.AlertDialogBuilder
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -240,12 +238,14 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     private fun showLoadingErrorAlert() {
-        val builder = AlertDialog.Builder(this)
-        builder.setCancelable(false)
-        builder.setMessage(R.string.loading_error)
-        builder.setPositiveButton(android.R.string.ok, null)
-        val dialog: Dialog = builder.show()
-        dialog.setOnDismissListener { finish() }
+        AlertDialogBuilder(this, lifecycle).apply {
+            message = getString(R.string.loading_error)
+            positiveText = getString(android.R.string.ok)
+            cancelable = false
+            dismissAction = {
+                finish()
+            }
+        }.createAlertDialog().show()
     }
 
     private fun startLiquidBuyAndSellDashActivity() {

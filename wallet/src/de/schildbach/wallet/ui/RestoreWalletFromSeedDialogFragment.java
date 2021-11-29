@@ -124,7 +124,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         setupPasswordView();
         invalidWordView = (TextView)view.findViewById(R.id.restore_wallet_from_invalid_seed_warning);
 
-        final AlertDialogBuilder restoreWalletAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder restoreWalletAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         restoreWalletAlertDialogBuilder.setTitle(getString(R.string.import_keys_dialog_title_from_seed));
         restoreWalletAlertDialogBuilder.setView(view);
         restoreWalletAlertDialogBuilder.setPositiveText(getString(R.string.import_keys_dialog_button_import));
@@ -197,7 +197,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
             log.info("successfully restored wallet from seed: {}", words.size());
         } catch (final IOException | MnemonicException x) {
 
-            final AlertDialogBuilder restoreWalletFromSeedAlertDialogBuilder = new AlertDialogBuilder(activity);
+            final AlertDialogBuilder restoreWalletFromSeedAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
             restoreWalletFromSeedAlertDialogBuilder.setTitle(getString( R.string.import_export_keys_dialog_failure_title));
             restoreWalletFromSeedAlertDialogBuilder.setMessage(getString(R.string.import_keys_dialog_failure, x.getMessage()));
             restoreWalletFromSeedAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));

@@ -101,7 +101,7 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             backgroundHandler = new Handler(backgroundThread.getLooper());
         }
 
-        final AlertDialogBuilder abstractPinAlertDialogBuilder = new AlertDialogBuilder(requireActivity());
+        final AlertDialogBuilder abstractPinAlertDialogBuilder = new AlertDialogBuilder(requireActivity(), getLifecycle());
         abstractPinAlertDialogBuilder.setTitle(getString(dialogTitle));
         abstractPinAlertDialogBuilder.setView(view);
         abstractPinAlertDialogBuilder.setCancelable(false);

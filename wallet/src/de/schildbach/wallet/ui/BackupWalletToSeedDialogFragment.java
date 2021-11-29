@@ -162,7 +162,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
             updateView(true);
         }
 
-        final AlertDialogBuilder backUpWalletAlertDialogBuilder = new AlertDialogBuilder(activity);
+        final AlertDialogBuilder backUpWalletAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
         backUpWalletAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
         backUpWalletAlertDialogBuilder.setView(view);
         backUpWalletAlertDialogBuilder.setCancelable(false);

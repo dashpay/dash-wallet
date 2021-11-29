@@ -225,11 +225,17 @@ public class RestoreWalletDialogFragment extends DialogFragment {
                 final InputStream is = contentResolver.openInputStream(backupUri);
 
                 if (WalletUtils.isUnencryptedStream(contentResolver.openInputStream(backupUri))) {
-                    RestoreFromFileHelper.restoreWalletFromProtobuf(activity, backupUri, contentResolver.openInputStream(backupUri), listener);
+                    RestoreFromFileHelper.restoreWalletFromProtobuf(activity,
+                            this.getActivity(), this.getActivity(),
+                            backupUri, contentResolver.openInputStream(backupUri), listener);
                 } else if (WalletUtils.isKeysStream(contentResolver.openInputStream(backupUri))) {
-                    RestoreFromFileHelper.restorePrivateKeysFromBase58(activity, backupUri, contentResolver.openInputStream(backupUri), listener);
+                    RestoreFromFileHelper.restorePrivateKeysFromBase58(activity,
+                            this.getActivity(), this.getActivity(),
+                            backupUri, contentResolver.openInputStream(backupUri), listener);
                 } else if (Crypto.isEncryptedStream(is)) {
-                    RestoreFromFileHelper.restoreWalletFromEncrypted(activity, backupUri, contentResolver.openInputStream(backupUri), password, listener);
+                    RestoreFromFileHelper.restoreWalletFromEncrypted(activity,
+                            this.getActivity(), this.getActivity(),
+                            backupUri, contentResolver.openInputStream(backupUri), password, listener);
                 }
 
                 log.info("successfully restored wallet from external source");
@@ -276,7 +282,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
                 message.append(getString(R.string.restore_wallet_dialog_success_encrypted));
             }
 
-            final AlertDialogBuilder restoreWalletSuccessAlertDialogBuilder = new AlertDialogBuilder(activity);
+            final AlertDialogBuilder restoreWalletSuccessAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
             restoreWalletSuccessAlertDialogBuilder.setMessage(message);
             restoreWalletSuccessAlertDialogBuilder.setNeutralText(getString(R.string.button_ok));
             restoreWalletSuccessAlertDialogBuilder.setNeutralAction(
@@ -317,7 +323,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
             final String exceptionMessage = getArguments().getString(KEY_EXCEPTION_MESSAGE);
             final Uri backupUri = checkNotNull((Uri) getArguments().getParcelable(KEY_BACKUP_URI));
 
-            AlertDialogBuilder restoreWalletFailAlertDialogBuilder = new AlertDialogBuilder(activity);
+            AlertDialogBuilder restoreWalletFailAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
             restoreWalletFailAlertDialogBuilder.setTitle(getString(R.string.import_export_keys_dialog_failure_title));
             restoreWalletFailAlertDialogBuilder.setMessage(restoreWalletFailAlertDialogBuilder.formatString(R.string.import_keys_dialog_failure, exceptionMessage));
             restoreWalletFailAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));

@@ -40,6 +40,7 @@ import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.util.AlertDialogBuilder
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
@@ -457,15 +458,14 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      */
     private fun revokeAccessToken() {
         log.info("liquid: revoking access token")
-        val dialogBuilder = AlertDialog.Builder(this)
-        dialogBuilder.setMessage(R.string.liquid_logout_title)
-        dialogBuilder.setPositiveButton(android.R.string.ok) { dialog, button ->
-            openLogoutUrl()
-        }
-        dialogBuilder.setNegativeButton(android.R.string.cancel) { dialog, which ->
-
-        }
-        dialogBuilder.show()
+        AlertDialogBuilder(this, lifecycle).apply {
+            message = getString(R.string.liquid_logout_title)
+            positiveText = getString(android.R.string.ok)
+            positiveAction = {
+                openLogoutUrl()
+            }
+            negativeText = getString(android.R.string.cancel)
+        }.createAlertDialog().show()
     }
 
     private fun appAvailable(packageName: String): Boolean {

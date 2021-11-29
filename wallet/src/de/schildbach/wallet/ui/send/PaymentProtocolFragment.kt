@@ -21,7 +21,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AnimationUtils
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -42,6 +41,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.protocols.payments.PaymentProtocolException
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
+import org.dash.wallet.common.util.AlertDialogBuilder
 import org.dash.wallet.common.util.GenericUtils
 import org.slf4j.LoggerFactory
 
@@ -174,7 +174,9 @@ class PaymentProtocolFragment : Fragment() {
                     }
                 }
                 Status.ERROR -> {
-                    InputParser.dialog(activity, { _, _ -> requireActivity().finish() }, 0, it.message!!)
+                    InputParser.dialog(activity,
+                        this.lifecycle,
+                        { _, _ -> requireActivity().finish() }, 0, it.message!!)
                 }
             }
         })
@@ -282,23 +284,19 @@ class PaymentProtocolFragment : Fragment() {
     }
 
     private fun showInsufficientMoneyDialog() {
-        val dialogBuilder = AlertDialog.Builder(requireContext())
-        dialogBuilder.setTitle(R.string.payment_protocol_insufficient_funds_error_title)
-        dialogBuilder.setMessage(R.string.payment_protocol_insufficient_funds_error_message)
-        dialogBuilder.setPositiveButton(android.R.string.ok, null)
-        dialogBuilder.create().show()
+        AlertDialogBuilder(requireActivity(), lifecycle).apply {
+            title = getString(R.string.payment_protocol_insufficient_funds_error_title)
+            message = getString(R.string.payment_protocol_insufficient_funds_error_message)
+            positiveText = getString(android.R.string.ok)
+        }.createAlertDialog().show()
     }
 
     private fun showErrorDialog(exception: Exception) {
-        val dialogBuilder = AlertDialog.Builder(requireContext())
-        dialogBuilder.setTitle(R.string.payment_protocol_default_error_title)
-        if (exception.message != null) {
-            dialogBuilder.setMessage(exception.message)
-        } else {
-            dialogBuilder.setMessage(exception.toString())
-        }
-        dialogBuilder.setPositiveButton(android.R.string.ok, null)
-        dialogBuilder.create().show()
+        AlertDialogBuilder(requireActivity(), lifecycle).apply {
+            title = getString(R.string.payment_protocol_default_error_title)
+            message = if (exception.message.isNullOrEmpty()) exception.toString() else exception.message
+            positiveText = getString(android.R.string.ok)
+        }.createAlertDialog().show()
     }
 
     private fun displayRequest(paymentIntent: PaymentIntent, sendRequest: SendRequest?) {

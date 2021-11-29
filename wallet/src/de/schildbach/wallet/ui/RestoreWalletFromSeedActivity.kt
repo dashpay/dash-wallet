@@ -25,7 +25,6 @@ import android.text.Editable
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.MenuItem
-import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
@@ -35,6 +34,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_forgot_pin.*
 import kotlinx.android.synthetic.main.activity_recover_wallet_from_seed.*
 import org.bitcoinj.crypto.MnemonicException
+import org.dash.wallet.common.util.AlertDialogBuilder
 import java.util.*
 
 
@@ -150,12 +150,11 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
     }
 
     private fun showErrorDialog(errorMessage: String) {
-        AlertDialog.Builder(this).apply {
-            setTitle(R.string.import_export_keys_dialog_failure_title)
-            setMessage(errorMessage)
-            setPositiveButton(R.string.button_ok, null)
-            show()
-        }
+        AlertDialogBuilder(this, lifecycle).apply {
+            title = getString(R.string.import_export_keys_dialog_failure_title)
+            message = errorMessage
+            positiveText = getString(R.string.button_ok)
+        }.createAlertDialog().show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

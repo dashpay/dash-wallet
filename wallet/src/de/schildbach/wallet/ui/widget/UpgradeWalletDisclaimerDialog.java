@@ -53,7 +53,7 @@ public class UpgradeWalletDisclaimerDialog extends DialogFragment {
                 getString(R.string.pin_code_required_dialog_message);
         String buttonText = getString(R.string.export_keys_dialog_title_to_seed) + " / " + getString(R.string.wallet_options_encrypt_keys_set);
 
-        final AlertDialogBuilder upgradeWalletAlertDialogBuilder = new AlertDialogBuilder(requireActivity());
+        final AlertDialogBuilder upgradeWalletAlertDialogBuilder = new AlertDialogBuilder(requireActivity(), getLifecycle());
         upgradeWalletAlertDialogBuilder.setTitle(getString(R.string.encrypt_new_key_chain_dialog_title));
         upgradeWalletAlertDialogBuilder.setMessage(message);
         upgradeWalletAlertDialogBuilder.setCancelable(false);

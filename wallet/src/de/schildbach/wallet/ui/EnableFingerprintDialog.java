@@ -115,7 +115,7 @@ public class EnableFingerprintDialog extends DialogFragment {
         } else {
             dismiss();
         }
-        final AlertDialogBuilder enableFingerPrintAlertDialogBuilder = new AlertDialogBuilder(requireActivity());
+        final AlertDialogBuilder enableFingerPrintAlertDialogBuilder = new AlertDialogBuilder(requireActivity(), getLifecycle());
         enableFingerPrintAlertDialogBuilder.setTitle(getString(R.string.enable_fingerprint));
         enableFingerPrintAlertDialogBuilder.setView(view);
         enableFingerPrintAlertDialogBuilder.setPositiveText(getString(R.string.notification_inactivity_action_dismiss));
