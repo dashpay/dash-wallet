@@ -30,11 +30,15 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
+import org.dash.wallet.common.LockScreenViewModel
 import org.dash.wallet.common.R
+import org.dash.wallet.common.UserInteractionAwareCallback
 
 class FancyAlertDialog : DialogFragment() {
+    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
     enum class Type {
         INFO,
@@ -86,7 +90,7 @@ class FancyAlertDialog : DialogFragment() {
 
     private lateinit var sharedViewModel: FancyAlertDialogViewModel
     private val type by lazy {
-        Type.valueOf(arguments!!.getString("type")!!)
+        Type.valueOf(requireArguments().getString("type")!!)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -114,10 +118,16 @@ class FancyAlertDialog : DialogFragment() {
                 setupProgress()
             }
         }
+        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
+            dismiss()
+        }
+        dialog?.window?.callback = UserInteractionAwareCallback(
+            dialog?.window?.callback, requireActivity()
+        )
     }
 
     private fun setOrHideIfEmpty(view: View, argKey: String) {
-        val resId = arguments!!.getInt(argKey)
+        val resId = requireArguments().getInt(argKey)
         if (resId != 0) {
             when (view) {
                 is TextView -> view.setText(resId)

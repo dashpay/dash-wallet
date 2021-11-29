@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package org.dash.wallet.common
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.WalletApplication
 import org.dash.wallet.common.data.SingleLiveEvent
 import javax.inject.Inject
 
 @HiltViewModel
 class LockScreenViewModel @Inject constructor(application: Application) : AndroidViewModel(application) {
-
-    private val walletApplication = application as WalletApplication
-
     val activatingLockScreen = SingleLiveEvent<Void>()
 }

@@ -27,6 +27,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.LockScreenViewModel
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 @AndroidEntryPoint

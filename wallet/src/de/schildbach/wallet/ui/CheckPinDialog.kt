@@ -44,6 +44,7 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
+import org.dash.wallet.common.LockScreenViewModel
 import org.dash.wallet.common.util.AlertDialogBuilder
 import org.slf4j.LoggerFactory
 

@@ -45,6 +45,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
+import org.dash.wallet.common.LockScreenViewModel
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.util.AlertDialogBuilder
 import org.slf4j.LoggerFactory
