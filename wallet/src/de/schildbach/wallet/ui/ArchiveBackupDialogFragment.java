@@ -17,28 +17,27 @@
 
 package de.schildbach.wallet.ui;
 
-import java.io.File;
+import android.app.Activity;
+import android.app.Dialog;
+import android.os.Bundle;
+import android.text.Html;
 
-import org.dash.wallet.common.ui.DialogBuilder;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ShareCompat;
+import androidx.core.content.FileProvider;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
+
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.WholeStringBuilder;
 import de.schildbach.wallet_test.R;
-
-import android.app.Activity;
-import android.app.Dialog;
-
-import android.content.DialogInterface;
-import android.os.Bundle;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.core.app.ShareCompat;
-import androidx.core.content.FileProvider;
-import android.text.Html;
+import kotlin.Unit;
 
 /**
  * @author Andreas Schildbach
@@ -87,18 +86,17 @@ public class ArchiveBackupDialogFragment extends DialogFragment {
         else
             path = backupPath;
 
-        final DialogBuilder dialog = new DialogBuilder(activity);
-        dialog.setMessage(Html.fromHtml(getString(R.string.export_keys_dialog_success, path)));
-        dialog.setPositiveButton(WholeStringBuilder.bold(getString(R.string.export_keys_dialog_button_archive)),
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(final DialogInterface dialog, final int which) {
-                        archiveWalletBackup(backupFile);
-                    }
-                });
-        dialog.setNegativeButton(R.string.button_dismiss, null);
-
-        return dialog.create();
+        final AlertDialogBuilder archiveBackUpAlertDialogBuilder = new AlertDialogBuilder(activity);
+        archiveBackUpAlertDialogBuilder.setMessage(Html.fromHtml(getString(R.string.export_keys_dialog_success, path)));
+        archiveBackUpAlertDialogBuilder.setPositiveText(WholeStringBuilder.bold(getString(R.string.export_keys_dialog_button_archive)));
+        archiveBackUpAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    archiveWalletBackup(backupFile);
+                    return Unit.INSTANCE;
+                }
+        );
+        archiveBackUpAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+        return archiveBackUpAlertDialogBuilder.createAlertDialog();
     }
 
     private void archiveWalletBackup(final File backupFile) {

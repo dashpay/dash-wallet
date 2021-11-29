@@ -16,10 +16,7 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -47,7 +44,7 @@ import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.DialogBuilder
+import org.dash.wallet.common.util.AlertDialogBuilder
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
@@ -472,13 +469,13 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun showFingerprintKeyChangedDialog() {
-        val dialogBuilder = DialogBuilder(this)
-        dialogBuilder.setTitle(R.string.fingerprint_changed_title)
-        dialogBuilder.setMessage(R.string.fingerprint_changed_message)
-        dialogBuilder.setPositiveButton(android.R.string.ok) { _, _ ->
-            setLockState(State.ENTER_PIN)
-        }
-        dialogBuilder.show()
+        AlertDialogBuilder(this).apply {
+            title = getString(R.string.fingerprint_changed_title)
+            message = getString(R.string.fingerprint_changed_message)
+            positiveText = getString(android.R.string.ok)
+            positiveAction = { setLockState(State.ENTER_PIN) }
+        }.createAlertDialog().show()
+
     }
 
     private val shouldShowBackupReminder = configuration.remindBackupSeed

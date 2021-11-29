@@ -22,10 +22,6 @@ import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
-import android.view.WindowManager
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.Constants
@@ -39,7 +35,7 @@ import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.DialogBuilder
+import org.dash.wallet.common.util.AlertDialogBuilder
 
 
 @SuppressLint("Registered")
@@ -74,15 +70,18 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
                 TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
                 else -> it.message!!
             }
-            val dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title,
-                getString(R.string.import_keys_dialog_failure, message))
-            dialog.setPositiveButton(R.string.button_dismiss, null)
-            dialog.setNegativeButton(R.string.button_retry) { _, _ ->
-                RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-            }
-            dialog.show()
+
+            AlertDialogBuilder(this).apply {
+                title = getString(R.string.import_export_keys_dialog_failure_title)
+                this.message = getString(R.string.import_keys_dialog_failure, message)
+                positiveText = getString(R.string.button_dismiss)
+                negativeText = getString(R.string.button_retry)
+                negativeAction = { RestoreWalletFromSeedDialogFragment.show(supportFragmentManager) }
+                showIcon = true
+            }.createAlertDialog().show()
+
         })
-        viewModel.showUpgradeWalletAction.observe(this, Observer {
+        viewModel.showUpgradeWalletAction.observe(this, {
             walletBuffer = it
             EncryptNewKeyChainDialogFragment.show(supportFragmentManager, Constants.BIP44_PATH)
         })

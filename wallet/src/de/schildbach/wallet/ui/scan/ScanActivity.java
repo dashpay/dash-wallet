@@ -22,7 +22,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +40,7 @@ import com.google.zxing.qrcode.QRCodeReader;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.util.OnFirstPreDraw;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -50,7 +51,6 @@ import android.app.ActivityOptions;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -257,6 +257,7 @@ public final class ScanActivity extends AbstractWalletActivity
     @Override
     public void onRequestPermissionsResult(final int requestCode, final String[] permissions,
             final int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
             maybeOpenCamera();
         else
@@ -500,15 +501,18 @@ public final class ScanActivity extends AbstractWalletActivity
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final Bundle args = getArguments();
-            final DialogBuilder dialog = DialogBuilder.warn(getActivity(), args.getInt("title"));
-            dialog.setMessage(args.getString("message"));
-            dialog.singleDismissButton(new OnClickListener() {
-                @Override
-                public void onClick(final DialogInterface dialog, final int which) {
-                    getActivity().finish();
-                }
-            });
-            return dialog.create();
+            final AlertDialogBuilder warnScanAlertDialogBuilder = new AlertDialogBuilder(getActivity());
+            warnScanAlertDialogBuilder.setTitle(String.valueOf(args.getInt("title")));
+            warnScanAlertDialogBuilder.setMessage((args.getString("message")));
+            warnScanAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+            warnScanAlertDialogBuilder.setNeutralAction(
+                    () -> {
+                        getActivity().finish();
+                        return Unit.INSTANCE;
+                    }
+            );
+            warnScanAlertDialogBuilder.setShowIcon(true);
+            return warnScanAlertDialogBuilder.createAlertDialog();
         }
 
         @Override

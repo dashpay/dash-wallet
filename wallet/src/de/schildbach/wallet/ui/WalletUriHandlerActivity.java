@@ -18,8 +18,6 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.app.ActivityManager;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -31,7 +29,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +40,8 @@ import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
 
 /**
  * The only purpose of this Activity is to handle all so called Wallet Uris
@@ -117,30 +117,12 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
 
                     protected void handleMasterPublicKeyRequest(String sender) {
                         String confirmationMessage = getString(R.string.wallet_uri_handler_public_key_request_dialog_msg, sender);
-                        showConfirmationDialog(confirmationMessage, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                String watchingKey = wallet.getWatchingKey().serializePubB58(wallet.getNetworkParameters());
-                                Uri requestData = getIntent().getData();
-                                Intent result = WalletUri.createMasterPublicKeyResult(requestData, watchingKey, null, getAppName());
-                                setResult(RESULT_OK, result);
-                                finish();
-                            }
-                        });
+                        showConfirmationDialog(confirmationMessage, positiveBtnClickCreateMasterKey);
                     }
 
                     protected void handleAddressRequest(String sender) {
                         String confirmationMessage = getString(R.string.wallet_uri_handler_address_request_dialog_msg, sender);
-                        showConfirmationDialog(confirmationMessage, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                Address address = wallet.freshReceiveAddress();
-                                Uri requestData = getIntent().getData();
-                                Intent result = WalletUri.createAddressResult(requestData, address.toString(), getAppName());
-                                setResult(RESULT_OK, result);
-                                finish();
-                            }
-                        });
+                        showConfirmationDialog(confirmationMessage, positiveBtnClickCreateAddress);
                     }
 
                     @Override
@@ -152,31 +134,26 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
                             }
                         }, 0, messageResId, messageArgs);
                     }
-
-                    private String getAppName() {
-                        ApplicationInfo applicationInfo = getApplicationInfo();
-                        int stringId = applicationInfo.labelRes;
-                        return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : getString(stringId);
-                    }
                 }.parse();
             }
         }
     }
 
-    private void showConfirmationDialog(String message, final DialogInterface.OnClickListener onPositiveButtonClickListener) {
-        final DialogBuilder dialog = new DialogBuilder(WalletUriHandlerActivity.this);
-        dialog.setMessage(message);
-        dialog.setTitle(R.string.app_name);
-        dialog.setPositiveButton(R.string.button_ok, onPositiveButtonClickListener);
-        dialog.setNegativeButton(R.string.button_cancel, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                setResult(RESULT_CANCELED);
-                finish();
-            }
-        });
-        dialog.show();
+    private String getAppName() {
+        ApplicationInfo applicationInfo = getApplicationInfo();
+        int stringId = applicationInfo.labelRes;
+        return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : getString(stringId);
+    }
+
+    private void showConfirmationDialog(String message, final Function0<Unit> onPositiveButtonClickListener) {
+        AlertDialogBuilder confirmationAlertDialogBuilder = new AlertDialogBuilder(this);
+        confirmationAlertDialogBuilder.setTitle(getString(R.string.app_name));
+        confirmationAlertDialogBuilder.setMessage(message);
+        confirmationAlertDialogBuilder.setPositiveText(getString(R.string.button_ok));
+        confirmationAlertDialogBuilder.setPositiveAction(onPositiveButtonClickListener);
+        confirmationAlertDialogBuilder.setNegativeText( getString(R.string.button_cancel));
+        confirmationAlertDialogBuilder.setNegativeAction(negativeButtonClickListener);
+        confirmationAlertDialogBuilder.createAlertDialog().show();
     }
 
     @Override
@@ -193,4 +170,28 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
             finish();
         }
     }
+
+    private final Function0<Unit> negativeButtonClickListener = () -> {
+        WalletUriHandlerActivity.this.setResult(RESULT_CANCELED);
+        WalletUriHandlerActivity.this.finish();
+        return Unit.INSTANCE;
+    };
+
+    private final Function0<Unit> positiveBtnClickCreateMasterKey = () -> {
+        String watchingKey = wallet.getWatchingKey().serializePubB58(wallet.getNetworkParameters());
+        Uri requestData = getIntent().getData();
+        Intent result = WalletUri.createMasterPublicKeyResult(requestData, watchingKey, null, getAppName());
+        setResult(RESULT_OK, result);
+        finish();
+        return Unit.INSTANCE;
+    };
+
+    private final Function0<Unit> positiveBtnClickCreateAddress = () -> {
+        Address address = wallet.freshReceiveAddress();
+        Uri requestData = getIntent().getData();
+        Intent result = WalletUri.createAddressResult(requestData, address.toString(), getAppName());
+        setResult(RESULT_OK, result);
+        finish();
+        return Unit.INSTANCE;
+    };
 }

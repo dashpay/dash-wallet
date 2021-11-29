@@ -29,15 +29,16 @@ import androidx.lifecycle.ViewModelProviders;
 
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
 
 public class SendCoinsActivity extends AbstractBindServiceActivity {
 
@@ -67,10 +68,11 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
                     case ERROR: {
                         String message = paymentIntentResource.getMessage();
                         if (message != null) {
-                            final DialogBuilder dialog = new DialogBuilder(SendCoinsActivity.this);
-                            dialog.setMessage(message);
-                            dialog.singleDismissButton(activityDismissListener);
-                            dialog.show();
+                            AlertDialogBuilder paymentMessageAlertDialogBuilder = new AlertDialogBuilder(SendCoinsActivity.this);
+                            paymentMessageAlertDialogBuilder.setMessage(message);
+                            paymentMessageAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                            paymentMessageAlertDialogBuilder.setNeutralAction(neutralActionListener);
+                            paymentMessageAlertDialogBuilder.createAlertDialog().show();
                         }
                         break;
                     }
@@ -177,4 +179,9 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
     }
+
+    private final Function0<Unit> neutralActionListener = () -> {
+        finish();
+        return Unit.INSTANCE;
+    };
 }

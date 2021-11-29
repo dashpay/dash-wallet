@@ -52,7 +52,7 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.dash.wallet.common.UserInteractionAwareCallback;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,12 +76,12 @@ import de.schildbach.wallet_test.R;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 
-import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet.ui.ShowPasswordCheckListener;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Iso8601Format;
 import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet.util.WalletUtils;
+import kotlin.Unit;
 
 import static androidx.core.util.Preconditions.checkNotNull;
 import static androidx.core.util.Preconditions.checkState;
@@ -167,24 +167,33 @@ public class BackupWalletDialogFragment extends DialogFragment {
 
         warningView = view.findViewById(R.id.backup_wallet_dialog_warning_encrypted);
 
-        final DialogBuilder builder = DialogBuilder.custom(activity, R.string.export_keys_dialog_title, view);
-        // dummies, just to make buttons show
-        builder.setPositiveButton(R.string.export_keys_dialog_button_export, null);
-        builder.setNegativeButton(R.string.button_cancel, null);
+        final AlertDialogBuilder backUpWalletAlertDialogBuilder = new AlertDialogBuilder(activity);
+        backUpWalletAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
+        backUpWalletAlertDialogBuilder.setView(view);
+        backUpWalletAlertDialogBuilder.setPositiveText(getString(R.string.export_keys_dialog_button_export));
+        backUpWalletAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
+        backUpWalletAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    handleGo();
+                    return Unit.INSTANCE;
+                }
+        );
+        backUpWalletAlertDialogBuilder.setNegativeAction(
+                () -> {
+                    dismissAllowingStateLoss();
+                    activity.finish();
+                    return Unit.INSTANCE;
+                }
+        );
 
-        final AlertDialog dialog = builder.create();
+        final AlertDialog dialog = backUpWalletAlertDialogBuilder.createAlertDialog();
         dialog.setCanceledOnTouchOutside(false);
         dialog.setOnShowListener(d -> {
             positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
             positiveButton.setEnabled(false);
             positiveButton.setTypeface(Typeface.DEFAULT_BOLD);
-            positiveButton.setOnClickListener(v -> handleGo());
 
             negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
-            negativeButton.setOnClickListener(v -> {
-                dismissAllowingStateLoss();
-                activity.finish();
-            });
 
             passwordView.addTextChangedListener(textWatcher);
             passwordAgainView.addTextChangedListener(textWatcher);
@@ -229,8 +238,6 @@ public class BackupWalletDialogFragment extends DialogFragment {
         backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
         backgroundThread.start();
         backgroundHandler = new Handler(backgroundThread.getLooper());
-
-        dialog.getWindow().setCallback(new UserInteractionAwareCallback(dialog.getWindow().getCallback(), activity));
 
         return dialog;
     }
@@ -419,10 +426,17 @@ public class BackupWalletDialogFragment extends DialogFragment {
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final String target = getArguments().getString(KEY_TARGET);
-            final DialogBuilder dialog = DialogBuilder.dialog(activity, R.string.export_keys_dialog_title,
-                    Html.fromHtml(getString(R.string.export_keys_dialog_success, target)));
-            dialog.singleDismissButton((d, id) -> activity.finish());
-            return dialog.create();
+            AlertDialogBuilder walletBackUpSuccessAlertDialogBuilder = new AlertDialogBuilder(activity);
+            walletBackUpSuccessAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
+            walletBackUpSuccessAlertDialogBuilder.setMessage(Html.fromHtml(getString(R.string.export_keys_dialog_success, target)));
+            walletBackUpSuccessAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+            walletBackUpSuccessAlertDialogBuilder.setNeutralAction(
+                    () -> {
+                        activity.finish();
+                        return Unit.INSTANCE;
+                    }
+            );
+            return walletBackUpSuccessAlertDialogBuilder.createAlertDialog();
         }
     }
 
@@ -449,11 +463,18 @@ public class BackupWalletDialogFragment extends DialogFragment {
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final String exceptionMessage = getArguments().getString(KEY_EXCEPTION_MESSAGE);
-            final DialogBuilder dialog = DialogBuilder.warn(activity,
-                    R.string.import_export_keys_dialog_failure_title, R.string.export_keys_dialog_failure,
-                    exceptionMessage);
-            dialog.singleDismissButton((d, id) -> activity.finish());
-            return dialog.create();
+            AlertDialogBuilder walletBackupFailureAlertDialogBuilder = new AlertDialogBuilder(activity);
+            walletBackupFailureAlertDialogBuilder.setTitle(getString( R.string.import_export_keys_dialog_failure_title));
+            walletBackupFailureAlertDialogBuilder.setMessage(walletBackupFailureAlertDialogBuilder.formatString(R.string.export_keys_dialog_failure, exceptionMessage));
+            walletBackupFailureAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+            walletBackupFailureAlertDialogBuilder.setNeutralAction(
+                    () -> {
+                        activity.finish();
+                        return Unit.INSTANCE;
+                    }
+            );
+            walletBackupFailureAlertDialogBuilder.setShowIcon(true);
+            return walletBackupFailureAlertDialogBuilder.createAlertDialog();
         }
     }
 }

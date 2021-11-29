@@ -36,10 +36,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.crypto.MnemonicException;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +58,8 @@ import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+
 import android.annotation.SuppressLint;
 
 
@@ -115,11 +116,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
-
-        final DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.import_keys_dialog_title_from_seed);
         final View view = LayoutInflater.from(activity).inflate(R.layout.restore_wallet_from_seed_dialog, null);
-        builder.setView(view);
         final TextView messageView = (TextView) view.findViewById(R.id.restore_wallet_dialog_message);
         messageView.setText(getString(R.string.import_keys_from_seed_dialog_message));
         replaceWarningView = view.findViewById(R.id.restore_wallet_from_storage_dialog_replace_warning);
@@ -127,25 +124,27 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         setupPasswordView();
         invalidWordView = (TextView)view.findViewById(R.id.restore_wallet_from_invalid_seed_warning);
 
-        builder.setPositiveButton(R.string.import_keys_dialog_button_import, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(final DialogInterface dialog, final int which) {
-                final String password = passwordView.getText().toString().trim();
-                clearPasswordView();
-
-                List<String> words = new ArrayList<>(Arrays.asList(password.split(" ")));
-
-                restoreWalletFromSeed(words);
-            }
-        });
-        builder.setNegativeButton(R.string.button_cancel, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(final DialogInterface dialog, final int which) {
-                clearPasswordView();
-            }
-        });
-
-        return builder.create();
+        final AlertDialogBuilder restoreWalletAlertDialogBuilder = new AlertDialogBuilder(activity);
+        restoreWalletAlertDialogBuilder.setTitle(getString(R.string.import_keys_dialog_title_from_seed));
+        restoreWalletAlertDialogBuilder.setView(view);
+        restoreWalletAlertDialogBuilder.setPositiveText(getString(R.string.import_keys_dialog_button_import));
+        restoreWalletAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    final String password = passwordView.getText().toString().trim();
+                    clearPasswordView();
+                    List<String> words = new ArrayList<>(Arrays.asList(password.split(" ")));
+                    restoreWalletFromSeed(words);
+                    return Unit.INSTANCE;
+                }
+        );
+        restoreWalletAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
+        restoreWalletAlertDialogBuilder.setNegativeAction(
+                () -> {
+                    clearPasswordView();
+                    return Unit.INSTANCE;
+                }
+        );
+        return restoreWalletAlertDialogBuilder.createAlertDialog();
     }
 
     private void setupPasswordView() {
@@ -197,17 +196,20 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
             log.info("successfully restored wallet from seed: {}", words.size());
         } catch (final IOException | MnemonicException x) {
-            final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.import_export_keys_dialog_failure_title);
-            dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.getMessage()));
-            dialog.setPositiveButton(R.string.button_dismiss, null);
-            dialog.setNegativeButton(R.string.button_retry, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(final DialogInterface dialog, final int id) {
-                    activity.handleRestoreWalletFromSeed();
-                }
-            });
-            dialog.show();
 
+            final AlertDialogBuilder restoreWalletFromSeedAlertDialogBuilder = new AlertDialogBuilder(activity);
+            restoreWalletFromSeedAlertDialogBuilder.setTitle(getString( R.string.import_export_keys_dialog_failure_title));
+            restoreWalletFromSeedAlertDialogBuilder.setMessage(getString(R.string.import_keys_dialog_failure, x.getMessage()));
+            restoreWalletFromSeedAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
+            restoreWalletFromSeedAlertDialogBuilder.setNegativeText(getString(R.string.button_retry));
+            restoreWalletFromSeedAlertDialogBuilder.setNegativeAction(
+                    () -> {
+                        activity.handleRestoreWalletFromSeed();
+                        return Unit.INSTANCE;
+                    }
+            );
+            restoreWalletFromSeedAlertDialogBuilder.setShowIcon(true);
+            restoreWalletFromSeedAlertDialogBuilder.createAlertDialog().show();
             log.info("problem restoring wallet from seed: ", x);
         }
     }

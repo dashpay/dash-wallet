@@ -16,7 +16,6 @@
 
 package org.dash.wallet.integration.uphold.ui;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -39,7 +38,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.dash.wallet.common.util.WalletDataProvider;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
@@ -210,10 +209,10 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         if(code == 400 || code == 403 || code >= 400)
                 messageId = R.string.uphold_error_report_issue;
 
-        new DialogBuilder(this)
-                .setMessage(messageId)
-                .setTitle(R.string.uphold_error)
-                .show();
+        AlertDialogBuilder errorAlertDialogBuilder = new AlertDialogBuilder(this);
+        errorAlertDialogBuilder.setTitle(getString(R.string.uphold_error));
+        errorAlertDialogBuilder.setMessage(getString(messageId));
+        errorAlertDialogBuilder.createAlertDialog().show();
     }
 
     private void showWithdrawalDialog() {

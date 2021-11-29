@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.widget;
 
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
@@ -27,10 +26,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 
 import de.schildbach.wallet.ui.BackupWalletToSeedDialogFragment;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 public class UpgradeWalletDisclaimerDialog extends DialogFragment {
 
@@ -49,25 +49,24 @@ public class UpgradeWalletDisclaimerDialog extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
-        final DialogBuilder dialogBuilder = new DialogBuilder(getActivity());
-        dialogBuilder.setTitle(R.string.encrypt_new_key_chain_dialog_title);
-
         String message = getString(R.string.encrypt_new_key_chain_dialog_message) + "\n\n" +
                 getString(R.string.pin_code_required_dialog_message);
-        dialogBuilder.setMessage(message);
-        dialogBuilder.setCancelable(false);
-        dialogBuilder.setPositiveButton(android.R.string.ok, null);
-
         String buttonText = getString(R.string.export_keys_dialog_title_to_seed) + " / " + getString(R.string.wallet_options_encrypt_keys_set);
-        dialogBuilder.setPositiveButton(buttonText,
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(final DialogInterface dialog, final int which) {
-                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
-                    }
-                });
 
-        return dialogBuilder.create();
+        final AlertDialogBuilder upgradeWalletAlertDialogBuilder = new AlertDialogBuilder(requireActivity());
+        upgradeWalletAlertDialogBuilder.setTitle(getString(R.string.encrypt_new_key_chain_dialog_title));
+        upgradeWalletAlertDialogBuilder.setMessage(message);
+        upgradeWalletAlertDialogBuilder.setCancelable(false);
+        upgradeWalletAlertDialogBuilder.setPositiveText(buttonText);
+        upgradeWalletAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    if (isAdded()){
+                        BackupWalletToSeedDialogFragment.show(getParentFragmentManager(), true);
+                    }
+                    return Unit.INSTANCE;
+                }
+        );
+        return upgradeWalletAlertDialogBuilder.createAlertDialog();
     }
 
     public interface OnUpgradeConfirmedListener {

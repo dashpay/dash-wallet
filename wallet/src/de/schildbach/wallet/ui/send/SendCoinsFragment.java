@@ -53,7 +53,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
 import org.bitcoinj.wallet.Wallet.DustySendRequested;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.dash.wallet.common.util.GenericUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -74,6 +74,7 @@ import de.schildbach.wallet.ui.InputParser;
 import de.schildbach.wallet.ui.SingleActionSharedViewModel;
 import de.schildbach.wallet.ui.TransactionResultActivity;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 public class SendCoinsFragment extends Fragment {
 
@@ -149,7 +150,7 @@ public class SendCoinsFragment extends Fragment {
             }
         });
 
-        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(this, new Observer<BlockchainState>() {
+        AppDatabase.getAppDatabase().blockchainStateDao().load().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
             @Override
             public void onChanged(BlockchainState blockchainState) {
                 SendCoinsFragment.this.blockchainState = blockchainState;
@@ -374,9 +375,6 @@ public class SendCoinsFragment extends Fragment {
         final Coin pending = estimated.subtract(available);
 
         final MonetaryFormat dashFormat = config.getFormat();
-
-        final DialogBuilder dialog = DialogBuilder.warn(activity,
-                R.string.send_coins_fragment_insufficient_money_title);
         final StringBuilder msg = new StringBuilder();
         msg.append(getString(R.string.send_coins_fragment_insufficient_money_msg1, dashFormat.format(missing)));
 
@@ -385,34 +383,42 @@ public class SendCoinsFragment extends Fragment {
                     .append(getString(R.string.send_coins_fragment_pending, dashFormat.format(pending)));
         if (viewModel.getBasePaymentIntentValue().mayEditAmount())
             msg.append("\n\n").append(getString(R.string.send_coins_fragment_insufficient_money_msg2));
-        dialog.setMessage(msg);
-        if (viewModel.getBasePaymentIntentValue().mayEditAmount()) {
-            dialog.setPositiveButton(R.string.send_coins_options_empty, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(final DialogInterface dialog, final int which) {
-                    handleEmpty();
-                }
-            });
-            dialog.setNegativeButton(R.string.button_cancel, null);
+
+        final AlertDialogBuilder insufficientMoneyAlertDialogBuilder = new AlertDialogBuilder(activity);
+        insufficientMoneyAlertDialogBuilder.setTitle(getString(R.string.send_coins_fragment_insufficient_money_title));
+        insufficientMoneyAlertDialogBuilder.setMessage(msg);
+        if (viewModel.getBasePaymentIntentValue().mayEditAmount()){
+            insufficientMoneyAlertDialogBuilder.setPositiveText(getString(R.string.send_coins_options_empty));
+            insufficientMoneyAlertDialogBuilder.setPositiveAction(
+                    () -> {
+                        handleEmpty();
+                        return Unit.INSTANCE;
+                    }
+            );
+            insufficientMoneyAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
         } else {
-            dialog.setNeutralButton(R.string.button_dismiss, null);
+            insufficientMoneyAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
         }
-        dialog.show();
+        insufficientMoneyAlertDialogBuilder.setShowIcon(true);
+        insufficientMoneyAlertDialogBuilder.createAlertDialog().show();
     }
 
     private void showEmptyWalletFailedDialog() {
-        final DialogBuilder dialog = DialogBuilder.warn(activity,
-                R.string.send_coins_fragment_empty_wallet_failed_title);
-        dialog.setMessage(R.string.send_coins_fragment_hint_empty_wallet_failed);
-        dialog.setNeutralButton(R.string.button_dismiss, null);
-        dialog.show();
+        final AlertDialogBuilder emptyWalletAlertDialogBuilder = new AlertDialogBuilder(activity);
+        emptyWalletAlertDialogBuilder.setTitle(getString(R.string.send_coins_fragment_empty_wallet_failed_title));
+        emptyWalletAlertDialogBuilder.setMessage(getString(R.string.send_coins_fragment_hint_empty_wallet_failed));
+        emptyWalletAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+        emptyWalletAlertDialogBuilder.setShowIcon(true);
+        emptyWalletAlertDialogBuilder.createAlertDialog().show();
     }
 
     private void showFailureDialog(Exception exception) {
-        final DialogBuilder dialog = DialogBuilder.warn(activity, R.string.send_coins_error_msg);
-        dialog.setMessage(exception.toString());
-        dialog.setNeutralButton(R.string.button_dismiss, null);
-        dialog.show();
+        final AlertDialogBuilder sendCoinsFailedAlertDialogBuilder = new AlertDialogBuilder(activity);
+        sendCoinsFailedAlertDialogBuilder.setTitle(getString(R.string.send_coins_error_msg));
+        sendCoinsFailedAlertDialogBuilder.setMessage(exception.toString());
+        sendCoinsFailedAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+        sendCoinsFailedAlertDialogBuilder.setShowIcon(true);
+        sendCoinsFailedAlertDialogBuilder.createAlertDialog().show();
     }
 
     private void showTransactionResult(Transaction transaction, Wallet wallet) {
@@ -581,7 +587,7 @@ public class SendCoinsFragment extends Fragment {
 
         DialogFragment dialog = ConfirmTransactionDialog.createDialog(address, amountStr, amountFiat,
                 fiatSymbol, fee, total, null, null, null);
-        dialog.show(Objects.requireNonNull(getFragmentManager()), "ConfirmTransactionDialog");
+        dialog.show(getParentFragmentManager(), "ConfirmTransactionDialog");
     }
 
 

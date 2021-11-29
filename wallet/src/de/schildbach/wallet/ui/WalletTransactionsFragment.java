@@ -43,6 +43,7 @@ import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
@@ -62,6 +63,7 @@ import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.UserInteractionAwareCallback;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.slf4j.Logger;
@@ -379,7 +381,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
                         return application.getWallet().toString(false, true, true, null);
                     }
                 };
-                dialog.show();
+                AlertDialog alertDialog = dialog.show();
+                alertDialog.getWindow().setCallback(new UserInteractionAwareCallback(alertDialog.getWindow().getCallback(), getActivity()));
             }
         });
         popupMenu.show();

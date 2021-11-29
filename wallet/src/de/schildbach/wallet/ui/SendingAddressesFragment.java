@@ -28,7 +28,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -224,20 +224,18 @@ public final class SendingAddressesFragment extends FancyListFragment
 
     private void handlePasteClipboard() {
         final Address address = getAddressFromPrimaryClip();
+        final AlertDialogBuilder pasteClipboardAlertDialogBuilder = new AlertDialogBuilder(activity);
+        pasteClipboardAlertDialogBuilder.setTitle(getString(R.string.address_book_options_paste_from_clipboard_title));
+        pasteClipboardAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+
         if (address == null) {
-            final DialogBuilder dialog = new DialogBuilder(activity);
-            dialog.setTitle(R.string.address_book_options_paste_from_clipboard_title);
-            dialog.setMessage(R.string.address_book_options_paste_from_clipboard_invalid);
-            dialog.singleDismissButton(null);
-            dialog.show();
+            pasteClipboardAlertDialogBuilder.setMessage(getString(R.string.address_book_options_paste_from_clipboard_invalid));
+            pasteClipboardAlertDialogBuilder.createAlertDialog().show();
         } else if (!wallet.isPubKeyHashMine(address.getHash160())) {
-            EditAddressBookEntryFragment.edit(getFragmentManager(), address);
+            EditAddressBookEntryFragment.edit(getParentFragmentManager(), address);
         } else {
-            final DialogBuilder dialog = new DialogBuilder(activity);
-            dialog.setTitle(R.string.address_book_options_paste_from_clipboard_title);
-            dialog.setMessage(R.string.address_book_options_paste_from_clipboard_own_address);
-            dialog.singleDismissButton(null);
-            dialog.show();
+            pasteClipboardAlertDialogBuilder.setMessage(getString(R.string.address_book_options_paste_from_clipboard_own_address));
+            pasteClipboardAlertDialogBuilder.createAlertDialog().show();
         }
     }
 

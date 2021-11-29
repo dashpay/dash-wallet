@@ -21,20 +21,20 @@ import java.io.IOException;
 import java.util.Locale;
 
 import org.bitcoinj.crypto.DeterministicKey;
+import org.dash.wallet.common.UserInteractionAwareCallback;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 import android.app.Activity;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
@@ -45,6 +45,8 @@ import android.preference.PreferenceScreen;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
+
+import androidx.appcompat.app.AlertDialog;
 
 /**
  * @author Andreas Schildbach
@@ -131,23 +133,24 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 				return application.getWallet().toString(false, true, true, null);
 			}
 		};
-		dialog.show();
+		AlertDialog alertDialog = dialog.show();
+		alertDialog.getWindow().setCallback(new UserInteractionAwareCallback(alertDialog.getWindow().getCallback(), getActivity()));
 	}
     private void handleInitiateReset() {
-		final DialogBuilder dialog = new DialogBuilder(activity);
-		dialog.setTitle(R.string.preferences_initiate_reset_title);
-		dialog.setMessage(R.string.preferences_initiate_reset_dialog_message);
-        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive, new OnClickListener() {
-			@Override
-            public void onClick(final DialogInterface dialog, final int which) {
-				log.info("manually initiated blockchain reset");
-
-				application.resetBlockchain();
-				activity.finish(); // TODO doesn't fully finish prefs on single pane layouts
-			}
-		});
-		dialog.setNegativeButton(R.string.button_dismiss, null);
-		dialog.show();
+		final AlertDialogBuilder resetBlockChainAlertDialogBuilder = new AlertDialogBuilder(activity);
+		resetBlockChainAlertDialogBuilder.setTitle(getString(R.string.preferences_initiate_reset_title));
+		resetBlockChainAlertDialogBuilder.setMessage(getString(R.string.preferences_initiate_reset_dialog_message));
+		resetBlockChainAlertDialogBuilder.setPositiveText(getString(R.string.preferences_initiate_reset_dialog_positive));
+		resetBlockChainAlertDialogBuilder.setPositiveAction(
+				() -> {
+					log.info("manually initiated blockchain reset");
+					application.resetBlockchain();
+					activity.finish(); // TODO doesn't fully finish prefs on single pane layouts
+					return Unit.INSTANCE;
+				}
+		);
+		resetBlockChainAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+		resetBlockChainAlertDialogBuilder.createAlertDialog().show();
 	}
 
     private void handleExtendedPublicKey() {
@@ -165,21 +168,25 @@ public final class DiagnosticsFragment extends PreferenceFragment {
 		final ImageView imageView = (ImageView) view.findViewById(R.id.extended_public_key_dialog_image);
 		imageView.setImageDrawable(bitmap);
 
-		final DialogBuilder dialog = new DialogBuilder(activity);
-		dialog.setView(view);
-		dialog.setNegativeButton(R.string.button_dismiss, null);
-		dialog.setPositiveButton(R.string.button_share, new OnClickListener() {
-			@Override
-			public void onClick(final DialogInterface dialog, final int which) {
-				final Intent intent = new Intent(Intent.ACTION_SEND);
-				intent.setType("text/plain");
-				intent.putExtra(Intent.EXTRA_TEXT, xpub);
-				intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.extended_public_key_fragment_title));
-				startActivity(Intent.createChooser(intent, getString(R.string.extended_public_key_fragment_share)));
-				log.info("xpub shared via intent: {}", xpub);
-			}
-		});
+		final AlertDialogBuilder extendPublicKeyAlertDialogBuilder = new AlertDialogBuilder(activity);
+		extendPublicKeyAlertDialogBuilder.setView(view);
+		extendPublicKeyAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+		extendPublicKeyAlertDialogBuilder.setPositiveText(getString(R.string.button_share));
+		extendPublicKeyAlertDialogBuilder.setPositiveAction(
+				() -> {
+					createAndLaunchShareIntent(xpub);
+					return Unit.INSTANCE;
+				}
+		);
+		extendPublicKeyAlertDialogBuilder.createAlertDialog().show();
+	}
 
-		dialog.show();
+	private void createAndLaunchShareIntent(String xpub) {
+		final Intent intent = new Intent(Intent.ACTION_SEND);
+		intent.setType("text/plain");
+		intent.putExtra(Intent.EXTRA_TEXT, xpub);
+		intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.extended_public_key_fragment_title));
+		startActivity(Intent.createChooser(intent, getString(R.string.extended_public_key_fragment_share)));
+		log.info("xpub shared via intent: {}", xpub);
 	}
 }

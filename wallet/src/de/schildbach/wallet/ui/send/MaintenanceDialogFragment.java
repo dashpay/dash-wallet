@@ -28,6 +28,7 @@ import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicUpgradeRequiresPassword;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.util.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.bouncycastle.crypto.params.KeyParameter;
@@ -39,6 +40,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -139,49 +141,34 @@ public class MaintenanceDialogFragment extends DialogFragment {
 
         badPasswordView = view.findViewById(R.id.maintenance_dialog_bad_password);
 
-        final DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.maintenance_dialog_title);
-        builder.setView(view);
-        builder.setPositiveButton(R.string.maintenance_dialog_button_move, null); // dummy, just to make it
-                                                                                  // show
-        builder.setNegativeButton(R.string.button_dismiss, null);
-        builder.setCancelable(false);
+        final AlertDialogBuilder maintenanceAlertDialogBuilder = new AlertDialogBuilder(activity);
+        maintenanceAlertDialogBuilder.setTitle(getString(R.string.maintenance_dialog_title));
+        maintenanceAlertDialogBuilder.setView(view);
+        maintenanceAlertDialogBuilder.setPositiveText(getString(R.string.maintenance_dialog_button_move));
+        maintenanceAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    log.info("user decided to do maintenance");
+                    handleGo();
+                    return Unit.INSTANCE;
+                }
+        );
+        maintenanceAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+        maintenanceAlertDialogBuilder.setCancelable(false);
+        maintenanceAlertDialogBuilder.setCancelableOnTouchOutside(false);
+        final AlertDialog dialog = maintenanceAlertDialogBuilder.createAlertDialog();
+        dialog.setOnShowListener(dialogInterface -> {
+            positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+            negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
+            positiveButton.setTypeface(Typeface.DEFAULT_BOLD);
+            passwordView.addTextChangedListener(textWatcher);
+            MaintenanceDialogFragment.this.dialog = dialog;
+            updateView();
 
-        final AlertDialog dialog = builder.create();
-        dialog.setCanceledOnTouchOutside(false);
-
-        dialog.setOnShowListener(new OnShowListener() {
-            @Override
-            public void onShow(final DialogInterface d) {
-                positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-                negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
-
-                positiveButton.setTypeface(Typeface.DEFAULT_BOLD);
-                positiveButton.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(final View v) {
-                        log.info("user decided to do maintenance");
-                        handleGo();
-                    }
-                });
-                negativeButton.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(final View v) {
-                        log.info("user decided to dismiss");
-                        dismiss();
-                    }
-                });
-
-                passwordView.addTextChangedListener(textWatcher);
-
-                MaintenanceDialogFragment.this.dialog = dialog;
-                updateView();
-            }
         });
 
         log.info("showing maintenance dialog");
-
         return dialog;
+
     }
 
     @Override

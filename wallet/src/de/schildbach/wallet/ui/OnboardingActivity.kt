@@ -21,7 +21,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.LayerDrawable
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.TextUtils
@@ -37,7 +36,7 @@ import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
-import org.dash.wallet.common.ui.DialogBuilder
+import org.dash.wallet.common.util.AlertDialogBuilder
 
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 const val SET_PIN_REQUEST_CODE = 1
@@ -156,13 +155,17 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
                 else -> it.message!!
             }
-            val dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title)
-            dialog.setMessage(getString(R.string.import_keys_dialog_failure, message))
-            dialog.setPositiveButton(R.string.button_dismiss, null)
-            dialog.setNegativeButton(R.string.button_retry) { _, _ ->
-                RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-            }
-            dialog.show()
+
+            AlertDialogBuilder(this).apply {
+                title = getString(R.string.import_export_keys_dialog_failure_title)
+                this.message = getString(R.string.import_keys_dialog_failure, message)
+                positiveText = getString(R.string.button_dismiss)
+                negativeText = getString(R.string.button_retry)
+                negativeAction = {
+                    RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
+                }
+                showIcon = true
+            }.createAlertDialog().show()
         })
         viewModel.startActivityAction.observe(this, Observer {
             startActivityForResult(it, SET_PIN_REQUEST_CODE)
