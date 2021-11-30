@@ -185,9 +185,9 @@ public class BackupWalletDialogFragment extends DialogFragment {
                     return Unit.INSTANCE;
                 }
         );
+        backUpWalletAlertDialogBuilder.setCancelableOnTouchOutside(false);
 
         final AlertDialog dialog = backUpWalletAlertDialogBuilder.createAlertDialog();
-        dialog.setCanceledOnTouchOutside(false);
         dialog.setOnShowListener(d -> {
             positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
             positiveButton.setEnabled(false);

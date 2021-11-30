@@ -19,12 +19,14 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_view_seed.*
 
 /**
  * @author Eric Britten
  */
+@AndroidEntryPoint
 class ViewSeedActivity : BaseMenuActivity() {
 
     companion object {

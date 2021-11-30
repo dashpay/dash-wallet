@@ -31,6 +31,7 @@ import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.dash.wallet.common.ui.AlertDialogBuilder;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
@@ -40,6 +41,7 @@ import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 
+@AndroidEntryPoint
 public class SendCoinsActivity extends AbstractBindServiceActivity {
 
     public static final String ANYPAY_SCHEME = "pay";

@@ -69,6 +69,7 @@ import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -94,6 +95,7 @@ import kotlin.jvm.functions.Function0;
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public final class WalletActivity extends AbstractBindServiceActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback,
         NavigationView.OnNavigationItemSelectedListener,
