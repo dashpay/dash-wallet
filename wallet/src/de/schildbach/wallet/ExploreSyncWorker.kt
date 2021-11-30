@@ -17,6 +17,7 @@
 package de.schildbach.wallet
 
 import android.content.Context
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.common.base.Stopwatch
@@ -91,18 +92,22 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         valueType: Class<T>,
         dao: BaseDao<T>
     ) {
-        val prefsLastSyncKey = "${PREFS_LAST_SYNC_KEY}_$tableName"
-        val lastSync = preferences.getLong(prefsLastSyncKey, 0)
-        val lastDataUpdate = exploreRepository.getLastUpdate(tableName)
-        if (lastSync < lastDataUpdate) {
-            log.info("Local $tableName data timestamp\t$lastSync (${Date(lastSync)})")
-            log.info("Remote $tableName data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
-            dao.deleteAll(source)
-            syncTable(tableName, valueType, dao)
-            preferences.edit().putLong(prefsLastSyncKey, lastDataUpdate).apply()
-            log.info("Sync $tableName finished")
-        } else {
-            log.info("Data $tableName timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+        try {
+            val prefsLastSyncKey = "${PREFS_LAST_SYNC_KEY}_$tableName"
+            val lastSync = preferences.getLong(prefsLastSyncKey, 0)
+            val lastDataUpdate = exploreRepository.getLastUpdate(tableName)
+            if (lastSync < lastDataUpdate) {
+                log.info("Local $tableName data timestamp\t$lastSync (${Date(lastSync)})")
+                log.info("Remote $tableName data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
+                dao.deleteAll(source)
+                syncTable(tableName, valueType, dao)
+                preferences.edit().putLong(prefsLastSyncKey, lastDataUpdate).apply()
+                log.info("Sync $tableName finished")
+            } else {
+                log.info("Data $tableName timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+            }
+        } catch (ex: Exception) {
+            log.error("Error while syncing ${tableName}: ${ex.message}")
         }
     }
 

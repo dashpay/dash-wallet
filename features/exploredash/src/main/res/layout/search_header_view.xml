@@ -83,6 +83,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/filter_btn"
+            app:layout_constraintBottom_toTopOf="@id/search_subtitle"
             tools:text="United States, New York" />
 
         <TextView
@@ -97,6 +98,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/filter_btn"
             app:layout_constraintTop_toBottomOf="@id/search_title"
+            app:layout_constraintBottom_toBottomOf="parent"
             tools:text="105 ATMs in 20 miles" />
 
         <Button
