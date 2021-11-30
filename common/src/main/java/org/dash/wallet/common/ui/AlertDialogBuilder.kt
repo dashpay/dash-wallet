@@ -1,4 +1,4 @@
-package org.dash.wallet.common.util
+package org.dash.wallet.common.ui
 
 import android.app.Activity
 import android.content.Context

@@ -33,7 +33,6 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
-import org.dash.wallet.common.LockScreenViewModel
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 

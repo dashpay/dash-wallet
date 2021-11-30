@@ -34,7 +34,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_forgot_pin.*
 import kotlinx.android.synthetic.main.activity_recover_wallet_from_seed.*
 import org.bitcoinj.crypto.MnemonicException
-import org.dash.wallet.common.util.AlertDialogBuilder
+import org.dash.wallet.common.ui.AlertDialogBuilder
 import java.util.*
 
 

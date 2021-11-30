@@ -22,7 +22,7 @@ import java.util.Locale;
 
 import org.bitcoinj.crypto.DeterministicKey;
 import org.dash.wallet.common.UserInteractionAwareCallback;
-import org.dash.wallet.common.util.AlertDialogBuilder;
+import org.dash.wallet.common.ui.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

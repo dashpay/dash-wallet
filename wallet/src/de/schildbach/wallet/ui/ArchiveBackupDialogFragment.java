@@ -28,7 +28,7 @@ import androidx.core.content.FileProvider;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 
-import org.dash.wallet.common.util.AlertDialogBuilder;
+import org.dash.wallet.common.ui.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

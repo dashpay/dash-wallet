@@ -38,7 +38,7 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
-import org.dash.wallet.common.util.AlertDialogBuilder
+import org.dash.wallet.common.ui.AlertDialogBuilder
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidClient

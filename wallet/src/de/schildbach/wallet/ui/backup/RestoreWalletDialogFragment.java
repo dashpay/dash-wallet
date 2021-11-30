@@ -52,7 +52,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.UserInteractionAwareCallback;
 import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.common.util.AlertDialogBuilder;
+import org.dash.wallet.common.ui.AlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

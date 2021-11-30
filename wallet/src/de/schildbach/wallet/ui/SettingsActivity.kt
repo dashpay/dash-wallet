@@ -29,7 +29,7 @@ import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
 import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
 import android.app.Activity
 import de.schildbach.wallet.rates.ExchangeRate
-import org.dash.wallet.common.util.AlertDialogBuilder
+import org.dash.wallet.common.ui.AlertDialogBuilder
 
 
 class SettingsActivity : BaseMenuActivity() {

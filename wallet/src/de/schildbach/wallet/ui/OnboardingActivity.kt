@@ -36,7 +36,7 @@ import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
-import org.dash.wallet.common.util.AlertDialogBuilder
+import org.dash.wallet.common.ui.AlertDialogBuilder
 
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 const val SET_PIN_REQUEST_CODE = 1

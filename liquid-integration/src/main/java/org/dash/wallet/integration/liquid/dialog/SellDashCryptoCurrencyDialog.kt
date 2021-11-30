@@ -2,17 +2,19 @@ package org.dash.wallet.integration.liquid.dialog
 
 import android.content.Context
 import android.widget.TextView
+import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.integration.liquid.adapter.CryptoCurrencyAdapter
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import org.dash.wallet.common.ui.BaseBottomSheetDialog
 import org.dash.wallet.integration.liquid.R
 import java.util.*
 
 
-class SellDashCryptoCurrencyDialog(val contexts: Context, val currencyType: String, val currencyArrayList: List<PayloadItem>, val listener: ValueSelectListener) : BottomSheetDialog(contexts) {
+class SellDashCryptoCurrencyDialog(val contexts: Context, val lifecycle: Lifecycle, val currencyType: String, val currencyArrayList: List<PayloadItem>, val listener: ValueSelectListener) : BaseBottomSheetDialog(contexts, lifecycle) {
     private val payload: List<PayloadItem>
     private var rvCryptoCurrency: RecyclerView? = null
 

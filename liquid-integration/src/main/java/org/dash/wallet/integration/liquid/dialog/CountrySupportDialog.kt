@@ -1,5 +1,6 @@
 package org.dash.wallet.integration.liquid.dialog
 
+import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.os.bundleOf
+import org.dash.wallet.common.UserInteractionAwareCallback
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integration.liquid.R
@@ -66,6 +68,7 @@ class CountrySupportDialog(val contexts: Context, val isCreditCard: Boolean) : D
                 R.drawable.ic_cryptocurrency
             }))
         }
+        window?.callback = UserInteractionAwareCallback(window?.callback, contexts as Activity?)
     }
 
 }

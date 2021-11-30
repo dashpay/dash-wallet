@@ -24,7 +24,6 @@ import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
@@ -64,7 +63,7 @@ import org.dash.wallet.common.UserInteractionAwareCallback;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
-import org.dash.wallet.common.util.AlertDialogBuilder;
+import org.dash.wallet.common.ui.AlertDialogBuilder;
 
 import java.io.IOException;
 import java.util.Currency;

@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui;
 
 import android.app.Activity;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.net.Uri;
@@ -29,7 +28,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.util.AlertDialogBuilder;
+import org.dash.wallet.common.ui.AlertDialogBuilder;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

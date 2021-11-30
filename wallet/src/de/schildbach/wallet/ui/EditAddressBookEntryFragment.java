@@ -34,7 +34,7 @@ import androidx.fragment.app.FragmentManager;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.util.AlertDialogBuilder;
+import org.dash.wallet.common.ui.AlertDialogBuilder;
 
 import javax.annotation.Nullable;
 

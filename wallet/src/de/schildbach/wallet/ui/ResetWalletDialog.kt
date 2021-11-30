@@ -18,22 +18,19 @@ package de.schildbach.wallet.ui
 
 import android.app.Dialog
 import android.os.Bundle
-import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.common.util.AlertDialogBuilder
+import org.dash.wallet.common.ui.AlertDialogBuilder
 
 class ResetWalletDialog : DialogFragment() {
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val builder = AlertDialogBuilder(this.requireActivity(), lifecycle)
-        //builder.registerLifecycle(lifecycle)
-        return builder
+        return AlertDialogBuilder(this.requireActivity(), lifecycle)
             .apply {
                 title = getString(R.string.wallet_lock_reset_wallet_title)
                 message = getString(R.string.wallet_lock_reset_wallet_message)

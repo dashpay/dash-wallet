@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.dash.wallet.common
+package org.dash.wallet.common.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel

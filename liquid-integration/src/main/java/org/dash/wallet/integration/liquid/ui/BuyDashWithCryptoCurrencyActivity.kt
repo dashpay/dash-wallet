@@ -24,7 +24,7 @@ import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.util.AlertDialogBuilder
+import org.dash.wallet.common.ui.AlertDialogBuilder
 import org.dash.wallet.integration.liquid.R
 import org.slf4j.LoggerFactory
 
