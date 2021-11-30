@@ -212,13 +212,19 @@
         <item name="colorControlActivated">@color/dash_blue</item>
     </style>
 
-    <style name="WhiteBackground">
+    <style name="ScreenshotWarningPanel">
+        <item name="android:background">@drawable/rounded_background</item>
+        <item name="android:theme">@style/ScreenshotWarningBackground</item>
+    </style>
+
+    <style name="ScreenshotWarningBackground">
         <item name="primaryColor">@android:color/white</item>
         <item name="secondaryColor">@android:color/white</item>
     </style>
 
-    <style name="ScreenshotWarningBackground" parent="WhiteBackground">
-        <item name="cornerRadius">10dp</item>
+    <style name="WhiteBackground">
+        <item name="primaryColor">@android:color/white</item>
+        <item name="secondaryColor">@android:color/white</item>
     </style>
 
     <style name="VerifySeedTextViewBackground" parent="WhiteBackground">

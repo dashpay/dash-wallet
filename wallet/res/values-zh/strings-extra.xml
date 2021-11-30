@@ -211,6 +211,15 @@
     <string name="verify_seed_buttons_tip">请以正确顺序输入您的助记词</string>
     <string name="verify_seed_success_title">验证成功</string>
     <string name="verify_seed_success_message">您的钱包现已安全. 您可以随时在其他设备通过您的助记词找回您的账户.</string>
+    <string name="verify_no_screenshot_title">请勿截屏</string>
+    <string name="verify_no_screenshot_message">相反, 将助记词写在安全的地方.</string>
+    <string name="verify_why_no_screenshot">为什么我不应该截屏?</string>
+    <string name="verify_warning_title">警告</string>
+    <string name="verify_warning_message">通过此助记词可获得您钱包的使用权.</string>
+    <string name="verify_warning_screenshots_title">请千万不要截屏</string>
+    <string name="verify_warning_screenshots_message">其他应用和设备可读取截屏.</string>
+    <string name="verify_warning_do_not_show">请千万不要让他人看到您的助记词.</string>
+    <string name="verify_warning_do_not_type">永远不要将助记词输入密码管理器或其它地方.</string>
     <string name="view_seed_done">完成</string>
     <string name="view_seed_title">助记词</string>
     <string name="transaction_result_view_on_explorer">在区块浏览器中查看</string>

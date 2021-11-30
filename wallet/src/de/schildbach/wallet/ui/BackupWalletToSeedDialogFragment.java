@@ -179,9 +179,7 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
             }
         });
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            initFingerprintHelper();
-        }
+        initFingerprintHelper();
 
         return builder.create();
     }

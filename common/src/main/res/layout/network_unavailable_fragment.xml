@@ -62,7 +62,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="20dp"
         android:textSize="13sp"
-        android:drawableStart="@drawable/ic_arrow_left_blue"
+        app:drawableStartCompat="@drawable/ic_arrow_left_blue"
         android:visibility="gone"
         tools:text="Button"
         tools:visibility="visible"

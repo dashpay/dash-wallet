@@ -24,11 +24,13 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.Toolbar
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.dialog.CurrencyDialog
@@ -42,6 +44,9 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
 import org.dash.wallet.common.Constants.USER_BUY_SELL_DASH
 import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -49,6 +54,7 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
+import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.ui.LiquidBuyAndSellDashActivity
@@ -56,12 +62,14 @@ import org.dash.wallet.integration.liquid.ui.LiquidSplashActivity
 import org.dash.wallet.integration.liquid.ui.LiquidViewModel
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import org.dash.wallet.integration.uphold.data.UpholdClient
+import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.math.BigDecimal
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     private var liquidClient: LiquidClient? = null
@@ -79,6 +87,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     private lateinit var viewModel: BuyAndSellViewModel
     private lateinit var liquidViewModel: LiquidViewModel
     private var isNetworkOnline: Boolean = true
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(BuyAndSellLiquidUpholdActivity::class.java)
@@ -121,6 +131,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         updateBalances()
 
         liquid_container.setOnClickListener {
+            analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
+                AnalyticsConstants.Liquid.ENTER_CONNECTED
+            } else {
+                AnalyticsConstants.Liquid.ENTER_DISCONNECTED
+            }, bundleOf())
+
             startActivityForResult(
                 LiquidBuyAndSellDashActivity.createIntent(this),
                 USER_BUY_SELL_DASH
@@ -135,6 +151,13 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commitNow()
         network_status_container.isVisible = false
+
+        // check for missing keys from service.properties
+        if (!LiquidConstants.hasValidCredentials() || !UpholdConstants.hasValidCredentials()) {
+            keys_missing_error.isVisible = true
+            liquid_container.isEnabled = false
+            uphold_container.isEnabled = false
+        }
     }
 
     fun initViewModel() {
@@ -240,8 +263,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     private fun setNetworkState(online: Boolean) {
         network_status_container.isVisible = !online
-        liquid_container.isEnabled = online && Constants.IS_PROD_BUILD
-        uphold_container.isEnabled = online && Constants.IS_PROD_BUILD
+        liquid_container.isEnabled = online && Constants.IS_PROD_BUILD && LiquidConstants.hasValidCredentials()
+        uphold_container.isEnabled = online && Constants.IS_PROD_BUILD && UpholdConstants.hasValidCredentials()
         setLoginStatus(online)
         if (!isNetworkOnline && online) {
             updateBalances()

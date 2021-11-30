@@ -86,19 +86,17 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             }
         });
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            fingerprintHelper = new FingerprintHelper(getActivity());
-            if (fingerprintHelper.init()) {
-                boolean isFingerprintEnabled = fingerprintHelper.isFingerprintEnabled();
-                if (isFingerprintEnabled) {
-                    fingerprintView.setVisibility(View.VISIBLE);
-                    startFingerprintListener();
-                } else {
-                    fingerprintView.setText(R.string.touch_fingerprint_to_enable);
-                }
+        fingerprintHelper = new FingerprintHelper(getActivity());
+        if (fingerprintHelper.init()) {
+            boolean isFingerprintEnabled = fingerprintHelper.isFingerprintEnabled();
+            if (isFingerprintEnabled) {
+                fingerprintView.setVisibility(View.VISIBLE);
+                startFingerprintListener();
             } else {
-                fingerprintHelper = null;
+                fingerprintView.setText(R.string.touch_fingerprint_to_enable);
             }
+        } else {
+            fingerprintHelper = null;
         }
 
         if (walletProvider.getWallet().isEncrypted()) {

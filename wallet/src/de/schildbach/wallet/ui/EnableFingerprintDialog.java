@@ -56,7 +56,7 @@ public class EnableFingerprintDialog extends DialogFragment {
     public static boolean shouldBeShown(Activity activity) {
         FingerprintHelper fingerprintHelper = new FingerprintHelper(activity);
         boolean remindEnableFingerprint = WalletApplication.getInstance().getConfiguration().getRemindEnableFingerprint();
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled() && remindEnableFingerprint;
+        return fingerprintHelper.init() && !fingerprintHelper.isFingerprintEnabled() && remindEnableFingerprint;
     }
 
     public static EnableFingerprintDialog show(String password, FragmentManager fragmentManager) {
@@ -99,7 +99,7 @@ public class EnableFingerprintDialog extends DialogFragment {
         fingerprintView.setText(R.string.touch_fingerprint_to_enable);
 
         final FingerprintHelper fingerprintHelper = new FingerprintHelper(getActivity());
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && fingerprintHelper.init()) {
+        if (fingerprintHelper.init()) {
             fingerprintCancellationSignal = new CancellationSignal();
             fingerprintHelper.savePassword(getArguments().getString(PASSWORD_ARG),
                     fingerprintCancellationSignal, new FingerprintHelper.Callback() {

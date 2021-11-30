@@ -25,7 +25,7 @@
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
             android:layout_marginRight="15dp"
-            android:src="@drawable/ic_radio_round_unchecked" />
+            app:srcCompat="@drawable/ic_radio_round_unchecked" />
 
         <LinearLayout
             android:layout_width="match_parent"

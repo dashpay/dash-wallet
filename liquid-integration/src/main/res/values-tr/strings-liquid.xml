@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">Kredi kartıyla Dash satın al</string>
     <string name="liquid_logout">Çıkış Yap</string>
     <string name="liquid_logout_title">Liquid\'dan çıkış yap</string>
+    <string name="liquid_forced_logout">Liquid hesabınızın bağlantısı kesildi. Lütfen bir sonraki ekranda Liquid Hesabı Bağla\'yı seçin.</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Dash\'i diğer kripto para birimleriyle değiştir</string>
     <string name="transfer_dash_to_and_from_account">Dash\'inizi Liquid hesabınıza aktarın veya hesabınızdan gönderim yapın</string>
 
@@ -17,10 +18,12 @@
     <string name="button_cancel">İptal et</string>
     <string name="choose_your_payment_method">Ödeme şeklinizi seçin</string>
     <string name="crypto_support">Kripto Desteği</string>
+    <string name="credit_card_support">Kredi Kartı Desteği</string>
     <string name="okay">Tamam</string>
     <string name="close">Kapat</string>
-    <string name="list_of_countries">Desteklenmeyen ülkelerin listesini görüntüle</string>
-    <string name="buying_dash_not_supported">Kripto para birimleriyle Dash satın almak bazı ülkelerde desteklenmiyor</string>
+    <string name="list_of_countries">Desteklenmeyen ülkelerin listesine bakın.</string>
+    <string name="buying_dash_not_supported_credit_cards">Kredi kartıyla Dash satın almak bazı ülkelerde desteklenmiyor.</string>
+    <string name="buying_dash_not_supported_crypto">Kripto para birimleriyle Dash satın almak bazı ülkelerde desteklenmiyor.</string>
     <string name="buying_dash_success_message">Bu ekranı kapatabilirsiniz, Dash\'iniz cüzdanınıza gönderilecektir.</string>
 
     <string name="confirm">Onayla</string>
@@ -30,7 +33,8 @@
     <string name="total">Toplam</string>
     <string name="connect">Bağlan</string>
     <string name="connected">Bağlandı</string>
-    <string name="buy_sell_dash">Dash al &amp;amp; sat veya yeni bir hesap oluştur</string>
+    <string name="disconnected">Bağlantı kesildi</string>
+    <string name="buy_sell_dash">Dash almak &amp; satmak veya yeni bir hesap oluşturmak için</string>
 
 
     <string name="transfer_to_liquid">Liquid\'e transfer et</string>

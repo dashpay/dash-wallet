@@ -19,18 +19,27 @@ package de.schildbach.wallet.ui
 import android.app.Dialog
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
+import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class ResetWalletDialog : DialogFragment() {
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialogBuilder = AlertDialog.Builder(context!!, R.style.My_Theme_Dialog)
+        val dialogBuilder = AlertDialog.Builder(requireContext(), R.style.My_Theme_Dialog)
         dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title)
         dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message)
         //Inverting dialog answers to prevent accidental wallet reset
         dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title) { _, _ ->
+            analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
             (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
             WalletApplication.getInstance().triggerWipe(context)
         }

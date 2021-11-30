@@ -50,6 +50,20 @@
                     android:textColor="@color/dash_gray"
                     android:textSize="12sp" />
 
+                <TextView
+                    android:id="@+id/keys_missing_error"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="15dp"
+                    android:layout_marginEnd="15dp"
+                    android:layout_marginStart="15dp"
+                    android:text="@string/services_portal_subtitle_error"
+                    android:textColor="@color/dash_red"
+                    android:textSize="12sp"
+                    android:visibility="gone"
+                    tools:visibility="visible"/>
+
                 <RelativeLayout
                     android:id="@+id/liquid_container"
                     style="@style/DashButton.White.NoDisabled"
@@ -110,7 +124,7 @@
                         android:layout_marginStart="10dp"
                         android:orientation="horizontal"
                         android:visibility="gone"
-                        tools:visibility="visible" >
+                        tools:visibility="visible">
 
                         <ImageView
                             android:layout_width="15dp"
@@ -140,7 +154,7 @@
                             android:layout_marginTop="2dp"
                             android:textColor="@color/dash_gray"
                             android:textSize="12sp"
-                            tools:text="USD 0.00"/>
+                            tools:text="USD 0.00" />
 
                     </LinearLayout>
 

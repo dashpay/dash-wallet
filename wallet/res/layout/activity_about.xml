@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dash_lighter_gray">
+    android:background="@color/dash_lighter_gray"
+    tools:context="de.schildbach.wallet.ui.AboutActivity">
 
     <include
         android:id="@+id/app_bar_include"
@@ -63,6 +64,25 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/app_version_code"
         tools:text="DashJ 0.18.0" />
+
+    <TextView
+        android:id="@+id/firebase_installation_id"
+        style="@style/MontserratRegular"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/selectable_background_dark"
+        android:gravity="center"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:textColor="@android:color/black"
+        android:textSize="12sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/library_version_name"
+        tools:text="Firebase Installation ID"
+        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/fork_disclaimer"

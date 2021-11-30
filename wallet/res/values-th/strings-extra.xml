@@ -201,7 +201,7 @@
     <string name="verify_it_is_important">สำคัญ</string>
     <string name="verify_it_is_important_subtitle">เรากำลังจะแสดงให้คุณเห็นถึง การเข้ารหัสและถอดรหัสโดยใช้กุญแจรหัสตัวเดียวกันในการเข้าถึงกระเป๋าสตางค์ของคุณ</string>
     <string name="verify_info_text_1">วลีกู้คืนนี้จะทำให้คุณเข้าถึงจำนวนเงินในกระเป๋าสตางค์</string>
-    <string name="verify_info_text_2">เราไม่เก็บรักษาวลีนี้</string>
+    <string name="verify_info_text_2">เราไม่เก็บวลีการกู้คืนนี้</string>
     <string name="verify_info_text_3">คุณจะต้องใช้วลีกู้คืนนี้เพื่อเข้าถึงเงินทุนของคุณหากอุปกรณ์นี้สูญหายได้รับความเสียหายหรือหากกระเป๋าสตางค์ Dash เคยถอนการติดตั้งโดยไม่ได้ตั้งใจจากอุปกรณ์นี้</string>
     <string name="verify_skip">ข้าม</string>
     <string name="verify_secure_now_btn">ปลอดภัย</string>
@@ -211,6 +211,15 @@
     <string name="verify_seed_buttons_tip">โปรดแตะที่คำจากวลีการกู้คืนของคุณในลำดับที่ถูกต้อง</string>
     <string name="verify_seed_success_title">้ตรวจสอบสำเร็จ</string>
     <string name="verify_seed_success_message">กระเป๋าสตางค์ของคุณปลอดภัยแล้ว คุณสามารถใช้วลีกู้คืนได้ทุกเวลาเพื่อกู้คืนบัญชีของคุณบนอุปกรณ์อื่น</string>
+    <string name="verify_no_screenshot_title">อย่าใช้วิธีการบันทึกภาพหน้าจอ</string>
+    <string name="verify_no_screenshot_message">ให้เขียนวลีการกู้คืนในที่ปลอดภัยแทน</string>
+    <string name="verify_why_no_screenshot">ทำไมฉันจึงไม่ควรใช้การบันทึกภาพหน้าจอ</string>
+    <string name="verify_warning_title">คำเตือน</string>
+    <string name="verify_warning_message">วลีกู้คืนนี้คือการเข้าถึงเงินทุนในกระเป๋าของคุณ</string>
+    <string name="verify_warning_screenshots_title">อย่าถ่ายภาพหน้าจอ</string>
+    <string name="verify_warning_screenshots_message">การถ่ายภาพหน้าจอนั้นสามารถแสดงไปถึงแอพลิเคชั่น และอุปกรณ์อื่นได้</string>
+    <string name="verify_warning_do_not_show">อย่าให้ใครดูวลีการกู้คืนของคุณ</string>
+    <string name="verify_warning_do_not_type">อย่าพิมพ์วลีการกู้คืนของคุณลงใน \"password managers\" หรือที่อื่น ๆ</string>
     <string name="view_seed_done">เสร็จแล้ว</string>
     <string name="view_seed_title">วลีกู้คืน</string>
     <string name="transaction_result_view_on_explorer">ดูใน Block Explorer</string>

@@ -4,6 +4,7 @@
     <string name="buy_dash_with_liquid_account">ซื้อ Dash ด้วยบัตรเครดิต</string>
     <string name="liquid_logout">ออกจากระบบ</string>
     <string name="liquid_logout_title">ออกจากบัญชีสภาพคล่อง</string>
+    <string name="liquid_forced_logout">ลิงก์ไปยังบัญชีลิควิดของคุณเสียหาย โปรดเลือกลิงค์บัญชีลิควิดในหน้าจอถัดไป</string>
     <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Swap Dash กับคริปโตเคอเรนซีอื่น ๆ</string>
     <string name="transfer_dash_to_and_from_account">โอนไปยังและจากบัญชีสภาพคล่องของคุณ</string>
 
@@ -17,10 +18,12 @@
     <string name="button_cancel">ยกเลิก</string>
     <string name="choose_your_payment_method">เลือกวิธีการชำระเงิน</string>
     <string name="crypto_support">สนับสนุนคริปโต</string>
+    <string name="credit_card_support">การรองรับบัตรเครดิต</string>
     <string name="okay">ตกลง</string>
     <string name="close">ปิด</string>
-    <string name="list_of_countries">ดูรายชื่อประเทศที่ไม่รองรับ</string>
-    <string name="buying_dash_not_supported">การซื้อ Dash ด้วยคริปโตเคอเรนซีไม่รองรับในบางประเทศ</string>
+    <string name="list_of_countries">ดูรายชื่อประเทศที่ไม่ได้รับการสนับสนุน</string>
+    <string name="buying_dash_not_supported_credit_cards">การซื้อ Dash ด้วยบัตรเครดิตไม่ได้รับการสนับสนุนในบางประเทศ</string>
+    <string name="buying_dash_not_supported_crypto">การซื้อ Dash ด้วยคริปโตเคอเรนซีในบางประเทศยังไม่ยอมรับ</string>
     <string name="buying_dash_success_message">คุณสามารถปิดหน้าจอนี้ Dash ของคุณจะถูกส่งไปยังกระเป๋าเงินของคุณ</string>
 
     <string name="confirm">ยืนยัน</string>
@@ -30,7 +33,8 @@
     <string name="total">ทั้งหมด</string>
     <string name="connect">เชื่อมต่อ</string>
     <string name="connected">เชื่อมต่อแล้ว</string>
-    <string name="buy_sell_dash">ซื้อ &amp;amp; ขาย Dash หรือสร้างบัญชีใหม่</string>
+    <string name="disconnected">ตัดการเชื่อมต่อ</string>
+    <string name="buy_sell_dash">การซื้อ &amp; ขาย Dash หรือสร้างบัญชีใหม่</string>
 
 
     <string name="transfer_to_liquid">โอนไปยังบัญชีสภาพคล่อง</string>

@@ -50,7 +50,12 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getIntent().putExtra(LockScreenActivity.INTENT_EXTRA_KEEP_UNLOCKED, true);
+
+        // only set INTENT_EXTRA_KEEP_UNLOCKED if it is not yet set
+        // if this Activity is started by a dash: uri, then it will not be set
+        if (!getIntent().hasExtra(INTENT_EXTRA_KEEP_UNLOCKED)) {
+            getIntent().putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true);
+        }
 
         SendCoinsActivityViewModel viewModel = ViewModelProviders.of(this).get(SendCoinsActivityViewModel.class);
         viewModel.getBasePaymentIntent().observe(this, new Observer<Resource<PaymentIntent>>() {
@@ -168,5 +173,10 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }

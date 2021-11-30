@@ -204,7 +204,7 @@
     <string name="verify_it_is_important">Het is belangrijk</string>
     <string name="verify_it_is_important_subtitle">We gaan u de geheime sleutel van uw portemonnee laten zien.</string>
     <string name="verify_info_text_1">Deze herstelzin is uw toegang tot het saldo in deze portemonnee.</string>
-    <string name="verify_info_text_2">We slaan deze herstelzin niet op.</string>
+    <string name="verify_info_text_2">Je herstelzin wordt NIET opgeslagen</string>
     <string name="verify_info_text_3">U hebt deze herstelzin nodig om toegang te krijgen tot uw saldo als dit apparaat is verloren of beschadigd, of als Dash Wallet ooit per ongeluk van dit apparaat wordt verwijderd.</string>
     <string name="verify_skip">Overslaan</string>
     <string name="verify_secure_now_btn">Beveilig nu</string>
@@ -214,6 +214,15 @@
     <string name="verify_seed_buttons_tip">Tik op de woorden van uw herstelzin in de juiste volgorde</string>
     <string name="verify_seed_success_title">Succesvol geverifieerd </string>
     <string name="verify_seed_success_message">Uw portemonnee is nu beveiligd. U kunt uw herstelzin op elk gewenst moment gebruiken om uw account op een ander apparaat te herstellen.</string>
+    <string name="verify_no_screenshot_title">Maak geen screenshot</string>
+    <string name="verify_no_screenshot_message">noteer de herstelzin en berg hem goed op</string>
+    <string name="verify_why_no_screenshot">Waarom moet ik geen screenshot maken?</string>
+    <string name="verify_warning_title">Waarschuwing</string>
+    <string name="verify_warning_message">Deze herstelzin is je toegang tot het geld in je portemonnee.</string>
+    <string name="verify_warning_screenshots_title">neem GEEN schermafbeeldingen</string>
+    <string name="verify_warning_screenshots_message">Schermafbeeldingen zijn zichtbaar voor andere apps en apparaten.</string>
+    <string name="verify_warning_do_not_show">Laat je herstelzin aan NIEMAND zien.</string>
+    <string name="verify_warning_do_not_type">Sla je herstelzin nooit op in een password manager of via andere methodieken.</string>
     <string name="view_seed_done">Klaar</string>
     <string name="view_seed_title">Herstelzin</string>
     <string name="transaction_result_view_on_explorer">Bekijk in Block Explorer</string>

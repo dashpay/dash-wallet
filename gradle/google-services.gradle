@@ -1,3 +1,8 @@
+//
+// The purpose of this file is to allow other developers to build this app without
+// the Dash Core Group specific google-services.json file
+//
+
 ext {
     useGoogleServices = file(projectDir.path + "/google-services.json").exists()
 }
@@ -5,9 +10,8 @@ ext {
 if (ext.useGoogleServices) {
     println "google-services.json was found"
     apply plugin: 'com.google.gms.google-services'
-    //TODO: add other plugins here such as:
-    //apply plugin: 'com.google.firebase.appdistribution'
     apply plugin: 'com.google.firebase.crashlytics'
+    //add other plugins here
 } else {
     println "google-services.json was not found"
 }

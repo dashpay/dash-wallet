@@ -210,7 +210,7 @@
     <string name="verify_it_is_important">To ważne!</string>
     <string name="verify_it_is_important_subtitle">Za chwilę pokażemy Ci tajny klucz do twojego portfela.</string>
     <string name="verify_info_text_1">Ta fraza odzyskiwania jest dostępem do środków w tym portfelu.</string>
-    <string name="verify_info_text_2">Nie przechowujemy tej frazy odzyskiwania.</string>
+    <string name="verify_info_text_2">NIE przechowujemy słów wymaganych do odzysku portfela</string>
     <string name="verify_info_text_3">Fraza odzysku danych będzie potrzebna aby mieć dostęp do funduszy w wypadku utraty tego urządzenia lub jeśli Dash Wallet zostanie przypadkowo odinstalowany. </string>
     <string name="verify_skip">Pomiń</string>
     <string name="verify_secure_now_btn">Zabezpiecz Teraz</string>
@@ -220,6 +220,15 @@
     <string name="verify_seed_buttons_tip">Wskaź słowa z frazy odzyskiwania w odpowiedniej kolejności</string>
     <string name="verify_seed_success_title">Zweryfikowano Pomyślnie</string>
     <string name="verify_seed_success_message">Twój portfel jest teraz zabezpieczony. Możesz użyć swojej frazy odzyskiwania w dowolnym momencie, aby odzyskać konto na innym urządzeniu.</string>
+    <string name="verify_no_screenshot_title">Nie rób zrzutu ekranu</string>
+    <string name="verify_no_screenshot_message">Zapisz słowa do odzysku portfela w bezpiecznym miejscu</string>
+    <string name="verify_why_no_screenshot">Dlaczego mam nie robić zrzutu ekranu?</string>
+    <string name="verify_warning_title">Ostrzeżenie</string>
+    <string name="verify_warning_message">Ta lista słów jest kluczem do wszystkich twoich funduszy w tym portfelu. </string>
+    <string name="verify_warning_screenshots_title">Nie rób screenshotów </string>
+    <string name="verify_warning_screenshots_message">Inne aplikacje i urządzenia mają dostęp do twoich screenshotów. </string>
+    <string name="verify_warning_do_not_show">Nie pozwól, aby ktokolwiek zobaczył twoją listę słów do odzysku portfela.</string>
+    <string name="verify_warning_do_not_type">NIGDY nie wpisuj twojej frazy odzyskiwania portfela do menedżerów haseł ani w innych miejscach.</string>
     <string name="view_seed_done">Zrobione</string>
     <string name="view_seed_title">Fraza Odzyskiwania</string>
     <string name="transaction_result_view_on_explorer">Zobacz na eksplorerze bloków</string>

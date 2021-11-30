@@ -1,0 +1,83 @@
+name: Dash Wallet CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Get build number from run id
+      run: |
+          echo "build_number=$((70000))" >> $GITHUB_ENV
+    
+    - uses: actions/checkout@v2
+    - name: set up JDK 8
+      uses: actions/setup-java@v2
+      with:
+        java-version: '8'
+        distribution: 'adopt'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Set up Ruby
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: '3.0.2'
+        
+    - name: Generate cache key
+      run: bash ./checksum.sh checksum.txt
+      
+    - name: Gem caching
+      uses: actions/cache@v2
+      continue-on-error: true
+      with:
+        path: vendor/bundle
+        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+        restore-keys: |
+            ${{ runner.os }}-gems-
+            
+    - name: Setup fastlane
+      run: |
+        gem install bundler:2.2.26
+        bundle config path vendor/bundle
+        bundle install --jobs 4 --retry 3
+        
+    - name: Cache Gradle packages
+      uses: actions/cache@v2
+      continue-on-error: true
+      with:
+        path: |
+          ~/.gradle/caches/modules-*
+          ~/.gradle/caches/jars-*
+          ~/.gradle/caches/build-cache-*
+        key: ${{ runner.os }}-gradle-${{ hashFiles('checksum.txt') }}
+      
+    - name: Decrypt secrets
+      run: |
+        gpg -d --passphrase "${{ secrets.GOOGLE_SERVICES_KEY }}" --batch .deploy/google-services.json.gpg > wallet/google-services.json
+        gpg -d --passphrase "${{ secrets.SERVICE_PROPERTIES_KEY }}" --batch .deploy/service.properties.gpg > service.properties
+        gpg -d --passphrase "${{ secrets.APP_DISTRIBUTION_KEY }}" --batch .deploy/app-distribution-key.json.gpg > .deploy/app-distribution-key.json
+        gpg -d --passphrase "${{ secrets.KEYSTORE_KEY }}" --batch .deploy/keystore.jks.gpg > .deploy/keystore.jks
+    
+    - name: Test
+      run: bundle exec fastlane test flavor:"_testNet3" type:"debug"
+      
+    - name: Build
+      if: github.event_name == 'pull_request'
+      run: bundle exec fastlane build flavor:"_testNet3" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}"
+      
+    - name: TestNet Build and Firebase Distribution
+      if: github.event_name == 'push'
+      run: bundle exec fastlane build_distribute flavor:"_testNet3" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}" comment:"Up to date Dash Wallet TestNet build" app_id:"1:1039839682638:android:3202b16d460a1a88" test_group:"qa"
+      
+    - name: Production Build and Firebase Distribution
+      if: github.event_name == 'push'
+      run: bundle exec fastlane build_distribute flavor:"prod" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}" comment:"Up to date Dash Wallet Production build" app_id:"1:1039839682638:android:989eecd6db36de6a" test_group:"qa"
