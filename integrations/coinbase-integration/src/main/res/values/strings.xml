@@ -1,1 +1,10 @@
-<resources></resources>
+<resources>
+    <string name="Coinbase">Coinbase</string>
+    <string name="last_known_balance" >Last known balance</string>
+    <string name="coinbase_dash_wallet_error_title">We didn\'t find a Dash Wallet on your Coinbase account.</string>
+    <string name="coinbase_dash_wallet_error_message"> Please create a Dash Wallet on Coinbase to proceed.</string>
+    <string name="CreateـDashـAccount">Create Dash Account</string>
+    <string name="Close">Close</string>
+    <string name="connected">Connected</string>
+    <string name="disconnect_coinbase_account">Disconnect Coinbase Account</string>
+</resources>

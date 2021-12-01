@@ -30,18 +30,21 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.dialog.CurrencyDialog
 import de.schildbach.wallet.rates.ExchangeRatesViewModel
+import de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity
+import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
+import kotlinx.android.synthetic.main.item_coinbase_integration_item.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.Constants.RESULT_CODE_GO_HOME
-import org.dash.wallet.common.Constants.USER_BUY_SELL_DASH
+import org.dash.wallet.common.Constants.*
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
@@ -49,7 +52,6 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.integration.coinbase_integration.CoinbaseSplashActivity
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -66,9 +68,9 @@ import org.dash.wallet.integration.uphold.ui.UpholdAccountActivity
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.math.BigDecimal
 import java.util.ArrayList
 
+@AndroidEntryPoint
 class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     private var liquidClient: LiquidClient? = null
@@ -95,14 +97,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         }
     }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         log.info("starting Buy and Sell Dash activity")
         setContentView(R.layout.activity_buy_and_sell_liquid_uphold)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-
 
         application = WalletApplication.getInstance()
         config = application.configuration
@@ -122,27 +122,26 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         loadingDialog!!.setCancelable(false)
         loadingDialog!!.setMessage(getString(org.dash.wallet.integration.liquid.R.string.loading))
 
-        //do we need this here?
+        // do we need this here?
         setLoginStatus(isNetworkOnline)
 
         initViewModel()
         updateBalances()
 
         liquid_container.setOnClickListener {
-            analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
-                AnalyticsConstants.Liquid.ENTER_CONNECTED
-            } else {
-                AnalyticsConstants.Liquid.ENTER_DISCONNECTED
-            }, bundleOf())
+            analytics.logEvent(
+                if (UpholdClient.getInstance().isAuthenticated) {
+                    AnalyticsConstants.Liquid.ENTER_CONNECTED
+                } else {
+                    AnalyticsConstants.Liquid.ENTER_DISCONNECTED
+                },
+                bundleOf()
+            )
 
             startActivityForResult(
                 LiquidBuyAndSellDashActivity.createIntent(this),
                 USER_BUY_SELL_DASH
             )
-        }
-
-        coinbase.setOnClickListener {
-            startActivity(Intent(this, CoinbaseSplashActivity::class.java))
         }
 
         uphold_container.setOnClickListener {
@@ -175,11 +174,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                        //TODO: start progress bar
+                        // TODO: start progress bar
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            //TODO: hide progress bar
+                            // TODO: hide progress bar
                             val balance = it.data.toString()
                             config.lastUpholdBalance = balance
                             showUpholdBalance(balance)
@@ -187,16 +186,16 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
-                            //TODO: error progress bar
+                            // TODO: error progress bar
 
-                            //TODO: if the exception is UnknownHostException and isNetworkOnline is true
+                            // TODO: if the exception is UnknownHostException and isNetworkOnline is true
                             // then there is a problem contacting the server and we don't have
                             // error handling for it
                             showUpholdBalance(config.lastUpholdBalance)
                         }
                     }
                     Status.CANCELED -> {
-                        //TODO: stop progress bar
+                        // TODO: stop progress bar
                         showUpholdBalance(config.lastUpholdBalance)
                     }
                 }
@@ -207,17 +206,17 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                        //TODO: start progress bar
+                        // TODO: start progress bar
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            //TODO: finish progress bar
+                            // TODO: finish progress bar
                             showDashLiquidBalance(it.data!!)
                         }
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
-                            //TODO: error progress bar
+                            // TODO: error progress bar
                             if (it.exception is LiquidUnauthorizedException) {
                                 // do we need this
                                 setLoginStatus(isNetworkOnline)
@@ -227,7 +226,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                     this@BuyAndSellLiquidUpholdActivity,
                                     Observer {
                                         startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
-                                    })
+                                    }
+                                )
                                 FancyAlertDialog.newInstance(
                                     org.dash.wallet.integration.liquid.R.string.liquid_logout_title,
                                     org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
@@ -236,14 +236,14 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                     0
                                 ).show(supportFragmentManager, "auto-logout-dialog")
                             }
-                            //TODO: if the exception is UnknownHostException and isNetworkOnline is true
+                            // TODO: if the exception is UnknownHostException and isNetworkOnline is true
                             // then there is a problem contacting the server and we don't have
                             // error handling for it
                             showLiquidBalance(liquidViewModel.lastLiquidBalance)
                         }
                     }
                     Status.CANCELED -> {
-                        //TODO: stop progress bar
+                        // TODO: stop progress bar
                         showLiquidBalance(liquidViewModel.lastLiquidBalance)
                     }
                 }
@@ -252,14 +252,33 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
         // for getting currency exchange rates
         val exchangeRatesViewModel = ViewModelProvider(this)[ExchangeRatesViewModel::class.java]
-        exchangeRatesViewModel.getRate(config.exchangeCurrencyCode).observe(this,
+        exchangeRatesViewModel.getRate(config.exchangeCurrencyCode).observe(
+            this,
             { exchangeRate ->
                 if (exchangeRate != null) {
                     currentExchangeRate = exchangeRate
                     showLiquidBalance(liquidViewModel.lastLiquidBalance)
                     showUpholdBalance(config.lastUpholdBalance)
                 }
-            })
+            }
+        )
+
+        viewModel.coinbaseIsConnected.observe(
+            this, {
+                if (it) {
+                    startActivity(Intent(this, CoinbaseActivity::class.java))
+                } else {
+                    startActivityForResult(
+                        Intent(this, CoinBaseWebClientActivity::class.java),
+                        COIN_BASE_AUTH
+                    )
+                }
+            }
+        )
+
+        coinbase.setOnClickListener {
+            viewModel.isUserConnected()
+        }
     }
 
     fun setNetworkState(online: Boolean) {
@@ -306,7 +325,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             liquid_balance_container.visibility = View.VISIBLE
             liquid_balance_inaccurate.isVisible = !online
         } else {
-            liquid_connect.visibility = View.VISIBLE//if (online) View.VISIBLE else View.GONE
+            liquid_connect.visibility = View.VISIBLE // if (online) View.VISIBLE else View.GONE
             liquid_connected.visibility = View.GONE
             liquid_balance_container.visibility = View.GONE
             liquid_balance_inaccurate.isVisible = false
@@ -330,7 +349,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             uphold_balance_container.visibility = View.GONE
             uphold_balance_inaccurate.isVisible = false
         }
-
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -352,7 +370,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    //TODO: Can these next two functions be refactored into the liquid module?
+    // TODO: Can these next two functions be refactored into the liquid module?
     private fun showDashLiquidBalance(data: String) {
 
         try {
@@ -373,7 +391,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-
     }
 
     private fun showLiquidBalance(amount: String) {
@@ -425,6 +442,14 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             }
             setResult(RESULT_CODE_GO_HOME)
             finish()
+        } else if (requestCode == COIN_BASE_AUTH) {
+            if (resultCode == RESULT_OK) {
+                if (data?.hasExtra(CoinBaseWebClientActivity.RESULT_TEXT) == true) {
+                    data?.extras?.getString(CoinBaseWebClientActivity.RESULT_TEXT)?.let { code ->
+                        viewModel.loginToCoinbase(code)
+                    }
+                }
+            }
         }
     }
 
@@ -453,9 +478,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     }
                     checkAndCallApiOfUpload()
                 }
-
             })
-
         } else {
             log.error("liquid: There is no internet connection")
         }
@@ -466,33 +489,33 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
      */
     private fun getUpholdCurrencyList() {
 
-
         if (GenericUtils.isInternetConnected(this)) {
             loadingDialog!!.show()
             UpholdClient.getInstance()
-                .getUpholdCurrency(rangeString, object : UpholdClient.CallbackFilter<String> {
-                    override fun onSuccess(data: String?, range: String) {
+                .getUpholdCurrency(
+                    rangeString,
+                    object : UpholdClient.CallbackFilter<String> {
+                        override fun onSuccess(data: String?, range: String) {
 
+                            if (rangeString == "items=0-50") {
+                                upholdCurrencyArrayList.clear()
+                                totalUpholdRange = range
+                                rangeString = ""
+                            }
 
-                        if (rangeString == "items=0-50") {
-                            upholdCurrencyArrayList.clear()
-                            totalUpholdRange = range
-                            rangeString = ""
+                            val turnsType = object : TypeToken<List<UpholdCurrencyResponse>>() {}.type
+                            val turns = Gson().fromJson<List<UpholdCurrencyResponse>>(data, turnsType)
+                            upholdCurrencyArrayList.addAll(turns)
+                            loadingDialog!!.hide()
+                            checkAndCallApiOfUpload()
+                            // showCurrenciesDialog()
                         }
 
-                        val turnsType = object : TypeToken<List<UpholdCurrencyResponse>>() {}.type
-                        val turns = Gson().fromJson<List<UpholdCurrencyResponse>>(data, turnsType)
-                        upholdCurrencyArrayList.addAll(turns)
-                        loadingDialog!!.hide()
-                        checkAndCallApiOfUpload()
-                        //showCurrenciesDialog()
+                        override fun onError(e: java.lang.Exception?, otpRequired: Boolean) {
+                            loadingDialog!!.hide()
+                            showCurrenciesDialog()
+                        }
                     }
-
-                    override fun onError(e: java.lang.Exception?, otpRequired: Boolean) {
-                        loadingDialog!!.hide()
-                        showCurrenciesDialog()
-                    }
-                }
                 )
         } else {
             log.error("liquid: There is no internet connection")
@@ -512,7 +535,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     if (array.size == 2) {
                         val totalRange = array[1]
                         val size = upholdCurrencyArrayList.size + 1
-                        rangeString = "items=${size.toString()}-$totalRange"
+                        rangeString = "items=$size-$totalRange"
                         getUpholdCurrencyList()
                     }
                 } else {
@@ -523,7 +546,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             }
         }
     }
-
 
     /**
      * Show dialog of currency list
@@ -546,7 +568,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     selectedFilterCurrencyItems = selectedFilterCurrencyItem
                     setSelectedCurrency()
                 }
-            })
+            }
+        )
     }
 
     /**

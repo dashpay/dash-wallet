@@ -89,6 +89,12 @@ public class Configuration {
     public static final String PREFS_KEY_LAST_LIQUID_BALANCE = "last_liquid_balance";
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
+    public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
+    public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
+    public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_uphold_balance";
+
+
+
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
     private static final int PREFS_DEFAULT_BTC_PRECISION = 8;
     public static final String PREFS_KEY_IS_DASH_TO_FIAT_DIRECTION = "is_dash_to_fiat_direction";
@@ -518,4 +524,30 @@ public class Configuration {
     public void setPrefsKeyHasInfoScreenBeenShownAlready(boolean isShown){
         prefs.edit().putBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, isShown).apply();
     }
+
+    public void setLastCoinBaseAccessToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
+    }
+
+    public String getLastCoinbaseAccessToken() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, null);
+    }
+
+    public void setLastCoinBaseRefreshToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, token).apply();
+    }
+
+    public String getLastCoinbaseRefreshToken() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, null);
+    }
+
+
+    public void setLastCoinBaseBalance(String balance) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, balance).apply();
+    }
+
+    public String getLastCoinbaseBalance() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
+    }
+
 }

@@ -35,4 +35,6 @@
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
+
+    <string name="CoinBase" translatable="false">CoinBase</string>
 </resources>

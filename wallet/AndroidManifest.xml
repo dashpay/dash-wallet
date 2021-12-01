@@ -234,9 +234,6 @@
         <activity android:name="org.dash.wallet.integration.uphold.ui.UpholdAccountActivity"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
-        <activity android:name="org.dash.wallet.integration.coinbase_integration.CoinbaseSplashActivity"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
-
         <activity
             android:name="de.schildbach.wallet.ui.LockScreenActivity"
             android:screenOrientation="portrait"
@@ -457,6 +454,17 @@
         <meta-data
             android:name="android.nfc.disable_beam_default"
             android:value="true" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.coinbase.CoinbaseActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/LockScreenActivity.Theme" />
+
+        <activity
+            android:name="de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:exported="true" />
     </application>
 
 </manifest>

@@ -17,25 +17,27 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.liveData
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.BlockchainState
-import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.*
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseAuthRepository
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import java.math.BigDecimal
+import javax.inject.Inject
 import kotlin.coroutines.suspendCoroutine
 
 /**
  * @author Eric Britten
  */
+@HiltViewModel
+class BuyAndSellViewModel @Inject constructor(
+    application: Application,
+    private val coinBaseRepository: CoinBaseAuthRepository
+) : AndroidViewModel(application) {
 
-class BuyAndSellViewModel(application: Application) : AndroidViewModel(application) {
-
-    //TODO: move this into UpholdViewModel
+    // TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
 
     fun updateUpholdBalance() {
@@ -43,6 +45,10 @@ class BuyAndSellViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     private val upholdClient = UpholdClient.getInstance()
+
+    private val _coinbaseIsConnected: MutableLiveData<Boolean> = MutableLiveData()
+    val coinbaseIsConnected: LiveData<Boolean>
+        get() = _coinbaseIsConnected
 
     val upholdBalanceLiveData = Transformations.switchMap(triggerUploadBalanceUpdate) {
         liveData {
@@ -59,6 +65,26 @@ class BuyAndSellViewModel(application: Application) : AndroidViewModel(applicati
                 })
             }
             emit(result)
+        }
+    }
+
+    fun isUserConnected() {
+        _coinbaseIsConnected.value = coinBaseRepository.isUserConnected()
+    }
+
+    fun loginToCoinbase(code: String) {
+        viewModelScope.launch {
+            when (val response = coinBaseRepository.getUserToken(code)) {
+                is ResponseResource.Success -> {
+                    _coinbaseIsConnected.value =
+                        response.value.body()?.accessToken?.isEmpty()?.not()
+                }
+                is ResponseResource.Loading -> {
+                }
+                is ResponseResource.Failure -> {
+                    _coinbaseIsConnected.value = false
+                }
+            }
         }
     }
 }

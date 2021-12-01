@@ -15,23 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.di
+package de.schildbach.wallet.ui.coinbase
+import android.os.Bundle
+import androidx.activity.viewModels
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.BaseMenuActivity
+import de.schildbach.wallet_test.R
 
-import android.content.Context
-import androidx.preference.PreferenceManager
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.common.Configuration
-import javax.inject.Singleton
+@AndroidEntryPoint
+class CoinbaseActivity : BaseMenuActivity() {
+    private val viewModel: CoinbaseActivityViewModel by viewModels()
+    override fun getLayoutId(): Int {
+        return R.layout.activity_coinbase
+    }
 
-@Module
-@InstallIn(SingletonComponent::class)
-object ConfigurationModule {
-    @Singleton
-    @Provides
-    fun provideConfiguration(@ApplicationContext context: Context): Configuration =
-        Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.resources)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+    }
 }

@@ -88,7 +88,7 @@
                         android:textSize="12sp"
                         android:visibility="gone"
                         app:drawableStartCompat="@drawable/drawable_green_round"
-                        tools:visibility="visible"/>
+                        tools:visibility="visible" />
 
                     <ImageView
                         android:id="@+id/imgLiquid"
@@ -281,6 +281,20 @@
                         android:layout_marginEnd="10dp" />
                 </RelativeLayout>
 
+                <RelativeLayout
+                    android:id="@+id/coinbase"
+                    style="@style/DashButton.White.NoDisabled"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginEnd="20dp">
+
+                    <include layout="@layout/item_coinbase_integration_item" />
+
+                </RelativeLayout>
+
+
                 <FrameLayout
                     android:id="@+id/network_status_container"
                     android:layout_width="match_parent"
@@ -349,12 +363,6 @@
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-        <Button
-            android:id="@+id/coinbase"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:text="coinbase"/>
 
     </RelativeLayout>
 </LinearLayout>
