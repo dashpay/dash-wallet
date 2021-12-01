@@ -17,10 +17,10 @@
 package de.schildbach.wallet
 
 import android.content.Context
-import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.common.base.Stopwatch
+import com.google.firebase.FirebaseException
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -120,13 +120,19 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         val totalPages = ceil(dataSize.toDouble() / PAGE_SIZE).toInt()
         log.info("$tableName $dataSize records in $totalPages chunks")
         val tableSyncWatch = Stopwatch.createStarted()
+        var synced = 0
 
         for (page in 0 until totalPages) {
             val startAt = page * PAGE_SIZE
             val endAt = startAt + PAGE_SIZE
             log.info("$tableName chunk ${page + 1} of $totalPages ($startAt to $endAt)")
             val data = exploreRepository.get(tableName, startAt, endAt, valueType)
+            synced += data.size
             dao.save(data)
+        }
+
+        if (synced != dataSize) {
+            throw FirebaseException("sync is broken, expected $dataSize records, got $synced")
         }
 
         tableSyncWatch.stop()
