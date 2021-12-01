@@ -31,9 +31,19 @@ import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
 
+class SearchResultDiffCallback<T: SearchResult> : DiffUtil.ItemCallback<T>() {
+    override fun areItemsTheSame(oldItem: T, newItem: T): Boolean {
+        return oldItem.id == newItem.id
+    }
+
+    override fun areContentsTheSame(oldItem: T, newItem: T): Boolean {
+        return oldItem == newItem
+    }
+}
+
 class MerchantsAtmsResultAdapter(
     private val clickListener: (SearchResult, RecyclerView.ViewHolder) -> Unit
-) : PagingDataAdapter<SearchResult, RecyclerView.ViewHolder>(DiffCallback()) {
+) : PagingDataAdapter<SearchResult, RecyclerView.ViewHolder>(SearchResultDiffCallback()) {
 
     override fun getItemViewType(position: Int): Int {
         if (position >= itemCount) {
@@ -79,23 +89,12 @@ class MerchantsAtmsResultAdapter(
             }
         }
     }
-
-    class DiffCallback : DiffUtil.ItemCallback<SearchResult>() {
-        override fun areItemsTheSame(oldItem: SearchResult, newItem: SearchResult): Boolean {
-            return oldItem.id == newItem.id
-        }
-
-        override fun areContentsTheSame(oldItem: SearchResult, newItem: SearchResult): Boolean {
-            return oldItem == newItem
-        }
-    }
 }
 
 class MerchantViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHolder(binding.root) {
     fun bind(merchant: Merchant?) {
         val resources = binding.root.resources
         binding.title.text = merchant?.name
-        binding.subtitle.isVisible = merchant?.physicalAmount ?: 0 > 1
 
         Glide.with(binding.root.context)
             .load(merchant?.logoLocation)

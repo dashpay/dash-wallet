@@ -40,6 +40,12 @@
         <item name="cornerRadius">25dp</item>
     </style>
 
+    <style name="MerchantLocationBackground">
+        <item name="backgroundColor">@color/steel_gray_40</item>
+        <item name="strokeColor">@color/steel_gray_40</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+
     <style name="UpButtonBackground">
         <item name="backgroundColor">@color/gray_900_0.7</item>
         <item name="strokeColor">@android:color/transparent</item>

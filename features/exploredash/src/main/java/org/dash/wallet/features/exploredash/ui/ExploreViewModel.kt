@@ -141,6 +141,21 @@ class ExploreViewModel @Inject constructor(
         addSource(_filterMode.asLiveData(), this::setValue)
     }
 
+    private val _allMerchantLocations = MutableLiveData<List<Merchant>>(
+        listOf(
+            Merchant().apply { name = "457 Alfreton Road, Nottingham, NG7 5LX" },
+            Merchant().apply { name = "191 Baker Street, Marylebone, New York, NW1 6UY" },
+            Merchant().apply { name = "Berkeley Precinct, Ecclesall Road, Sheffield, S11 8PN" },
+            Merchant().apply { name = "Broughton Lane, Sheffield, S9 2DD" },
+            Merchant().apply { name = "457 Alfreton Road, Nottingham, NG7 5LX" },
+            Merchant().apply { name = "191 Baker Street, Marylebone, New York, NW1 6UY" },
+            Merchant().apply { name = "Broughton Lane, Sheffield, S9 2DD" },
+            Merchant().apply { name = "457 Alfreton Road, Nottingham, NG7 5LX" },
+            Merchant().apply { name = "Berkeley Precinct, Ecclesall Road, Sheffield, S11 8PN" },
+        ))
+    val allMerchantLocations: LiveData<List<Merchant>>
+        get() = _allMerchantLocations
+
     private val _physicalSearchResults = MutableLiveData<List<SearchResult>>()
     val physicalSearchResults: LiveData<List<SearchResult>>
         get() = _physicalSearchResults

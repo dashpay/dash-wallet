@@ -166,7 +166,8 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:paddingHorizontal="15dp"
-                android:theme="@style/ListViewButtonBackground">
+                android:theme="@style/ListViewButtonBackground"
+                tools:background="@color/white">
 
                 <TextView
                     android:id="@+id/location_name"
@@ -182,7 +183,6 @@
                     tools:text="Alabama" />
 
                 <ImageView
-                    android:id="@+id/checkmark"
                     android:layout_width="14dp"
                     android:layout_height="14dp"
                     android:rotation="180"

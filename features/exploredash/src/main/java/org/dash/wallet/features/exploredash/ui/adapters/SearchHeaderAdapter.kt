@@ -33,8 +33,8 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
 
     private var onFilterOptionChosen: ((FilterMode) -> Unit)? = null
     private var onSearchQueryChanged: ((String) -> Unit)? = null
-    private var onSearchQuerySubmitted: ((Unit) -> Unit)? = null
-    private var onFilterButtonClicked: ((Unit) -> Unit)? = null
+    private var onSearchQuerySubmitted: (() -> Unit)? = null
+    private var onFilterButtonClicked: (() -> Unit)? = null
 
     var title: String = ""
         set(value) {
@@ -100,7 +100,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
 
         binding.search.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                onSearchQuerySubmitted?.invoke(Unit)
+                onSearchQuerySubmitted?.invoke()
             }
 
             true
@@ -111,7 +111,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         }
 
         binding.filterBtn.setOnClickListener {
-            onFilterButtonClicked?.invoke(Unit)
+            onFilterButtonClicked?.invoke()
         }
 
         binding.searchTitle.text = title
@@ -131,11 +131,11 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         onSearchQueryChanged = listener
     }
 
-    fun setOnSearchQuerySubmitted(listener: (Unit) -> Unit) {
+    fun setOnSearchQuerySubmitted(listener: () -> Unit) {
         onSearchQuerySubmitted = listener
     }
 
-    fun setOnFilterButtonClicked(listener: (Unit) -> Unit) {
+    fun setOnFilterButtonClicked(listener: () -> Unit) {
         onFilterButtonClicked = listener
     }
 }

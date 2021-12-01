@@ -14,15 +14,15 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<LinearLayout
+<merge
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingHorizontal="15dp"
     android:orientation="vertical"
-    tools:context="org.dash.wallet.features.exploredash.ui.SearchFragment">
+    tools:parentTag="android.widget.LinearLayout"
+    tools:context="org.dash.wallet.features.exploredash.ui.ItemDetails">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/buy_sell_container"
@@ -115,7 +115,7 @@
             style="@style/Subtitle1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
+            android:layout_marginStart="20dp"
             app:layout_constraintStart_toEndOf="@id/item_image"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toTopOf="@id/item_type"
@@ -129,7 +129,7 @@
             style="@style/Body2.Gray400"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="1dp"
+            android:layout_marginTop="2dp"
             app:layout_constraintStart_toStartOf="@+id/item_name"
             app:layout_constraintTop_toBottomOf="@id/item_name"
             app:layout_constraintBottom_toTopOf="@id/item_address"
@@ -224,4 +224,4 @@
             android:text="@string/explore_pay_with_dash"
             app:layout_constraintBottom_toBottomOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
-</LinearLayout>
+</merge>
