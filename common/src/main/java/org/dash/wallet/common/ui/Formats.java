@@ -17,12 +17,13 @@
 
 package org.dash.wallet.common.ui;
 
+import androidx.annotation.Nullable;
+
 import org.dash.wallet.common.Constants;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
 
 /**
  * @author Andreas Schildbach
