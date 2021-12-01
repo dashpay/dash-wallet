@@ -62,5 +62,5 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0"
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.2.0'
     implementation 'com.google.code.gson:gson:2.8.6'
-
+    implementation 'org.slf4j:slf4j-api:1.7.30'
 }

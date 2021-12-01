@@ -73,6 +73,8 @@ dependencies {
     implementation "androidx.core:core-ktx:1.5.0"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.google.guava:guava:29.0-android'
+    implementation 'org.slf4j:slf4j-api:1.7.30'
 }
 repositories {
     mavenLocal()
