@@ -34,9 +34,9 @@ jobs:
       run: chmod +x gradlew
       
     - name: Set up Ruby
-      uses: actions/setup-ruby@v1
+      uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.0.2'
+        ruby-version: '3.0.3'
         
     - name: Generate cache key
       run: bash ./checksum.sh checksum.txt
