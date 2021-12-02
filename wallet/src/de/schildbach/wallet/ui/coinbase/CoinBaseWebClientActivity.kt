@@ -4,9 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.webkit.*
 import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
@@ -32,13 +30,26 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
             setDisplayShowHomeEnabled(true)
         }
         setTitle(R.string.CoinBase)
+        // Clear all the Application Cache, Web SQL Database and the HTML5 Web Storage
+        WebStorage.getInstance().deleteAllData()
+
+        // Clear all the cookies
+        CookieManager.getInstance().removeAllCookies(null)
+        CookieManager.getInstance().flush()
+
+        binding.webView.clearCache(true)
+        binding.webView.clearFormData()
+        binding.webView.clearHistory()
+        binding.webView.clearSslPreferences()
 
         binding.webView.webViewClient = MyWebViewClient()
         binding.webView.webChromeClient = WebChromeClient()
         binding.webView.settings.javaScriptEnabled = true
         binding.webView.settings.allowFileAccess = false
+        WebStorage.getInstance().deleteAllData()
+
         val loginUrl =
-            "https://www.coinbase.com/oauth/authorize?client_id=1ca2946d789bf6d986f26df03f4a52a8c6f1fe80e469eb1d3477e7c90768559a&redirect_uri=https://coin.base.test/callback&response_type=code&scope=wallet:accounts:read,wallet:user:read,wallet:transactions:transfer"
+            "https://www.coinbase.com/oauth/authorize?client_id=1ca2946d789bf6d986f26df03f4a52a8c6f1fe80e469eb1d3477e7c90768559a&redirect_uri=https://coin.base.test/callback&response_type=code&account=all&scope=wallet:accounts:read,wallet:user:read,wallet:transactions:transfer"
 
         binding.webView.loadUrl(loginUrl)
     }

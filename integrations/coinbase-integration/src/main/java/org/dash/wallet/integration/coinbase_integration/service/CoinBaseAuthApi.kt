@@ -17,9 +17,6 @@ interface CoinBaseAuthApi {
         @Field("code") code: String
     ): Response<TokenResponse>
 
-    @FormUrlEncoded
-    @POST("oauth/revokeToken")
-    suspend fun revokeToken(
-        @Field("token") token: String = "ACCESS_TOKEN",
-    ): Response<TokenResponse>
+    @POST("oauth/revoke")
+    suspend fun revokeToken(): Response<Void>
 }
