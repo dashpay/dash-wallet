@@ -55,7 +55,9 @@ class CoinbaseServicesViewModel @Inject constructor(
     }
 
     fun disconnectCoinbaseAccount() {
-        coinBaseRepository.disconnectCoinbaseAccount()
+        viewModelScope.launch {
+            coinBaseRepository.disconnectCoinbaseAccount()
+        }
     }
 
     init {
