@@ -19,7 +19,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:padding="10dp"
+    android:paddingHorizontal="14dp"
+    android:paddingVertical="5dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -28,7 +29,8 @@
         android:theme="@style/MerchantLocationBackground"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="20dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="14dp"
         android:clickable="true"
         android:focusable="true">
 

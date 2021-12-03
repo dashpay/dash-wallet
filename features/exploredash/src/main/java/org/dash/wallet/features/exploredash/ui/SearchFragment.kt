@@ -307,7 +307,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setupItemDetails(header: SearchHeaderAdapter) {
         binding.itemDetails.setOnSendDashClicked { viewModel.sendDash() }
         binding.itemDetails.setOnReceiveDashClicked { viewModel.receiveDash() }
-        binding.itemDetails.setOnShowAllLocationsClicked { transitToAllMerchantLocations() }
+        binding.itemDetails.setOnShowAllLocationsClicked {
+            viewModel.selectedItem.value?.let { merchant ->
+                if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
+                    viewModel.retrieveAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                    transitToAllMerchantLocations()
+                }
+            }
+        }
 
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
             if (item != null) {

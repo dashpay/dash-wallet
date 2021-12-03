@@ -74,6 +74,17 @@ interface ExploreDataSource {
         bounds: GeoBounds
     ): Int
 
+    suspend fun getMerchantLocations(
+        merchantId: Long,
+        source: String,
+        territory: String,
+        paymentMethod: String,
+        bounds: GeoBounds,
+        sortByDistance: Boolean,
+        userLat: Double,
+        userLng: Double
+    ): List<Merchant>
+
     suspend fun getMerchantTerritories(): List<String>
     suspend fun getAtmTerritories(): List<String>
     fun sanitizeQuery(query: String): String
@@ -281,6 +292,28 @@ open class MerchantAtmDataSource @Inject constructor(
 
     override suspend fun getAtmTerritories(): List<String> {
         return atmDao.getTerritories()
+    }
+
+    override suspend fun getMerchantLocations(
+        merchantId: Long,
+        source: String,
+        territory: String,
+        paymentMethod: String,
+        bounds: GeoBounds,
+        sortByDistance: Boolean,
+        userLat: Double,
+        userLng: Double
+    ): List<Merchant> {
+        val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+
+        return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
+            merchantDao.getByCoordinates(merchantId, source, types, paymentMethod,
+                bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
+                sortByDistance, userLat, userLng)
+        } else {
+            merchantDao.getByTerritory(merchantId, source, territory, types,
+                paymentMethod, sortByDistance, userLat, userLng)
+        }
     }
 
     override fun sanitizeQuery(query: String): String {

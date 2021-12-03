@@ -48,25 +48,24 @@ open class SearchResult(
     var coverImage: String? = "",
     open var type: String? = ""
 ) {
-    val displayAddress: String
-        get() {
-            val addressBuilder = StringBuilder()
-            addressBuilder.append(address1)
+    fun getDisplayAddress(separator: String): String {
+        val addressBuilder = StringBuilder()
+        addressBuilder.append(address1)
 
-            if (!address2.isNullOrBlank()) {
-                addressBuilder.append("\n${address2}")
-            }
-
-            if (!address3.isNullOrBlank()) {
-                addressBuilder.append("\n${address3}")
-            }
-
-            if (!address4.isNullOrBlank()) {
-                addressBuilder.append("\n${address4}")
-            }
-
-            return addressBuilder.toString()
+        if (!address2.isNullOrBlank()) {
+            addressBuilder.append("${separator}${address2}")
         }
+
+        if (!address3.isNullOrBlank()) {
+            addressBuilder.append("${separator}${address3}")
+        }
+
+        if (!address4.isNullOrBlank()) {
+            addressBuilder.append("${separator}${address4}")
+        }
+
+        return addressBuilder.toString()
+    }
 
     override fun equals(other: Any?): Boolean {
         val second = other as SearchResult

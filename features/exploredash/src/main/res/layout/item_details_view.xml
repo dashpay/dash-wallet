@@ -34,7 +34,7 @@
             android:id="@+id/logo_img"
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="@dimen/atm_manufacturer_vertical_margin"
             android:src="@drawable/ic_image_placeholder"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
@@ -58,7 +58,7 @@
             style="@style/Button.Primary.Green"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="@dimen/atm_manufacturer_vertical_margin"
             android:text="@string/explore_buy_dash"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/sell_btn"
@@ -71,7 +71,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="7dp"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="@dimen/atm_manufacturer_vertical_margin"
             android:text="@string/explore_sell_dash"
             app:layout_constraintStart_toEndOf="@id/buy_btn"
             app:layout_constraintEnd_toEndOf="parent"
@@ -81,7 +81,7 @@
             android:id="@+id/separator"
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="80dp"
+            android:layout_marginTop="@dimen/atm_content_vertical_margin"
             android:background="@color/divider_color"
             app:layout_constraintTop_toBottomOf="@id/manufacturer"  />
     </androidx.constraintlayout.widget.ConstraintLayout>

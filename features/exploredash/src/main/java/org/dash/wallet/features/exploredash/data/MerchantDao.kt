@@ -23,8 +23,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.MerchantType
-import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.MerchantInfo
 
 @Dao
@@ -32,6 +30,59 @@ interface MerchantDao : BaseDao<Merchant> {
     // Sorting by distance is approximate - it's done using "flat-earth" Pythagorean formula.
     // It's good enough for our purposes, but if there is a need to display the distance
     // in UI it should be done using map APIs.
+    @Query("""
+        SELECT *
+        FROM merchant 
+        WHERE
+            (:merchantId = -1 OR merchantId = :merchantId)
+            AND (:source = '' OR source = :source COLLATE NOCASE)
+            AND type IN (:types)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND latitude < :northLat
+            AND latitude > :southLat
+            AND longitude < :eastLng
+            AND longitude > :westLng
+        ORDER BY
+            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
+            CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
+    """)
+    suspend fun getByCoordinates(
+        merchantId: Long,
+        source: String,
+        types: List<String>,
+        paymentMethod: String,
+        northLat: Double,
+        eastLng: Double,
+        southLat: Double,
+        westLng: Double,
+        sortByDistance: Boolean,
+        anchorLat: Double,
+        anchorLng: Double
+    ): List<Merchant>
+
+    @Query("""
+        SELECT *
+        FROM merchant
+        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+            AND (:source = '' OR source = :source COLLATE NOCASE)
+            AND (:territoryFilter = '' OR territory = :territoryFilter)
+            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
+            AND type IN (:types)
+        ORDER BY
+            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
+            CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
+    """)
+    suspend fun getByTerritory(
+        merchantId: Long,
+        source: String,
+        territoryFilter: String,
+        types: List<String>,
+        paymentMethod: String,
+        sortByDistance: Boolean,
+        anchorLat: Double,
+        anchorLng: Double
+    ): List<Merchant>
+
     @Transaction
     @Query("""
         SELECT *, COUNT(*) AS physical_amount
@@ -167,7 +218,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
     """)
-    fun getByTerritoryResultCount(
+    suspend fun getByTerritoryResultCount(
         territoryFilter: String,
         types: List<String>,
         paymentMethod: String
@@ -240,7 +291,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
     """)
-    fun getGroupedResultCount(
+    suspend fun getGroupedResultCount(
         types: List<String>,
         paymentMethod: String
     ): Int
@@ -270,7 +321,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
     """)
-    fun searchGroupedResultCount(
+    suspend fun searchGroupedResultCount(
         query: String,
         types: List<String>,
         paymentMethod: String

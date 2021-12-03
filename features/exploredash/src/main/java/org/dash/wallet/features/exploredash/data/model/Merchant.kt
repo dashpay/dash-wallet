@@ -43,6 +43,7 @@ object MerchantType {
         Index("longitude"),
     ]
 )
+
 data class Merchant(
     var deeplink: String? = "",
 

@@ -44,6 +44,6 @@ class MerchantsLocationsAdapter(
 
 class MerchantLocationViewHolder(val binding: MerchantLocationRowBinding) : RecyclerView.ViewHolder(binding.root) {
     fun bind(merchant: Merchant?) {
-        binding.locationName.text = merchant?.name
+        binding.locationName.text = merchant?.getDisplayAddress(", ")
     }
 }

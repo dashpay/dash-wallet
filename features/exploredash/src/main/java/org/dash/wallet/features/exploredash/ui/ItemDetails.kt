@@ -81,7 +81,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
     private fun bindCommonDetails(item: SearchResult, isOnline: Boolean) {
         binding.apply {
             itemName.text = item.name
-            itemAddress.text = item.displayAddress
+            itemAddress.text = item.getDisplayAddress("\n")
 
             linkBtn.isVisible = !item.website.isNullOrEmpty()
             linkBtn.setOnClickListener {

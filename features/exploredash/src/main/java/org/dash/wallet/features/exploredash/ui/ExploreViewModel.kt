@@ -109,8 +109,10 @@ class ExploreViewModel @Inject constructor(
     val radius: Double
         get() = if (isMetric) selectedRadiusOption * METERS_IN_KILOMETER else selectedRadiusOption * METERS_IN_MILE
 
+    // Bounded only by selected radius
     private var radiusBounds: GeoBounds? = null
 
+    // Bounded by min(screen edges, selected radius)
     private val _searchBounds = MutableStateFlow<GeoBounds?>(null)
     var searchBounds: GeoBounds?
         get() = _searchBounds.value
@@ -141,18 +143,7 @@ class ExploreViewModel @Inject constructor(
         addSource(_filterMode.asLiveData(), this::setValue)
     }
 
-    private val _allMerchantLocations = MutableLiveData<List<Merchant>>(
-        listOf(
-            Merchant().apply { name = "457 Alfreton Road, Nottingham, NG7 5LX" },
-            Merchant().apply { name = "191 Baker Street, Marylebone, New York, NW1 6UY" },
-            Merchant().apply { name = "Berkeley Precinct, Ecclesall Road, Sheffield, S11 8PN" },
-            Merchant().apply { name = "Broughton Lane, Sheffield, S9 2DD" },
-            Merchant().apply { name = "457 Alfreton Road, Nottingham, NG7 5LX" },
-            Merchant().apply { name = "191 Baker Street, Marylebone, New York, NW1 6UY" },
-            Merchant().apply { name = "Broughton Lane, Sheffield, S9 2DD" },
-            Merchant().apply { name = "457 Alfreton Road, Nottingham, NG7 5LX" },
-            Merchant().apply { name = "Berkeley Precinct, Ecclesall Road, Sheffield, S11 8PN" },
-        ))
+    private val _allMerchantLocations = MutableLiveData<List<Merchant>>()
     val allMerchantLocations: LiveData<List<Merchant>>
         get() = _allMerchantLocations
 
@@ -360,6 +351,25 @@ class ExploreViewModel @Inject constructor(
             } else {
                 openAtmDetails(item as Atm)
             }
+        }
+    }
+
+    fun retrieveAllMerchantLocations(merchantId: Long, source: String) {
+        viewModelScope.launch {
+            val userLat = currentUserLocation.value?.latitude
+            val userLng = currentUserLocation.value?.longitude
+            val byDistance = _filterMode.value != FilterMode.Online &&
+                    _isLocationEnabled.value == true &&
+                    userLat != null && userLng != null &&
+                    sortByDistance
+
+            val locations = exploreData.getMerchantLocations(
+                merchantId, source, selectedTerritory, paymentMethodFilter,
+                radiusBounds ?: GeoBounds.noBounds, byDistance,
+                userLat ?: 0.0, userLng ?: 0.0
+            )
+
+            _allMerchantLocations.value = locations
         }
     }
 
