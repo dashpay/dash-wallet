@@ -30,14 +30,14 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 class FancyAlertDialog : DialogFragment() {
-    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
+    private lateinit var lockScreenViewModel: LockScreenViewModel
+    private lateinit var sharedViewModel: FancyAlertDialogViewModel
 
     enum class Type {
         INFO,
@@ -87,7 +87,6 @@ class FancyAlertDialog : DialogFragment() {
         }
     }
 
-    private lateinit var sharedViewModel: FancyAlertDialogViewModel
     private val type by lazy {
         Type.valueOf(requireArguments().getString("type")!!)
     }
@@ -103,6 +102,7 @@ class FancyAlertDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        initViewModels()
         setOrHideIfEmpty(title, "title")
         setOrHideIfEmpty(message, "message")
         setOrHideIfEmpty(image, "image")
@@ -120,9 +120,6 @@ class FancyAlertDialog : DialogFragment() {
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
             dismiss()
         }
-        dialog?.window?.callback = UserInteractionAwareCallback(
-            dialog?.window?.callback, requireActivity()
-        )
     }
 
     private fun setOrHideIfEmpty(view: View, argKey: String) {
@@ -162,7 +159,12 @@ class FancyAlertDialog : DialogFragment() {
     override fun onStart() {
         super.onStart()
         dialog?.apply {
-            window?.setLayout(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+            window?.apply {
+                setLayout(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+                setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                requestFeature(Window.FEATURE_NO_TITLE)
+                callback = UserInteractionAwareCallback(this.callback, requireActivity())
+            }
             if (type == Type.PROGRESS) {
                 setCancelable(false)
                 setCanceledOnTouchOutside(false)
@@ -170,10 +172,8 @@ class FancyAlertDialog : DialogFragment() {
         }
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        sharedViewModel = activity?.run {
-            ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
+    private fun initViewModels() {
+        lockScreenViewModel = ViewModelProvider(this)[LockScreenViewModel::class.java]
+        sharedViewModel = ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
     }
 }

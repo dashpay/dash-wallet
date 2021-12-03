@@ -35,7 +35,7 @@ import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.AlertDialogBuilder
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 
 
 @SuppressLint("Registered")
@@ -71,14 +71,14 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
                 else -> it.message!!
             }
 
-            AlertDialogBuilder(this, lifecycle).apply {
+            BaseAlertDialogBuilder(this).apply {
                 title = getString(R.string.import_export_keys_dialog_failure_title)
                 this.message = getString(R.string.import_keys_dialog_failure, message)
                 positiveText = getString(R.string.button_dismiss)
                 negativeText = getString(R.string.button_retry)
                 negativeAction = { RestoreWalletFromSeedDialogFragment.show(supportFragmentManager) }
                 showIcon = true
-            }.createAlertDialog().show()
+            }.buildAlertDialog().show()
 
         })
         viewModel.showUpgradeWalletAction.observe(this, {
@@ -86,7 +86,7 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
             EncryptNewKeyChainDialogFragment.show(supportFragmentManager, Constants.BIP44_PATH)
         })
         viewModel.showUpgradeDisclaimerAction.observe(this, Observer {
-            UpgradeWalletDisclaimerDialog.show(supportFragmentManager)
+            UpgradeWalletDisclaimerDialog.show(supportFragmentManager, false)
         })
         viewModel.startActivityAction.observe(this, Observer {
             startActivityForResult(it, SET_PIN_REQUEST_CODE)

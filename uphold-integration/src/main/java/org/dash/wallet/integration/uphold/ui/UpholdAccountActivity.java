@@ -36,7 +36,6 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
 import org.dash.wallet.common.util.WalletDataProvider;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
@@ -208,10 +207,10 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         if(code == 400 || code == 403 || code >= 400)
                 messageId = R.string.uphold_error_report_issue;
 
-        AlertDialogBuilder errorAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
-        errorAlertDialogBuilder.setTitle(getString(R.string.uphold_error));
-        errorAlertDialogBuilder.setMessage(getString(messageId));
-        errorAlertDialogBuilder.createAlertDialog().show();
+        alertDialogBuilder.setTitle(getString(R.string.uphold_error));
+        alertDialogBuilder.setMessage(getString(messageId));
+
+        alertDialogBuilder.buildAlertDialog().show();
     }
 
     private void showWithdrawalDialog() {
@@ -227,18 +226,17 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         LayoutInflater inflater = this.getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.uphold_logout_confirm, null);
 
-        AlertDialogBuilder revokeTokenAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
-        revokeTokenAlertDialogBuilder.setTitle(getString(R.string.uphold_logout_title));
-        revokeTokenAlertDialogBuilder.setPositiveText(getString(R.string.uphold_logout_go_to_website));
-        revokeTokenAlertDialogBuilder.setPositiveAction(
+        alertDialogBuilder.setTitle(getString(R.string.uphold_logout_title));
+        alertDialogBuilder.setPositiveText(getString(R.string.uphold_logout_go_to_website));
+        alertDialogBuilder.setPositiveAction(
                 () -> {
                     revokeUpholdAccessToken();
                     return Unit.INSTANCE;
                 }
         );
-        revokeTokenAlertDialogBuilder.setNegativeText(getString(android.R.string.cancel));
-        revokeTokenAlertDialogBuilder.setView(dialogView);
-        revokeTokenAlertDialogBuilder.createAlertDialog().show();
+        alertDialogBuilder.setNegativeText(getString(android.R.string.cancel));
+        alertDialogBuilder.setCustomView(dialogView);
+        alertDialogBuilder.buildAlertDialog().show();
     }
 
     private void revokeUpholdAccessToken() {
@@ -289,18 +287,17 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     }
 
     private void showUpholdBalanceErrorDialog() {
-        AlertDialogBuilder upholdBalanceAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
-        upholdBalanceAlertDialogBuilder.setTitle(getString(R.string.uphold_error));
-        upholdBalanceAlertDialogBuilder.setMessage(getString(R.string.uphold_error_not_logged_in));
-        upholdBalanceAlertDialogBuilder.setCancelable(false);
-        upholdBalanceAlertDialogBuilder.setPositiveText(getString(R.string.uphold_link_account));
-        upholdBalanceAlertDialogBuilder.setPositiveAction(
+        alertDialogBuilder.setTitle(getString(R.string.uphold_error));
+        alertDialogBuilder.setMessage(getString(R.string.uphold_error_not_logged_in));
+        alertDialogBuilder.setDialogCancelable(false);
+        alertDialogBuilder.setPositiveText(getString(R.string.uphold_link_account));
+        alertDialogBuilder.setPositiveAction(
                 () -> {
                     startUpholdSplashActivity();
                     return Unit.INSTANCE;
                 }
         );
-        upholdBalanceAlertDialogBuilder.createAlertDialog().show();
+        alertDialogBuilder.buildAlertDialog().show();
     }
 
     private void startUpholdSplashActivity() {

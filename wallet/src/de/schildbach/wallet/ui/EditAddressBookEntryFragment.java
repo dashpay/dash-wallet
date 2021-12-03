@@ -34,7 +34,7 @@ import androidx.fragment.app.FragmentManager;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
 
 import javax.annotation.Nullable;
 
@@ -48,7 +48,7 @@ import kotlin.Unit;
 /**
  * @author Andreas Schildbach
  */
-public final class EditAddressBookEntryFragment extends DialogFragment {
+public final class EditAddressBookEntryFragment extends BaseDialogFragment {
     private static final String FRAGMENT_TAG = EditAddressBookEntryFragment.class.getName();
 
     private static final String KEY_ADDRESS = "address";
@@ -118,15 +118,14 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
         final TextView viewLabel = (TextView) view.findViewById(R.id.edit_address_book_entry_label);
         viewLabel.setText(label != null ? label : suggestedAddressLabel);
 
-        final AlertDialogBuilder editAddressBookEntryAlertDialogBuilder = new AlertDialogBuilder(activity, EditAddressBookEntryFragment.this.getLifecycle());
         if (isOwn){
-            editAddressBookEntryAlertDialogBuilder.setTitle(isAdd ? getString(R.string.edit_address_book_entry_dialog_title_add_receive):getString(R.string.edit_address_book_entry_dialog_title_edit_receive));
+            baseAlertDialogBuilder.setTitle(isAdd ? getString(R.string.edit_address_book_entry_dialog_title_add_receive):getString(R.string.edit_address_book_entry_dialog_title_edit_receive));
         } else {
-            editAddressBookEntryAlertDialogBuilder.setTitle(isAdd ? getString(R.string.edit_address_book_entry_dialog_title_add):getString(R.string.edit_address_book_entry_dialog_title_edit));
+            baseAlertDialogBuilder.setTitle(isAdd ? getString(R.string.edit_address_book_entry_dialog_title_add):getString(R.string.edit_address_book_entry_dialog_title_edit));
         }
-        editAddressBookEntryAlertDialogBuilder.setView(view);
-        editAddressBookEntryAlertDialogBuilder.setPositiveText(isAdd ? getString(R.string.button_add):getString(R.string.edit_address_book_entry_dialog_button_edit));
-        editAddressBookEntryAlertDialogBuilder.setPositiveAction(
+        baseAlertDialogBuilder.setCustomView(view);
+        baseAlertDialogBuilder.setPositiveText(isAdd ? getString(R.string.button_add):getString(R.string.edit_address_book_entry_dialog_button_edit));
+        baseAlertDialogBuilder.setPositiveAction(
                 () -> {
                     final String newLabel = viewLabel.getText().toString().trim();
                     if (!newLabel.isEmpty()) {
@@ -145,19 +144,19 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
         );
 
         if (!isAdd){
-            editAddressBookEntryAlertDialogBuilder.setNeutralText(getString(R.string.button_delete));
-            editAddressBookEntryAlertDialogBuilder.setNeutralAction(
+            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_delete));
+            baseAlertDialogBuilder.setNeutralAction(
                     () -> {
                         contentResolver.delete(uri, null, null);
                         return Unit.INSTANCE;
                     }
             );
         }
-        editAddressBookEntryAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
-        final AlertDialog dialog = editAddressBookEntryAlertDialogBuilder.createAlertDialog();
-        dialog.setOnShowListener(d -> {
-            Button negativeButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
-            Button neutralButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+        baseAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        alertDialog.setOnShowListener(d -> {
+            Button negativeButton = alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            Button neutralButton = alertDialog.getButton(AlertDialog.BUTTON_NEUTRAL);
 
             int colorMediumGray = getResources().getColor(R.color.medium_gray, null);
             if (negativeButton != null) {
@@ -168,6 +167,6 @@ public final class EditAddressBookEntryFragment extends DialogFragment {
             }
         });
 
-        return dialog;
+        return super.onCreateDialog(savedInstanceState);
     }
 }

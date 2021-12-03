@@ -29,7 +29,6 @@ import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
 import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
 import android.app.Activity
 import de.schildbach.wallet.rates.ExchangeRate
-import org.dash.wallet.common.ui.AlertDialogBuilder
 
 
 class SettingsActivity : BaseMenuActivity() {
@@ -42,10 +41,8 @@ class SettingsActivity : BaseMenuActivity() {
     override fun getLayoutId(): Int {
         return R.layout.activity_settings
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setTitle(R.string.settings_title)
         about.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.ABOUT, bundleOf())
@@ -68,8 +65,7 @@ class SettingsActivity : BaseMenuActivity() {
 
     private fun resetBlockchain() {
         var isFinished = false
-
-        AlertDialogBuilder(this, lifecycle).apply {
+        alertDialog = baseAlertDialogBuilder.apply {
             title = getString(R.string.preferences_initiate_reset_title)
             message = getString(R.string.preferences_initiate_reset_dialog_message)
             positiveText = getString(R.string.preferences_initiate_reset_dialog_positive)
@@ -88,7 +84,8 @@ class SettingsActivity : BaseMenuActivity() {
                     analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
                 }
             }
-        }.createAlertDialog().show()
+        }.buildAlertDialog()
+        alertDialog.show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

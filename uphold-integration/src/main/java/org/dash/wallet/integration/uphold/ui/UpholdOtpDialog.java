@@ -27,7 +27,7 @@ import android.widget.TextView;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 
@@ -52,9 +52,9 @@ public class UpholdOtpDialog extends DialogFragment {
 
         final TextView otpCodeView = (TextView) view.findViewById(R.id.otp_code);
 
-        final AlertDialogBuilder upholdOtpAlertDialogBuilder = new AlertDialogBuilder(requireActivity(), getLifecycle());
+        final BaseAlertDialogBuilder upholdOtpAlertDialogBuilder = new BaseAlertDialogBuilder(requireContext());
         upholdOtpAlertDialogBuilder.setTitle(getString(R.string.uphold_otp_dialog_title));
-        upholdOtpAlertDialogBuilder.setView(view);
+        upholdOtpAlertDialogBuilder.setCustomView(view);
         upholdOtpAlertDialogBuilder.setPositiveText(getString(android.R.string.ok));
         upholdOtpAlertDialogBuilder.setNegativeText(getString(android.R.string.cancel));
         upholdOtpAlertDialogBuilder.setPositiveAction(
@@ -69,7 +69,7 @@ public class UpholdOtpDialog extends DialogFragment {
         );
         upholdOtpAlertDialogBuilder.setCancelableOnTouchOutside(false);
 
-        return upholdOtpAlertDialogBuilder.createAlertDialog();
+        return upholdOtpAlertDialogBuilder.buildAlertDialog();
     }
 
     public interface OnOtpSetListener {

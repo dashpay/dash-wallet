@@ -62,7 +62,6 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
     private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
     private lateinit var balance: Coin
-
     private lateinit var withdrawalDialog: UpholdWithdrawalHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {

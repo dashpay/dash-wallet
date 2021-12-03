@@ -50,9 +50,7 @@ import kotlin.Unit;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.UserInteractionAwareCallback;
-import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -185,22 +183,36 @@ public class RestoreWalletDialogFragment extends DialogFragment {
         showView = view.findViewById(R.id.restore_wallet_dialog_show);
         replaceWarningView = view.findViewById(R.id.restore_wallet_dialog_replace_warning);
 
-        final DialogBuilder builder = DialogBuilder.custom(activity, R.string.import_keys_dialog_title, view);
-        builder.setPositiveButton(R.string.import_keys_dialog_button_import, (dialog, which) -> {
-            final String password = passwordView.getText().toString().trim();
-            passwordView.setText(null); // get rid of it asap
-            handleRestore(password);
-        });
-        builder.setNegativeButton(R.string.button_cancel, (dialog, which) -> {
-            passwordView.setText(null); // get rid of it asap
-            maybeFinishActivity();
-        });
-        builder.setOnCancelListener(dialog -> {
-            passwordView.setText(null); // get rid of it asap
-            maybeFinishActivity();
-        });
+        final BaseAlertDialogBuilder dialogBuilder = new BaseAlertDialogBuilder(requireActivity());
+        dialogBuilder.setTitle(getString(R.string.import_keys_dialog_title));
+        dialogBuilder.setCustomView(view);
+        dialogBuilder.setPositiveText(getString(R.string.import_keys_dialog_button_import));
+        dialogBuilder.setPositiveAction(
+                () -> {
+                    final String password = passwordView.getText().toString().trim();
+                    passwordView.setText(null);
+                    handleRestore(password);
+                    return Unit.INSTANCE;
+                }
+        );
+        dialogBuilder.setNegativeText(getString(R.string.button_cancel));
+        dialogBuilder.setNegativeAction(
+                () -> {
+                    passwordView.setText(null);
+                    maybeFinishActivity();
+                    return Unit.INSTANCE;
+                }
+        );
+        dialogBuilder.setCancelAction(
+                () -> {
+                    passwordView.setText(null);
+                    maybeFinishActivity();
+                    return Unit.INSTANCE;
+                }
+        );
 
-        final AlertDialog dialog = builder.create();
+
+        final AlertDialog dialog = dialogBuilder.buildAlertDialog();
 
         dialog.setOnShowListener(d -> {
             final ImportDialogButtonEnablerListener dialogButtonEnabler = new ImportDialogButtonEnablerListener(
@@ -213,7 +225,6 @@ public class RestoreWalletDialogFragment extends DialogFragment {
             passwordView.addTextChangedListener(dialogButtonEnabler);
             showView.setOnCheckedChangeListener(new ShowPasswordCheckListener(passwordView));
         });
-        dialog.getWindow().setCallback(new UserInteractionAwareCallback(dialog.getWindow().getCallback(), activity));
 
         return dialog;
     }
@@ -282,7 +293,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
                 message.append(getString(R.string.restore_wallet_dialog_success_encrypted));
             }
 
-            final AlertDialogBuilder restoreWalletSuccessAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
+            final BaseAlertDialogBuilder restoreWalletSuccessAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
             restoreWalletSuccessAlertDialogBuilder.setMessage(message);
             restoreWalletSuccessAlertDialogBuilder.setNeutralText(getString(R.string.button_ok));
             restoreWalletSuccessAlertDialogBuilder.setNeutralAction(
@@ -292,7 +303,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
                         return Unit.INSTANCE;
                     }
             );
-            return restoreWalletSuccessAlertDialogBuilder.createAlertDialog();
+            return restoreWalletSuccessAlertDialogBuilder.buildAlertDialog();
         }
     }
 
@@ -323,7 +334,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
             final String exceptionMessage = getArguments().getString(KEY_EXCEPTION_MESSAGE);
             final Uri backupUri = checkNotNull((Uri) getArguments().getParcelable(KEY_BACKUP_URI));
 
-            AlertDialogBuilder restoreWalletFailAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
+            BaseAlertDialogBuilder restoreWalletFailAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
             restoreWalletFailAlertDialogBuilder.setTitle(getString(R.string.import_export_keys_dialog_failure_title));
             restoreWalletFailAlertDialogBuilder.setMessage(restoreWalletFailAlertDialogBuilder.formatString(R.string.import_keys_dialog_failure, exceptionMessage));
             restoreWalletFailAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
@@ -335,7 +346,8 @@ public class RestoreWalletDialogFragment extends DialogFragment {
                     }
             );
             restoreWalletFailAlertDialogBuilder.setShowIcon(true);
-            return restoreWalletFailAlertDialogBuilder.createAlertDialog();
+
+            return restoreWalletFailAlertDialogBuilder.buildAlertDialog();
         }
     }
 

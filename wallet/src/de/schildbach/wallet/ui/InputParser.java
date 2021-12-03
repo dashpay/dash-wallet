@@ -23,7 +23,6 @@ import android.content.DialogInterface.OnClickListener;
 import android.net.Uri;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.lifecycle.Lifecycle;
 
 import com.google.common.hash.Hashing;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -48,7 +47,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -425,24 +424,22 @@ public abstract class InputParser {
     }
 
     public static void dialog(final Context context,
-                              final Lifecycle lifecycle,
                               @Nullable final OnClickListener dismissListener,
                               final int titleResId,
                               final int messageResId, final Object... messageArgs) {
-        dialog(context, lifecycle, dismissListener, titleResId, context.getString(messageResId, messageArgs));
+        dialog(context, dismissListener, titleResId, context.getString(messageResId, messageArgs));
     }
 
     public static void dialog(final Context context,
-                              final Lifecycle lifecycle,
                               @Nullable final OnClickListener dismissListener,
                               final int titleResId,
                               String message) {
-        final AlertDialogBuilder inputParserAlertDialogBuilder = new AlertDialogBuilder(context, lifecycle);
+        final BaseAlertDialogBuilder inputParserAlertDialogBuilder = new BaseAlertDialogBuilder(context);
         if (titleResId != 0){
             inputParserAlertDialogBuilder.setTitle(context.getString(titleResId));
         }
         inputParserAlertDialogBuilder.setMessage(message);
-        final AlertDialog alertDialog = inputParserAlertDialogBuilder.createAlertDialog();
+        final AlertDialog alertDialog = inputParserAlertDialogBuilder.buildAlertDialog();
         alertDialog.setButton(DialogInterface.BUTTON_NEUTRAL, context.getString(R.string.button_dismiss), dismissListener);
         alertDialog.show();
     }

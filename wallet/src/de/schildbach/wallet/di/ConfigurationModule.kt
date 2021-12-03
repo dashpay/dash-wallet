@@ -24,6 +24,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.AutoLogout
 import org.dash.wallet.common.Configuration
 import javax.inject.Singleton
 
@@ -34,4 +35,9 @@ object ConfigurationModule {
     @Provides
     fun provideConfiguration(@ApplicationContext context: Context): Configuration =
         Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.resources)
+
+    @Singleton
+    @Provides
+    fun provideAutoLogout(configuration: Configuration): AutoLogout =
+        AutoLogout(configuration)
 }

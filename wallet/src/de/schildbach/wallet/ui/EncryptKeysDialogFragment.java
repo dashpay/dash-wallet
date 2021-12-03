@@ -46,7 +46,8 @@ import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +63,7 @@ import kotlin.Unit;
 /**
  * @author Andreas Schildbach
  */
-public class EncryptKeysDialogFragment extends DialogFragment {
+public class EncryptKeysDialogFragment extends BaseDialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
 
@@ -183,9 +184,9 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
         showView = (CheckBox) view.findViewById(R.id.encrypt_keys_dialog_show);
 
-        final AlertDialogBuilder encryptKeysAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
+        final BaseAlertDialogBuilder encryptKeysAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
         encryptKeysAlertDialogBuilder.setTitle(getString(R.string.encrypt_keys_dialog_title));
-        encryptKeysAlertDialogBuilder.setView(view);
+        encryptKeysAlertDialogBuilder.setCustomView(view);
         encryptKeysAlertDialogBuilder.setPositiveText(getString(R.string.button_ok));
         encryptKeysAlertDialogBuilder.setPositiveAction(
                 () -> {
@@ -197,8 +198,8 @@ public class EncryptKeysDialogFragment extends DialogFragment {
             encryptKeysAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
         }
         encryptKeysAlertDialogBuilder.setCancelableOnTouchOutside(false);
-        final AlertDialog dialog = encryptKeysAlertDialogBuilder.createAlertDialog();
-        dialog.setOnShowListener(dialogInterface -> {
+        alertDialog = encryptKeysAlertDialogBuilder.buildAlertDialog();
+        alertDialog.setOnShowListener(dialogInterface -> {
             positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
             negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
             positiveButton.setTypeface(Typeface.DEFAULT_BOLD);
@@ -211,11 +212,11 @@ public class EncryptKeysDialogFragment extends DialogFragment {
                 showView.setChecked(true);
             }
 
-            EncryptKeysDialogFragment.this.dialog = dialog;
+            EncryptKeysDialogFragment.this.dialog = alertDialog;
             updateView();
         });
 
-        return dialog;
+        return super.onCreateDialog(savedInstanceState);
 
     }
 

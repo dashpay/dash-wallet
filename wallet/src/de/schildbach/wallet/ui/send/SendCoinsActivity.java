@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui.send;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -29,7 +28,6 @@ import androidx.lifecycle.ViewModelProviders;
 
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -39,8 +37,6 @@ import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
-import kotlin.jvm.functions.Function0;
-
 @AndroidEntryPoint
 public class SendCoinsActivity extends AbstractBindServiceActivity {
 
@@ -70,13 +66,15 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
                     case ERROR: {
                         String message = paymentIntentResource.getMessage();
                         if (message != null) {
-                            AlertDialogBuilder paymentMessageAlertDialogBuilder = new AlertDialogBuilder(
-                                    SendCoinsActivity.this,
-                                    SendCoinsActivity.this.getLifecycle());
-                            paymentMessageAlertDialogBuilder.setMessage(message);
-                            paymentMessageAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-                            paymentMessageAlertDialogBuilder.setNeutralAction(neutralActionListener);
-                            paymentMessageAlertDialogBuilder.createAlertDialog().show();
+                            baseAlertDialogBuilder.setMessage(message);
+                            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                            baseAlertDialogBuilder.setNeutralAction(
+                                    () -> {
+                                        finish();
+                                        return Unit.INSTANCE;
+                                    });
+                            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                            alertDialog.show();
                         }
                         break;
                     }
@@ -158,13 +156,6 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
                 .commitNow();
     }
 
-    private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(final DialogInterface dialog, final int which) {
-            finish();
-        }
-    };
-
     public boolean isUserAuthorized() {
         return false;
     }
@@ -183,9 +174,4 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
     }
-
-    private final Function0<Unit> neutralActionListener = () -> {
-        finish();
-        return Unit.INSTANCE;
-    };
 }

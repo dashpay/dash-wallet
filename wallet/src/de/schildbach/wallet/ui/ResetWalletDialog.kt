@@ -19,18 +19,18 @@ package de.schildbach.wallet.ui
 import android.app.Dialog
 import android.os.Bundle
 import androidx.core.os.bundleOf
-import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.common.ui.AlertDialogBuilder
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.BaseDialogFragment
 
-class ResetWalletDialog : DialogFragment() {
+class ResetWalletDialog : BaseDialogFragment() {
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return AlertDialogBuilder(this.requireActivity(), lifecycle)
+        alertDialog = BaseAlertDialogBuilder(requireContext())
             .apply {
                 title = getString(R.string.wallet_lock_reset_wallet_title)
                 message = getString(R.string.wallet_lock_reset_wallet_message)
@@ -41,9 +41,10 @@ class ResetWalletDialog : DialogFragment() {
                     WalletApplication.getInstance().triggerWipe(context)
                 }
                 positiveText = getString(android.R.string.no)
-                cancelable = false
+                isDialogCancelable = false
                 isCancelableOnTouchOutside = false
-            }.createAlertDialog()
+            }.buildAlertDialog()
+        return super.onCreateDialog(savedInstanceState)
     }
 
     companion object {

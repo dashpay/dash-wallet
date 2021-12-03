@@ -110,9 +110,7 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    dialog(SendCoinsQrActivity.this,
-                            SendCoinsQrActivity.this.getLifecycle(),
-                            dismissListener, 0, messageResId, messageArgs);
+                    dialog(SendCoinsQrActivity.this, dismissListener, 0, messageResId, messageArgs);
                 }
 
                 private final OnClickListener dismissListener = new OnClickListener() {

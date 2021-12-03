@@ -28,7 +28,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.integration.uphold.ui.UpholdSplashActivity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,9 +126,7 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
 
                     @Override
                     protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                        dialog(WalletUriHandlerActivity.this,
-                                WalletUriHandlerActivity.this.getLifecycle(),
-                                (dialog, which) -> finish(), 0, messageResId, messageArgs);
+                        dialog(WalletUriHandlerActivity.this, (dialog, which) -> finish(), 0, messageResId, messageArgs);
                     }
                 }.parse();
             }
@@ -142,14 +140,14 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
     }
 
     private void showConfirmationDialog(String message, final Function0<Unit> onPositiveButtonClickListener) {
-        AlertDialogBuilder confirmationAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
+        BaseAlertDialogBuilder confirmationAlertDialogBuilder = new BaseAlertDialogBuilder(this);
         confirmationAlertDialogBuilder.setTitle(getString(R.string.app_name));
         confirmationAlertDialogBuilder.setMessage(message);
         confirmationAlertDialogBuilder.setPositiveText(getString(R.string.button_ok));
         confirmationAlertDialogBuilder.setPositiveAction(onPositiveButtonClickListener);
         confirmationAlertDialogBuilder.setNegativeText( getString(R.string.button_cancel));
         confirmationAlertDialogBuilder.setNegativeAction(negativeButtonClickListener);
-        confirmationAlertDialogBuilder.createAlertDialog().show();
+        confirmationAlertDialogBuilder.buildAlertDialog().show();
     }
 
     @Override

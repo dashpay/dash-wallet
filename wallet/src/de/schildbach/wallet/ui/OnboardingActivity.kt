@@ -36,7 +36,7 @@ import de.schildbach.wallet.ui.security.SecurityGuard
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
-import org.dash.wallet.common.ui.AlertDialogBuilder
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 const val SET_PIN_REQUEST_CODE = 1
@@ -156,7 +156,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 else -> it.message!!
             }
 
-            AlertDialogBuilder(this, lifecycle).apply {
+            BaseAlertDialogBuilder(this).apply {
                 title = getString(R.string.import_export_keys_dialog_failure_title)
                 this.message = getString(R.string.import_keys_dialog_failure, message)
                 positiveText = getString(R.string.button_dismiss)
@@ -165,7 +165,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
                 }
                 showIcon = true
-            }.createAlertDialog().show()
+            }.buildAlertDialog().show()
         })
         viewModel.startActivityAction.observe(this, Observer {
             startActivityForResult(it, SET_PIN_REQUEST_CODE)

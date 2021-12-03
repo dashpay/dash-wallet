@@ -22,23 +22,20 @@ import android.content.Intent;
 import android.net.Uri;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdApiException;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integration.uphold.data.UpholdTransaction;
-
 import java.math.BigDecimal;
-
 import kotlin.Unit;
 
 
 public class UpholdWithdrawalHelper {
 
-    private BigDecimal balance;
-    private OnTransferListener onTransferListener;
+    private final BigDecimal balance;
+    private final OnTransferListener onTransferListener;
     private UpholdTransaction transaction;
 
     public UpholdWithdrawalHelper(BigDecimal balance, OnTransferListener onTransferListener) {
@@ -105,7 +102,7 @@ public class UpholdWithdrawalHelper {
     }
 
     private void showSuccessDialog(final AppCompatActivity activity, final String txId) {
-        final AlertDialogBuilder upholdWithdrawSuccessAlertDialogBuilder = new AlertDialogBuilder(activity, activity.getLifecycle());
+        final BaseAlertDialogBuilder upholdWithdrawSuccessAlertDialogBuilder = new BaseAlertDialogBuilder(activity);
         upholdWithdrawSuccessAlertDialogBuilder.setTitle(activity.getString(R.string.uphold_withdrawal_success_title));
         upholdWithdrawSuccessAlertDialogBuilder.setMessage(activity.getString(R.string.uphold_withdrawal_success_message, txId));
         upholdWithdrawSuccessAlertDialogBuilder.setPositiveText(activity.getString(android.R.string.ok));
@@ -125,8 +122,7 @@ public class UpholdWithdrawalHelper {
                     return Unit.INSTANCE;
                 }
         );
-        upholdWithdrawSuccessAlertDialogBuilder.createAlertDialog().show();
-
+        upholdWithdrawSuccessAlertDialogBuilder.buildAlertDialog().show();
     }
 
     private void showOtpDialog(final AppCompatActivity activity) {
@@ -146,7 +142,7 @@ public class UpholdWithdrawalHelper {
     }
 
     private void showLoadingError(AppCompatActivity activity, Exception e) {
-        AlertDialogBuilder loadingErrorAlertDialogBuilder = new AlertDialogBuilder(activity, activity.getLifecycle());
+        BaseAlertDialogBuilder loadingErrorAlertDialogBuilder = new BaseAlertDialogBuilder(activity);
         if (e instanceof UpholdApiException){
             loadingErrorAlertDialogBuilder.setTitle(activity.getString(R.string.uphold_api_error_title));
             UpholdApiException upholdApiException = (UpholdApiException) e;
@@ -156,7 +152,7 @@ public class UpholdWithdrawalHelper {
             loadingErrorAlertDialogBuilder.setMessage(activity.getString(R.string.loading_error));
         }
         loadingErrorAlertDialogBuilder.setPositiveText(activity.getString(android.R.string.ok));
-        loadingErrorAlertDialogBuilder.createAlertDialog().show();
+        loadingErrorAlertDialogBuilder.buildAlertDialog().show();
     }
 
     public interface OnTransferListener {

@@ -38,7 +38,6 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
-import org.dash.wallet.common.ui.AlertDialogBuilder
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -55,10 +54,12 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     private var liquidClient: LiquidClient? = null
     private lateinit var viewModel: LiquidViewModel
     private lateinit var viewBinding: LiquidSplashScreenBinding
+    private lateinit var countrySupportDialog: CountrySupportDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         log.info("liquid: starting liquid splash activity")
         super.onCreate(savedInstanceState)
+        countrySupportDialog = CountrySupportDialog(this, true)
         viewBinding = LiquidSplashScreenBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
         val toolbar = findViewById<View>(R.id.toolbar) as Toolbar
@@ -78,7 +79,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         viewBinding.apply {
             liquidLinkAccount.setOnClickListener { authUser() }
             ivInfo.setOnClickListener {
-                CountrySupportDialog(this@LiquidSplashActivity, true).show()
+                countrySupportDialog.show()
             }
         }
 
@@ -92,7 +93,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         if (prefs.getBoolean(REMIND_UNSUPPORTED_COUNTRIES, true)) {
             prefs.edit().putBoolean(REMIND_UNSUPPORTED_COUNTRIES, false).apply()
-            CountrySupportDialog(this, true).show()
+            countrySupportDialog.show()
         }
 
         supportFragmentManager.beginTransaction().replace(
@@ -238,14 +239,14 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     private fun showLoadingErrorAlert() {
-        AlertDialogBuilder(this, lifecycle).apply {
+        alertDialogBuilder.apply {
             message = getString(R.string.loading_error)
             positiveText = getString(android.R.string.ok)
-            cancelable = false
+            isDialogCancelable = false
             dismissAction = {
                 finish()
             }
-        }.createAlertDialog().show()
+        }.buildAlertDialog().show()
     }
 
     private fun startLiquidBuyAndSellDashActivity() {
@@ -330,5 +331,10 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     override fun onResume() {
         super.onResume()
         super.turnOnAutoLogout()
+    }
+
+    override fun onPause() {
+        countrySupportDialog.dismiss()
+        super.onPause()
     }
 }

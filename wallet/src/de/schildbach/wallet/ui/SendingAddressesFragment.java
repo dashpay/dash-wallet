@@ -28,7 +28,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -166,14 +166,10 @@ public final class SendingAddressesFragment extends FancyListFragment
                                 if (!wallet.isPubKeyHashMine(address.getHash160()))
                                     EditAddressBookEntryFragment.edit(getFragmentManager(), address);
                                 else
-                                    dialog(activity,
-                                            SendingAddressesFragment.this.getLifecycle(),
-                                            null, R.string.address_book_options_scan_title,
+                                    dialog(activity, null, R.string.address_book_options_scan_title,
                                             R.string.address_book_options_scan_own_address);
                             } else {
-                                dialog(activity,
-                                        SendingAddressesFragment.this.getLifecycle(),
-                                        null, R.string.address_book_options_scan_title,
+                                dialog(activity, null, R.string.address_book_options_scan_title,
                                         R.string.address_book_options_scan_invalid);
                             }
                         }
@@ -187,9 +183,7 @@ public final class SendingAddressesFragment extends FancyListFragment
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    dialog(activity,
-                            SendingAddressesFragment.this.getLifecycle(),
-                            null, R.string.address_book_options_scan_title, messageResId, messageArgs);
+                    dialog(activity, null, R.string.address_book_options_scan_title, messageResId, messageArgs);
                 }
             }.parse();
         }
@@ -230,18 +224,20 @@ public final class SendingAddressesFragment extends FancyListFragment
 
     private void handlePasteClipboard() {
         final Address address = getAddressFromPrimaryClip();
-        final AlertDialogBuilder pasteClipboardAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
+        final BaseAlertDialogBuilder pasteClipboardAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
         pasteClipboardAlertDialogBuilder.setTitle(getString(R.string.address_book_options_paste_from_clipboard_title));
         pasteClipboardAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
 
         if (address == null) {
             pasteClipboardAlertDialogBuilder.setMessage(getString(R.string.address_book_options_paste_from_clipboard_invalid));
-            pasteClipboardAlertDialogBuilder.createAlertDialog().show();
+            alertDialog = pasteClipboardAlertDialogBuilder.buildAlertDialog();
+            alertDialog.show();
         } else if (!wallet.isPubKeyHashMine(address.getHash160())) {
             EditAddressBookEntryFragment.edit(getParentFragmentManager(), address);
         } else {
             pasteClipboardAlertDialogBuilder.setMessage(getString(R.string.address_book_options_paste_from_clipboard_own_address));
-            pasteClipboardAlertDialogBuilder.createAlertDialog().show();
+            alertDialog = pasteClipboardAlertDialogBuilder.buildAlertDialog();
+            alertDialog.show();
         }
     }
 

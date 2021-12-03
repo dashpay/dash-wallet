@@ -1,28 +1,25 @@
 package org.dash.wallet.common.ui
 
-import android.app.Activity
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import android.view.ViewGroup
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
-open class BaseBottomSheetDialog(context: Context, private val lifecycle: Lifecycle) : BottomSheetDialog(context), LifecycleObserver {
+open class BaseBottomSheetDialog(context: Context) : BottomSheetDialog(context, R.style.BottomSheetDialog) {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lifecycle.addObserver(this)
-        window?.callback = UserInteractionAwareCallback(
-            window?.callback, context as Activity?
-        )
+        setCancelable(true)
+        setCanceledOnTouchOutside(true)
+        window?.callback = UserInteractionAwareCallback(window?.callback, context.getActivity())
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-    fun stop() {
-        dismiss()
-        Log.e("TAG", "================================>>>> lifecycle owner STOPPED")
+    override fun onStart() {
+        super.onStart()
+        window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 }

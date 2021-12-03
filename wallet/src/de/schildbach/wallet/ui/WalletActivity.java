@@ -63,7 +63,6 @@ import org.dash.wallet.common.UserInteractionAwareCallback;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
 
 import java.io.IOException;
 import java.util.Currency;
@@ -274,9 +273,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    dialog(WalletActivity.this,
-                            WalletActivity.this.getLifecycle(),
-                            null, 0, messageResId, messageArgs);
+                    dialog(WalletActivity.this, null, 0, messageResId, messageArgs);
                 }
             }.parse();
         }
@@ -328,9 +325,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             @Override
             protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                dialog(WalletActivity.this,
-                        WalletActivity.this.getLifecycle(),
-                        null, errorDialogTitleResId, messageResId, messageArgs);
+                dialog(WalletActivity.this, null, errorDialogTitleResId, messageResId, messageArgs);
             }
 
             @Override
@@ -480,8 +475,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void handleReportIssue() {
-        Dialog dialog = ReportIssueDialogBuilder.createReportIssueDialog(this, application).show();
-        dialog.getWindow().setCallback(new UserInteractionAwareCallback(dialog.getWindow().getCallback(), this));
+        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this, application).buildAlertDialog();
+        alertDialog.show();
     }
 
     private void handlePaste() {
@@ -508,9 +503,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (input != null) {
             handleString(input, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message);
         } else {
-            InputParser.dialog(this,
-                    WalletActivity.this.getLifecycle(),
-                    null, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message_no_data);
+            InputParser.dialog(this, null, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message_no_data);
         }
     }
 
@@ -544,11 +537,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }*/
 
     private Dialog createBackupWalletPermissionDialog() {
-        AlertDialogBuilder backUpWalletPermissionDialog = new AlertDialogBuilder(this, getLifecycle());
-        backUpWalletPermissionDialog.setTitle(getString(R.string.backup_wallet_permission_dialog_title));
-        backUpWalletPermissionDialog.setMessage(getString(R.string.backup_wallet_permission_dialog_message));
-        backUpWalletPermissionDialog.setNeutralText(getString(R.string.button_dismiss));
-        return backUpWalletPermissionDialog.createAlertDialog();
+        baseAlertDialogBuilder.setTitle(getString(R.string.backup_wallet_permission_dialog_title));
+        baseAlertDialogBuilder.setMessage(getString(R.string.backup_wallet_permission_dialog_message));
+        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+        return baseAlertDialogBuilder.buildAlertDialog();
     }
 
     private Dialog createRestoreWalletPermissionDialog() {
@@ -566,20 +558,19 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private Dialog createLowStorageAlertDialog() {
-        final AlertDialogBuilder lowStorageAlertDialog = new AlertDialogBuilder(this, getLifecycle());
-        lowStorageAlertDialog.setTitle(getString(R.string.wallet_low_storage_dialog_title));
-        lowStorageAlertDialog.setMessage(getString(R.string.wallet_low_storage_dialog_msg));
-        lowStorageAlertDialog.setPositiveText(getString(R.string.wallet_low_storage_dialog_button_apps));
-        lowStorageAlertDialog.setPositiveAction(
+        baseAlertDialogBuilder.setTitle(getString(R.string.wallet_low_storage_dialog_title));
+        baseAlertDialogBuilder.setMessage(getString(R.string.wallet_low_storage_dialog_msg));
+        baseAlertDialogBuilder.setPositiveText(getString(R.string.wallet_low_storage_dialog_button_apps));
+        baseAlertDialogBuilder.setPositiveAction(
                 () -> {
                     startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
                     finish();
                     return Unit.INSTANCE;
                 }
         );
-        lowStorageAlertDialog.setNegativeText(getString(R.string.button_dismiss));
-        lowStorageAlertDialog.setShowIcon(true);
-        return lowStorageAlertDialog.createAlertDialog();
+        baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+        baseAlertDialogBuilder.setShowIcon(true);
+        return baseAlertDialogBuilder.buildAlertDialog();
     }
 
     private void checkAlerts() {
@@ -693,8 +684,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 }
             };
 
-            AlertDialog alertDialog = dialog.show();
-            alertDialog.getWindow().setCallback(new UserInteractionAwareCallback(alertDialog.getWindow().getCallback(), this));
+
+            alertDialog = dialog.buildAlertDialog();
+            alertDialog.show();
         }
     }
 
@@ -702,12 +694,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
         final PackageManager pm = getPackageManager();
         final Intent settingsIntent = new Intent(android.provider.Settings.ACTION_DATE_SETTINGS);
 
-        final AlertDialogBuilder timeSkewAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
-        timeSkewAlertDialogBuilder.setTitle(getString(R.string.wallet_timeskew_dialog_title));
-        timeSkewAlertDialogBuilder.setMessage(getString(R.string.wallet_timeskew_dialog_msg, diffMinutes));
+        baseAlertDialogBuilder.setTitle(getString(R.string.wallet_timeskew_dialog_title));
+        baseAlertDialogBuilder.setMessage(getString(R.string.wallet_timeskew_dialog_msg, diffMinutes));
         if (pm.resolveActivity(settingsIntent, 0) != null){
-            timeSkewAlertDialogBuilder.setPositiveText(getString(R.string.button_settings));
-            timeSkewAlertDialogBuilder.setPositiveAction(
+            baseAlertDialogBuilder.setPositiveText(getString(R.string.button_settings));
+            baseAlertDialogBuilder.setPositiveAction(
                     () -> {
                         startActivity(settingsIntent);
                         finish();
@@ -715,9 +706,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     }
             );
         }
-        timeSkewAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
-        timeSkewAlertDialogBuilder.setShowIcon(true);
-        return timeSkewAlertDialogBuilder.createAlertDialog();
+        baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+        baseAlertDialogBuilder.setShowIcon(true);
+        return baseAlertDialogBuilder.buildAlertDialog();
     }
 
     private Dialog createVersionAlertDialog() {
@@ -729,12 +720,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (Build.VERSION.SDK_INT < Constants.SDK_DEPRECATED_BELOW)
             message.append("\n\n").append(getString(R.string.wallet_version_dialog_msg_deprecated));
 
-        final AlertDialogBuilder appVersionAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
-        appVersionAlertDialogBuilder.setTitle(getString(R.string.wallet_version_dialog_title));
-        appVersionAlertDialogBuilder.setMessage(message);
+        baseAlertDialogBuilder.setTitle(getString(R.string.wallet_version_dialog_title));
+        baseAlertDialogBuilder.setMessage(message);
         if (pm.resolveActivity(marketIntent, 0) != null){
-            appVersionAlertDialogBuilder.setPositiveText(getString(R.string.wallet_version_dialog_button_market));
-            appVersionAlertDialogBuilder.setPositiveAction(
+            baseAlertDialogBuilder.setPositiveText(getString(R.string.wallet_version_dialog_button_market));
+            baseAlertDialogBuilder.setPositiveAction(
                     () -> {
                         startActivity(marketIntent);
                         finish();
@@ -743,8 +733,8 @@ public final class WalletActivity extends AbstractBindServiceActivity
             );
         }
         if (pm.resolveActivity(binaryIntent, 0) != null){
-            appVersionAlertDialogBuilder.setNeutralText(getString(R.string.wallet_version_dialog_button_binary));
-            appVersionAlertDialogBuilder.setNeutralAction(
+            baseAlertDialogBuilder.setNeutralText(getString(R.string.wallet_version_dialog_button_binary));
+            baseAlertDialogBuilder.setNeutralAction(
                     () -> {
                         startActivity(binaryIntent);
                         finish();
@@ -752,9 +742,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     }
             );
         }
-        appVersionAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
-        appVersionAlertDialogBuilder.setShowIcon(true);
-        return appVersionAlertDialogBuilder.createAlertDialog();
+        baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
+        baseAlertDialogBuilder.setShowIcon(true);
+        return baseAlertDialogBuilder.buildAlertDialog();
     }
 
     public void restoreWallet(final Wallet wallet) {
@@ -768,12 +758,12 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
     private void resetBlockchain() {
         isRestoringBackup = false;
-        AlertDialogBuilder resetBlockChainAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
-        resetBlockChainAlertDialogBuilder.setTitle(getString(R.string.restore_wallet_dialog_success));
-        resetBlockChainAlertDialogBuilder.setMessage(getString(R.string.restore_wallet_dialog_success_replay));
-        resetBlockChainAlertDialogBuilder.setNeutralText(getString(R.string.button_ok));
-        resetBlockChainAlertDialogBuilder.setNeutralAction(neutralActionListener);
-        resetBlockChainAlertDialogBuilder.createAlertDialog().show();
+        baseAlertDialogBuilder.setTitle(getString(R.string.restore_wallet_dialog_success));
+        baseAlertDialogBuilder.setMessage(getString(R.string.restore_wallet_dialog_success_replay));
+        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_ok));
+        baseAlertDialogBuilder.setNeutralAction(neutralActionListener);
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        alertDialog.show();
     }
 
     private void checkWalletEncryptionDialog() {
@@ -873,7 +863,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                 // Tell the user that the wallet is being upgraded (BIP44)
                 // and they will have to enter a PIN.
                 //
-                UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager());
+                UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager(), true);
             }
         } else {
             if (restoreBackup) {
@@ -1046,11 +1036,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
      */
     private void showFiatCurrencyChangeDetectedDialog(final String currentCurrencyCode,
                                                       final String newCurrencyCode) {
-        AlertDialogBuilder fiatCurrencyChangeAlertDialogBuilder = new AlertDialogBuilder(this, getLifecycle());
-        fiatCurrencyChangeAlertDialogBuilder.setMessage(getString(R.string.change_exchange_currency_code_message,
+        baseAlertDialogBuilder.setMessage(getString(R.string.change_exchange_currency_code_message,
                 newCurrencyCode, currentCurrencyCode));
-        fiatCurrencyChangeAlertDialogBuilder.setPositiveText(getString(R.string.change_to, newCurrencyCode));
-        fiatCurrencyChangeAlertDialogBuilder.setPositiveAction(
+        baseAlertDialogBuilder.setPositiveText(getString(R.string.change_to, newCurrencyCode));
+        baseAlertDialogBuilder.setPositiveAction(
                 () -> {
                     config.setExchangeCurrencyCodeDetected(true);
                     config.setExchangeCurrencyCode(newCurrencyCode);
@@ -1058,14 +1047,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     return Unit.INSTANCE;
                 }
         );
-        fiatCurrencyChangeAlertDialogBuilder.setNegativeText(getString(R.string.leave_as, currentCurrencyCode));
-        fiatCurrencyChangeAlertDialogBuilder.setNegativeAction(
+        baseAlertDialogBuilder.setNegativeText(getString(R.string.leave_as, currentCurrencyCode));
+        baseAlertDialogBuilder.setNegativeAction(
                 () -> {
                     config.setExchangeCurrencyCodeDetected(true);
                     return Unit.INSTANCE;
                 }
         );
-        fiatCurrencyChangeAlertDialogBuilder.createAlertDialog().show();
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        alertDialog.show();
     }
 
     private void updateSyncPaneVisibility(int id, boolean visible) {

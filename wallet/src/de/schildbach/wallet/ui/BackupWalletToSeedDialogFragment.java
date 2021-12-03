@@ -41,14 +41,13 @@ import android.widget.TextView;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.os.CancellationSignal;
-import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +69,7 @@ import kotlin.Unit;
 /**
  * @author Andreas Schildbach
  */
-public class BackupWalletToSeedDialogFragment extends DialogFragment
+public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String FRAGMENT_TAG = BackupWalletToSeedDialogFragment.class.getName();
@@ -162,12 +161,11 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
             updateView(true);
         }
 
-        final AlertDialogBuilder backUpWalletAlertDialogBuilder = new AlertDialogBuilder(activity, getLifecycle());
-        backUpWalletAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
-        backUpWalletAlertDialogBuilder.setView(view);
-        backUpWalletAlertDialogBuilder.setCancelable(false);
-        backUpWalletAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
-        backUpWalletAlertDialogBuilder.setPositiveAction(
+        baseAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
+        baseAlertDialogBuilder.setCustomView(view);
+        baseAlertDialogBuilder.setDialogCancelable(false);
+        baseAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
+        baseAlertDialogBuilder.setPositiveAction(
                 () -> {
                     if (writtenDown.isChecked()) {
                         config.disarmBackupSeedReminder();
@@ -182,8 +180,8 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
         );
 
         initFingerprintHelper();
-
-        return backUpWalletAlertDialogBuilder.createAlertDialog();
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        return super.onCreateDialog(savedInstanceState);
     }
 
     @Override

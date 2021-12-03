@@ -20,7 +20,6 @@ import org.dash.wallet.integration.liquid.ui.WebViewActivity
 
 class CountrySupportDialog(val contexts: Context, val isCreditCard: Boolean) : Dialog(contexts, R.style.Theme_Dialog) {
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
-
     init {
         setCanceledOnTouchOutside(false)
         setCancelable(false)

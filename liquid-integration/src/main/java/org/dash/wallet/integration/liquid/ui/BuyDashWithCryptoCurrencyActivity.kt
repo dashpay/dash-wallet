@@ -22,13 +22,13 @@ import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
+import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.ui.AlertDialogBuilder
 import org.dash.wallet.integration.liquid.R
 import org.slf4j.LoggerFactory
 
-
+@AndroidEntryPoint
 class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
 
     companion object {
@@ -41,12 +41,13 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
     private var isTransestionSuccessful = false
     private var error: String? = null
     private var mPermissionRequest: PermissionRequest? = null
-
+    private lateinit var countrySupportDialog: CountrySupportDialog
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         log.info("liquid: starting buy dash with crypto currency")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview_quick_exchange)
+        countrySupportDialog = CountrySupportDialog(this, false)
         webview = findViewById(R.id.webview)
         initToolBar()
     }
@@ -82,7 +83,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
 
 
         findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this, false).show()
+            countrySupportDialog.show()
         }
         webview.webViewClient = MyBrowser()
         webview.settings.javaScriptEnabled = true
@@ -165,7 +166,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
 
     @SuppressLint("NewApi")
     fun showPermissionDialog(request: PermissionRequest) {
-        AlertDialogBuilder(this, lifecycle).apply {
+        alertDialogBuilder.apply {
             title = getString(R.string.allow_permission)
             message = getString(R.string.allow_permission_to_camera)
             positiveText = getString(android.R.string.yes)
@@ -176,8 +177,8 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
             negativeAction = {
                 request.deny()
             }
-            cancelable = false
-        }.createAlertDialog().show()
+            isDialogCancelable = false
+        }.buildAlertDialog().show()
     }
 
     val FILE_CHOOSER_RESULT_CODE = 1
@@ -378,6 +379,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
     override fun onDestroy() {
         log.info("liquid: closing buy dash with crypto currency")
         webview.removeJavascriptInterface(mJsInterfaceName)
+        countrySupportDialog.dismiss()
         super.onDestroy()
     }
 

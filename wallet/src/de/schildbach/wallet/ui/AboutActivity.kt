@@ -29,7 +29,6 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_about.*
 import org.bitcoinj.core.VersionMessage
-import org.dash.wallet.common.UserInteractionAwareCallback
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
@@ -99,9 +98,11 @@ class AboutActivity : BaseMenuActivity() {
     }
 
     private fun handleReportIssue() {
-        val dialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
-                WalletApplication.getInstance()).show()
-        dialog.window!!.callback = UserInteractionAwareCallback(dialog.window!!.callback, this)
+        /*
+        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
+                WalletApplication.getInstance()).buildAlertDialog()
+        alertDialog.show()
+        */
     }
 
 }

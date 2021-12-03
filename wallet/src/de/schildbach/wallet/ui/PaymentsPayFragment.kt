@@ -144,8 +144,7 @@ class PaymentsPayFragment : Fragment() {
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    dialog(context, this@PaymentsPayFragment.lifecycle,
-                        null, errorDialogTitleResId, messageResId, *messageArgs)
+                    dialog(context,null, errorDialogTitleResId, messageResId, *messageArgs)
                 } else {
                     manageStateOfPayToAddressButton(null)
                 }

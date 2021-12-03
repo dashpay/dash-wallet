@@ -22,7 +22,7 @@ import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
 
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -101,11 +101,11 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             backgroundHandler = new Handler(backgroundThread.getLooper());
         }
 
-        final AlertDialogBuilder abstractPinAlertDialogBuilder = new AlertDialogBuilder(requireActivity(), getLifecycle());
+        final BaseAlertDialogBuilder abstractPinAlertDialogBuilder = new BaseAlertDialogBuilder(requireContext());
         abstractPinAlertDialogBuilder.setTitle(getString(dialogTitle));
-        abstractPinAlertDialogBuilder.setView(view);
-        abstractPinAlertDialogBuilder.setCancelable(false);
-        final AlertDialog alertDialog = abstractPinAlertDialogBuilder.createAlertDialog();
+        abstractPinAlertDialogBuilder.setCustomView(view);
+        abstractPinAlertDialogBuilder.setDialogCancelable(false);
+        final AlertDialog alertDialog = abstractPinAlertDialogBuilder.buildAlertDialog();
         alertDialog.setOnShowListener(dialog -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 pinView.postDelayed(() -> KeyboardUtil.showSoftKeyboard(getActivity(), pinView), 100);

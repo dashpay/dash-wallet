@@ -21,8 +21,10 @@ import java.util.EnumMap;
 import java.util.Map;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
-import org.dash.wallet.common.ui.AlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ import com.google.zxing.ResultPointCallback;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.ui.AbstractWalletActivity;
 import de.schildbach.wallet.util.OnFirstPreDraw;
 import de.schildbach.wallet_test.R;
@@ -78,7 +81,6 @@ import android.view.animation.AccelerateInterpolator;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.Observer;
@@ -88,6 +90,7 @@ import androidx.lifecycle.ViewModelProviders;
  * @author Andreas Schildbach
  */
 @SuppressWarnings("deprecation")
+@AndroidEntryPoint
 public final class ScanActivity extends AbstractWalletActivity
         implements SurfaceTextureListener, ActivityCompat.OnRequestPermissionsResultCallback {
     private static final String INTENT_EXTRA_SCENE_TRANSITION_X = "scene_transition_x";
@@ -486,9 +489,9 @@ public final class ScanActivity extends AbstractWalletActivity
         }
     };
 
-    public static class WarnDialogFragment extends DialogFragment {
+    @AndroidEntryPoint
+    public static class WarnDialogFragment extends BaseDialogFragment {
         private static final String FRAGMENT_TAG = WarnDialogFragment.class.getName();
-
         public static void show(final FragmentManager fm, final int titleResId, final String message) {
             final WarnDialogFragment newFragment = new WarnDialogFragment();
             final Bundle args = new Bundle();
@@ -501,18 +504,18 @@ public final class ScanActivity extends AbstractWalletActivity
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final Bundle args = getArguments();
-            final AlertDialogBuilder warnScanAlertDialogBuilder = new AlertDialogBuilder(requireActivity(), getLifecycle());
-            warnScanAlertDialogBuilder.setTitle(String.valueOf(args.getInt("title")));
-            warnScanAlertDialogBuilder.setMessage((args.getString("message")));
-            warnScanAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
-            warnScanAlertDialogBuilder.setNeutralAction(
+            baseAlertDialogBuilder.setTitle(String.valueOf(args.getInt("title")));
+            baseAlertDialogBuilder.setMessage((args.getString("message")));
+            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+            baseAlertDialogBuilder.setNeutralAction(
                     () -> {
                         getActivity().finish();
                         return Unit.INSTANCE;
                     }
             );
-            warnScanAlertDialogBuilder.setShowIcon(true);
-            return warnScanAlertDialogBuilder.createAlertDialog();
+            baseAlertDialogBuilder.setShowIcon(true);
+            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+            return super.onCreateDialog(savedInstanceState);
         }
 
         @Override

@@ -23,6 +23,7 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,10 +33,8 @@ import androidx.annotation.RequiresApi
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
@@ -45,10 +44,9 @@ import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
 import org.dash.wallet.common.ui.LockScreenViewModel
-import org.dash.wallet.common.ui.AlertDialogBuilder
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
 
-@AndroidEntryPoint
 open class CheckPinDialog : DialogFragment() {
 
     companion object {
@@ -87,7 +85,7 @@ open class CheckPinDialog : DialogFragment() {
 
     protected lateinit var viewModel: CheckPinViewModel
     protected lateinit var sharedModel: CheckPinSharedModel
-    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
+    protected lateinit var lockScreenViewModel: LockScreenViewModel
 
     protected val pinRetryController = PinRetryController.getInstance()
     protected var fingerprintHelper: FingerprintHelper? = null
@@ -221,7 +219,9 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected fun initLockScreenViewModel(activity: FragmentActivity) {
+        lockScreenViewModel = ViewModelProvider(activity)[LockScreenViewModel::class.java]
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner) {
+            Log.e(this::class.java.simpleName, "Dialog dismissed")
             sharedModel.onCancelCallback.call()
             dismiss()
         }
@@ -334,10 +334,10 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected open fun showLockedAlert(context: Context) {
-        AlertDialogBuilder(requireContext(), lifecycle).apply {
+        BaseAlertDialogBuilder(requireContext()).apply {
             title = getString(R.string.wallet_lock_wallet_disabled)
             message = pinRetryController.getWalletTemporaryLockedMessage(context)
             positiveText = getString(android.R.string.ok)
-        }.createAlertDialog().show()
+        }.buildAlertDialog().show()
     }
 }
