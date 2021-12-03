@@ -63,7 +63,7 @@
                 android:orientation="vertical">
 
                 <TextView
-                    style="@style/MontserratSemiBold.WR.13"
+                    style="@style/Subtitle2.Red"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"

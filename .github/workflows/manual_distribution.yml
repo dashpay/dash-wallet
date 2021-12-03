@@ -47,7 +47,13 @@ jobs:
           run_num: ${{ github.run_number }}
       run: |
           echo "build_number=$((70000+$run_num))" >> $GITHUB_ENV
-    
+
+    - name: Get the support email
+      env:
+        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
+      run: |
+        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
+
     - uses: actions/checkout@v2    
     - name: set up JDK 8
       uses: actions/setup-java@v2
@@ -60,9 +66,9 @@ jobs:
       run: chmod +x gradlew
       
     - name: Set up Ruby
-      uses: actions/setup-ruby@v1
+      uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.0.2'
+        ruby-version: '3.0.3'
         
     - name: Generate cache key
       run: bash ./checksum.sh checksum.txt

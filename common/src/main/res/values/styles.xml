@@ -178,10 +178,6 @@
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="MontserratRegular.MG.15">
-        <item name="android:textSize">15sp</item>
-    </style>
-
     <style name="MontserratRegular.G900">
         <item name="android:textColor">@color/gray_900</item>
     </style>
@@ -321,14 +317,6 @@
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="MontserratSemiBold.WR">
-        <item name="android:textColor">@color/warning_red</item>
-    </style>
-
-    <style name="MontserratSemiBold.WR.13">
-        <item name="android:textSize">13sp</item>
-    </style>
-
     <style name="MontserratSemiBold.G900">
         <item name="android:textColor">@color/gray_900</item>
     </style>
@@ -424,10 +412,20 @@
         <item name="android:visibility">gone</item>
     </style>
 
-    <style name="CheckBox">
+    <style name="OldCheckBox">
         <item name="android:layout_marginLeft">-2dp</item>
         <item name="android:layout_marginStart">-2dp</item>
         <item name="android:theme">@style/CheckboxStyle</item>
+    </style>
+
+    <style name="CheckBox" parent="Body2.Medium">
+        <item name="android:button">@drawable/checkbox</item>
+        <item name="android:drawablePadding">10dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">11dp</item>
+        <item name="android:paddingBottom">11dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:layout_marginStart">15dp</item>
     </style>
 
     <style name="TwoPanesScreenSubtitle" parent="MontserratMedium">
@@ -538,6 +536,11 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+    <style name="DashButton.Blue.SemiBold" parent="DashButton.Blue">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
     <style name="DashButton.White.Bordered" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/white_button_bordered_text</item>
         <item name="android:background">@drawable/white_button_bordered_background</item>
@@ -614,4 +617,269 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
+
+    <!-- Design System styles -->
+
+    <style name="WhiteBackground">
+        <item name="backgroundColor">@android:color/white</item>
+        <item name="strokeColor">@android:color/white</item>
+    </style>
+
+    <style name="ScreenshotWarningBackground" parent="WhiteBackground">
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="VerifySeedTextViewBackground" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="DragIndicatorBackground">
+        <item name="backgroundColor">@color/gray_100</item>
+        <item name="strokeColor">@color/gray_100</item>
+        <item name="cornerRadius">2dp</item>
+    </style>
+
+    <style name="GrayBackground">
+        <item name="backgroundColor">@color/gray_40</item>
+        <item name="strokeColor">@color/gray_40</item>
+    </style>
+
+    <style name="SearchInputBackground" parent="GrayBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="SegmentedPickerBackground" parent="GrayBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="SegmentedPickerThumb">
+        <item name="android:elevation">6dp</item>
+    </style>
+
+    <style name="SegmentedPickerThumbBackground" parent="WhiteBackground">
+        <item name="cornerRadius">7dp</item>
+    </style>
+
+    <style name="ListViewButtonBackground" parent="WhiteBackground">
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="CardViewRaised" parent="Base.CardView">
+        <item name="android:background">@color/dash_white</item>
+        <item name="cardCornerRadius">10dp</item>
+        <item name="cardElevation">5dp</item>
+    </style>
+
+    <!-- Typography -->
+
+    <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Headline4.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="Headline4.Bold.White">
+        <item name="android:textColor">@color/dash_white</item>
+    </style>
+
+    <style name="Headline6" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/montserrat_medium</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Headline6.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="Body1" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Body1.SemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
+    <style name="Body2" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColorHint">@color/gray_300</item>
+        <item name="android:lineSpacingExtra">5sp</item>
+    </style>
+
+    <style name="Body2.White">
+        <item name="android:textColor">@color/dash_white</item>
+    </style>
+
+    <style name="Body2.SteelGray">
+        <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Body2.Medium">
+        <item name="fontFamily">@font/montserrat_medium</item>
+    </style>
+
+    <style name="Subtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
+    <style name="Subtitle1.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="Subtitle2" parent="TextAppearance.MaterialComponents.Subtitle2">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:lineSpacingExtra">5sp</item>
+    </style>
+
+    <style name="Subtitle2.Red">
+        <item name="android:textColor">@color/red_300</item>
+    </style>
+
+    <style name="Caption" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:lineSpacingExtra">3sp</item>
+    </style>
+
+    <style name="Caption.SemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
+    <style name="Caption.SteelGray">
+        <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Caption.SemiBold.SteelGray">
+        <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Caption.Gray600">
+        <item name="android:textColor">@color/gray_600</item>
+    </style>
+
+    <style name="Caption.Gray400">
+        <item name="android:textColor">@color/gray_400</item>
+    </style>
+
+    <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:lineSpacingExtra">4sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0.0</item>
+    </style>
+
+    <style name="Overline.SemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
+    <style name="Overline.SemiBold.Blue">
+        <item name="android:textColor">@color/dash_blue</item>
+    </style>
+
+    <!-- Buttons -->
+
+    <style name="TertiaryButtonTheme">
+        <item name="cornerRadius">8dp</item>
+        <item name="titleTextColor">@color/gray_900</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Blue">
+        <item name="titleTextColor">@color/dash_blue</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Red">
+        <item name="titleTextColor">@color/red_300</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Small">
+        <item name="cornerRadius">6dp</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Small.Blue">
+        <item name="titleTextColor">@color/dash_blue</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Large">
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Large.Red">
+        <item name="titleTextColor">@color/red_300</item>
+    </style>
+
+    <style name="Button.Primary" parent="Widget.AppCompat.Button.Borderless">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <style name="Button.Primary.Blue">
+        <item name="android:background">@drawable/blue_button_background</item>
+    </style>
+
+    <style name="Button.Primary.Large">
+        <item name="android:textSize">15sp</item>
+        <item name="android:minHeight">46dp</item>
+    </style>
+
+    <style name="Button.Primary.Large.Blue">
+        <item name="android:background">@drawable/blue_button_background</item>
+    </style>
+
+    <style name="Button.Tertiary" parent="Widget.AppCompat.Button.Borderless">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="android:background">@drawable/rounded_ripple_transparent</item>
+        <item name="android:theme">@style/TertiaryButtonTheme</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <style name="Button.Tertiary.Blue">
+        <item name="android:theme">@style/TertiaryButtonTheme.Blue</item>
+    </style>
+
+    <style name="Button.Tertiary.Small">
+        <item name="android:textSize">13sp</item>
+        <item name="android:minHeight">36dp</item>
+        <item name="android:theme">@style/TertiaryButtonTheme.Small</item>
+    </style>
+
+    <style name="Button.Tertiary.Small.Blue">
+        <item name="android:theme">@style/TertiaryButtonTheme.Small.Blue</item>
+    </style>
+
+    <style name="Button.Tertiary.Large">
+        <item name="android:textSize">15sp</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:theme">@style/TertiaryButtonTheme.Large</item>
+    </style>
+
+    <style name="Button.Tertiary.Large.Red">
+        <item name="android:theme">@style/TertiaryButtonTheme.Large.Red</item>
+    </style>
+
+    <style name="DialogCloseButton">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_gravity">end</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:layout_marginEnd">15dp</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:src">@drawable/ic_popup_close</item>
+    </style>
 </resources>
