@@ -25,6 +25,7 @@
     android:layout_height="wrap_content">
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/clickable_item"
         android:background="@drawable/rounded_ripple_background"
         android:theme="@style/MerchantLocationBackground"
         android:layout_width="match_parent"

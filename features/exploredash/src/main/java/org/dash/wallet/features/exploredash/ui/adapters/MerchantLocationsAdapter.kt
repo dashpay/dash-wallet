@@ -38,7 +38,7 @@ class MerchantsLocationsAdapter(
     override fun onBindViewHolder(holder: MerchantLocationViewHolder, position: Int) {
         val item = getItem(position)
         holder.bind(item as Merchant)
-        holder.binding.root.setOnClickListener { clickListener.invoke(item, holder) }
+        holder.binding.clickableItem.setOnClickListener { clickListener.invoke(item, holder) }
     }
 }
 

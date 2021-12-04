@@ -30,6 +30,7 @@ import org.dash.wallet.features.exploredash.ui.FilterMode
 
 class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: SearchHeaderViewBinding
+    private var currentFilterOption = 0
 
     private var onFilterOptionChosen: ((FilterMode) -> Unit)? = null
     private var onSearchQueryChanged: ((String) -> Unit)? = null
@@ -74,6 +75,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
                     R.array.atms_filter_options
                 }).toList()
         )
+        binding.filterOptions.pickedOptionIndex = currentFilterOption
         binding.filterOptions.setOnOptionPickedListener { _, index ->
             onFilterOptionChosen?.invoke(
                     if (topic == ExploreTopic.Merchants) {
@@ -117,6 +119,29 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         binding.searchTitle.text = title
         binding.searchSubtitle.text = subtitle
         binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
+    }
+
+    fun setFilterMode(mode: FilterMode) {
+        val index = if (topic == ExploreTopic.Merchants) {
+            when (mode) {
+                FilterMode.Online -> 0
+                FilterMode.Physical -> 1
+                else -> 2
+            }
+        } else {
+            when (mode) {
+                FilterMode.Buy -> 1
+                FilterMode.Sell -> 2
+                FilterMode.BuySell -> 3
+                else -> 0
+            }
+        }
+
+        currentFilterOption = index
+
+        if (::binding.isInitialized) {
+            binding.filterOptions.pickedOptionIndex = index
+        }
     }
 
     fun clearSearchQuery() {

@@ -63,5 +63,5 @@ data class Merchant(
     var merchantId: Long? = null,
 
     @Ignore
-    var physicalAmount: Int = 1
+    var physicalAmount: Int = 0
 ) : SearchResult()

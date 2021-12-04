@@ -314,7 +314,9 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun setFilterMode(mode: FilterMode) {
-        _filterMode.value = mode
+        if (_filterMode.value != mode) {
+            _filterMode.value = mode
+        }
     }
 
     fun submitSearchQuery(query: String) {
@@ -330,9 +332,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant) {
-        if (isLocationEnabled.value == true || merchant.physicalAmount <= 1) {
-            _selectedItem.postValue(merchant)
-        }
+        _selectedItem.postValue(merchant)
     }
 
     fun openAtmDetails(atm: Atm) {
@@ -371,6 +371,10 @@ class ExploreViewModel @Inject constructor(
 
             _allMerchantLocations.value = locations
         }
+    }
+
+    fun clearMerchantLocations() {
+        _allMerchantLocations.value = listOf()
     }
 
     fun sendDash() {

@@ -36,6 +36,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -65,10 +66,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         private const val SCROLL_OFFSET_FOR_UP = 700
     }
 
-    enum class State {
+    enum class ScreenState {
         SearchResults,
-        DetailsGrouped,
-        AllLocations,
+        MerchantLocations,
         Details
     }
 
@@ -82,7 +82,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var bottomSheetWasExpanded: Boolean = false
     private var isKeyboardShowing: Boolean = false
     private var hasLocationBeenRequested: Boolean = false
-    private var screenState: State = State.SearchResults
+    private var nearestLocation: SearchResult? = null
 
     private val isPhysicalSearch: Boolean
         get() = viewModel.exploreTopic == ExploreTopic.ATMs ||
@@ -94,6 +94,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
+    private lateinit var searchHeaderAdapter: SearchHeaderAdapter
+
     private val searchResultsAdapter = MerchantsAtmsResultAdapter { item, _ ->
         hideKeyboard()
 
@@ -104,8 +106,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private val merchantLocationsAdapter = MerchantsLocationsAdapter { _, _ ->
-        binding.screenshot.isVisible = true
+    private val merchantLocationsAdapter = MerchantsLocationsAdapter { merchant, _ ->
+        viewModel.openMerchantDetails(merchant)
     }
 
     private val searchResultsDecorator: ListDividerDecorator by lazy {
@@ -116,6 +118,50 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
         )
     }
+
+    private var savedSearchScrollPosition: Int = -1
+    private var savedLocationsScrollPosition: Int = -1
+
+    private var screenState: ScreenState = ScreenState.SearchResults
+        set(value) {
+            if (field != value) {
+                when(value) {
+                    ScreenState.SearchResults -> {
+                        transitToSearchResults()
+
+                        if (savedSearchScrollPosition > 0) {
+                            binding.searchResults.scrollToPosition(savedSearchScrollPosition)
+                            savedSearchScrollPosition = -1
+                        }
+                    }
+                    ScreenState.Details -> {
+                        val layoutManager = binding.searchResults.layoutManager as LinearLayoutManager
+                        val firstVisiblePosition = layoutManager.findFirstCompletelyVisibleItemPosition()
+                        Log.i("EXPLOREDASH", "firstVisiblePosition: ${firstVisiblePosition}")
+
+                        if (field == ScreenState.SearchResults) {
+                            savedSearchScrollPosition = firstVisiblePosition
+                        } else if (field == ScreenState.MerchantLocations) {
+                            savedLocationsScrollPosition = firstVisiblePosition
+                        }
+
+                        transitToDetails()
+                    }
+                    ScreenState.MerchantLocations -> {
+                        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+                            transitToAllMerchantLocations(savedLocationsScrollPosition > 0)
+
+                            if (savedLocationsScrollPosition > 0) {
+                                binding.searchResults.scrollToPosition(savedLocationsScrollPosition)
+                                savedLocationsScrollPosition = -1
+                            }
+                        }
+                    }
+                }
+
+                field = value
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -144,12 +190,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (args.type == ExploreTopic.Merchants) R.dimen.merchant_half_expanded_ratio else R.dimen.atm_half_expanded_ratio
         )
 
-        val header = SearchHeaderAdapter(args.type)
-        setupBackNavigation(header)
-        setupFilters(header, bottomSheet, args.type)
-        setupSearchInput(header, bottomSheet)
-        setupSearchResults(header)
-        setupItemDetails(header)
+        searchHeaderAdapter = SearchHeaderAdapter(args.type)
+        setupBackNavigation()
+        setupFilters(bottomSheet, args.type)
+        setupSearchInput(bottomSheet)
+        setupSearchResults()
+        setupItemDetails()
 
         viewModel.init(args.type)
         binding.toolbarTitle.text = getToolbarTitle()
@@ -183,18 +229,22 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupFilters(
-        header: SearchHeaderAdapter,
         bottomSheet: BottomSheetBehavior<ConstraintLayout>,
         topic: ExploreTopic
     ) {
-        val defaultMode = if (topic == ExploreTopic.Merchants) FilterMode.Online else FilterMode.All
+        val defaultMode = when {
+            topic == ExploreTopic.ATMs -> FilterMode.All
+            isLocationPermissionGranted -> FilterMode.Physical
+            else -> FilterMode.Online
+        }
+
         viewModel.setFilterMode(defaultMode)
 
-        header.setOnFilterOptionChosen { mode ->
+        searchHeaderAdapter.setOnFilterOptionChosen { mode ->
             viewModel.setFilterMode(mode)
         }
 
-        header.setOnFilterButtonClicked {
+        searchHeaderAdapter.setOnFilterButtonClicked {
             openFilters()
         }
 
@@ -204,8 +254,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
             binding.noResultsPanel.isVisible = false
-            header.title = getSearchTitle()
-            header.subtitle = getSearchSubtitle()
+            searchHeaderAdapter.title = getSearchTitle()
+            searchHeaderAdapter.subtitle = getSearchSubtitle()
+            searchHeaderAdapter.setFilterMode(mode)
             binding.filterPanel.isVisible = shouldShowFiltersPanel()
 
             if (mode == FilterMode.Online) {
@@ -234,15 +285,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupSearchInput(
-        header: SearchHeaderAdapter,
         bottomSheet: BottomSheetBehavior<ConstraintLayout>
     ) {
-        header.setOnSearchQueryChanged {
+        searchHeaderAdapter.setOnSearchQueryChanged {
             binding.noResultsPanel.isVisible = false
             viewModel.submitSearchQuery(it)
         }
 
-        header.setOnSearchQuerySubmitted {
+        searchHeaderAdapter.setOnSearchQuerySubmitted {
             hideKeyboard()
         }
 
@@ -260,9 +310,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupSearchResults(header: SearchHeaderAdapter) {
+    private fun setupSearchResults() {
         binding.searchResults.addItemDecoration(searchResultsDecorator)
-        binding.searchResults.adapter = ConcatAdapter(header, searchResultsAdapter)
+        binding.searchResults.adapter = ConcatAdapter(searchHeaderAdapter, searchResultsAdapter)
 
         binding.searchResults.setOnScrollChangeListener { _, _, _, _, _ ->
             binding.upButton.isVisible = shouldShowUpButton()
@@ -274,7 +324,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.resetFiltersBtn.setOnClickListener {
             viewModel.clearFilters()
-            header.clearSearchQuery()
+            searchHeaderAdapter.clearSearchQuery()
             binding.resetFiltersBtn.isEnabled = false
         }
 
@@ -283,17 +333,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.pagingSearchResultsCount.observe(viewLifecycleOwner) {
-            header.subtitle = getSearchSubtitle()
+            searchHeaderAdapter.subtitle = getSearchSubtitle()
             binding.noResultsPanel.isVisible = it <= 0
         }
 
         viewModel.searchLocationName.observe(viewLifecycleOwner) {
-            header.title = getSearchTitle()
+            searchHeaderAdapter.title = getSearchTitle()
         }
 
         viewModel.appliedFilters.observe(viewLifecycleOwner) { filters ->
             resolveAppliedFilters(filters)
-            header.subtitle = getSearchSubtitle()
+            searchHeaderAdapter.subtitle = getSearchSubtitle()
             binding.resetFiltersBtn.isEnabled = filters.query.isNotEmpty() ||
                     filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION ||
                     filters.payment.isNotEmpty() || filters.territory.isNotEmpty()
@@ -304,110 +354,121 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupItemDetails(header: SearchHeaderAdapter) {
+    private fun setupItemDetails() {
         binding.itemDetails.setOnSendDashClicked { viewModel.sendDash() }
         binding.itemDetails.setOnReceiveDashClicked { viewModel.receiveDash() }
+        binding.itemDetails.setOnBackButtonClicked {
+            if (screenState == ScreenState.Details) {
+                screenState = ScreenState.MerchantLocations
+            }
+        }
         binding.itemDetails.setOnShowAllLocationsClicked {
             viewModel.selectedItem.value?.let { merchant ->
                 if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
                     viewModel.retrieveAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
-                    transitToAllMerchantLocations()
+                    screenState = ScreenState.MerchantLocations
                 }
             }
         }
 
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
             if (item != null) {
-                binding.toolbarTitle.text = item.name
-                val isOnline = item.type == MerchantType.ONLINE ||
-                        viewModel.filterMode.value == FilterMode.Online
-                val isGrouped = true
-                binding.itemDetails.bindItem(item, isOnline, isGrouped)
-
                 lifecycleScope.launch {
                     if (isKeyboardShowing) {
                         delay(100)
                     }
 
-                    transitToDetails(isOnline, isGrouped)
+                    if (viewModel.exploreTopic == ExploreTopic.ATMs ||
+                        canShowNearestLocation(item)
+                    ) {
+                        // Opening details screen
+                        screenState = ScreenState.Details
+                    } else if (item is Merchant) {
+                        // Opening all merchant locations screen
+                        viewModel.retrieveAllMerchantLocations(item.merchantId!!, item.source!!)
+                        screenState = ScreenState.MerchantLocations
+                    }
                 }
+
+                binding.toolbarTitle.text = item.name
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
-                transitToSearchResults(header)
+                screenState = ScreenState.SearchResults
+                viewModel.clearMerchantLocations()
             }
         }
     }
 
-    private fun setupBackNavigation(header: SearchHeaderAdapter) {
-        val onBackButtonAction = {
+    private fun setupBackNavigation() {
+        binding.backToNearestBtn.setOnClickListener {
+            val openedLocation = nearestLocation
+
+            if (screenState == ScreenState.MerchantLocations && openedLocation is Merchant) {
+                viewModel.openMerchantDetails(openedLocation)
+            }
+        }
+
+        val hardBackAction = {
             if (viewModel.selectedItem.value != null) {
                 viewModel.openSearchResults()
-                transitToSearchResults(header)
             } else {
                 findNavController().popBackStack()
             }
         }
 
         binding.toolbar.setNavigationOnClickListener {
-            onBackButtonAction.invoke()
+            hardBackAction.invoke()
         }
 
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
             object: OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
-                    onBackButtonAction.invoke()
+                    hardBackAction.invoke()
                 }
             })
     }
 
+    private fun transitToDetails() {
+        val item = viewModel.selectedItem.value ?: return
 
-    private fun transitToDetails(fullHeight: Boolean, isGrouped: Boolean) {
-        if (isGrouped && screenState == State.DetailsGrouped) {
-            return
+        val isGrouped = item is Merchant && item.physicalAmount > 0
+        val isOnline = item.type == MerchantType.ONLINE ||
+                viewModel.filterMode.value == FilterMode.Online
+        binding.itemDetails.bindItem(item, isOnline, isGrouped)
+        val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
+
+        if (isGrouped) {
+            bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
+            nearestLocation = item
         }
 
-        if (!isGrouped && screenState == State.Details) {
-            return
-        }
+        bottomSheet.isDraggable = false
+        bottomSheet.state =
+            if (isOnline) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_HALF_EXPANDED
 
-        screenState = if (isGrouped) State.DetailsGrouped else State.Details
+        binding.itemDetails.isVisible = true
         binding.upButton.isVisible = false
         binding.filterPanel.isVisible = false
 
-        binding.backButton.text = getString(R.string.explore_back_to_locations)
-        binding.backButton.isVisible = !fullHeight && !isGrouped
-
-        val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        bottomSheet.isDraggable = false
-        bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
-        bottomSheet.state =
-            if (fullHeight) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_HALF_EXPANDED
-
-        binding.itemDetails.isVisible = true
-
         val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 0f)
+        val animBackButton = ObjectAnimator.ofFloat(binding.backToNearestBtn, View.ALPHA, 0f)
         val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
         val animDetails = ObjectAnimator.ofFloat(binding.itemDetails, View.ALPHA, 1f)
         AnimatorSet().apply {
-            playTogether(animResults, animDrag, animDetails)
+            playTogether(animResults, animBackButton, animDrag, animDetails)
             duration = 200
             doOnEnd {
                 binding.searchResults.isVisible = false
                 binding.dragIndicator.isVisible = false
+                binding.backToNearestBtn.isVisible = false
             }
         }.start()
     }
 
-    private fun transitToSearchResults(header: SearchHeaderAdapter) {
-        if (screenState == State.SearchResults) {
-            return
-        }
-
-        screenState = State.SearchResults
+    private fun transitToSearchResults() {
         binding.upButton.isVisible = shouldShowUpButton()
-        binding.filterPanel.isVisible = shouldShowFiltersPanel()
-        binding.backButton.isVisible = false
+        binding.backToNearestBtn.isVisible = false
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true &&
@@ -424,7 +485,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.searchResults.addItemDecoration(searchResultsDecorator)
         }
 
-        binding.searchResults.adapter = ConcatAdapter(header, searchResultsAdapter)
+        binding.searchResults.adapter = ConcatAdapter(searchHeaderAdapter, searchResultsAdapter)
+        val layoutParams = binding.searchResults.layoutParams as ConstraintLayout.LayoutParams
+        layoutParams.topMargin = resources.getDimensionPixelOffset(R.dimen.search_results_margin_top)
         binding.searchResults.isVisible = true
         binding.dragIndicator.isVisible = true
 
@@ -436,25 +499,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             duration = 200
             doOnEnd {
                 binding.itemDetails.isVisible = false
+                binding.filterPanel.isVisible = shouldShowFiltersPanel()
             }
         }.start()
     }
 
-    private fun transitToAllMerchantLocations() {
-        if (screenState == State.AllLocations) {
-            return
-        }
-
-        screenState = State.AllLocations
+    private fun transitToAllMerchantLocations(expand: Boolean) {
         binding.upButton.isVisible = shouldShowUpButton()
         binding.filterPanel.isVisible = false
 
-        binding.backButton.isVisible = true
-        binding.backButton.text = getString(R.string.explore_back_to_nearest)
+        val canShowNearest = canShowNearestLocation(nearestLocation)
+        binding.backToNearestBtn.isVisible = canShowNearest
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        bottomSheet.isDraggable = true
-        bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+        bottomSheet.isDraggable = canShowNearest
+        bottomSheet.state = if (!canShowNearest || expand) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_HALF_EXPANDED
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.all_locations_expanded_offset)
 
         viewModel.selectedItem.value?.let { item ->
@@ -469,14 +528,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
 
             binding.searchResults.adapter = ConcatAdapter(header, merchantLocationsAdapter)
+            val layoutParams = binding.searchResults.layoutParams as ConstraintLayout.LayoutParams
+            layoutParams.topMargin = resources.getDimensionPixelOffset(R.dimen.all_locations_margin_top)
             binding.searchResults.isVisible = true
         }
         binding.dragIndicator.isVisible = false
 
         val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 1f)
+        val animBackButton = ObjectAnimator.ofFloat(binding.backToNearestBtn, View.ALPHA, 1f)
         val animDetails = ObjectAnimator.ofFloat(binding.itemDetails, View.ALPHA, 0f)
         AnimatorSet().apply {
-            playTogether(animResults, animDetails)
+            playTogether(animResults, animBackButton, animDetails)
             duration = 200
             doOnEnd {
                 binding.itemDetails.isVisible = false
@@ -611,4 +673,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val offset = binding.searchResults.computeVerticalScrollOffset()
         return offset > SCROLL_OFFSET_FOR_UP
     }
+
+    private fun canShowNearestLocation(item: SearchResult?): Boolean =
+        // Cannot show nearest location if there are more than 1 in group and location is disabled
+        viewModel.isLocationEnabled.value == true || (item is Merchant && item.physicalAmount <= 1)
 }

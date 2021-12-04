@@ -48,7 +48,7 @@ open class SearchResult(
     var coverImage: String? = "",
     open var type: String? = ""
 ) {
-    fun getDisplayAddress(separator: String): String {
+    fun getDisplayAddress(separator: String = "\n"): String {
         val addressBuilder = StringBuilder()
         addressBuilder.append(address1)
 

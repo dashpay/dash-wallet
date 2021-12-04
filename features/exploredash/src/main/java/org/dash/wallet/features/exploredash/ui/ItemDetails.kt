@@ -42,6 +42,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
     private var onSendDashClicked: (() -> Unit)? = null
     private var onReceiveDashClicked: (() -> Unit)? = null
     private var onShowAllLocationsClicked: (() -> Unit)? = null
+    private var onBackButtonClicked: (() -> Unit)? = null
 
     init {
         orientation = VERTICAL
@@ -67,6 +68,10 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
 
     fun setOnReceiveDashClicked(listener: () -> Unit) {
         onReceiveDashClicked = listener
+    }
+
+    fun setOnBackButtonClicked(listener: () -> Unit) {
+        onBackButtonClicked = listener
     }
 
     fun getMerchantType(type: String?): String {
@@ -106,6 +111,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
         binding.apply {
             buySellContainer.isVisible = false
             locationHint.isVisible = false
+            backButton.isVisible = !isOnline && !isGrouped
 
             loadImage(merchant.logoLocation, itemImage)
             itemType.text = getMerchantType(merchant.type)
@@ -130,6 +136,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
             }
 
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
+            backButton.setOnClickListener { onBackButtonClicked?.invoke() }
 
             if (isOnline) {
                 root.updateLayoutParams<ConstraintLayout.LayoutParams> {
@@ -154,6 +161,7 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
             manufacturer.text = atm.manufacturer?.replaceFirstChar { it.uppercase() }
             itemType.isVisible = false
             showAllBtn.isVisible = false
+            backButton.isVisible = false
 
             sellBtn.setOnClickListener { onSendDashClicked?.invoke() }
             buyBtn.setOnClickListener { onReceiveDashClicked?.invoke() }

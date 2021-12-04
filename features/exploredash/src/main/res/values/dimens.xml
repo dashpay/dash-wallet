@@ -31,4 +31,6 @@
     <dimen name="search_content_peek_height">24dp</dimen>
     <dimen name="default_expanded_offset">42dp</dimen>
     <dimen name="all_locations_expanded_offset">50dp</dimen>
+    <dimen name="search_results_margin_top">12dp</dimen>
+    <dimen name="all_locations_margin_top">6dp</dimen>
 </resources>
