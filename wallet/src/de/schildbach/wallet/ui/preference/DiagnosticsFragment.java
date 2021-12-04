@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Locale;
 
 import org.bitcoinj.crypto.DeterministicKey;
-import org.dash.wallet.common.UserInteractionAwareCallback;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.LockScreenViewModel;
 import org.jetbrains.annotations.NotNull;
@@ -184,7 +183,7 @@ public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 		final ImageView imageView = (ImageView) view.findViewById(R.id.extended_public_key_dialog_image);
 		imageView.setImageDrawable(bitmap);
 		BaseAlertDialogBuilder baseAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
-		baseAlertDialogBuilder.setCustomView(view);
+		baseAlertDialogBuilder.setView(view);
 		baseAlertDialogBuilder.setNegativeText(getString(R.string.button_dismiss));
 		baseAlertDialogBuilder.setPositiveText(getString(R.string.button_share));
 		baseAlertDialogBuilder.setPositiveAction(

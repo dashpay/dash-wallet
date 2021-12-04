@@ -123,7 +123,7 @@ public final class EditAddressBookEntryFragment extends BaseDialogFragment {
         } else {
             baseAlertDialogBuilder.setTitle(isAdd ? getString(R.string.edit_address_book_entry_dialog_title_add):getString(R.string.edit_address_book_entry_dialog_title_edit));
         }
-        baseAlertDialogBuilder.setCustomView(view);
+        baseAlertDialogBuilder.setView(view);
         baseAlertDialogBuilder.setPositiveText(isAdd ? getString(R.string.button_add):getString(R.string.edit_address_book_entry_dialog_button_edit));
         baseAlertDialogBuilder.setPositiveAction(
                 () -> {

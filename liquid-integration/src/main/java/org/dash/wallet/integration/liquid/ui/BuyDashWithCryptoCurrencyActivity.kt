@@ -177,7 +177,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
             negativeAction = {
                 request.deny()
             }
-            isDialogCancelable = false
+            cancelable = false
         }.buildAlertDialog().show()
     }
 

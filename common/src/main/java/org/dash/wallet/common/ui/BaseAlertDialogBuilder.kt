@@ -15,14 +15,14 @@ open class BaseAlertDialogBuilder(private val context: Context) {
     var positiveText: CharSequence? = null
     var negativeText: CharSequence? = null
     var neutralText: CharSequence? = null
-    var customView: View? = null
+    var view: View? = null
     var positiveAction: (() -> Unit)? = null
     var negativeAction: (() -> Unit)? = null
     var neutralAction: (() -> Unit)? = null
     var dismissAction: (() -> Unit)? = null
     var cancelAction: (() -> Unit)? = null
     var drawableIcon: Int? = null
-    var isDialogCancelable: Boolean = true
+    var cancelable: Boolean = true
     var showIcon: Boolean = false
     var isCancelableOnTouchOutside: Boolean = true
 
@@ -30,13 +30,13 @@ open class BaseAlertDialogBuilder(private val context: Context) {
         val alertDialog = AlertDialog.Builder(context, R.style.My_Theme_Dialog)
             .setTitle(title)
             .setMessage(message)
-            .setView(customView)
+            .setView(view)
             .setPositiveButton(positiveText) {_, _ -> positiveAction?.invoke() }
             .setNegativeButton(negativeText) {_, _ -> negativeAction?.invoke() }
             .setNeutralButton(neutralText) {_, _ -> neutralAction?.invoke() }
             .setOnCancelListener { cancelAction?.invoke() }
             .setOnDismissListener { dismissAction?.invoke() }
-            .setCancelable(isDialogCancelable)
+            .setCancelable(cancelable)
             .create()
 
         alertDialog.apply {

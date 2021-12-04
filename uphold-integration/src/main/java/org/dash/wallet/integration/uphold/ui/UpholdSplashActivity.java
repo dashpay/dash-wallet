@@ -153,7 +153,7 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
 
     private void showLoadingErrorAlert() {
         alertDialogBuilder.setMessage(getString(R.string.loading_error));
-        alertDialogBuilder.setDialogCancelable(false);
+        alertDialogBuilder.setCancelable(false);
         alertDialogBuilder.setPositiveText(getString(android.R.string.ok));
         alertDialogBuilder.setDismissAction(
                 () -> {

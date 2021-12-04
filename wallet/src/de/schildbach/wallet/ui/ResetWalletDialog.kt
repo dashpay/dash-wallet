@@ -41,7 +41,7 @@ class ResetWalletDialog : BaseDialogFragment() {
                     WalletApplication.getInstance().triggerWipe(context)
                 }
                 positiveText = getString(android.R.string.no)
-                isDialogCancelable = false
+                cancelable = false
                 isCancelableOnTouchOutside = false
             }.buildAlertDialog()
         return super.onCreateDialog(savedInstanceState)

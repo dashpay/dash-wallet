@@ -103,8 +103,8 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
         final BaseAlertDialogBuilder abstractPinAlertDialogBuilder = new BaseAlertDialogBuilder(requireContext());
         abstractPinAlertDialogBuilder.setTitle(getString(dialogTitle));
-        abstractPinAlertDialogBuilder.setCustomView(view);
-        abstractPinAlertDialogBuilder.setDialogCancelable(false);
+        abstractPinAlertDialogBuilder.setView(view);
+        abstractPinAlertDialogBuilder.setCancelable(false);
         final AlertDialog alertDialog = abstractPinAlertDialogBuilder.buildAlertDialog();
         alertDialog.setOnShowListener(dialog -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

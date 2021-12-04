@@ -185,7 +185,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
 
         final BaseAlertDialogBuilder dialogBuilder = new BaseAlertDialogBuilder(requireActivity());
         dialogBuilder.setTitle(getString(R.string.import_keys_dialog_title));
-        dialogBuilder.setCustomView(view);
+        dialogBuilder.setView(view);
         dialogBuilder.setPositiveText(getString(R.string.import_keys_dialog_button_import));
         dialogBuilder.setPositiveAction(
                 () -> {

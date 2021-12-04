@@ -112,10 +112,10 @@ public class EnableFingerprintDialog extends BaseDialogFragment {
             dismiss();
         }
         baseAlertDialogBuilder.setTitle(getString(R.string.enable_fingerprint));
-        baseAlertDialogBuilder.setCustomView(view);
+        baseAlertDialogBuilder.setView(view);
         baseAlertDialogBuilder.setPositiveText(getString(R.string.notification_inactivity_action_dismiss));
         baseAlertDialogBuilder.setNegativeText(getString(R.string.notification_inactivity_action_dismiss_forever));
-        baseAlertDialogBuilder.setDialogCancelable(false);
+        baseAlertDialogBuilder.setCancelable(false);
         baseAlertDialogBuilder.setNegativeAction(
                 () -> {
                     WalletApplication.getInstance().getConfiguration().setRemindEnableFingerprint(false);

@@ -235,7 +235,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
                 }
         );
         alertDialogBuilder.setNegativeText(getString(android.R.string.cancel));
-        alertDialogBuilder.setCustomView(dialogView);
+        alertDialogBuilder.setView(dialogView);
         alertDialogBuilder.buildAlertDialog().show();
     }
 
@@ -289,7 +289,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     private void showUpholdBalanceErrorDialog() {
         alertDialogBuilder.setTitle(getString(R.string.uphold_error));
         alertDialogBuilder.setMessage(getString(R.string.uphold_error_not_logged_in));
-        alertDialogBuilder.setDialogCancelable(false);
+        alertDialogBuilder.setCancelable(false);
         alertDialogBuilder.setPositiveText(getString(R.string.uphold_link_account));
         alertDialogBuilder.setPositiveAction(
                 () -> {

@@ -162,8 +162,8 @@ public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         }
 
         baseAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
-        baseAlertDialogBuilder.setCustomView(view);
-        baseAlertDialogBuilder.setDialogCancelable(false);
+        baseAlertDialogBuilder.setView(view);
+        baseAlertDialogBuilder.setCancelable(false);
         baseAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
         baseAlertDialogBuilder.setPositiveAction(
                 () -> {

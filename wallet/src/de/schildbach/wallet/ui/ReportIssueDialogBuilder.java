@@ -101,7 +101,7 @@ public abstract class ReportIssueDialogBuilder extends BaseAlertDialogBuilder {
         viewCollectWalletDump = (CheckBox) view.findViewById(R.id.report_issue_dialog_collect_wallet_dump);
 
         setTitle(context.getString(titleResId));
-        setCustomView(view);
+        setView(view);
         setPositiveText(context.getString((R.string.report_issue_dialog_report)));
         setPositiveAction(
                 () -> {

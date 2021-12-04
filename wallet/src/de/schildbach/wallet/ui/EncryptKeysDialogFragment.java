@@ -186,7 +186,7 @@ public class EncryptKeysDialogFragment extends BaseDialogFragment {
 
         final BaseAlertDialogBuilder encryptKeysAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
         encryptKeysAlertDialogBuilder.setTitle(getString(R.string.encrypt_keys_dialog_title));
-        encryptKeysAlertDialogBuilder.setCustomView(view);
+        encryptKeysAlertDialogBuilder.setView(view);
         encryptKeysAlertDialogBuilder.setPositiveText(getString(R.string.button_ok));
         encryptKeysAlertDialogBuilder.setPositiveAction(
                 () -> {

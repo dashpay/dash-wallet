@@ -126,7 +126,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
 
         final BaseAlertDialogBuilder restoreWalletAlertDialogBuilder = new BaseAlertDialogBuilder(requireContext());
         restoreWalletAlertDialogBuilder.setTitle(getString(R.string.import_keys_dialog_title_from_seed));
-        restoreWalletAlertDialogBuilder.setCustomView(view);
+        restoreWalletAlertDialogBuilder.setView(view);
         restoreWalletAlertDialogBuilder.setPositiveText(getString(R.string.import_keys_dialog_button_import));
         restoreWalletAlertDialogBuilder.setPositiveAction(
                 () -> {

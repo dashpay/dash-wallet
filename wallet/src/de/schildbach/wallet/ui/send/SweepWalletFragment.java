@@ -537,7 +537,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
         badPasswordView.setVisibility(badPassword ? View.VISIBLE : View.GONE);
 
         baseAlertDialogBuilder.setTitle(getString(R.string.sweep_wallet_fragment_encrypted));
-        baseAlertDialogBuilder.setCustomView(contentView);
+        baseAlertDialogBuilder.setView(contentView);
         baseAlertDialogBuilder.setPositiveText(getString(R.string.sweep_wallet_fragment_button_decrypt));
         baseAlertDialogBuilder.setPositiveAction(
                 () -> {
@@ -546,7 +546,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
                     return Unit.INSTANCE;
                 }
         );
-        baseAlertDialogBuilder.setDialogCancelable(false);
+        baseAlertDialogBuilder.setCancelable(false);
 
         if (decryptDialog != null) {
             decryptDialog.cancel();

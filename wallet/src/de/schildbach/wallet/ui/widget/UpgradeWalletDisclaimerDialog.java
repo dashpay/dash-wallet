@@ -56,7 +56,7 @@ public class UpgradeWalletDisclaimerDialog extends BaseDialogFragment {
         String buttonText = getString(R.string.export_keys_dialog_title_to_seed) + " / " + getString(R.string.wallet_options_encrypt_keys_set);
         baseAlertDialogBuilder.setTitle(getString(R.string.encrypt_new_key_chain_dialog_title));
         baseAlertDialogBuilder.setMessage(message);
-        baseAlertDialogBuilder.setDialogCancelable(false);
+        baseAlertDialogBuilder.setCancelable(false);
         baseAlertDialogBuilder.setPositiveText(buttonText);
         baseAlertDialogBuilder.setPositiveAction(
                 () -> {

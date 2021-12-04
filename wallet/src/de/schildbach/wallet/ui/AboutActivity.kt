@@ -98,11 +98,9 @@ class AboutActivity : BaseMenuActivity() {
     }
 
     private fun handleReportIssue() {
-        /*
         alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                 WalletApplication.getInstance()).buildAlertDialog()
         alertDialog.show()
-        */
     }
 
 }

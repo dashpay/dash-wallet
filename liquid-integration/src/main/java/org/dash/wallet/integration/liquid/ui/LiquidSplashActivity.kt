@@ -242,7 +242,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         alertDialogBuilder.apply {
             message = getString(R.string.loading_error)
             positiveText = getString(android.R.string.ok)
-            isDialogCancelable = false
+            cancelable = false
             dismissAction = {
                 finish()
             }

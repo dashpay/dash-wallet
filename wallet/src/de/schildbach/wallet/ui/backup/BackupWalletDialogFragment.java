@@ -54,7 +54,6 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.BaseDialogFragment;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -169,10 +168,9 @@ public class BackupWalletDialogFragment extends BaseDialogFragment {
 
         warningView = view.findViewById(R.id.backup_wallet_dialog_warning_encrypted);
 
-        //final AlertDialogBuilder backUpWalletAlertDialogBuilder = new AlertDialogBuilder();
         final BaseAlertDialogBuilder alertDialogBuilder = new BaseAlertDialogBuilder(requireContext());
         alertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
-        alertDialogBuilder.setCustomView(view);
+        alertDialogBuilder.setView(view);
         alertDialogBuilder.setPositiveText(getString(R.string.export_keys_dialog_button_export));
         alertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
         alertDialogBuilder.setPositiveAction(
