@@ -21,33 +21,28 @@ import de.schildbach.wallet_test.R;
 
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.os.Build;
 
 /**
  * @author Andreas Schildbach
  */
-public final class ExchangeRatesActivity extends AbstractBindServiceActivity {
+public class ExchangeRatesActivity extends AbstractBindServiceActivity {
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.exchange_rates_content);
-    }
 
-    @Override
-    public boolean onOptionsItemSelected(final MenuItem item) {
-        switch (item.getItemId()) {
-        case android.R.id.home:
-            finish();
-            return true;
+        if(savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.container, ExchangeRatesFragment.newInstance())
+                    .commitNow();
         }
-
-        return super.onOptionsItemSelected(item);
     }
 
     @Override
     public void finish() {
-        super.finish();
+        super.finishAndRemoveTask();
         overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left);
     }
 

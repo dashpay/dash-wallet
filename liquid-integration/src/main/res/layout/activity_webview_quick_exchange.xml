@@ -37,12 +37,14 @@
 
         </androidx.appcompat.widget.Toolbar>
 
-        <ViewSwitcher
-            android:id="@+id/view_switcher"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:animateFirstView="false"
-            android:measureAllChildren="true">
+    <ViewSwitcher
+        android:id="@+id/view_switcher"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        tools:visibility="visible"
+        android:animateFirstView="false"
+        android:measureAllChildren="true">
 
             <WebView
                 android:id="@+id/webview"

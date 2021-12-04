@@ -180,7 +180,6 @@
     <string name="backup_wallet_dialog_message">Backup-ul tău va fi securizat cu parola aleasă și scrisă pe spațiul de stocare extern.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Portofelul tău este protejat de un PIN de cheltuieli. Asigură-te că îți amintiți codul PIN pe lângă parola de backup!</string>
     <string name="export_keys_dialog_button_export">Efectuează backup</string>
-    <string name="export_keys_dialog_success"><![CDATA[<p>Portofelul tau are un backup pe <tt>%s</tt></p><p>Dacă dispozitivul tău are o cartelă SD detașabilă, copia de backup <i>ar trebui să fie</i> pe această cartelă. Scoteți-o și păstrați-o într-un loc sigur. Dacă această cartelă <i>nu este</i> detașabilă, trebuie să arhivezi backup-ul în alt loc decât acest dispozitiv.</p><p><b>Dacă singurul loc unde există backup-ul este pe dispozitiv, riști să le pierzi pe amândouă în același timp!</b></p><p>În orice caz, asigură-te că îți amintești parola de backup. Dorești să arhivezi acum portofelul?</p>]]></string>
     <string name="export_keys_dialog_failure">Backup-ul pentru portofelul tău nu a putut fi efectuat:\n%s</string>
     <string name="export_keys_dialog_button_archive">Arhivă</string>
     <string name="export_keys_dialog_mail_subject">Backup pentru portofelul Dash</string>

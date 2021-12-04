@@ -27,6 +27,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -48,11 +49,14 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class PaymentsPayFragment : Fragment(),
         OnContactItemClickListener {
-
+    @Inject
+    lateinit var analytics: AnalyticsService
     companion object {
 
         private const val REQUEST_CODE_SCAN = 0
@@ -72,9 +76,17 @@ class PaymentsPayFragment : Fragment(),
         super.onViewCreated(view, savedInstanceState)
 
         //Make the whole row clickable
-        pay_by_contact_select.setOnClickListener { handleSelectContact() }
-        pay_by_qr_button.setOnClickListener { handleScan() }
-        pay_to_address.setOnClickListener { handlePaste(true) }
+        pay_by_contact_select.setOnClickListener {
+            handleSelectContact()
+        }
+        pay_by_qr_button.setOnClickListener {
+            handleScan()
+            analytics.logEvent(AnalyticsConstants.SendReceive.SCAN_TO_SEND, bundleOf())
+        }
+        pay_to_address.setOnClickListener {
+            handlePaste(true)
+            analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, bundleOf())
+        }
         handlePaste(false)
 
         frequent_contacts_rv.layoutManager = LinearLayoutManager(requireContext(), RecyclerView.HORIZONTAL, false)

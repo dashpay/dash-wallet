@@ -23,14 +23,18 @@ import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.dash.wallet.integration.liquid.model.WidgetResponse
 import com.google.gson.Gson
+import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integration.liquid.R
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-
+@AndroidEntryPoint
 class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
-
+    @Inject
+    lateinit var analytics: AnalyticsService
     companion object {
         private val log = LoggerFactory.getLogger(BuyDashWithCryptoCurrencyActivity::class.java)
     }
@@ -72,12 +76,8 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
         val freshReceiveAddress = walletDataProvider.freshReceiveAddress()
         walletAddress = freshReceiveAddress.toBase58()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            CookieManager.getInstance().removeAllCookies(null)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            CookieManager.getInstance().flush()
-        }
+        CookieManager.getInstance().removeAllCookies(null)
+        CookieManager.getInstance().flush()
 
         webview.clearCache(true)
         webview.clearFormData()
@@ -86,7 +86,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
 
 
         findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this, false).show()
+            CountrySupportDialog(this, false, analytics).show()
         }
         webview.webViewClient = MyBrowser()
         webview.settings.javaScriptEnabled = true
@@ -100,9 +100,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
         webview.settings.allowUniversalAccessFromFileURLs = true
         webview.settings.allowFileAccessFromFileURLs = true
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            webview.settings.mediaPlaybackRequiresUserGesture = false
-        }
+        webview.settings.mediaPlaybackRequiresUserGesture = false
 
         /**
          * This is for checking camera permission for selfie and upload document
@@ -354,12 +352,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
     fun executeJavascriptInWebview(rawJavascript: String) {
         log.info("liquid: execute script: $rawJavascript")
         runOnUiThread {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-                webview.evaluateJavascript(rawJavascript, null);
-            } else {
-                val javaScriptFunctionCall = "(function() { $rawJavascript })()";
-                webview.loadUrl("javascript:$javaScriptFunctionCall;")
-            }
+            webview.evaluateJavascript(rawJavascript, null);
         }
     }
 

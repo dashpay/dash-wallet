@@ -28,6 +28,8 @@ import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
+import androidx.core.os.bundleOf
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.lifecycleOwner
 import de.schildbach.wallet.ui.ReceiveActivity
@@ -43,13 +45,18 @@ import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.Configuration
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-
+@AndroidEntryPoint
 class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout(context, attrs) {
 
     private val log = LoggerFactory.getLogger(ReceiveInfoView::class.java)
-
+    @Inject
+    lateinit var analytics: AnalyticsService
     private var config: Configuration? = null
     private var blockchainIdentity: BlockchainIdentity? = null
 
@@ -82,12 +89,15 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             blockchainIdentity = PlatformRepo.getInstance().getBlockchainIdentity()
 
             address_preview_pane.setOnClickListener {
+                analytics.logEvent(AnalyticsConstants.SendReceive.COPY_ADDRESS, bundleOf())
                 handleCopyAddress()
             }
             specify_amount_button.setOnClickListener {
+                analytics.logEvent(AnalyticsConstants.SendReceive.SPECIFY_AMOUNT, bundleOf())
                 handleSpecifyAmount()
             }
             share_button.setOnClickListener {
+                analytics.logEvent(AnalyticsConstants.SendReceive.SHARE, bundleOf())
                 handleShare()
             }
             share_button2.setOnClickListener {

@@ -36,4 +36,10 @@ data class BlockchainIdentityBaseData(val id: Int,
 
     val creationComplete: Boolean
         get() = creationState >= BlockchainIdentityData.CreationState.DONE
+
+    val creationCompleteDismissed: Boolean
+        get() = creationState == BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+
+    val creationError: Boolean
+        get() = creationStateErrorMessage != null
 }

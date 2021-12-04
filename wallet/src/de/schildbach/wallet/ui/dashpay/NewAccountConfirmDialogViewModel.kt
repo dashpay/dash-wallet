@@ -36,6 +36,6 @@ class NewAccountConfirmDialogViewModel(application: Application) : AndroidViewMo
 
     init {
         val currencyCode = walletApplication.configuration.exchangeCurrencyCode
-        exchangeRateData = ExchangeRatesRepository.getInstance().getRate(currencyCode)
+        exchangeRateData = ExchangeRatesRepository.instance.getRate(currencyCode)
     }
 }

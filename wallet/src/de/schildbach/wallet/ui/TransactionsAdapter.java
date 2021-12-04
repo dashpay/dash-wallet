@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -28,6 +29,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -80,7 +82,6 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     private static final String PREFS_FILE_NAME = TransactionsAdapter.class.getSimpleName() + ".prefs";
-    private static final String PREFS_KEY_HIDE_HELLO_CARD = "hide_hello_card";
     private static final String PREFS_KEY_HIDE_JOIN_DASHPAY_CARD = "hide_join_dashpay_card";
 
     private final SharedPreferences preferences;
@@ -169,12 +170,14 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         setHasStableIds(true);
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setFormat(final MonetaryFormat format) {
         this.format = format.noCode();
 
         notifyDataSetChanged();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void clear() {
         transactions.clear();
         filteredTransactions.clear();
@@ -182,6 +185,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         notifyDataSetChanged();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void replace(final Collection<TransactionHistoryItem> transactions) {
         this.transactions.clear();
         this.transactions.addAll(transactions);
@@ -190,6 +194,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         notifyDataSetChanged();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void clearCacheAndNotifyDataSetChanged() {
         transactionCache.clear();
 
@@ -273,7 +278,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
         if (viewType == VIEW_TYPE_PROCESSING_IDENTITY) {
             return new ProcessingIdentityViewHolder(inflater.inflate(R.layout.identity_creation_state, parent, false));
         } else if (viewType == VIEW_TYPE_TRANSACTION) {
@@ -288,7 +293,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
     }
 
     @Override
-    public void onBindViewHolder(final RecyclerView.ViewHolder holder, final int position) {
+    public void onBindViewHolder(@NonNull final RecyclerView.ViewHolder holder, final int position) {
         if (holder instanceof TransactionViewHolder) {
             final TransactionViewHolder transactionHolder = (TransactionViewHolder) holder;
 
@@ -335,7 +340,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
                         //hide "Hello Card" after first click
                         if (blockchainIdentityData.getCreationState() == BlockchainIdentityData.CreationState.DONE) {
-                            preferences.edit().putBoolean(PREFS_KEY_HIDE_HELLO_CARD, true).apply();
+                            onClickListener.onUsernameCreatedClicked();
                             notifyDataSetChanged();
                         }
                     }
@@ -362,6 +367,8 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         void onProcessingIdentityRowClicked(BlockchainIdentityBaseData blockchainIdentityData, boolean retry);
 
         void onJoinDashPayClicked();
+
+        void onUsernameCreatedClicked();
 
     }
 
@@ -575,15 +582,17 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         return blockchainIdentityData;
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setBlockchainIdentityData(BlockchainIdentityBaseData blockchainIdentityData) {
         this.blockchainIdentityData = blockchainIdentityData;
         notifyDataSetChanged();
     }
 
     private boolean shouldShowHelloCard() {
-        boolean hideHelloCard = preferences.getBoolean(PREFS_KEY_HIDE_HELLO_CARD, false);
-        return blockchainIdentityData != null && !hideHelloCard &&
-                blockchainIdentityData.getCreationState() != BlockchainIdentityData.CreationState.DONE_AND_DISMISS;
+        return blockchainIdentityData != null && (blockchainIdentityData.getCreationInProgress() ||
+                blockchainIdentityData.getCreationComplete() ||
+                blockchainIdentityData.getCreationError()) &&
+                !blockchainIdentityData.getCreationCompleteDismissed();
     }
 
     private boolean shouldShowJoinDashPay() {
@@ -604,6 +613,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
         filter();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private void filter() {
         filteredTransactions.clear();
         transactionsByDate.clear();

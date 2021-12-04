@@ -30,9 +30,12 @@ import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.InputParser.BinaryInputParser
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.ui.backup.RestoreFromFileHelper
@@ -59,6 +62,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.DialogBuilder
+import org.dash.wallet.common.ui.FancyAlertDialog
 import java.io.IOException
 import java.util.*
 import javax.inject.Inject
@@ -218,6 +222,29 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
             }
         }
+        viewModel.seriousErrorLiveData.observe(this) {
+            if (it != null) {
+                if (it.data != null && !viewModel.processingSeriousError) {
+                    val messageId = when (it.data) {
+                        SeriousError.MissingEncryptionIV -> {
+                            R.string.serious_error_security_missing_iv
+                        }
+                        else -> {
+                            R.string.serious_error_unknown
+                        }
+                    }
+                    val dialog = FancyAlertDialog.newInstance(
+                        R.string.serious_error_title,
+                        messageId, R.drawable.ic_error,
+                        R.string.button_ok,
+                        R.string.button_cancel
+                    )
+                    dialog.show(supportFragmentManager, "serious_error_dialog")
+                    viewModel.processingSeriousError = true
+                }
+            }
+        }
+
     }
 
     private fun showInviteSendContactRequestDialog(initInvitationUserId: String) {
@@ -313,6 +340,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private fun showContacts(mode: Int = MODE_SEARCH_CONTACTS) {
         if (viewModel.hasIdentity) {
+            viewModel.blockchainIdentityData.observeOnce(this) {
+                if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
+                    viewModel.dismissUsernameCreatedCard()
+                }
+            }
             val contactsFragment = ContactsFragment.newInstance(mode)
             if (mode == MODE_VIEW_REQUESTS) {
                 addFragment(contactsFragment)

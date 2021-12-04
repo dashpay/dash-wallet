@@ -42,6 +42,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,8 +113,6 @@ public class WalletTransactionsFragment extends Fragment
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        setRetainInstance(true);
 
         adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
     }
@@ -282,6 +282,11 @@ public class WalletTransactionsFragment extends Fragment
     @Override
     public void onJoinDashPayClicked() {
         mainActivityViewModel.getShowCreateUsernameEvent().postValue(Unit.INSTANCE);
+    }
+
+    @Override
+    public void onUsernameCreatedClicked() {
+        mainActivityViewModel.dismissUsernameCreatedCard();
     }
 
     @Override

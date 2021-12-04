@@ -71,6 +71,11 @@ data class BlockchainIdentityData(var creationState: CreationState = CreationSta
 
     fun getIdentity(wallet: Wallet?): String? = findCreditFundingTransaction(wallet)?.let { it.creditBurnIdentityIdentifier.toStringBase58() }
 
+    fun getErrorMetadata() = creationStateErrorMessage?.let {
+            val metadataIndex = it.indexOf("Metadata(")
+            it.substring(metadataIndex)
+    }
+
     enum class CreationState {
         NONE,   // this should always be the first value
         UPGRADING_WALLET,

@@ -204,7 +204,7 @@
     <string name="verify_it_is_important">Dies ist wichtig</string>
     <string name="verify_it_is_important_subtitle">Wir zeigen dir nun den geheimen Zugangsschlüssel zu deiner Wallet.</string>
     <string name="verify_info_text_1">Diese Wiederherstellungsphrase stellt den Zugang zu dieser Wallet dar.</string>
-    <string name="verify_info_text_2">Wir speichern diese Wiederherstellungsphrase nicht.</string>
+    <string name="verify_info_text_2">Wir speichern die Wiederherstellungsphrase NICHT.</string>
     <string name="verify_info_text_3">Diese Wiederherstellungsphrase wird zum Zugriff auf das Guthaben benötigt, sollte das Gerät verloren oder kaputt gehen, oder falls die App fälschlicherweise deinstalliert wird.</string>
     <string name="verify_skip">Überspringen</string>
     <string name="verify_secure_now_btn">Jetzt sichern</string>
@@ -214,6 +214,15 @@
     <string name="verify_seed_buttons_tip">Bitte tippe die Wörter deiner Wiederherstellungsphrase in der richtigen Reihenfolge an</string>
     <string name="verify_seed_success_title">Erfolgreich verifiziert</string>
     <string name="verify_seed_success_message">Deine Wallet ist jetzt gesichert. Du kannst die Phrase jederzeit nutzen, um die Wallet auf einem anderen Gerät wiederherzustellen.</string>
+    <string name="verify_no_screenshot_title">Keinen Screenshot aufnehmen</string>
+    <string name="verify_no_screenshot_message">Schreibe deine Wiederherstellungsphrase stattdessen an einen sicheren Ort.</string>
+    <string name="verify_why_no_screenshot">Warum sollte ich keinen Screenshot machen?</string>
+    <string name="verify_warning_title">Warnung</string>
+    <string name="verify_warning_message">Diese Wiederherstellungsphrase stellt den Zugang zu deiner Wallet dar.</string>
+    <string name="verify_warning_screenshots_title">Mache KEINEN Screenshot</string>
+    <string name="verify_warning_screenshots_message">Screenshots sind sichtbar für andere Apps und Geräte.</string>
+    <string name="verify_warning_do_not_show">Lasse NIEMANDEN deine Wiederherstellungsphrase sehen.</string>
+    <string name="verify_warning_do_not_type">Gib deine Wiederherstellungsphrase niemals in einen Passwort-Manager oder ähnliches ein.</string>
     <string name="view_seed_done">Fertig</string>
     <string name="view_seed_title">Wiederherstellungs-Wortfolge</string>
     <string name="transaction_result_view_on_explorer">Im Blockexplorer ansehen</string>

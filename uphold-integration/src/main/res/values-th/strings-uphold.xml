@@ -30,4 +30,14 @@
     <string name="uphold_api_error_identity">บัญชี Uphold ของคุณไม่ได้รับการตรวจสอบ เงินทุนจึงไม่สามารถถอนได้</string>
     <string name="uphold_api_error_403_description">บัญชี Uphold ของคุณได้รับการตั้งค่าสถานะสำหรับการตรวจสอบ \n\nUphold ได้จำกัดบัญชีของคุณชั่วคราวและคุณจะไม่สามารถที่จะถอนเงิน \n\nUphold จะติดต่อเพื่อช่วยให้คุณจัดการสิ่งนี้ออกไปอย่างรวดเร็ว</string>
     <string name="uphold_api_error_400_description">กองทุน Uphold จะถูกล็อค 24 ชั่วโมง\n\n คุณจะมีเงินทุนที่เพียงพอสำหรับการถ่ายโอนนี้โดย %s</string>
+    <string name="uphold_api_error_400_locked">กองทุนสนับสนุน (%1$s %2$s) ถูกล็อคไว้นานถึง 65 วัน \n\n คุณจะมีเงินทุนเพียงพอสำหรับการโอนนี้โดย %3$s</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">คุณไม่มีเงินทุนเพียงพอสำหรับการโอนนี้</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">ค่านี้ควรน้อยกว่าหรือเท่ากับ %s</string>
+    <string name="uphold_api_error_400_tx_validation">ไม่สามารถโอนได้มากเท่าจำนวนนั้นผ่านแอพนี้ (สูงสุด $3000)</string>
+    <string name="uphold_api_error_400_password_reset">กองทุนสนับสนุนจะถูกล็อคเนื่องจากมีการเปลี่ยนรหัสผ่านล่าสุด \n\n คุณต้องรอจนถึง %s จึงจะทำการโอนได้อีกครั้ง </string>
+    <string name="uphold_api_error_400_authentication_change">กองทุนสนับสนุนจะถูกล็อคเนื่องจากมีการเปลี่ยน authentication เมื่อเร็ว ๆ นี้ \n\n คุณต้องรอจนถึง %s จึงจะทำการโอนได้อีกครั้ง </string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">ไม่สามารถโอนได้มากเท่าจำนวนนั้นผ่านแอพนี้ (สูงสุด $3000)\n\nโปรดใช้บัญชีของคุณเพื่อทำการโอน</string>
+    <string name="uphold_api_error_400_required">ไม่สามารถโอนได้มากเท่าจำนวนนั้นผ่านแอพนี้ (สูงสุด $3000)\n\nโปรดใช้บัญชีของคุณเพื่อทำการโอน</string>
+
 </resources>

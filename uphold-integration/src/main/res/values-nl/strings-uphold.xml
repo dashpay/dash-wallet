@@ -30,4 +30,14 @@
     <string name="uphold_api_error_identity">Uw Uphold account is nog niet geverifieerd. Geld kan niet worden opgenomen.</string>
     <string name="uphold_api_error_403_description">Uw Uphold account is gemarkeerd voor beoordeling.\n\nUphold heeft uw account tijdelijk beperkt en u kunt geen geld opnemen.\n\nUphold neemt contact met u op om u te helpen dit snel op te lossen.</string>
     <string name="uphold_api_error_400_description">Overboekingen worden 24 uur lang geblokkeerd.\n\nU heeft met %svoldoende saldo voor deze overboeking.</string>
+    <string name="uphold_api_error_400_locked">Uphold saldo (%1$s %2$s) worden maximaal 65 dagen geblokkeerd.\n\nEr is voldoende saldo voor deze overboeking over%3$s.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">U heeft niet voldoende saldo voor deze overboeking</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">Deze waarde moet kleiner zijn dan of gelijk zijn aan %s.</string>
+    <string name="uphold_api_error_400_tx_validation">Kan niet zoveel overboeken met deze app (max $3000)</string>
+    <string name="uphold_api_error_400_password_reset">Tegoeden zijn vergrendeld vanwege een recente wachtwoordwijziging.\n\nJe moet %s wachten tot voordat je geld kunt overboeken.</string>
+    <string name="uphold_api_error_400_authentication_change">Tegoeden zijn vergrendeld vanwege een recente wijziging in authenticatiemethode.\n\nJe moet %s wachten tot voordat je geld kunt overboeken.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">Kan niet zoveel overboeken met deze app (max $3000)\n\nGebruik je Uphold-account om de overboeking uit te voeren.</string>
+    <string name="uphold_api_error_400_required">Kan niet zoveel overboeken met deze app (max $3000)\n\nGebruik je Uphold-account om de overboeking uit te voeren.</string>
+
 </resources>

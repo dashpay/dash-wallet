@@ -37,9 +37,11 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
@@ -49,10 +51,12 @@ import org.dash.wallet.integration.liquid.databinding.LiquidSplashScreenBinding
 import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
-
+@AndroidEntryPoint
 class LiquidSplashActivity : InteractionAwareActivity() {
-
+    @Inject
+    lateinit var analytics: AnalyticsService
     private var loadingDialog: ProgressDialog? = null
     private var liquidClient: LiquidClient? = null
     private lateinit var viewModel: LiquidViewModel
@@ -80,7 +84,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         viewBinding.apply {
             liquidLinkAccount.setOnClickListener { authUser() }
             ivInfo.setOnClickListener {
-                CountrySupportDialog(this@LiquidSplashActivity, true).show()
+                CountrySupportDialog(this@LiquidSplashActivity, true, analytics).show()
             }
         }
 
@@ -94,7 +98,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         if (prefs.getBoolean(REMIND_UNSUPPORTED_COUNTRIES, true)) {
             prefs.edit().putBoolean(REMIND_UNSUPPORTED_COUNTRIES, false).apply()
-            CountrySupportDialog(this, true).show()
+            CountrySupportDialog(this, true, analytics).show()
         }
 
         supportFragmentManager.beginTransaction().replace(

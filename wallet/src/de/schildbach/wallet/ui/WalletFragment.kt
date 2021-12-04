@@ -46,6 +46,8 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class WalletFragment : BottomNavFragment(R.layout.home_content) {
@@ -62,6 +64,9 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
     private val walletApplication by lazy { WalletApplication.getInstance() }
     private val config by lazy { walletApplication.configuration }
+
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -106,21 +111,26 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         shortcuts_pane!!.setOnShortcutClickListener(View.OnClickListener { v ->
             when (v) {
                 shortcuts_pane.secureNowButton -> {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SECURE_WALLET, Bundle.EMPTY)
                     handleVerifySeed()
                 }
                 shortcuts_pane.scanToPayButton -> {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SCAN_TO_PAY, Bundle.EMPTY)
                     handleScan(v)
                 }
                 shortcuts_pane.buySellButton -> {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL, Bundle.EMPTY)
                     startActivity(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()));
                 }
                 shortcuts_pane.payToAddressButton -> {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS, Bundle.EMPTY)
                     handlePaste()
                 }
                 shortcuts_pane.payToContactButton -> {
                     handleSelectContact()
                 }
                 shortcuts_pane.receiveButton -> {
+                    analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE, Bundle.EMPTY)
                     (requireActivity() as OnSelectPaymentTabListener).onSelectPaymentTab(PaymentsFragment.ACTIVE_TAB_RECEIVE)
                 }
                 shortcuts_pane.importPrivateKey -> {

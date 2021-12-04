@@ -4,17 +4,20 @@ import android.app.Application
 import androidx.core.os.bundleOf
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
-import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.CanAffordIdentityCreationLiveData
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -82,4 +85,13 @@ class MainActivityViewModel @Inject constructor(
     fun logEvent(event: String) {
         analytics.logEvent(event, bundleOf())
     }
+
+    fun dismissUsernameCreatedCard() {
+        viewModelScope.launch {
+            platformRepo.doneAndDismiss()
+        }
+    }
+
+    val seriousErrorLiveData = SeriousErrorLiveData(PlatformRepo.getInstance())
+    var processingSeriousError = false
 }

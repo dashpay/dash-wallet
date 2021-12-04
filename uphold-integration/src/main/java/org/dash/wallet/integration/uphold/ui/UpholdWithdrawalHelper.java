@@ -151,11 +151,7 @@ public class UpholdWithdrawalHelper {
         if (e instanceof UpholdApiException) {
             builder.setTitle(R.string.uphold_api_error_title);
             UpholdApiException upholdApiException = (UpholdApiException) e;
-            String availableAt = null;
-            if (upholdApiException.hasError(UpholdApiException.LOCKED_FUNDS_KEY)) {
-                availableAt = upholdApiException.getErrorArg(UpholdApiException.AVAILABLE_AT_KEY);
-            }
-            builder.setMessage(upholdApiException.getDescription(activity, availableAt));
+            builder.setMessage(upholdApiException.getDescription(activity));
         } else {
             builder.setTitle(R.string.uphold_general_error_title);
             builder.setMessage(R.string.loading_error);

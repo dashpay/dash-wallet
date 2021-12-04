@@ -36,24 +36,24 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'com.google.android:flexbox:1.1.0'
+    implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation 'androidx.preference:preference:1.1.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation 'org.dashj.platform:dashpay:0.20-SNAPSHOT'
-    implementation 'org.dashj.platform:platform-core:0.20-SNAPSHOT'
-    implementation 'org.dashj.platform:dpp:0.20-SNAPSHOT'
-    implementation 'org.dashj.platform:dapi-client:0.20-SNAPSHOT'
-    implementation 'org.dashj:dashj-merk:0.20-SNAPSHOT'
-    implementation 'org.dashj.android:dashj-merk:0.20-SNAPSHOT'
+    implementation 'org.dashj.platform:dashpay:0.21-SNAPSHOT'
+    implementation 'org.dashj.platform:platform-core:0.21-SNAPSHOT'
+    implementation 'org.dashj.platform:dpp:0.21-SNAPSHOT'
+    implementation 'org.dashj.platform:dapi-client:0.21-SNAPSHOT'
+    implementation 'org.dashj:dashj-merk:0.21-SNAPSHOT'
+    implementation 'org.dashj.android:dashj-merk:0.21-SNAPSHOT'
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:0.18"
     implementation "org.dashj.android:dashj-x11-android:0.17.5"
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
-    implementation 'com.google.zxing:core:3.3.3' // 3.3.3 is the maximum to support Android 4.4 to 6.x
+    implementation 'com.google.zxing:core:3.4.1'
 
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
@@ -65,9 +65,8 @@ dependencies {
     }
     implementation 'com.github.tony19:logback-android-core:1.1.1-6'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
-    implementation 'com.tbuonomo.andrui:viewpagerdotsindicator:4.1.2'
-    implementation 'com.sambarboza:orbitview:0.2.0'
-    implementation 'com.amulyakhare:com.amulyakhare.textdrawable:1.0.1'
+    implementation 'com.tbuonomo:dotsindicator:4.2'
+    implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
     implementation project(path: ':common')
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
@@ -83,17 +82,20 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1"
+    def coroutines_version = "1.4.2"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
 
     implementation "com.github.bumptech.glide:glide:$glideVersion"
     kapt "com.github.bumptech.glide:compiler:$glideVersion"
 
     implementation 'com.github.MikeOrtiz:TouchImageView:3.0.3'
 
-    // Declare the dependencies for the Crashlytics and Analytics libraries
-    // When using the BoM, you don't specify versions in Firebase library dependencies
+    // Import the BoM for the Firebase platform
     implementation platform("com.google.firebase:firebase-bom:$firebaseVersion")
+
+    implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-inappmessaging-display'
+    implementation 'com.google.firebase:firebase-installations'
     implementation 'com.google.firebase:firebase-dynamic-links'
 
     // Declare the dependency for the Performance Monitoring library
@@ -173,10 +175,10 @@ android {
         disable 'MissingTranslation'
     }
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 23
         targetSdkVersion 30
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80108
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "5.0-dashpay"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80114
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "5.1.2-dashpay"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -342,5 +344,4 @@ android {
     }
 }
 
-apply plugin: 'com.google.firebase.crashlytics'
 apply from: file("../gradle/google-services.gradle")

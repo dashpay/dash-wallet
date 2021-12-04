@@ -198,7 +198,6 @@
     <string name="verify_it_is_important">Điều này là quan trọng</string>
     <string name="verify_it_is_important_subtitle">Chúng tôi sẽ hiển thị cho bạn khoá bí mật trong ví của bạn.</string>
     <string name="verify_info_text_1">Câu phục hồi này là quyền truy cập đến tiền trong ví này của bạn.</string>
-    <string name="verify_info_text_2">Chúng tôi không lưu trữ câu phục hồi</string>
     <string name="verify_info_text_3">Bạn cần cụm từ phục hồi để truy cập đến khoản tiền của bạn nếu thiết bị này bị mất, hỏng hoặc ví Dash Wallet vô tình bị gỡ bỏ khỏi thiết bị này.</string>
     <string name="verify_skip">Bỏ qua</string>
     <string name="verify_secure_now_btn">Bảo mật ngay</string>
@@ -208,6 +207,9 @@
     <string name="verify_seed_buttons_tip">Hãy bấm vào các từ trong câu phục hồi của bạn theo đúng thứ tự</string>
     <string name="verify_seed_success_title">Xác thực thành công</string>
     <string name="verify_seed_success_message">Ví của bạn bây giờ đã được bảo mật. Bạn có thể sử dụng câu phục hồi của mình bất cứ khi nào để khôi phục lại tiền của mình trên một thiết bị khác.</string>
+    <string name="verify_no_screenshot_title">Đừng chụp ảnh màn hình</string>
+    <string name="verify_why_no_screenshot">Tại sao tôi không nên chụp ảnh màn hình?</string>
+    <string name="verify_warning_title">Cảnh báo</string>
     <string name="view_seed_done">Xong</string>
     <string name="view_seed_title">Cụm từ phục hồi</string>
     <string name="transaction_result_view_on_explorer">Xem trên công cụ khám phá khối</string>

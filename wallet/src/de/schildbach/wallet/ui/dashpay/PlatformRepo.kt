@@ -30,6 +30,8 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.SeriousError
+import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
@@ -47,6 +49,7 @@ import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.*
@@ -58,7 +61,7 @@ import org.dashj.platform.dpp.errors.InvalidIdentityAssetLockProofError
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.identity.IdentityPublicKey
-import org.dashj.platform.dpp.toHexString
+import org.dashj.platform.dpp.toHex
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.sdk.platform.Platform
 import org.dashj.platform.sdk.platform.multicall.MulticallQuery
@@ -92,6 +95,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
+    private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
 
     private val updatingContacts = AtomicBoolean(false)
     private val preDownloadBlocks = AtomicBoolean(false)
@@ -114,7 +118,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     private val invitationsDaoAsync = AppDatabase.getAppDatabase().invitationsDaoAsync()
     private val userAlertDaoAsync = AppDatabase.getAppDatabase().userAlertDaoAsync()
 
-    private val securityGuard = SecurityGuard()
     private lateinit var blockchainIdentity: BlockchainIdentity
 
     private val backgroundThread = HandlerThread("background", Process.THREAD_PRIORITY_BACKGROUND)
@@ -125,9 +128,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
 
+    private val analytics: AnalyticsService
+
     init {
         backgroundThread.start()
         backgroundHandler = Handler(backgroundThread.looper)
+        analytics = walletApplication.analyticsService
     }
 
     fun initGlobal() {
@@ -464,12 +470,19 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         return msg
     }
 
+    /**
+     * returns true if:
+     *  1. Invites have been not been sent previously
+     *  2. Identity Creation is not in progress
+     *  3. The balance is high enough
+     */
+
     suspend fun shouldShowAlert(): Boolean {
         val hasSentInvites = invitationsDao.count() > 0
         val blockchainIdentityData = blockchainIdentityDataDao.load()
         val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
         val canAffordIdentityCreation = walletApplication.wallet.canAffordIdentityCreation()
-        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
+        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || !hasSentInvites)
     }
 
 
@@ -521,6 +534,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     @Throws(Exception::class)
     suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
         if (walletApplication.wallet.isEncrypted) {
+            // always create a SecurityGuard when it is required
+            val securityGuard = SecurityGuard()
             val password = securityGuard.retrievePassword()
             // Don't bother with DeriveKeyTask here, just call deriveKey
             val encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
@@ -638,7 +653,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             var cftxData = platform.client.getTransaction(invite.cftx)
             //TODO: remove when iOS uses big endian
             if (cftxData == null)
-                cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
+                cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
             val cftx = CreditFundingTransaction(platform.params, cftxData!!.transaction)
             val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
             cftx.setCreditBurnPublicKeyAndIndex(privateKey, 0)
@@ -672,6 +687,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 3: Verify that the identity is registered
     //
+    @Deprecated("watch* functions should no longer be used")
     suspend fun verifyIdentityRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             blockchainIdentity.watchIdentity(100, 1000, RetryDelayType.SLOW20)
@@ -707,6 +723,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 4: Verify that the username was preordered
     //
+    @Deprecated("watch* functions should no longer be used")
     suspend fun isNamePreorderedAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val set = blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.PREORDER_REGISTRATION_PENDING)
@@ -731,6 +748,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     // Step 5: Verify that the username was registered
     //
+    @Deprecated("watch* functions should no longer be used")
     suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(BlockchainIdentity.UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
@@ -837,10 +855,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val errorMessage = exception?.run {
             var message = "${exception.javaClass.simpleName}: ${exception.message}"
             if (this is StatusRuntimeException) {
-                val exceptionInfo = GrpcExceptionInfo(this)
-                if (exceptionInfo.errors.isNotEmpty() && exceptionInfo.errors.first().containsKey("name")) {
-                    message += " ${exceptionInfo.errors.first()["name"]}"
-                }
+                val exceptionInfo = GrpcExceptionInfo(this).exception
+                message += exceptionInfo
             }
             message
         }
@@ -957,7 +973,16 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val contactIdentity = platform.identities.get(contactRequest.toUserId)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
-                    val password = securityGuard.retrievePassword()
+                    val password = try {
+                        // always create a SecurityGuard when it is required
+                        val securityGuard = SecurityGuard()
+                        securityGuard.retrievePassword()
+                    } catch (e: IllegalArgumentException) {
+                        log.error("There was an error retrieving the wallet password", e)
+                        analytics.logError(e, "There was an error retrieving the wallet password")
+                        fireSeriousErrorListeners(SeriousError.MissingEncryptionIV)
+                        null
+                    } ?: return false
                     // Don't bother with DeriveKeyTask here, just call deriveKey
                     myEncryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
@@ -982,7 +1007,16 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 val contactIdentity = platform.identities.get(contactRequest.ownerId)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
-                    val password = securityGuard.retrievePassword()
+                    val password = try {
+                        // always create a SecurityGuard when it is required
+                        val securityGuard = SecurityGuard()
+                        securityGuard.retrievePassword()
+                    } catch (e: IllegalArgumentException) {
+                        log.error("There was an error retrieving the wallet password", e)
+                        analytics.logError(e, "There was an error retrieving the wallet password")
+                        fireSeriousErrorListeners(SeriousError.MissingEncryptionIV)
+                        null
+                    } ?: return false
                     // Don't bother with DeriveKeyTask here, just call deriveKey
                     myEncryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
@@ -1037,7 +1071,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             val watch = Stopwatch.createStarted()
             var addedContact = false
             Context.propagate(walletApplication.wallet.context)
-            var encryptionKey: KeyParameter? = null
 
             var lastContactRequestTime = if (dashPayContactRequestDao.countAllRequests() > 0) {
                 val lastTimeStamp = dashPayContactRequestDao.getLastTimestamp()
@@ -1070,23 +1103,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
                     // add our receiving from this contact keychain if it doesn't exist
                     addedContact = addedContact || checkAndAddSentRequest(userId, contactRequest)
-                    /*val contact = EvolutionContact(userId, dashPayContactRequest.toUserId)
-                    try {
-                        if (!walletApplication.wallet.hasReceivingKeyChain(contact)) {
-                            log.info("adding accepted/send request to wallet: ${contactRequest.toUserId}")
-                            val contactIdentity = platform.identities.get(contactRequest.toUserId)
-                            if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
-                                val password = securityGuard.retrievePassword()
-                                // Don't bother with DeriveKeyTask here, just call deriveKey
-                                encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
-                            }
-                            blockchainIdentity.addPaymentKeyChainFromContact(contactIdentity!!, contactRequest, encryptionKey!!)
-                            addedContact = true
-                        }
-                    } catch (e: KeyCrypterException) {
-                        // we can't send payments to this contact due to an invalid encryptedPublicKey
-                        log.info("ContactRequest: error ${e.message}")
-                    }*/
+                    log.info("contactRequest: added sent request from ${contactRequest.toUserId}")
                 }
             }
             updateSyncStatus(PreBlockStage.GetReceivedRequests)
@@ -1103,27 +1120,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayContactRequestDao.insert(dashPayContactRequest)
 
                     // add the sending to contact keychain if it doesn't exist
-
                     addedContact = addedContact || checkAndAddReceivedRequest(userId, contactRequest)
+                    log.info("contactRequest: added received request from ${contactRequest.ownerId}")
 
-                    /*val contact = EvolutionContact(userId, 0, dashPayContactRequest.userId, contactRequest.accountReference)
-                    try {
-                        if (!walletApplication.wallet.hasSendingKeyChain(contact)) {
-                            log.info("adding received request: ${dashPayContactRequest.userId} to wallet")
-                            val contactIdentity = platform.identities.get(dashPayContactRequest.userId)
-                            if (encryptionKey == null && walletApplication.wallet.isEncrypted) {
-                                val password = securityGuard.retrievePassword()
-                                // Don't bother with DeriveKeyTask here, just call deriveKey
-                                encryptionKey = walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
-                            }
-                            blockchainIdentity.addContactPaymentKeyChain(contactIdentity!!, it, encryptionKey!!)
-                            addedContact = true
-                        }
-                    } catch (e: KeyCrypterException) {
-                        // we can't send payments to this contact due to an invalid encryptedPublicKey
-                        log.info("ContactRequest: error ${e.message}")
-                    }
-                     */
                 }
             }
             updateSyncStatus(PreBlockStage.GetSentRequests)
@@ -1355,6 +1354,20 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
+    fun addSeriousErrorListener(listener: SeriousErrorListener) {
+        onSeriousErrorListeneners.add(listener)
+    }
+
+    fun removeSeriousErrorListener(listener: SeriousErrorListener) {
+        onSeriousErrorListeneners.remove(listener)
+    }
+
+    private fun fireSeriousErrorListeners(error: SeriousError) {
+        for (listener in onSeriousErrorListeneners) {
+            listener.onSeriousError(Resource.success(error))
+        }
+    }
+
     fun addPreBlockProgressListener(listener: OnPreBlockProgressListener) {
         onPreBlockContactListeners.add(listener)
     }
@@ -1488,6 +1501,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     //
     suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
             : CreditFundingTransaction {
+        // dashj Context does not work with coroutines well, so we need to call Context.propogate
+        // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet.context)
         val cftx = blockchainIdentity.createInviteFundingTransaction(Constants.DASH_PAY_FEE, keyParameter)
         val invitation = Invitation(cftx.creditBurnIdentityIdentifier.toStringBase58(), cftx.txId,
@@ -1598,7 +1613,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         //TODO: remove when iOS uses big endian
         if (tx == null) {
             tx =
-                platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHexString())
+                platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
         }
         if (tx != null) {
             val cfTx = CreditFundingTransaction(Constants.NETWORK_PARAMETERS, tx.transaction)

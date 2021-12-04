@@ -4,7 +4,9 @@
     <string name="loading">Chargement...</string>
     <string name="loading_error">Une erreur est survenue. Veuillez réessayer plus tard.</string>
     <string name="dash_available">%1$s disponibles</string>
-
+    <string name="network_unavailable_title">Réseau non disponible</string>
+    <string name="network_unavailable_check_connection">Veuillez vérifier votre connexion réseau</string>
+    <string name="network_unavailable_balance_not_accurate">Le solde peut être imprécis en raison de la connexion perdue</string>
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">livre de Guernesey</string>
     <!-- Local Currency List: JEP -->
@@ -23,4 +25,9 @@
     <string name="currency_PAX">Paxos Standard</string>
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">Ignorer</string>
+    <string name="network_unavailable_return">Retourner au portefeuille</string>
+
 </resources>

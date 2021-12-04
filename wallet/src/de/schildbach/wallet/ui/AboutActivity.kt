@@ -16,8 +16,7 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
+import android.content.*
 import android.content.Intent.ACTION_VIEW
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -25,6 +24,9 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
+import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
+import com.google.firebase.installations.FirebaseInstallations
 import android.widget.Toast
 import android.widget.Toast.LENGTH_LONG
 import de.schildbach.wallet.WalletApplication
@@ -37,9 +39,9 @@ import org.slf4j.LoggerFactory
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 
 class AboutActivity : BaseMenuActivity(), SensorEventListener {
-
     // variables for shake detection
     private val SHAKE_THRESHOLD = 1.50f // m/S**2
 
@@ -70,12 +72,29 @@ class AboutActivity : BaseMenuActivity(), SensorEventListener {
             startActivity(i)
         }
         review_and_rate.setOnClickListener { openReviewAppIntent() }
-        contact_support.setOnClickListener { handleReportIssue() }
+        contact_support.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT, bundleOf())
+            handleReportIssue()
+        }
 
-        // Get a sensor manager to listen for shakes
-
+        showFirebaseInstallationId()
         // Get a sensor manager to listen for shakes
         mSensorMgr = getSystemService(SENSOR_SERVICE) as SensorManager
+    }
+
+    private fun showFirebaseInstallationId() {
+        FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
+            firebase_installation_id.isVisible = task.isSuccessful && BuildConfig.DEBUG
+            if (task.isSuccessful) {
+                firebase_installation_id.text = task.result
+            }
+            firebase_installation_id.setOnClickListener {
+                (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
+                    setPrimaryClip(ClipData.newPlainText("Firebase Installation ID", firebase_installation_id.text))
+                }
+                Toast.makeText(this@AboutActivity, "Copied", LENGTH_LONG).show()
+            }
+        }
     }
 
     override fun onResume() {

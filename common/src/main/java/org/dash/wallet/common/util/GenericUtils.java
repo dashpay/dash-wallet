@@ -28,9 +28,14 @@ import androidx.core.content.res.ResourcesCompat;
 import org.dash.wallet.common.R;
 
 import android.net.ConnectivityManager;
+import android.os.Build;
+import android.os.LocaleList;
+import android.text.TextUtils;
 import android.widget.Toast;
 
+import java.text.NumberFormat;
 import java.util.Currency;
+import java.util.Locale;
 
 /**
  * @author Andreas Schildbach
@@ -87,4 +92,128 @@ public class GenericUtils {
         Toast.makeText(context, messages, Toast.LENGTH_LONG).show();
     }
 
+    /**
+     * Function which returns a concatenation of the currency code or currency symbol
+     * For currencies used by multiple countries, we set a locale with any country using the currency
+     * If the currentCurrencySymbol equals the currency code, we just use the currency code, otherwise we
+     * get the symbol
+     * @param currencyCode
+     * @return
+     */
+    public static String setCurrentCurrencySymbolWithCode(String currencyCode) {
+        Locale currentLocale = new Locale("", "");
+        String currentCurrencySymbol = "";
+        switch (currencyCode.toLowerCase(Locale.ROOT)) {
+            case "eur":
+                currentLocale = Locale.FRANCE;
+                break;
+            case "xof":
+                currentLocale = new Locale("fr", "CM");
+                break;
+            case "xaf":
+                currentLocale = new Locale("fr", "SN");
+                break;
+            case "cfp":
+                currentLocale = new Locale("fr", "NC");
+                break;
+            case "hkd":
+                currentLocale = new Locale("en", "HK");
+                break;
+            case "bnd":
+                currentLocale = new Locale("ms", "BN");
+                break;
+            case "aud":
+                currentLocale = new Locale("en", "AU");
+                break;
+            case "gbp":
+                currentLocale = Locale.UK;
+                break;
+            case "inr":
+                currentLocale = new Locale("en", "IN");
+                break;
+            case "nzd":
+                currentLocale = new Locale("en", "NZ");
+                break;
+            case "ils":
+                currentLocale = new Locale("iw", "IL");
+                break;
+            case "jod":
+                currentLocale = new Locale("ar", "JO");
+                break;
+            case "rub":
+                currentLocale = new Locale("ru", "RU");
+                break;
+            case "zar":
+                currentLocale = new Locale("en", "ZA");
+                break;
+            case "chf":
+                currentLocale = new Locale("fr", "CH");
+                break;
+            case "try":
+                currentLocale = new Locale("tr", "TR");
+                break;
+            case "usd":
+                currentLocale = Locale.US;
+                break;
+        }
+        currentCurrencySymbol = TextUtils.isEmpty(currentLocale.getLanguage()) ?
+                currencySymbol(currencyCode.toLowerCase(Locale.ROOT)) : Currency.getInstance(currentLocale).getSymbol();
+
+        return String.format(getDeviceLocale(), "%s",
+                currencyCode.equalsIgnoreCase(currentCurrencySymbol) ? currencyCode : currentCurrencySymbol);
+    }
+
+    public static Locale getDeviceLocale() {
+        String countryCode = "";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            countryCode = LocaleList.getDefault().get(0).getCountry();
+        } else {
+            countryCode = Locale.getDefault().getCountry();
+        }
+        String deviceLocaleLanguage = Locale.getDefault().getLanguage();
+        return new Locale(deviceLocaleLanguage, countryCode);
+    }
+
+    public static FiatAmountFormat formatFiatFromLocale(CharSequence fiatValue) {
+        String valWithoutLetters = stripLettersFromString(fiatValue.toString());
+        String valWithoutComma = formatFiatWithoutComma(valWithoutLetters);
+        Double fiatAsDouble;
+        // we may get a NumberFormatException
+        try {
+            fiatAsDouble = valWithoutComma.length() == 0 ? 0.00 : Double.parseDouble(valWithoutComma);
+        } catch (NumberFormatException x) {
+            fiatAsDouble = 0.00;
+        }
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        String formattedStringValue = numberFormat.format(fiatAsDouble);
+        // get currency symbol and code to remove explicitly
+        String currencyCode = numberFormat.getCurrency().getCurrencyCode();
+        String currencySymbol = numberFormat.getCurrency().getSymbol();
+        return new FiatAmountFormat(Character.isDigit(formattedStringValue.charAt(0)), stripCurrencyFromString(formattedStringValue, currencySymbol, currencyCode));
+    }
+
+    /**
+     * Keep numericals, minus, dot, comma
+     */
+    private static String stripLettersFromString(String st) {
+        return st.replaceAll("[^\\d,.-]", "");
+    }
+
+    /**
+     * Remove currency symbols and codes from the string
+     */
+    private static String stripCurrencyFromString(String st, String symbol, String code) {
+        return stripLettersFromString(st.replaceAll(symbol, "").replaceAll(code, ""));
+    }
+
+    /**
+     * To perform some operations on our fiat values (ex: parse to double, convert fiat to Coin), it needs to be properly formatted
+     * In case our fiat value is in a currency that has a comma, we need to strip it away so as to have our value as a decimal
+     * @param fiatValue
+     * @return
+     */
+    public static String formatFiatWithoutComma(String fiatValue){
+        boolean fiatValueContainsCommaWithDecimal = fiatValue.contains(",") && fiatValue.contains(".");
+        return fiatValueContainsCommaWithDecimal ? fiatValue.replaceAll(",", "") :  fiatValue.replaceAll(",", ".");
+    }
 }

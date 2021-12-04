@@ -35,6 +35,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
@@ -47,6 +48,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import androidx.work.WorkManager;
 
@@ -151,6 +153,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Inject
     HiltWorkerFactory workerFactory;
 
+    @Inject
+    protected AnalyticsService analyticsService;
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -171,6 +176,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
 
+            int activityCount = 0;
+            int foregroundActivityCount = 0;
+            int visibleActivityCount = 0;
+            final String logName = "activity lifecycle";
             @Override
             protected void onStartedFirst(Activity activity) {
 
@@ -192,6 +201,47 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 if (config.getAutoLogoutEnabled() && config.getAutoLogoutMinutes() == 0) {
                     sendBroadcast(new Intent(InteractionAwareActivity.FORCE_FINISH_ACTION));
                 }
+            }
+
+            public void onActivityCreated(@NonNull Activity activity, Bundle bundle) {
+                if (activityCount == 0)
+                    log.info("{}: app started", logName);
+                activityCount++;
+                log.info("{}: activity {} created", logName, activity.getClass().getSimpleName());
+                logState();
+            }
+
+            public void onActivityDestroyed(@NonNull Activity activity) {
+                log.info("{}: activity {} destroyed", logName, activity.getClass().getSimpleName());
+                activityCount--;
+                logState();
+                if (activityCount == 0)
+                    log.info("{}: app closed", logName);
+            }
+
+            public void onActivityResumed(@NonNull Activity activity) {
+                foregroundActivityCount++;
+                logState();
+            }
+
+            public void onActivityPaused(@NonNull Activity activity) {
+                foregroundActivityCount--;
+                logState();
+            }
+
+            public void onActivityStarted(@NonNull Activity activity) {
+                visibleActivityCount++;
+                logState();
+            }
+
+            public void onActivityStopped(Activity activity) {
+                visibleActivityCount--;
+                logState();
+            }
+
+            private void logState() {
+                log.info("{}: activities: {} visible: {} foreground: {}", logName,
+                        activityCount, visibleActivityCount, foregroundActivityCount);
             }
         });
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
@@ -688,10 +738,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         if (activityManager == null)
             return false;
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
-            return activityManager.isLowRamDevice();
-        else
-            return activityManager.getMemoryClass() <= Constants.MEMORY_CLASS_LOWEND;
+        return activityManager.isLowRamDevice();
     }
 
     public int maxConnectedPeers() {
@@ -705,7 +752,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
      * @return The number of scrypt interations
      */
     public int scryptIterationsTarget() {
-        boolean is64bitABI = Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? Build.SUPPORTED_64_BIT_ABIS.length != 0 : false;
+        boolean is64bitABI = Build.SUPPORTED_64_BIT_ABIS.length != 0;
         return (isLowRamDevice() || !is64bitABI) ? Constants.SCRYPT_ITERATIONS_TARGET_LOWRAM : Constants.SCRYPT_ITERATIONS_TARGET;
     }
 
@@ -822,6 +869,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });
+    }
+
+    public AnalyticsService getAnalyticsService() {
+        return analyticsService;
     }
 
     public static WalletApplication getInstance() {

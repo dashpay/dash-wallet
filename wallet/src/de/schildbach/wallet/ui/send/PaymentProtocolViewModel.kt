@@ -59,7 +59,7 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
 
     init {
         val currencyCode = walletApplication.configuration.exchangeCurrencyCode
-        exchangeRateData = ExchangeRatesRepository.getInstance().getRate(currencyCode)
+        exchangeRateData = ExchangeRatesRepository.instance.getRate(currencyCode)
     }
 
     fun requestPaymentRequest(basePaymentIntent: PaymentIntent) {

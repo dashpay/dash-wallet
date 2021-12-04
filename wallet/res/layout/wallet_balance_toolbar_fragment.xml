@@ -31,7 +31,7 @@
                     android:layout_width="14.5dp"
                     android:layout_height="12dp"
                     android:layout_marginRight="4dp"
-                    android:src="@drawable/ic_dash_d_white_bottom"/>
+                    app:srcCompat="@drawable/ic_dash_d_white_bottom"/>
 
                 <org.dash.wallet.common.ui.CurrencyTextView
                     android:id="@+id/wallet_balance_btc"
@@ -65,7 +65,7 @@
             android:layout_width="16dp"
             android:layout_height="16dp"
             android:layout_gravity="center_vertical"
-            android:src="@drawable/ic_warning" />
+            app:srcCompat="@drawable/ic_warning" />
 
     </LinearLayout>
 

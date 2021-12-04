@@ -206,7 +206,7 @@
     <string name="verify_it_is_important">مهم</string>
     <string name="verify_it_is_important_subtitle">می‌خواهیم کلید مخفی برای باز کردن کیف پول‌تان را نشان دهیم.</string>
     <string name="verify_info_text_1">داشتن این عبارت بازیابی، به معنای دسترسی به موجودی کیف پول‌تان است.</string>
-    <string name="verify_info_text_2">ما این عبارت بازیابی را ذخیره نمی‌کنیم. </string>
+    <string name="verify_info_text_2">ما عبارت بازیابی را ذخیره نمی‌کنیم. </string>
     <string name="verify_info_text_3">اگر دستگاه‌تان گم شود یا آسیب ببیند یا دش والت به صورت تصادفی از روی دستگاه‌تان پاک شود، برای دسترسی به موجودی‌تان به این عبارت بازیابی نیاز خواهید داشت. </string>
     <string name="verify_skip">رد کردن</string>
     <string name="verify_secure_now_btn">اکنون امن است</string>
@@ -216,6 +216,15 @@
     <string name="verify_seed_buttons_tip">لطفا این کلمات را بر اساس ترتیب کلمات در عبارت بازیابی، به ترتیب انتخاب کنید. </string>
     <string name="verify_seed_success_title">با موفقیت تائید شد</string>
     <string name="verify_seed_success_message">کیف پول‌تان اکنون امن است. هر گاه خواستید می‌توانید از این عبارت بازیابی برای بازگرداندن حساب‌تان روی دستگاهی دیگر استفاده کنید. </string>
+    <string name="verify_no_screenshot_title">اسکرین‌شات نگیرید</string>
+    <string name="verify_no_screenshot_message">به جای این کار، عبارت بازیابی را در جایی امن یادداشت کنید. </string>
+    <string name="verify_why_no_screenshot">چرا نباید اسکرین‌شات بگیریم؟ </string>
+    <string name="verify_warning_title">هشدار</string>
+    <string name="verify_warning_message">این عبارت بازیابی، دسترسی‌تان به موجودی در کیف پول را فراهم می‌سازد. </string>
+    <string name="verify_warning_screenshots_title">اسکرین‌شات نگیرید</string>
+    <string name="verify_warning_screenshots_message">اسکرین‌شات توسط سایر اپلیکیشن‌ها و دستگاه‌ها قابل مشاهده است. </string>
+    <string name="verify_warning_do_not_show">نگذارید کسی عبارت بازیابی شما را مشاهده کند. </string>
+    <string name="verify_warning_do_not_type">هرگز عبارت بازیابی را در اپلیکیشن مدیریت گذرواژه یا جای دیگر یادداشت نکنید. </string>
     <string name="view_seed_done">انجام شد</string>
     <string name="view_seed_title">عبارت بازیابی</string>
     <string name="transaction_result_view_on_explorer">مشاهده در مرورگر بلاک</string>
@@ -306,6 +315,7 @@
     <string name="welcome_screen_subtitle_3">کنترل بیشتری روی کیف پول‌تان داشته باشید و آن را بر اساس نیازهایتان، تغییر دهید. </string>
 
     <string name="sync_status_wait">لطفا منتظر بمانید تا همزمان‌سازی کامل شود</string>
+    <string name="sync_status_syncing_title">در حال همزمان‌سازی%1$d</string>
     <string name="sync_status_syncing_sub_title"> بلاکچین دش</string>
     <string name="sync_status_unable_to_connect">امکان اتصال وجود ندارد</string>
     <string name="sync_status_check_connection">لطفا اتصال‌ به اینترنت را بررسی کنید</string>
@@ -334,6 +344,8 @@
     <string name="import_image_invalid_private">کلید خصوصی نامعتبر است</string>
 
     <string name="syncing">در حال همزمان‌سازی</string>
+    <string name="syncing_balance">در حال همزمان‌سازی موجودی </string>
+
     <string name="all_transactions">همه</string>
     <string name="received_transactions">دریافتی</string>
     <string name="sent_transactions">ارسالی</string>
