@@ -115,14 +115,14 @@
     </style>
 
     <style name="ScreenshotWarningBackground">
-        <item name="primaryColor">@android:color/white</item>
-        <item name="secondaryColor">@android:color/white</item>
+        <item name="backgroundColor">@android:color/white</item>
+        <item name="strokeColor">@android:color/white</item>
         <item name="cornerRadius">10dp</item>
     </style>
 
     <style name="VerifySeedTextViewBackground">
-        <item name="primaryColor">@android:color/white</item>
-        <item name="secondaryColor">@android:color/white</item>
+        <item name="backgroundColor">@android:color/white</item>
+        <item name="strokeColor">@android:color/white</item>
         <item name="cornerRadius">8dp</item>
     </style>
 </resources>

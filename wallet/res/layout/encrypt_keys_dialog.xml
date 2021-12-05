@@ -84,7 +84,7 @@
         android:layout_marginBottom="@dimen/list_entry_padding_vertical"
         android:layout_marginTop="@dimen/list_entry_padding_vertical"
         android:text="@string/encrypt_keys_dialog_show"
-        style="@style/CheckBox"/>
+        style="@style/OldCheckBox"/>
 
     <TextView
         android:id="@+id/pin_attempts"

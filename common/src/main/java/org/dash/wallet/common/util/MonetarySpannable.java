@@ -21,8 +21,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.regex.Matcher;
 
-import javax.annotation.Nullable;
-
 import org.bitcoinj.core.Monetary;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.Constants;
@@ -33,6 +31,8 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
+
+import androidx.annotation.Nullable;
 
 /**
  * @author Andreas Schildbach

@@ -17,8 +17,6 @@
 
 package org.dash.wallet.common.ui;
 
-import javax.annotation.Nullable;
-
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Monetary;
 import org.bitcoinj.utils.MonetaryFormat;
@@ -34,6 +32,8 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Parcelable;
+
+import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 import android.text.Editable;
 import android.text.InputType;
