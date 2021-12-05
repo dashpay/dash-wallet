@@ -33,4 +33,5 @@
     <dimen name="all_locations_expanded_offset">50dp</dimen>
     <dimen name="search_results_margin_top">12dp</dimen>
     <dimen name="all_locations_margin_top">6dp</dimen>
+    <dimen name="markers_offset">50dp</dimen>
 </resources>

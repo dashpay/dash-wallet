@@ -270,7 +270,14 @@ class ExploreViewModel @Inject constructor(
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
                     .distinctUntilChanged()
-                    .onEach(_physicalSearchResults::postValue)
+                    .onEach { list ->
+                        list.forEach {
+                            if (it is Merchant) {
+                                it.physicalAmount = 1
+                            }
+                        }
+                        _physicalSearchResults.postValue(list)
+                    }
                     .launchIn(viewModelWorkerScope)
             }
             // Right now we don't show the map at all while location is disabled

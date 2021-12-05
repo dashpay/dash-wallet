@@ -50,9 +50,9 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
         updatePaddingRelative(start = horizontalPadding, end = horizontalPadding)
     }
 
-    fun bindItem(item: SearchResult, isOnline: Boolean, isGrouped: Boolean) {
+    fun bindItem(item: SearchResult, filterMode: FilterMode) {
         if (item is Merchant) {
-            bindMerchantDetails(item, isOnline, isGrouped)
+            bindMerchantDetails(item, filterMode)
         } else if (item is Atm) {
             bindAtmDetails(item)
         }
@@ -107,8 +107,11 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
         }
     }
 
-    private fun bindMerchantDetails(merchant: Merchant, isOnline: Boolean, isGrouped: Boolean) {
+    private fun bindMerchantDetails(merchant: Merchant, filterMode: FilterMode) {
         binding.apply {
+            val isGrouped = merchant.physicalAmount > 0
+            val isOnline = merchant.type == MerchantType.ONLINE || filterMode == FilterMode.Online
+
             buySellContainer.isVisible = false
             locationHint.isVisible = false
             backButton.isVisible = !isOnline && !isGrouped

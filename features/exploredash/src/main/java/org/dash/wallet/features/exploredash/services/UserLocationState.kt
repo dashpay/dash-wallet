@@ -87,11 +87,9 @@ class UserLocationState @Inject constructor(private val context: Context, privat
                 super.onLocationResult(locationResult)
                 val location = locationResult.lastLocation
                 val newLocation = Pair(location.latitude, location.longitude)
-
                 val distance = distanceBetween(previousLocation.first, previousLocation.second, newLocation.first, newLocation.second)
-                if (distance < 100) {
-                    Log.i(this@UserLocationState::class.java.simpleName, "previous and latest locations are equal")
-                } else {
+
+                if (distance > 50) {
                     previousLocation = Pair(location.latitude, location.longitude)
                     trySend(UserLocation(previousLocation.first, previousLocation.second, location.accuracy.toDouble()))
                 }

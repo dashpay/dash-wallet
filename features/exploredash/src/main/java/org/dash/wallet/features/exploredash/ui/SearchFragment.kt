@@ -136,7 +136,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     }
                     ScreenState.Details -> {
                         val layoutManager = binding.searchResults.layoutManager as LinearLayoutManager
-                        val firstVisiblePosition = layoutManager.findFirstCompletelyVisibleItemPosition()
+                        val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
                         Log.i("EXPLOREDASH", "firstVisiblePosition: ${firstVisiblePosition}")
 
                         if (field == ScreenState.SearchResults) {
@@ -382,6 +382,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         canShowNearestLocation(item)
                     ) {
                         // Opening details screen
+                        binding.itemDetails.bindItem(item, viewModel.filterMode.value ?: FilterMode.Online)
                         screenState = ScreenState.Details
                     } else if (item is Merchant) {
                         // Opening all merchant locations screen
@@ -435,7 +436,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val isGrouped = item is Merchant && item.physicalAmount > 0
         val isOnline = item.type == MerchantType.ONLINE ||
                 viewModel.filterMode.value == FilterMode.Online
-        binding.itemDetails.bindItem(item, isOnline, isGrouped)
+
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
 
         if (isGrouped) {
