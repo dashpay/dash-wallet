@@ -7,6 +7,7 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
@@ -31,7 +32,11 @@ class MainActivityViewModel @Inject constructor(
     }
 
     private val isPlatformAvailableData = liveData(Dispatchers.IO) {
-        val status = platformRepo.isPlatformAvailable()
+        val status = if (Constants.SUPPORTS_PLATFORM) {
+            platformRepo.isPlatformAvailable()
+        } else {
+            Resource.success(false)
+        }
         if (status.status == Status.SUCCESS && status.data != null) {
             emit(status.data)
         } else {
