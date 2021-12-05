@@ -81,6 +81,8 @@ dependencies {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.google.guava:guava:29.0-android'
+    implementation 'org.slf4j:slf4j-api:1.7.30'
 }
 repositories {
     mavenLocal()

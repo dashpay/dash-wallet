@@ -41,7 +41,6 @@ import javax.annotation.Nullable;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.NetworkParameters;
@@ -295,7 +294,7 @@ public class WalletUtils {
     public static void writeKeys(final Writer out, final List<ECKey> keys) throws IOException {
         final DateFormat format = Iso8601Format.newDateTimeFormatT();
 
-        out.write("# KEEP YOUR PRIVATE KEYS SAFE! Anyone who can read this can spend your "+ CoinDefinition.coinName+"s.\n");
+        out.write("# KEEP YOUR PRIVATE KEYS SAFE! Anyone who can read this can spend your Dash.\n");
 
         for (final ECKey key : keys) {
             out.write(key.getPrivateKeyEncoded(Constants.NETWORK_PARAMETERS).toString());

@@ -69,4 +69,6 @@ dependencies {
     implementation 'javax.inject:javax.inject:1'
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
+
+    implementation 'org.slf4j:slf4j-api:1.7.30'
 }

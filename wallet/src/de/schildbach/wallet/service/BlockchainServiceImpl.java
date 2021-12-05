@@ -955,7 +955,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     if(count > 0 && count <= 3)
                         minimum = count;
 
-                    peerGroup.broadcastTransaction(tx, minimum);
+                    peerGroup.broadcastTransaction(tx, minimum, true);
                 } else {
                     log.info("peergroup not available, not broadcasting transaction " + tx.getHashAsString());
                     tx.getConfidence().setPeerInfo(0, 1);

@@ -27,7 +27,6 @@ import android.view.MenuItem;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
-import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.dash.wallet.common.ui.DialogBuilder;
 
@@ -44,6 +43,7 @@ import de.schildbach.wallet_test.R;
 public class SendCoinsActivity extends AbstractBindServiceActivity {
 
     public static final String ANYPAY_SCHEME = "pay";
+    public static final String DASH_SCHEME = "dash";
 
     public static final String INTENT_EXTRA_PAYMENT_INTENT = "payment_intent";
 
@@ -94,7 +94,7 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
             final String mimeType = intent.getType();
 
             if ((Intent.ACTION_VIEW.equals(action) || NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action))
-                    && intentUri != null && (CoinDefinition.coinURIScheme.equals(scheme) || ANYPAY_SCHEME.equals(scheme))) {
+                    && intentUri != null && (DASH_SCHEME.equals(scheme) || ANYPAY_SCHEME.equals(scheme))) {
                 viewModel.initStateFromDashUri(intentUri);
 
             } else if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action) && PaymentProtocol.MIMETYPE_PAYMENTREQUEST.equals(mimeType)) {

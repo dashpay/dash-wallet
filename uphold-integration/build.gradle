@@ -46,4 +46,5 @@ dependencies {
     implementation 'com.scottyab:secure-preferences-lib:0.1.7'
 
     implementation project(path: ':common')
+    implementation 'org.slf4j:slf4j-api:1.7.30'
 }
