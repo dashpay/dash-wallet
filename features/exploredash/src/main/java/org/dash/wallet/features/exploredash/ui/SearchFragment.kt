@@ -21,7 +21,6 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
@@ -137,7 +136,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     ScreenState.Details -> {
                         val layoutManager = binding.searchResults.layoutManager as LinearLayoutManager
                         val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
-                        Log.i("EXPLOREDASH", "firstVisiblePosition: ${firstVisiblePosition}")
 
                         if (field == ScreenState.SearchResults) {
                             savedSearchScrollPosition = firstVisiblePosition

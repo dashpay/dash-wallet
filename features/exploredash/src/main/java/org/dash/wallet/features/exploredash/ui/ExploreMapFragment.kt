@@ -117,46 +117,51 @@ class ExploreMapFragment: SupportMapFragment() {
         }
 
         viewModel.physicalSearchResults.observe(viewLifecycleOwner) { results ->
-//            if (viewModel.allMerchantLocations.value.isNullOrEmpty()) {
-                setResults(results)
-//            } else {
-//                setResults(viewModel.allMerchantLocations.value ?: listOf())
-//            }
+            setResults(results)
         }
 
-//        viewModel.allMerchantLocations.observe(viewLifecycleOwner) { locations ->
-//            setResults(locations)
-//        }
+        viewModel.allMerchantLocations.observe(viewLifecycleOwner) { locations ->
+            if (locations.isNotEmpty()) {
+                setResults(locations)
+            } else {
+                setResults(viewModel.physicalSearchResults.value)
+            }
+        }
 
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
             googleMap?.let { map ->
-                val prevBounds = savedBounds
                 selectedMarker?.remove()
                 markersGlideRequestManager.clear(selectedIconRequest)
-                markerCollection?.markers?.forEach { it.zIndex = 0f }
 
                 if (item != null) {
                     if (canFocusOnItem(item)) {
                         savedBounds = map.projection.visibleRegion.latLngBounds
-                        val marker = markerCollection?.markers?.firstOrNull { it.tag == item.id }
 
-                        if (marker != null) {
-                            marker.zIndex = 1f
-                        } else {
+                        if (markerCollection?.markers?.firstOrNull { it.tag == item.id } == null) {
                             val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
                             selectedIconRequest = buildMarkerRequest(item, true).submit(markerSize, markerSize)
                         }
 
-                        val zoom = if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
-                        val position = CameraPosition(LatLng(item.latitude!!, item.longitude!!), zoom, 0f, 0f)
-                        map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+                        val itemLatLng = LatLng(item.latitude!!, item.longitude!!)
+                        val mapBounds = map.projection.visibleRegion.latLngBounds
+
+                        if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL ||
+                            !mapBounds.contains(itemLatLng)
+                        ) {
+                            val zoom = if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
+                            val position = CameraPosition(itemLatLng, zoom, 0f, 0f)
+                            map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+                        }
                     }
                 } else {
+                    val prevBounds = savedBounds
+
                     if (prevBounds != null) {
                         savedBounds = null
                         map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
                     } else {
-                        setResults(viewModel.physicalSearchResults.value)
+                        val physicalPoints = viewModel.physicalSearchResults.value
+                        setResults(physicalPoints)
                     }
                 }
             }
@@ -201,15 +206,28 @@ class ExploreMapFragment: SupportMapFragment() {
                     )
                 }.take(ExploreViewModel.MAX_MARKERS)
                 setMarkers(sortedMax)
+                checkCameraFocus(sortedMax)
+            }
+        }
+    }
 
-                val markers = sortedMax
-                    .filterNot { it.latitude == null || it.longitude == null }
-                    .map { LatLng(it.latitude!!, it.longitude!!) }
-                val mapBounds = map.projection.visibleRegion.latLngBounds
+    private fun checkCameraFocus(items: List<SearchResult>?) {
+        if (items.isNullOrEmpty()) {
+            return
+        }
 
-                if (markers.any { !mapBounds.contains(it) }) {
-                    focusCamera(markers)
-                }
+        googleMap?.let { map ->
+            val mapBounds = map.projection.visibleRegion.latLngBounds
+            val markers = items
+                .filterNot { it.latitude == null || it.longitude == null }
+                .map { LatLng(it.latitude!!, it.longitude!!) }
+
+            if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL ||
+                map.cameraPosition.zoom >= DETAILS_ZOOM_LEVEL - 1 ||
+                markers.all { !mapBounds.contains(it) }
+            ) {
+                // Focus on results if camera is too far, too close or nothing on the screen
+                focusCamera(markers)
             }
         }
     }
@@ -331,7 +349,6 @@ class ExploreMapFragment: SupportMapFragment() {
             anchor(0.5f, 0.5f)
             icon(BitmapDescriptorFactory.fromBitmap(bitmap))
             draggable(false)
-            zIndex(if (isSelected) 1f else 0f)
         }
 
         if (isSelected) {

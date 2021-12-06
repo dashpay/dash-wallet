@@ -118,7 +118,9 @@ class ExploreViewModel @Inject constructor(
         get() = _searchBounds.value
         set(value) {
             value?.let {
-                _searchBounds.value = ceilByRadius(value, radius)
+                if (value.zoomLevel > MIN_ZOOM_LEVEL) {
+                    _searchBounds.value = ceilByRadius(value, radius)
+                }
             }
         }
 
@@ -185,14 +187,15 @@ class ExploreViewModel @Inject constructor(
                     _selectedRadiusOption.flatMapLatest { _ ->
                         _selectedTerritory.flatMapLatest { territory ->
                             _filterMode.flatMapLatest { mode ->
+                                _pagingSearchResultsCount.postValue(0)
                                 _searchBounds
                                     .filterNotNull()
-                                    .filter {
-                                        mode == FilterMode.Online ||
-                                                isLocationEnabled.value != true ||
-                                                territory.isNotBlank() ||
-                                                it.zoomLevel > MIN_ZOOM_LEVEL
-                                    }
+//                                    .filter {
+//                                        mode == FilterMode.Online ||
+//                                                isLocationEnabled.value != true ||
+//                                                territory.isNotBlank() ||
+//                                                it.zoomLevel > MIN_ZOOM_LEVEL
+//                                    }
                                     .map { bounds ->
                                         if (isLocationEnabled.value == true &&
                                            (exploreTopic == ExploreTopic.ATMs ||
@@ -233,10 +236,10 @@ class ExploreViewModel @Inject constructor(
                     _selectedTerritory.flatMapLatest { territory ->
                         _searchBounds
                             .filterNotNull()
-                            .filter {
-                                territory.isNotBlank() ||
-                                it.zoomLevel > MIN_ZOOM_LEVEL
-                            }
+//                            .filter {
+//                                territory.isNotBlank() ||
+//                                it.zoomLevel > MIN_ZOOM_LEVEL
+//                            }
                             .flatMapLatest { bounds ->
                                 _filterMode
                                     .filterNot { it == FilterMode.Online }
