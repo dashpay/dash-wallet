@@ -19,31 +19,29 @@ package de.schildbach.wallet.ui;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.os.CancellationSignal;
-import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.widget.FingerprintView;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet_test.R;
 import kotlin.Pair;
+import kotlin.Unit;
 
 /**
  * @author Samuel Barbosa
  */
-public class EnableFingerprintDialog extends DialogFragment {
+public class EnableFingerprintDialog extends BaseDialogFragment {
 
     private FingerprintView fingerprintView;
     private CancellationSignal fingerprintCancellationSignal;
@@ -81,19 +79,6 @@ public class EnableFingerprintDialog extends DialogFragment {
         final Activity activity = getActivity();
         final View view = LayoutInflater.from(activity)
                 .inflate(R.layout.fingerprint_dialog, null);
-
-        DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.enable_fingerprint);
-        builder.setView(view);
-        builder.setPositiveButton(R.string.notification_inactivity_action_dismiss, null);
-        builder.setNegativeButton(R.string.notification_inactivity_action_dismiss_forever, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                WalletApplication.getInstance().getConfiguration().setRemindEnableFingerprint(false);
-            }
-        });
-        builder.setCancelable(false);
-
         fingerprintView = view.findViewById(R.id.fingerprint_view);
         fingerprintView.setVisibility(View.VISIBLE);
         fingerprintView.setText(R.string.touch_fingerprint_to_enable);
@@ -126,10 +111,20 @@ public class EnableFingerprintDialog extends DialogFragment {
         } else {
             dismiss();
         }
-
-        AlertDialog dialog = builder.create();
-        dialog.setCanceledOnTouchOutside(false);
-        return dialog;
+        baseAlertDialogBuilder.setTitle(getString(R.string.enable_fingerprint));
+        baseAlertDialogBuilder.setView(view);
+        baseAlertDialogBuilder.setPositiveText(getString(R.string.notification_inactivity_action_dismiss));
+        baseAlertDialogBuilder.setNegativeText(getString(R.string.notification_inactivity_action_dismiss_forever));
+        baseAlertDialogBuilder.setCancelable(false);
+        baseAlertDialogBuilder.setNegativeAction(
+                () -> {
+                    WalletApplication.getInstance().getConfiguration().setRemindEnableFingerprint(false);
+                    return Unit.INSTANCE;
+                }
+        );
+        baseAlertDialogBuilder.setCancelableOnTouchOutside(false);
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        return super.onCreateDialog(savedInstanceState);
     }
 
     @Override

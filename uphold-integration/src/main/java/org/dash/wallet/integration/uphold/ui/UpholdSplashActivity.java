@@ -17,13 +17,9 @@
 
 package org.dash.wallet.integration.uphold.ui;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
@@ -43,6 +39,8 @@ import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
+
+import kotlin.Unit;
 
 
 public class UpholdSplashActivity extends InteractionAwareActivity {
@@ -154,17 +152,16 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
     }
 
     private void showLoadingErrorAlert() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCancelable(false);
-        builder.setMessage(R.string.loading_error);
-        builder.setPositiveButton(android.R.string.ok, null);
-        Dialog dialog = builder.show();
-        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                finish();
-            }
-        });
+        alertDialogBuilder.setMessage(getString(R.string.loading_error));
+        alertDialogBuilder.setCancelable(false);
+        alertDialogBuilder.setPositiveText(getString(android.R.string.ok));
+        alertDialogBuilder.setDismissAction(
+                () -> {
+                    finish();
+                    return Unit.INSTANCE;
+                }
+        );
+        alertDialogBuilder.buildAlertDialog().show();
     }
 
     private void startUpholdAccountActivity() {

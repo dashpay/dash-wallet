@@ -75,7 +75,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        arguments!!.apply {
+        requireArguments().apply {
             input_value.text = getString(ARG_AMOUNT)
             fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
             fiat_value.text = getString(ARG_AMOUNT_FIAT)

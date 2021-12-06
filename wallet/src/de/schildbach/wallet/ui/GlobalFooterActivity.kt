@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.core.os.bundleOf
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.widget.GlobalFooterView
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -26,6 +27,7 @@ import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 
 
 @SuppressLint("Registered")
+@AndroidEntryPoint
 open class GlobalFooterActivity : LockScreenActivity(), GlobalFooterView.OnFooterActionListener {
 
     private lateinit var globalFooterView: GlobalFooterView

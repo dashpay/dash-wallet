@@ -21,13 +21,18 @@ import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.fragment.app.activityViewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.LockScreenViewModel
+import org.dash.wallet.common.UserInteractionAwareCallback
 
+@AndroidEntryPoint
 open class BaseBottomSheetDialogFragment : BottomSheetDialogFragment() {
-
+    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -43,5 +48,9 @@ open class BaseBottomSheetDialogFragment : BottomSheetDialogFragment() {
         view.findViewById<View>(R.id.collapse_button).setOnClickListener {
             dismiss()
         }
+        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
+            dismiss()
+        }
+        dialog?.window?.callback = UserInteractionAwareCallback(dialog?.window?.callback, requireActivity())
     }
 }

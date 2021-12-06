@@ -39,8 +39,11 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.BaseLockScreenFragment
+import org.dash.wallet.common.ui.formatString
 
-class PaymentsPayFragment : Fragment() {
+class PaymentsPayFragment : BaseLockScreenFragment() {
 
     companion object {
 
@@ -72,13 +75,13 @@ class PaymentsPayFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        view!!.viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        requireView().viewTreeObserver?.addOnWindowFocusChangeListener(onWindowFocusChangeListener)
         getClipboardManager().addPrimaryClipChangedListener(onPrimaryClipChangedListener)
     }
 
     override fun onPause() {
         super.onPause()
-        view!!.viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
+        requireView().viewTreeObserver?.removeOnWindowFocusChangeListener(onWindowFocusChangeListener)
         getClipboardManager().removePrimaryClipChangedListener(onPrimaryClipChangedListener)
     }
 
@@ -102,8 +105,8 @@ class PaymentsPayFragment : Fragment() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
         if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK) {
-            val input = intent!!.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
-            handleString(input, true, R.string.button_scan)
+            val input = intent?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
+            input?.let { handleString(it, true, R.string.button_scan) }
         } else {
             super.onActivityResult(requestCode, resultCode, intent)
         }
@@ -144,7 +147,12 @@ class PaymentsPayFragment : Fragment() {
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    dialog(context, null, errorDialogTitleResId, messageResId, *messageArgs)
+                    alertDialog = baseAlertDialogBuilder.apply {
+                        title = getString(errorDialogTitleResId)
+                        message = requireContext().formatString(messageResId, messageArgs)
+                        neutralText = getString(R.string.button_dismiss)
+                    }.buildAlertDialog()
+                    alertDialog.show()
                 } else {
                     manageStateOfPayToAddressButton(null)
                 }

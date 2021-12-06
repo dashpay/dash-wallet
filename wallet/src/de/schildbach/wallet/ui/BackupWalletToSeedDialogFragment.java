@@ -41,16 +41,15 @@ import android.widget.TextView;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.os.CancellationSignal;
-import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 
 import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.Wallet;
+import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.bouncycastle.crypto.params.KeyParameter;
 
 import java.util.List;
 
@@ -65,11 +64,12 @@ import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog;
 import de.schildbach.wallet.util.FingerprintHelper;
 import de.schildbach.wallet.util.KeyboardUtil;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 /**
  * @author Andreas Schildbach
  */
-public class BackupWalletToSeedDialogFragment extends DialogFragment
+public class BackupWalletToSeedDialogFragment extends BaseDialogFragment
         implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String FRAGMENT_TAG = BackupWalletToSeedDialogFragment.class.getName();
@@ -161,27 +161,27 @@ public class BackupWalletToSeedDialogFragment extends DialogFragment
             updateView(true);
         }
 
-        final DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.export_keys_dialog_title);
-        builder.setView(view);
-        builder.setCancelable(false);
-        builder.setPositiveButton(R.string.button_dismiss, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                if (writtenDown.isChecked()) {
-                    config.disarmBackupSeedReminder();
+        baseAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
+        baseAlertDialogBuilder.setView(view);
+        baseAlertDialogBuilder.setCancelable(false);
+        baseAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
+        baseAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    if (writtenDown.isChecked()) {
+                        config.disarmBackupSeedReminder();
+                    }
+                    privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);
+                    if (getArguments().getBoolean(ARGS_IS_UPGRADING, false)
+                            && activity instanceof UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener) {
+                        ((UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener) activity).onUpgradeConfirmed();
+                    }
+                    return Unit.INSTANCE;
                 }
-                privateKeyPasswordView.removeTextChangedListener(privateKeyPasswordListener);
-                if (getArguments().getBoolean(ARGS_IS_UPGRADING, false)
-                        && activity instanceof UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener) {
-                    ((UpgradeWalletDisclaimerDialog.OnUpgradeConfirmedListener) activity).onUpgradeConfirmed();
-                }
-            }
-        });
+        );
 
         initFingerprintHelper();
-
-        return builder.create();
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        return super.onCreateDialog(savedInstanceState);
     }
 
     @Override
