@@ -86,6 +86,7 @@ import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 
 import static com.google.common.base.Preconditions.checkState;
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
@@ -300,7 +301,11 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
 
                     @Override
                     protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                        dialog(activity, null, R.string.button_scan, messageResId, messageArgs);
+                        baseAlertDialogBuilder.setTitle(getString(R.string.button_scan));
+                        baseAlertDialogBuilder.setMessage(formatString(requireActivity(), messageResId, messageArgs));
+                        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                        alertDialog.show();
                     }
                 }.parse();
             }

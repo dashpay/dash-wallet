@@ -42,6 +42,8 @@ import de.schildbach.wallet_test.R;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
 
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
+
 /**
  * The only purpose of this Activity is to handle all so called Wallet Uris
  * providing simple and convenient Inter App Communication.
@@ -126,7 +128,15 @@ public final class WalletUriHandlerActivity extends AppCompatActivity {
 
                     @Override
                     protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                        dialog(WalletUriHandlerActivity.this, (dialog, which) -> finish(), 0, messageResId, messageArgs);
+                        BaseAlertDialogBuilder baseAlertDialogBuilder = new BaseAlertDialogBuilder(WalletUriHandlerActivity.this);
+                        baseAlertDialogBuilder.setMessage(formatString(WalletUriHandlerActivity.this, messageResId, messageArgs));
+                        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                        baseAlertDialogBuilder.setNeutralAction(
+                                () -> {
+                                    WalletUriHandlerActivity.this.finish();
+                                    return Unit.INSTANCE;
+                                }
+                        );
                     }
                 }.parse();
             }

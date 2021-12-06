@@ -41,7 +41,6 @@ import android.view.MenuItem;
 import android.view.View;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -59,7 +58,6 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.UserInteractionAwareCallback;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
@@ -90,6 +88,8 @@ import de.schildbach.wallet_test.R;
 import kotlin.Pair;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function0;
+
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
@@ -273,7 +273,10 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    dialog(WalletActivity.this, null, 0, messageResId, messageArgs);
+                    baseAlertDialogBuilder.setMessage(formatString(WalletActivity.this, messageResId, messageArgs));
+                    baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                    alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                    alertDialog.show();
                 }
             }.parse();
         }
@@ -325,7 +328,9 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
             @Override
             protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                dialog(WalletActivity.this, null, errorDialogTitleResId, messageResId, messageArgs);
+                baseAlertDialogBuilder.setTitle(getString(errorDialogTitleResId));
+                baseAlertDialogBuilder.setMessage(formatString(WalletActivity.this, messageResId, messageArgs));
+                baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
             }
 
             @Override
@@ -503,7 +508,11 @@ public final class WalletActivity extends AbstractBindServiceActivity
         if (input != null) {
             handleString(input, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message);
         } else {
-            InputParser.dialog(this, null, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message_no_data);
+            baseAlertDialogBuilder.setTitle(getString(R.string.scan_to_pay_error_dialog_title));
+            baseAlertDialogBuilder.setMessage(getString(R.string.scan_to_pay_error_dialog_message_no_data));
+            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+            alertDialog.show();
         }
     }
 

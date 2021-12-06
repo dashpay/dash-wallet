@@ -142,7 +142,16 @@ public class SendCoinsFragment extends BaseLockScreenFragment {
                     }
                     case ERROR: {
                         String errorMessage = paymentIntentResource.getMessage();
-                        InputParser.dialog(activity, activityDismissListener, 0, errorMessage);
+                        baseAlertDialogBuilder.setMessage(errorMessage);
+                        baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                        baseAlertDialogBuilder.setNeutralAction(
+                                () -> {
+                                    requireActivity().finish();
+                                    return Unit.INSTANCE;
+                                }
+                        );
+                        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                        alertDialog.show();
                         break;
                     }
                 }

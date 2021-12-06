@@ -39,8 +39,11 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.BaseLockScreenFragment
+import org.dash.wallet.common.ui.formatString
 
-class PaymentsPayFragment : Fragment() {
+class PaymentsPayFragment : BaseLockScreenFragment() {
 
     companion object {
 
@@ -144,7 +147,12 @@ class PaymentsPayFragment : Fragment() {
 
             override fun error(ex: Exception?, messageResId: Int, vararg messageArgs: Any) {
                 if (fireAction) {
-                    dialog(context,null, errorDialogTitleResId, messageResId, *messageArgs)
+                    alertDialog = baseAlertDialogBuilder.apply {
+                        title = getString(errorDialogTitleResId)
+                        message = requireContext().formatString(messageResId, messageArgs)
+                        neutralText = getString(R.string.button_dismiss)
+                    }.buildAlertDialog()
+                    alertDialog.show()
                 } else {
                     manageStateOfPayToAddressButton(null)
                 }

@@ -87,6 +87,7 @@ import kotlin.Unit;
 
 import static androidx.core.util.Preconditions.checkNotNull;
 import static androidx.core.util.Preconditions.checkState;
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
@@ -463,8 +464,7 @@ public class BackupWalletDialogFragment extends BaseDialogFragment {
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final String exceptionMessage = getArguments().getString(KEY_EXCEPTION_MESSAGE);
             baseAlertDialogBuilder.setTitle(getString( R.string.import_export_keys_dialog_failure_title));
-            baseAlertDialogBuilder.setMessage(
-                    baseAlertDialogBuilder.formatString(R.string.export_keys_dialog_failure, exceptionMessage));
+            baseAlertDialogBuilder.setMessage(formatString(requireContext(),R.string.export_keys_dialog_failure, exceptionMessage));
             baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
             baseAlertDialogBuilder.setNeutralAction(
                     () -> {

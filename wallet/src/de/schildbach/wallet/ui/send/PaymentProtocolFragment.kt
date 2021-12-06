@@ -171,8 +171,14 @@ class PaymentProtocolFragment : BaseLockScreenFragment() {
                     }
                 }
                 Status.ERROR -> {
-                    InputParser.dialog(activity,
-                        { _, _ -> requireActivity().finish() }, 0, it.message!!)
+                    alertDialog = baseAlertDialogBuilder.apply {
+                        message = it.message
+                        neutralText = getString(R.string.button_dismiss)
+                        neutralAction = {
+                            requireActivity().finish()
+                        }
+                    }.buildAlertDialog()
+                    alertDialog.show()
                 }
             }
         })

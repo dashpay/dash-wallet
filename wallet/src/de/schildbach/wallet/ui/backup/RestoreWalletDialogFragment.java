@@ -58,6 +58,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
@@ -336,7 +337,7 @@ public class RestoreWalletDialogFragment extends DialogFragment {
 
             BaseAlertDialogBuilder restoreWalletFailAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
             restoreWalletFailAlertDialogBuilder.setTitle(getString(R.string.import_export_keys_dialog_failure_title));
-            restoreWalletFailAlertDialogBuilder.setMessage(restoreWalletFailAlertDialogBuilder.formatString(R.string.import_keys_dialog_failure, exceptionMessage));
+            restoreWalletFailAlertDialogBuilder.setMessage(formatString(requireContext(), R.string.import_keys_dialog_failure, exceptionMessage));
             restoreWalletFailAlertDialogBuilder.setPositiveText(getString(R.string.button_dismiss));
             restoreWalletFailAlertDialogBuilder.setNegativeText(getString(R.string.button_retry));
             restoreWalletFailAlertDialogBuilder.setNegativeAction(

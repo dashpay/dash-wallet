@@ -44,7 +44,7 @@ public class FancyListFragment extends ListFragment {
     protected AlertDialog alertDialog;
 
     @Override
-    public void onCreate(@Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         lockScreenViewModel = new ViewModelProvider(this).get(LockScreenViewModel.class);
         lockScreenViewModel.getActivatingLockScreen().observe(this, unused -> alertDialog.dismiss());

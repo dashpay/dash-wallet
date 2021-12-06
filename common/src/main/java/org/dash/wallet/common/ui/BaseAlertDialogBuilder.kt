@@ -48,15 +48,15 @@ open class BaseAlertDialogBuilder(private val context: Context) {
         }
         return alertDialog
     }
+}
 
-    /**
-     * Wrapper function which returns a formatted string as calling the method getString(@StringResId, Object...) returns:
-     * Format string XXX is not a valid format string so it should not be passed to String.format
-     */
-    fun formatString(messageResId: Int,
-                     vararg messageArgs: Any): String {
-        return context.getString(messageResId, messageArgs)
-    }
+/**
+ * Wrapper function which returns a formatted string as calling the method getString(@StringResId, Object...)
+ * returns the error: Format string XXX is not a valid format string so it should not be passed to String.format
+ */
+fun Context.formatString(messageResId: Int,
+                          vararg messageArgs: Any): String {
+    return this.getString(messageResId, messageArgs)
 }
 
 fun AlertDialog.dismissDialog() {
