@@ -21,13 +21,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.view.WindowManager;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import javax.inject.Inject;
+import dagger.hilt.android.AndroidEntryPoint;
 
+@AndroidEntryPoint
 public class InteractionAwareActivity extends SecureActivity {
-
+    @Inject
+    protected BaseAlertDialogBuilder alertDialogBuilder;
+    protected AlertDialog alertDialog;
     public static final String FORCE_FINISH_ACTION = "InteractionAwareActivity.FORCE_FINISH_ACTION";
 
     @Override
@@ -41,6 +46,14 @@ public class InteractionAwareActivity extends SecureActivity {
     public void onUserInteraction() {
         super.onUserInteraction();
         ((AutoLogoutTimerHandler) getApplication()).resetAutoLogoutTimer();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (alertDialog != null && alertDialog.isShowing()){
+            alertDialog.dismiss();
+        }
     }
 
     @Override

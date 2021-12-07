@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="allow_permission">Allow Permission</string>
+    <string name="allow_permission_to_camera">Allow Permission to camera</string>
+</resources>

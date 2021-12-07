@@ -28,7 +28,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +71,8 @@ import android.widget.SimpleCursorAdapter;
 import android.widget.SimpleCursorAdapter.ViewBinder;
 import android.widget.TextView;
 
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
+
 /**
  * @author Andreas Schildbach
  */
@@ -89,7 +91,7 @@ public final class SendingAddressesFragment extends FancyListFragment
     private static final int REQUEST_CODE_SCAN = 0;
 
     private static final Logger log = LoggerFactory.getLogger(SendingAddressesFragment.class);
-
+    private BaseAlertDialogBuilder alertDialogBuilder;
     @Override
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
@@ -104,7 +106,7 @@ public final class SendingAddressesFragment extends FancyListFragment
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        alertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
         setHasOptionsMenu(true);
 
         adapter = new SimpleCursorAdapter(activity, R.layout.address_book_row, null,
@@ -165,12 +167,19 @@ public final class SendingAddressesFragment extends FancyListFragment
                                 final Address address = paymentIntent.getAddress();
                                 if (!wallet.isPubKeyHashMine(address.getHash160()))
                                     EditAddressBookEntryFragment.edit(getFragmentManager(), address);
-                                else
-                                    dialog(activity, null, R.string.address_book_options_scan_title,
-                                            R.string.address_book_options_scan_own_address);
+                                else {
+                                    alertDialogBuilder.setTitle(getString(R.string.address_book_options_scan_title));
+                                    alertDialogBuilder.setMessage(getString(R.string.address_book_options_scan_own_address));
+                                    alertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                                    alertDialog = alertDialogBuilder.buildAlertDialog();
+                                    alertDialog.show();
+                                }
                             } else {
-                                dialog(activity, null, R.string.address_book_options_scan_title,
-                                        R.string.address_book_options_scan_invalid);
+                                alertDialogBuilder.setTitle(getString(R.string.address_book_options_scan_title));
+                                alertDialogBuilder.setMessage(getString(R.string.address_book_options_scan_invalid));
+                                alertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                                alertDialog = alertDialogBuilder.buildAlertDialog();
+                                alertDialog.show();
                             }
                         }
                     }, 500);
@@ -183,7 +192,11 @@ public final class SendingAddressesFragment extends FancyListFragment
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    dialog(activity, null, R.string.address_book_options_scan_title, messageResId, messageArgs);
+                    alertDialogBuilder.setTitle(getString(R.string.address_book_options_scan_title));
+                    alertDialogBuilder.setMessage(formatString(requireActivity(), messageResId, messageArgs));
+                    alertDialogBuilder.setNeutralText(getString(R.string.address_book_options_scan_title));
+                    alertDialog = alertDialogBuilder.buildAlertDialog();
+                    alertDialog.show();
                 }
             }.parse();
         }
@@ -224,20 +237,19 @@ public final class SendingAddressesFragment extends FancyListFragment
 
     private void handlePasteClipboard() {
         final Address address = getAddressFromPrimaryClip();
+        alertDialogBuilder.setTitle(getString(R.string.address_book_options_paste_from_clipboard_title));
+        alertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+
         if (address == null) {
-            final DialogBuilder dialog = new DialogBuilder(activity);
-            dialog.setTitle(R.string.address_book_options_paste_from_clipboard_title);
-            dialog.setMessage(R.string.address_book_options_paste_from_clipboard_invalid);
-            dialog.singleDismissButton(null);
-            dialog.show();
+            alertDialogBuilder.setMessage(getString(R.string.address_book_options_paste_from_clipboard_invalid));
+            alertDialog = alertDialogBuilder.buildAlertDialog();
+            alertDialog.show();
         } else if (!wallet.isPubKeyHashMine(address.getHash160())) {
-            EditAddressBookEntryFragment.edit(getFragmentManager(), address);
+            EditAddressBookEntryFragment.edit(getParentFragmentManager(), address);
         } else {
-            final DialogBuilder dialog = new DialogBuilder(activity);
-            dialog.setTitle(R.string.address_book_options_paste_from_clipboard_title);
-            dialog.setMessage(R.string.address_book_options_paste_from_clipboard_own_address);
-            dialog.singleDismissButton(null);
-            dialog.show();
+            alertDialogBuilder.setMessage(getString(R.string.address_book_options_paste_from_clipboard_own_address));
+            alertDialog = alertDialogBuilder.buildAlertDialog();
+            alertDialog.show();
         }
     }
 

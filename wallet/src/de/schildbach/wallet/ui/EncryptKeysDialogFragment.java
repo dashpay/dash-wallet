@@ -17,53 +17,53 @@
 
 package de.schildbach.wallet.ui;
 
-import javax.annotation.Nullable;
-
-import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.crypto.KeyCrypterScrypt;
-import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.DialogBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.bouncycastle.crypto.params.KeyParameter;
-
-import com.google.common.base.Strings;
-
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.ui.preference.PinRetryController;
-
-import de.schildbach.wallet.util.FingerprintHelper;
-import de.schildbach.wallet.util.KeyboardUtil;
-import de.schildbach.wallet_test.R;
-
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnShowListener;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.fragment.app.FragmentManager;
-import androidx.appcompat.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+
+import com.google.common.base.Strings;
+
+import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.crypto.KeyCrypterScrypt;
+import org.bitcoinj.wallet.Wallet;
+import org.bouncycastle.crypto.params.KeyParameter;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.preference.PinRetryController;
+import de.schildbach.wallet.util.FingerprintHelper;
+import de.schildbach.wallet.util.KeyboardUtil;
+import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+
 /**
  * @author Andreas Schildbach
  */
-public class EncryptKeysDialogFragment extends DialogFragment {
+public class EncryptKeysDialogFragment extends BaseDialogFragment {
 
     private static final String FRAGMENT_TAG = EncryptKeysDialogFragment.class.getName();
 
@@ -184,44 +184,40 @@ public class EncryptKeysDialogFragment extends DialogFragment {
 
         showView = (CheckBox) view.findViewById(R.id.encrypt_keys_dialog_show);
 
-        final DialogBuilder builder = new DialogBuilder(activity);
-        builder.setTitle(R.string.encrypt_keys_dialog_title);
-        builder.setView(view);
-        builder.setPositiveButton(R.string.button_ok, null); // dummy, just to make it show
-        if (getArguments() != null && getArguments().getBoolean(CANCELABLE_ARG)) {
-            builder.setNegativeButton(R.string.button_cancel, null);
+        final BaseAlertDialogBuilder encryptKeysAlertDialogBuilder = new BaseAlertDialogBuilder(requireActivity());
+        encryptKeysAlertDialogBuilder.setTitle(getString(R.string.encrypt_keys_dialog_title));
+        encryptKeysAlertDialogBuilder.setView(view);
+        encryptKeysAlertDialogBuilder.setPositiveText(getString(R.string.button_ok));
+        encryptKeysAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    handleGo();
+                    return Unit.INSTANCE;
+                }
+        );
+        if (getArguments() != null && getArguments().getBoolean(CANCELABLE_ARG)){
+            encryptKeysAlertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
         }
+        encryptKeysAlertDialogBuilder.setCancelableOnTouchOutside(false);
+        alertDialog = encryptKeysAlertDialogBuilder.buildAlertDialog();
+        alertDialog.setOnShowListener(dialogInterface -> {
+            positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+            negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
+            positiveButton.setTypeface(Typeface.DEFAULT_BOLD);
+            oldPasswordView.addTextChangedListener(textWatcher);
+            newPasswordView.addTextChangedListener(textWatcher);
 
-        final AlertDialog dialog = builder.create();
-        dialog.setCanceledOnTouchOutside(false);
-
-        dialog.setOnShowListener(new OnShowListener() {
-            @Override
-            public void onShow(final DialogInterface d) {
-                positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-                negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
-
-                positiveButton.setTypeface(Typeface.DEFAULT_BOLD);
-                positiveButton.setOnClickListener(new OnClickListener() {
-                    @Override
-                    public void onClick(final View v) {
-                        handleGo();
-                    }
-                });
-
-                oldPasswordView.addTextChangedListener(textWatcher);
-                newPasswordView.addTextChangedListener(textWatcher);
-
-                showView = (CheckBox) dialog.findViewById(R.id.encrypt_keys_dialog_show);
+            showView = (CheckBox) dialog.findViewById(R.id.encrypt_keys_dialog_show);
+            if (showView != null) {
                 showView.setOnCheckedChangeListener(new ShowPasswordCheckListener(newPasswordView, oldPasswordView));
                 showView.setChecked(true);
-
-                EncryptKeysDialogFragment.this.dialog = dialog;
-                updateView();
             }
+
+            EncryptKeysDialogFragment.this.dialog = alertDialog;
+            updateView();
         });
 
-        return dialog;
+        return super.onCreateDialog(savedInstanceState);
+
     }
 
     @Override

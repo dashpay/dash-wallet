@@ -40,10 +40,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
-import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -64,6 +62,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
+import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +92,7 @@ import de.schildbach.wallet_test.R;
 /**
  * @author Andreas Schildbach
  */
-public class WalletTransactionsFragment extends Fragment implements LoaderManager.LoaderCallbacks<List<Transaction>>,
+public class WalletTransactionsFragment extends BaseLockScreenFragment implements LoaderManager.LoaderCallbacks<List<Transaction>>,
         TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
 
 
@@ -180,7 +179,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
         transactionsFilterSharedViewModel = new ViewModelProvider(requireActivity())
                 .get(TransactionsFilterSharedViewModel.class);
         view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
-            new TransactionsFilterDialog().show(getChildFragmentManager(), null);
+            dialogFragment = new TransactionsFilterDialog();
+            dialogFragment.show(getChildFragmentManager(), null);
         });
 
         refreshShortcutsPaneViewModel = new ViewModelProvider(requireActivity()).get(RefreshUpdateShortcutsPaneViewModel.class);
@@ -382,7 +382,8 @@ public class WalletTransactionsFragment extends Fragment implements LoaderManage
                         return application.getWallet().toString(false, true, true, null);
                     }
                 };
-                dialog.show();
+                alertDialog = dialog.buildAlertDialog();
+                alertDialog.show();
             }
         });
         popupMenu.show();

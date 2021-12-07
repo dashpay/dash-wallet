@@ -127,7 +127,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     private var isTransactionSuccessful = false
     private var finishWithCloseButton = false
     private var lostConnection = false
-
+    private lateinit var countrySupportDialog: CountrySupportDialog
     private var mPermissionRequest: PermissionRequest? = null
     val FILE_CHOOSER_RESULT_CODE = 1
     var uploadMessage: ValueCallback<Uri?>? = null
@@ -139,7 +139,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
         viewBinding = ActivityWebviewQuickExchangeBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
-
+        countrySupportDialog = CountrySupportDialog(this, true)
         webview = viewBinding.webview
         loadWebView()
 
@@ -292,7 +292,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
         //don't show the (i) icon
         viewBinding.ivInfo.isVisible = false
         viewBinding.ivInfo.setOnClickListener {
-            CountrySupportDialog(this, true).show()
+            countrySupportDialog.show()
         }
     }
 
@@ -579,6 +579,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     override fun onDestroy() {
         log.info("liquid: closing buy dash with credit card")
         webview.removeJavascriptInterface(mJsInterfaceName)
+        countrySupportDialog.dismiss()
         super.onDestroy()
     }
 

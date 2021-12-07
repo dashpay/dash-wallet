@@ -1,37 +1,26 @@
 package org.dash.wallet.integration.liquid.dialog
 
 import android.content.Context
+import android.os.Bundle
 import android.widget.ImageView
 import android.widget.LinearLayout
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
-import com.google.android.material.bottomsheet.BottomSheetDialog
+import org.dash.wallet.common.ui.BaseBottomSheetDialog
 import org.dash.wallet.integration.liquid.R
 
 
-class SelectBuyDashDialog(val contexts: Context, private val listener: ValueSelectListener) : BottomSheetDialog(contexts) {
+class SelectBuyDashDialog(val contexts: Context, private val listener: ValueSelectListener) : BaseBottomSheetDialog(contexts) {
 
-    init {
-        setCancelable(true)
-        setCanceledOnTouchOutside(true)
-        create()
-    }
-
-    override fun create() {
-
-
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         val bottomSheetView = layoutInflater.inflate(R.layout.dialog_buy_dash, null)
-        val dialog = BottomSheetDialog(contexts, R.style.BottomSheetDialog) // Style here
-        dialog.setContentView(bottomSheetView);
-        dialog.show()
-
-
+        setContentView(bottomSheetView)
         val llCreditCard = bottomSheetView.findViewById(R.id.ll_credit_card) as LinearLayout
         val llCryptocurrency = bottomSheetView.findViewById(R.id.ll_cryptocurrency) as LinearLayout
         val collapseButton = bottomSheetView.findViewById(R.id.collapse_button) as ImageView
 
         llCreditCard.setOnClickListener {
-            dialog.dismiss()
-
+            dismiss()
             listener.onItemSelected(1)
 
             // Commented for future to use enter amount screen
@@ -47,12 +36,12 @@ class SelectBuyDashDialog(val contexts: Context, private val listener: ValueSele
         }
 
         llCryptocurrency.setOnClickListener {
-            dialog.dismiss()
+            dismiss()
             listener.onItemSelected(2)
         }
 
         collapseButton.setOnClickListener {
-            dialog.dismiss()
+            dismiss()
         }
     }
 }
