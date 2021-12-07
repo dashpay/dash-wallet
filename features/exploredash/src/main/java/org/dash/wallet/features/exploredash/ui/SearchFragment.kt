@@ -615,6 +615,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         } else {
             bottomSheet.peekHeight = bottomSheetPeekHeight
         }
+
+        if (viewModel.isLocationEnabled.value == true &&
+            viewModel.filterMode.value != FilterMode.Online && filters.territory.isEmpty()){
+            bottomSheet.isDraggable = true
+            bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+            bottomSheetWasExpanded = false
+        } else {
+            bottomSheet.isDraggable = false
+            bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
+            bottomSheetWasExpanded = true
+        }
     }
 
     private fun shouldShowFiltersPanel(): Boolean {
