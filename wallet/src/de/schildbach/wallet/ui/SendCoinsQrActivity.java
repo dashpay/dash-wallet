@@ -19,8 +19,6 @@ package de.schildbach.wallet.ui;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -28,6 +26,7 @@ import android.view.View;
 import org.bitcoinj.core.PrefixedChecksummedBytes;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.PaymentIntent;
@@ -35,6 +34,10 @@ import de.schildbach.wallet.ui.InputParser.StringInputParser;
 import de.schildbach.wallet.ui.scan.ScanActivity;
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity;
 import de.schildbach.wallet.ui.send.SweepWalletActivity;
+import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
@@ -110,17 +113,18 @@ public class SendCoinsQrActivity extends ShortcutComponentActivity {
 
                 @Override
                 protected void error(Exception x, final int messageResId, final Object... messageArgs) {
-                    dialog(SendCoinsQrActivity.this, dismissListener, 0, messageResId, messageArgs);
+                    BaseAlertDialogBuilder alertDialogBuilder = new BaseAlertDialogBuilder(SendCoinsQrActivity.this);
+                    alertDialogBuilder.setMessage(formatString(SendCoinsQrActivity.this, messageResId, messageArgs));
+                    alertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                    alertDialogBuilder.setNeutralAction(
+                            () -> {
+                                if (isQuickScan()) {
+                                    SendCoinsQrActivity.this.finish();
+                                }
+                                return Unit.INSTANCE;
+                            }
+                    );
                 }
-
-                private final OnClickListener dismissListener = new OnClickListener() {
-                    @Override
-                    public void onClick(final DialogInterface dialog, final int which) {
-                        if (isQuickScan()) {
-                            SendCoinsQrActivity.this.finish();
-                        }
-                    }
-                };
             }.parse();
         } else {
             if (isQuickScan()) {

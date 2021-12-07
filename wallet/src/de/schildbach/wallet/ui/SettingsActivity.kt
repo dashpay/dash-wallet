@@ -24,10 +24,8 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_settings.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.common.ui.DialogBuilder
 import org.slf4j.LoggerFactory
 import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
-import android.util.Log
 import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
 import android.app.Activity
 import de.schildbach.wallet.rates.ExchangeRate
@@ -43,10 +41,8 @@ class SettingsActivity : BaseMenuActivity() {
     override fun getLayoutId(): Int {
         return R.layout.activity_settings
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setTitle(R.string.settings_title)
         about.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.ABOUT, bundleOf())
@@ -68,26 +64,28 @@ class SettingsActivity : BaseMenuActivity() {
     }
 
     private fun resetBlockchain() {
-        val dialog = DialogBuilder(this)
         var isFinished = false
-        dialog.setTitle(R.string.preferences_initiate_reset_title)
-        dialog.setMessage(R.string.preferences_initiate_reset_dialog_message)
-        dialog.setPositiveButton(R.string.preferences_initiate_reset_dialog_positive) { _, _ ->
-            isFinished = true
-            log.info("manually initiated blockchain reset")
-            analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, bundleOf())
+        alertDialog = baseAlertDialogBuilder.apply {
+            title = getString(R.string.preferences_initiate_reset_title)
+            message = getString(R.string.preferences_initiate_reset_dialog_message)
+            positiveText = getString(R.string.preferences_initiate_reset_dialog_positive)
+            positiveAction = {
+                isFinished = true
+                log.info("manually initiated blockchain reset")
+                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET, bundleOf())
 
-            WalletApplication.getInstance().resetBlockchain()
-            WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
-            startActivity(WalletActivity.createIntent(this))
-        }
-        dialog.setNegativeButton(R.string.button_dismiss, null)
-        dialog.setOnDismissListener {
-            if (!isFinished) {
-                analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
+                WalletApplication.getInstance().resetBlockchain()
+                WalletApplication.getInstance().configuration.updateLastBlockchainResetTime()
+                startActivity(WalletActivity.createIntent(this@SettingsActivity))
             }
-        }
-        dialog.show()
+            negativeText = getString(R.string.button_dismiss)
+            dismissAction = {
+                if (!isFinished) {
+                    analytics.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS, bundleOf())
+                }
+            }
+        }.buildAlertDialog()
+        alertDialog.show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

@@ -8,10 +8,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
-import androidx.annotation.RequiresApi;
-import androidx.core.os.CancellationSignal;
-import androidx.fragment.app.DialogFragment;
-import androidx.appcompat.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -26,7 +22,7 @@ import androidx.core.os.CancellationSignal;
 import androidx.fragment.app.DialogFragment;
 
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.preference.PinRetryController;
@@ -105,25 +101,16 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
             backgroundHandler = new Handler(backgroundThread.getLooper());
         }
 
-        final DialogBuilder builder = new DialogBuilder(getContext());
-        builder.setTitle(dialogTitle);
-        builder.setView(view);
-        builder.setCancelable(false);
-
-        final AlertDialog alertDialog = builder.create();
-        alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
-            @Override
-            public void onShow(DialogInterface dialog) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    pinView.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
-                        }
-                    }, 100);
-                } else {
-                    KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
-                }
+        final BaseAlertDialogBuilder abstractPinAlertDialogBuilder = new BaseAlertDialogBuilder(requireContext());
+        abstractPinAlertDialogBuilder.setTitle(getString(dialogTitle));
+        abstractPinAlertDialogBuilder.setView(view);
+        abstractPinAlertDialogBuilder.setCancelable(false);
+        final AlertDialog alertDialog = abstractPinAlertDialogBuilder.buildAlertDialog();
+        alertDialog.setOnShowListener(dialog -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pinView.postDelayed(() -> KeyboardUtil.showSoftKeyboard(getActivity(), pinView), 100);
+            } else {
+                KeyboardUtil.showSoftKeyboard(getActivity(), pinView);
             }
         });
 

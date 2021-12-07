@@ -23,7 +23,6 @@ import android.nfc.NfcAdapter;
 import android.os.Bundle;
 
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.ui.LockScreenActivity;
 
 public class SendCoinsInternalActivity extends SendCoinsActivity {
 

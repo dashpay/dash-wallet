@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.backup;
 
 import android.app.Activity;
-import androidx.appcompat.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -33,6 +32,7 @@ import android.os.Process;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -52,7 +52,8 @@ import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.dash.wallet.common.UserInteractionAwareCallback;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,36 +70,41 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.TimeZone;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.ui.SecurityActivity;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.ui.send.DeriveKeyTask;
 import de.schildbach.wallet_test.R;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.ui.AbstractWalletActivity;
 
-import org.dash.wallet.common.ui.DialogBuilder;
 import de.schildbach.wallet.ui.ShowPasswordCheckListener;
 import de.schildbach.wallet.util.Crypto;
 import de.schildbach.wallet.util.Iso8601Format;
 import de.schildbach.wallet.util.Toast;
 import de.schildbach.wallet.util.WalletUtils;
+import kotlin.Unit;
 
 import static androidx.core.util.Preconditions.checkNotNull;
 import static androidx.core.util.Preconditions.checkState;
+import static org.dash.wallet.common.ui.BaseAlertDialogBuilderKt.formatString;
 
 /**
  * @author Andreas Schildbach
  * @author Eric Britten
  */
-public class BackupWalletDialogFragment extends DialogFragment {
+
+@AndroidEntryPoint
+public class BackupWalletDialogFragment extends BaseDialogFragment {
     private static final String FRAGMENT_TAG = BackupWalletDialogFragment.class.getName();
 
     public static void show(final FragmentManager fm) {
-        final DialogFragment newFragment = new BackupWalletDialogFragment();
+        final BackupWalletDialogFragment newFragment = new BackupWalletDialogFragment();
+        Log.e("BackupWalletDialogFragm", "Dialog shown");
         newFragment.show(fm, FRAGMENT_TAG);
     }
 
-    private AbstractWalletActivity activity;
+    private SecurityActivity activity;
     private WalletApplication application;
 
     private EditText passwordView, passwordAgainView;
@@ -110,8 +116,6 @@ public class BackupWalletDialogFragment extends DialogFragment {
 
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
-
-    //private AbstractWalletActivityViewModel walletActivityViewModel;
     private BackupWalletViewModel viewModel;
 
     private static final int REQUEST_CODE_CREATE_DOCUMENT = 0;
@@ -136,7 +140,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
     @Override
     public void onAttach(final Context context) {
         super.onAttach(context);
-        this.activity = (AbstractWalletActivity) context;
+        this.activity = (SecurityActivity) context;
         this.application = activity.getWalletApplication();
     }
 
@@ -144,8 +148,6 @@ public class BackupWalletDialogFragment extends DialogFragment {
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         log.info("opening dialog {}", getClass().getName());
-
-        //walletActivityViewModel = new ViewModelProvider(activity).get(AbstractWalletActivityViewModel.class);
         viewModel = new ViewModelProvider(this).get(BackupWalletViewModel.class);
     }
 
@@ -167,24 +169,33 @@ public class BackupWalletDialogFragment extends DialogFragment {
 
         warningView = view.findViewById(R.id.backup_wallet_dialog_warning_encrypted);
 
-        final DialogBuilder builder = DialogBuilder.custom(activity, R.string.export_keys_dialog_title, view);
-        // dummies, just to make buttons show
-        builder.setPositiveButton(R.string.export_keys_dialog_button_export, null);
-        builder.setNegativeButton(R.string.button_cancel, null);
+        final BaseAlertDialogBuilder alertDialogBuilder = new BaseAlertDialogBuilder(requireContext());
+        alertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
+        alertDialogBuilder.setView(view);
+        alertDialogBuilder.setPositiveText(getString(R.string.export_keys_dialog_button_export));
+        alertDialogBuilder.setNegativeText(getString(R.string.button_cancel));
+        alertDialogBuilder.setPositiveAction(
+                () -> {
+                    handleGo();
+                    return Unit.INSTANCE;
+                }
+        );
+        alertDialogBuilder.setNegativeAction(
+                () -> {
+                    dismissAllowingStateLoss();
+                    activity.finish();
+                    return Unit.INSTANCE;
+                }
+        );
+        alertDialogBuilder.setCancelableOnTouchOutside(false);
 
-        final AlertDialog dialog = builder.create();
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.setOnShowListener(d -> {
-            positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        alertDialog = alertDialogBuilder.buildAlertDialog();
+        alertDialog.setOnShowListener(d -> {
+            positiveButton = alertDialog.getButton(DialogInterface.BUTTON_POSITIVE);
             positiveButton.setEnabled(false);
             positiveButton.setTypeface(Typeface.DEFAULT_BOLD);
-            positiveButton.setOnClickListener(v -> handleGo());
 
-            negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE);
-            negativeButton.setOnClickListener(v -> {
-                dismissAllowingStateLoss();
-                activity.finish();
-            });
+            negativeButton = alertDialog.getButton(DialogInterface.BUTTON_NEGATIVE);
 
             passwordView.addTextChangedListener(textWatcher);
             passwordAgainView.addTextChangedListener(textWatcher);
@@ -229,10 +240,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
         backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);
         backgroundThread.start();
         backgroundHandler = new Handler(backgroundThread.getLooper());
-
-        dialog.getWindow().setCallback(new UserInteractionAwareCallback(dialog.getWindow().getCallback(), activity));
-
-        return dialog;
+        return super.onCreateDialog(savedInstanceState);
     }
 
     @Override
@@ -243,7 +251,6 @@ public class BackupWalletDialogFragment extends DialogFragment {
         showView.setOnCheckedChangeListener(null);
 
         wipePasswords();
-
         super.onDismiss(dialog);
     }
 
@@ -396,10 +403,10 @@ public class BackupWalletDialogFragment extends DialogFragment {
         }
     }
 
-    public static class SuccessDialogFragment extends DialogFragment {
+    @AndroidEntryPoint
+    public static class SuccessDialogFragment extends BaseDialogFragment {
         private static final String FRAGMENT_TAG = SuccessDialogFragment.class.getName();
         private static final String KEY_TARGET = "target";
-
         private Activity activity;
 
         public static void showDialog(final FragmentManager fm, final String target) {
@@ -419,17 +426,24 @@ public class BackupWalletDialogFragment extends DialogFragment {
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final String target = getArguments().getString(KEY_TARGET);
-            final DialogBuilder dialog = DialogBuilder.dialog(activity, R.string.export_keys_dialog_title,
-                    Html.fromHtml(getString(R.string.export_keys_dialog_success, target)));
-            dialog.singleDismissButton((d, id) -> activity.finish());
-            return dialog.create();
+            baseAlertDialogBuilder.setTitle(getString(R.string.export_keys_dialog_title));
+            baseAlertDialogBuilder.setMessage(Html.fromHtml(getString(R.string.export_keys_dialog_success, target)));
+            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+            baseAlertDialogBuilder.setNeutralAction(
+                    () -> {
+                        activity.finish();
+                        return Unit.INSTANCE;
+                    }
+            );
+            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+            return super.onCreateDialog(savedInstanceState);
         }
     }
 
-    public static class ErrorDialogFragment extends DialogFragment {
+    @AndroidEntryPoint
+    public static class ErrorDialogFragment extends BaseDialogFragment {
         private static final String FRAGMENT_TAG = ErrorDialogFragment.class.getName();
         private static final String KEY_EXCEPTION_MESSAGE = "exception_message";
-
         private Activity activity;
 
         public static void showDialog(final FragmentManager fm, final String exceptionMessage) {
@@ -449,11 +463,18 @@ public class BackupWalletDialogFragment extends DialogFragment {
         @Override
         public Dialog onCreateDialog(final Bundle savedInstanceState) {
             final String exceptionMessage = getArguments().getString(KEY_EXCEPTION_MESSAGE);
-            final DialogBuilder dialog = DialogBuilder.warn(activity,
-                    R.string.import_export_keys_dialog_failure_title, R.string.export_keys_dialog_failure,
-                    exceptionMessage);
-            dialog.singleDismissButton((d, id) -> activity.finish());
-            return dialog.create();
+            baseAlertDialogBuilder.setTitle(getString( R.string.import_export_keys_dialog_failure_title));
+            baseAlertDialogBuilder.setMessage(formatString(requireContext(),R.string.export_keys_dialog_failure, exceptionMessage));
+            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+            baseAlertDialogBuilder.setNeutralAction(
+                    () -> {
+                        activity.finish();
+                        return Unit.INSTANCE;
+                    }
+            );
+            baseAlertDialogBuilder.setShowIcon(true);
+            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+            return super.onCreateDialog(savedInstanceState);
         }
     }
 }
