@@ -48,21 +48,23 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
+import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import javax.inject.Inject
 
 @FlowPreview
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
-class ExploreMapFragment: SupportMapFragment() {
+class ExploreMapFragment : SupportMapFragment() {
     companion object {
-        const val DETAILS_ZOOM_LEVEL = 16f
+        const val DETAILS_ZOOM_LEVEL = 14f
     }
 
     private val viewModel: ExploreViewModel by activityViewModels()
-    private var googleMap: GoogleMap? = null
-    private var savedBounds: LatLngBounds? = null
+    private var savedSearchResultsBounds: LatLngBounds? = null
+    private var savedMerchantLocationsBounds: LatLngBounds? = null
 
+    private var googleMap: GoogleMap? = null
     private lateinit var mCurrentUserLocation: LatLng
     private var currentAccuracy = 0.0
     private var lastFocusedUserLocation: LatLng? = null
@@ -79,7 +81,8 @@ class ExploreMapFragment: SupportMapFragment() {
     private lateinit var markersGlideRequestManager: RequestManager
     private var markerDrawable: Bitmap? = null
 
-    @Inject lateinit var userLocationState: UserLocationStateInt
+    @Inject
+    lateinit var userLocationState: UserLocationStateInt
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -95,13 +98,13 @@ class ExploreMapFragment: SupportMapFragment() {
                     if (viewModel.selectedItem.value == null) {
                         val bounds = map.projection.visibleRegion.latLngBounds
                         viewModel.searchBounds = GeoBounds(
-                                bounds.northeast.latitude,
-                                bounds.northeast.longitude,
-                                bounds.southwest.latitude,
-                                bounds.southwest.longitude,
-                                bounds.center.latitude,
-                                bounds.center.longitude,
-                                map.cameraPosition.zoom
+                            bounds.northeast.latitude,
+                            bounds.northeast.longitude,
+                            bounds.southwest.latitude,
+                            bounds.southwest.longitude,
+                            bounds.center.latitude,
+                            bounds.center.longitude,
+                            map.cameraPosition.zoom
                         )
                     }
                 }
@@ -117,25 +120,41 @@ class ExploreMapFragment: SupportMapFragment() {
         }
 
         viewModel.physicalSearchResults.observe(viewLifecycleOwner) { results ->
-            setResults(results)
-        }
-
-        viewModel.allMerchantLocations.observe(viewLifecycleOwner) { locations ->
-            if (locations.isNotEmpty()) {
-                setResults(locations)
-            } else {
-                setResults(viewModel.physicalSearchResults.value)
+            if (viewModel.screenState.value == ScreenState.SearchResults) {
+                setResults(results)
             }
         }
 
-        viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
+        viewModel.allMerchantLocations.observe(viewLifecycleOwner) { locations ->
+            if (locations.isNotEmpty() && viewModel.screenState.value == ScreenState.MerchantLocations) {
+                setResults(locations)
+            }
+        }
+
+        viewModel.screenState.observe(viewLifecycleOwner) { state ->
+            if (viewModel.filterMode.value == FilterMode.Online) {
+                return@observe
+            }
+
             googleMap?.let { map ->
                 selectedMarker?.remove()
                 markersGlideRequestManager.clear(selectedIconRequest)
 
-                if (item != null) {
-                    if (canFocusOnItem(item)) {
-                        savedBounds = map.projection.visibleRegion.latLngBounds
+                if (state == ScreenState.Details) {
+                    val item = viewModel.selectedItem.value
+
+                    if (item != null && canFocusOnItem(item)) {
+                        val boundsToSave = map.projection.visibleRegion.latLngBounds
+
+                        if (savedSearchResultsBounds == null) {
+                            savedSearchResultsBounds = boundsToSave
+                        } else if (savedMerchantLocationsBounds == null) {
+                            savedMerchantLocationsBounds = boundsToSave
+                        }
+
+                        if (item is Merchant && item.physicalAmount > 0) {
+                            setResults(viewModel.physicalSearchResults.value, savedSearchResultsBounds)
+                        }
 
                         if (markerCollection?.markers?.firstOrNull { it.tag == item.id } == null) {
                             val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
@@ -143,21 +162,28 @@ class ExploreMapFragment: SupportMapFragment() {
                         }
 
                         val itemLatLng = LatLng(item.latitude!!, item.longitude!!)
-                        val mapBounds = map.projection.visibleRegion.latLngBounds
-
-                        if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL ||
-                            !mapBounds.contains(itemLatLng)
-                        ) {
-                            val zoom = if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
+                            val zoom =
+                                if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
                             val position = CameraPosition(itemLatLng, zoom, 0f, 0f)
                             map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
-                        }
+
                     }
-                } else {
-                    val prevBounds = savedBounds
+                } else if (state == ScreenState.MerchantLocations && viewModel.isLocationEnabled.value == true) {
+                    val prevBounds = savedMerchantLocationsBounds
 
                     if (prevBounds != null) {
-                        savedBounds = null
+                        savedMerchantLocationsBounds = null
+                        map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
+                    } else {
+                        val physicalPoints = viewModel.allMerchantLocations.value
+                        setResults(physicalPoints)
+                    }
+                } else if (state == ScreenState.SearchResults && viewModel.isLocationEnabled.value == true) {
+                    val prevBounds = savedSearchResultsBounds
+
+                    if (prevBounds != null) {
+                        savedSearchResultsBounds = null
+                        savedMerchantLocationsBounds = null
                         map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
                     } else {
                         val physicalPoints = viewModel.physicalSearchResults.value
@@ -187,21 +213,25 @@ class ExploreMapFragment: SupportMapFragment() {
         val status: Int = googleApiAvailability.isGooglePlayServicesAvailable(requireActivity())
         if (ConnectionResult.SUCCESS == status) return true else {
             if (googleApiAvailability.isUserResolvableError(status))
-                Toast.makeText(requireActivity(), R.string.common_google_play_services_install_title, Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    requireActivity(),
+                    R.string.common_google_play_services_install_title,
+                    Toast.LENGTH_LONG
+                ).show()
         }
         return false
     }
 
-    private fun setResults(results: List<SearchResult>?) {
+    private fun setResults(results: List<SearchResult>?, inBounds: LatLngBounds? = null) {
         googleMap?.let { map ->
             if (results.isNullOrEmpty()) {
                 allIconsRequests.forEach { markersGlideRequestManager.clear(it) }
                 markerCollection?.clear() ?: Unit
             } else {
-                val center = map.projection.visibleRegion.latLngBounds.center
+                val bounds = inBounds ?: map.projection.visibleRegion.latLngBounds
                 val sortedMax = results.sortedBy {
                     userLocationState.distanceBetween(
-                        center.latitude, center.longitude,
+                        bounds.center.latitude, bounds.center.longitude,
                         it.latitude ?: 0.0, it.longitude ?: 0.0
                     )
                 }.take(ExploreViewModel.MAX_MARKERS)
@@ -212,7 +242,10 @@ class ExploreMapFragment: SupportMapFragment() {
     }
 
     private fun checkCameraFocus(items: List<SearchResult>?) {
-        if (items.isNullOrEmpty()) {
+        if (items.isNullOrEmpty() ||
+            viewModel.filterMode.value == FilterMode.Online ||
+            viewModel.isLocationEnabled.value != true
+        ) {
             return
         }
 
@@ -274,8 +307,9 @@ class ExploreMapFragment: SupportMapFragment() {
         val radius = viewModel.radius
 
         if (lastFocusedUserLocation == null ||
-                userLocationState.distanceBetween(
-                        userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0) > radius / 2
+            userLocationState.distanceBetween(
+                userLat, userLng, lastLat ?: 0.0, lastLng ?: 0.0
+            ) > radius / 2
         ) {
             setMapDefaultViewLevel(radius)
         }
@@ -286,7 +320,14 @@ class ExploreMapFragment: SupportMapFragment() {
             val heightInPixel = this.requireView().measuredHeight
             val latLngBounds = userLocationState.calculateBounds(mCurrentUserLocation, radius)
             val mapPadding = resources.getDimensionPixelOffset(R.dimen.map_padding)
-            map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, heightInPixel, heightInPixel, mapPadding))
+            map.moveCamera(
+                CameraUpdateFactory.newLatLngBounds(
+                    latLngBounds,
+                    heightInPixel,
+                    heightInPixel,
+                    mapPadding
+                )
+            )
             lastFocusedUserLocation = mCurrentUserLocation
         }
     }
@@ -306,8 +347,7 @@ class ExploreMapFragment: SupportMapFragment() {
             .error(R.drawable.ic_merchant)
             .apply(RequestOptions().centerCrop().circleCrop())
             .listener(object : RequestListener<Bitmap> {
-                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?,
-                                          isFirstResource: Boolean): Boolean {
+                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Bitmap>?, isFirstResource: Boolean): Boolean {
                     if (item.latitude != null && item.longitude != null && markerDrawable != null) {
                         lifecycleScope.launch {
                             addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, markerDrawable!!, item.id)
@@ -316,8 +356,7 @@ class ExploreMapFragment: SupportMapFragment() {
                     return false
                 }
 
-                override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?,
-                                             dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                override fun onResourceReady(resource: Bitmap?, model: Any?, target: Target<Bitmap>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
                     if (item.latitude != null && item.longitude != null && resource != null) {
                         lifecycleScope.launch {
                             addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, resource, item.id)
@@ -383,7 +422,12 @@ class ExploreMapFragment: SupportMapFragment() {
         } else {
             val boundsBuilder = LatLngBounds.builder()
             markers.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
-            CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), width, height.toInt(), padding)
+            CameraUpdateFactory.newLatLngBounds(
+                boundsBuilder.build(),
+                width,
+                height.toInt(),
+                padding
+            )
         }
 
         googleMap?.animateCamera(cameraUpdate)
@@ -396,7 +440,13 @@ class ExploreMapFragment: SupportMapFragment() {
 
     private fun getBitmapFromDrawable(drawableId: Int): Bitmap? {
         val drawable = AppCompatResources.getDrawable(requireActivity(), drawableId)
-        val bitmap = drawable?.let { Bitmap.createBitmap(it.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888) }
+        val bitmap = drawable?.let {
+            Bitmap.createBitmap(
+                it.intrinsicWidth,
+                drawable.intrinsicHeight,
+                Bitmap.Config.ARGB_8888
+            )
+        }
         val canvas = bitmap?.let { Canvas(it) }
         canvas?.width?.let { drawable.setBounds(0, 0, it, canvas.height) }
         canvas?.let { drawable.draw(it) }

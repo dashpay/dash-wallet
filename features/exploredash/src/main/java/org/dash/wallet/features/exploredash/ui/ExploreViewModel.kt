@@ -47,6 +47,12 @@ enum class FilterMode {
     All, Online, Physical, Buy, Sell, BuySell
 }
 
+enum class ScreenState {
+    SearchResults,
+    MerchantLocations,
+    Details
+}
+
 data class FilterOptions(
     val query: String,
     val territory: String,
@@ -118,7 +124,7 @@ class ExploreViewModel @Inject constructor(
         get() = _searchBounds.value
         set(value) {
             value?.let {
-                if (value.zoomLevel > MIN_ZOOM_LEVEL) {
+                if (_isLocationEnabled.value != true || value.zoomLevel > MIN_ZOOM_LEVEL) {
                     _searchBounds.value = ceilByRadius(value, radius)
                 }
             }
@@ -144,6 +150,8 @@ class ExploreViewModel @Inject constructor(
     var filterMode: LiveData<FilterMode> = MediatorLiveData<FilterMode>().apply {
         addSource(_filterMode.asLiveData(), this::setValue)
     }
+
+    private var nearestLocation: SearchResult? = null
 
     private val _allMerchantLocations = MutableLiveData<List<Merchant>>()
     val allMerchantLocations: LiveData<List<Merchant>>
@@ -177,6 +185,9 @@ class ExploreViewModel @Inject constructor(
     val appliedFilters: LiveData<FilterOptions>
         get() = _appliedFilters
 
+    private val _screenState = MutableLiveData(ScreenState.SearchResults)
+    val screenState: LiveData<ScreenState>
+        get() = _screenState
 
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> = searchQuery
@@ -184,18 +195,11 @@ class ExploreViewModel @Inject constructor(
         .flatMapLatest { query ->
             _paymentMethodFilter.flatMapLatest { payment ->
                 _sortByDistance.flatMapLatest { sortByDistance ->
-                    _selectedRadiusOption.flatMapLatest { _ ->
+                    _selectedRadiusOption.flatMapLatest {
                         _selectedTerritory.flatMapLatest { territory ->
                             _filterMode.flatMapLatest { mode ->
-                                _pagingSearchResultsCount.postValue(0)
                                 _searchBounds
                                     .filterNotNull()
-//                                    .filter {
-//                                        mode == FilterMode.Online ||
-//                                                isLocationEnabled.value != true ||
-//                                                territory.isNotBlank() ||
-//                                                it.zoomLevel > MIN_ZOOM_LEVEL
-//                                    }
                                     .map { bounds ->
                                         if (isLocationEnabled.value == true &&
                                            (exploreTopic == ExploreTopic.ATMs ||
@@ -236,10 +240,6 @@ class ExploreViewModel @Inject constructor(
                     _selectedTerritory.flatMapLatest { territory ->
                         _searchBounds
                             .filterNotNull()
-//                            .filter {
-//                                territory.isNotBlank() ||
-//                                it.zoomLevel > MIN_ZOOM_LEVEL
-//                            }
                             .flatMapLatest { bounds ->
                                 _filterMode
                                     .filterNot { it == FilterMode.Online }
@@ -341,20 +341,38 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun openMerchantDetails(merchant: Merchant) {
+    fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
         _selectedItem.postValue(merchant)
+
+        if (isGrouped) {
+            if (canShowNearestLocation(merchant)) {
+                // Opening details screen
+                nearestLocation = merchant
+                _screenState.postValue(ScreenState.Details)
+            } else {
+                // Opening all merchant locations screen
+                openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+            }
+        } else {
+            _screenState.postValue(ScreenState.Details)
+        }
     }
 
     fun openAtmDetails(atm: Atm) {
         _selectedItem.postValue(atm)
+        _screenState.postValue(ScreenState.Details)
     }
 
     fun openSearchResults() {
         _selectedItem.postValue(null)
+        _allMerchantLocations.postValue(listOf())
+        _screenState.postValue(ScreenState.SearchResults)
     }
 
     fun onMapMarkerSelected(id: Int) {
-        val item = _physicalSearchResults.value?.firstOrNull { it.id == id }
+        val item = _allMerchantLocations.value?.firstOrNull { it.id == id }
+            ?: _physicalSearchResults.value?.firstOrNull { it.id == id }
+
         item?.let {
             if (item is Merchant) {
                 openMerchantDetails(item)
@@ -364,7 +382,8 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun retrieveAllMerchantLocations(merchantId: Long, source: String) {
+    fun openAllMerchantLocations(merchantId: Long, source: String) {
+        _screenState.postValue(ScreenState.MerchantLocations)
         viewModelScope.launch {
             val userLat = currentUserLocation.value?.latitude
             val userLng = currentUserLocation.value?.longitude
@@ -383,8 +402,11 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun clearMerchantLocations() {
-        _allMerchantLocations.value = listOf()
+    fun canShowNearestLocation(item: SearchResult? = null): Boolean {
+        val nearest = item ?: nearestLocation
+        // Cannot show nearest location if there are more than 1 in group and location is disabled
+        return selectedTerritory.isEmpty() &&
+                (isLocationEnabled.value == true || (nearest is Merchant && nearest.physicalAmount <= 1))
     }
 
     fun sendDash() {
@@ -393,6 +415,20 @@ class ExploreViewModel @Inject constructor(
 
     fun receiveDash() {
         navigationCallback.postValue(NavigationRequest.ReceiveDash)
+    }
+
+    fun backFromMerchantLocation() {
+        if (screenState.value == ScreenState.Details) {
+            _screenState.postValue(ScreenState.MerchantLocations)
+        }
+    }
+
+    fun backFromAllMerchantLocations() {
+        val openedLocation = nearestLocation
+
+        if (screenState.value == ScreenState.MerchantLocations && openedLocation is Merchant) {
+            openMerchantDetails(openedLocation)
+        }
     }
 
     fun monitorUserLocation() {
