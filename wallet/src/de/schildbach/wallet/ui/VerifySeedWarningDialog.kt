@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 
 class VerifySeedWarningDialog: BaseBottomSheetDialogFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
