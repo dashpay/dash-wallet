@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash.ui
 
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
@@ -51,6 +50,7 @@ enum class FilterMode {
 enum class ScreenState {
     SearchResults,
     MerchantLocations,
+    DetailsGrouped,
     Details
 }
 
@@ -87,6 +87,7 @@ class ExploreViewModel @Inject constructor(
 
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
+    private var allMerchantLocationsJob: Job? = null
 
     val isMetric = !Locale.getDefault().isO3Country.equals("usa", true) &&
             !Locale.getDefault().isO3Country.equals("mmr", true)
@@ -201,6 +202,7 @@ class ExploreViewModel @Inject constructor(
                             _filterMode.flatMapLatest { mode ->
                                 _searchBounds
                                     .filterNotNull()
+                                    .filter { screenState.value == ScreenState.SearchResults }
                                     .map { bounds ->
                                         if (isLocationEnabled.value == true &&
                                            (exploreTopic == ExploreTopic.ATMs ||
@@ -241,6 +243,7 @@ class ExploreViewModel @Inject constructor(
                     _selectedTerritory.flatMapLatest { territory ->
                         _searchBounds
                             .filterNotNull()
+                            .filter { screenState.value == ScreenState.SearchResults }
                             .flatMapLatest { bounds ->
                                 _filterMode
                                     .filterNot { it == FilterMode.Online }
@@ -343,14 +346,13 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
-        Log.i("EXPLOREDASH", "openMerchantDetails: ${merchant.address1}")
         _selectedItem.postValue(merchant)
 
         if (isGrouped) {
             if (canShowNearestLocation(merchant)) {
                 // Opening details screen
                 nearestLocation = merchant
-                _screenState.postValue(ScreenState.Details)
+                _screenState.postValue(ScreenState.DetailsGrouped)
             } else {
                 // Opening all merchant locations screen
                 openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
@@ -368,14 +370,14 @@ class ExploreViewModel @Inject constructor(
     fun openSearchResults() {
         nearestLocation = null
         _selectedItem.postValue(null)
-        _allMerchantLocations.postValue(listOf())
         _screenState.postValue(ScreenState.SearchResults)
+        _allMerchantLocations.postValue(listOf())
+        this.allMerchantLocationsJob?.cancel()
     }
 
     fun onMapMarkerSelected(id: Int) {
-        val item = _allMerchantLocations.value?.firstOrNull { it.id == id }
-            ?: _physicalSearchResults.value?.firstOrNull { it.id == id }
-
+        val item = _allMerchantLocations.value?.firstOrNull { it.id == id } ?:
+                   _physicalSearchResults.value?.firstOrNull { it.id == id }
         item?.let {
             if (item is Merchant) {
                 openMerchantDetails(item)
@@ -387,28 +389,38 @@ class ExploreViewModel @Inject constructor(
 
     fun openAllMerchantLocations(merchantId: Long, source: String) {
         _screenState.postValue(ScreenState.MerchantLocations)
-        viewModelScope.launch {
-            val userLat = currentUserLocation.value?.latitude
-            val userLng = currentUserLocation.value?.longitude
-            val byDistance = _filterMode.value != FilterMode.Online &&
-                    _isLocationEnabled.value == true &&
-                    userLat != null && userLng != null &&
-                    sortByDistance
-
-            val limit = if (_isLocationEnabled.value != true || selectedTerritory.isNotEmpty()) {
-                100
-            } else {
-                -1
+        this.allMerchantLocationsJob?.cancel()
+        this.allMerchantLocationsJob = _searchBounds
+            .filterNotNull()
+            .flatMapLatest { bounds ->
+                val radiusBounds = if (_isLocationEnabled.value == true) {
+                    locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
+                } else {
+                    GeoBounds.noBounds
+                }
+                val limitResults = _isLocationEnabled.value != true || selectedTerritory.isNotEmpty()
+                val limit = if (limitResults) 100 else -1
+                exploreData.observeMerchantLocations(
+                    merchantId, source, selectedTerritory, "", radiusBounds, limit
+                )
             }
-
-            val locations = exploreData.getMerchantLocations(
-                merchantId, source, selectedTerritory, paymentMethodFilter,
-                radiusBounds ?: GeoBounds.noBounds, byDistance,
-                userLat ?: 0.0, userLng ?: 0.0, limit
-            )
-
-            _allMerchantLocations.postValue(locations)
-        }
+            .onEach { locations ->
+                val location = currentUserLocation.value
+                val sorted = if (isLocationEnabled.value == true && location != null) {
+                    locations.sortedBy {
+                        val userLat = location.latitude
+                        val userLng = location.longitude
+                        locationProvider.distanceBetween(
+                            userLat, userLng,
+                            it.latitude ?: 0.0, it.longitude ?: 0.0
+                        )
+                    }
+                } else {
+                    locations.sortedBy { it.getDisplayAddress(", ") }
+                }
+                _allMerchantLocations.postValue(sorted)
+            }
+            .launchIn(viewModelWorkerScope)
     }
 
     fun canShowNearestLocation(item: SearchResult? = null): Boolean {
@@ -436,7 +448,7 @@ class ExploreViewModel @Inject constructor(
         val openedLocation = nearestLocation
 
         if (screenState.value == ScreenState.MerchantLocations && openedLocation is Merchant) {
-            openMerchantDetails(openedLocation)
+            openMerchantDetails(openedLocation, true)
         }
     }
 

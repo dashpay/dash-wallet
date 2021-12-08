@@ -96,18 +96,16 @@ class ExploreMapFragment : SupportMapFragment() {
             showMap()
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
-                    if (viewModel.screenState.value == ScreenState.SearchResults) {
-                        val bounds = map.projection.visibleRegion.latLngBounds
-                        viewModel.searchBounds = GeoBounds(
-                            bounds.northeast.latitude,
-                            bounds.northeast.longitude,
-                            bounds.southwest.latitude,
-                            bounds.southwest.longitude,
-                            bounds.center.latitude,
-                            bounds.center.longitude,
-                            map.cameraPosition.zoom
-                        )
-                    }
+                    val bounds = map.projection.visibleRegion.latLngBounds
+                    viewModel.searchBounds = GeoBounds(
+                        bounds.northeast.latitude,
+                        bounds.northeast.longitude,
+                        bounds.southwest.latitude,
+                        bounds.southwest.longitude,
+                        bounds.center.latitude,
+                        bounds.center.longitude,
+                        map.cameraPosition.zoom
+                    )
                 }
             }
         }
@@ -140,8 +138,8 @@ class ExploreMapFragment : SupportMapFragment() {
             selectedMarker?.remove()
             markersGlideRequestManager.clear(selectedIconRequest)
 
-            if (state == ScreenState.Details) {
-                showSelectedMarker()
+            if (state == ScreenState.Details || state == ScreenState.DetailsGrouped) {
+                showSelectedMarker(state)
             } else if (viewModel.isLocationEnabled.value == true) {
                 showMarkerSet(state)
             }
@@ -150,7 +148,7 @@ class ExploreMapFragment : SupportMapFragment() {
         }
     }
 
-    private fun showSelectedMarker() {
+    private fun showSelectedMarker(state: ScreenState) {
         googleMap?.let { map ->
             val item = viewModel.selectedItem.value
 
@@ -159,7 +157,7 @@ class ExploreMapFragment : SupportMapFragment() {
 
                 if (prevScreenState == ScreenState.SearchResults) {
                     savedSearchResultsBounds = boundsToSave
-                } else if (prevScreenState == ScreenState.MerchantLocations) {
+                } else if (state == ScreenState.Details && prevScreenState == ScreenState.MerchantLocations) {
                     savedMerchantLocationsBounds = boundsToSave
                 }
 
@@ -185,15 +183,15 @@ class ExploreMapFragment : SupportMapFragment() {
             if (state == ScreenState.MerchantLocations) {
                 val prevBounds = savedMerchantLocationsBounds
 
-                if (prevBounds != null) {
+                if (prevScreenState == ScreenState.Details && prevBounds != null) {
                     savedMerchantLocationsBounds = null
                     map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
-                } else {
-                    val physicalPoints = viewModel.allMerchantLocations.value
-
-                    if (physicalPoints != null) {
-                        setResults(physicalPoints)
-                    }
+                } else if (prevScreenState == ScreenState.DetailsGrouped ||
+                           prevScreenState == ScreenState.SearchResults
+                ) {
+                    val mapCenter = map.projection.visibleRegion.latLngBounds.center
+                    val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
+                    map.animateCamera(radiusBounds)
                 }
             } else if (state == ScreenState.SearchResults) {
                 val prevBounds = savedSearchResultsBounds
@@ -241,7 +239,10 @@ class ExploreMapFragment : SupportMapFragment() {
         return false
     }
 
-    private fun setResults(results: List<SearchResult>?, inBounds: LatLngBounds? = null) {
+    private fun setResults(
+        results: List<SearchResult>?,
+        inBounds: LatLngBounds? = null
+    ) {
         googleMap?.let { map ->
             if (results.isNullOrEmpty()) {
                 allIconsRequests.forEach { markersGlideRequestManager.clear(it) }
@@ -276,8 +277,7 @@ class ExploreMapFragment : SupportMapFragment() {
                 .map { LatLng(it.latitude!!, it.longitude!!) }
 
             if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL ||
-                markers.all { !mapBounds.contains(it) }
-            ) {
+                markers.all { !mapBounds.contains(it) }) {
                 // Focus on results if camera is too far or nothing on the screen
                 focusCamera(markers)
             }
@@ -336,19 +336,22 @@ class ExploreMapFragment : SupportMapFragment() {
 
     private fun setMapDefaultViewLevel(radius: Double) {
         googleMap?.let { map ->
-            val heightInPixel = this.requireView().measuredHeight
-            val latLngBounds = userLocationState.calculateBounds(mCurrentUserLocation, radius)
-            val mapPadding = resources.getDimensionPixelOffset(R.dimen.map_padding)
-            map.moveCamera(
-                CameraUpdateFactory.newLatLngBounds(
-                    latLngBounds,
-                    heightInPixel,
-                    heightInPixel,
-                    mapPadding
-                )
-            )
+            val radiusBounds = getRadiusBounds(mCurrentUserLocation, radius)
+            map.moveCamera(radiusBounds)
             lastFocusedUserLocation = mCurrentUserLocation
         }
+    }
+
+    private fun getRadiusBounds(center: LatLng, radius: Double): CameraUpdate {
+        val heightInPixel = this.requireView().measuredHeight
+        val latLngBounds = userLocationState.calculateBounds(center, radius)
+        val mapPadding = resources.getDimensionPixelOffset(R.dimen.map_padding)
+        return CameraUpdateFactory.newLatLngBounds(
+            latLngBounds,
+            heightInPixel,
+            heightInPixel,
+            mapPadding
+        )
     }
 
     private fun loadMarkers(items: List<SearchResult>) {

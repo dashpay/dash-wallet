@@ -54,6 +54,7 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapt
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import javax.inject.Inject
@@ -341,13 +342,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                             savedSearchScrollPosition = -1
                         }
                     }
-                    ScreenState.Details -> {
+                    ScreenState.Details, ScreenState.DetailsGrouped -> {
                         val layoutManager = binding.searchResults.layoutManager as LinearLayoutManager
                         val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
 
                         if (previousScreenState == ScreenState.SearchResults) {
                             savedSearchScrollPosition = firstVisiblePosition
-                        } else if (previousScreenState == ScreenState.MerchantLocations) {
+                        } else if (state == ScreenState.Details && previousScreenState == ScreenState.MerchantLocations) {
                             savedLocationsScrollPosition = firstVisiblePosition
                         }
 
@@ -467,6 +468,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun transitToAllMerchantLocations(expand: Boolean) {
+        Log.i("EXPLOREDASH", "transit to all merchant locations: ${viewModel.selectedItem}")
         binding.upButton.isVisible = shouldShowUpButton()
         binding.filterPanel.isVisible = false
 

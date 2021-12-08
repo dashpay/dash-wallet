@@ -32,38 +32,6 @@ interface MerchantDao : BaseDao<Merchant> {
     // in UI it should be done using map APIs.
     @Query("""
         SELECT *
-        FROM merchant 
-        WHERE
-            (:merchantId = -1 OR merchantId = :merchantId)
-            AND (:source = '' OR source = :source COLLATE NOCASE)
-            AND type IN (:types)
-            AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND latitude < :northLat
-            AND latitude > :southLat
-            AND longitude < :eastLng
-            AND longitude > :westLng
-        ORDER BY
-            CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
-            CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
-        LIMIT :limit
-    """)
-    suspend fun getByCoordinates(
-        merchantId: Long,
-        source: String,
-        types: List<String>,
-        paymentMethod: String,
-        northLat: Double,
-        eastLng: Double,
-        southLat: Double,
-        westLng: Double,
-        sortByDistance: Boolean,
-        anchorLat: Double,
-        anchorLng: Double,
-        limit: Int
-    ): List<Merchant>
-
-    @Query("""
-        SELECT *
         FROM merchant
         WHERE (:merchantId = -1 OR merchantId = :merchantId)
             AND (:source = '' OR source = :source COLLATE NOCASE)
@@ -334,20 +302,26 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("""
         SELECT * 
         FROM merchant
-        WHERE (:excludeType = '' OR type != :excludeType)
+        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+            AND (:source = '' OR source = :source COLLATE NOCASE)
+            AND (:excludeType = '' OR type != :excludeType)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
+        LIMIT :limit
     """)
     fun observe(
+        merchantId: Long,
+        source: String,
         excludeType: String,
         paymentMethod: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
-        westLng: Double
+        westLng: Double,
+        limit: Int
     ): Flow<List<Merchant>>
 
     @Query("""
@@ -375,14 +349,20 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("""
         SELECT * 
         FROM merchant 
-        WHERE (:territoryFilter = '' OR territory = :territoryFilter)
+        WHERE (:merchantId = -1 OR merchantId = :merchantId)
+            AND (:source = '' OR source = :source COLLATE NOCASE) 
+            AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:excludeType = '' OR type != :excludeType)
+        LIMIT :limit
     """)
     fun observeByTerritory(
+        merchantId: Long,
+        source: String,
         territoryFilter: String,
         excludeType: String,
-        paymentMethod: String
+        paymentMethod: String,
+        limit: Int
     ): Flow<List<Merchant>>
 
     @Query("""

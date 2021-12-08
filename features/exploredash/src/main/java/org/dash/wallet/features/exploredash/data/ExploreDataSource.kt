@@ -74,17 +74,14 @@ interface ExploreDataSource {
         bounds: GeoBounds
     ): Int
 
-    suspend fun getMerchantLocations(
+    suspend fun observeMerchantLocations(
         merchantId: Long,
         source: String,
         territory: String,
         paymentMethod: String,
         bounds: GeoBounds,
-        sortByDistance: Boolean,
-        userLat: Double,
-        userLng: Double,
         limit: Int
-    ): List<Merchant>
+    ): Flow<List<Merchant>>
 
     suspend fun getMerchantTerritories(): List<String>
     suspend fun getAtmTerritories(): List<String>
@@ -106,15 +103,15 @@ open class MerchantAtmDataSource @Inject constructor(
             if (query.isNotBlank()) {
                 merchantDao.searchByTerritory(sanitizeQuery(query), territory, MerchantType.ONLINE, paymentMethod)
             } else {
-                merchantDao.observeByTerritory(territory, MerchantType.ONLINE, paymentMethod)
+                merchantDao.observeByTerritory(-1, "", territory, MerchantType.ONLINE, paymentMethod, -1)
             }
         } else {
             if (query.isNotBlank()) {
-                merchantDao.observeSearchResults(sanitizeQuery(query), MerchantType.ONLINE, paymentMethod,
-                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
+                merchantDao.observeSearchResults(sanitizeQuery(query), MerchantType.ONLINE,
+                    paymentMethod, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
             } else {
-                merchantDao.observe(MerchantType.ONLINE, paymentMethod, bounds.northLat,
-                    bounds.eastLng, bounds.southLat, bounds.westLng)
+                merchantDao.observe(-1, "", MerchantType.ONLINE, paymentMethod,
+                    bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng, -1)
             }
         }
     }
@@ -295,26 +292,20 @@ open class MerchantAtmDataSource @Inject constructor(
         return atmDao.getTerritories()
     }
 
-    override suspend fun getMerchantLocations(
+    override suspend fun observeMerchantLocations(
         merchantId: Long,
         source: String,
         territory: String,
         paymentMethod: String,
         bounds: GeoBounds,
-        sortByDistance: Boolean,
-        userLat: Double,
-        userLng: Double,
         limit: Int
-    ): List<Merchant> {
-        val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
-
+    ): Flow<List<Merchant>> {
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
-            merchantDao.getByCoordinates(merchantId, source, types, paymentMethod,
-                bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
-                sortByDistance, userLat, userLng, limit)
+            merchantDao.observe(merchantId, source, MerchantType.ONLINE, paymentMethod,
+                bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng, limit)
         } else {
-            merchantDao.getByTerritory(merchantId, source, territory, types,
-                paymentMethod, sortByDistance, userLat, userLng, limit)
+            merchantDao.observeByTerritory(merchantId, source, territory,
+                MerchantType.ONLINE, paymentMethod, limit)
         }
     }
 
