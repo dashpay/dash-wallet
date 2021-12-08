@@ -92,11 +92,6 @@ class FancyAlertDialog : DialogFragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        // Set transparent background and no title
-        dialog?.window?.apply {
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            requestFeature(Window.FEATURE_NO_TITLE)
-        }
         return inflater.inflate(R.layout.fancy_alert_dialog, container)
     }
 
