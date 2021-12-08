@@ -45,6 +45,7 @@ interface MerchantDao : BaseDao<Merchant> {
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
             CASE WHEN :sortByDistance = 0 THEN name END COLLATE NOCASE ASC
+        LIMIT :limit
     """)
     suspend fun getByCoordinates(
         merchantId: Long,
@@ -57,7 +58,8 @@ interface MerchantDao : BaseDao<Merchant> {
         westLng: Double,
         sortByDistance: Boolean,
         anchorLat: Double,
-        anchorLng: Double
+        anchorLng: Double,
+        limit: Int
     ): List<Merchant>
 
     @Query("""
@@ -71,6 +73,7 @@ interface MerchantDao : BaseDao<Merchant> {
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
             CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
+        LIMIT :limit
     """)
     suspend fun getByTerritory(
         merchantId: Long,
@@ -80,7 +83,8 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String,
         sortByDistance: Boolean,
         anchorLat: Double,
-        anchorLng: Double
+        anchorLng: Double,
+        limit: Int
     ): List<Merchant>
 
     @Transaction

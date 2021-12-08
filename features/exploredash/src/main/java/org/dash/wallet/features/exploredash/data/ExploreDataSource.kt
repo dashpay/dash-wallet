@@ -82,7 +82,8 @@ interface ExploreDataSource {
         bounds: GeoBounds,
         sortByDistance: Boolean,
         userLat: Double,
-        userLng: Double
+        userLng: Double,
+        limit: Int
     ): List<Merchant>
 
     suspend fun getMerchantTerritories(): List<String>
@@ -302,17 +303,18 @@ open class MerchantAtmDataSource @Inject constructor(
         bounds: GeoBounds,
         sortByDistance: Boolean,
         userLat: Double,
-        userLng: Double
+        userLng: Double,
+        limit: Int
     ): List<Merchant> {
         val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
 
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
             merchantDao.getByCoordinates(merchantId, source, types, paymentMethod,
                 bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng,
-                sortByDistance, userLat, userLng)
+                sortByDistance, userLat, userLng, limit)
         } else {
             merchantDao.getByTerritory(merchantId, source, territory, types,
-                paymentMethod, sortByDistance, userLat, userLng)
+                paymentMethod, sortByDistance, userLat, userLng, limit)
         }
     }
 

@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
@@ -342,6 +343,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
+        Log.i("EXPLOREDASH", "openMerchantDetails: ${merchant.address1}")
         _selectedItem.postValue(merchant)
 
         if (isGrouped) {
@@ -364,6 +366,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openSearchResults() {
+        nearestLocation = null
         _selectedItem.postValue(null)
         _allMerchantLocations.postValue(listOf())
         _screenState.postValue(ScreenState.SearchResults)
@@ -392,21 +395,27 @@ class ExploreViewModel @Inject constructor(
                     userLat != null && userLng != null &&
                     sortByDistance
 
+            val limit = if (_isLocationEnabled.value != true || selectedTerritory.isNotEmpty()) {
+                100
+            } else {
+                -1
+            }
+
             val locations = exploreData.getMerchantLocations(
                 merchantId, source, selectedTerritory, paymentMethodFilter,
                 radiusBounds ?: GeoBounds.noBounds, byDistance,
-                userLat ?: 0.0, userLng ?: 0.0
+                userLat ?: 0.0, userLng ?: 0.0, limit
             )
 
-            _allMerchantLocations.value = locations
+            _allMerchantLocations.postValue(locations)
         }
     }
 
     fun canShowNearestLocation(item: SearchResult? = null): Boolean {
         val nearest = item ?: nearestLocation
         // Cannot show nearest location if there are more than 1 in group and location is disabled
-        return selectedTerritory.isEmpty() &&
-                (isLocationEnabled.value == true || (nearest is Merchant && nearest.physicalAmount <= 1))
+        return (nearest is Merchant && nearest.physicalAmount <= 1) ||
+                (isLocationEnabled.value == true && selectedTerritory.isEmpty())
     }
 
     fun sendDash() {

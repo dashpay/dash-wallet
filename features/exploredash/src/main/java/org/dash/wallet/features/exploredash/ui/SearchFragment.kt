@@ -21,6 +21,7 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
@@ -208,7 +209,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
             binding.noResultsPanel.isVisible = false
             searchHeaderAdapter.title = getSearchTitle()
-            searchHeaderAdapter.subtitle = ""
+            searchHeaderAdapter.subtitle = getSearchSubtitle()
             searchHeaderAdapter.setFilterMode(mode)
             binding.filterPanel.isVisible = shouldShowFiltersPanel()
 
@@ -237,9 +238,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun setupSearchInput(
-        bottomSheet: BottomSheetBehavior<ConstraintLayout>
-    ) {
+    private fun setupSearchInput(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
         searchHeaderAdapter.setOnSearchQueryChanged {
             binding.noResultsPanel.isVisible = false
             viewModel.submitSearchQuery(it)

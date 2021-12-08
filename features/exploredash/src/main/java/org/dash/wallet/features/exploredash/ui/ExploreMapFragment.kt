@@ -63,6 +63,7 @@ class ExploreMapFragment : SupportMapFragment() {
     private val viewModel: ExploreViewModel by activityViewModels()
     private var savedSearchResultsBounds: LatLngBounds? = null
     private var savedMerchantLocationsBounds: LatLngBounds? = null
+    private var prevScreenState: ScreenState = ScreenState.SearchResults
 
     private var googleMap: GoogleMap? = null
     private lateinit var mCurrentUserLocation: LatLng
@@ -95,7 +96,7 @@ class ExploreMapFragment : SupportMapFragment() {
             showMap()
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
-                    if (viewModel.selectedItem.value == null) {
+                    if (viewModel.screenState.value == ScreenState.SearchResults) {
                         val bounds = map.projection.visibleRegion.latLngBounds
                         viewModel.searchBounds = GeoBounds(
                             bounds.northeast.latitude,
@@ -136,57 +137,75 @@ class ExploreMapFragment : SupportMapFragment() {
                 return@observe
             }
 
-            googleMap?.let { map ->
-                selectedMarker?.remove()
-                markersGlideRequestManager.clear(selectedIconRequest)
+            selectedMarker?.remove()
+            markersGlideRequestManager.clear(selectedIconRequest)
 
-                if (state == ScreenState.Details) {
-                    val item = viewModel.selectedItem.value
+            if (state == ScreenState.Details) {
+                showSelectedMarker()
+            } else if (viewModel.isLocationEnabled.value == true) {
+                showMarkerSet(state)
+            }
 
-                    if (item != null && canFocusOnItem(item)) {
-                        val boundsToSave = map.projection.visibleRegion.latLngBounds
+            prevScreenState = state
+        }
+    }
 
-                        if (savedSearchResultsBounds == null) {
-                            savedSearchResultsBounds = boundsToSave
-                        } else if (savedMerchantLocationsBounds == null) {
-                            savedMerchantLocationsBounds = boundsToSave
-                        }
+    private fun showSelectedMarker() {
+        googleMap?.let { map ->
+            val item = viewModel.selectedItem.value
 
-                        if (item is Merchant && item.physicalAmount > 0) {
-                            setResults(viewModel.physicalSearchResults.value, savedSearchResultsBounds)
-                        }
+            if (item != null && canFocusOnItem(item)) {
+                val boundsToSave = map.projection.visibleRegion.latLngBounds
 
-                        if (markerCollection?.markers?.firstOrNull { it.tag == item.id } == null) {
-                            val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
-                            selectedIconRequest = buildMarkerRequest(item, true).submit(markerSize, markerSize)
-                        }
+                if (prevScreenState == ScreenState.SearchResults) {
+                    savedSearchResultsBounds = boundsToSave
+                } else if (prevScreenState == ScreenState.MerchantLocations) {
+                    savedMerchantLocationsBounds = boundsToSave
+                }
 
-                        val itemLatLng = LatLng(item.latitude!!, item.longitude!!)
-                            val zoom =
-                                if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
-                            val position = CameraPosition(itemLatLng, zoom, 0f, 0f)
-                            map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+                if (item is Merchant && item.physicalAmount > 0) {
+                    setResults(viewModel.physicalSearchResults.value, savedSearchResultsBounds)
+                }
 
-                    }
-                } else if (state == ScreenState.MerchantLocations && viewModel.isLocationEnabled.value == true) {
-                    val prevBounds = savedMerchantLocationsBounds
+                if (markerCollection?.markers?.firstOrNull { it.tag == item.id } == null) {
+                    val markerSize = resources.getDimensionPixelSize(R.dimen.explore_marker_size)
+                    selectedIconRequest = buildMarkerRequest(item, true).submit(markerSize, markerSize)
+                }
 
-                    if (prevBounds != null) {
-                        savedMerchantLocationsBounds = null
-                        map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
-                    } else {
-                        val physicalPoints = viewModel.allMerchantLocations.value
+                val itemLatLng = LatLng(item.latitude!!, item.longitude!!)
+                val zoom = if (map.cameraPosition.zoom > DETAILS_ZOOM_LEVEL) map.cameraPosition.zoom else DETAILS_ZOOM_LEVEL
+                val position = CameraPosition(itemLatLng, zoom, 0f, 0f)
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+            }
+        }
+    }
+
+    private fun showMarkerSet(state: ScreenState) {
+        googleMap?.let { map ->
+            if (state == ScreenState.MerchantLocations) {
+                val prevBounds = savedMerchantLocationsBounds
+
+                if (prevBounds != null) {
+                    savedMerchantLocationsBounds = null
+                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
+                } else {
+                    val physicalPoints = viewModel.allMerchantLocations.value
+
+                    if (physicalPoints != null) {
                         setResults(physicalPoints)
                     }
-                } else if (state == ScreenState.SearchResults && viewModel.isLocationEnabled.value == true) {
-                    val prevBounds = savedSearchResultsBounds
+                }
+            } else if (state == ScreenState.SearchResults) {
+                val prevBounds = savedSearchResultsBounds
 
-                    if (prevBounds != null) {
-                        savedSearchResultsBounds = null
-                        savedMerchantLocationsBounds = null
-                        map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
-                    } else {
-                        val physicalPoints = viewModel.physicalSearchResults.value
+                if (prevBounds != null) {
+                    savedSearchResultsBounds = null
+                    savedMerchantLocationsBounds = null
+                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(prevBounds, 0))
+                } else {
+                    val physicalPoints = viewModel.physicalSearchResults.value
+
+                    if (physicalPoints != null) {
                         setResults(physicalPoints)
                     }
                 }
@@ -226,7 +245,8 @@ class ExploreMapFragment : SupportMapFragment() {
         googleMap?.let { map ->
             if (results.isNullOrEmpty()) {
                 allIconsRequests.forEach { markersGlideRequestManager.clear(it) }
-                markerCollection?.clear() ?: Unit
+                markerCollection?.clear()
+                currentMapItems = listOf()
             } else {
                 val bounds = inBounds ?: map.projection.visibleRegion.latLngBounds
                 val sortedMax = results.sortedBy {
@@ -256,10 +276,9 @@ class ExploreMapFragment : SupportMapFragment() {
                 .map { LatLng(it.latitude!!, it.longitude!!) }
 
             if (map.cameraPosition.zoom < ExploreViewModel.MIN_ZOOM_LEVEL ||
-                map.cameraPosition.zoom >= DETAILS_ZOOM_LEVEL - 1 ||
                 markers.all { !mapBounds.contains(it) }
             ) {
-                // Focus on results if camera is too far, too close or nothing on the screen
+                // Focus on results if camera is too far or nothing on the screen
                 focusCamera(markers)
             }
         }
