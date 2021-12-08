@@ -14,6 +14,8 @@ import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
+import java.util.*
+import kotlin.concurrent.schedule
 
 @AndroidEntryPoint
 class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
@@ -32,7 +34,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         binding.disconnectLayout.setOnClickListener {
             viewModel.disconnectCoinbaseAccount()
-            requireActivity().finish()
+            // Use
+            Timer().schedule(1000) {
+                requireActivity().finish()
+            }
         }
 
         binding.walletBalanceDash.setApplyMarkup(false)

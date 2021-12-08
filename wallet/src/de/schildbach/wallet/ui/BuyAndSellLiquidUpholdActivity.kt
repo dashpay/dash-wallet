@@ -25,6 +25,7 @@ import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
@@ -48,6 +49,7 @@ import org.dash.wallet.common.Constants.*
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.ui.CurrencyTextView
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -259,12 +261,33 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     currentExchangeRate = exchangeRate
                     showLiquidBalance(liquidViewModel.lastLiquidBalance)
                     showUpholdBalance(config.lastUpholdBalance)
+                    viewModel.getUserLastAccountBalance()
+                        ?.let { showCoinBaseBalance(it, coinbase_balance, coinbase_fiat_amount) }
                 }
             }
         )
 
         viewModel.coinbaseIsConnected.observe(
             this, {
+                val lastBalance = viewModel.getUserLastAccountBalance()
+                coinbase_status_group.isVisible = it
+                connected.isVisible = it
+                disconnected.isGone = it
+                last_known_balance.isGone = it
+                lastBalance?.let { amount ->
+                    showCoinBaseBalance(amount, coinbase_balance, coinbase_fiat_amount)
+                }
+
+                if (!it) {
+                    coinbase_status_group.isGone = lastBalance.isNullOrEmpty()
+                    disconnected.isGone = lastBalance.isNullOrEmpty()
+                    last_known_balance.isGone = lastBalance.isNullOrEmpty()
+                }
+            }
+        )
+
+        coinbase.setOnClickListener {
+            viewModel.coinbaseIsConnected.value?.let {
                 if (it) {
                     startActivity(Intent(this, CoinbaseActivity::class.java))
                 } else {
@@ -274,10 +297,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     )
                 }
             }
-        )
-
-        coinbase.setOnClickListener {
-            viewModel.isUserConnected()
         }
     }
 
@@ -299,6 +318,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         if (UpholdClient.getInstance().isAuthenticated) {
             viewModel.updateUpholdBalance()
         }
+
+        viewModel.isUserConnected()
     }
 
     override fun onResume() {
@@ -429,6 +450,25 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             uphold_fiat_amount.text = getString(
                 R.string.fiat_balance_with_currency, config.exchangeCurrencyCode,
                 if (amount.isZero) "0.00" else fiatFormat.format(localValue)
+            )
+        }
+    }
+
+    private fun showCoinBaseBalance(balance: String, balanceTextView: CurrencyTextView, fiatTextView: CurrencyTextView) {
+        val monetaryFormat = MonetaryFormat().noCode().minDecimals(8)
+        balanceTextView.setFormat(monetaryFormat)
+        balanceTextView.setApplyMarkup(false)
+        val amount = Coin.parseCoin(balance)
+        balanceTextView.setAmount(amount)
+
+        if (currentExchangeRate != null) {
+            val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
+            val localValue = exchangeRate.coinToFiat(amount)
+            val fiatFormat = Constants.LOCAL_FORMAT
+
+            fiatTextView.text = getString(
+                R.string.coinbase_fiat_balance_with_currency,
+                if (amount.isZero) "0.00" else fiatFormat.format(localValue), config.exchangeCurrencyCode
             )
         }
     }

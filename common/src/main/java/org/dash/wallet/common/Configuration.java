@@ -26,6 +26,7 @@ import android.net.Uri;
 import android.text.format.DateUtils;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.common.base.Strings;
 
@@ -91,7 +92,7 @@ public class Configuration {
 
     public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
-    public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_uphold_balance";
+    public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
 
 
 
@@ -546,6 +547,7 @@ public class Configuration {
         prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, balance).apply();
     }
 
+    @Nullable
     public String getLastCoinbaseBalance() {
         return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
     }

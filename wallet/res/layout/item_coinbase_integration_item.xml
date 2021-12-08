@@ -54,63 +54,67 @@
         style="@style/MontserratRegular.G900.10"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
         android:drawablePadding="5dp"
         android:text="@string/connected"
+        android:visibility="gone"
         app:drawableStartCompat="@drawable/ic_connected"
         app:iconGravity="textStart"
+        app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
         app:layout_constraintStart_toStartOf="@+id/imgCoinbase"
-        app:layout_constraintTop_toBottomOf="@+id/separator" />
+        app:layout_constraintTop_toTopOf="@+id/dash_icon" />
 
     <TextView
         android:id="@+id/disconnected"
         style="@style/MontserratRegular.G900.10"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
         android:drawablePadding="5dp"
         android:text="@string/disconnected"
+        android:visibility="gone"
         app:drawableStartCompat="@drawable/ic_disconnected"
         app:iconGravity="textStart"
+        app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
         app:layout_constraintStart_toStartOf="@+id/imgCoinbase"
-        app:layout_constraintTop_toBottomOf="@+id/separator" />
+        app:layout_constraintTop_toTopOf="@+id/dash_icon" />
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/dash_icon"
         android:layout_width="15dp"
         android:layout_height="15dp"
         android:layout_gravity="center"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginEnd="5dp"
         app:layout_constraintEnd_toStartOf="@+id/coinbase_balance"
         app:layout_constraintTop_toBottomOf="@+id/separator"
-        app:srcCompat="@drawable/ic_dash_d_white_bottom"
-        app:tint="@color/colorPrimary" />
+        app:srcCompat="@drawable/ic_dash_circle_filled" />
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/coinbase_balance"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_gravity="center"
         android:layout_marginStart="5dp"
-        android:layout_marginTop="2dp"
+        android:layout_marginEnd="3dp"
+        android:includeFontPadding="false"
         android:textColor="@color/dash_black"
-        android:textSize="16sp"
+        android:textSize="10sp"
+        app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
         app:layout_constraintEnd_toStartOf="@+id/coinbase_fiat_amount"
-        app:layout_constraintTop_toBottomOf="@+id/separator"
+        app:layout_constraintTop_toTopOf="@+id/dash_icon"
         tools:text="0.00" />
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/coinbase_fiat_amount"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_gravity="center"
         android:layout_marginStart="15dp"
-        android:layout_marginTop="2dp"
         android:includeFontPadding="false"
         android:textColor="@color/dash_gray"
-        android:textSize="12sp"
+        android:textSize="10sp"
+        app:layout_constraintBottom_toBottomOf="@+id/dash_icon"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/separator"
+        app:layout_constraintTop_toTopOf="@+id/dash_icon"
         tools:text="USD 0.00" />
 
     <TextView
@@ -120,16 +124,15 @@
         android:layout_height="wrap_content"
         android:text="@string/last_known_balance"
         android:visibility="gone"
-        app:layout_constraintStart_toStartOf="@+id/dash_icon"
         app:layout_constraintEnd_toEndOf="@id/coinbase_fiat_amount"
+        app:layout_constraintStart_toStartOf="@+id/dash_icon"
         app:layout_constraintTop_toBottomOf="@+id/dash_icon" />
 
-
     <androidx.constraintlayout.widget.Group
-        android:id="@+id/coinbase_group"
+        android:id="@+id/coinbase_status_group"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        app:constraint_referenced_ids="dash_icon,coinbase_fiat_amount,coinbase_balance,disconnected,connected,separator" />
+        app:constraint_referenced_ids="dash_icon,coinbase_fiat_amount,coinbase_balance,separator" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

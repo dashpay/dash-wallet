@@ -43,6 +43,7 @@ class CoinbaseServicesViewModel @Inject constructor(
                     _userAccountError.value = true
                 } else {
                     _user.value = userAccountData
+                    coinBaseRepository.saveLastCoinbaseDashAccountBalance(userAccountData.balance?.amount)
                 }
             }
             is ResponseResource.Loading -> {

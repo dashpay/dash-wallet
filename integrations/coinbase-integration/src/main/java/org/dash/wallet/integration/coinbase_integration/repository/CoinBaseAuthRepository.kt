@@ -24,9 +24,7 @@ class CoinBaseAuthRepository @Inject constructor(
         userPreferences.setLastCoinBaseRefreshToken(refreshToken)
     }
 
-    fun getSavedUserCoinBaseToken(): String? {
-        return userPreferences.lastCoinbaseAccessToken
-    }
-
     fun isUserConnected() = userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+
+    fun getUserLastCoinbaseBalance(): String? = userPreferences.lastCoinbaseBalance
 }

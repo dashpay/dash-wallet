@@ -16,8 +16,14 @@ class CoinBaseRepository @Inject constructor(
     suspend fun getExchangeRates() = safeApiCall { api.getExchangeRates() }
 
     suspend fun disconnectCoinbaseAccount() {
-        safeApiCall { authApi.revokeToken() }
         userPreferences.setLastCoinBaseAccessToken(null)
         userPreferences.setLastCoinBaseRefreshToken(null)
+        safeApiCall { authApi.revokeToken() }
+    }
+
+    fun saveLastCoinbaseDashAccountBalance(amount: String?) {
+        amount?.let {
+            userPreferences.setLastCoinBaseBalance(it)
+        }
     }
 }

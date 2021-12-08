@@ -50,6 +50,10 @@ class BuyAndSellViewModel @Inject constructor(
     val coinbaseIsConnected: LiveData<Boolean>
         get() = _coinbaseIsConnected
 
+    init {
+        isUserConnected()
+    }
+
     val upholdBalanceLiveData = Transformations.switchMap(triggerUploadBalanceUpdate) {
         liveData {
             emit(Resource.loading())
@@ -68,9 +72,11 @@ class BuyAndSellViewModel @Inject constructor(
         }
     }
 
-    fun isUserConnected() {
+     fun isUserConnected() {
         _coinbaseIsConnected.value = coinBaseRepository.isUserConnected()
     }
+
+    fun getUserLastAccountBalance() = coinBaseRepository.getUserLastCoinbaseBalance()
 
     fun loginToCoinbase(code: String) {
         viewModelScope.launch {

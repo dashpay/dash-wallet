@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.MenuItem
 import android.webkit.*
 import androidx.appcompat.widget.Toolbar
 import de.schildbach.wallet_test.R
@@ -89,6 +90,16 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
             url?.let { view?.loadUrl(it) }
             return true
         }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     companion object {
