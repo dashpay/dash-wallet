@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package org.dash.wallet.common.ui
 
 
 import android.os.Bundle
@@ -26,8 +26,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet_test.R
-import org.dash.wallet.common.ui.LockScreenViewModel
+import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 @AndroidEntryPoint
@@ -40,7 +39,7 @@ open class BaseBottomSheetDialogFragment : BottomSheetDialogFragment() {
             // apply wrap_content height
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            val coordinatorLayout = bottomSheet!!.parent as CoordinatorLayout
+            val coordinatorLayout = bottomSheet?.parent as CoordinatorLayout
             val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
             bottomSheetBehavior.peekHeight = bottomSheet.height
             coordinatorLayout.parent.requestLayout()
