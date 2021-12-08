@@ -25,11 +25,10 @@ import androidx.annotation.DrawableRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.dash.wallet.common.R
 
 
-open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
+open class OffsetDialogFragment<T: ViewGroup> : BaseBottomSheetDialogFragment() {
     @DrawableRes protected open val background: Int = R.drawable.white_background_rounded
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
