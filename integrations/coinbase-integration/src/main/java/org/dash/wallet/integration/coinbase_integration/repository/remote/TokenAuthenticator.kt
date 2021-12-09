@@ -1,6 +1,5 @@
 package org.dash.wallet.integration.coinbase_integration.repository.remote
 
-import android.content.Context
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
@@ -14,35 +13,12 @@ import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRef
 import javax.inject.Inject
 
 class TokenAuthenticator @Inject constructor(
-    context: Context,
     private val tokenApi: CoinBaseTokenRefreshApi,
     private val userPreferences: Configuration
 ) : Authenticator {
 
-//    private val appContext = context.applicationContext
-//    // private val userPreferences = UserPreferences(appContext)
-
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
-//
-//            if (userPreferences.accessToken.first().isNullOrEmpty()) {
-//                when (val tokenResponse = getUpdatedToken()) {
-//                    is ResponseResource.Success -> {
-//                        userPreferences.saveAccessTokens(
-//                            tokenResponse.value.access_token,
-//                            tokenResponse.value.refresh_token
-//                        )
-//                        response.request().newBuilder()
-//                            .header("Authorization", "Bearer ${tokenResponse.value.access_token}")
-//                            .build()
-//                    }
-//                    else -> null
-//                }
-//            } else {
-//                response.request().newBuilder()
-//                    .header("Authorization", "Bearer " + userPreferences.accessToken.first())
-//                    .build()
-//            }
             when (val tokenResponse = getUpdatedToken()) {
                 is ResponseResource.Success -> {
                     tokenResponse.value.body()?.let { tokenResponse ->

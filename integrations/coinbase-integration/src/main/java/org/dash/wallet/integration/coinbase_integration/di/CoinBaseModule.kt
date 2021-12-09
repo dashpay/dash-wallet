@@ -41,12 +41,4 @@ object CoinBaseModule {
     ): CoinBaseServicesApi {
         return remoteDataSource.buildApi(CoinBaseServicesApi::class.java)
     }
-
-//    @Provides
-//    fun provideCoinBaseAuthRepository(
-//        authApi: CoinBaseAuthApi,
-//        userPreferences: Configuration
-//    ): CoinBaseAuthRepository {
-//        return CoinBaseAuthRepository(authApi, userPreferences)
-//    }
 }
