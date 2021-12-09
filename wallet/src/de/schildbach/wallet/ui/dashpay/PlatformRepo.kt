@@ -886,26 +886,32 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * @return true if an update was made, false if not
      */
     suspend fun updateDashPayProfile(userId: String): Boolean {
-        var profileDocument = profiles.get(userId)
-        if (profileDocument == null) {
-            val identity = platform.identities.get(userId)
-            if (identity != null) {
-                profileDocument = profiles.createProfileDocument("", "", "", null, null, identity)
-            } else {
-                // there is no existing identity, so do nothing
-                return false
+        try {
+            var profileDocument = profiles.get(userId)
+            if (profileDocument == null) {
+                val identity = platform.identities.get(userId)
+                if (identity != null) {
+                    profileDocument =
+                        profiles.createProfileDocument("", "", "", null, null, identity)
+                } else {
+                    // there is no existing identity, so do nothing
+                    return false
+                }
             }
-        }
-        val nameDocuments = platform.names.getByOwnerId(userId)
+            val nameDocuments = platform.names.getByOwnerId(userId)
 
-        if (nameDocuments.isNotEmpty()) {
-            val username = nameDocuments[0].data["normalizedLabel"] as String
+            if (nameDocuments.isNotEmpty()) {
+                val username = nameDocuments[0].data["normalizedLabel"] as String
 
-            val profile = DashPayProfile.fromDocument(profileDocument, username)
-            dashPayProfileDao.insert(profile!!)
-            return true
+                val profile = DashPayProfile.fromDocument(profileDocument, username)
+                dashPayProfileDao.insert(profile!!)
+                return true
+            }
+            return false
+        } catch (e: StatusRuntimeException) {
+            formatExceptionMessage("update profile failure", e)
+            return false
         }
-        return false
     }
 
     suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
