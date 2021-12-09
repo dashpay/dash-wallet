@@ -21,7 +21,6 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
@@ -54,7 +53,6 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapt
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import javax.inject.Inject
@@ -468,7 +466,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun transitToAllMerchantLocations(expand: Boolean) {
-        Log.i("EXPLOREDASH", "transit to all merchant locations: ${viewModel.selectedItem}")
         binding.upButton.isVisible = shouldShowUpButton()
         binding.filterPanel.isVisible = false
 
