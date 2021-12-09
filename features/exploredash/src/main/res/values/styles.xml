@@ -20,18 +20,6 @@
         <item name="android:textColor">@color/gray_900</item>
     </style>
 
-    <style name="DashButton.Blue.Small" parent="DashButton.Blue">
-        <item name="android:background">@drawable/small_blue_button_background</item>
-        <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:layout_height">40dp</item>
-    </style>
-
-    <style name="DashButton.Green.Small" parent="DashButton.Blue">
-        <item name="android:background">@drawable/small_green_button_background</item>
-        <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:layout_height">40dp</item>
-    </style>
-
     <style name="ExploreTestBottomContentBackground" parent="WhiteBackground">
         <item name="cornerRadius">8dp</item>
     </style>
@@ -50,6 +38,12 @@
         <item name="backgroundColor">@color/blue_50</item>
         <item name="strokeColor">@color/blue_50</item>
         <item name="cornerRadius">25dp</item>
+    </style>
+
+    <style name="MerchantLocationBackground">
+        <item name="backgroundColor">@color/steel_gray_40</item>
+        <item name="strokeColor">@color/steel_gray_40</item>
+        <item name="cornerRadius">10dp</item>
     </style>
 
     <style name="UpButtonBackground">

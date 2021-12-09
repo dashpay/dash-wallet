@@ -17,6 +17,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -82,13 +83,16 @@
 
     <ImageView
         android:id="@+id/dash_gift_card_orange_icon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="50dp"
+        android:layout_height="36dp"
         app:layout_constraintTop_toBottomOf="@id/pay_with_dash_label"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="38dp"
-        app:srcCompat="@drawable/ic_explore_info_screen_gift_card_orange"
+        android:src="@drawable/ic_gift_card"
+        android:scaleType="centerCrop"
+        app:tint="@color/gift_card_orange"
+        tools:tint="@color/gift_card_orange"
         />
 
     <TextView

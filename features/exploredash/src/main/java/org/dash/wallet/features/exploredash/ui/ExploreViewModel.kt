@@ -25,8 +25,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.features.exploredash.data.AtmDao
-import org.dash.wallet.features.exploredash.data.MerchantDao
+import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocation
@@ -48,6 +47,13 @@ enum class FilterMode {
     All, Online, Physical, Buy, Sell, BuySell
 }
 
+enum class ScreenState {
+    SearchResults,
+    MerchantLocations,
+    DetailsGrouped,
+    Details
+}
+
 data class FilterOptions(
     val query: String,
     val territory: String,
@@ -59,8 +65,7 @@ data class FilterOptions(
 @FlowPreview
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    private val merchantDao: MerchantDao,
-    private val atmDao: AtmDao,
+    private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt
 ) : ViewModel() {
     companion object {
@@ -82,6 +87,7 @@ class ExploreViewModel @Inject constructor(
 
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
+    private var allMerchantLocationsJob: Job? = null
 
     val isMetric = !Locale.getDefault().isO3Country.equals("usa", true) &&
             !Locale.getDefault().isO3Country.equals("mmr", true)
@@ -111,14 +117,18 @@ class ExploreViewModel @Inject constructor(
     val radius: Double
         get() = if (isMetric) selectedRadiusOption * METERS_IN_KILOMETER else selectedRadiusOption * METERS_IN_MILE
 
+    // Bounded only by selected radius
     private var radiusBounds: GeoBounds? = null
 
+    // Bounded by min(screen edges, selected radius)
     private val _searchBounds = MutableStateFlow<GeoBounds?>(null)
     var searchBounds: GeoBounds?
         get() = _searchBounds.value
         set(value) {
             value?.let {
-                _searchBounds.value = ceilByRadius(value, radius)
+                if (_isLocationEnabled.value != true || value.zoomLevel > MIN_ZOOM_LEVEL) {
+                    _searchBounds.value = ceilByRadius(value, radius)
+                }
             }
         }
 
@@ -142,6 +152,12 @@ class ExploreViewModel @Inject constructor(
     var filterMode: LiveData<FilterMode> = MediatorLiveData<FilterMode>().apply {
         addSource(_filterMode.asLiveData(), this::setValue)
     }
+
+    private var nearestLocation: SearchResult? = null
+
+    private val _allMerchantLocations = MutableLiveData<List<Merchant>>()
+    val allMerchantLocations: LiveData<List<Merchant>>
+        get() = _allMerchantLocations
 
     private val _physicalSearchResults = MutableLiveData<List<SearchResult>>()
     val physicalSearchResults: LiveData<List<SearchResult>>
@@ -171,6 +187,9 @@ class ExploreViewModel @Inject constructor(
     val appliedFilters: LiveData<FilterOptions>
         get() = _appliedFilters
 
+    private val _screenState = MutableLiveData(ScreenState.SearchResults)
+    val screenState: LiveData<ScreenState>
+        get() = _screenState
 
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> = searchQuery
@@ -178,17 +197,12 @@ class ExploreViewModel @Inject constructor(
         .flatMapLatest { query ->
             _paymentMethodFilter.flatMapLatest { payment ->
                 _sortByDistance.flatMapLatest { sortByDistance ->
-                    _selectedRadiusOption.flatMapLatest { _ ->
+                    _selectedRadiusOption.flatMapLatest {
                         _selectedTerritory.flatMapLatest { territory ->
                             _filterMode.flatMapLatest { mode ->
                                 _searchBounds
                                     .filterNotNull()
-                                    .filter {
-                                        mode == FilterMode.Online ||
-                                                isLocationEnabled.value != true ||
-                                                territory.isNotBlank() ||
-                                                it.zoomLevel > MIN_ZOOM_LEVEL
-                                    }
+                                    .filter { screenState.value == ScreenState.SearchResults }
                                     .map { bounds ->
                                         if (isLocationEnabled.value == true &&
                                            (exploreTopic == ExploreTopic.ATMs ||
@@ -207,19 +221,10 @@ class ExploreViewModel @Inject constructor(
                                         }
                                     }
                                     .flatMapLatest { bounds ->
-                                        Pager(
-                                            PagingConfig(
-                                                pageSize = PAGE_SIZE,
-                                                enablePlaceholders = false,
-                                                maxSize = MAX_ITEMS_IN_MEMORY
-                                            )
-                                        ) {
-                                            _appliedFilters.postValue(
-                                                FilterOptions(query, territory, payment, selectedRadiusOption)
-                                            )
-
-                                            getPagingSource(query, territory, payment, mode, bounds, sortByDistance)
-                                        }.flow
+                                        _appliedFilters.postValue(
+                                            FilterOptions(query, territory, payment, selectedRadiusOption)
+                                        )
+                                        getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
                                             .cachedIn(viewModelScope)
                                     }
                             }
@@ -238,10 +243,7 @@ class ExploreViewModel @Inject constructor(
                     _selectedTerritory.flatMapLatest { territory ->
                         _searchBounds
                             .filterNotNull()
-                            .filter {
-                                territory.isNotBlank() ||
-                                it.zoomLevel > MIN_ZOOM_LEVEL
-                            }
+                            .filter { screenState.value == ScreenState.SearchResults }
                             .flatMapLatest { bounds ->
                                 _filterMode
                                     .filterNot { it == FilterMode.Online }
@@ -257,8 +259,7 @@ class ExploreViewModel @Inject constructor(
 
     fun init(exploreTopic: ExploreTopic) {
         if (this.exploreTopic != exploreTopic) {
-            _pagingSearchResults.value = PagingData.from(listOf())
-            _physicalSearchResults.value = listOf()
+            clearSearchResults()
         }
 
         this.exploreTopic = exploreTopic
@@ -276,7 +277,14 @@ class ExploreViewModel @Inject constructor(
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
                     .distinctUntilChanged()
-                    .onEach(_physicalSearchResults::postValue)
+                    .onEach { list ->
+                        list.forEach {
+                            if (it is Merchant) {
+                                it.physicalAmount = 1
+                            }
+                        }
+                        _physicalSearchResults.postValue(list)
+                    }
                     .launchIn(viewModelWorkerScope)
             }
             // Right now we don't show the map at all while location is disabled
@@ -320,7 +328,9 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun setFilterMode(mode: FilterMode) {
-        _filterMode.value = mode
+        if (_filterMode.value != mode) {
+            _filterMode.value = mode
+        }
     }
 
     fun submitSearchQuery(query: String) {
@@ -329,26 +339,45 @@ class ExploreViewModel @Inject constructor(
 
     suspend fun getTerritoriesWithPOIs(): List<String> {
         return if (exploreTopic == ExploreTopic.Merchants) {
-            merchantDao.getTerritories().filter { it.isNotEmpty() }
+            exploreData.getMerchantTerritories().filter { it.isNotEmpty() }
         } else {
-            atmDao.getTerritories().filter { it.isNotEmpty() }
+            exploreData.getAtmTerritories().filter { it.isNotEmpty() }
         }
     }
 
-    fun openMerchantDetails(merchant: Merchant) {
+    fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
         _selectedItem.postValue(merchant)
+
+        if (isGrouped) {
+            if (canShowNearestLocation(merchant)) {
+                // Opening details screen
+                nearestLocation = merchant
+                _screenState.postValue(ScreenState.DetailsGrouped)
+            } else {
+                // Opening all merchant locations screen
+                openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+            }
+        } else {
+            _screenState.postValue(ScreenState.Details)
+        }
     }
 
     fun openAtmDetails(atm: Atm) {
         _selectedItem.postValue(atm)
+        _screenState.postValue(ScreenState.Details)
     }
 
     fun openSearchResults() {
+        nearestLocation = null
         _selectedItem.postValue(null)
+        _screenState.postValue(ScreenState.SearchResults)
+        _allMerchantLocations.postValue(listOf())
+        this.allMerchantLocationsJob?.cancel()
     }
 
     fun onMapMarkerSelected(id: Int) {
-        val item = _physicalSearchResults.value?.firstOrNull { it.id == id }
+        val item = _allMerchantLocations.value?.firstOrNull { it.id == id } ?:
+                   _physicalSearchResults.value?.firstOrNull { it.id == id }
         item?.let {
             if (item is Merchant) {
                 openMerchantDetails(item)
@@ -358,12 +387,69 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
+    fun openAllMerchantLocations(merchantId: Long, source: String) {
+        _screenState.postValue(ScreenState.MerchantLocations)
+        this.allMerchantLocationsJob?.cancel()
+        this.allMerchantLocationsJob = _searchBounds
+            .filterNotNull()
+            .flatMapLatest { bounds ->
+                val radiusBounds = if (_isLocationEnabled.value == true) {
+                    locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
+                } else {
+                    GeoBounds.noBounds
+                }
+                val limitResults = _isLocationEnabled.value != true || selectedTerritory.isNotEmpty()
+                val limit = if (limitResults) 100 else -1
+                exploreData.observeMerchantLocations(
+                    merchantId, source, selectedTerritory, "", radiusBounds, limit
+                )
+            }
+            .onEach { locations ->
+                val location = currentUserLocation.value
+                val sorted = if (isLocationEnabled.value == true && location != null) {
+                    locations.sortedBy {
+                        val userLat = location.latitude
+                        val userLng = location.longitude
+                        locationProvider.distanceBetween(
+                            userLat, userLng,
+                            it.latitude ?: 0.0, it.longitude ?: 0.0
+                        )
+                    }
+                } else {
+                    locations.sortedBy { it.getDisplayAddress(", ") }
+                }
+                _allMerchantLocations.postValue(sorted)
+            }
+            .launchIn(viewModelWorkerScope)
+    }
+
+    fun canShowNearestLocation(item: SearchResult? = null): Boolean {
+        val nearest = item ?: nearestLocation
+        // Cannot show nearest location if there are more than 1 in group and location is disabled
+        return (nearest is Merchant && nearest.physicalAmount <= 1) ||
+                (isLocationEnabled.value == true && selectedTerritory.isEmpty())
+    }
+
     fun sendDash() {
         navigationCallback.postValue(NavigationRequest.SendDash)
     }
 
     fun receiveDash() {
         navigationCallback.postValue(NavigationRequest.ReceiveDash)
+    }
+
+    fun backFromMerchantLocation() {
+        if (screenState.value == ScreenState.Details) {
+            _screenState.postValue(ScreenState.MerchantLocations)
+        }
+    }
+
+    fun backFromAllMerchantLocations() {
+        val openedLocation = nearestLocation
+
+        if (screenState.value == ScreenState.MerchantLocations && openedLocation is Merchant) {
+            openMerchantDetails(openedLocation, true)
+        }
     }
 
     fun monitorUserLocation() {
@@ -383,12 +469,9 @@ class ExploreViewModel @Inject constructor(
         _selectedRadiusOption.value = DEFAULT_RADIUS_OPTION
     }
 
-    private fun resetFilterMode() {
-        _filterMode.value = if (exploreTopic == ExploreTopic.Merchants) {
-            FilterMode.Online
-        } else {
-            FilterMode.All
-        }
+    private fun clearSearchResults() {
+        _pagingSearchResults.value = PagingData.from(listOf())
+        _physicalSearchResults.value = listOf()
     }
 
     private fun getBoundedFlow(
@@ -399,39 +482,65 @@ class ExploreViewModel @Inject constructor(
         bounds: GeoBounds
     ): Flow<List<SearchResult>> {
         return if (exploreTopic == ExploreTopic.Merchants) {
-            merchantDao.observePhysical(query, territory, payment, bounds)
+            exploreData.observePhysicalMerchants(query, territory, payment, bounds)
         } else {
             val types = getAtmTypes(filterMode)
-            atmDao.observePhysical(query, territory, types, bounds)
+            exploreData.observePhysicalAtms(query, territory, types, bounds)
         }
     }
 
-    private fun getPagingSource(
+    private fun getPagingFlow(
         query: String,
         territory: String,
         payment: String,
         filterMode: FilterMode,
         bounds: GeoBounds,
         sortByDistance: Boolean
-    ): PagingSource<Int, SearchResult> {
+    ): Flow<PagingData<SearchResult>> {
         val userLat = currentUserLocation.value?.latitude
         val userLng = currentUserLocation.value?.longitude
         val byDistance = _filterMode.value != FilterMode.Online &&
-                         _isLocationEnabled.value == true &&
-                         userLat != null && userLng != null &&
-                         sortByDistance
+                _isLocationEnabled.value == true &&
+                userLat != null && userLng != null &&
+                sortByDistance
         val onlineFirst = _isLocationEnabled.value != true
+
+        val pagerConfig = PagingConfig(
+            pageSize = PAGE_SIZE,
+            enablePlaceholders = false,
+            maxSize = MAX_ITEMS_IN_MEMORY
+        )
 
         @Suppress("UNCHECKED_CAST")
         return if (exploreTopic == ExploreTopic.Merchants) {
-            val type = getMerchantType(filterMode)
-            merchantDao.observeAllPaging(query, territory, type, payment, bounds,
-                    byDistance, userLat ?: 0.0, userLng ?: 0.0, onlineFirst)
+            Pager(pagerConfig) {
+                val type = getMerchantType(filterMode)
+                exploreData.observeMerchantsPaging(
+                    query, territory, type, payment, bounds,
+                    byDistance, userLat ?: 0.0, userLng ?: 0.0, onlineFirst
+                )
+            }.flow.map { data ->
+                data.filter { it.merchant != null }
+                    .map {
+                        it.merchant!!.apply {
+                            this.physicalAmount =
+                                if (filterMode != FilterMode.Online) {
+                                    it.physicalAmount ?: 1
+                                } else {
+                                    0
+                                }
+                        }
+                    }
+            }
         } else {
-            val types = getAtmTypes(filterMode)
-            atmDao.observeAllPaging(query, territory, types, bounds,
-                    byDistance, userLat ?: 0.0, userLng ?: 0.0)
-        } as PagingSource<Int, SearchResult>
+            Pager(pagerConfig) {
+                val types = getAtmTypes(filterMode)
+                exploreData.observeAtmsPaging(
+                    query, territory, types, bounds,
+                    byDistance, userLat ?: 0.0, userLng ?: 0.0
+                )
+            }.flow
+        } as Flow<PagingData<SearchResult>>
     }
 
     private fun countPagedResults() {
@@ -447,19 +556,33 @@ class ExploreViewModel @Inject constructor(
             }
             val result = if (exploreTopic == ExploreTopic.Merchants) {
                 val type = getMerchantType(filterMode.value ?: FilterMode.Online)
-                merchantDao.getPagingResultsCount(
+                exploreData.getMerchantsResultCount(
                         searchQuery.value, selectedTerritory, type,
                         paymentMethodFilter, radiusBounds ?: GeoBounds.noBounds
                 )
             } else {
                 val types = getAtmTypes(filterMode.value ?: FilterMode.All)
-                atmDao.getPagingResultsCount(
+                exploreData.getAtmsResultsCount(
                         searchQuery.value, types,
                         selectedTerritory, radiusBounds ?: GeoBounds.noBounds
                 )
             }
             _pagingSearchResultsCount.postValue(result)
         }
+    }
+
+    private fun resetFilterMode() {
+        val defaultMode = if (exploreTopic == ExploreTopic.Merchants) {
+            FilterMode.Online
+        } else {
+            FilterMode.All
+        }
+
+        if (defaultMode != _filterMode.value) {
+            clearSearchResults()
+        }
+
+        _filterMode.value = defaultMode
     }
 
     private fun getMerchantType(filterMode: FilterMode): String {

@@ -19,6 +19,8 @@ package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.Entity
 import androidx.annotation.Keep
+import androidx.room.ColumnInfo
+import androidx.room.Ignore
 import androidx.room.Index
 import com.google.firebase.database.PropertyName
 
@@ -41,6 +43,7 @@ object MerchantType {
         Index("longitude"),
     ]
 )
+
 data class Merchant(
     var deeplink: String? = "",
 
@@ -57,5 +60,8 @@ data class Merchant(
     var paymentMethod: String? = "",
 
     @get:PropertyName("merchant_id") @set:PropertyName("merchant_id")
-    var merchantId: Long? = null
+    var merchantId: Long? = null,
+
+    @Ignore
+    var physicalAmount: Int = 0
 ) : SearchResult()

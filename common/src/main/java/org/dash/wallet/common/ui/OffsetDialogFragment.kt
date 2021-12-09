@@ -42,6 +42,8 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
                 bottomSheet.setBackgroundResource(background)
                 
                 val rootLayout = view.findViewById<T>(R.id.root_layout)
+                    ?: throw NoSuchElementException("Offset dialog root must have 'root_layout' id")
+
                 rootLayout.layoutParams = FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT, bottomSheet.height)
 

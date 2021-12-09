@@ -59,7 +59,7 @@ interface AtmDao : BaseDao<Atm> {
             AND longitude < :eastLng
             AND longitude > :westLng
     """)
-    fun getByCoordinatesResultCount(
+    suspend fun getByCoordinatesResultCount(
         types: List<String>,
         northLat: Double,
         eastLng: Double,
@@ -104,7 +104,7 @@ interface AtmDao : BaseDao<Atm> {
             AND longitude < :eastLng
             AND longitude > :westLng
     """)
-    fun searchByCoordinatesResultCount(
+    suspend fun searchByCoordinatesResultCount(
         query: String,
         types: List<String>,
         northLat: Double,
@@ -136,7 +136,7 @@ interface AtmDao : BaseDao<Atm> {
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
     """)
-    fun getByTerritoryResultCount(
+    suspend fun getByTerritoryResultCount(
         territoryFilter: String,
         types: List<String>
     ): Int
@@ -169,7 +169,7 @@ interface AtmDao : BaseDao<Atm> {
             AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
             AND type IN (:types)
     """)
-    fun searchByTerritoryResultCount(
+    suspend fun searchByTerritoryResultCount(
         query: String,
         territoryFilter: String,
         types: List<String>
@@ -245,78 +245,4 @@ interface AtmDao : BaseDao<Atm> {
 
     @Query("DELETE FROM atm WHERE source LIKE :source")
     override suspend fun deleteAll(source: String): Int
-
-    fun observePhysical(
-        query: String,
-        territory: String,
-        types: List<String>,
-        bounds: GeoBounds
-    ): Flow<List<Atm>> {
-        return if (territory.isNotBlank()) {
-            if (query.isNotBlank()) {
-                searchByTerritory(sanitizeQuery(query), territory, types)
-            } else {
-                observeByTerritory(territory, types)
-            }
-        } else {
-            if (query.isNotBlank()) {
-                observeSearchResults(sanitizeQuery(query), types, bounds.northLat,
-                    bounds.eastLng, bounds.southLat, bounds.westLng)
-            } else {
-                observe(types, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
-            }
-        }
-    }
-
-    fun observeAllPaging(
-        query: String,
-        territory: String,
-        types: List<String>,
-        bounds: GeoBounds,
-        sortByDistance: Boolean,
-        userLat: Double,
-        userLng: Double
-    ): PagingSource<Int, Atm> {
-        return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
-            // Search by coordinates (nearby) if territory isn't specified
-            if (query.isNotBlank()) {
-                pagingSearchByCoordinates(sanitizeQuery(query), types, bounds.northLat, bounds.eastLng,
-                        bounds.southLat, bounds.westLng, sortByDistance, userLat, userLng)
-            } else {
-                pagingGetByCoordinates(types, bounds.northLat, bounds.eastLng, bounds.southLat,
-                        bounds.westLng, sortByDistance, userLat, userLng)
-            }
-        } else {
-            // If location services are disabled or user picked a territory
-            // we search everything and filter by territory
-            if (query.isNotBlank()) {
-                pagingSearchByTerritory(sanitizeQuery(query), territory,
-                        types, sortByDistance, userLat, userLng)
-            } else {
-                pagingGetByTerritory(territory, types, sortByDistance, userLat, userLng)
-            }
-        }
-    }
-
-    suspend fun getPagingResultsCount(
-        query: String,
-        types: List<String>,
-        territory: String,
-        bounds: GeoBounds
-    ): Int {
-        return if (territory.isBlank() && bounds != GeoBounds.noBounds) {
-            if (query.isNotBlank()) {
-                searchByCoordinatesResultCount(sanitizeQuery(query), types,
-                        bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
-            } else {
-                getByCoordinatesResultCount(types, bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng)
-            }
-        } else {
-            if (query.isNotBlank()) {
-                searchByTerritoryResultCount(sanitizeQuery(query), territory, types)
-            } else {
-                getByTerritoryResultCount(territory, types)
-            }
-        }
-    }
 }

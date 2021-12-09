@@ -15,15 +15,23 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
+    <dimen name="details_horizontal_margin">15dp</dimen>
     <dimen name="details_physical_margin_top">20dp</dimen>
     <dimen name="details_online_margin_top">40dp</dimen>
     <dimen name="logo_corners_radius">8dp</dimen>
-    <dimen name="merchant_half_expanded_ratio">0.45</dimen>
-    <dimen name="merchant_details_height_ratio">0.48</dimen>
+    <dimen name="merchant_half_expanded_ratio">0.46</dimen>
+    <dimen name="merchant_details_height_ratio">0.49</dimen>
     <dimen name="atm_half_expanded_ratio">0.51</dimen>
     <dimen name="atm_details_height_ratio">0.51</dimen>
+    <dimen name="atm_manufacturer_vertical_margin">20dp</dimen>
+    <dimen name="atm_content_vertical_margin">80dp</dimen>
     <dimen name="explore_marker_size">35dp</dimen>
     <dimen name="map_padding">5dp</dimen>
     <dimen name="dialog_horizontal_inset">15dp</dimen>
     <dimen name="search_content_peek_height">24dp</dimen>
+    <dimen name="default_expanded_offset">42dp</dimen>
+    <dimen name="all_locations_expanded_offset">50dp</dimen>
+    <dimen name="search_results_margin_top">12dp</dimen>
+    <dimen name="all_locations_margin_top">6dp</dimen>
+    <dimen name="markers_offset">50dp</dimen>
 </resources>

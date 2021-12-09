@@ -15,17 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.data
+package org.dash.wallet.features.exploredash.data.model
 
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import org.dash.wallet.features.exploredash.data.model.SearchResult
+import androidx.room.ColumnInfo
+import androidx.room.Embedded
 
-interface BaseDao<T: SearchResult> {
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun save(list: List<T>)
-
-    // add @Query(...) in sub classes to avoid build failures
-    suspend fun deleteAll(source: String): Int
+class MerchantInfo {
+    @Embedded
+    var merchant: Merchant? = null
+    @ColumnInfo(name = "physical_amount") var physicalAmount: Int? = null
 }
