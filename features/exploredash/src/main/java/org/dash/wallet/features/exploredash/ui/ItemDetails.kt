@@ -35,6 +35,8 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
+import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import java.util.*
 
 class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, attrs) {
     private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
@@ -87,6 +89,15 @@ class ItemDetails(context: Context, attrs: AttributeSet): LinearLayout(context, 
         binding.apply {
             itemName.text = item.name
             itemAddress.text = item.getDisplayAddress("\n")
+
+            val isMetric = Locale.getDefault().isMetric
+            val distanceStr = item.getDistanceStr(isMetric)
+            itemDistance.text = when {
+                distanceStr.isEmpty() -> ""
+                isMetric -> resources.getString(R.string.distance_kilometers, distanceStr)
+                else -> resources.getString(R.string.distance_miles, distanceStr)
+            }
+            itemDistance.isVisible = !isOnline && distanceStr.isNotEmpty()
 
             linkBtn.isVisible = !item.website.isNullOrEmpty()
             linkBtn.setOnClickListener {

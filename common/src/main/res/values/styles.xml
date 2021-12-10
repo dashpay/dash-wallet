@@ -739,6 +739,14 @@
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
+    <style name="Caption.Medium.SteelGray">
+        <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Caption.Medium.SteelGray400">
+        <item name="android:textColor">@color/steel_gray_400</item>
+    </style>
+
     <style name="Caption.SemiBold">
         <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
