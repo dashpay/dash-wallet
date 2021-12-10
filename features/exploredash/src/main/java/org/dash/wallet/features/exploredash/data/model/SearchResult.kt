@@ -73,7 +73,7 @@ open class SearchResult(
 
         return addressBuilder.toString()
     }
-
+    
     fun getDistanceStr(isMetric: Boolean): String {
         return if (distance.isNaN()) {
             ""
@@ -91,7 +91,7 @@ open class SearchResult(
             }
         }
     }
-
+    
     override fun equals(other: Any?): Boolean {
         val second = other as SearchResult
         return id == second.id &&

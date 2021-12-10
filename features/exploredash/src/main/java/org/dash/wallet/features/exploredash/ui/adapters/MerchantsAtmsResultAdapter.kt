@@ -37,16 +37,6 @@ import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import java.util.*
 
-class SearchResultDiffCallback<T: SearchResult> : DiffUtil.ItemCallback<T>() {
-    override fun areItemsTheSame(oldItem: T, newItem: T): Boolean {
-        return oldItem.id == newItem.id
-    }
-
-    override fun areContentsTheSame(oldItem: T, newItem: T): Boolean {
-        return oldItem == newItem
-    }
-}
-
 open class ExploreViewHolder(root: View): RecyclerView.ViewHolder(root) {
     fun getDistanceText(resources: Resources, item: SearchResult?): String {
         val isMetric = Locale.getDefault().isMetric
@@ -57,6 +47,16 @@ open class ExploreViewHolder(root: View): RecyclerView.ViewHolder(root) {
             isMetric -> resources.getString(R.string.distance_kilometers, distanceStr)
             else -> resources.getString(R.string.distance_miles, distanceStr)
         }
+    }
+}
+
+class SearchResultDiffCallback<T: SearchResult> : DiffUtil.ItemCallback<T>() {
+    override fun areItemsTheSame(oldItem: T, newItem: T): Boolean {
+        return oldItem.id == newItem.id
+    }
+
+    override fun areContentsTheSame(oldItem: T, newItem: T): Boolean {
+        return oldItem == newItem
     }
 }
 
