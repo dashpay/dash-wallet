@@ -58,7 +58,19 @@
             android:layout_height="match_parent"
             android:layout_marginTop="?attr/actionBarSize"
             app:layout_behavior="org.dash.wallet.features.exploredash.ui.bottomsheetbehavior.ExploreMapBottomSheetBehavior" />
-
+        <ImageButton
+            android:id="@+id/recenter_map_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/round_corners_bgd_white"
+            android:src="@drawable/ic_compass"
+            android:layout_gravity="top|right"
+            android:layout_marginTop="64dp"
+            android:layout_marginRight="8dp"
+            android:padding="8dp"
+            tools:visibility="visible"
+            android:visibility="visible"
+            />
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/content_panel"
             android:layout_width="match_parent"

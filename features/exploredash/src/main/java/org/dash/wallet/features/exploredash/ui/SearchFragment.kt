@@ -166,6 +166,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.allMerchantLocations.observe(viewLifecycleOwner) { merchantLocations ->
             merchantLocationsAdapter.submitList(merchantLocations)
         }
+        binding.recenterMapBtn.setOnClickListener { viewModel.recenterMapCallback.call() }
     }
 
     override fun onResume() {

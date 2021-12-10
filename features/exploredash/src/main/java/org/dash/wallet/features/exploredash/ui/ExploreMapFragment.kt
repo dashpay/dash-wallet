@@ -146,6 +146,10 @@ class ExploreMapFragment : SupportMapFragment() {
 
             prevScreenState = state
         }
+
+        viewModel.recenterMapCallback.observe(viewLifecycleOwner) {
+            setMapDefaultViewLevel(viewModel.radius)
+        }
     }
 
     private fun showSelectedMarker(state: ScreenState) {

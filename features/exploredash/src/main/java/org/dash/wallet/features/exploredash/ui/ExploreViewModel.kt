@@ -84,7 +84,7 @@ class ExploreViewModel @Inject constructor(
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
-
+    val recenterMapCallback = SingleLiveEvent<Unit>()
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
     private var allMerchantLocationsJob: Job? = null
@@ -347,7 +347,6 @@ class ExploreViewModel @Inject constructor(
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
         _selectedItem.postValue(merchant)
-
         if (isGrouped) {
             if (canShowNearestLocation(merchant)) {
                 // Opening details screen
