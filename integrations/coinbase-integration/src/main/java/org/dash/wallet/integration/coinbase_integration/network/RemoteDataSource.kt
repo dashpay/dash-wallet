@@ -25,7 +25,7 @@ class RemoteDataSource @Inject constructor(
     fun <Api> buildApi(
         api: Class<Api>,
     ): Api {
-        val authenticator = TokenAuthenticator(context, buildTokenApi(),userPreferences)
+        val authenticator = TokenAuthenticator(buildTokenApi(), userPreferences)
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(getRetrofitClient(authenticator))
