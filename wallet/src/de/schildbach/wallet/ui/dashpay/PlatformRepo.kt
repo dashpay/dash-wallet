@@ -795,9 +795,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             blockchainIdentity
         }
         return blockchainIdentity.apply {
-            identity = if (blockchainIdentityData.identity != null)
-                blockchainIdentityData.identity
-            else platform.identities.get(uniqueIdString)
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus!!
             val usernameStatus = HashMap<String, Any>()
