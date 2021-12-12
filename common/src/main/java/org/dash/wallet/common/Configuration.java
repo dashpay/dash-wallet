@@ -102,7 +102,6 @@ public class Configuration {
     public static final String PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY = "send_payment_exchange_currency";
     public static final String PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED = "fiat_currency_changed";
     public static final String PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED = "current_fiat_currency_changed";
-    public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration(final SharedPreferences prefs, final Resources res) {
