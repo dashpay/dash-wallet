@@ -25,6 +25,8 @@ dependencies {
     }
     //Liquid Integration
     implementation project(path: ':liquid-integration')
+    //coinbase integration
+    implementation project(path: ":integrations:coinbase-integration")
 
     implementation 'androidx.annotation:annotation:1.2.0'
     implementation 'androidx.core:core-ktx:1.5.0'
@@ -63,8 +65,6 @@ dependencies {
     implementation 'com.tbuonomo:dotsindicator:4.2'
 
     implementation project(path: ':common')
-    //coinbase integration
-    implementation project(path: ":integrations:coinbase-integration")
 
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"

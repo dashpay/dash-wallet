@@ -1,10 +1,28 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
 <resources>
-    <string name="Coinbase">Coinbase</string>
+    <string name="coinbase">Coinbase</string>
     <string name="last_known_balance" >Last known balance</string>
     <string name="coinbase_dash_wallet_error_title">We didn\'t find a Dash Wallet on your Coinbase account.</string>
     <string name="coinbase_dash_wallet_error_message"> Please create a Dash Wallet on Coinbase to proceed.</string>
     <string name="CreateـDashـAccount">Create Dash Account</string>
-    <string name="Close">Close</string>
+    <string name="close">Close</string>
     <string name="connected">Connected</string>
     <string name="disconnect_coinbase_account">Disconnect Coinbase Account</string>
+    <string name="receive_directly_into_dash_wallet">Receive directly into Dash Wallet.</string>
+    <string name="buy_dash">Buy Dash</string>
 </resources>

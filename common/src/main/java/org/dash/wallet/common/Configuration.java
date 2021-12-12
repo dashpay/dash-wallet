@@ -517,14 +517,6 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, isChanged).apply();
     }
 
-    public boolean hasInfoScreenBeenShownAlready() {
-        return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
-    }
-
-    public void setPrefsKeyHasInfoScreenBeenShownAlready(boolean isShown){
-        prefs.edit().putBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, isShown).apply();
-    }
-
     public void setLastCoinBaseAccessToken(String token) {
         prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
     }

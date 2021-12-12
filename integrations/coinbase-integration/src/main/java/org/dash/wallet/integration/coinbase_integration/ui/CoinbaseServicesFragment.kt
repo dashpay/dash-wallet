@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 Dash Core Group
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
@@ -14,6 +29,7 @@ import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
+import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -27,7 +43,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.titleBar.connected.setText(R.string.connected)
-        binding.titleBar.toolbarTitle.setText(R.string.Coinbase)
+        binding.titleBar.toolbarTitle.setText(R.string.coinbase)
         binding.titleBar.toolbar.setNavigationOnClickListener {
             requireActivity().finish()
         }
@@ -78,7 +94,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                     R.string.coinbase_dash_wallet_error_message,
                     R.drawable.ic_info_red,
                     R.string.CreateـDashـAccount,
-                    R.string.Close
+                    R.string.close
                 )
             }
         )

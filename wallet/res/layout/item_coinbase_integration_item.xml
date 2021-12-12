@@ -25,7 +25,7 @@
         android:layout_marginStart="15dp"
         android:layout_marginEnd="10dp"
         android:gravity="center"
-        android:text="@string/CoinBase"
+        android:text="@string/coinbase"
         app:layout_constraintBottom_toBottomOf="@+id/imgCoinbase"
         app:layout_constraintStart_toEndOf="@+id/imgCoinbase"
         app:layout_constraintTop_toTopOf="@+id/imgCoinbase" />
@@ -119,7 +119,7 @@
 
     <TextView
         android:id="@+id/last_known_balance"
-        style="@style/MontserratRegular.red.10"
+        style="@style/Overline.red.10"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/last_known_balance"

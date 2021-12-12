@@ -35,7 +35,4 @@
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
-
-    <string name="CoinBase" translatable="false">CoinBase</string>
-    <string name="coinbase_fiat_balance_with_currency" translatable="false">=%s %s</string>
 </resources>

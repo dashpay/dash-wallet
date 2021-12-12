@@ -16,7 +16,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Caption.Gray400.13"
+        style="@style/Caption.Gray400"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
@@ -95,7 +95,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="15dp"
             android:layout_marginTop="11dp"
-            android:text="Buy Dash"
+            android:text="@string/buy_dash"
             app:layout_constraintStart_toEndOf="@+id/buy_dash_icon"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -106,7 +106,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:lineSpacingExtra="2sp"
-            android:text="Receive directly into Dash Wallet."
+            android:text="@string/receive_directly_into_dash_wallet"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
             app:layout_constraintTop_toBottomOf="@+id/buy_dash_title" />

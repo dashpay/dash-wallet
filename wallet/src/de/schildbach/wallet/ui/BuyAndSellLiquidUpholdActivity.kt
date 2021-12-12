@@ -467,7 +467,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             val fiatFormat = Constants.LOCAL_FORMAT
 
             fiatTextView.text = getString(
-                R.string.coinbase_fiat_balance_with_currency,
+                R.string.fiat_balance_with_currency,
                 if (amount.isZero) "0.00" else fiatFormat.format(localValue), config.exchangeCurrencyCode
             )
         }

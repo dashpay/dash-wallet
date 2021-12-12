@@ -14,23 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-package de.schildbach.wallet.ui.coinbase
-import android.os.Bundle
-import androidx.activity.viewModels
-import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.BaseMenuActivity
-import de.schildbach.wallet_test.R
-import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseActivityViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-@AndroidEntryPoint
-class CoinbaseActivity : BaseMenuActivity() {
-    private val viewModel: CoinbaseActivityViewModel by viewModels()
-    override fun getLayoutId(): Int {
-        return R.layout.activity_coinbase
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-}
+@HiltViewModel
+class CoinbaseActivityViewModel @Inject constructor(
+    application: Application
+) : AndroidViewModel(application)

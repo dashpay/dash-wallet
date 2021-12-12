@@ -178,11 +178,11 @@
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="MontserratRegular.red">
+    <style name="Overline.red">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
-    <style name="MontserratRegular.red.10">
+    <style name="Overline.red.10">
         <item name="android:textSize">10sp</item>
     </style>
 
@@ -791,15 +791,8 @@
         <item name="android:textColor">@color/gray_400</item>
     </style>
 
-    <style name="Caption.Gray400.13">
-        <item name="android:textSize">13sp</item>
-    </style>
-
     <style name="Caption.Gray700">
         <item name="android:textColor">@color/gray_700</item>
-    </style>
-    <style name="Caption.Gray700.12">
-        <item name="android:textSize">12sp</item>
     </style>
 
     <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">
