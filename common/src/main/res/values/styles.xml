@@ -178,16 +178,36 @@
         <item name="android:textSize">14sp</item>
     </style>
 
+    <style name="Overline.red">
+        <item name="android:textColor">@color/red_300</item>
+    </style>
+
+    <style name="Overline.red.10">
+        <item name="android:textSize">10sp</item>
+    </style>
+
     <style name="MontserratRegular.G900">
         <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="MontserratRegular.G900.10">
+        <item name="android:textSize">10sp</item>
     </style>
 
     <style name="MontserratRegular.G900.13">
         <item name="android:textSize">13sp</item>
     </style>
 
+    <style name="MontserratRegular.G900.14">
+        <item name="android:textSize">14sp</item>
+    </style>
+
     <style name="MontserratRegular.G900.15">
         <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.16">
+        <item name="android:textSize">16sp</item>
     </style>
 
     <style name="MontserratMedium">
@@ -546,6 +566,10 @@
         <item name="android:background">@drawable/white_button_bordered_background</item>
     </style>
 
+    <style name="DashButton.White.Borderedless" parent="DashButton.Blue">
+        <item name="android:textColor">@drawable/white_button_bordered_text</item>
+        <item name="android:background">@null</item>
+    </style>
     <style name="DashButton.Transparent" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/transparent_button_text</item>
         <item name="android:background">@drawable/transparent_button_background</item>
@@ -767,6 +791,10 @@
         <item name="android:textColor">@color/gray_400</item>
     </style>
 
+    <style name="Caption.Gray700">
+        <item name="android:textColor">@color/gray_700</item>
+    </style>
+
     <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
@@ -881,5 +909,10 @@
         <item name="android:layout_marginEnd">15dp</item>
         <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
         <item name="android:src">@drawable/ic_popup_close</item>
+    </style>
+
+    <style name="CoinBase.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:background">@color/white</item>
+        <item name="android:textColor">@color/gray_900</item>
     </style>
 </resources>

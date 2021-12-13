@@ -109,12 +109,12 @@ class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewMode
                     sendRequest = createSendRequest(wallet, false, paymentIntent, signInputs = false, forceEnsureMinRequiredFee = true)
                     wallet.completeTx(sendRequest)
                 }
-                callbackHandler.post {
+                callbackHandler?.post {
                     baseSendRequest = sendRequest
                     sendRequestLiveData.value = Resource.success(sendRequest)
                 }
             } catch (x: Exception) {
-                callbackHandler.post {
+                callbackHandler?.post {
                     baseSendRequest = null
                     sendRequestLiveData.value = Resource.error(x)
                 }

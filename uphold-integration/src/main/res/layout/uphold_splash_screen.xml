@@ -43,7 +43,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="12dp"
                 android:layout_marginRight="12dp"
-                android:src="@drawable/ic_buy_dash" />
+                android:src="@drawable/ic_buy_dash_green" />
 
             <TextView
                 style="@style/MontserratMedium.DB.14"
