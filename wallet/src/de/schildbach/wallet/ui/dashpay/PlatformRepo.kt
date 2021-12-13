@@ -782,12 +782,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         val blockchainIdentity = if (creditFundingTransaction != null) {
+            // the blockchain is synced past the point when the credit funding tx was found
             BlockchainIdentity(platform, creditFundingTransaction, wallet, blockchainIdentityData.identity)
         } else {
+            // the blockchain is not synced
             val blockchainIdentity = BlockchainIdentity(platform, 0, wallet)
             if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.DONE) {
                 blockchainIdentity.apply {
                     uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
+                    identity = blockchainIdentity.identity
                 }
             } else {
                 return blockchainIdentity
