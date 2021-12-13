@@ -25,4 +25,5 @@
     <string name="disconnect_coinbase_account">Disconnect Coinbase Account</string>
     <string name="receive_directly_into_dash_wallet">Receive directly into Dash Wallet.</string>
     <string name="buy_dash">Buy Dash</string>
+    <string name="balance_on_coinbase">Balance on Coinbase</string>
 </resources>
