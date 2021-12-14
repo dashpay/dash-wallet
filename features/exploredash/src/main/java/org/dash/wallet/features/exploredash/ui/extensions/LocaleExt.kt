@@ -19,8 +19,8 @@ package org.dash.wallet.features.exploredash.ui.extensions
 
 import java.util.*
 
+private val imperialCountries
+    get() = listOf("USA", "MMR", "GBR", "LBR")
+
 val Locale.isMetric: Boolean
-    get() {
-        return !isO3Country.equals("usa", true) &&
-               !isO3Country.equals("mmr", true)
-    }
+    get() = isO3Country !in imperialCountries
