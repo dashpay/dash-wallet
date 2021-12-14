@@ -787,10 +787,10 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         } else {
             // the blockchain is not synced
             val blockchainIdentity = BlockchainIdentity(platform, 0, wallet)
-            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.DONE) {
+            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
                 blockchainIdentity.apply {
                     uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
-                    identity = blockchainIdentity.identity
+                    identity = blockchainIdentityData.identity
                 }
             } else {
                 return blockchainIdentity
