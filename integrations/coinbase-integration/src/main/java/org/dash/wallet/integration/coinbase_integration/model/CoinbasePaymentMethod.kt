@@ -15,16 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui.radio_group
+package org.dash.wallet.integration.coinbase_integration.model
 
-import androidx.annotation.DrawableRes
+import com.google.gson.annotations.SerializedName
 
-data class IconifiedViewItem(
-    val title: String,
-    val subtitle: String,
-    @DrawableRes
-    val icon: Int? = null,
-    val isIconEncircled: Boolean = false,
-    @DrawableRes
-    val subtitleDrawable: Int? = null
+data class CoinbasePaymentMethod(
+    val id: String?,
+    val type: String?,
+    val name: String?,
+    val currency: String?,
+    @SerializedName("allow_buy")
+    val allowBuy: Boolean?,
+    @SerializedName("allow_sell")
+    val allowSell: Boolean?
 )

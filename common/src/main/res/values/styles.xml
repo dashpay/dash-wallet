@@ -694,6 +694,18 @@
         <item name="cardElevation">5dp</item>
     </style>
 
+    <style name="EncircledIconTheme">
+        <item name="backgroundColor">@color/steel_gray_40</item>
+        <item name="strokeColor">@color/steel_gray_40</item>
+        <item name="cornerRadius">15dp</item>
+    </style>
+
+    <style name="EncircledIconSelectedTheme">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@color/dash_blue</item>
+        <item name="cornerRadius">15dp</item>
+    </style>
+
     <!-- Typography -->
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
@@ -732,6 +744,7 @@
         <item name="android:textColor">@color/gray_900</item>
         <item name="android:textColorHint">@color/gray_300</item>
         <item name="android:lineSpacingExtra">5sp</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Body2.White">
@@ -768,6 +781,7 @@
     <style name="Caption" parent="TextAppearance.MaterialComponents.Caption">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
+        <item name="android:letterSpacing">0.0</item>
         <item name="android:lineSpacingExtra">3sp</item>
     </style>
 
@@ -777,6 +791,10 @@
 
     <style name="Caption.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Caption.SteelGray400">
+        <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
     <style name="Caption.SemiBold.SteelGray">
@@ -906,7 +924,7 @@
         <item name="android:layout_height">40dp</item>
         <item name="android:layout_gravity">end</item>
         <item name="android:layout_marginTop">12dp</item>
-        <item name="android:layout_marginEnd">15dp</item>
+        <item name="android:layout_marginEnd">10dp</item>
         <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
         <item name="android:src">@drawable/ic_popup_close</item>
     </style>

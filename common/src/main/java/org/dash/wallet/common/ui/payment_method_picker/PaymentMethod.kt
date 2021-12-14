@@ -15,16 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui.radio_group
+package org.dash.wallet.common.ui.payment_method_picker
 
 import androidx.annotation.DrawableRes
 
-data class IconifiedViewItem(
-    val title: String,
-    val subtitle: String,
+data class PaymentMethod(
+    val name: String,
+    val account: String?,
+    val accountType: String?,
     @DrawableRes
-    val icon: Int? = null,
-    val isIconEncircled: Boolean = false,
+    val paymentMethodIcon: Int?,
     @DrawableRes
-    val subtitleDrawable: Int? = null
+    val accountIcon: Int?,
 )

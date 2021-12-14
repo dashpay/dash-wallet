@@ -24,7 +24,9 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
+import org.dash.wallet.common.ui.getRoundedBackground
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
@@ -70,7 +72,7 @@ class RadioGroupAdapter(
         }
 
         override fun areContentsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
-            return oldItem.name == newItem.name &&
+            return oldItem.title == newItem.title &&
                     oldItem.icon == newItem.icon
         }
     }
@@ -79,15 +81,44 @@ class RadioGroupAdapter(
 class RadioButtonViewHolder(val binding: RadiobuttonRowBinding) : RecyclerView.ViewHolder(binding.root) {
     fun bind(option: IconifiedViewItem, isSelected: Boolean) {
         val resources = binding.root.resources
-        binding.name.text = option.name
-        binding.icon.isVisible = option.icon != null
+
+        binding.title.text = option.title
+        binding.title.setTextColor(resources.getColorStateList(
+            if (option.isIconEncircled) R.color.gray_900 else R.color.radiobutton_text_color,
+            null
+        ))
+
+        binding.subtitle.isVisible = option.subtitle.isNotEmpty()
+        binding.subtitle.text = option.subtitle
+
+        binding.iconWrapper.isVisible = option.icon != null
         option.icon?.let {
             binding.icon.setImageDrawable(
                 ResourcesCompat.getDrawable(
                     resources, option.icon, null
                 )
             )
+            val tint = if (option.isIconEncircled) R.color.radiobutton_icon_color else R.color.radiobutton_text_color
+            binding.icon.imageTintList = resources.getColorStateList(tint, null)
+
+            binding.iconWrapper.background = when {
+                !option.isIconEncircled -> null
+                isSelected -> resources.getRoundedBackground(R.style.EncircledIconSelectedTheme)
+                else -> resources.getRoundedBackground(R.style.EncircledIconTheme)
+            }
         }
+
+        option.subtitleDrawable?.let { res ->
+            val drawable = ResourcesCompat.getDrawable(resources, res, null)
+            drawable?.let { img ->
+                val height = resources.getDimensionPixelSize(R.dimen.payment_method_image_height)
+                val ratio = height.toFloat() / img.minimumHeight
+                val width = (img.minimumWidth * ratio).toInt()
+                img.setBounds(0, 0, width, height)
+                binding.subtitle.setCompoundDrawables(img, null, null, null)
+            }
+        }
+
         binding.checkmark.isVisible = isSelected
     }
 }

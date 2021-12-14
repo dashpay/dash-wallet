@@ -31,6 +31,8 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
+import org.dash.wallet.integration.coinbase_integration.model.CoinbasePaymentMethod
+import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -62,6 +64,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.walletBalanceDash.setAmount(Coin.ZERO)
         binding.walletBalanceLocal.setFormat(MonetaryFormat().noCode().minDecimals(2))
         binding.walletBalanceLocal.setAmount(Coin.ZERO)
+
+        setupPaymentMethodPayment()
 
         viewModel.user.observe(
             viewLifecycleOwner,
@@ -123,5 +127,49 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     ) {
         val dialog = CoinBaseErrorDialog.newInstance(title, message, image, positiveButtonText, negativeButtonText)
         dialog.showNow(parentFragmentManager, "error")
+    }
+
+    private fun setupPaymentMethodPayment() {
+        val coinbasePaymentMethods = listOf(
+            CoinbasePaymentMethod(
+                id = "127b4d76-a1a0-5de7-8185-3657d7b526e",
+                type = "secure3d_card",
+                name = "Debit card ****1234",
+                currency = "USD",
+                allowBuy = true,
+                allowSell = false
+            ),
+            CoinbasePaymentMethod(
+                id = "83562370-3e5c-51db-87da-752af5ab9559",
+                type = "ach_bank_account",
+                name = "Chase Bank *****1111",
+                currency = "USD",
+                allowBuy = true,
+                allowSell = true
+            )
+        )
+        val paymentMethods = coinbasePaymentMethods.map {
+            val nameAccountPair = splitNameAndAccount(it.name)
+            PaymentMethod(
+                nameAccountPair.first,
+                nameAccountPair.second,
+                "", // set "Checking" to get "****1234 • Checking" in subtitle
+                paymentMethodIcon = when (it.type) {
+                    "secure3d_card" -> R.drawable.ic_card
+                    "ach_bank_account" -> R.drawable.ic_bank
+                    else -> null
+                },
+                // It's unlikely that we can distinguish visa/mastercard from coinbase API
+                accountIcon = if (it.type == "secure3d_card") R.drawable.ic_visa else null
+            )
+        }
+        binding.paymentMethodPicker.paymentMethods = paymentMethods
+    }
+
+    private fun splitNameAndAccount(nameAccount: String?): Pair<String, String> {
+        return nameAccount?.let {
+            val split = "(?=\\s[a-z]?\\*+)".toRegex().split(nameAccount)
+            return Pair(split.first(), split.getOrNull(1) ?: "")
+        } ?: Pair("", "")
     }
 }

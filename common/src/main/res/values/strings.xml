@@ -35,4 +35,6 @@
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
+    <string name="pay_with">Pay with</string>
+    <string name="choose_payment_method">Choose Payment Method</string>
 </resources>

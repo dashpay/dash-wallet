@@ -34,4 +34,8 @@ interface CoinBaseServicesApi {
     suspend fun getExchangeRates(
         @Query("currency")currency: String = "DASH"
     ): Response<CoinBaseUserAccountInfo>
+
+    @GET("v2/payment-methods")
+    suspend fun getPaymentMethods(
+    ): Response<String>
 }
