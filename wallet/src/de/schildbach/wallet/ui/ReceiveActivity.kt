@@ -7,11 +7,12 @@ import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.receive.ReceiveDetailsDialog
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
-
+@AndroidEntryPoint
 class ReceiveActivity : LockScreenActivity() {
 
     companion object {
@@ -53,8 +54,8 @@ class ReceiveActivity : LockScreenActivity() {
         enterAmountSharedViewModel.buttonClickEvent.observe(this, Observer {
             val dashAmount = enterAmountSharedViewModel.dashAmount
             val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(dashAmount)
-            val dialog = ReceiveDetailsDialog.createDialog(dashAmount, fiatAmount)
-            dialog.show(supportFragmentManager, "ReceiveDetailsDialog")
+            dialogFragment = ReceiveDetailsDialog.createDialog(dashAmount, fiatAmount)
+            dialogFragment?.show(supportFragmentManager, "ReceiveDetailsDialog")
         })
     }
 

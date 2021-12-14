@@ -208,11 +208,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                        // TODO: start progress bar
+                        //TODO: start progress bar
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            // TODO: finish progress bar
+                            //TODO: finish progress bar
                             showDashLiquidBalance(it.data!!)
                         }
                     }
@@ -592,7 +592,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
      */
 
     private fun showCurrenciesDialog() {
-        CurrencyDialog(
+        bottomSheetDialog = CurrencyDialog(
             this,
             liquidCurrencyArrayList,
             upholdCurrencyArrayList,
@@ -610,6 +610,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 }
             }
         )
+            })
+        bottomSheetDialog?.show()
     }
 
     /**

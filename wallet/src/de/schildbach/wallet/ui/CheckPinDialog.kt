@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.AlertDialog
 import android.app.Dialog
 import android.content.*
 import android.graphics.Color
@@ -24,6 +23,7 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -43,7 +43,8 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
-import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.ui.LockScreenViewModel
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
 
 open class CheckPinDialog : DialogFragment() {
@@ -220,6 +221,7 @@ open class CheckPinDialog : DialogFragment() {
     protected fun initLockScreenViewModel(activity: FragmentActivity) {
         lockScreenViewModel = ViewModelProvider(activity)[LockScreenViewModel::class.java]
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner) {
+            Log.e(this::class.java.simpleName, "Dialog dismissed")
             sharedModel.onCancelCallback.call()
             dismiss()
         }
@@ -332,10 +334,10 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected open fun showLockedAlert(context: Context) {
-        val dialogBuilder = AlertDialog.Builder(context)
-        dialogBuilder.setTitle(R.string.wallet_lock_wallet_disabled)
-        dialogBuilder.setMessage(pinRetryController.getWalletTemporaryLockedMessage(context))
-        dialogBuilder.setPositiveButton(android.R.string.ok, null)
-        dialogBuilder.show()
+        BaseAlertDialogBuilder(requireContext()).apply {
+            title = getString(R.string.wallet_lock_wallet_disabled)
+            message = pinRetryController.getWalletTemporaryLockedMessage(context)
+            positiveText = getString(android.R.string.ok)
+        }.buildAlertDialog().show()
     }
 }

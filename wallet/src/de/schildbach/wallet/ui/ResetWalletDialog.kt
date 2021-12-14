@@ -18,32 +18,33 @@ package de.schildbach.wallet.ui
 
 import android.app.Dialog
 import android.os.Bundle
-import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
-import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.ui.BaseDialogFragment
 
-class ResetWalletDialog : DialogFragment() {
+class ResetWalletDialog : BaseDialogFragment() {
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialogBuilder = AlertDialog.Builder(requireContext(), R.style.My_Theme_Dialog)
-        dialogBuilder.setTitle(R.string.wallet_lock_reset_wallet_title)
-        dialogBuilder.setMessage(R.string.wallet_lock_reset_wallet_message)
-        //Inverting dialog answers to prevent accidental wallet reset
-        dialogBuilder.setNegativeButton(R.string.wallet_lock_reset_wallet_title) { _, _ ->
-            analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
-            (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
-            WalletApplication.getInstance().triggerWipe(context)
-        }
-        dialogBuilder.setPositiveButton(android.R.string.no, null)
-        dialogBuilder.setCancelable(false)
-        val dialog = dialogBuilder.create()
-        dialog.setCanceledOnTouchOutside(false)
-        return dialog
+        alertDialog = BaseAlertDialogBuilder(requireContext())
+            .apply {
+                title = getString(R.string.wallet_lock_reset_wallet_title)
+                message = getString(R.string.wallet_lock_reset_wallet_message)
+                negativeText = getString(R.string.wallet_lock_reset_wallet_title)
+                negativeAction = {
+                    analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
+                    (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
+                    WalletApplication.getInstance().triggerWipe(context)
+                }
+                positiveText = getString(android.R.string.no)
+                cancelable = false
+                isCancelableOnTouchOutside = false
+            }.buildAlertDialog()
+        return super.onCreateDialog(savedInstanceState)
     }
 
     companion object {
