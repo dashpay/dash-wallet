@@ -85,6 +85,9 @@ dependencies {
     implementation 'com.google.maps.android:maps-ktx:3.2.0'
     implementation 'com.google.maps.android:android-maps-utils:2.2.6'
 
+    // Logs
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+
     // Tests
     testImplementation 'junit:junit:4.13.2'
     testImplementation "org.mockito.kotlin:mockito-kotlin:4.0.0"

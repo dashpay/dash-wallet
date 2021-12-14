@@ -11,6 +11,7 @@ buildscript {
         navigationVersion = '2.3.5'
         recyclerViewVersion = "1.2.1"
         glideVersion = '4.12.0'
+        slf4jVersion = '1.7.32'
     }
 
     repositories {
