@@ -43,6 +43,8 @@
     <string name="explore_in_radius">%1$s in %2$s</string>
     <string name="explore_no_merchants">No merchants</string>
     <string name="explore_no_atms">No ATMs</string>
+    <string name="distance_miles">%s miles</string>
+    <string name="distance_kilometers">%s kilometers</string>
 
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d merchant</item>

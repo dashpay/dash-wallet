@@ -30,6 +30,8 @@ import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
+import org.dash.wallet.features.exploredash.ui.extensions.Const
+import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import java.util.*
 import javax.inject.Inject
 import kotlin.math.max
@@ -72,8 +74,6 @@ class ExploreViewModel @Inject constructor(
         const val QUERY_DEBOUNCE_VALUE = 300L
         const val PAGE_SIZE = 100
         const val MAX_ITEMS_IN_MEMORY = 300
-        const val METERS_IN_MILE = 1609.344
-        const val METERS_IN_KILOMETER = 1000.0
         const val MIN_ZOOM_LEVEL = 8f
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
@@ -89,8 +89,7 @@ class ExploreViewModel @Inject constructor(
     private var pagingFilterJob: Job? = null
     private var allMerchantLocationsJob: Job? = null
 
-    val isMetric = !Locale.getDefault().isO3Country.equals("usa", true) &&
-            !Locale.getDefault().isO3Country.equals("mmr", true)
+    val isMetric = Locale.getDefault().isMetric
 
     private val searchQuery = MutableStateFlow("")
     var exploreTopic = ExploreTopic.Merchants
@@ -115,7 +114,7 @@ class ExploreViewModel @Inject constructor(
 
     // In meters
     val radius: Double
-        get() = if (isMetric) selectedRadiusOption * METERS_IN_KILOMETER else selectedRadiusOption * METERS_IN_MILE
+        get() = if (isMetric) selectedRadiusOption * Const.METERS_IN_KILOMETER else selectedRadiusOption * Const.METERS_IN_MILE
 
     // Bounded only by selected radius
     private var radiusBounds: GeoBounds? = null
@@ -282,6 +281,10 @@ class ExploreViewModel @Inject constructor(
                             if (it is Merchant) {
                                 it.physicalAmount = 1
                             }
+
+                            val userLat = _currentUserLocation.value?.latitude
+                            val userLng = _currentUserLocation.value?.longitude
+                            it.distance = calculateDistance(it, userLat, userLng)
                         }
                         _physicalSearchResults.postValue(list)
                     }
@@ -408,12 +411,8 @@ class ExploreViewModel @Inject constructor(
                 val location = currentUserLocation.value
                 val sorted = if (isLocationEnabled.value == true && location != null) {
                     locations.sortedBy {
-                        val userLat = location.latitude
-                        val userLng = location.longitude
-                        locationProvider.distanceBetween(
-                            userLat, userLng,
-                            it.latitude ?: 0.0, it.longitude ?: 0.0
-                        )
+                        it.distance = calculateDistance(it, location.latitude, location.longitude)
+                        it.distance
                     }
                 } else {
                     locations.sortedBy { it.getDisplayAddress(", ") }
@@ -529,6 +528,7 @@ class ExploreViewModel @Inject constructor(
                                 } else {
                                     0
                                 }
+                            this.distance = calculateDistance(this, userLat, userLng)
                         }
                     }
             }
@@ -539,7 +539,13 @@ class ExploreViewModel @Inject constructor(
                     query, territory, types, bounds,
                     byDistance, userLat ?: 0.0, userLng ?: 0.0
                 )
-            }.flow
+            }.flow.map { data ->
+                data.map {
+                    it.apply {
+                        distance = calculateDistance(it, userLat, userLng)
+                    }
+                }
+            }
         } as Flow<PagingData<SearchResult>>
     }
 
@@ -623,6 +629,14 @@ class ExploreViewModel @Inject constructor(
         address?.let {
             val name = "${address.country}, ${address.city}"
             _searchLocationName.postValue(name)
+        }
+    }
+
+    private fun calculateDistance(item: SearchResult, userLat: Double?, userLng: Double?): Double {
+        return if (_isLocationEnabled.value == true && userLat != null && userLng != null) {
+            locationProvider.distanceBetween(userLat, userLng, item.latitude ?: 0.0, item.longitude ?: 0.0)
+        } else {
+            Double.NaN
         }
     }
 

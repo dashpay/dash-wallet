@@ -18,8 +18,12 @@
 package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.ColumnInfo
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import com.google.firebase.database.PropertyName
+import org.dash.wallet.features.exploredash.ui.extensions.Const
+import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import java.util.*
 
 open class SearchResult(
     @PrimaryKey(autoGenerate = true)
@@ -46,7 +50,10 @@ open class SearchResult(
     var googleMaps: String? = "",
     @get:PropertyName("cover_image") @set:PropertyName("cover_image")
     var coverImage: String? = "",
-    open var type: String? = ""
+    open var type: String? = "",
+
+    @Ignore
+    var distance: Double = Double.NaN
 ) {
     fun getDisplayAddress(separator: String = "\n"): String {
         val addressBuilder = StringBuilder()
@@ -66,7 +73,25 @@ open class SearchResult(
 
         return addressBuilder.toString()
     }
+    
+    fun getDistanceStr(isMetric: Boolean): String {
+        return if (distance.isNaN()) {
+            ""
+        } else {
+            val distance = if (isMetric) {
+                distance / Const.METERS_IN_KILOMETER
+            } else {
+                distance / Const.METERS_IN_MILE
+            }
 
+            if (distance < 10) {
+                String.format("%.1f", distance)
+            } else {
+                String.format("%.0f", distance)
+            }
+        }
+    }
+    
     override fun equals(other: Any?): Boolean {
         val second = other as SearchResult
         return id == second.id &&

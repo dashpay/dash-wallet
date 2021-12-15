@@ -156,6 +156,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
+            android:layout_marginBottom="2dp"
             android:minLines="1"
             android:maxLines="4"
             android:ellipsize="end"
@@ -166,37 +167,48 @@
             app:layout_constrainedHeight="true"
             tools:text="208 Regent Street\nLondon, United Kingdom\nW1B 5AH"/>
 
-
         <LinearLayout
             android:id="@+id/actions"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:layout_marginBottom="8dp"
             app:layout_constraintTop_toBottomOf="@id/item_address"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@id/item_name"
             app:layout_constraintBottom_toTopOf="@id/pay_btn">
+
+            <TextView
+                android:id="@+id/item_distance"
+                style="@style/Caption.Medium.SteelGray400"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="20dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="6dp"
+                android:drawableStart="@drawable/ic_distance"
+                android:drawablePadding="8dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                tools:text="20 miles" />
 
             <Button
                 android:id="@+id/show_all_btn"
                 style="@style/Button.Primary.ExtraSmall.Blue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="2dp"
                 android:text="@string/explore_show_all"
                 android:drawablePadding="8dp"
                 android:drawableRight="@drawable/ic_show_all"
                 android:visibility="gone"
-                android:layout_gravity="center_horizontal"
                 tools:background="@color/extra_small_btn_bg"
                 tools:visibility="visible" />
 
             <LinearLayout
                 android:layout_width="136dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="18dp"
                 android:orientation="horizontal">
 
                 <ImageButton

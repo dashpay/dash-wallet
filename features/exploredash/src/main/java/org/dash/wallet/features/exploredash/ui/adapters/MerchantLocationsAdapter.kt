@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash.ui.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.features.exploredash.data.model.Merchant
@@ -42,8 +43,11 @@ class MerchantsLocationsAdapter(
     }
 }
 
-class MerchantLocationViewHolder(val binding: MerchantLocationRowBinding) : RecyclerView.ViewHolder(binding.root) {
+class MerchantLocationViewHolder(val binding: MerchantLocationRowBinding) : ExploreViewHolder(binding.root) {
     fun bind(merchant: Merchant?) {
         binding.locationName.text = merchant?.getDisplayAddress(", ")
+        val distanceText = getDistanceText(binding.root.resources, merchant)
+        binding.distance.text = distanceText
+        binding.distance.isVisible = distanceText.isNotEmpty()
     }
 }

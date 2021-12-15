@@ -15,10 +15,11 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <dimen name="merchant_half_expanded_ratio">0.50</dimen>
-    <dimen name="merchant_details_height_ratio">0.55</dimen>
-    <dimen name="atm_half_expanded_ratio">0.55</dimen>
-    <dimen name="atm_details_height_ratio">0.55</dimen>
+    <dimen name="merchant_half_expanded_ratio">0.55</dimen>
+    <dimen name="merchant_details_height_ratio">0.60</dimen>
+    <dimen name="atm_half_expanded_ratio">0.61</dimen>
+    <dimen name="atm_details_height_ratio">0.61</dimen>
+
     <dimen name="atm_manufacturer_vertical_margin">12dp</dimen>
     <dimen name="atm_content_vertical_margin">72dp</dimen>
 </resources>

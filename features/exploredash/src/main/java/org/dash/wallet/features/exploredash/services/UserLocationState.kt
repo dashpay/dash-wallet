@@ -21,11 +21,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
 import android.os.Looper
-import android.util.Log
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.SphericalUtil
@@ -35,7 +31,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
-import java.util.*
+import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.*
@@ -61,6 +57,7 @@ class UserLocationState @Inject constructor(private val context: Context, privat
         private const val UPDATE_INTERVAL_SECS = 10L
         private const val FASTEST_UPDATE_INTERVAL_SECS = 2L
         private const val EARTH_RADIUS = 6371009 // in meters
+        private val log = LoggerFactory.getLogger(UserLocationState::class.java)
     }
 
     private var previousLocation: Pair<Double, Double> = Pair(0.0, 0.0)
@@ -82,6 +79,23 @@ class UserLocationState @Inject constructor(private val context: Context, privat
                 priority = LocationRequest.PRIORITY_HIGH_ACCURACY
             }
 
+        val settingsClient: SettingsClient = LocationServices.getSettingsClient(context)
+        val builder = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
+
+        val task = settingsClient.checkLocationSettings(builder.build())
+        task.addOnSuccessListener { locationSettingsResponse ->
+            locationSettingsResponse.locationSettingsStates?.let { states ->
+                log.info("checkLocationSettings, isGpsPresent: ${states.isGpsPresent}, " +
+                        "isGpsUsable: ${states.isGpsUsable}, " +
+                        "isNetworkLocationPresent: ${states.isNetworkLocationPresent}, " +
+                        "isNetworkLocationUsable: ${states.isNetworkLocationUsable}")
+            }
+        }
+
+        task.addOnFailureListener { exception ->
+            log.info("checkLocationSettings failure: $exception")
+        }
+
         val callback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
@@ -95,6 +109,15 @@ class UserLocationState @Inject constructor(private val context: Context, privat
                 }
             }
         }
+
+        client.lastLocation.addOnSuccessListener { location ->
+            log.info("getLastLocation() success, location available: ${location != null}")
+            location?.let {
+                trySend(UserLocation(location.latitude, location.longitude, location.accuracy.toDouble()))
+            }
+        }.addOnFailureListener {
+            log.info("getLastLocation() failure")
+        }
         client.requestLocationUpdates(locationRequest, callback, Looper.getMainLooper())
         awaitClose { client.removeLocationUpdates(callback) }
     }
@@ -107,13 +130,12 @@ class UserLocationState @Inject constructor(private val context: Context, privat
             if (!addresses.isNullOrEmpty()) {
                 val locality = addresses[0].locality
                 val cityName = if (locality.isNullOrEmpty()) addresses[0].adminArea else locality
-                Log.e(this::class.java.simpleName, "City name: $cityName")
                 Address(addresses[0].countryName, cityName)
             } else {
                 null
             }
         } catch (e: Exception) {
-            Log.i("GeocoderException" ,"${e.message}")
+            log.info("GeocoderException ${e.message}")
             null
         }
     }

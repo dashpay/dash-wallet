@@ -17,8 +17,11 @@
 
 package org.dash.wallet.features.exploredash.ui.adapters
 
+import android.content.res.Resources
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
@@ -30,6 +33,22 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
+import org.dash.wallet.features.exploredash.ui.extensions.Const
+import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import java.util.*
+
+open class ExploreViewHolder(root: View): RecyclerView.ViewHolder(root) {
+    fun getDistanceText(resources: Resources, item: SearchResult?): String {
+        val isMetric = Locale.getDefault().isMetric
+        val distanceStr = item?.getDistanceStr(isMetric)
+
+        return when {
+            distanceStr.isNullOrEmpty() -> ""
+            isMetric -> resources.getString(R.string.distance_kilometers, distanceStr)
+            else -> resources.getString(R.string.distance_miles, distanceStr)
+        }
+    }
+}
 
 class SearchResultDiffCallback<T: SearchResult> : DiffUtil.ItemCallback<T>() {
     override fun areItemsTheSame(oldItem: T, newItem: T): Boolean {
@@ -91,10 +110,12 @@ class MerchantsAtmsResultAdapter(
     }
 }
 
-class MerchantViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHolder(binding.root) {
+class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(binding.root) {
     fun bind(merchant: Merchant?) {
         val resources = binding.root.resources
         binding.title.text = merchant?.name
+        binding.subtitle.text = getDistanceText(resources, merchant)
+        binding.subtitle.isVisible = binding.subtitle.text.isNotEmpty()
 
         Glide.with(binding.root.context)
             .load(merchant?.logoLocation)
@@ -110,11 +131,18 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : RecyclerView.ViewHol
     }
 }
 
-class AtmViewHolder(val binding: AtmRowBinding) : RecyclerView.ViewHolder(binding.root) {
+class AtmViewHolder(val binding: AtmRowBinding) : ExploreViewHolder(binding.root) {
     fun bind(atm: Atm?) {
         val resources = binding.root.resources
         binding.title.text = atm?.name
-        binding.subtitle.text = atm?.manufacturer?.replaceFirstChar { it.titlecase() }
+        val manufacturer = atm?.manufacturer?.replaceFirstChar { it.titlecase() } ?: ""
+        val distanceText = getDistanceText(resources, atm)
+        binding.subtitle.text = if (distanceText.isEmpty()) {
+            manufacturer
+        } else {
+            "$distanceText • $manufacturer"
+        }
+        binding.subtitle.isVisible = binding.subtitle.text.isNotEmpty()
 
         Glide.with(binding.root.context)
             .load(atm?.logoLocation)
