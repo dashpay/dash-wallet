@@ -23,22 +23,20 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.DrawableRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
-@AndroidEntryPoint
 open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
     @DrawableRes protected open val background: Int = R.drawable.white_background_rounded
-    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
+    protected lateinit var lockScreenViewModel: LockScreenViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        lockScreenViewModel = ViewModelProvider(requireActivity())[LockScreenViewModel::class.java]
         dialog?.setOnShowListener { dialog ->
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)

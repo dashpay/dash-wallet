@@ -73,7 +73,7 @@ class ExploreViewModelTest {
             }
 
             val viewModel = ExploreViewModel(dataSource, locationState)
-            viewModel.selectedTerritory = territory
+            viewModel.setSelectedTerritory(territory)
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
 
@@ -154,7 +154,7 @@ class ExploreViewModelTest {
             }
 
             val viewModel = ExploreViewModel(dataSource, locationState)
-            viewModel.selectedTerritory = territory
+            viewModel.setSelectedTerritory(territory)
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
             viewModel.submitSearchQuery(query)

@@ -154,13 +154,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.toolbarTitle.text = getToolbarTitle()
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) { isEnabled ->
-            if (isEnabled && viewModel.filterMode.value != FilterMode.Online) {
-                bottomSheet.isDraggable = true
-                bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-            } else {
-                bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
-                bottomSheet.isDraggable = false
-            }
+            bottomSheet.isDraggable = isBottomSheetDraggable(isEnabled)
+            bottomSheet.state = setBottomSheetState()
         }
 
         viewModel.allMerchantLocations.observe(viewLifecycleOwner) { merchantLocations ->
@@ -222,9 +217,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             } else {
                 if (isLocationPermissionGranted) {
-                    bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                    bottomSheet.state = setBottomSheetState()
+                    bottomSheet.isDraggable = isBottomSheetDraggable(true)
                     bottomSheetWasExpanded = false
-                    bottomSheet.isDraggable = true
                 } else if (!hasLocationBeenRequested) {
                     requestLocationPermission(
                         viewModel.exploreTopic,
@@ -296,6 +291,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             binding.resetFiltersBtn.isEnabled = filters.query.isNotEmpty() ||
                     filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION ||
                     filters.payment.isNotEmpty() || filters.territory.isNotEmpty()
+        }
+
+        viewModel.selectedTerritory.observe(viewLifecycleOwner){
+            val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
+            bottomSheet.isDraggable = isBottomSheetDraggable(viewModel.isLocationEnabled.value == true)
+            bottomSheet.state = setBottomSheetState()
         }
 
         viewLifecycleOwner.observeOnDestroy {
@@ -399,15 +400,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun transitToDetails() {
         val item = viewModel.selectedItem.value ?: return
-        val isOnline = item.type == MerchantType.ONLINE ||
-                viewModel.filterMode.value == FilterMode.Online
+        val isOnline = item.type == MerchantType.ONLINE
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
-
-        bottomSheet.isDraggable = false
-        bottomSheet.state =
-            if (isOnline) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_HALF_EXPANDED
+        bottomSheet.isDraggable = isBottomSheetDraggable(viewModel.isLocationEnabled.value == true)
+        bottomSheet.state = setBottomSheetState(isOnline)
 
         binding.itemDetails.isVisible = true
         binding.upButton.isVisible = false
@@ -431,17 +429,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun transitToSearchResults() {
         binding.upButton.isVisible = shouldShowUpButton()
         binding.backToNearestBtn.isVisible = false
-
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true &&
-                viewModel.filterMode.value != FilterMode.Online
+        bottomSheet.isDraggable = isBottomSheetDraggable(viewModel.isLocationEnabled.value == true)
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.default_expanded_offset)
-
-        bottomSheet.state = if (bottomSheetWasExpanded) {
-            BottomSheetBehavior.STATE_EXPANDED
-        } else {
-            BottomSheetBehavior.STATE_HALF_EXPANDED
-        }
+        bottomSheet.state = setBottomSheetState(expandedInSearchScreen = bottomSheetWasExpanded)
 
         if (binding.searchResults.itemDecorationCount < 1) {
             binding.searchResults.addItemDecoration(searchResultsDecorator)
@@ -474,14 +465,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.backToNearestBtn.isVisible = canShowNearest
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        bottomSheet.isDraggable = viewModel.isLocationEnabled.value == true
+        bottomSheet.isDraggable = isBottomSheetDraggable(viewModel.isLocationEnabled.value == true)
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.all_locations_expanded_offset)
-        bottomSheet.state = if (viewModel.isLocationEnabled.value != true || expand)
-        {
-            BottomSheetBehavior.STATE_EXPANDED
-        } else {
-            BottomSheetBehavior.STATE_HALF_EXPANDED
-        }
+        bottomSheet.state = setBottomSheetState(expandInMerchantLocationScreen = expand)
 
         viewModel.selectedItem.value?.let { item ->
             val header = MerchantLocationsHeaderAdapter(
@@ -545,8 +531,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             return ""
         }
 
-        val searchLocation = if (viewModel.selectedTerritory.isNotEmpty()) {
-            viewModel.selectedTerritory
+        val searchLocation = if (viewModel.selectedTerritory.value?.isNotEmpty() == true) {
+            viewModel.selectedTerritory.value
         } else {
             val radiusOption = viewModel.selectedRadiusOption
             resources.getQuantityString(
@@ -616,17 +602,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         } else {
             bottomSheet.peekHeight = bottomSheetPeekHeight
         }
-
-        if (viewModel.isLocationEnabled.value == true &&
-            viewModel.filterMode.value != FilterMode.Online && filters.territory.isEmpty()){
-            bottomSheet.isDraggable = true
-            bottomSheet.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-            bottomSheetWasExpanded = false
-        } else {
-            bottomSheet.isDraggable = false
-            bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
-            bottomSheetWasExpanded = true
-        }
     }
 
     private fun shouldShowFiltersPanel(): Boolean {
@@ -634,7 +609,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                viewModel.isLocationEnabled.value == true &&
                (isPhysicalSearch ||
                viewModel.paymentMethodFilter.isNotEmpty() ||
-               viewModel.selectedTerritory.isNotEmpty())
+                       viewModel.selectedTerritory.value?.isNotEmpty() == true)
     }
 
     private fun openFilters() {
@@ -650,5 +625,29 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun shouldShowUpButton(): Boolean {
         val offset = binding.searchResults.computeVerticalScrollOffset()
         return offset > SCROLL_OFFSET_FOR_UP
+    }
+
+    private fun isBottomSheetDraggable(isLocationGranted: Boolean): Boolean {
+        val isSearchResultOrMerchantLocationScreen =
+            (viewModel.screenState.value == ScreenState.SearchResults)
+                    || (viewModel.screenState.value == ScreenState.MerchantLocations)
+        return isLocationGranted
+                && viewModel.filterMode.value != FilterMode.Online
+                && isSearchResultOrMerchantLocationScreen
+                && viewModel.selectedTerritory.value?.isEmpty() == true
+    }
+
+    private fun setBottomSheetState(isOnlineMerchant: Boolean = false,
+                                    expandedInSearchScreen: Boolean = false,
+                                    expandInMerchantLocationScreen: Boolean = false): Int {
+
+        return if (viewModel.filterMode.value == FilterMode.Online
+            || viewModel.selectedTerritory.value?.isNotEmpty() == true
+            || viewModel.isLocationEnabled.value == false || isOnlineMerchant
+            || expandedInSearchScreen || expandInMerchantLocationScreen){
+            BottomSheetBehavior.STATE_EXPANDED
+        } else {
+            BottomSheetBehavior.STATE_HALF_EXPANDED
+        }
     }
 }
