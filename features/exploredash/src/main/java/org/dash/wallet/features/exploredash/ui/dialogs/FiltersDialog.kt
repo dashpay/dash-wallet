@@ -233,7 +233,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
     }
 
     private fun setupTerritoryFilter() {
-        setTerritoryName(viewModel.selectedTerritory)
+        viewModel.selectedTerritory.value?.let { setTerritoryName(it) }
 
         lifecycleScope.launch {
             territoriesJob = async {
@@ -287,7 +287,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
     }
 
     private fun applyFilters() {
-        viewModel.selectedTerritory = selectedTerritory
+        viewModel.setSelectedTerritory(selectedTerritory)
         viewModel.selectedRadiusOption = selectedRadiusOption
         viewModel.sortByDistance = sortByDistance
 

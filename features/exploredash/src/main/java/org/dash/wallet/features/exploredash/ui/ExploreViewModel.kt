@@ -84,7 +84,7 @@ class ExploreViewModel @Inject constructor(
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
 
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
-
+    val recenterMapCallback = SingleLiveEvent<Unit>()
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
     private var allMerchantLocationsJob: Job? = null
@@ -100,11 +100,10 @@ class ExploreViewModel @Inject constructor(
     val currentUserLocation = _currentUserLocation.asLiveData()
 
     private val _selectedTerritory = MutableStateFlow("")
-    var selectedTerritory: String
-        get() = _selectedTerritory.value
-        set(value) {
-            _selectedTerritory.value = value
-        }
+    val selectedTerritory = _selectedTerritory.asLiveData()
+    fun setSelectedTerritory(territory: String){
+        _selectedTerritory.value = territory
+    }
 
     // Can be miles or kilometers, see isMetric
     private val _selectedRadiusOption = MutableStateFlow(DEFAULT_RADIUS_OPTION)
@@ -299,7 +298,7 @@ class ExploreViewModel @Inject constructor(
                 val lastResolved = lastResolvedAddress
                 isLocationEnabled.value == true &&
                 it.zoomLevel > MIN_ZOOM_LEVEL &&
-                (selectedTerritory.isEmpty() || lastResolved == null ||
+                (selectedTerritory.value?.isEmpty() == true || lastResolved == null ||
                 locationProvider.distanceBetweenCenters(lastResolved, it) > radius / 2)
             }
             .onEach(::resolveAddress)
@@ -350,7 +349,6 @@ class ExploreViewModel @Inject constructor(
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
         _selectedItem.postValue(merchant)
-
         if (isGrouped) {
             if (canShowNearestLocation(merchant)) {
                 // Opening details screen
@@ -401,10 +399,10 @@ class ExploreViewModel @Inject constructor(
                 } else {
                     GeoBounds.noBounds
                 }
-                val limitResults = _isLocationEnabled.value != true || selectedTerritory.isNotEmpty()
+                val limitResults = _isLocationEnabled.value != true || selectedTerritory.value?.isNotEmpty() == true
                 val limit = if (limitResults) 100 else -1
                 exploreData.observeMerchantLocations(
-                    merchantId, source, selectedTerritory, "", radiusBounds, limit
+                    merchantId, source, selectedTerritory.value!!, "", radiusBounds, limit
                 )
             }
             .onEach { locations ->
@@ -426,7 +424,7 @@ class ExploreViewModel @Inject constructor(
         val nearest = item ?: nearestLocation
         // Cannot show nearest location if there are more than 1 in group and location is disabled
         return (nearest is Merchant && nearest.physicalAmount <= 1) ||
-                (isLocationEnabled.value == true && selectedTerritory.isEmpty())
+                (isLocationEnabled.value == true && selectedTerritory.value?.isEmpty() == true)
     }
 
     fun sendDash() {
@@ -563,14 +561,14 @@ class ExploreViewModel @Inject constructor(
             val result = if (exploreTopic == ExploreTopic.Merchants) {
                 val type = getMerchantType(filterMode.value ?: FilterMode.Online)
                 exploreData.getMerchantsResultCount(
-                        searchQuery.value, selectedTerritory, type,
+                        searchQuery.value, selectedTerritory.value!!, type,
                         paymentMethodFilter, radiusBounds ?: GeoBounds.noBounds
                 )
             } else {
                 val types = getAtmTypes(filterMode.value ?: FilterMode.All)
                 exploreData.getAtmsResultsCount(
                         searchQuery.value, types,
-                        selectedTerritory, radiusBounds ?: GeoBounds.noBounds
+                        selectedTerritory.value!!, radiusBounds ?: GeoBounds.noBounds
                 )
             }
             _pagingSearchResultsCount.postValue(result)
