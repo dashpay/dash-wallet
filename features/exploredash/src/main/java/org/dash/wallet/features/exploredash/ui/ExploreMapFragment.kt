@@ -148,7 +148,9 @@ class ExploreMapFragment : SupportMapFragment() {
         }
 
         viewModel.recenterMapCallback.observe(viewLifecycleOwner) {
-            setMapDefaultViewLevel(viewModel.radius)
+            if (::mCurrentUserLocation.isInitialized) {
+                setMapDefaultViewLevel(viewModel.radius)
+            }
         }
     }
 
