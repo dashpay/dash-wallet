@@ -20,6 +20,7 @@ package org.dash.wallet.common.ui.payment_method_picker
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -58,12 +59,18 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
 
         setOnClickListener {
             val itemList = paymentMethods.map { method ->
+                val name = if (method.name.isEmpty() && method.paymentMethodType == PaymentMethodType.Card) {
+                    context.getString(R.string.debit_credit_card)
+                } else {
+                    method.name
+                }
+
                 IconifiedViewItem(
-                    method.name,
+                    name,
                     listOf(method.account, method.accountType).filterNot { it.isNullOrEmpty() }.joinToString(" • "),
-                    method.paymentMethodIcon,
-                    method.paymentMethodIcon != null,
-                    method.accountIcon
+                    getPaymentMethodIcon(method.paymentMethodType),
+                    method.paymentMethodType != PaymentMethodType.Unknown,
+                    getCardIcon(method.paymentMethodType, method.account)
                 )
             }
 
@@ -83,8 +90,9 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
 
     private fun setDisplayedInfo(paymentMethod: PaymentMethod) {
         binding.paymentMethodName.text = paymentMethod.name
-        binding.paymentMethodName.isVisible = paymentMethod.accountIcon == null
-        binding.paymentMethodIcon.setImageResource(paymentMethod.accountIcon ?: 0)
+        val cardIcon = getCardIcon(paymentMethod.paymentMethodType, paymentMethod.account)
+        binding.paymentMethodName.isVisible = cardIcon == null
+        binding.paymentMethodIcon.setImageResource(cardIcon ?: 0)
         binding.account.text = paymentMethod.account
 
         val canOpenPicker = paymentMethods.size > 1
@@ -93,7 +101,30 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
         isFocusable = canOpenPicker
     }
 
-    fun getFragmentManager(context: Context?): FragmentManager? {
+    @DrawableRes
+    private fun getPaymentMethodIcon(paymentMethodType: PaymentMethodType): Int? {
+        return when(paymentMethodType) {
+            PaymentMethodType.Card -> R.drawable.ic_card
+            PaymentMethodType.BankAccount -> R.drawable.ic_bank
+            PaymentMethodType.PayPal -> R.drawable.ic_paypal
+            else -> null
+        }
+    }
+
+    @DrawableRes
+    private fun getCardIcon(paymentMethodType: PaymentMethodType, account: String?): Int? {
+        if (paymentMethodType == PaymentMethodType.Card && !account.isNullOrEmpty()) {
+            cardTypes.forEach { (regex, drawableRes) ->
+                if (regex.toRegex().containsMatchIn(account)) {
+                    return drawableRes
+                }
+            }
+        }
+
+        return null
+    }
+
+    private fun getFragmentManager(context: Context?): FragmentManager? {
         return when (context) {
             is AppCompatActivity -> context.supportFragmentManager
             is ContextThemeWrapper -> getFragmentManager(context.baseContext)
@@ -101,4 +132,13 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
             else -> null
         }
     }
+
+    private val cardTypes = mapOf(
+        "^4[0-9]{3}?" to R.drawable.ic_visa,
+        "^5[1-5][0-9]{2}|222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720" to R.drawable.ic_mastercard,
+        "^3[47][0-9]{2}" to R.drawable.ic_american_express,
+        "^6(?:011|5[0-9]{2})" to R.drawable.ic_card_discover,
+        "^3(?:0[0-5]|[68][0-9])[0-9]" to R.drawable.ic_diners_club,
+        "^35[0-9]{2}" to R.drawable.ic_card_jcb
+    )
 }

@@ -19,12 +19,19 @@ package org.dash.wallet.common.ui.payment_method_picker
 
 import androidx.annotation.DrawableRes
 
+enum class PaymentMethodType {
+    Unknown,
+    Fiat,
+    Card,
+    BankAccount,
+    WireTransfer,
+    PayPal,
+    GooglePay
+}
+
 data class PaymentMethod(
     val name: String,
     val account: String?,
     val accountType: String?,
-    @DrawableRes
-    val paymentMethodIcon: Int?,
-    @DrawableRes
-    val accountIcon: Int?,
+    val paymentMethodType: PaymentMethodType,
 )

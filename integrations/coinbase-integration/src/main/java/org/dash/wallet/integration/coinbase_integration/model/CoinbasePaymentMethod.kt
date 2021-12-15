@@ -20,12 +20,12 @@ package org.dash.wallet.integration.coinbase_integration.model
 import com.google.gson.annotations.SerializedName
 
 data class CoinbasePaymentMethod(
-    val id: String?,
-    val type: String?,
-    val name: String?,
-    val currency: String?,
+    val id: String,
+    val type: String,
+    val name: String,
+    val currency: String,
     @SerializedName("allow_buy")
-    val allowBuy: Boolean?,
+    val allowBuy: Boolean,
     @SerializedName("allow_sell")
-    val allowSell: Boolean?
+    val allowSell: Boolean
 )

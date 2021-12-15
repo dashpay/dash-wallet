@@ -27,12 +27,12 @@
     tools:context="org.dash.wallet.common.ui.payment_method_picker.PaymentMethodPicker">
 
     <TextView
+        android:id="@+id/pay_label"
         style="@style/Body2.Medium"
         android:text="@string/pay_with"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/payment_method_icon"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -40,20 +40,23 @@
         android:id="@+id/payment_method_icon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="2dp"
-        app:layout_constraintEnd_toStartOf="@id/payment_method_name"
+        android:layout_marginEnd="6dp"
+        app:layout_constraintEnd_toStartOf="@id/account"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
         android:id="@+id/payment_method_name"
         style="@style/Caption"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="2dp"
+        android:layout_marginHorizontal="4dp"
+        android:gravity="end"
+        android:maxLines="1"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/account"
+        app:layout_constraintStart_toEndOf="@id/pay_label"
         tools:text="Chase Bank" />
 
     <TextView
