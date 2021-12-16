@@ -107,13 +107,16 @@ class ExploreViewModel @Inject constructor(
 
     // Can be miles or kilometers, see isMetric
     private val _selectedRadiusOption = MutableStateFlow(DEFAULT_RADIUS_OPTION)
-    var selectedRadiusOption = _selectedRadiusOption.asLiveData()
+    val selectedRadiusOption = _selectedRadiusOption.asLiveData()
     fun setSelectedRadiusOption(selectedRadius: Int){
         _selectedRadiusOption.value = selectedRadius
     }
     // In meters
     val radius: Double
-        get() = if (isMetric) selectedRadiusOption.value!! * Const.METERS_IN_KILOMETER else selectedRadiusOption.value!! * Const.METERS_IN_MILE
+        get() = selectedRadiusOption.value?.let {
+            if (isMetric) it * Const.METERS_IN_KILOMETER else it * Const.METERS_IN_MILE
+        } ?: if (isMetric) DEFAULT_RADIUS_OPTION * Const.METERS_IN_KILOMETER
+        else DEFAULT_RADIUS_OPTION * Const.METERS_IN_MILE
 
     // Bounded only by selected radius
     private var radiusBounds: GeoBounds? = null
