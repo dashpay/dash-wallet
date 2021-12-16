@@ -152,6 +152,14 @@ class ExploreMapFragment : SupportMapFragment() {
                 setMapDefaultViewLevel(viewModel.radius)
             }
         }
+
+        viewModel.selectedRadiusOption.observe(viewLifecycleOwner) {
+            googleMap?.let { map ->
+                val mapCenter = map.projection.visibleRegion.latLngBounds.center
+                val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
+                map.animateCamera(radiusBounds)
+            }
+        }
     }
 
     private fun showSelectedMarker(state: ScreenState) {

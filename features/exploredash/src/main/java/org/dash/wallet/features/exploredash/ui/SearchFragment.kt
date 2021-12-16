@@ -534,11 +534,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val searchLocation = if (viewModel.selectedTerritory.value?.isNotEmpty() == true) {
             viewModel.selectedTerritory.value
         } else {
-            val radiusOption = viewModel.selectedRadiusOption
-            resources.getQuantityString(
-                if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
-                radiusOption, radiusOption
-            )
+            val radiusOption = viewModel.selectedRadiusOption.value
+            radiusOption?.let {
+                resources.getQuantityString(
+                    if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
+                    it, it
+                )
+            }
         }
 
         val resultSize = viewModel.pagingSearchResultsCount.value ?: 0

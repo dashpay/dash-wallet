@@ -186,7 +186,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         binding.radiusLabel.isVisible = true
         binding.radiusCard.isVisible = true
 
-        selectedRadiusOption = viewModel.selectedRadiusOption
+        selectedRadiusOption = viewModel.selectedRadiusOption.value!!
 
         if (viewModel.isLocationEnabled.value == true) {
             binding.radiusFilter.isVisible = true
@@ -288,7 +288,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
     private fun applyFilters() {
         viewModel.setSelectedTerritory(selectedTerritory)
-        viewModel.selectedRadiusOption = selectedRadiusOption
+        viewModel.setSelectedRadiusOption(selectedRadiusOption)
         viewModel.sortByDistance = sortByDistance
 
         if (viewModel.exploreTopic == ExploreTopic.Merchants) {
