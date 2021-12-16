@@ -20,11 +20,16 @@ package org.dash.wallet.features.exploredash.repository
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 interface ExploreRepository {
     suspend fun getLastUpdate(): Long
@@ -55,43 +60,95 @@ class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
         valueType: Class<T>
     ): List<T> {
         ensureAuthenticated()
-        val dataSnapshot = fbDatabase.getReference("explore/$tableName/data")
+        val query = fbDatabase.getReference("explore/$tableName/data")
             .orderByKey()
             .startAt(startAt.toString())
             .endBefore(endBefore.toString())
-            .get()
-            .await()
 
-        val data = mutableListOf<T>()
-        dataSnapshot.children.forEach {
-            val merchant = it.getValue(valueType)!!
-            data.add(merchant)
+        return suspendCancellableCoroutine { coroutine ->
+            query.addListenerForSingleValueEvent(object: ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    val data = mutableListOf<T>()
+                    dataSnapshot.children.forEach {
+                        val merchant = it.getValue(valueType)!!
+                        data.add(merchant)
+                    }
+
+                    if (coroutine.isActive) {
+                        coroutine.resume(data)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    if (coroutine.isActive) {
+                        coroutine.resumeWithException(error.toException())
+                    }
+                }
+            })
         }
-        return data
     }
 
     override suspend fun getDataSize(tableName: String): Int {
         ensureAuthenticated()
-        return fbDatabase.getReference("explore/$tableName/data_size")
-            .get()
-            .await()
-            .getValue<Int>()!!
+        val query = fbDatabase.getReference("explore/$tableName/data_size")
+
+        return suspendCancellableCoroutine { coroutine ->
+            query.addListenerForSingleValueEvent(object: ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    if (coroutine.isActive) {
+                        coroutine.resume(dataSnapshot.getValue<Int>()!!)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    if (coroutine.isActive) {
+                        coroutine.resumeWithException(error.toException())
+                    }
+                }
+            })
+        }
     }
 
     override suspend fun getLastUpdate(): Long {
         ensureAuthenticated()
-        return fbDatabase.getReference("explore/last_update")
-            .get()
-            .await()
-            .getValue<Long>()!!
+        val query = fbDatabase.getReference("explore/last_update")
+
+        return suspendCancellableCoroutine { coroutine ->
+            query.addListenerForSingleValueEvent(object: ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    if (coroutine.isActive) {
+                        coroutine.resume(dataSnapshot.getValue<Long>()!!)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    if (coroutine.isActive) {
+                        coroutine.resumeWithException(error.toException())
+                    }
+                }
+            })
+        }
     }
 
     override suspend fun getLastUpdate(tableName: String): Long {
         ensureAuthenticated()
-        return fbDatabase.getReference("explore/$tableName/last_update")
-            .get()
-            .await()
-            .getValue<Long>()!!
+        val query = fbDatabase.getReference("explore/$tableName/last_update")
+
+        return suspendCancellableCoroutine { coroutine ->
+            query.addListenerForSingleValueEvent(object: ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    if (coroutine.isActive) {
+                        coroutine.resume(dataSnapshot.getValue<Long>()!!)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    if (coroutine.isActive) {
+                        coroutine.resumeWithException(error.toException())
+                    }
+                }
+            })
+        }
     }
 
     private suspend fun ensureAuthenticated() {
@@ -101,7 +158,22 @@ class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
     }
 
     private suspend fun signingAnonymously(): FirebaseUser {
-        val result = auth.signInAnonymously().await()
-        return result.user ?: throw FirebaseAuthException("-1", "User is null after anon sign in")
+        return suspendCancellableCoroutine { coroutine ->
+            auth.signInAnonymously().addOnSuccessListener { result ->
+                if (coroutine.isActive) {
+                    val user = result.user
+
+                    if (user != null) {
+                        coroutine.resume(user)
+                    } else {
+                        coroutine.resumeWithException(FirebaseAuthException("-1", "User is null after anon sign in"))
+                    }
+                }
+            }.addOnFailureListener {
+                if (coroutine.isActive) {
+                    coroutine.resumeWithException(it)
+                }
+            }
+        }
     }
 }

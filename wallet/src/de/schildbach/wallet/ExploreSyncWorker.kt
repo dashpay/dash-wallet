@@ -73,17 +73,25 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
     override suspend fun doWork(): Result {
         log.info("Sync Explore Dash started")
         val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
-        val lastDataUpdate = exploreRepository.getLastUpdate()
-        if (lastSync < lastDataUpdate) {
-            maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, entryPoint.merchantDao())
-            maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, entryPoint.atmDao())
-            maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, entryPoint.merchantDao())
 
-            preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
-            log.info("Sync Explore Dash finished")
-        } else {
-            log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+        try {
+            val lastDataUpdate = exploreRepository.getLastUpdate()
+
+            if (lastSync < lastDataUpdate) {
+                maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, entryPoint.merchantDao())
+                maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, entryPoint.atmDao())
+                maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, entryPoint.merchantDao())
+
+                preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
+                log.info("Sync Explore Dash finished")
+            } else {
+                log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+            }
+        } catch (ex: Exception) {
+            log.info("Sync Explore Dash error: ${ex.message}")
+            return Result.retry()
         }
+
         return Result.success()
     }
 
