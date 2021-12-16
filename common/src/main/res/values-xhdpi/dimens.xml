@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="keyboard_button_font_size">18sp</dimen>
+    <dimen name="keyboard_button_min_height">46dp</dimen>
+    <dimen name="enter_amount_keyboard_spacing">8dp</dimen>
+</resources>

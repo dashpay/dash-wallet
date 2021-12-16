@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_filter_dialog"
+    android:background="@color/background_primary"
     tools:context=".ui.CoinbaseServicesFragment">
 
     <include
@@ -122,14 +122,6 @@
             app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
             app:layout_constraintTop_toBottomOf="@+id/buy_dash_subtitle" />
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <org.dash.wallet.common.ui.payment_method_picker.PaymentMethodPicker
-        android:id="@+id/payment_method_picker"
-        android:layout_width="match_parent"
-        android:layout_marginHorizontal="15dp"
-        android:layout_height="46dp"
-        android:layout_marginTop="20dp"
-        app:layout_constraintTop_toBottomOf="@id/buy_dash_btn" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/disconnect_layout"

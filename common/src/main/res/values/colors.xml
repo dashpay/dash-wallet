@@ -19,7 +19,7 @@
     <color name="dash_green">#27C509</color>
     <color name="ripple_light">#60ffffff</color>
     <color name="ripple_dark">#80012060</color>
-    <color name="list_view_btn_ripple">#1f000000</color>
+    <color name="button_ripple_color">#1f000000</color>
     <color name="success_green">#92D048</color>
     <color name="error_red">#BF2827</color>
     <!-- added for transaction status -->
@@ -40,6 +40,7 @@
     <color name="gray_900_0.7">#B30C0C0D</color>
     <color name="gray_700">#434A52</color>
     <color name="gray_600">#5D5F61</color>
+    <color name="gray_500">#6D7885</color>
     <color name="gray_400">#818C99</color>
     <color name="gray_300">#99A2AD</color>
     <color name="gray_100">#E1E3E6</color>
@@ -88,5 +89,7 @@
     <color name="bg_explore">#003470</color>
     <color name="divider_color">#EBEDF0</color>
     <color name="bg_accuracy_circle">#26008DE4</color>
-    <color name="bg_filter_dialog">#eff0f4</color>
+    <color name="background_primary">#eff0f4</color>
+    <color name="disabled_button_bg">#eeeeee</color>
+    <color name="extra_small_btn_bg">#f2f9fd</color>
 </resources>

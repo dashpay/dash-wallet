@@ -15,21 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui.payment_method_picker
+package de.schildbach.wallet.di
 
-enum class PaymentMethodType {
-    Unknown,
-    Fiat,
-    Card,
-    BankAccount,
-    WireTransfer,
-    PayPal,
-    GooglePay
+import android.content.Context
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import org.dash.wallet.common.WalletDataProvider
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DataProviderModule {
+    @Singleton
+    @Provides
+    fun provideWalletData(@ApplicationContext context: Context): WalletDataProvider =
+        context.applicationContext as WalletDataProvider
 }
-
-data class PaymentMethod(
-    val name: String,
-    val account: String?,
-    val accountType: String?,
-    val paymentMethodType: PaymentMethodType,
-)

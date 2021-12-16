@@ -53,7 +53,7 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
 
     init {
         background = resources.getRoundedRippleBackground(R.style.ListViewButtonBackground)
-        val paddingStart = resources.getDimensionPixelOffset(R.dimen.payment_method_padding_start)
+        val paddingStart = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         val paddingEnd = resources.getDimensionPixelOffset(R.dimen.payment_method_padding_end)
         updatePadding(left=paddingStart, right=paddingEnd)
 

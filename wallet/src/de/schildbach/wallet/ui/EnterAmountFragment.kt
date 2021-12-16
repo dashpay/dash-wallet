@@ -26,7 +26,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
-import de.schildbach.wallet.ui.widget.NumericKeyboardView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.enter_amount_fragment.*
 import org.bitcoinj.core.Coin
@@ -41,10 +40,10 @@ import de.schildbach.wallet.rates.ExchangeRate
 import java.util.*
 import android.content.Intent
 import android.app.Activity
-import android.content.Context
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.util.FiatAmountFormat
 
 
@@ -106,7 +105,7 @@ class EnterAmountFragment : Fragment() {
             analytics.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX, bundleOf())
             sharedViewModel.maxButtonClickEvent.call(true)
         }
-        numeric_keyboard.enableDecSeparator(true);
+        numeric_keyboard.isDecSeparatorEnabled = true
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             var value = StringBuilder()

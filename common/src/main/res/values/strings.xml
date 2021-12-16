@@ -32,10 +32,12 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
+    <string name="button_continue">Continue</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
     <string name="pay_with">Pay with</string>
     <string name="choose_payment_method">Choose Payment Method</string>
     <string name="debit_credit_card">Debit/Credit card</string>
+    <string name="max">Max</string>
 </resources>
