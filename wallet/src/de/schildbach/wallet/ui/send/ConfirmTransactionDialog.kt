@@ -28,7 +28,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProviders
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
+import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
@@ -75,7 +75,7 @@ class ConfirmTransactionDialog : BaseBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        arguments!!.apply {
+        requireArguments().apply {
             input_value.text = getString(ARG_AMOUNT)
             fiat_symbol.text = getString(ARG_FIAT_SYMBOL)
             fiat_value.text = getString(ARG_AMOUNT_FIAT)

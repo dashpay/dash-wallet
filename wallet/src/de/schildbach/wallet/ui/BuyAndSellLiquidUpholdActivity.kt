@@ -149,6 +149,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         uphold_container.setOnClickListener {
             startActivity(UpholdAccountActivity.createIntent(this))
         }
+
         supportFragmentManager.beginTransaction()
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commitNow()
@@ -592,7 +593,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
      */
 
     private fun showCurrenciesDialog() {
-        CurrencyDialog(
+        bottomSheetDialog = CurrencyDialog(
             this,
             liquidCurrencyArrayList,
             upholdCurrencyArrayList,
@@ -610,6 +611,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 }
             }
         )
+        bottomSheetDialog?.show()
     }
 
     /**

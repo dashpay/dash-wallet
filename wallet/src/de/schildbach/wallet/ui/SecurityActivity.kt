@@ -26,8 +26,9 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.os.bundleOf
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.backup.BackupWalletActivity
+import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_security.*
@@ -76,7 +77,8 @@ class SecurityActivity : BaseMenuActivity(), AbstractPINDialogFragment.WalletPro
         checkPinSharedModel.onCorrectPinCallback.observe(this, Observer<Pair<Int?, String?>> { (requestCode, pin) ->
             when (requestCode) {
                 AUTH_REQUEST_CODE_BACKUP -> {
-                    BackupWalletActivity.start(this)
+                    BackupWalletDialogFragment.show(supportFragmentManager)
+                    //BackupWalletActivity.start(this)
                 }
                 ENABLE_FINGERPRINT_REQUEST_CODE -> {
                     if (pin != null) {

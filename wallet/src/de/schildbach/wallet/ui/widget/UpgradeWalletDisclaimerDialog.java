@@ -18,26 +18,28 @@
 package de.schildbach.wallet.ui.widget;
 
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import androidx.annotation.Nullable;
-import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.ui.BaseDialogFragment;
 
 import de.schildbach.wallet.ui.BackupWalletToSeedDialogFragment;
 import de.schildbach.wallet_test.R;
-
-public class UpgradeWalletDisclaimerDialog extends DialogFragment {
+import kotlin.Unit;
+public class UpgradeWalletDisclaimerDialog extends BaseDialogFragment {
 
     private static final String FRAGMENT_TAG = UpgradeWalletDisclaimerDialog .class.getName();
+    private static final String ARGS_DISMISS_ON_APP_LOCK = "dismiss_on_app_lock";
 
-    public static void show(FragmentManager fm) {
+    public static void show(FragmentManager fm, boolean dismissOnAppLock) {
         UpgradeWalletDisclaimerDialog dialogFragment = new UpgradeWalletDisclaimerDialog();
+        Bundle bundle = new Bundle();
+        bundle.putBoolean(ARGS_DISMISS_ON_APP_LOCK, dismissOnAppLock);
+        dialogFragment.setArguments(bundle);
         dialogFragment.show(fm, FRAGMENT_TAG);
     }
 
@@ -49,25 +51,24 @@ public class UpgradeWalletDisclaimerDialog extends DialogFragment {
 
     @Override
     public Dialog onCreateDialog(final Bundle savedInstanceState) {
-        final DialogBuilder dialogBuilder = new DialogBuilder(getActivity());
-        dialogBuilder.setTitle(R.string.encrypt_new_key_chain_dialog_title);
-
         String message = getString(R.string.encrypt_new_key_chain_dialog_message) + "\n\n" +
                 getString(R.string.pin_code_required_dialog_message);
-        dialogBuilder.setMessage(message);
-        dialogBuilder.setCancelable(false);
-        dialogBuilder.setPositiveButton(android.R.string.ok, null);
-
         String buttonText = getString(R.string.export_keys_dialog_title_to_seed) + " / " + getString(R.string.wallet_options_encrypt_keys_set);
-        dialogBuilder.setPositiveButton(buttonText,
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(final DialogInterface dialog, final int which) {
-                        BackupWalletToSeedDialogFragment.show(getFragmentManager(), true);
+        baseAlertDialogBuilder.setTitle(getString(R.string.encrypt_new_key_chain_dialog_title));
+        baseAlertDialogBuilder.setMessage(message);
+        baseAlertDialogBuilder.setCancelable(false);
+        baseAlertDialogBuilder.setPositiveText(buttonText);
+        baseAlertDialogBuilder.setPositiveAction(
+                () -> {
+                    if (isAdded()){
+                        BackupWalletToSeedDialogFragment.show(getParentFragmentManager(), true);
                     }
-                });
+                    return Unit.INSTANCE;
+                }
+        );
 
-        return dialogBuilder.create();
+        alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+        return super.onCreateDialog(savedInstanceState);
     }
 
     public interface OnUpgradeConfirmedListener {

@@ -14,20 +14,24 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package org.dash.wallet.common.ui
 
 
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.fragment.app.activityViewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import de.schildbach.wallet_test.R
+import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.R
+import org.dash.wallet.common.UserInteractionAwareCallback
 
+@AndroidEntryPoint
 open class BaseBottomSheetDialogFragment : BottomSheetDialogFragment() {
-
+    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -35,7 +39,7 @@ open class BaseBottomSheetDialogFragment : BottomSheetDialogFragment() {
             // apply wrap_content height
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            val coordinatorLayout = bottomSheet!!.parent as CoordinatorLayout
+            val coordinatorLayout = bottomSheet?.parent as CoordinatorLayout
             val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
             bottomSheetBehavior.peekHeight = bottomSheet.height
             coordinatorLayout.parent.requestLayout()
@@ -43,5 +47,9 @@ open class BaseBottomSheetDialogFragment : BottomSheetDialogFragment() {
         view.findViewById<View>(R.id.collapse_button).setOnClickListener {
             dismiss()
         }
+        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
+            dismiss()
+        }
+        dialog?.window?.callback = UserInteractionAwareCallback(dialog?.window?.callback, requireActivity())
     }
 }

@@ -26,7 +26,7 @@ import java.util.ArrayList;
 
 import javax.annotation.Nullable;
 
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +36,9 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 import android.app.Activity;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.net.Uri;
 import androidx.core.content.FileProvider;
@@ -56,7 +55,7 @@ import android.widget.Toast;
 /**
  * @author Andreas Schildbach
  */
-public abstract class ReportIssueDialogBuilder extends DialogBuilder implements OnClickListener {
+public abstract class ReportIssueDialogBuilder extends BaseAlertDialogBuilder {
     private final Activity context;
 
     private EditText viewDescription;
@@ -101,47 +100,19 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
         viewCollectApplicationLog = (CheckBox) view.findViewById(R.id.report_issue_dialog_collect_application_log);
         viewCollectWalletDump = (CheckBox) view.findViewById(R.id.report_issue_dialog_collect_wallet_dump);
 
-        setTitle(titleResId);
+        setTitle(context.getString(titleResId));
         setView(view);
-        setPositiveButton(R.string.report_issue_dialog_report, this);
-        setNegativeButton(R.string.button_cancel, null);
+        setPositiveText(context.getString((R.string.report_issue_dialog_report)));
+        setPositiveAction(
+                () -> {
+                    positiveBtnClickListener();
+                    return Unit.INSTANCE;
+                }
+        );
+        setNegativeText(context.getString(R.string.button_cancel));
     }
 
-    public static ReportIssueDialogBuilder createReportIssueDialog(final Activity context,
-                                                                   final WalletApplication application) {
-        final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(context,
-                R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
-            @Override
-            protected CharSequence subject() {
-                return Constants.REPORT_SUBJECT_BEGIN + application.packageInfo().versionName + " "
-                        + Constants.REPORT_SUBJECT_ISSUE;
-            }
-
-            @Override
-            protected CharSequence collectApplicationInfo() throws IOException {
-                final StringBuilder applicationInfo = new StringBuilder();
-                CrashReporter.appendApplicationInfo(applicationInfo, application);
-                return applicationInfo;
-            }
-
-            @Override
-            protected CharSequence collectDeviceInfo() throws IOException {
-                final StringBuilder deviceInfo = new StringBuilder();
-                CrashReporter.appendDeviceInfo(deviceInfo, context);
-                return deviceInfo;
-            }
-
-            @Override
-            protected CharSequence collectWalletDump() {
-                return application.getWallet().toString(false, true,
-                        true, null);
-            }
-        };
-        return dialog;
-    }
-
-    @Override
-    public void onClick(final DialogInterface dialog, final int which) {
+    private void positiveBtnClickListener() {
         final StringBuilder text = new StringBuilder();
         final ArrayList<Uri> attachments = new ArrayList<Uri>();
         final File cacheDir = context.getCacheDir();
@@ -246,6 +217,39 @@ public abstract class ReportIssueDialogBuilder extends DialogBuilder implements 
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.");
 
         startSend(subject(), text, attachments);
+    }
+
+    public static ReportIssueDialogBuilder createReportIssueDialog(final Activity context,
+                                                                   final WalletApplication application) {
+        final ReportIssueDialogBuilder dialog = new ReportIssueDialogBuilder(context,
+                R.string.report_issue_dialog_title_issue, R.string.report_issue_dialog_message_issue) {
+            @Override
+            protected CharSequence subject() {
+                return Constants.REPORT_SUBJECT_BEGIN + application.packageInfo().versionName + " "
+                        + Constants.REPORT_SUBJECT_ISSUE;
+            }
+
+            @Override
+            protected CharSequence collectApplicationInfo() throws IOException {
+                final StringBuilder applicationInfo = new StringBuilder();
+                CrashReporter.appendApplicationInfo(applicationInfo, application);
+                return applicationInfo;
+            }
+
+            @Override
+            protected CharSequence collectDeviceInfo() throws IOException {
+                final StringBuilder deviceInfo = new StringBuilder();
+                CrashReporter.appendDeviceInfo(deviceInfo, context);
+                return deviceInfo;
+            }
+
+            @Override
+            protected CharSequence collectWalletDump() {
+                return application.getWallet().toString(false, true,
+                        true, null);
+            }
+        };
+        return dialog;
     }
 
     private void startSend(final CharSequence subject, final CharSequence text, final ArrayList<Uri> attachments) {

@@ -28,6 +28,7 @@ import org.bitcoinj.wallet.Wallet;
 
 import com.google.common.collect.Iterables;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet_test.R;
 
@@ -50,6 +51,7 @@ import android.widget.TextView;
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public final class AddressBookActivity extends AbstractBindServiceActivity {
     public static void start(final Context context) {
 		context.startActivity(new Intent(context, AddressBookActivity.class));
