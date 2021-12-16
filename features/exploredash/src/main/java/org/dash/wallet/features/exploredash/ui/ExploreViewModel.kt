@@ -113,10 +113,8 @@ class ExploreViewModel @Inject constructor(
     }
     // In meters
     val radius: Double
-        get() = selectedRadiusOption.value?.let {
-            if (isMetric) it * Const.METERS_IN_KILOMETER else it * Const.METERS_IN_MILE
-        } ?: if (isMetric) DEFAULT_RADIUS_OPTION * Const.METERS_IN_KILOMETER
-        else DEFAULT_RADIUS_OPTION * Const.METERS_IN_MILE
+        get() = if (isMetric) (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_KILOMETER
+        else (selectedRadiusOption.value ?: DEFAULT_RADIUS_OPTION) * Const.METERS_IN_MILE
 
     // Bounded only by selected radius
     private var radiusBounds: GeoBounds? = null
@@ -198,7 +196,7 @@ class ExploreViewModel @Inject constructor(
         .flatMapLatest { query ->
             _paymentMethodFilter.flatMapLatest { payment ->
                 _sortByDistance.flatMapLatest { sortByDistance ->
-                    _selectedRadiusOption.flatMapLatest {
+                    _selectedRadiusOption.flatMapLatest { selectedRadius ->
                         _selectedTerritory.flatMapLatest { territory ->
                             _filterMode.flatMapLatest { mode ->
                                 _searchBounds
@@ -223,7 +221,7 @@ class ExploreViewModel @Inject constructor(
                                     }
                                     .flatMapLatest { bounds ->
                                         _appliedFilters.postValue(
-                                            FilterOptions(query, territory, payment, selectedRadiusOption.value!!)
+                                            FilterOptions(query, territory, payment, selectedRadius)
                                         )
                                         getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
                                             .cachedIn(viewModelScope)

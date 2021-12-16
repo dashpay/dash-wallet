@@ -186,7 +186,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         binding.radiusLabel.isVisible = true
         binding.radiusCard.isVisible = true
 
-        selectedRadiusOption = viewModel.selectedRadiusOption.value!!
+        selectedRadiusOption = viewModel.selectedRadiusOption.value ?: ExploreViewModel.DEFAULT_RADIUS_OPTION
 
         if (viewModel.isLocationEnabled.value == true) {
             binding.radiusFilter.isVisible = true
