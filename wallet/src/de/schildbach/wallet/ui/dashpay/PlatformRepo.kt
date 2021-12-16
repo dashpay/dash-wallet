@@ -782,12 +782,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
         val creditFundingTransaction = blockchainIdentityData.findCreditFundingTransaction(wallet)
         val blockchainIdentity = if (creditFundingTransaction != null) {
+            // the blockchain is synced past the point when the credit funding tx was found
             BlockchainIdentity(platform, creditFundingTransaction, wallet, blockchainIdentityData.identity)
         } else {
+            // the blockchain is not synced
             val blockchainIdentity = BlockchainIdentity(platform, 0, wallet)
-            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.DONE) {
+            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
                 blockchainIdentity.apply {
                     uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
+                    identity = blockchainIdentityData.identity
                 }
             } else {
                 return blockchainIdentity
@@ -795,9 +798,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             blockchainIdentity
         }
         return blockchainIdentity.apply {
-            identity = if (blockchainIdentityData.identity != null)
-                blockchainIdentityData.identity
-            else platform.identities.get(uniqueIdString)
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus!!
             val usernameStatus = HashMap<String, Any>()
@@ -886,26 +886,32 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
      * @return true if an update was made, false if not
      */
     suspend fun updateDashPayProfile(userId: String): Boolean {
-        var profileDocument = profiles.get(userId)
-        if (profileDocument == null) {
-            val identity = platform.identities.get(userId)
-            if (identity != null) {
-                profileDocument = profiles.createProfileDocument("", "", "", null, null, identity)
-            } else {
-                // there is no existing identity, so do nothing
-                return false
+        try {
+            var profileDocument = profiles.get(userId)
+            if (profileDocument == null) {
+                val identity = platform.identities.get(userId)
+                if (identity != null) {
+                    profileDocument =
+                        profiles.createProfileDocument("", "", "", null, null, identity)
+                } else {
+                    // there is no existing identity, so do nothing
+                    return false
+                }
             }
-        }
-        val nameDocuments = platform.names.getByOwnerId(userId)
+            val nameDocuments = platform.names.getByOwnerId(userId)
 
-        if (nameDocuments.isNotEmpty()) {
-            val username = nameDocuments[0].data["normalizedLabel"] as String
+            if (nameDocuments.isNotEmpty()) {
+                val username = nameDocuments[0].data["normalizedLabel"] as String
 
-            val profile = DashPayProfile.fromDocument(profileDocument, username)
-            dashPayProfileDao.insert(profile!!)
-            return true
+                val profile = DashPayProfile.fromDocument(profileDocument, username)
+                dashPayProfileDao.insert(profile!!)
+                return true
+            }
+            return false
+        } catch (e: StatusRuntimeException) {
+            formatExceptionMessage("update profile failure", e)
+            return false
         }
-        return false
     }
 
     suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {

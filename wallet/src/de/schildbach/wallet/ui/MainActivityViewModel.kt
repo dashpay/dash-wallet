@@ -10,6 +10,7 @@ import de.schildbach.wallet.AppDatabase
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BlockchainIdentityData
 import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
