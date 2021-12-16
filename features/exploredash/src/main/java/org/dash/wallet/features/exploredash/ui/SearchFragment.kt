@@ -400,7 +400,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun transitToDetails() {
         val item = viewModel.selectedItem.value ?: return
-        val isOnline = item.type == MerchantType.ONLINE
+        val isOnline = viewModel.filterMode.value == FilterMode.Online ||
+                item.type == MerchantType.ONLINE
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
@@ -432,7 +433,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = isBottomSheetDraggable(viewModel.isLocationEnabled.value == true)
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.default_expanded_offset)
-        bottomSheet.state = setBottomSheetState(expandedInSearchScreen = bottomSheetWasExpanded)
+        bottomSheet.state = setBottomSheetState(bottomSheetWasExpanded)
 
         if (binding.searchResults.itemDecorationCount < 1) {
             binding.searchResults.addItemDecoration(searchResultsDecorator)
@@ -467,7 +468,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = isBottomSheetDraggable(viewModel.isLocationEnabled.value == true)
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.all_locations_expanded_offset)
-        bottomSheet.state = setBottomSheetState(expandInMerchantLocationScreen = expand)
+        bottomSheet.state = setBottomSheetState(expand)
 
         viewModel.selectedItem.value?.let { item ->
             val header = MerchantLocationsHeaderAdapter(
@@ -637,17 +638,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 && viewModel.selectedTerritory.value?.isEmpty() == true
     }
 
-    private fun setBottomSheetState(isOnlineMerchant: Boolean = false,
-                                    expandedInSearchScreen: Boolean = false,
-                                    expandInMerchantLocationScreen: Boolean = false): Int {
+    private fun setBottomSheetState(forceExpand: Boolean = false): Int {
+        val screenState = viewModel.screenState.value
+        val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
+        val nearbySearch = viewModel.filterMode.value != FilterMode.Online &&
+                           viewModel.selectedTerritory.value.isNullOrEmpty() &&
+                           viewModel.isLocationEnabled.value == true
 
-        return if (viewModel.filterMode.value == FilterMode.Online
-            || viewModel.selectedTerritory.value?.isNotEmpty() == true
-            || viewModel.isLocationEnabled.value == false || isOnlineMerchant
-            || expandedInSearchScreen || expandInMerchantLocationScreen){
-            BottomSheetBehavior.STATE_EXPANDED
-        } else {
-            BottomSheetBehavior.STATE_HALF_EXPANDED
+        return when {
+            forceExpand -> BottomSheetBehavior.STATE_EXPANDED
+            isDetails -> BottomSheetBehavior.STATE_HALF_EXPANDED
+            nearbySearch -> BottomSheetBehavior.STATE_HALF_EXPANDED
+            else -> BottomSheetBehavior.STATE_EXPANDED
         }
     }
 }
