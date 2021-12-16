@@ -117,8 +117,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        if (!configuration.hasExploreDashInfoScreenBeenShown()) {
+        if (!configuration.hasExploreDashInfoScreenBeenShown() && args.type == ExploreTopic.Merchants) {
             safeNavigate(SearchFragmentDirections.exploreToInfo())
             configuration.setHasExploreDashInfoScreenBeenShown(true)
         }
