@@ -35,4 +35,6 @@
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
+    <string name="select_a_service_to_buy_and_sell_Dash"> Select a service to buy and sell Dash.</string>
+
 </resources>

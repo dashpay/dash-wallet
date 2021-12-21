@@ -24,7 +24,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.Constants
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
@@ -39,9 +43,14 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val binding by viewBinding(FragmentCoinbaseServicesBinding::bind)
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
+    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val walletDataProvider = requireActivity().application as WalletDataProvider
+        val defaultCurrency = walletDataProvider.defaultCurrencyCode()
 
         binding.titleBar.connected.setText(R.string.connected)
         binding.titleBar.toolbarTitle.setText(R.string.coinbase)
@@ -57,16 +66,39 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             }
         }
 
+        binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
-        binding.walletBalanceDash.setFormat(MonetaryFormat().noCode().minDecimals(8))
         binding.walletBalanceDash.setAmount(Coin.ZERO)
-        binding.walletBalanceLocal.setFormat(MonetaryFormat().noCode().minDecimals(2))
-        binding.walletBalanceLocal.setAmount(Coin.ZERO)
+        binding.walletBalanceLocal.setFormat(
+                        MonetaryFormat().noCode().minDecimals(2).code(
+                            0,
+                             viewModel.config.exchangeCurrencyCode
+                        )
+                    )
+
+        walletDataProvider.getExchangeRate(defaultCurrency).observe(viewLifecycleOwner,
+            { exchangeRate ->
+                if (exchangeRate != null) {
+                    currentExchangeRate = exchangeRate
+                    if (currentExchangeRate != null) {
+                        val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
+                        val localValue = exchangeRate.coinToFiat(Coin.parseCoin(viewModel.user.value?.balance?.amount?:"0"))
+                        binding.walletBalanceLocal.setAmount(localValue)
+                    }
+                }
+            })
 
         viewModel.user.observe(
             viewLifecycleOwner,
             {
                 binding.walletBalanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
+
+                if (currentExchangeRate != null) {
+                    val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
+                    val localValue = exchangeRate.coinToFiat(Coin.parseCoin(it.balance?.amount))
+                    binding.walletBalanceLocal.setAmount(localValue)
+                }
+
             }
         )
 

@@ -23,6 +23,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
@@ -32,6 +33,7 @@ import javax.inject.Inject
 class CoinbaseServicesViewModel @Inject constructor(
     application: Application,
     private val coinBaseRepository: CoinBaseRepository,
+    val config: Configuration
 ) : AndroidViewModel(application) {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
