@@ -533,7 +533,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val searchLocation = if (viewModel.selectedTerritory.value?.isNotEmpty() == true) {
             viewModel.selectedTerritory.value
         } else {
-            val radiusOption = viewModel.selectedRadiusOption
+            val radiusOption = viewModel.selectedRadiusOption.value ?: ExploreViewModel.DEFAULT_RADIUS_OPTION
             resources.getQuantityString(
                 if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
                 radiusOption, radiusOption
