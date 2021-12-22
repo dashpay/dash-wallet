@@ -25,13 +25,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseServicesViewModel @Inject constructor(
     application: Application,
-    private val coinBaseRepository: CoinBaseRepository,
+    private val coinBaseRepository: CoinBaseRepositoryInt,
 ) : AndroidViewModel(application) {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
@@ -60,6 +60,7 @@ class CoinbaseServicesViewModel @Inject constructor(
                 } else {
                     _user.value = userAccountData
                     coinBaseRepository.saveLastCoinbaseDashAccountBalance(userAccountData.balance?.amount)
+                    coinBaseRepository.saveUserAccountId(userAccountData.id)
                 }
             }
             is ResponseResource.Loading -> {

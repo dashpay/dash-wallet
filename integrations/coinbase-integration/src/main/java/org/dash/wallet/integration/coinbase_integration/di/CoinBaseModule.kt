@@ -16,12 +16,15 @@
  */
 package org.dash.wallet.integration.coinbase_integration.di
 
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.network.RemoteDataSource
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import javax.inject.Singleton
@@ -52,4 +55,11 @@ object CoinBaseModule {
     ): CoinBaseServicesApi {
         return remoteDataSource.buildApi(CoinBaseServicesApi::class.java)
     }
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class AbstractBindingProvision {
+    @Binds
+    abstract fun bindCoinbaseRepository(coinBaseRepository: CoinBaseRepository): CoinBaseRepositoryInt
 }

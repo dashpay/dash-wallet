@@ -33,6 +33,7 @@ import com.google.common.base.Strings;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.data.CurrencyInfo;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,6 +94,7 @@ public class Configuration {
     public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
     public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
+    public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
 
 
 
@@ -543,4 +545,11 @@ public class Configuration {
         return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
     }
 
+    public void setCoinBaseUserAccountId(String accountId) {
+        prefs.edit().putString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, accountId).apply();
+    }
+
+    public String getCoinbaseUserAccountId(){
+        return prefs.getString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, null);
+    }
 }
