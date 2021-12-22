@@ -137,12 +137,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     }
 
     private fun onUpHoldItemClicked() {
-        if (UpholdConstants.hasValidCredentials()) {
+        if (isNetworkOnline&&UpholdConstants.hasValidCredentials()) {
             startActivity(UpholdAccountActivity.createIntent(this))
         }
     }
     private fun onLiquidItemClicked() {
-        if (LiquidConstants.hasValidCredentials())
+        if (isNetworkOnline&&LiquidConstants.hasValidCredentials())
             analytics.logEvent(
                 if (UpholdClient.getInstance().isAuthenticated) {
                     AnalyticsConstants.Liquid.ENTER_CONNECTED
@@ -160,13 +160,15 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     private fun onCoinBaseItemClicked() {
         viewModel.coinbaseIsConnected.value?.let {
-            if (it) {
-                startActivity(Intent(this, CoinbaseActivity::class.java))
-            } else {
-                startActivityForResult(
-                    Intent(this, CoinBaseWebClientActivity::class.java),
-                    COIN_BASE_AUTH
-                )
+            if (isNetworkOnline) {
+                if (it) {
+                    startActivity(Intent(this, CoinbaseActivity::class.java))
+                } else {
+                    startActivityForResult(
+                        Intent(this, CoinBaseWebClientActivity::class.java),
+                        COIN_BASE_AUTH
+                    )
+                }
             }
         }
     }
@@ -275,7 +277,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                     it1
                                 )
                             }
-                            // showLiquidBalance(liquidViewModel.lastLiquidBalance)
                         }
                     }
                     Status.CANCELED -> {
@@ -334,8 +335,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     fun setNetworkState(online: Boolean) {
         network_status_container.isVisible = !online
-        // liquid_container.isEnabled = online && LiquidConstants.hasValidCredentials()
-        // uphold_container.isEnabled = online && UpholdConstants.hasValidCredentials()
         setLoginStatus(online)
         if (!isNetworkOnline && online) {
             updateBalances()
@@ -390,7 +389,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             for (i in 0 until cryptoArray.length()) {
                 val currency = cryptoArray.getJSONObject(i).getString("currency")
                 if (currency == "DASH") {
-                    // liquid_balance_container.visibility = View.VISIBLE
                     amount = cryptoArray.getJSONObject(i).getString("balance")
                     liquidViewModel.lastLiquidBalance = amount
                 }

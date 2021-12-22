@@ -93,7 +93,7 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     private fun changeCoinBaseItemStatus(isOnline: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
-        return if (coinBaseRepository.getUserLastCoinbaseBalance()?.isEmpty() == true) {
+        return if (coinBaseRepository.getUserLastCoinbaseBalance()== null) {
             BuyAndSellDashServicesModel.ServiceStatus.IDLE
         } else {
             if (coinBaseRepository.isUserConnected() && isOnline) {

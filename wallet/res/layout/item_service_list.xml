@@ -21,7 +21,7 @@
 
     <TextView
         android:id="@+id/service_name"
-        style="@style/Subtitle2.14"
+        style="@style/Subtitle2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
@@ -125,8 +125,8 @@
         android:layout_height="wrap_content"
         android:text="@string/last_known_balance"
         android:visibility="gone"
+        tools:visibility="visible"
         app:layout_constraintEnd_toEndOf="@id/service_fiat_amount"
-        app:layout_constraintStart_toStartOf="@+id/dash_icon"
         app:layout_constraintTop_toBottomOf="@+id/dash_icon" />
 
     <androidx.constraintlayout.widget.Group
