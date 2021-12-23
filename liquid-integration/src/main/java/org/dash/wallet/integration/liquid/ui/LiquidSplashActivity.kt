@@ -34,6 +34,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
@@ -47,7 +48,7 @@ import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-
+@AndroidEntryPoint
 class LiquidSplashActivity : InteractionAwareActivity() {
 
     private var loadingDialog: ProgressDialog? = null
