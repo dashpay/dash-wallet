@@ -19,7 +19,11 @@ package de.schildbach.wallet.ui
 import android.app.Application
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseAuthRepository
@@ -34,7 +38,8 @@ import kotlin.coroutines.suspendCoroutine
 @HiltViewModel
 class BuyAndSellViewModel @Inject constructor(
     application: Application,
-    private val coinBaseRepository: CoinBaseAuthRepository
+    private val coinBaseRepository: CoinBaseAuthRepository,
+    private val config: Configuration
 ) : AndroidViewModel(application) {
 
     // TODO: move this into UpholdViewModel
@@ -50,8 +55,14 @@ class BuyAndSellViewModel @Inject constructor(
     val coinbaseIsConnected: LiveData<Boolean>
         get() = _coinbaseIsConnected
 
+    private val _servicesList: MutableLiveData<List<BuyAndSellDashServicesModel>> = MutableLiveData()
+    val servicesList: LiveData<List<BuyAndSellDashServicesModel>>
+        get() = _servicesList
+
+    private var buyAndSellDashServicesModel = BuyAndSellDashServicesModel.getBuyAndSellDashServicesList()
+
     init {
-        isUserConnected()
+        isUserConnectedToCoinbase()
     }
 
     val upholdBalanceLiveData = Transformations.switchMap(triggerUploadBalanceUpdate) {
@@ -72,11 +83,79 @@ class BuyAndSellViewModel @Inject constructor(
         }
     }
 
-     fun isUserConnected() {
+    fun isUserConnectedToCoinbase() {
         _coinbaseIsConnected.value = coinBaseRepository.isUserConnected()
     }
 
-    fun getUserLastAccountBalance() = coinBaseRepository.getUserLastCoinbaseBalance()
+    private fun setDashServiceList(list: List<BuyAndSellDashServicesModel>) {
+        _servicesList.value = list.sortedBy { it.serviceStatus }
+        buyAndSellDashServicesModel = list
+    }
+
+    private fun changeCoinBaseItemStatus(isOnline: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
+        return if (coinBaseRepository.getUserLastCoinbaseBalance()== null) {
+            BuyAndSellDashServicesModel.ServiceStatus.IDLE
+        } else {
+            if (coinBaseRepository.isUserConnected() && isOnline) {
+                BuyAndSellDashServicesModel.ServiceStatus.CONNECTED
+            } else {
+                BuyAndSellDashServicesModel.ServiceStatus.DISCONNECTED
+            }
+        }
+    }
+
+    private fun changeItemStatus(isOnline: Boolean, clientIsAuthenticated: Boolean, userHadBalance: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
+        return if (!userHadBalance) {
+            BuyAndSellDashServicesModel.ServiceStatus.IDLE
+        } else {
+            if (clientIsAuthenticated && isOnline) {
+                BuyAndSellDashServicesModel.ServiceStatus.CONNECTED
+            } else {
+                BuyAndSellDashServicesModel.ServiceStatus.DISCONNECTED
+            }
+        }
+    }
+
+    fun setServicesStatus(isOnline: Boolean, liquidClientIsAuthenticated: Boolean, upHoldClientIsAuthenticated: Boolean) {
+        setDashServiceList(
+            buyAndSellDashServicesModel.toMutableList().map { model ->
+                val serviceStatus = when (model.serviceType) {
+                    BuyAndSellDashServicesModel.ServiceType.LIQUID -> changeItemStatus(isOnline, liquidClientIsAuthenticated, config.lastLiquidBalance.isNullOrEmpty().not())
+                    BuyAndSellDashServicesModel.ServiceType.UPHOLD -> changeItemStatus(isOnline, upHoldClientIsAuthenticated, config.lastUpholdBalance.isNullOrEmpty().not())
+                    BuyAndSellDashServicesModel.ServiceType.COINBASE -> changeCoinBaseItemStatus(isOnline)
+                }
+                if (serviceStatus != model.serviceStatus) {
+                    model.copy(serviceStatus = serviceStatus)
+                } else {
+                    model
+                }
+            }
+        )
+    }
+
+    fun showRowBalance(serviceType: BuyAndSellDashServicesModel.ServiceType, currentExchangeRate: de.schildbach.wallet.rates.ExchangeRate?, amount: String) {
+        val list = buyAndSellDashServicesModel.toMutableList().map { model ->
+            if (model.serviceType == serviceType) {
+                val balance = try {
+                    Coin.parseCoin(amount)
+                } catch (x: Exception) {
+                    Coin.ZERO
+                }
+                if (currentExchangeRate == null) {
+                    model.copy(balance = balance)
+                } else {
+                    val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
+                    val localValue = exchangeRate.coinToFiat(balance)
+                    model.copy(balance = balance, localBalance = localValue)
+                }
+            } else {
+                model
+            }
+        }
+        setDashServiceList(list)
+    }
+
+    fun getUserLastCoinBaseAccountBalance() = coinBaseRepository.getUserLastCoinbaseBalance()
 
     fun loginToCoinbase(code: String) {
         viewModelScope.launch {

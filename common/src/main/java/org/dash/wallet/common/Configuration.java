@@ -477,9 +477,16 @@ public class Configuration {
         prefs.edit().putString(PREFS_KEY_LAST_UPHOLD_BALANCE, balance).apply();
     }
 
-    @NonNull
     public String getLastUpholdBalance() {
-        return prefs.getString(PREFS_KEY_LAST_UPHOLD_BALANCE, "0.00");
+        return prefs.getString(PREFS_KEY_LAST_UPHOLD_BALANCE, null);
+    }
+
+    public void setLastLiquidBalance(String balance) {
+        prefs.edit().putString(PREFS_KEY_LAST_LIQUID_BALANCE, balance).apply();
+    }
+
+    public String getLastLiquidBalance() {
+        return prefs.getString(PREFS_KEY_LAST_LIQUID_BALANCE, null);
     }
 
     public Boolean isDashToFiatDirection() {

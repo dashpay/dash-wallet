@@ -34,6 +34,8 @@
     <string name="network_unavailable_return">Return to Wallet</string>
     <string name="button_continue">Continue</string>
 
+    <string name="select_a_service_to_buy_and_sell_Dash"> Select a service to buy and sell Dash.</string>
+
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
     <string name="pay_with">Pay with</string>

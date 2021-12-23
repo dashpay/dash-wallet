@@ -16,6 +16,7 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -46,7 +47,7 @@ import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
+@AndroidEntryPoint
 class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     companion object {
@@ -161,7 +162,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                 when (it.status) {
                     Status.LOADING -> {
                         loadingDialog!!.show()
-                        showLiquidBalance(viewModel.lastLiquidBalance)
+                        viewModel.lastLiquidBalance?.let { it1 -> showLiquidBalance(it1) }
                     }
                     Status.SUCCESS -> {
                         log.info("liquid: get user balance successful")
@@ -174,7 +175,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                         log.error("liquid: cannot obtain user balance: ${it.exception?.message}")
                         if (!isFinishing) {
                             loadingDialog!!.hide()
-                            showLiquidBalance(viewModel.lastLiquidBalance)
+                            viewModel.lastLiquidBalance?.let { it1 -> showLiquidBalance(it1) }
                         }
                         if (it.exception is LiquidUnauthorizedException) {
                             val viewModel =
@@ -194,7 +195,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                     Status.CANCELED -> {
                         if (!isFinishing) {
                             loadingDialog!!.hide()
-                            showLiquidBalance(viewModel.lastLiquidBalance)
+                            viewModel.lastLiquidBalance?.let { it1 -> showLiquidBalance(it1) }
                         }
                     }
                 }
