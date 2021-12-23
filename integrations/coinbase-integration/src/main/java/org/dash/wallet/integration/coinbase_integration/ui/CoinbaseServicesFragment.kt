@@ -26,8 +26,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
@@ -35,6 +33,8 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
+import java.text.DecimalFormat
+import java.text.NumberFormat
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -69,12 +69,17 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
+
+        val currencySymbol = (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
+            currency = Currency.getInstance(viewModel.config.exchangeCurrencyCode)
+        }.decimalFormatSymbols.currencySymbol
+
         binding.walletBalanceLocal.setFormat(
-                        MonetaryFormat().noCode().minDecimals(2).code(
-                            0,
-                             viewModel.config.exchangeCurrencyCode
-                        )
-                    )
+            MonetaryFormat().noCode().minDecimals(2).optionalDecimals().code(
+                0,
+                currencySymbol
+            )
+        )
 
         walletDataProvider.getExchangeRate(defaultCurrency).observe(viewLifecycleOwner,
             { exchangeRate ->
@@ -82,8 +87,14 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                     currentExchangeRate = exchangeRate
                     if (currentExchangeRate != null) {
                         val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-                        val localValue = exchangeRate.coinToFiat(Coin.parseCoin(viewModel.user.value?.balance?.amount?:"0"))
-                        binding.walletBalanceLocal.setAmount(localValue)
+                        val localValue = Coin.parseCoin(viewModel.user.value?.balance?.amount?:"0")
+
+                        binding.walletBalanceLocal.setFiatAmount(
+                            localValue,
+                            exchangeRate,
+                            MonetaryFormat().noCode().minDecimals(2).optionalDecimals(),
+                            currencySymbol
+                        )
                     }
                 }
             })
