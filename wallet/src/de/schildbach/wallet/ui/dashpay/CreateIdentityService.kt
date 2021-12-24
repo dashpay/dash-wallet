@@ -359,67 +359,7 @@ class CreateIdentityService : LifecycleService() {
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
-        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
-        if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERED) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERED)
-            //
-            // Step 3: Verify that the identity was registered
-            //
-            //platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
-            //
-            // Step 4: Preorder the username
-            if (!blockchainIdentity.getUsernames().contains(blockchainIdentityData.username!!)) {
-                blockchainIdentity.addUsername(blockchainIdentityData.username!!)
-            }
-            platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
-        if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERED) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERED)
-            //
-            // Step 4: Verify that the username was preordered
-            //
-            //platformRepo.isNamePreorderedAsync(blockchainIdentity)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        if (blockchainIdentityData.creationState <= CreationState.USERNAME_REGISTERING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERING)
-            //
-            // Step 5: Register the username
-            //
-            platformRepo.registerNameAsync(blockchainIdentity, encryptionKey)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
-        if (blockchainIdentityData.creationState <= CreationState.USERNAME_REGISTERED) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.USERNAME_REGISTERED)
-            //
-            // Step 5: Verify that the username was registered
-            //
-            //platformRepo.isNameRegisteredAsync(blockchainIdentity)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        // Step 6: A profile will not be created, since the user has not yet specified
-        //         a display name, public message (bio) or an avatarUrl
-        //         However, a default empty profile will be saved to the local database.
-        val emptyProfile = DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
-        platformRepo.updateDashPayProfile(emptyProfile)
-        addInviteUserAlert(wallet)
-
-        PlatformRepo.getInstance().init()
-
-        // aaaand we're done :)
-        log.info("username registration complete")
+        finishRegistration(blockchainIdentity, encryptionKey)
     }
 
     private fun handleCreateIdentityFromInvitationAction(username: String?, invite: InvitationLinkData?) {
@@ -577,6 +517,7 @@ class CreateIdentityService : LifecycleService() {
                 }
             }
         }
+        log.info("username registration with invite complete")
     }
 
     private suspend fun finishRegistration(blockchainIdentity: BlockchainIdentity, encryptionKey: KeyParameter) {
@@ -587,7 +528,6 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 3: Verify that the identity was registered
             //
-            //platformRepo.verifyIdentityRegisteredAsync(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
@@ -608,7 +548,6 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 4: Verify that the username was preordered
             //
-            //platformRepo.isNamePreorderedAsync(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
@@ -627,8 +566,8 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 5: Verify that the username was registered
             //
-            //platformRepo.isNameRegisteredAsync(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, bundleOf())
         }
 
         // Step 6: A profile will not be created, since the user has not yet specified
@@ -689,7 +628,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         val loadingFromCreditFundingTransaction = creditFundingTransaction != null
-        var existingIdentity: Identity?
+        val existingIdentity: Identity?
 
         if (!loadingFromCreditFundingTransaction) {
             existingIdentity = platformRepo.getIdentityFromPublicKeyId()
