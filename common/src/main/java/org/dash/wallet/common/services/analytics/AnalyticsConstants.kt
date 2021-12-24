@@ -118,6 +118,7 @@ object AnalyticsConstants {
     }
 
     object UsersContacts {
+        const val CREATE_USERNAME = "create_username"
         const val SEARCH_CONTACTS = "contacts_search"
         const val SEARCH_DASH_NETWORK = "contacts_search_dash_network"
         const val SEARCH_USER_ICON = "contacts_search_user_icon"
