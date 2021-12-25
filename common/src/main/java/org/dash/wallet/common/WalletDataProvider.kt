@@ -22,16 +22,15 @@ import androidx.lifecycle.LiveData
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Resource
 
 interface WalletDataProvider {
-
     fun freshReceiveAddress(): Address
 
-    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate>
+    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData>
 
-    fun getExchangeRates(): LiveData<List<ExchangeRate>>
+    fun getExchangeRates(): LiveData<List<ExchangeRateData>>
 
     fun currencyCodes(): LiveData<List<String>>
 
@@ -40,5 +39,4 @@ interface WalletDataProvider {
     fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
-
 }

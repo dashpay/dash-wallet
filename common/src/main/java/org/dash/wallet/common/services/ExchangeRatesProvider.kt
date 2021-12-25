@@ -15,21 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui.radio_group
+package org.dash.wallet.common.services
 
-import androidx.annotation.DrawableRes
+import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.common.data.ExchangeRate
 
-enum class IconSelectMode {
-    None, Encircle, Tint
+interface ExchangeRatesProvider {
+    fun observeExchangeRates(): Flow<List<ExchangeRate>>
+    fun observeExchangeRate(currencyCode: String): Flow<ExchangeRate>
 }
-
-data class IconifiedViewItem(
-    val title: String,
-    val subtitle: String,
-    @DrawableRes
-    val icon: Int? = null,
-    val iconSelectMode: IconSelectMode = IconSelectMode.Tint,
-    val additionalInfo: String? = null,
-    @DrawableRes
-    val subtitleDrawable: Int? = null,
-)

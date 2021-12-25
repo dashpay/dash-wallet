@@ -18,6 +18,7 @@
 package org.dash.wallet.common.ui.enter_amount
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -25,16 +26,20 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Monetary
+import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
+import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormatSymbols
 
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     companion object {
         private const val ARG_INITIAL_AMOUNT = "initial_amount"
@@ -95,8 +100,27 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             maxSelected = true
         }
 
-        viewModel.exchangeRate.observe(viewLifecycleOwner) {
-            binding.amountView.exchangeRate = it
+        binding.amountView.setOnCurrencyToggleClicked {
+            parentFragmentManager.let { fragmentManager ->
+                ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
+                    viewModel.selectedCurrencyCode = rate.currencyCode
+                    dialog.dismiss()
+                }.show(fragmentManager, "payment_method")
+            }
+        }
+
+        viewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
+            binding.amountView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
+        }
+    }
+
+    fun setViewDetails(continueText: String, keyboardHeader: View?) {
+        lifecycleScope.launchWhenStarted {
+            binding.continueBtn.text = continueText
+            keyboardHeader?.let {
+                binding.keyboardContainer.addView(keyboardHeader, 0)
+                binding.keyboardHeaderDivider.isVisible = true
+            }
         }
     }
 
@@ -165,16 +189,6 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             }
 
             binding.amountView.input = value.toString()
-        }
-    }
-
-    fun setViewDetails(continueText: String, keyboardHeader: View?) {
-        lifecycleScope.launchWhenStarted {
-            binding.continueBtn.text = continueText
-            keyboardHeader?.let {
-                binding.keyboardContainer.addView(keyboardHeader, 0)
-                binding.keyboardHeaderDivider.isVisible = true
-            }
         }
     }
 }

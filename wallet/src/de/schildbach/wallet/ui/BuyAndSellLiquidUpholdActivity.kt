@@ -39,6 +39,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants.*
+import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
@@ -67,7 +68,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     private lateinit var application: WalletApplication
     private lateinit var config: Configuration
 
-    private var currentExchangeRate: de.schildbach.wallet.rates.ExchangeRate? = null
+    private var currentExchangeRate: ExchangeRate? = null
 
     private lateinit var viewModel: BuyAndSellViewModel
     private lateinit var liquidViewModel: LiquidViewModel

@@ -19,30 +19,43 @@ package org.dash.wallet.common.ui.enter_amount
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import javax.inject.Inject
 
+@ExperimentalCoroutinesApi
 @HiltViewModel
 class EnterAmountViewModel @Inject constructor(
-    var walletDataProvider: WalletDataProvider
+    var exchangeRates: ExchangeRatesProvider,
+    var configuration: Configuration
 ) : ViewModel() {
-    private val _exchangeRate = MutableLiveData<ExchangeRate>()
-    val exchangeRate: LiveData<ExchangeRate>
-        get() = _exchangeRate
+    private val _selectedCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
+    var selectedCurrencyCode: String
+        get() = _selectedCurrencyCode.value
+        set(value) {
+            _selectedCurrencyCode.value = value
+        }
+
+    private val _selectedExchangeRate = MutableLiveData<ExchangeRate>()
+    val selectedExchangeRate: LiveData<ExchangeRate>
+        get() = _selectedExchangeRate
 
     var maxAmount: Coin = Coin.ZERO
     val onContinueEvent = SingleLiveEvent<Pair<Coin, Fiat>>()
 
     init {
-        val defaultCurrency = walletDataProvider.defaultCurrencyCode()
-        walletDataProvider.getExchangeRate(defaultCurrency).observeForever { rate ->
-            rate?.let {
-                _exchangeRate.postValue(ExchangeRate(Coin.COIN, rate.fiat))
-            }
-        }
+        _selectedCurrencyCode.flatMapLatest { code ->
+            exchangeRates.observeExchangeRate(code)
+        }.onEach(_selectedExchangeRate::postValue)
+            .launchIn(viewModelScope)
     }
 }

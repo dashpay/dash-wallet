@@ -17,13 +17,12 @@
 
 package de.schildbach.wallet.di
 
-import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.rates.ExchangeRatesRepository
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import javax.inject.Singleton
 
 @Module
@@ -31,6 +30,5 @@ import javax.inject.Singleton
 object DataProviderModule {
     @Singleton
     @Provides
-    fun provideWalletData(@ApplicationContext context: Context): WalletDataProvider =
-        context.applicationContext as WalletDataProvider
+    fun provideExchangeRateRepository(): ExchangeRatesProvider = ExchangeRatesRepository.instance
 }

@@ -23,7 +23,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.DrawableRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.fragment.app.viewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -31,6 +30,11 @@ import org.dash.wallet.common.R
 
 
 open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
+    companion object {
+        private const val FULLSCREEN_DIFF = 80
+    }
+
+    protected open val forceExpand: Boolean = false
     @DrawableRes protected open val background: Int = R.drawable.white_background_rounded
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -41,22 +45,27 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
             bottomSheet?.let {
                 bottomSheet.setBackgroundResource(background)
-                
+                val displayHeight = requireContext().resources.displayMetrics.heightPixels
+
                 val rootLayout = view.findViewById<T>(R.id.root_layout)
+                val height = if (forceExpand) displayHeight - FULLSCREEN_DIFF else bottomSheet.height
                 rootLayout.layoutParams = FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT, bottomSheet.height)
+                        FrameLayout.LayoutParams.MATCH_PARENT, height)
 
                 val coordinatorLayout = bottomSheet.parent as CoordinatorLayout
                 val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-
                 val marginTop = resources.getDimensionPixelSize(R.dimen.offset_dialog_margin_top)
-                val displayHeight = requireContext().resources.displayMetrics.heightPixels
 
-                if (bottomSheet.height + 80 > displayHeight) {
+                if (forceExpand || bottomSheet.height + FULLSCREEN_DIFF > displayHeight) {
                     // apply top offset
                     bottomSheetBehavior.isFitToContents = false
                     bottomSheetBehavior.expandedOffset = marginTop
-                    bottomSheetBehavior.peekHeight = bottomSheet.height - marginTop
+
+                    if (forceExpand) {
+                        bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                    } else {
+                        bottomSheetBehavior.peekHeight = bottomSheet.height - marginTop
+                    }
                 } else {
                     // apply wrap_content height
                     bottomSheetBehavior.peekHeight = bottomSheet.height

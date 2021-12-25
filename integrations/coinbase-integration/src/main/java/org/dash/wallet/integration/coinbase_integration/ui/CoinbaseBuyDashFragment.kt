@@ -25,14 +25,16 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashBinding
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
@@ -40,6 +42,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinbasePaymentMet
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 
 @AndroidEntryPoint
+@ExperimentalCoroutinesApi
 class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
@@ -55,14 +58,26 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
             val headerBinding = KeyboardHeaderViewBinding.inflate(layoutInflater, null, false)
             fragment.setViewDetails(getString(R.string.button_continue), headerBinding.root)
 
-            childFragmentManager.commit {
+            parentFragmentManager.commit {
                 setReorderingAllowed(true)
                 add(R.id.enter_amount_fragment_placeholder, fragment)
             }
         }
 
         setupPaymentMethodPayment()
+        binding.toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
+        }
+
+        amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
+            binding.toolbarSubtitle.text = getString(
+                R.string.exchange_rate_template,
+                Coin.COIN.toPlainString(),
+                GenericUtils.fiatToString(rate.fiat)
+            )
+        }
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
+            // TODO
             Log.i("COINBASELOG", "fiat: ${pair.second}, coin: ${pair.first}")
         }
     }

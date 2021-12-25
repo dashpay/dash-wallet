@@ -31,6 +31,7 @@ import dagger.hilt.android.internal.managers.ViewComponentManager
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.ViewPaymentMethodBinding
 import org.dash.wallet.common.ui.getRoundedRippleBackground
+import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 
@@ -65,11 +66,13 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
                     method.name
                 }
 
+                val paymentMethodIcon = getPaymentMethodIcon(method.paymentMethodType)
                 IconifiedViewItem(
                     name,
                     listOf(method.account, method.accountType).filterNot { it.isNullOrEmpty() }.joinToString(" • "),
-                    getPaymentMethodIcon(method.paymentMethodType),
-                    method.paymentMethodType != PaymentMethodType.Unknown,
+                    paymentMethodIcon,
+                    if (paymentMethodIcon != null) IconSelectMode.Encircle else IconSelectMode.Tint,
+                    null,
                     getCardIcon(method.paymentMethodType, method.account)
                 )
             }

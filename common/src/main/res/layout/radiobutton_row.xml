@@ -50,12 +50,12 @@
         style="@style/Body2.Medium"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="35dp"
         android:textColor="@color/radiobutton_text_color"
+        android:layout_marginEnd="12dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/subtitle"
         app:layout_constraintStart_toEndOf="@id/icon_wrapper"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/additional_info"
         tools:text="Alabama" />
 
     <TextView
@@ -63,22 +63,40 @@
         style="@style/Caption.SteelGray400"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="35dp"
         android:layout_marginTop="2dp"
         android:drawablePadding="4dp"
+        android:layout_marginEnd="12dp"
         app:layout_constraintStart_toStartOf="@id/title"
         app:layout_constraintTop_toBottomOf="@id/title"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/additional_info"
         tools:text="****1234" />
 
-    <ImageView
-        android:id="@+id/checkmark"
+    <TextView
+        android:id="@+id/additional_info"
+        style="@style/Body2.Gray400"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/checkmark_frame"
+        tools:visibility="visible"
+        tools:text="USD" />
+
+    <FrameLayout
+        android:id="@+id/checkmark_frame"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:layout_marginEnd="2dp"
-        android:src="@drawable/ic_checkmark_blue"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageView
+            android:id="@+id/checkmark"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/ic_checkmark_blue" />
+    </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

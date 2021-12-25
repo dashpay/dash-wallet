@@ -15,21 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui.radio_group
+package org.dash.wallet.common.ui.exchange_rates
 
-import androidx.annotation.DrawableRes
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
+import dagger.hilt.android.lifecycle.HiltViewModel
+import org.dash.wallet.common.services.ExchangeRatesProvider
+import javax.inject.Inject
 
-enum class IconSelectMode {
-    None, Encircle, Tint
+@HiltViewModel
+class ExchangeRatesViewModel @Inject constructor(
+    exchangeRatesRepo: ExchangeRatesProvider
+) : ViewModel() {
+    val exchangeRates = exchangeRatesRepo.observeExchangeRates().asLiveData()
 }
-
-data class IconifiedViewItem(
-    val title: String,
-    val subtitle: String,
-    @DrawableRes
-    val icon: Int? = null,
-    val iconSelectMode: IconSelectMode = IconSelectMode.Tint,
-    val additionalInfo: String? = null,
-    @DrawableRes
-    val subtitleDrawable: Int? = null,
-)

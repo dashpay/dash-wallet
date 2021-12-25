@@ -25,7 +25,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
@@ -42,6 +41,8 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         .noCode().minDecimals(6).optionalDecimals()
     private val fiatFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
+
+    private var onCurrencyToggleClicked: (() -> Unit)? = null
 
     private var currencySymbol = "$"
     private var isCurrencySymbolFirst = true
@@ -89,9 +90,20 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         val padding = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         updatePadding(left = padding, right = padding)
         updateCurrency()
+
         binding.convertDirectionBtn.setOnClickListener {
             dashToFiat = !dashToFiat
         }
+        binding.inputCurrencyToggle.setOnClickListener {
+            onCurrencyToggleClicked?.invoke()
+        }
+        binding.resultCurrencyToggle.setOnClickListener {
+            onCurrencyToggleClicked?.invoke()
+        }
+    }
+
+    fun setOnCurrencyToggleClicked(listener: () -> Unit) {
+        onCurrencyToggleClicked = listener
     }
 
     private fun updateCurrency() {

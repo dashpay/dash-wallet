@@ -30,6 +30,7 @@ import org.dash.wallet.common.ui.getRoundedBackground
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
+    private val roundCheckMark: Boolean = false,
     private val clickListener: (IconifiedViewItem, Int) -> Unit
 ): ListAdapter<IconifiedViewItem, RadioButtonViewHolder>(DiffCallback()) {
 
@@ -47,7 +48,7 @@ class RadioGroupAdapter(
         val inflater = LayoutInflater.from(parent.context)
         val binding = RadiobuttonRowBinding.inflate(inflater, parent, false)
 
-        return RadioButtonViewHolder(binding)
+        return RadioButtonViewHolder(binding, this.roundCheckMark)
     }
 
     override fun onBindViewHolder(holder: RadioButtonViewHolder, position: Int) {
@@ -78,13 +79,16 @@ class RadioGroupAdapter(
     }
 }
 
-class RadioButtonViewHolder(val binding: RadiobuttonRowBinding) : RecyclerView.ViewHolder(binding.root) {
+class RadioButtonViewHolder(
+    val binding: RadiobuttonRowBinding,
+    private val roundCheckMark: Boolean
+) : RecyclerView.ViewHolder(binding.root) {
     fun bind(option: IconifiedViewItem, isSelected: Boolean) {
         val resources = binding.root.resources
 
         binding.title.text = option.title
         binding.title.setTextColor(resources.getColorStateList(
-            if (option.isIconEncircled) R.color.gray_900 else R.color.radiobutton_text_color,
+            if (option.iconSelectMode == IconSelectMode.Encircle) R.color.gray_900 else R.color.radiobutton_text_color,
             null
         ))
 
@@ -98,11 +102,18 @@ class RadioButtonViewHolder(val binding: RadiobuttonRowBinding) : RecyclerView.V
                     resources, option.icon, null
                 )
             )
-            val tint = if (option.isIconEncircled) R.color.radiobutton_icon_color else R.color.radiobutton_text_color
-            binding.icon.imageTintList = resources.getColorStateList(tint, null)
+
+            val tint = when (option.iconSelectMode) {
+                IconSelectMode.Encircle -> R.color.radiobutton_icon_color
+                IconSelectMode.Tint -> R.color.radiobutton_text_color
+                else -> null
+            }
+            tint?.let {
+                binding.icon.imageTintList = resources.getColorStateList(tint, null)
+            }
 
             binding.iconWrapper.background = when {
-                !option.isIconEncircled -> null
+                option.iconSelectMode != IconSelectMode.Encircle  -> null
                 isSelected -> resources.getRoundedBackground(R.style.EncircledIconSelectedTheme)
                 else -> resources.getRoundedBackground(R.style.EncircledIconTheme)
             }
@@ -119,6 +130,24 @@ class RadioButtonViewHolder(val binding: RadiobuttonRowBinding) : RecyclerView.V
             }
         }
 
-        binding.checkmark.isVisible = isSelected
+        binding.additionalInfo.isVisible = !option.additionalInfo.isNullOrEmpty()
+        binding.additionalInfo.text = option.additionalInfo
+
+        if (this.roundCheckMark) {
+            binding.checkmark.setImageDrawable(ResourcesCompat.getDrawable(
+                resources,
+                if (isSelected) {
+                    R.drawable.checkbox_checked
+                } else {
+                    R.drawable.checkbox_unchecked
+                },
+                null
+            ))
+        } else {
+            binding.checkmark.setImageDrawable(ResourcesCompat.getDrawable(
+                resources, R.drawable.ic_checkmark_blue, null
+            ))
+            binding.checkmark.isVisible = isSelected
+        }
     }
 }

@@ -36,7 +36,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.util.GenericUtils
 import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
-import de.schildbach.wallet.rates.ExchangeRate
+import org.dash.wallet.common.data.ExchangeRate
 import java.util.*
 import android.content.Intent
 import android.app.Activity

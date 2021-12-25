@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 
-import de.schildbach.wallet.rates.ExchangeRate;
+import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.QuickReceiveActivity;
 import de.schildbach.wallet.ui.SendCoinsQrActivity;

@@ -2,7 +2,7 @@ package org.dash.wallet.common.data
 
 import org.bitcoinj.utils.Fiat
 
-data class ExchangeRate(
+data class ExchangeRateData(
         val currencyCode: String,
         val rate: String,
         val currencyName: String,

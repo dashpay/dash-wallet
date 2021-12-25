@@ -16,14 +16,14 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
@@ -31,10 +31,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseServicesViewModel @Inject constructor(
-    application: Application,
     private val coinBaseRepository: CoinBaseRepository,
+    private val exchangeRatesProvider: ExchangeRatesProvider,
     val config: Configuration
-) : AndroidViewModel(application) {
+) : ViewModel() {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
     val user: LiveData<CoinBaseUserAccountData>
@@ -47,6 +47,10 @@ class CoinbaseServicesViewModel @Inject constructor(
     private val _userAccountError: MutableLiveData<Boolean> = MutableLiveData()
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
+
+    private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
+    val exchangeRate: LiveData<ExchangeRate>
+        get() = _exchangeRate
 
     private fun getUserAccountInfo() = viewModelScope.launch {
 
@@ -81,5 +85,8 @@ class CoinbaseServicesViewModel @Inject constructor(
 
     init {
         getUserAccountInfo()
+        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)
+            .onEach(_exchangeRate::postValue)
+            .launchIn(viewModelScope)
     }
 }

@@ -37,7 +37,7 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Resource
 
 abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider {
@@ -60,19 +60,19 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         return getWalletData()!!.freshReceiveAddress()
     }
 
-    override fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate> {
+    override fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData> {
         return ExchangeRatesRepository.instance.getRate(currencyCode).switchMap {
-            return@switchMap MutableLiveData<ExchangeRate>().apply {
-                value = ExchangeRate(it.currencyCode, it.rate, it.getCurrencyName(this@BaseWalletApplication), it.fiat)
+            return@switchMap MutableLiveData<ExchangeRateData>().apply {
+                value = ExchangeRateData(it.currencyCode, it.rate, it.getCurrencyName(this@BaseWalletApplication), it.fiat)
             }
         }
     }
 
-    override fun getExchangeRates(): LiveData<List<ExchangeRate>> {
+    override fun getExchangeRates(): LiveData<List<ExchangeRateData>> {
         return ExchangeRatesRepository.instance.rates.switchMap {
-            return@switchMap MutableLiveData<List<ExchangeRate>>().apply {
+            return@switchMap MutableLiveData<List<ExchangeRateData>>().apply {
                 value = it.map { exchangeRate ->
-                    ExchangeRate(exchangeRate.currencyCode, exchangeRate.rate, exchangeRate.getCurrencyName(this@BaseWalletApplication), exchangeRate.fiat)
+                    ExchangeRateData(exchangeRate.currencyCode, exchangeRate.rate, exchangeRate.getCurrencyName(this@BaseWalletApplication), exchangeRate.fiat)
                 }
             }
         }
