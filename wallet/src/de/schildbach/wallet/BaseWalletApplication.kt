@@ -63,7 +63,7 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
     override fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData> {
         return ExchangeRatesRepository.instance.getRate(currencyCode).switchMap {
             return@switchMap MutableLiveData<ExchangeRateData>().apply {
-                value = ExchangeRateData(it.currencyCode, it.rate, it.getCurrencyName(this@BaseWalletApplication), it.fiat)
+                value = ExchangeRateData(it.currencyCode, it.rate ?: "0.0", it.getCurrencyName(this@BaseWalletApplication), it.fiat)
             }
         }
     }
@@ -72,17 +72,7 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         return ExchangeRatesRepository.instance.rates.switchMap {
             return@switchMap MutableLiveData<List<ExchangeRateData>>().apply {
                 value = it.map { exchangeRate ->
-                    ExchangeRateData(exchangeRate.currencyCode, exchangeRate.rate, exchangeRate.getCurrencyName(this@BaseWalletApplication), exchangeRate.fiat)
-                }
-            }
-        }
-    }
-
-    override fun currencyCodes(): LiveData<List<String>> {
-        return ExchangeRatesRepository.instance.rates.switchMap {
-            return@switchMap MutableLiveData<List<String>>().apply {
-                value = it.map { exchangeRate ->
-                    exchangeRate.currencyCode
+                    ExchangeRateData(exchangeRate.currencyCode, exchangeRate.rate ?: "0.0", exchangeRate.getCurrencyName(this@BaseWalletApplication), exchangeRate.fiat)
                 }
             }
         }

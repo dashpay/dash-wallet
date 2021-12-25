@@ -28,12 +28,13 @@ import org.dash.wallet.common.data.Resource
 interface WalletDataProvider {
     fun freshReceiveAddress(): Address
 
+    @Deprecated("Inject ExchangeRatesProvider instead")
     fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData>
 
+    @Deprecated("Inject ExchangeRatesProvider instead")
     fun getExchangeRates(): LiveData<List<ExchangeRateData>>
 
-    fun currencyCodes(): LiveData<List<String>>
-
+    @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
 
     fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
