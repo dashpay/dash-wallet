@@ -67,13 +67,18 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
                 }
 
                 val paymentMethodIcon = getPaymentMethodIcon(method.paymentMethodType)
+                val cardIcon = if (method.paymentMethodType == PaymentMethodType.Card) {
+                    CardUtils.getCardIcon(method.account)
+                } else {
+                    null
+                }
                 IconifiedViewItem(
                     name,
                     listOf(method.account, method.accountType).filterNot { it.isNullOrEmpty() }.joinToString(" • "),
                     paymentMethodIcon,
                     if (paymentMethodIcon != null) IconSelectMode.Encircle else IconSelectMode.Tint,
                     null,
-                    getCardIcon(method.paymentMethodType, method.account)
+                    cardIcon
                 )
             }
 
@@ -93,7 +98,11 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
 
     private fun setDisplayedInfo(paymentMethod: PaymentMethod) {
         binding.paymentMethodName.text = paymentMethod.name
-        val cardIcon = getCardIcon(paymentMethod.paymentMethodType, paymentMethod.account)
+        val cardIcon = if (paymentMethod.paymentMethodType == PaymentMethodType.Card) {
+            CardUtils.getCardIcon(paymentMethod.account)
+        } else {
+            null
+        }
         binding.paymentMethodName.isVisible = cardIcon == null
         binding.paymentMethodIcon.setImageResource(cardIcon ?: 0)
         binding.account.text = paymentMethod.account
@@ -114,19 +123,6 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
         }
     }
 
-    @DrawableRes
-    private fun getCardIcon(paymentMethodType: PaymentMethodType, account: String?): Int? {
-        if (paymentMethodType == PaymentMethodType.Card && !account.isNullOrEmpty()) {
-            cardTypes.forEach { (regex, drawableRes) ->
-                if (regex.toRegex().containsMatchIn(account)) {
-                    return drawableRes
-                }
-            }
-        }
-
-        return null
-    }
-
     private fun getFragmentManager(context: Context?): FragmentManager? {
         return when (context) {
             is AppCompatActivity -> context.supportFragmentManager
@@ -135,13 +131,4 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
             else -> null
         }
     }
-
-    private val cardTypes = mapOf(
-        "^4[0-9]{3}?" to R.drawable.ic_visa,
-        "^5[1-5][0-9]{2}|222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720" to R.drawable.ic_mastercard,
-        "^3[47][0-9]{2}" to R.drawable.ic_american_express,
-        "^6(?:011|5[0-9]{2})" to R.drawable.ic_card_discover,
-        "^3(?:0[0-5]|[68][0-9])[0-9]" to R.drawable.ic_diners_club,
-        "^35[0-9]{2}" to R.drawable.ic_card_jcb
-    )
 }
