@@ -47,6 +47,8 @@ public class ExchangeRate implements Parcelable {
     @Ignore
     private Currency currency;
 
+    public ExchangeRate() { }
+
     public ExchangeRate(@NonNull String currencyCode, String rate) {
         this.currencyCode = currencyCode;
         this.rate = rate;
@@ -62,6 +64,10 @@ public class ExchangeRate implements Parcelable {
     @NonNull
     public String getCurrencyCode() {
         return currencyCode;
+    }
+
+    public void setCurrencyCode(@NonNull String currencyCode) {
+        this.currencyCode = currencyCode;
     }
 
     public String getRate() {
