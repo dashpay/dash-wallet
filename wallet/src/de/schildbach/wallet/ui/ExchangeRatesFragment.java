@@ -83,6 +83,7 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
     private ConstraintLayout viewContainer;
     private Group settingsGroup, sendPaymentGroup;
     public static final String ARG_SHOW_AS_DIALOG = "ARG_SHOW_AS_DIALOG";
+    public static final String ARG_CURRENCY_CODE = "ARG_CURRENCY_CODE";
     private boolean showAsDialog;
     public static final String BUNDLE_EXCHANGE_RATE = "BUNDLE_EXCHANGE_RATE";
     @Override
@@ -94,37 +95,32 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         this.wallet = application.getWallet();
     }
 
-    public static ExchangeRatesFragment newInstance(boolean showAsDialog) {
+    public static ExchangeRatesFragment newInstance(boolean showAsDialog, String selectedCurrency) {
         ExchangeRatesFragment fragment = new ExchangeRatesFragment();
         Bundle args = new Bundle();
         args.putBoolean(ARG_SHOW_AS_DIALOG, showAsDialog);
+        args.putString(ARG_CURRENCY_CODE, selectedCurrency);
         fragment.setArguments(args);
         return fragment;
     }
 
-    public static ExchangeRatesFragment newInstance() {
-        return newInstance(true);
+    public static ExchangeRatesFragment newInstance(String selectedCurrency) {
+        return newInstance(true, selectedCurrency);
     }
 
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        showAsDialog = getActivity().getIntent().getBooleanExtra(ARG_SHOW_AS_DIALOG, false);
+        showAsDialog = requireActivity().getIntent().getBooleanExtra(ARG_SHOW_AS_DIALOG, false);
         adapter = new ExchangeRatesAdapter(activity, config, wallet, new ArrayList<>(), this, this,showAsDialog);
         adapter.setRateBase(config.getBtcBase());
-        if (showAsDialog){
-            if (config.isDefaultFiatCurrencyChanged()) {
-                adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
-                config.setDefaultFiatCurrencyChanged(false);
-            } else if (config.isCurrentFiatCurrencyChanged()) {
-                adapter.setDefaultCurrency(config.getSendPaymentExchangeCurrencyCode());
-                config.setCurrentFiatCurrencyChanged(false);
-            } else {
-                adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
-            }
-        } else {
-            adapter.setDefaultCurrency(config.getExchangeCurrencyCode());
+        String currencyCode = requireActivity().getIntent().getStringExtra(ARG_CURRENCY_CODE);
+
+        if (Strings.isNullOrEmpty(currencyCode)) {
+            currencyCode = config.getExchangeCurrencyCode();
         }
+
+        adapter.setDefaultCurrency(currencyCode);
     }
 
     @Override

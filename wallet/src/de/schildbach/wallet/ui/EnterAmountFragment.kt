@@ -36,14 +36,13 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.util.GenericUtils
-import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
 import de.schildbach.wallet.rates.ExchangeRate
 import java.util.*
 import android.content.Intent
 import android.app.Activity
 import android.content.Context
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
+import de.schildbach.wallet.ui.ExchangeRatesFragment.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.util.FiatAmountFormat
 
@@ -178,12 +177,16 @@ class EnterAmountFragment : Fragment() {
         input_select_currency_toggle.setOnClickListener {
             val intent = Intent(activity, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, true)
+            val currencyCode = sharedViewModel.exchangeRate?.fiat?.currencyCode ?: configuration.exchangeCurrencyCode
+            intent.putExtra(ARG_CURRENCY_CODE, currencyCode)
             startActivityForResult(intent, RC_FIAT_CURRENCY_SELECTED)
         }
 
         calc_select_currency_toggle.setOnClickListener {
             val intent = Intent(activity, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, true)
+            val currencyCode = sharedViewModel.exchangeRate?.fiat?.currencyCode ?: configuration.exchangeCurrencyCode
+            intent.putExtra(ARG_CURRENCY_CODE, currencyCode)
             startActivityForResult(intent, RC_FIAT_CURRENCY_SELECTED)
         }
     }
