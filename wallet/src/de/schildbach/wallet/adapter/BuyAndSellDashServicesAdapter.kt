@@ -11,6 +11,7 @@ import androidx.core.view.isVisible
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
@@ -47,25 +48,22 @@ class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListen
                 binding.serviceBalance.setApplyMarkup(false)
                 binding.serviceBalance.setAmount(Coin.ZERO)
 
+
                 val currencySymbol = (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
                     currency = Currency.getInstance(config.exchangeCurrencyCode)
                 }.decimalFormatSymbols.currencySymbol
 
-                val fiatFormat = MonetaryFormat().noCode().minDecimals(2).optionalDecimals()
-
-                binding.serviceFiatAmount.text = Constants.PREFIX_ALMOST_EQUAL_TO+ view.context.getString(
-                    R.string.fiat_balance_with_currency, fiatFormat.format(Coin.ZERO),
-                    currencySymbol
+                binding.serviceFiatAmount.setFormat(
+                    MonetaryFormat().noCode().minDecimals(2).code(
+                        0, Constants.PREFIX_ALMOST_EQUAL_TO +currencySymbol
+                    )
                 )
 
                 if(data.balance!=null){
                     binding.serviceBalance.setAmount(data.balance)
                 }
                 if(data.localBalance!=null){
-                    binding.serviceFiatAmount.text = Constants.PREFIX_ALMOST_EQUAL_TO+  view.context.getString(
-                        R.string.fiat_balance_with_currency, fiatFormat.format(data.localBalance),
-                        currencySymbol
-                    )
+                    binding.serviceFiatAmount.setAmount(data.localBalance)
                 }
 
             }
