@@ -1,6 +1,7 @@
 package de.schildbach.wallet.adapter
 
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,10 +11,10 @@ import androidx.core.view.isVisible
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.BaseAdapter
+import org.dash.wallet.common.util.GenericUtils
 
 class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListener:ClickListener) : BaseAdapter<BuyAndSellDashServicesModel>(){
 
@@ -25,6 +26,7 @@ class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListen
     }
 
     inner class BuyAndSellDashServicesViewHolder( val binding: ItemServiceListBinding) : BaseViewHolder(binding.root) {
+        @SuppressLint("SetTextI18n")
         override fun bindData(data: BuyAndSellDashServicesModel?) {
             data?.let {
                 binding.root.setOnClickListener {
@@ -40,16 +42,12 @@ class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListen
                 binding.serviceBalance.setFormat(config.format.noCode())
                 binding.serviceBalance.setApplyMarkup(false)
                 binding.serviceBalance.setAmount(Coin.ZERO)
-                binding.serviceFiatAmount.setFormat(
-                    MonetaryFormat().noCode().minDecimals(2).code(
-                        0, config.exchangeCurrencyCode+Constants.PREFIX_ALMOST_EQUAL_TO
-                    )
-                )
+
                 if(data.balance!=null){
                     binding.serviceBalance.setAmount(data.balance)
                 }
                 if(data.localBalance!=null){
-                    binding.serviceFiatAmount.setAmount(data.localBalance)
+                    binding.serviceFiatAmount.text ="${Constants.PREFIX_ALMOST_EQUAL_TO} ${GenericUtils.fiatToString(data.localBalance)}"
                 }
 
             }
