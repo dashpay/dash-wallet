@@ -249,6 +249,7 @@ public class WalletTransactionsFragment extends Fragment
                 TransactionDetailsDialogFragment.newInstance(transactionHistoryItem.getTransaction().getTxId());
         requireActivity().getSupportFragmentManager().beginTransaction()
                 .add(transactionDetailsDialogFragment, null).commitAllowingStateLoss();
+        analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS, Bundle.EMPTY);
     }
 
     @Override

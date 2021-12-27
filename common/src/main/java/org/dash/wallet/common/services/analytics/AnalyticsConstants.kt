@@ -21,8 +21,7 @@ object AnalyticsConstants {
     const val CALLING_ACTIVITY = "calling_activity"
 
     object Liquid {
-        const val BUY_SELL_HOME = "liquid_buy_sell_home_screen"
-        const val BUY_SELL_MORE = "liquid_buy_sell_more_screen"
+        const val BUY_SELL_MORE = "more_buy_sell_dash"
         const val ENTER_CONNECTED = "liquid_enter_connected"
         const val ENTER_DISCONNECTED = "liquid_enter_disconnected"
         const val DISCONNECT = "liquid_disconnect"
@@ -118,6 +117,7 @@ object AnalyticsConstants {
     }
 
     object UsersContacts {
+        const val CREATE_USERNAME = "create_username"
         const val SEARCH_CONTACTS = "contacts_search"
         const val SEARCH_DASH_NETWORK = "contacts_search_dash_network"
         const val SEARCH_USER_ICON = "contacts_search_user_icon"
