@@ -11,8 +11,6 @@ import androidx.core.view.isVisible
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.BaseAdapter
