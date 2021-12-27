@@ -93,8 +93,8 @@ class SettingsActivity : BaseMenuActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if(resultCode == Activity.RESULT_OK && requestCode == RC_DEFAULT_FIAT_CURRENCY_SELECTED){
             val exchangeRate: ExchangeRate? = data?.getParcelableExtra(BUNDLE_EXCHANGE_RATE)
-            local_currency_symbol.text = if(exchangeRate != null) exchangeRate.currencyCode else
-                WalletApplication.getInstance().configuration.exchangeCurrencyCode
+            local_currency_symbol.text = exchangeRate?.currencyCode ?: configuration.exchangeCurrencyCode
+            configuration.exchangeCurrencyCodeDetected = true
         } else {
             super.onActivityResult(requestCode, resultCode, data)
         }
