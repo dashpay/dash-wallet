@@ -32,6 +32,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
@@ -69,21 +70,14 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
-        binding.walletBalanceLocal.setFormat(
-                        MonetaryFormat().noCode().minDecimals(2).code(
-                            0,
-                             viewModel.config.exchangeCurrencyCode
-                        )
-                    )
+    
 
         walletDataProvider.getExchangeRate(defaultCurrency).observe(viewLifecycleOwner,
             { exchangeRate ->
                 if (exchangeRate != null) {
                     currentExchangeRate = exchangeRate
                     if (currentExchangeRate != null) {
-                        val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-                        val localValue = exchangeRate.coinToFiat(Coin.parseCoin(viewModel.user.value?.balance?.amount?:"0"))
-                        binding.walletBalanceLocal.setAmount(localValue)
+                        setLocalFaitAmount(viewModel.user.value?.balance?.amount ?: "0")
                     }
                 }
             })
@@ -92,11 +86,8 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             viewLifecycleOwner,
             {
                 binding.walletBalanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
-
                 if (currentExchangeRate != null) {
-                    val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-                    val localValue = exchangeRate.coinToFiat(Coin.parseCoin(it.balance?.amount))
-                    binding.walletBalanceLocal.setAmount(localValue)
+                    setLocalFaitAmount(it.balance?.amount ?:"0")
                 }
 
             }
@@ -131,6 +122,13 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 )
             }
         )
+    }
+
+    private fun setLocalFaitAmount(balance:String) {
+        val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
+        val localValue =
+            exchangeRate.coinToFiat(Coin.parseCoin(balance))
+        binding.walletBalanceLocal.text = GenericUtils.fiatToString(localValue)
     }
 
     private fun showProgress(messageResId: Int) {

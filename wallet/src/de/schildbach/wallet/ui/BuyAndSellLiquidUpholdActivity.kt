@@ -385,7 +385,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             val jsonObject = JSONObject(data)
             val cryptoArray = jsonObject.getJSONObject("payload").getJSONArray("crypto_accounts")
             var amount = "0.00"
-
+            liquidViewModel.lastLiquidBalance = amount
             for (i in 0 until cryptoArray.length()) {
                 val currency = cryptoArray.getJSONObject(i).getString("currency")
                 if (currency == "DASH") {

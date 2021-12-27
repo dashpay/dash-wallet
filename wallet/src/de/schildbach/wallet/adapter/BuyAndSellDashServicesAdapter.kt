@@ -14,6 +14,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.BaseAdapter
+import org.dash.wallet.common.util.GenericUtils
 
 class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListener:ClickListener) : BaseAdapter<BuyAndSellDashServicesModel>(){
 
@@ -40,16 +41,12 @@ class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListen
                 binding.serviceBalance.setFormat(config.format.noCode())
                 binding.serviceBalance.setApplyMarkup(false)
                 binding.serviceBalance.setAmount(Coin.ZERO)
-                binding.serviceFiatAmount.setFormat(
-                    MonetaryFormat().noCode().minDecimals(2).code(
-                        0, config.exchangeCurrencyCode+Constants.PREFIX_ALMOST_EQUAL_TO
-                    )
-                )
+
                 if(data.balance!=null){
                     binding.serviceBalance.setAmount(data.balance)
                 }
                 if(data.localBalance!=null){
-                    binding.serviceFiatAmount.setAmount(data.localBalance)
+                    binding.serviceFiatAmount.text ="${Constants.PREFIX_ALMOST_EQUAL_TO} ${GenericUtils.fiatToString(data.localBalance)}"
                 }
 
             }
