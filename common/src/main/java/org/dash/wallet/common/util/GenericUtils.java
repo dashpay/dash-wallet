@@ -160,6 +160,21 @@ public class GenericUtils {
         return new FiatAmountFormat(Character.isDigit(formattedStringValue.charAt(0)), stripCurrencyFromString(formattedStringValue, currencySymbol, currencyCode));
     }
 
+    public static String fiatToString(Fiat fiat) {
+        MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        Currency currency = Currency.getInstance(fiat.currencyCode);
+        numberFormat.setCurrency(currency);
+        String currencySymbol = currency.getSymbol(getDeviceLocale());
+        boolean isCurrencyFirst = numberFormat.format(1.0).startsWith(currencySymbol);
+
+        if (isCurrencyFirst) {
+            return currencySymbol + " " + format.format(fiat);
+        } else {
+            return format.format(fiat) + " " + currencySymbol;
+        }
+    }
+
     /**
      * Keep numericals, minus, dot, comma
      */
