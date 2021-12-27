@@ -75,7 +75,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.DynamicFeeLoader;
 import de.schildbach.wallet.data.PaymentIntent;
-import de.schildbach.wallet.rates.ExchangeRate;
+import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;

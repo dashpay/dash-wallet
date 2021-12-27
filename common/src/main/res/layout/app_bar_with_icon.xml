@@ -28,9 +28,7 @@
 
         <TextView
             android:id="@+id/toolbar_title"
-            style="@style/Subtitle1.Bold"
-            android:textSize="16sp"
-            android:textColor="@color/gray_900"
+            style="@style/Subtitle1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
@@ -43,8 +41,6 @@
         <TextView
             android:id="@+id/connected"
             style="@style/Overline"
-            android:textSize="10sp"
-            android:textColor="@color/gray_900"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/toolbar_title"

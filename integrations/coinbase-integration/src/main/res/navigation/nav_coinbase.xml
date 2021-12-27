@@ -24,5 +24,18 @@
     <fragment
         android:id="@+id/coinbaseServicesFragment"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseServicesFragment"
-        android:label="CoinbaseServicesFragment" />
+        android:label="CoinbaseServicesFragment">
+
+        <action
+            android:id="@+id/services_to_buy_dash"
+            app:destination="@id/coinbaseBuyDashFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/coinbaseBuyDashFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashFragment"
+        android:label="CoinbaseBuyDashFragment"/>
 </navigation>

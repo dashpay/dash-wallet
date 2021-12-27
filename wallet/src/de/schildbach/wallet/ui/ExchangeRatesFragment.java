@@ -49,6 +49,7 @@ import com.google.common.base.Strings;
 
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.ExchangeRate;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,7 +59,6 @@ import java.util.List;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.adapter.BaseFilterAdapter;
 import de.schildbach.wallet.adapter.ExchangeRatesAdapter;
-import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
 
@@ -154,9 +154,9 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
             }
         });
         exchangeRatesViewModel.getRates().observe(getViewLifecycleOwner(),
-                new Observer<List<de.schildbach.wallet.rates.ExchangeRate>>() {
+                new Observer<List<ExchangeRate>>() {
                     @Override
-                    public void onChanged(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
+                    public void onChanged(List<ExchangeRate> exchangeRates) {
                         adapter.setItems(exchangeRates);
                         updateView(exchangeRates);
                     }
@@ -229,7 +229,7 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         view.setVisibility(VISIBLE);
     }
 
-    private void updateView(List<de.schildbach.wallet.rates.ExchangeRate> exchangeRates) {
+    private void updateView(List<ExchangeRate> exchangeRates) {
         Collections.sort(exchangeRates, new ExchangeRateComparator());
         adapter.notifyDataSetChanged();
 
@@ -256,10 +256,10 @@ public final class ExchangeRatesFragment extends DialogFragment implements OnSha
         }
     }
 
-    public class ExchangeRateComparator implements Comparator<de.schildbach.wallet.rates.ExchangeRate> {
+    public class ExchangeRateComparator implements Comparator<ExchangeRate> {
 
         @Override
-        public int compare(de.schildbach.wallet.rates.ExchangeRate o1, de.schildbach.wallet.rates.ExchangeRate o2) {
+        public int compare(ExchangeRate o1, ExchangeRate o2) {
             return o1.getCurrencyName(getActivity()).compareToIgnoreCase(o2.getCurrencyName(getActivity()));
         }
     }

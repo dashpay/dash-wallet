@@ -26,4 +26,7 @@
     <string name="receive_directly_into_dash_wallet">Receive directly into Dash Wallet.</string>
     <string name="buy_dash">Buy Dash</string>
     <string name="balance_on_coinbase">Balance on Coinbase</string>
+    <string name="sending_to">Sending to</string>
+    <string name="dash_wallet_device">Dash Wallet on this device</string>
+    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
 </resources>

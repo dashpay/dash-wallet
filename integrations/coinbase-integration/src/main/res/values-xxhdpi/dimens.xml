@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="coinbase_enter_amount_top_guide">0.25</dimen>
+</resources>

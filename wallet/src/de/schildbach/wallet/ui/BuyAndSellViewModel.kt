@@ -133,7 +133,7 @@ class BuyAndSellViewModel @Inject constructor(
         )
     }
 
-    fun showRowBalance(serviceType: BuyAndSellDashServicesModel.ServiceType, currentExchangeRate: de.schildbach.wallet.rates.ExchangeRate?, amount: String) {
+    fun showRowBalance(serviceType: BuyAndSellDashServicesModel.ServiceType, currentExchangeRate: org.dash.wallet.common.data.ExchangeRate?, amount: String) {
         val list = buyAndSellDashServicesModel.toMutableList().map { model ->
             if (model.serviceType == serviceType) {
                 val balance = try {

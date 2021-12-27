@@ -31,6 +31,7 @@ import org.dash.wallet.common.Constants;
 import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * @author Andreas Schildbach
@@ -159,21 +160,6 @@ public class GenericUtils {
         return new FiatAmountFormat(Character.isDigit(formattedStringValue.charAt(0)), stripCurrencyFromString(formattedStringValue, currencySymbol, currencyCode));
     }
 
-    public static String fiatToString(Fiat fiat) {
-        MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
-        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
-        Currency currency = Currency.getInstance(fiat.currencyCode);
-        numberFormat.setCurrency(currency);
-        String currencySymbol = currency.getSymbol(getDeviceLocale());
-        boolean isCurrencyFirst = numberFormat.format(1.0).startsWith(currencySymbol);
-
-        if (isCurrencyFirst) {
-            return currencySymbol + " " + format.format(fiat);
-        } else {
-            return format.format(fiat) + " " + currencySymbol;
-        }
-    }
-
     /**
      * Keep numericals, minus, dot, comma
      */
@@ -197,5 +183,20 @@ public class GenericUtils {
     public static String formatFiatWithoutComma(String fiatValue){
         boolean fiatValueContainsCommaWithDecimal = fiatValue.contains(",") && fiatValue.contains(".");
         return fiatValueContainsCommaWithDecimal ? fiatValue.replaceAll(",", "") :  fiatValue.replaceAll(",", ".");
+    }
+
+    public static String fiatToString(Fiat fiat) {
+        MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        Currency currency = Currency.getInstance(fiat.currencyCode);
+        numberFormat.setCurrency(currency);
+        String currencySymbol = currency.getSymbol(getDeviceLocale());
+        boolean isCurrencyFirst = numberFormat.format(1.0).startsWith(currencySymbol);
+
+        if (isCurrencyFirst) {
+            return currencySymbol + " " + format.format(fiat);
+        } else {
+            return format.format(fiat) + " " + currencySymbol;
+        }
     }
 }

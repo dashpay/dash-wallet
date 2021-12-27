@@ -25,7 +25,6 @@ import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
@@ -33,6 +32,7 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
+import org.dash.wallet.common.util.safeNavigate
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -46,9 +46,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val walletDataProvider = requireActivity().application as WalletDataProvider
-        val defaultCurrency = walletDataProvider.defaultCurrencyCode()
 
         binding.titleBar.connected.setText(R.string.connected)
         binding.titleBar.toolbarTitle.setText(R.string.coinbase)
@@ -64,15 +61,19 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             }
         }
 
+        binding.buyDashBtn.setOnClickListener {
+            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash())
+        }
+
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
 
-        walletDataProvider.getExchangeRate(defaultCurrency).observe(viewLifecycleOwner,
-            { exchangeRate ->
-                if (exchangeRate != null) {
-                    currentExchangeRate = exchangeRate
+        viewModel.exchangeRate.observe(viewLifecycleOwner,
+            { rate ->
+                if (rate != null) {
+                    currentExchangeRate = rate
                     if (currentExchangeRate != null) {
                         setLocalFaitAmount(viewModel.user.value?.balance?.amount ?: "0")
                     }
@@ -141,6 +142,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             loadingDialog?.dismissAllowingStateLoss()
         }
     }
+
     private fun showErrorDialog(
         @StringRes title: Int,
         @StringRes message: Int,

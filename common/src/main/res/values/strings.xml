@@ -29,12 +29,18 @@
     <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
     <string name="currency_GUSD">Gemini Dollar</string>
 
+    <string name="select_a_service_to_buy_and_sell_Dash"> Select a service to buy and sell Dash.</string>
+    <string name="select_currency">Select Currency</string>
+
     <!-- Generic Buttons -->
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
+    <string name="button_continue">Continue</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
-    <string name="select_a_service_to_buy_and_sell_Dash"> Select a service to buy and sell Dash.</string>
-
+    <string name="pay_with">Pay with</string>
+    <string name="choose_payment_method">Choose Payment Method</string>
+    <string name="debit_credit_card">Debit/Credit card</string>
+    <string name="max">Max</string>
 </resources>

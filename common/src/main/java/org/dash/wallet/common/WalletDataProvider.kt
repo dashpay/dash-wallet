@@ -22,23 +22,22 @@ import androidx.lifecycle.LiveData
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Resource
 
 interface WalletDataProvider {
-
     fun freshReceiveAddress(): Address
 
-    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate>
+    @Deprecated("Inject ExchangeRatesProvider instead")
+    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData>
 
-    fun getExchangeRates(): LiveData<List<ExchangeRate>>
+    @Deprecated("Inject ExchangeRatesProvider instead")
+    fun getExchangeRates(): LiveData<List<ExchangeRateData>>
 
-    fun currencyCodes(): LiveData<List<String>>
-
+    @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
 
     fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
-
 }

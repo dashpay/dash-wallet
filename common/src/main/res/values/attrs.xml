@@ -22,4 +22,9 @@
         <attr name="primaryColor" format="color" />
         <attr name="secondaryColor" format="color" />
     </declare-styleable>
+
+    <declare-styleable name="NumericKeyboardView">
+        <attr format="boolean" name="nk_functionEnabled" />
+        <attr format="boolean" name="nk_decSeparatorEnabled" />
+    </declare-styleable>
 </resources>
