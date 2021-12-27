@@ -2,6 +2,8 @@ package org.dash.wallet.common;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.util.GenericUtils;
 
 public class Constants {
 
@@ -19,4 +21,6 @@ public class Constants {
     public static final int USER_BUY_SELL_DASH = 101;
     public static final int RESULT_CODE_GO_HOME = 100;
     public static final int COIN_BASE_AUTH = 102;
+
+    public static final MonetaryFormat SEND_PAYMENT_LOCAL_FORMAT = new MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2).optionalDecimals();
 }
