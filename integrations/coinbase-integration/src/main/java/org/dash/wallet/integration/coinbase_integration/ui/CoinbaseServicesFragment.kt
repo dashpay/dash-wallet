@@ -24,9 +24,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.WalletDataProvider
-import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
@@ -73,12 +72,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
-        binding.walletBalanceLocal.setFormat(
-                        MonetaryFormat().noCode().minDecimals(2).code(
-                            0,
-                             viewModel.config.exchangeCurrencyCode
-                        )
-                    )
+
 
         viewModel.exchangeRate.observe(viewLifecycleOwner,
             { rate ->
