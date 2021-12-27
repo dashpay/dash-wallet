@@ -553,10 +553,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val cr = contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
         log.info("contact request sent")
 
-        //Verify that the Contact Request was seen on the network
-        //val cr = contactRequests.watchContactRequest(Identifier.from(this.blockchainIdentity.uniqueId.bytes),
-        //        Identifier.from(toUserId), 100, 500, RetryDelayType.LINEAR)
-
         // add our receiving from this contact keychain if it doesn't exist
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
