@@ -30,14 +30,14 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 class FancyAlertDialog : DialogFragment() {
-    private lateinit var lockScreenViewModel: LockScreenViewModel
-    private lateinit var sharedViewModel: FancyAlertDialogViewModel
+    private val lockScreenViewModel by activityViewModels<LockScreenViewModel>()
+    private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
 
     enum class Type {
         INFO,
@@ -102,7 +102,6 @@ class FancyAlertDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        initViewModels()
         setOrHideIfEmpty(title, "title")
         setOrHideIfEmpty(message, "message")
         setOrHideIfEmpty(image, "image")
@@ -168,10 +167,5 @@ class FancyAlertDialog : DialogFragment() {
                 setCanceledOnTouchOutside(false)
             }
         }
-    }
-
-    private fun initViewModels() {
-        lockScreenViewModel = ViewModelProvider(this)[LockScreenViewModel::class.java]
-        sharedViewModel = ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
     }
 }
