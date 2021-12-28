@@ -16,17 +16,17 @@
  */
 package org.dash.wallet.integration.coinbase_integration.service
 
-import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountInfo
+import org.dash.wallet.integration.coinbase_integration.CB_VERSION_KEY
+import org.dash.wallet.integration.coinbase_integration.CB_VERSION_VALUE
+import org.dash.wallet.integration.coinbase_integration.model.*
 import retrofit2.Response
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.Query
+import retrofit2.http.*
 
 interface CoinBaseServicesApi {
 
     @GET("v2/accounts")
     suspend fun getUserAccount(
-        @Header("CB-VERSION") apiVersion: String = "2021-09-07",
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Query("limit") limit: Int = 300
     ): Response<CoinBaseUserAccountInfo>
 
@@ -34,4 +34,30 @@ interface CoinBaseServicesApi {
     suspend fun getExchangeRates(
         @Query("currency")currency: String = "DASH"
     ): Response<CoinBaseUserAccountInfo>
+
+    @GET("v2/payment-methods")
+    suspend fun getActivePaymentMethods(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+    ): Response<PaymentMethods>
+
+    @POST("v2/accounts/{account_id}/buys")
+    suspend fun placeBuyOrder(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Path("account_id") accountId: String,
+        @Body placeBuyOrderParams: PlaceBuyOrderParams
+    ): Response<PlaceBuyOrderResponse>
+
+    @POST("v2/accounts/{account_id}/buys/{buy_id}/commit")
+    suspend fun commitBuyOrder(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Path("account_id") accountId: String,
+        @Path("buy_id") buyOrderId: String
+    ): Response<PlaceBuyOrderResponse>
+
+    @POST("v2/accounts/{account_id}/transactions")
+    suspend fun sendCoinsToWallet(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Path("account_id") accountId: String,
+        @Body sendTransactionToWalletParams: SendTransactionToWalletParams
+        ): Response<SendTransactionToWalletResponse>
 }
