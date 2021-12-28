@@ -42,6 +42,9 @@ class InvitesHistoryFragment(private val caller: String) :
         fun newInstance(caller: String = "") = InvitesHistoryFragment(caller)
     }
 
+    // need default constructor to prevent crashes
+    constructor() :this("")
+
     private val invitesHistoryViewModel: InvitesHistoryViewModel by viewModels()
     private val filterViewModel: InvitesHistoryFilterViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
