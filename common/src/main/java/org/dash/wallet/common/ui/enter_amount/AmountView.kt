@@ -47,9 +47,11 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     private var currencySymbol = "$"
     private var isCurrencySymbolFirst = true
 
-    var input: String = "0"
+    private var _input = "0"
+    var input: String
+        get() = _input
         set(value) {
-            field = if(value.isEmpty()) "0" else value
+            _input = if(value.isEmpty()) "0" else value
             updateAmount()
         }
 
@@ -73,12 +75,18 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
                 field = value
                 updateDashSymbols()
 
-                val monetary = if (value) dashAmount else fiatAmount
-                input = when {
-                    monetary.value == 0L -> "0"
-                    value -> dashFormat.format(dashAmount).toString()
-                    else -> fiatFormat.minDecimals(0)
-                        .optionalDecimals(0,2).format(fiatAmount).toString()
+                if (value) {
+                    input = dashFormat.minDecimals(0)
+                        .optionalDecimals(0,6).format(dashAmount).toString()
+                } else {
+                    binding.resultAmount.text = dashFormat.format(dashAmount)
+
+                    exchangeRate?.let {
+                        fiatAmount = it.coinToFiat(dashAmount)
+                        _input = fiatFormat.minDecimals(0)
+                            .optionalDecimals(0,2).format(fiatAmount).toString()
+                        binding.inputAmount.text = formatInputWithCurrency()
+                    }
                 }
             }
         }
@@ -114,12 +122,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     }
 
     private fun updateAmount() {
-        binding.inputAmount.text = when {
-            dashToFiat -> input
-            isCurrencySymbolFirst -> "$currencySymbol $input"
-            else -> "$input $currencySymbol"
-        }
-
+        binding.inputAmount.text = formatInputWithCurrency()
         val rate = exchangeRate
 
         if (rate != null) {
@@ -133,10 +136,10 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
                 dashAmount = rate.fiatToCoin(fiatAmount)
             }
 
-            binding.resultAmount.text = when {
-                !dashToFiat -> dashFormat.format(dashAmount)
-                isCurrencySymbolFirst -> "$currencySymbol ${fiatFormat.format(fiatAmount)}"
-                else -> "${fiatFormat.format(fiatAmount)} $currencySymbol"
+            binding.resultAmount.text = if (dashToFiat) {
+                GenericUtils.fiatToString(fiatAmount)
+            } else {
+                dashFormat.format(dashAmount)
             }
         } else {
             binding.resultAmount.text = "0"
@@ -160,6 +163,14 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
             binding.inputSymbolDash.isVisible = false
             binding.inputSymbolDashPostfix.isVisible = false
+        }
+    }
+
+    private fun formatInputWithCurrency(): String {
+        return when {
+            dashToFiat -> input
+            isCurrencySymbolFirst -> "$currencySymbol $input"
+            else -> "$input $currencySymbol"
         }
     }
 }
