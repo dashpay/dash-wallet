@@ -24,7 +24,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.WalletDataProvider
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
@@ -47,9 +46,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val walletDataProvider = requireActivity().application as WalletDataProvider
-        val defaultCurrency = walletDataProvider.defaultCurrencyCode()
 
         binding.titleBar.connected.setText(R.string.connected)
         binding.titleBar.toolbarTitle.setText(R.string.coinbase)
