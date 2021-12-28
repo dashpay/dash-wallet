@@ -74,14 +74,11 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
                 updateDashSymbols()
 
                 val monetary = if (value) dashAmount else fiatAmount
-                input = if (monetary.value == 0L) {
-                    "0"
-                } else {
-                    if (value) {
-                        dashFormat.format(dashAmount)
-                    } else {
-                        fiatFormat.format(fiatAmount)
-                    }.toString()
+                input = when {
+                    monetary.value == 0L -> "0"
+                    value -> dashFormat.format(dashAmount).toString()
+                    else -> fiatFormat.minDecimals(0)
+                        .optionalDecimals(0,2).format(fiatAmount).toString()
                 }
             }
         }
