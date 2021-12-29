@@ -26,6 +26,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
+import org.dash.wallet.integration.coinbase_integration.model.CoinbasePaymentMethod
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import javax.inject.Inject
@@ -49,6 +50,14 @@ class CoinbaseServicesViewModel @Inject constructor(
     private val _userAccountError: MutableLiveData<Boolean> = MutableLiveData()
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
+
+    private val _userPaymentMethodsError: MutableLiveData<Boolean> = MutableLiveData()
+    val userPaymentMethodsError: LiveData<Boolean>
+        get() = _userPaymentMethodsError
+
+    private val _userPaymentMethodsList: MutableLiveData<List<CoinbasePaymentMethod>> = MutableLiveData()
+    val userPaymentMethodsList: LiveData<List<CoinbasePaymentMethod>>
+        get() = _userPaymentMethodsList
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val exchangeRate: LiveData<ExchangeRate>
@@ -86,6 +95,37 @@ class CoinbaseServicesViewModel @Inject constructor(
         }
     }
 
+    fun getPaymentMethods(){
+        viewModelScope.launch {
+
+            when (val response = coinBaseRepository.getActivePaymentMethods()) {
+                is ResponseResource.Success -> {
+                    _showLoading.value = false
+                    val userPaymentMethods = response.value.body()?.data?.map {
+                        CoinbasePaymentMethod(
+                            id = it.id,
+                            type = it.type,
+                            name = it.name,
+                            currency= it.currency,
+                            allowBuy = it.isBuyingAllowed,
+                            allowSell = it.isSellingAllowed
+                        )
+                    }
+                    if (userPaymentMethods == null||userPaymentMethods.isEmpty()) {
+                        _userPaymentMethodsError.value = true
+                    } else {
+                        _userPaymentMethodsList.value = userPaymentMethods
+                    }
+                }
+                is ResponseResource.Loading -> {
+                    _showLoading.value = true
+                }
+                is ResponseResource.Failure -> {
+                    _showLoading.value = false
+                }
+            }
+        }
+    }
     init {
         getUserAccountInfo()
         exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)

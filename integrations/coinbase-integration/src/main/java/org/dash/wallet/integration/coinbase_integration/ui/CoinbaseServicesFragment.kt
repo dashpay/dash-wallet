@@ -33,6 +33,7 @@ import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integration.coinbase_integration.model.ReviewBuyOrderModel
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -62,8 +63,15 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         }
 
         binding.buyDashBtn.setOnClickListener {
-            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash())
+            viewModel.getPaymentMethods()
+
         }
+        viewModel.userPaymentMethodsList.observe(
+            viewLifecycleOwner,
+            {
+                safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
+            }
+        )
 
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
@@ -116,6 +124,19 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                     R.string.coinbase_dash_wallet_error_message,
                     R.drawable.ic_info_red,
                     R.string.CreateـDashـAccount,
+                    R.string.close
+                )
+            }
+        )
+
+        viewModel.userPaymentMethodsError.observe(
+            viewLifecycleOwner,
+            {
+                showErrorDialog(
+                    R.string.coinbase_dash_wallet_no_payment_methods_error_title,
+                    R.string.coinbase_dash_wallet_no_payment_methods_error_message,
+                    R.drawable.ic_info_red,
+                    R.string.add_payment_method,
                     R.string.close
                 )
             }

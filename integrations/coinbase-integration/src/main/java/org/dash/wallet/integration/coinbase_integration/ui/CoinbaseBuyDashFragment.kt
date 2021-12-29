@@ -35,17 +35,20 @@ import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashBinding
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinbasePaymentMethod
+import org.dash.wallet.integration.coinbase_integration.model.ReviewBuyOrderModel
+import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
-    private val viewModel by viewModels<CoinbaseServicesViewModel>()
+        private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -77,75 +80,31 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
             )
         }
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
-            // TODO
-            Log.i("COINBASELOG", "fiat: ${pair.second}, coin: ${pair.first}")
+
+            //viewModel.onContinueClicked(pair.first,pair.second)
+            Log.i("COINBASELOG", "fiat: ${pair.second}, coin: ${pair.first} ${ binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex]}")
+           // safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(ReviewBuyOrderModel()))
         }
     }
 
     private fun setupPaymentMethodPayment() {
-        val coinbasePaymentMethods = listOf(
-            CoinbasePaymentMethod(
-                id = "239d7b3fsd76-ke23-5de7-8185-3657d7b526e",
-                type = "fiat_account",
-                name = "Cash (USD)",
-                currency= "USD",
-                allowBuy = false,
-                allowSell = true
-            ),
-            CoinbasePaymentMethod(
-                id = "127b4d76-a1a0-5de7-8185-3657d7b526e",
-                type = "secure3d_card",
-                name = "Debit card 5318****1234",
-                currency = "USD",
-                allowBuy = true,
-                allowSell = false
-            ),
-            CoinbasePaymentMethod(
-                id = "83562370-3e5c-51db-87da-752af5ab9559",
-                type = "ach_bank_account",
-                name = "Bank of America - Busi... ********2891",
-                currency = "USD",
-                allowBuy = true,
-                allowSell = true
-            ),
-            CoinbasePaymentMethod(
-                id = "0000621110-4sdf-51db-87da-752af5ab9559",
-                type = "worldpay_card",
-                name = "3056*********5904",
-                currency = "USD",
-                allowBuy = true,
-                allowSell = false
-            ),
-            CoinbasePaymentMethod(
-                id = "9d7382-a1a0-5de7-8185-3657d7b526e",
-                type = "worldpay_card",
-                name = "Credit card 4191*********8722",
-                currency = "USD",
-                allowBuy = true,
-                allowSell = false
-            ),
-            CoinbasePaymentMethod(
-                id = "832iwi-n13-5de7-8185-9283dnfskf",
-                type = "paypal_account",
-                name = "PayPal - q***a@gmail.com",
-                currency = "USD",
-                allowBuy = true,
-                allowSell = false
-            )
-        )
-        val paymentMethods = coinbasePaymentMethods
-            .filter { it.allowBuy }
-            .map {
-                val type = paymentMethodTypeFromCoinbaseType(it.type)
-                val nameAccountPair = splitNameAndAccount(it.name)
-                PaymentMethod(
-                    nameAccountPair.first,
-                    nameAccountPair.second,
-                    "", // set "Checking" to get "****1234 • Checking" in subtitle
-                    paymentMethodType = type
-                )
-            }
-        binding.paymentMethodPicker.paymentMethods = paymentMethods
+        arguments?.let {
+            val coinbasePaymentMethods = CoinbaseBuyDashFragmentArgs.fromBundle(it).paymentMethods
+            val paymentMethods = coinbasePaymentMethods
+                .filter { it.allowBuy }
+                .map {
+                    val type = paymentMethodTypeFromCoinbaseType(it.type)
+                    val nameAccountPair = splitNameAndAccount(it.name)
+                    PaymentMethod(
+                        nameAccountPair.first,
+                        nameAccountPair.second,
+                        "", // set "Checking" to get "****1234 • Checking" in subtitle
+                        paymentMethodType = type
+                    )
+                }
+            binding.paymentMethodPicker.paymentMethods = paymentMethods
+        }
+
     }
 
     private fun splitNameAndAccount(nameAccount: String?): Pair<String, String> {

@@ -17,15 +17,15 @@
 
 package org.dash.wallet.integration.coinbase_integration.model
 
-import com.google.gson.annotations.SerializedName
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class CoinbasePaymentMethod(
     val id: String,
     val type: String,
     val name: String,
     val currency: String,
-    @SerializedName("allow_buy")
     val allowBuy: Boolean,
-    @SerializedName("allow_sell")
     val allowSell: Boolean
-)
+):Parcelable
