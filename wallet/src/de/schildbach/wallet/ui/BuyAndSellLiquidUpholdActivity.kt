@@ -39,6 +39,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants.*
+import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
@@ -67,7 +68,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     private lateinit var application: WalletApplication
     private lateinit var config: Configuration
 
-    private var currentExchangeRate: de.schildbach.wallet.rates.ExchangeRate? = null
+    private var currentExchangeRate: ExchangeRate? = null
 
     private lateinit var viewModel: BuyAndSellViewModel
     private lateinit var liquidViewModel: LiquidViewModel
@@ -385,7 +386,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             val jsonObject = JSONObject(data)
             val cryptoArray = jsonObject.getJSONObject("payload").getJSONArray("crypto_accounts")
             var amount = "0.00"
-
+            liquidViewModel.lastLiquidBalance = amount
             for (i in 0 until cryptoArray.length()) {
                 val currency = cryptoArray.getJSONObject(i).getString("currency")
                 if (currency == "DASH") {

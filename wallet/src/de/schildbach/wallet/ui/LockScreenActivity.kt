@@ -34,15 +34,17 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.NavHostFragment
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
@@ -52,6 +54,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.LockScreenViewModel
+import org.dash.wallet.common.ui.OffsetDialogFragment
 import org.dash.wallet.common.ui.dismissDialog
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -238,7 +241,7 @@ open class LockScreenActivity : SecureActivity() {
             startActivity(SendCoinsQrActivity.createIntent(this, true))
             autoLogout.keepLockedUntilPinEntered = true
         }
-        numeric_keyboard.setFunctionEnabled(false)
+        numeric_keyboard.isFunctionEnabled = false
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
@@ -512,5 +515,19 @@ open class LockScreenActivity : SecureActivity() {
         }
         bottomSheetDialog?.dismiss()
         dialogFragment?.dismiss()
+
+        dismissOffsetDialogs(supportFragmentManager)
+    }
+
+    private fun dismissOffsetDialogs(fragmentManager: FragmentManager) {
+        fragmentManager.fragments
+            .takeIf { it.isNotEmpty() }
+            ?.forEach { fragment ->
+                if (fragment is OffsetDialogFragment<*>) {
+                    fragment.dismiss()
+                } else if (fragment is NavHostFragment) {
+                    dismissOffsetDialogs(fragment.childFragmentManager)
+                }
+            }
     }
 }

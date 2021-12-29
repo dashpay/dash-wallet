@@ -8,7 +8,7 @@ import androidx.room.TypeConverters;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.data.RoomConverters;
-import de.schildbach.wallet.rates.ExchangeRate;
+import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 
 /**

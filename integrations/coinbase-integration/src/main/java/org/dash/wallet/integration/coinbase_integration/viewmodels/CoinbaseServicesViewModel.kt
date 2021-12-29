@@ -18,9 +18,14 @@ package org.dash.wallet.integration.coinbase_integration.viewmodels
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.TRANSACTION_STATUS_COMPLETED
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -32,6 +37,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CoinbaseServicesViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
+    private val exchangeRatesProvider: ExchangeRatesProvider,
     val config: Configuration
 ) : ViewModel() {
 
@@ -46,6 +52,10 @@ class CoinbaseServicesViewModel @Inject constructor(
     private val _userAccountError: MutableLiveData<Boolean> = MutableLiveData()
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
+
+    private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
+    val exchangeRate: LiveData<ExchangeRate>
+        get() = _exchangeRate
 
     private val _activePaymentMethods: MutableLiveData<List<PaymentMethodUIModel>> = MutableLiveData()
     val activePaymentMethods: LiveData<List<PaymentMethodUIModel>>
@@ -94,6 +104,9 @@ class CoinbaseServicesViewModel @Inject constructor(
 
     init {
         getUserAccountInfo()
+        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)
+            .onEach(_exchangeRate::postValue)
+            .launchIn(viewModelScope)
     }
 
     fun getPaymentMethods() = viewModelScope.launch(Dispatchers.Main) {
