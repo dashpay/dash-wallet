@@ -16,25 +16,24 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
+import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.integration.coinbase_integration.TRANSACTION_STATUS_COMPLETED
+import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseServicesViewModel @Inject constructor(
-    application: Application,
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val config: Configuration
-) : AndroidViewModel(application) {
+) : ViewModel() {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
     val user: LiveData<CoinBaseUserAccountData>
@@ -47,6 +46,19 @@ class CoinbaseServicesViewModel @Inject constructor(
     private val _userAccountError: MutableLiveData<Boolean> = MutableLiveData()
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
+
+    private val _activePaymentMethods: MutableLiveData<List<PaymentMethodUIModel>> = MutableLiveData()
+    val activePaymentMethods: LiveData<List<PaymentMethodUIModel>>
+        get() = _activePaymentMethods
+
+    private val _placeBuyOrder: MutableLiveData<PlaceBuyOrderUIModel> = MutableLiveData()
+    val placeBuyOrder: LiveData<PlaceBuyOrderUIModel>
+        get() = _placeBuyOrder
+
+    val placeBuyOrderFailedCallback = SingleLiveEvent<Unit>()
+    val commitBuyOrderFailedCallback = SingleLiveEvent<Unit>()
+    val transactionCompletedCallback = SingleLiveEvent<Unit>()
+    val transactionInCompletedCallback = SingleLiveEvent<Unit>()
 
     private fun getUserAccountInfo() = viewModelScope.launch {
 
@@ -82,5 +94,85 @@ class CoinbaseServicesViewModel @Inject constructor(
 
     init {
         getUserAccountInfo()
+    }
+
+    fun getPaymentMethods() = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
+        when(val response = coinBaseRepository.getActivePaymentMethods()){
+            is ResponseResource.Success -> {
+                _showLoading.value = false
+                _activePaymentMethods.value = response.value
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+            }
+        }
+    }
+
+    fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
+        when(val result = coinBaseRepository.placeBuyOrder(params)){
+            is ResponseResource.Success -> {
+                if (result.value == BuyOrderResponse.EMPTY_PLACE_BUY) {
+                    _showLoading.value = false
+                    placeBuyOrderFailedCallback.call()
+                }
+                else {
+                    _placeBuyOrder.value = result.value
+                }
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+                placeBuyOrderFailedCallback.call()
+            }
+        }
+    }
+
+    fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
+        when(val result = coinBaseRepository.commitBuyOrder(params)){
+            is ResponseResource.Success -> {
+                if (result.value == BuyOrderResponse.EMPTY_COMMIT_BUY){
+                    _showLoading.value = false
+                    commitBuyOrderFailedCallback.call()
+                } else {
+                    val sendFundToWalletParams = SendTransactionToWalletParams(
+                        amount = result.value.dashAmount,
+                        currency = result.value.dashCurrency,
+                        idem = UUID.randomUUID().toString(),
+                        to = result.value.dashAddress,
+                        type = result.value.transactionType
+                    )
+                    sendDashToWallet(sendFundToWalletParams)
+                }
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+                commitBuyOrderFailedCallback.call()
+            }
+        }
+    }
+
+    fun sendDashToWallet(params: SendTransactionToWalletParams) = viewModelScope.launch(Dispatchers.Main){
+        when(val result = coinBaseRepository.sendFundsToWallet(params)){
+            is ResponseResource.Success -> {
+                _showLoading.value = false
+                when {
+                    result.value == SendTransactionToWalletResponse.EMPTY -> {
+                        transactionInCompletedCallback.call()
+                    }
+                    result.value.sendTransactionStatus == TRANSACTION_STATUS_COMPLETED -> {
+                        transactionCompletedCallback.call()
+                    }
+                    else -> {
+                        transactionInCompletedCallback.call()
+                    }
+                }
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+                transactionInCompletedCallback.call()
+            }
+        }
     }
 }
