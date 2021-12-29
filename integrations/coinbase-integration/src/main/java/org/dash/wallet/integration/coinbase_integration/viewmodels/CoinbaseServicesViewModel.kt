@@ -77,8 +77,8 @@ class CoinbaseServicesViewModel @Inject constructor(
     val transactionCompleted: LiveData<Boolean>
         get() = _transactionCompleted
 
-    private fun getUserAccountInfo() = viewModelScope.launch {
-
+    private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
         when (val response = coinBaseRepository.getUserAccount()) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
@@ -93,9 +93,6 @@ class CoinbaseServicesViewModel @Inject constructor(
                     coinBaseRepository.saveLastCoinbaseDashAccountBalance(userAccountData.balance?.amount)
                     coinBaseRepository.saveUserAccountId(userAccountData.id)
                 }
-            }
-            is ResponseResource.Loading -> {
-                _showLoading.value = true
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
@@ -154,6 +151,7 @@ class CoinbaseServicesViewModel @Inject constructor(
                     placeBuyOrderFailedCallback.call()
                 }
                 else {
+                    _showLoading.value = false
                     _placeBuyOrder.value = result.value
                 }
             }

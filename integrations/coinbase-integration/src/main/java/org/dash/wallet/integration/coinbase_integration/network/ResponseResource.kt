@@ -36,7 +36,6 @@ suspend fun <T> safeApiCall(
 ): ResponseResource<T> {
     return withContext(Dispatchers.IO) {
         try {
-            ResponseResource.Loading
             ResponseResource.Success(apiCall.invoke())
         } catch (throwable: Throwable) {
             throwable.printStackTrace()
