@@ -17,6 +17,7 @@
 package org.dash.wallet.integration.coinbase_integration.repository
 
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.SendFundsToWalletMapper
@@ -58,9 +59,7 @@ class CoinBaseRepository @Inject constructor(
 
     override suspend fun getActivePaymentMethods() = safeApiCall {
         val apiResult = api.getActivePaymentMethods()
-        apiResult?.data?.filter { it.isBuyingAllowed == true }
-            ?.map { PaymentMethodUIModel(it.id, it.name, it.type) }
-            ?: emptyList()
+        apiResult?.data ?: emptyList()
     }
 
     override suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams) = safeApiCall {
@@ -85,7 +84,7 @@ interface CoinBaseRepositoryInt {
     suspend fun disconnectCoinbaseAccount()
     fun saveLastCoinbaseDashAccountBalance(amount: String?)
     fun saveUserAccountId(accountId: String?)
-    suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodUIModel>>
+    suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
     suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<SendTransactionToWalletUIModel>

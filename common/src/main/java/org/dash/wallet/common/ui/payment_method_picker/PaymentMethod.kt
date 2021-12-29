@@ -28,6 +28,7 @@ enum class PaymentMethodType {
 }
 
 data class PaymentMethod(
+    val paymentMethodId: String,
     val name: String,
     val account: String?,
     val accountType: String?,

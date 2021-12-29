@@ -58,10 +58,3 @@ data class MinimumPurchaseAmount(
     val amount: String? = null,
     val currency: String? = null
 )
-
-data class PaymentMethodUIModel(
-    val id: String? = "",
-    val name: String? = "",
-    val type: String? = "",
-    val logoUrl: String? = ""
-)
