@@ -109,13 +109,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             }
         )
 
-        viewModel.user.observe(
-            viewLifecycleOwner,
-            {
-                binding.walletBalanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
-            }
-        )
-
         viewModel.userAccountError.observe(
             viewLifecycleOwner,
             {

@@ -38,26 +38,26 @@ interface CoinBaseServicesApi {
     @GET("v2/payment-methods")
     suspend fun getActivePaymentMethods(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
-    ): Response<PaymentMethods>
+    ): PaymentMethodsResponse?
 
     @POST("v2/accounts/{account_id}/buys")
     suspend fun placeBuyOrder(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Path("account_id") accountId: String,
         @Body placeBuyOrderParams: PlaceBuyOrderParams
-    ): Response<PlaceBuyOrderResponse>
+    ): BuyOrderResponse?
 
     @POST("v2/accounts/{account_id}/buys/{buy_id}/commit")
     suspend fun commitBuyOrder(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Path("account_id") accountId: String,
         @Path("buy_id") buyOrderId: String
-    ): Response<PlaceBuyOrderResponse>
+    ): BuyOrderResponse?
 
     @POST("v2/accounts/{account_id}/transactions")
     suspend fun sendCoinsToWallet(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Path("account_id") accountId: String,
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
-        ): Response<SendTransactionToWalletResponse>
+        ): SendTransactionToWalletResponse?
 }

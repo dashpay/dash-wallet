@@ -20,7 +20,6 @@ package org.dash.wallet.integration.coinbase_integration.ui
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
@@ -31,8 +30,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
-import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
-import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -129,6 +126,9 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
             "bank_wire" -> PaymentMethodType.WireTransfer
             "paypal_account" -> PaymentMethodType.PayPal
             else -> PaymentMethodType.Unknown
+        viewModel.getPaymentMethods()
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner){
+            binding.paymentMethodPicker.paymentMethods = it
         }
     }
 }

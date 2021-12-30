@@ -66,10 +66,12 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
         WebStorage.getInstance().deleteAllData()
 
         val loginUrl =
-            "https://www.coinbase.com/oauth/authorize?client_id=1ca2946d789bf6d986f26df03f4a52a8c6f1fe80e469eb1d3477e7c90768559a&redirect_uri=https://coin.base.test/callback&response_type=code&account=all&" +
-                    "scope=wallet:accounts:read,wallet:user:read,wallet:payment-methods:read,wallet:buys:read,wallet:buys:create,wallet:transactions:transfer,wallet:transactions:request,wallet:transactions:read,wallet:transactions:send&"+
-                    "meta[send_limit_amount]=1"
-
+           "https://www.coinbase.com/oauth/authorize?client_id=1ca2946d789bf6d986f26df03f4a52a8c6f1" +
+                   "fe80e469eb1d3477e7c90768559a&redirect_uri=https://coin.base.test/callback&response_type" +
+                   "=code&scope=wallet:accounts:read,wallet:user:read,wallet:payment-methods:read," +
+                   "wallet:buys:read,wallet:buys:create,wallet:transactions:transfer,wallet:" +
+                   "transactions:request,wallet:transactions:read,wallet:transactions:" +
+                   "send&meta[send_limit_amount]=1&account=all"
 
         binding.webView.loadUrl(loginUrl)
     }
