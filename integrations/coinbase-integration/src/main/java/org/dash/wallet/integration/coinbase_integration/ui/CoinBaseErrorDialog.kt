@@ -16,11 +16,13 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,13 +32,19 @@ import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
 import org.dash.wallet.common.ui.BaseDialogFragment
+import org.dash.wallet.common.ui.LockScreenViewModel
+import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseErrorBinding
 
 class CoinBaseErrorDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseErrorBinding::bind)
+    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
+
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -52,6 +60,11 @@ class CoinBaseErrorDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        lockScreenViewModel.activatingLockScreen.observe(this){
+            Log.e(this::class.java.simpleName, "Closing dialog")
+            dismiss()
+        }
 
         setOrHideIfEmpty(binding.coinbaseDialogTitle, "title")
         arguments?.getString("message")?.let {
