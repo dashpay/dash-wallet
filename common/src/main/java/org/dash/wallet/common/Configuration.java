@@ -531,7 +531,7 @@ public class Configuration {
     }
 
     public String getLastCoinbaseAccessToken() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, "53bb10004d1dfa0f94fba37dfa848567f082ba78df2b5fe65ef9addb3e738c27");
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, null);
     }
 
     public void setLastCoinBaseRefreshToken(String token) {

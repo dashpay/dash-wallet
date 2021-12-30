@@ -30,11 +30,12 @@ import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
+import org.dash.wallet.common.ui.BaseDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseErrorBinding
 
-class CoinBaseErrorDialog : DialogFragment() {
+class CoinBaseErrorDialog : BaseDialogFragment() {
     private val binding by viewBinding(DialogCoinbaseErrorBinding::bind)
 
     override fun onCreateView(
