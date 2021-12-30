@@ -1,17 +1,21 @@
 package org.dash.wallet.integration.coinbase_integration.model
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
 
+@Parcelize
 data class BuyOrderResponse(
     val `data`: BuyOrderData?
-) {
+): Parcelable {
     companion object {
         val EMPTY_PLACE_BUY = PlaceBuyOrderUIModel("", "", "", "")
         val EMPTY_COMMIT_BUY = CommitBuyOrderUIModel("", "", "", "")
     }
 }
 
+@Parcelize
 data class BuyOrderData(
     val amount: Amount? = null,
     val committed: Boolean? = null,
@@ -25,7 +29,6 @@ data class BuyOrderData(
     val instant: Boolean? = null,
     @SerializedName("is_first_buy")
     val isFirstBuy: Boolean? = null,
-    val next_step: Any? = null,
     @SerializedName("payment_method")
     val paymentMethod: PaymentMethod? = null,
     @SerializedName("payout_at")
@@ -45,7 +48,7 @@ data class BuyOrderData(
     val updatedAt: String? = null,
     @SerializedName("user_reference")
     val userReference: String? = null
-) {
+): Parcelable {
     fun mapToPlaceBuyUIModel(): PlaceBuyOrderUIModel {
         return PlaceBuyOrderUIModel(this.id ?:"", this.paymentMethod?.id?:"", this.fee?.amount?: "", this.fee?.currency?: "")
     }
@@ -54,62 +57,73 @@ data class BuyOrderData(
         return CommitBuyOrderUIModel(dashAmount = this.amount?.amount?: "")
     }
 }
-
+@Parcelize
 data class UnitPrice(
     val amount: String? = null,
     val currency: String? = null,
     val scale: Int? = null
-)
+): Parcelable
 
+@Parcelize
 data class PaymentMethod(
     val id: String? = null,
     val resource: String? = null,
     @SerializedName("resource_path")
     val resourcePath: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class Transaction(
     val id: String? = null,
     val resource: String? = null,
     @SerializedName("resource_path")
     val resourcePath: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class Amount(
     val amount: String? = null,
     val currency: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class Total(
     val amount: String? = null,
     val currency: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class Subtotal(
     val amount: String? = null,
     val currency: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class Fee(
     val amount: String? = null,
     val currency: String? = null
-)
+): Parcelable
 
 data class PlaceBuyOrderParams(
     val amount: String? = null,
     val currency: String? = null,
     val payment_method: String? = null,
     val commit: Boolean = false,
-    val quote: Boolean = true
+   // val quote: Boolean = true
 )
 
-
+@Parcelize
 data class PlaceBuyOrderUIModel(
-    val buyOrderId: String? = "",
-    val paymentMethodId: String? = "",
-    val coinbaseFee: String? = "",
-    val coinbaseFeeCurrency: String? = ""
-)
+    val buyOrderId:String? = "",
+    val paymentMethodId:String? = "",
+    val purchaseAmount:String? = "",
+    val purchaseCurrency: String? = "",
+    val coinBaseFeeAmount:String? = "",
+    val coinbaseFeeCurrency: String? = "",
+    val totalAmount:String? = "",
+    val totalCurrency: String? = "",
+    val dashAmount:String? = "",
+): Parcelable
 
 data class CommitBuyOrderUIModel(
     val dashAmount: String? = "",

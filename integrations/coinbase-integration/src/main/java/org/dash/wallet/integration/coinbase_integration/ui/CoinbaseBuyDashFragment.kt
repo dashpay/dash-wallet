@@ -28,6 +28,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -36,10 +37,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashBinding
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
-import org.dash.wallet.integration.coinbase_integration.model.CoinbasePaymentMethod
-import org.dash.wallet.integration.coinbase_integration.model.ReviewBuyOrderModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashViewModel
-import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
@@ -47,6 +45,7 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
         private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
+    private var loadingDialog: FancyAlertDialog? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -76,59 +75,51 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
                 GenericUtils.fiatToString(rate.fiat)
             )
         }
-        amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
 
-            //viewModel.onContinueClicked(pair.first,pair.second)
-            Log.i("COINBASELOG", "fiat: ${pair.second}, coin: ${pair.first} ${ binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex]}")
-           // safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(ReviewBuyOrderModel()))
+        amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
+            viewModel.onContinueClicked(pair.second,binding.paymentMethodPicker.selectedMethodIndex)
+            Log.i("COINBASELOG", "fiat: ${pair.second.value}, coin: ${pair.first.value} ${ binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex]}")
+           //
         }
+
+        viewModel.placeBuyOrder.observe(viewLifecycleOwner){
+            safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
+                binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex],
+                it))
+        }
+
+        viewModel.showLoading.observe(
+            viewLifecycleOwner,
+            {
+                if (it) {
+                    showProgress(R.string.loading)
+                } else
+                    dismissProgress()
+            }
+        )
     }
 
     private fun setupPaymentMethodPayment() {
-        arguments?.let {
-            val coinbasePaymentMethods = CoinbaseBuyDashFragmentArgs.fromBundle(it).paymentMethods
-            val paymentMethods = coinbasePaymentMethods
-                .filter { it.allowBuy }
-                .map {
-                    val type = paymentMethodTypeFromCoinbaseType(it.type)
-                    val nameAccountPair = splitNameAndAccount(it.name)
-                    PaymentMethod(
-                        nameAccountPair.first,
-                        nameAccountPair.second,
-                        "", // set "Checking" to get "****1234 • Checking" in subtitle
-                        paymentMethodType = type
-                    )
-                }
-            binding.paymentMethodPicker.paymentMethods = paymentMethods
-        }
-
-    }
-
-    private fun splitNameAndAccount(nameAccount: String?): Pair<String, String> {
-        nameAccount?.let {
-            val match = "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
-            match?.range?.first?.let { index ->
-                val name = nameAccount.substring(0, index).trim(' ', '-', ',', ':')
-                val account = nameAccount.substring(index, nameAccount.length).trim()
-                return Pair(name, account)
-            }
-        }
-
-        return Pair("", "")
-    }
-
-    private fun paymentMethodTypeFromCoinbaseType(type: String): PaymentMethodType {
-        return when (type) {
-            "fiat_account" -> PaymentMethodType.Fiat
-            "secure3d_card", "worldpay_card", "credit_card", "debit_card" -> PaymentMethodType.Card
-            "ach_bank_account", "sepa_bank_account",
-            "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
-            "bank_wire" -> PaymentMethodType.WireTransfer
-            "paypal_account" -> PaymentMethodType.PayPal
-            else -> PaymentMethodType.Unknown
-        viewModel.getPaymentMethods()
         viewModel.activePaymentMethods.observe(viewLifecycleOwner){
             binding.paymentMethodPicker.paymentMethods = it
+        }
+
+        arguments?.let {
+            viewModel.getActivePaymentMethods(CoinbaseBuyDashFragmentArgs.fromBundle(it).paymentMethods)
+        }
+    }
+
+    private fun showProgress(messageResId: Int) {
+        if (loadingDialog != null && loadingDialog?.isAdded == true) {
+            loadingDialog?.dismissAllowingStateLoss()
+        }
+        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0)
+        loadingDialog?.show(parentFragmentManager, "progress")
+    }
+
+    private fun dismissProgress() {
+        if (loadingDialog != null && loadingDialog?.isAdded == true) {
+            loadingDialog?.dismissAllowingStateLoss()
         }
     }
 }

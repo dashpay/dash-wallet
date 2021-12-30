@@ -13,7 +13,13 @@ class PlaceBuyOrderMapper: Mapper<BuyOrderData?, PlaceBuyOrderUIModel> {
         else {
             PlaceBuyOrderUIModel(input.id ?:"",
                 input.paymentMethod?.id?:"",
-                input.fee?.amount?: "", input.fee?.currency?: "")
+                input.subtotal?.amount?: "",
+                input.subtotal?.currency?: "",
+                input.fee?.amount?: "",
+                input.fee?.currency?: "",
+                 input.total?.amount?: "",
+                input.total?.currency?: "",
+                input.amount?.amount?: "")
         }
     }
 }

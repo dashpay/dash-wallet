@@ -162,7 +162,7 @@ class FancyAlertDialog : DialogFragment() {
             window?.apply {
                 setLayout(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
                 setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                requestFeature(Window.FEATURE_NO_TITLE)
+             //   requestFeature(Window.FEATURE_NO_TITLE)
                 callback = UserInteractionAwareCallback(this.callback, requireActivity())
             }
             if (type == Type.PROGRESS) {

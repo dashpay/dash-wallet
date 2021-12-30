@@ -33,7 +33,6 @@ import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.coinbase_integration.model.ReviewBuyOrderModel
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -66,7 +65,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             viewModel.getPaymentMethods()
 
         }
-        viewModel.userPaymentMethodsList.observe(
+        viewModel.activePaymentMethods.observe(
             viewLifecycleOwner,
             {
                 safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
@@ -122,7 +121,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             }
         )
 
-        viewModel.userPaymentMethodsError.observe(
+        viewModel.activePaymentMethodsFailureCallback.observe(
             viewLifecycleOwner,
             {
                 showErrorDialog(

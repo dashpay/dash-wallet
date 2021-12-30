@@ -17,7 +17,11 @@
 
 package org.dash.wallet.common.ui.payment_method_picker
 
-enum class PaymentMethodType {
+import android.os.Parcelable
+import kotlinx.android.parcel.Parcelize
+
+@Parcelize
+enum class PaymentMethodType:Parcelable {
     Unknown,
     Fiat,
     Card,
@@ -27,10 +31,11 @@ enum class PaymentMethodType {
     GooglePay
 }
 
+@Parcelize
 data class PaymentMethod(
     val paymentMethodId: String,
     val name: String,
     val account: String?,
     val accountType: String?,
     val paymentMethodType: PaymentMethodType,
-)
+):Parcelable

@@ -46,7 +46,7 @@
             app:popExitAnim="@anim/slide_out_left"/>
         <argument
             android:name="paymentMethods"
-            app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbasePaymentMethod[]" />
+            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod[]" />
 
     </fragment>
 
@@ -54,6 +54,12 @@
         android:id="@+id/coinbaseBuyDashOrderReviewFragment"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashOrderReviewFragment"
         android:label="CoinbaseBuyDashOrderReviewFragment">
+        <argument
+            android:name="paymentMethod"
+            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod" />
+        <argument
+            android:name="placeBuyOrderUIModel"
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel" />
 
     </fragment>
 </navigation>
