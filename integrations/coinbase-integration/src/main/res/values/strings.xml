@@ -41,4 +41,5 @@
     <string name="coinbase_dash_wallet_no_payment_methods_error_title">We didn’t find any payment methods.</string>
     <string name="coinbase_dash_wallet_no_payment_methods_error_message"> Please update your Coinbase account to proceed.</string>
     <string name="add_payment_method">Add Payment Method</string>
+    <string name="error">Error</string>
 </resources>

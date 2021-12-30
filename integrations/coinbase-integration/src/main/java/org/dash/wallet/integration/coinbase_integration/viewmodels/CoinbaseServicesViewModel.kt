@@ -16,28 +16,25 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import androidx.lifecycle.*
 import android.app.Application
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
-import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
-import org.dash.wallet.integration.coinbase_integration.model.CoinbasePaymentMethod
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.Event
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.TRANSACTION_STATUS_COMPLETED
 import org.dash.wallet.integration.coinbase_integration.model.*
+import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
-import java.util.*
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
@@ -60,15 +57,13 @@ class CoinbaseServicesViewModel @Inject constructor(
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
 
-
-    private val _activePaymentMethods: MutableLiveData<List<PaymentMethod>> = MutableLiveData()
-    val activePaymentMethods: LiveData<List<PaymentMethod>>
+    private val _activePaymentMethods: MutableLiveData<Event<List<PaymentMethod>>> = MutableLiveData()
+    val activePaymentMethods: LiveData<Event<List<PaymentMethod>>>
         get() = _activePaymentMethods
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
-
 
     val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
 
@@ -113,24 +108,26 @@ class CoinbaseServicesViewModel @Inject constructor(
 
     fun getPaymentMethods() = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
-        when(val response = coinBaseRepository.getActivePaymentMethods()){
+        when (val response = coinBaseRepository.getActivePaymentMethods()) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                if (response.value.isEmpty()){
+                if (response.value.isEmpty()) {
                     activePaymentMethodsFailureCallback.call()
                 } else {
-                    _activePaymentMethods.value = response.value.filter { it.isBuyingAllowed == true }
+                    _activePaymentMethods.value = Event(
+                        response.value.filter { it.isBuyingAllowed == true }
                             .map {
                                 val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
                                 val nameAccountPair = splitNameAndAccount(it.name)
                                 PaymentMethod(
-                                    it.id?: "",
+                                    it.id ?: "",
                                     nameAccountPair.first,
                                     nameAccountPair.second,
                                     "", // set "Checking" to get "****1234 • Checking" in subtitle
                                     paymentMethodType = type
                                 )
                             }
+                    )
                 }
             }
             is ResponseResource.Failure -> {

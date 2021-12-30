@@ -24,26 +24,21 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
-import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.TRANSACTION_STATUS_COMPLETED
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
-import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseBuyDashViewModel @Inject constructor(
     application: Application,
     private val coinBaseRepository: CoinBaseRepository,
-    private val walletDataProvider: WalletDataProvider,
     val config: Configuration
 ) : AndroidViewModel(application) {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
@@ -54,49 +49,53 @@ class CoinbaseBuyDashViewModel @Inject constructor(
     val activePaymentMethods: LiveData<List<PaymentMethod>>
         get() = _activePaymentMethods
 
+    private val _placeBuyOrder: MutableLiveData<Event<PlaceBuyOrderUIModel>> = MutableLiveData()
+    val placeBuyOrder: LiveData<Event<PlaceBuyOrderUIModel>>
+        get() = _placeBuyOrder
 
-    val placeBuyOrder = SingleLiveEvent<PlaceBuyOrderUIModel>()
+    val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
 
-
-    val placeBuyOrderFailedCallback = SingleLiveEvent<Unit>()
-
-    fun onContinueClicked(fiat: Fiat,paymentMethodIndex : Int) {
+    fun onContinueClicked(fiat: Fiat, paymentMethodIndex: Int) {
         _activePaymentMethods.value?.let {
-            if (paymentMethodIndex< it.size){
+            if (paymentMethodIndex < it.size) {
                 val paymentMethod = it[paymentMethodIndex]
-                placeBuyOrder(PlaceBuyOrderParams(fiat.toPlainString(),fiat.currencyCode,paymentMethod.paymentMethodId))
+                placeBuyOrder(PlaceBuyOrderParams(fiat.toPlainString(), fiat.currencyCode, paymentMethod.paymentMethodId))
             }
-
         }
-
     }
 
-    fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
+    private fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
-        when(val result = coinBaseRepository.placeBuyOrder(params)){
+        when (val result = coinBaseRepository.placeBuyOrder(params)) {
             is ResponseResource.Success -> {
                 if (result.value == BuyOrderResponse.EMPTY_PLACE_BUY) {
                     _showLoading.value = false
                     placeBuyOrderFailedCallback.call()
-                }
-                else {
+                } else {
                     _showLoading.value = false
-                    result.value?.let {
-                        placeBuyOrder.value = it
-                    }
 
+                    _placeBuyOrder.value = Event(result.value)
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                placeBuyOrderFailedCallback.call()
+
+                val error = result.errorBody?.string()
+                if (error.isNullOrEmpty()) {
+                    placeBuyOrderFailedCallback.call()
+                } else {
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)
+                    if (message.isNullOrEmpty()) {
+                        placeBuyOrderFailedCallback.call()
+                    } else {
+                        placeBuyOrderFailedCallback.value = message
+                    }
+                }
             }
         }
     }
 
-
-    fun getActivePaymentMethods(coinbasePaymentMethods:Array<PaymentMethod>){
+    fun getActivePaymentMethods(coinbasePaymentMethods: Array<PaymentMethod>) {
         _activePaymentMethods.value = coinbasePaymentMethods.toList()
     }
-
 }

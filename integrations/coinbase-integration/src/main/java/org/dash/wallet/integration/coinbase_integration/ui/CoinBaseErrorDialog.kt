@@ -35,7 +35,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseErrorBinding
 
-class CoinBaseErrorDialog : BaseDialogFragment() {
+class CoinBaseErrorDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseErrorBinding::bind)
 
     override fun onCreateView(
@@ -54,7 +54,9 @@ class CoinBaseErrorDialog : BaseDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setOrHideIfEmpty(binding.coinbaseDialogTitle, "title")
-        setOrHideIfEmpty(binding.coinbaseDialogMessage, "message")
+        arguments?.getString("message")?.let {
+            binding.coinbaseDialogMessage.text = it
+        }
         setOrHideIfEmpty(binding.coinbaseDialogIcon, "image")
         setOrHideIfEmpty(binding.coinbaseDialogPositiveButton, "positive_text")
         setOrHideIfEmpty(binding.coinbaseDialogNegativeButton, "negative_text")
@@ -91,17 +93,17 @@ class CoinBaseErrorDialog : BaseDialogFragment() {
 
         fun newInstance(
             @StringRes title: Int,
-            @StringRes message: Int,
+            message: String,
             @DrawableRes image: Int,
-            @StringRes positiveButtonText: Int,
-            @StringRes negativeButtonText: Int
+            @StringRes positiveButtonText: Int?,
+            @StringRes negativeButtonText: Int?
         ): CoinBaseErrorDialog {
             val args = Bundle().apply {
                 putInt("title", title)
-                putInt("message", message)
+                putString("message", message)
                 putInt("image", image)
-                putInt("positive_text", positiveButtonText)
-                putInt("negative_text", negativeButtonText)
+                positiveButtonText?.let { putInt("positive_text", it) }
+                negativeButtonText?.let { putInt("negative_text", it) }
             }
             return CoinBaseErrorDialog().apply {
                 arguments = args
