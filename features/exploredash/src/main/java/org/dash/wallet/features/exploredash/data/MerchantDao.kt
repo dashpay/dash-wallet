@@ -168,7 +168,7 @@ interface MerchantDao : BaseDao<Merchant> {
             CASE type
                 WHEN "online"   THEN :onlineOrder
                 WHEN "both"     THEN 1
-                WHEN "physical" THEN 2 - :onlineOrder
+                WHEN "physical" THEN :physicalOrder
             END,
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
             CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
@@ -180,7 +180,8 @@ interface MerchantDao : BaseDao<Merchant> {
         sortByDistance: Boolean,
         anchorLat: Double,
         anchorLng: Double,
-        onlineOrder: Int
+        onlineOrder: Int,
+        physicalOrder: Int
     ): PagingSource<Int, MerchantInfo>
 
     @Query("""
@@ -211,7 +212,7 @@ interface MerchantDao : BaseDao<Merchant> {
             CASE type
                 WHEN "online"   THEN :onlineOrder
                 WHEN "both"     THEN 1
-                WHEN "physical" THEN 2 - :onlineOrder
+                WHEN "physical" THEN :physicalOrder
             END,
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
             CASE WHEN :sortByDistance = 0 THEN merchant.name END COLLATE NOCASE ASC
@@ -224,7 +225,8 @@ interface MerchantDao : BaseDao<Merchant> {
         sortByDistance: Boolean,
         anchorLat: Double,
         anchorLng: Double,
-        onlineOrder: Int
+        onlineOrder: Int,
+        physicalOrder: Int
     ): PagingSource<Int, MerchantInfo>
 
     @Query("""
