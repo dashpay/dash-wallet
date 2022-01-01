@@ -32,6 +32,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
+    private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
@@ -57,7 +58,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                         amount = result.value.dashAmount,
                         currency = result.value.dashCurrency,
                         idem = UUID.randomUUID().toString(),
-                        to = "XkGE1Qzbx3pjouizBH3xDBfEEtsBv6jJT5",
+                        to = walletDataProvider.freshReceiveAddress().toBase58(),
                         type = result.value.transactionType
                     ).apply {
                         sendDashToWallet(this)
