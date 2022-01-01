@@ -40,7 +40,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
 
     val commitBuyOrderFailedCallback = SingleLiveEvent<Unit>()
 
-    val _transactionCompleted: MutableLiveData<Boolean> = MutableLiveData()
+    private val _transactionCompleted: MutableLiveData<Boolean> = MutableLiveData()
     val transactionCompleted: LiveData<Boolean>
         get() = _transactionCompleted
 
