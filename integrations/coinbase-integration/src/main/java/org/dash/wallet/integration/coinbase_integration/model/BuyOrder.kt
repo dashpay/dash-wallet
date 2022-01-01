@@ -108,8 +108,7 @@ data class PlaceBuyOrderParams(
     val amount: String? = null,
     val currency: String? = null,
     val payment_method: String? = null,
-    val commit: Boolean = false,
-    val quote: Boolean = true
+    val commit: Boolean = false
 )
 
 @Parcelize

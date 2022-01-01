@@ -44,8 +44,6 @@ class CoinBaseErrorDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseErrorBinding::bind)
     protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
-
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

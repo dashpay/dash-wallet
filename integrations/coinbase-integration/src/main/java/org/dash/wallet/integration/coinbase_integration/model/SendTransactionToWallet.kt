@@ -1,21 +1,25 @@
 package org.dash.wallet.integration.coinbase_integration.model
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class SendTransactionToWalletResponse(
     val `data`: SendTransactionToWalletData?
-) {
+): Parcelable {
     companion object {
         val EMPTY = SendTransactionToWalletUIModel("")
     }
 }
 
+@Parcelize
 data class SendTransactionToWalletData(
     val amount: Amount? = null,
     val application: Application? = null,
     @SerializedName("created_at")
     val createdAt: String? = null,
-    val description: Any? = null,
+    val description: String? = null,
     val details: Details? = null,
     @SerializedName("hide_native_amount")
     val hideNativeAmount: Boolean? = null,
@@ -34,16 +38,18 @@ data class SendTransactionToWalletData(
     val type: String? = null,
     @SerializedName("updated_at")
     val updatedAt: String? = null
-) {
+) : Parcelable{
     fun mapToUIModel(): SendTransactionToWalletUIModel {
         return SendTransactionToWalletUIModel(this.status)
     }
 }
 
+@Parcelize
 data class AddressInfo(
     val address: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class To(
     val address: String? = null,
     @SerializedName("address_info")
@@ -52,22 +58,25 @@ data class To(
     val addressUrl: String? = null,
     val currency: String? = null,
     val resource: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class Application(
     val id: String? = null,
     val resource: String? = null,
     @SerializedName("resource_path")
     val resourcePath: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class Details(
     val header: String? = null,
     val health: String? = null,
     val subtitle: String? = null,
     val title: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class Network(
     val confirmations: Int? = null,
     val status: String? = null,
@@ -77,32 +86,36 @@ data class Network(
     val transactionAmount: TransactionAmount? = null,
     @SerializedName("transaction_fee")
     val transactionFee: TransactionFee? = null
-)
+): Parcelable
 
+@Parcelize
 data class TransactionFee(
     val amount: String? = null,
     val currency: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class TransactionAmount(
     val amount: String? = null,
     val currency: String? = null
-)
+): Parcelable
 
+@Parcelize
 data class NativeAmount(
     val amount: String? = null,
     val currency: String? = null
-)
+): Parcelable
 
-
+@Parcelize
 data class SendTransactionToWalletParams(
     val amount: String?,
     val currency: String?,
     val idem: String?,
     val to: String?,
     val type: String?
-)
+): Parcelable
 
+@Parcelize
 data class SendTransactionToWalletUIModel(
     val sendTransactionStatus: String? = "",
-)
+): Parcelable
