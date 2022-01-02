@@ -145,7 +145,8 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
                     paymentMethodType = type
                 )
             }
-        binding.paymentMethodPicker.paymentMethods = paymentMethods
+//        binding.paymentMethodPicker.paymentMethods = paymentMethods // TODO: change to this to see the picker
+        binding.paymentMethodPicker.paymentMethods = listOf(paymentMethods[1])
     }
 
     private fun splitNameAndAccount(nameAccount: String?): Pair<String, String> {
