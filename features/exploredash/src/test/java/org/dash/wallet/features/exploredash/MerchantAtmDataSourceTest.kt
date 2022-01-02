@@ -45,11 +45,11 @@ class MerchantDaoTest {
     private val atmDaoMock = mock<AtmDao>()
     private val merchantDaoMock = mock<MerchantDao> {
         on { pagingGetGrouped(any(), any()) } doReturn TestPagingSource()
-        on { pagingGetByTerritory(any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
+        on { pagingGetByTerritory(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
         on { pagingGetByCoordinates(any(), any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
 
         on { pagingSearchGrouped(any(), any(), any()) } doReturn TestPagingSource()
-        on { pagingSearchByTerritory(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
+        on { pagingSearchByTerritory(any(), any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
         on { pagingSearchByCoordinates(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
     }
     private val dataSource = MerchantAtmDataSource(merchantDaoMock, atmDaoMock)
@@ -125,7 +125,7 @@ class MerchantDaoTest {
             bounds, false, 0.0, 0.0, false)
 
         verify(merchantDaoMock).pagingGetByTerritory(territory, requiredAllTypes, "",
-            false, 0.0, 0.0, 2)
+            false, 0.0, 0.0, 2, 1)
         verifyNoMoreInteractions(merchantDaoMock)
 
         // --- Physical type with bounds, query and territory should call pagingSearchByTerritory method ---
@@ -137,7 +137,7 @@ class MerchantDaoTest {
 
         verify(dataSourceSpy).sanitizeQuery(query)
         verify(merchantDaoMock).pagingSearchByTerritory(sanitizedQuery, territory, requiredAllTypes,
-            "", false, 0.0, 0.0, 2)
+            "", false, 0.0, 0.0, 2, 1)
         verifyNoMoreInteractions(merchantDaoMock)
     }
 
@@ -158,7 +158,7 @@ class MerchantDaoTest {
             GeoBounds.noBounds, false, 0.0, 0.0, false)
 
         verify(merchantDaoMock).pagingGetByTerritory("", requiredAllTypes, "",
-            false, 0.0, 0.0, 2)
+            false, 0.0, 0.0, 2,1)
         verifyNoMoreInteractions(merchantDaoMock)
 
         // --- All type with query should call pagingGetByTerritory method ---
@@ -170,7 +170,7 @@ class MerchantDaoTest {
 
         verify(dataSourceSpy).sanitizeQuery(query)
         verify(merchantDaoMock).pagingSearchByTerritory(sanitizedQuery, "", requiredAllTypes,
-            "", false, 0.0, 0.0, 2)
+            "", false, 0.0, 0.0, 2, 1)
         verifyNoMoreInteractions(merchantDaoMock)
     }
 }

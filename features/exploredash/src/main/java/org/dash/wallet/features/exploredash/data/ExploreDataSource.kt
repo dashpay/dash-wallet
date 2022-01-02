@@ -159,12 +159,14 @@ open class MerchantAtmDataSource @Inject constructor(
                 // or filter is All, we search everything and filter by territory
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
                 val onlineOrder = if (onlineFirst) 0 else 2
+                val physicalOrder = if (onlineFirst) 2 else 1
 
                 if (query.isNotBlank()) {
-                    merchantDao.pagingSearchByTerritory(sanitizeQuery(query), territory,
-                        types, paymentMethod, sortByDistance, userLat, userLng, onlineOrder)
+                    merchantDao.pagingSearchByTerritory(sanitizeQuery(query), territory, types,
+                        paymentMethod, sortByDistance, userLat, userLng, onlineOrder, physicalOrder)
                 } else {
-                    merchantDao.pagingGetByTerritory(territory, types, paymentMethod, sortByDistance, userLat, userLng, onlineOrder)
+                    merchantDao.pagingGetByTerritory(territory, types,
+                        paymentMethod, sortByDistance, userLat, userLng, onlineOrder, physicalOrder)
                 }
             }
         }
