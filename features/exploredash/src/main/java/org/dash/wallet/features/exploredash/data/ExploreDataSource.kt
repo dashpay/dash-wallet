@@ -157,7 +157,12 @@ open class MerchantAtmDataSource @Inject constructor(
             else -> {
                 // If location services are disabled or user picked a territory
                 // or filter is All, we search everything and filter by territory
-                val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
+                val types = if (type == MerchantType.PHYSICAL) {
+                    listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
+                } else {
+                    listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
+                }
+
                 val onlineOrder = if (onlineFirst) 0 else 2
                 val physicalOrder = if (onlineFirst) 2 else 1
 

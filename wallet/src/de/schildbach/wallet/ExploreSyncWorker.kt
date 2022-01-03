@@ -17,7 +17,6 @@
 package de.schildbach.wallet
 
 import android.content.Context
-import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.common.base.Stopwatch
@@ -74,25 +73,30 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         log.info("Sync Explore Dash started")
         val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
 
-        try {
+        return try {
             val lastDataUpdate = exploreRepository.getLastUpdate()
 
-            if (lastSync < lastDataUpdate) {
-                maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, entryPoint.merchantDao())
-                maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, entryPoint.atmDao())
-                maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, entryPoint.merchantDao())
+            if (lastSync >= lastDataUpdate) {
+                log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+                Result.success()
+            }
 
+            val allSynced = maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, entryPoint.merchantDao())
+                         && maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, entryPoint.atmDao())
+                         && maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, entryPoint.merchantDao())
+
+            if (allSynced) {
                 preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
                 log.info("Sync Explore Dash finished")
+                Result.success()
             } else {
-                log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+                log.info("Sync Explore Dash not fully finished")
+                Result.retry()
             }
         } catch (ex: Exception) {
             log.info("Sync Explore Dash error: ${ex.message}")
-            return Result.retry()
+            Result.retry()
         }
-
-        return Result.success()
     }
 
     private suspend fun <T: SearchResult> maybeSyncTable(
@@ -100,11 +104,12 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         source: String,
         valueType: Class<T>,
         dao: BaseDao<T>
-    ) {
-        try {
+    ): Boolean {
+        return try {
             val prefsLastSyncKey = "${PREFS_LAST_SYNC_KEY}_$tableName"
             val lastSync = preferences.getLong(prefsLastSyncKey, 0)
             val lastDataUpdate = exploreRepository.getLastUpdate(tableName)
+
             if (lastSync < lastDataUpdate) {
                 log.info("Local $tableName data timestamp\t$lastSync (${Date(lastSync)})")
                 log.info("Remote $tableName data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
@@ -115,8 +120,10 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             } else {
                 log.info("Data $tableName timestamp $lastSync, nothing to sync (${Date(lastSync)})")
             }
+            true
         } catch (ex: Exception) {
             log.error("Error while syncing ${tableName}: ${ex.message}")
+            false
         }
     }
 
