@@ -112,7 +112,6 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
     }
 
-
     private fun setupPaymentMethodPayment() {
         viewModel.activePaymentMethods.observe(viewLifecycleOwner){
             binding.paymentMethodPicker.paymentMethods = it
