@@ -54,4 +54,7 @@
     <string name="purchase_failed_msg"> Something went wrong</string>
     <string name="it_could_take_up_to_2_3_minutes">It could take up to 2-3 minutes for the Dash to be transferred to your Dash Wallet on this device.</string>
     <string name="contact_coinbase_support">Contact Coinbase Support</string>
+    <string name="fees_in_crypto_purchase">Fees in crypto purchases</string>
+    <string name="coinbase_fee_info_msg_content">In addition to the displayed Coinbase fee, we include a spread in the price. Cryptocurrency markets are volatile, and this allows us to temporary lock in a price for trade execution.</string>
+    <string name="learn_more">Learn More</string>
 </resources>

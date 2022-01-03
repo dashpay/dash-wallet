@@ -18,7 +18,6 @@
 package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -40,6 +39,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashBinding
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
+import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseErrorDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashViewModel
 
 @AndroidEntryPoint

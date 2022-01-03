@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.integration.coinbase_integration.ui
+package org.dash.wallet.integration.coinbase_integration.ui.dialogs
 
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -35,13 +35,13 @@ import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinba
 
 class CoinBaseBuyDashDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseBuyDashBinding::bind)
-    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
+    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
     var onCoinBaseBuyDashDialogButtonsClickListener: CoinBaseBuyDashDialogButtonsClickListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setStyle(DialogFragment.STYLE_NO_FRAME, R.style.FullScreenDialog)
+        setStyle(STYLE_NO_FRAME, R.style.FullScreenDialog)
     }
 
     override fun onCreateView(
@@ -115,7 +115,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     companion object {
 
         fun newInstance(
-           type:Type
+           type: Type
         ): CoinBaseBuyDashDialog {
             val args = Bundle().apply {
                 putInt("Type", type.ordinal)
@@ -133,7 +133,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     }
 
 
-    public interface CoinBaseBuyDashDialogButtonsClickListener {
-        fun onPositiveButtonClick(type:Type)
+    interface CoinBaseBuyDashDialogButtonsClickListener {
+        fun onPositiveButtonClick(type: Type)
     }
 }

@@ -60,6 +60,15 @@
         <argument
             android:name="placeBuyOrderUIModel"
             app:argType="org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel" />
-
+        <action
+            android:id="@+id/orderReviewToFeeInfo"
+            app:destination="@id/coinbaseFeeInfoDialog"
+            />
     </fragment>
+    <dialog
+        android:id="@+id/coinbaseFeeInfoDialog"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinbaseFeeInfoDialog"
+        android:label="coinbase_info_fee"
+        tools:layout="@layout/dialog_coinbase_fee_info"
+        />
 </navigation>

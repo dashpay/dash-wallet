@@ -14,9 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.integration.coinbase_integration.ui
+package org.dash.wallet.integration.coinbase_integration.ui.dialogs
 
-import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -33,16 +32,14 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
-import org.dash.wallet.common.ui.BaseDialogFragment
 import org.dash.wallet.common.ui.LockScreenViewModel
-import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseErrorBinding
 
 class CoinBaseErrorDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseErrorBinding::bind)
-    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
+    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
