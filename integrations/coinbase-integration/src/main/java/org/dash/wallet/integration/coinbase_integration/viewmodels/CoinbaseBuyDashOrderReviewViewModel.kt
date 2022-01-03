@@ -80,7 +80,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                     result.value == SendTransactionToWalletResponse.EMPTY -> {
                         _transactionCompleted.value = false
                     }
-                    result.value.sendTransactionStatus == TRANSACTION_STATUS_COMPLETED -> {
+                    result.value.sendTransactionStatus != TRANSACTION_STATUS_COMPLETED -> {
                         _transactionCompleted.value = false
                     }
                     else -> {

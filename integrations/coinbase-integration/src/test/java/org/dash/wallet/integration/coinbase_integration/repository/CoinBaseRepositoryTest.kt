@@ -67,8 +67,7 @@ class CoinBaseRepositoryTest {
         val expectedPlaceBuyOrderData = TestUtils.buyOrderData
         val accountId = "423095d3-bb89-5cef-b1bc-d1dfe6e13857"
         val params = PlaceBuyOrderParams("0.5", "usd", "931aa7a2-6500-505b-bf0b-35f031466711",
-            commit = true,
-            quote = false
+            commit = true
         )
         coEvery { coinBaseServicesApi.placeBuyOrder(accountId = accountId, placeBuyOrderParams = params) } returns expectedPlaceBuyOrderResponse
         coEvery { placeBuyOrderMapper.map(expectedPlaceBuyOrderData) } returns expectedPlaceBuyOrderUIModel
