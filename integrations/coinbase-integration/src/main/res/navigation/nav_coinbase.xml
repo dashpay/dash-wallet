@@ -32,10 +32,34 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
-    </fragment>
+          </fragment>
 
     <fragment
         android:id="@+id/coinbaseBuyDashFragment"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashFragment"
-        android:label="CoinbaseBuyDashFragment"/>
+        android:label="CoinbaseBuyDashFragment">
+        <action
+            android:id="@+id/buy_dash_to_order_review"
+            app:destination="@id/coinbaseBuyDashOrderReviewFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+        <argument
+            android:name="paymentMethods"
+            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod[]" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/coinbaseBuyDashOrderReviewFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashOrderReviewFragment"
+        android:label="CoinbaseBuyDashOrderReviewFragment">
+        <argument
+            android:name="paymentMethod"
+            app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod" />
+        <argument
+            android:name="placeBuyOrderUIModel"
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel" />
+
+    </fragment>
 </navigation>

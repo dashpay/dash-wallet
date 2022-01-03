@@ -18,14 +18,32 @@
 package org.dash.wallet.integration.coinbase_integration.model
 
 import android.os.Parcelable
+import com.google.gson.Gson
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-data class CoinbasePaymentMethod(
-    val id: String,
-    val type: String,
-    val name: String,
-    val currency: String,
-    val allowBuy: Boolean,
-    val allowSell: Boolean
-):Parcelable
+data class CoinbaseErrorResponse(
+    val errors: List<Error>? = null
+) : Parcelable {
+    companion object {
+        fun getErrorMessage(json: String): String? {
+            return try {
+                val gson = Gson()
+                val errorResponse: CoinbaseErrorResponse = gson.fromJson(
+                    json,
+                    CoinbaseErrorResponse::class.java
+                )
+                errorResponse.errors?.firstOrNull()?.message
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+}
+
+@Parcelize
+data class Error(
+    val id: String? = null,
+    val message: String? = null
+) : Parcelable

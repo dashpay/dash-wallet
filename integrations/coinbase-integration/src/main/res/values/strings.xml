@@ -21,6 +21,7 @@
     <string name="coinbase_dash_wallet_error_message"> Please create a Dash Wallet on Coinbase to proceed.</string>
     <string name="CreateـDashـAccount">Create Dash Account</string>
     <string name="close">Close</string>
+    <string name="retry">Retry</string>
     <string name="connected">Connected</string>
     <string name="disconnect_coinbase_account">Disconnect Coinbase Account</string>
     <string name="receive_directly_into_dash_wallet">Receive directly into Dash Wallet.</string>
@@ -29,4 +30,28 @@
     <string name="sending_to">Sending to</string>
     <string name="dash_wallet_device">Dash Wallet on this device</string>
     <string name="exchange_rate_template">%1$s DASH = %2$s</string>
+    <string name="payment_method">Payment method</string>
+    <string name="purchase">Purchase</string>
+    <string name="coinbase_fee">Coinbase Fee</string>
+    <string name="total">Total</string>
+    <string name="order_preview">Order Preview</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">You will receive %s Dash on your Dash Wallet on this device. Please note that it can take up to 2-3 minutes to complete a transfer.</string>
+    <string name="amount_in_dash">Amount in Dash</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm_sec">Confirm (%ss)</string>
+    <string name="confirm">Confirm</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_title">We didn’t find any payment methods.</string>
+    <string name="coinbase_dash_wallet_no_payment_methods_error_message"> Please update your Coinbase account to proceed.</string>
+    <string name="add_payment_method">Add Payment Method</string>
+    <string name="error">Error</string>
+    <string name="cancel_transaction">Cancel transaction?</string>
+    <string name="yes_cancel">Yes, cancel</string>
+    <string name="no_keep_it">No, keep it</string>
+    <string name="purchase_successful">Purchase successful</string>
+    <string name="purchase_failed">Purchase Failed</string>
+    <string name="transfer_failed">Transfer Failed</string>
+    <string name="transfer_failed_msg"> The Dash was successfully deposited to your Coinbase account. But there was a problem transferring it to Dash Wallet on this device.</string>
+    <string name="purchase_failed_msg"> Something went wrong</string>
+    <string name="it_could_take_up_to_2_3_minutes">It could take up to 2-3 minutes for the Dash to be transferred to your Dash Wallet on this device.</string>
+    <string name="contact_coinbase_support">Contact Coinbase Support</string>
 </resources>

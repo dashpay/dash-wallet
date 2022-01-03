@@ -20,6 +20,8 @@ package org.dash.wallet.integration.coinbase_integration.ui
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
@@ -28,21 +30,25 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.livedata.EventObserver
+import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashBinding
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
-import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
+import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashViewModel
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
-    private val viewModel by viewModels<CoinbaseServicesViewModel>()
+        private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
+    private var loadingDialog: FancyAlertDialog? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -72,16 +78,74 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
                 GenericUtils.fiatToString(rate.fiat)
             )
         }
+
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
-            // TODO
-            Log.i("COINBASELOG", "fiat: ${pair.second}, coin: ${pair.first}")
+            viewModel.onContinueClicked(pair.second,binding.paymentMethodPicker.selectedMethodIndex)
+        }
+
+        viewModel.placeBuyOrder.observe(
+            viewLifecycleOwner, EventObserver {
+                    safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
+                        binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex],
+                        it))
+            }
+        )
+
+
+        viewModel.showLoading.observe(
+            viewLifecycleOwner,
+            {
+                if (it) {
+                    showProgress(R.string.loading)
+                } else
+                    dismissProgress()
+            }
+        )
+
+        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner){
+            showErrorDialog(
+                R.string.error,
+                it,
+                R.drawable.ic_info_red,
+                negativeButtonText= R.string.close
+            )
         }
     }
 
+
     private fun setupPaymentMethodPayment() {
-        viewModel.getPaymentMethods()
         viewModel.activePaymentMethods.observe(viewLifecycleOwner){
             binding.paymentMethodPicker.paymentMethods = it
         }
+
+        arguments?.let {
+            viewModel.getActivePaymentMethods(CoinbaseBuyDashFragmentArgs.fromBundle(it).paymentMethods)
+        }
     }
+
+    private fun showProgress(messageResId: Int) {
+        if (loadingDialog != null && loadingDialog?.isAdded == true) {
+            loadingDialog?.dismissAllowingStateLoss()
+        }
+        loadingDialog = FancyAlertDialog.newProgress(messageResId, 0)
+        loadingDialog?.show(parentFragmentManager, "progress")
+    }
+
+    private fun dismissProgress() {
+        if (loadingDialog != null && loadingDialog?.isAdded == true) {
+            loadingDialog?.dismissAllowingStateLoss()
+        }
+    }
+
+    private fun showErrorDialog(
+        @StringRes title: Int,
+        message: String,
+        @DrawableRes image: Int,
+        @StringRes positiveButtonText: Int?= null,
+        @StringRes negativeButtonText: Int
+    ) {
+        val dialog = CoinBaseErrorDialog.newInstance(title, message, image, positiveButtonText, negativeButtonText)
+        dialog.showNow(parentFragmentManager, "error")
+    }
+
 }

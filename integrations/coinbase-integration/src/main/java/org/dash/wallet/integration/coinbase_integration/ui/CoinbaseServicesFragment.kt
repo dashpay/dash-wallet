@@ -25,6 +25,7 @@ import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
@@ -62,8 +63,15 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         }
 
         binding.buyDashBtn.setOnClickListener {
-            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash())
+            viewModel.getPaymentMethods()
+
         }
+        viewModel.activePaymentMethods.observe(
+            viewLifecycleOwner,
+            EventObserver {
+                safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
+            }
+        )
 
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
@@ -106,9 +114,22 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             {
                 showErrorDialog(
                     R.string.coinbase_dash_wallet_error_title,
-                    R.string.coinbase_dash_wallet_error_message,
+                    getString(R.string.coinbase_dash_wallet_error_message),
                     R.drawable.ic_info_red,
                     R.string.CreateـDashـAccount,
+                    R.string.close
+                )
+            }
+        )
+
+        viewModel.activePaymentMethodsFailureCallback.observe(
+            viewLifecycleOwner,
+            {
+                showErrorDialog(
+                    R.string.coinbase_dash_wallet_no_payment_methods_error_title,
+                    getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+                    R.drawable.ic_info_red,
+                    R.string.add_payment_method,
                     R.string.close
                 )
             }
@@ -138,7 +159,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
     private fun showErrorDialog(
         @StringRes title: Int,
-        @StringRes message: Int,
+        message: String,
         @DrawableRes image: Int,
         @StringRes positiveButtonText: Int,
         @StringRes negativeButtonText: Int

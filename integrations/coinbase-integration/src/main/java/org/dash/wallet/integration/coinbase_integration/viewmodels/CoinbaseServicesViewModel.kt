@@ -16,34 +16,34 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import android.app.Application
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
-import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.Event
+import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.TRANSACTION_STATUS_COMPLETED
 import org.dash.wallet.integration.coinbase_integration.model.*
+import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseServicesViewModel @Inject constructor(
-    private val coinBaseRepository: CoinBaseRepositoryInt,
+    application: Application,
+    private val coinBaseRepository: CoinBaseRepository,
     private val exchangeRatesProvider: ExchangeRatesProvider,
-    val config: Configuration,
-    private val walletDataProvider: WalletDataProvider
-) : ViewModel() {
+    val config: Configuration
+) : AndroidViewModel(application) {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
     val user: LiveData<CoinBaseUserAccountData>
@@ -57,25 +57,15 @@ class CoinbaseServicesViewModel @Inject constructor(
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
 
+    private val _activePaymentMethods: MutableLiveData<Event<List<PaymentMethod>>> = MutableLiveData()
+    val activePaymentMethods: LiveData<Event<List<PaymentMethod>>>
+        get() = _activePaymentMethods
+
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
-    private val _activePaymentMethods: MutableLiveData<List<PaymentMethod>> = MutableLiveData()
-    val activePaymentMethods: LiveData<List<PaymentMethod>>
-        get() = _activePaymentMethods
-
-    private val _placeBuyOrder: MutableLiveData<PlaceBuyOrderUIModel> = MutableLiveData()
-    val placeBuyOrder: LiveData<PlaceBuyOrderUIModel>
-        get() = _placeBuyOrder
-
     val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
-    val placeBuyOrderFailedCallback = SingleLiveEvent<Unit>()
-    val commitBuyOrderFailedCallback = SingleLiveEvent<Unit>()
-
-    private val _transactionCompleted: MutableLiveData<Boolean> = MutableLiveData()
-    val transactionCompleted: LiveData<Boolean>
-        get() = _transactionCompleted
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
@@ -93,6 +83,9 @@ class CoinbaseServicesViewModel @Inject constructor(
                     coinBaseRepository.saveLastCoinbaseDashAccountBalance(userAccountData.balance?.amount)
                     coinBaseRepository.saveUserAccountId(userAccountData.id)
                 }
+            }
+            is ResponseResource.Loading -> {
+                _showLoading.value = true
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
@@ -115,97 +108,31 @@ class CoinbaseServicesViewModel @Inject constructor(
 
     fun getPaymentMethods() = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
-        when(val response = coinBaseRepository.getActivePaymentMethods()){
+        when (val response = coinBaseRepository.getActivePaymentMethods()) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                if (response.value.isEmpty()){
+                if (response.value.isEmpty()) {
                     activePaymentMethodsFailureCallback.call()
                 } else {
-                    _activePaymentMethods.value = response.value.filter { it.isBuyingAllowed == true }
+                    _activePaymentMethods.value = Event(
+                        response.value.filter { it.isBuyingAllowed == true }
                             .map {
                                 val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
                                 val nameAccountPair = splitNameAndAccount(it.name)
                                 PaymentMethod(
-                                    it.id?: "",
+                                    it.id ?: "",
                                     nameAccountPair.first,
                                     nameAccountPair.second,
                                     "", // set "Checking" to get "****1234 • Checking" in subtitle
                                     paymentMethodType = type
                                 )
                             }
+                    )
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
                 activePaymentMethodsFailureCallback.call()
-            }
-        }
-    }
-
-    fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
-        _showLoading.value = true
-        when(val result = coinBaseRepository.placeBuyOrder(params)){
-            is ResponseResource.Success -> {
-                if (result.value == BuyOrderResponse.EMPTY_PLACE_BUY) {
-                    _showLoading.value = false
-                    placeBuyOrderFailedCallback.call()
-                }
-                else {
-                    _showLoading.value = false
-                    _placeBuyOrder.value = result.value
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
-                placeBuyOrderFailedCallback.call()
-            }
-        }
-    }
-
-    fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
-        _showLoading.value = true
-        when(val result = coinBaseRepository.commitBuyOrder(params)){
-            is ResponseResource.Success -> {
-                if (result.value == BuyOrderResponse.EMPTY_COMMIT_BUY){
-                    _showLoading.value = false
-                    commitBuyOrderFailedCallback.call()
-                } else {
-                    val sendFundToWalletParams = SendTransactionToWalletParams(
-                        amount = result.value.dashAmount,
-                        currency = result.value.dashCurrency,
-                        idem = UUID.randomUUID().toString(),
-                        to = walletDataProvider.freshReceiveAddress().toBase58(),
-                        type = result.value.transactionType
-                    )
-                    sendDashToWallet(sendFundToWalletParams)
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
-                commitBuyOrderFailedCallback.call()
-            }
-        }
-    }
-
-    fun sendDashToWallet(params: SendTransactionToWalletParams) = viewModelScope.launch(Dispatchers.Main){
-        when(val result = coinBaseRepository.sendFundsToWallet(params)){
-            is ResponseResource.Success -> {
-                _showLoading.value = false
-                when {
-                    result.value == SendTransactionToWalletResponse.EMPTY -> {
-                        _transactionCompleted.value = false
-                    }
-                    result.value.sendTransactionStatus == TRANSACTION_STATUS_COMPLETED -> {
-                        _transactionCompleted.value = false
-                    }
-                    else -> {
-                        _transactionCompleted.value = true
-                    }
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
-                _transactionCompleted.value = false
             }
         }
     }

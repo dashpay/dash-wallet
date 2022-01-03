@@ -16,11 +16,13 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,12 +32,17 @@ import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
+import org.dash.wallet.common.ui.BaseDialogFragment
+import org.dash.wallet.common.ui.LockScreenViewModel
+import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseErrorBinding
 
 class CoinBaseErrorDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseErrorBinding::bind)
+    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -52,8 +59,15 @@ class CoinBaseErrorDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        lockScreenViewModel.activatingLockScreen.observe(this){
+            Log.e(this::class.java.simpleName, "Closing dialog")
+            dismiss()
+        }
+
         setOrHideIfEmpty(binding.coinbaseDialogTitle, "title")
-        setOrHideIfEmpty(binding.coinbaseDialogMessage, "message")
+        arguments?.getString("message")?.let {
+            binding.coinbaseDialogMessage.text = it
+        }
         setOrHideIfEmpty(binding.coinbaseDialogIcon, "image")
         setOrHideIfEmpty(binding.coinbaseDialogPositiveButton, "positive_text")
         setOrHideIfEmpty(binding.coinbaseDialogNegativeButton, "negative_text")
@@ -90,17 +104,17 @@ class CoinBaseErrorDialog : DialogFragment() {
 
         fun newInstance(
             @StringRes title: Int,
-            @StringRes message: Int,
+            message: String,
             @DrawableRes image: Int,
-            @StringRes positiveButtonText: Int,
-            @StringRes negativeButtonText: Int
+            @StringRes positiveButtonText: Int?,
+            @StringRes negativeButtonText: Int?
         ): CoinBaseErrorDialog {
             val args = Bundle().apply {
                 putInt("title", title)
-                putInt("message", message)
+                putString("message", message)
                 putInt("image", image)
-                putInt("positive_text", positiveButtonText)
-                putInt("negative_text", negativeButtonText)
+                positiveButtonText?.let { putInt("positive_text", it) }
+                negativeButtonText?.let { putInt("negative_text", it) }
             }
             return CoinBaseErrorDialog().apply {
                 arguments = args
