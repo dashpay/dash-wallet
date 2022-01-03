@@ -632,7 +632,10 @@ class ExploreViewModel @Inject constructor(
     }
 
     private fun calculateDistance(item: SearchResult, userLat: Double?, userLng: Double?): Double {
-        return if (_isLocationEnabled.value == true && userLat != null && userLng != null) {
+        return if (item.type != MerchantType.ONLINE &&
+            _isLocationEnabled.value == true &&
+            userLat != null && userLng != null
+        ) {
             locationProvider.distanceBetween(userLat, userLng, item.latitude ?: 0.0, item.longitude ?: 0.0)
         } else {
             Double.NaN

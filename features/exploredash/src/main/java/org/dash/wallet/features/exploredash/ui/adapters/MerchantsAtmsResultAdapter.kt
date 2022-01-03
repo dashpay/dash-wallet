@@ -115,7 +115,8 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         val resources = binding.root.resources
         binding.title.text = merchant?.name
         binding.subtitle.text = getDistanceText(resources, merchant)
-        binding.subtitle.isVisible = binding.subtitle.text.isNotEmpty()
+        binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE &&
+                binding.subtitle.text.isNotEmpty()
 
         Glide.with(binding.root.context)
             .load(merchant?.logoLocation)
