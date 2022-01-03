@@ -116,12 +116,12 @@ class MerchantDaoTest {
             bounds.northLat, bounds.eastLng, bounds.southLat, bounds.westLng, false, 0.0, 0.0)
         verifyNoMoreInteractions(merchantDaoMock)
 
-        // --- Physical type with bounds, no query and territory should call pagingGetByTerritory method ---
+        // --- Both type with bounds, no query and territory should call pagingGetByTerritory method ---
         reset(dataSourceSpy)
         reset(merchantDaoMock)
         val territory = "Kansas"
 
-        dataSourceSpy.observeMerchantsPaging("", territory, MerchantType.PHYSICAL, "",
+        dataSourceSpy.observeMerchantsPaging("", territory, MerchantType.BOTH, "",
             bounds, false, 0.0, 0.0, false)
 
         verify(merchantDaoMock).pagingGetByTerritory(territory, requiredAllTypes, "",
@@ -136,7 +136,7 @@ class MerchantDaoTest {
             bounds, false, 0.0, 0.0, false)
 
         verify(dataSourceSpy).sanitizeQuery(query)
-        verify(merchantDaoMock).pagingSearchByTerritory(sanitizedQuery, territory, requiredAllTypes,
+        verify(merchantDaoMock).pagingSearchByTerritory(sanitizedQuery, territory, requiredPhysicalTypes,
             "", false, 0.0, 0.0, 2, 1)
         verifyNoMoreInteractions(merchantDaoMock)
     }
