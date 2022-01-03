@@ -17,7 +17,6 @@
 package org.dash.wallet.integration.coinbase_integration.repository
 
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.SendFundsToWalletMapper

@@ -34,11 +34,7 @@ data class SendTransactionToWalletData(
     val type: String? = null,
     @SerializedName("updated_at")
     val updatedAt: String? = null
-) {
-    fun mapToUIModel(): SendTransactionToWalletUIModel {
-        return SendTransactionToWalletUIModel(this.status)
-    }
-}
+)
 
 data class AddressInfo(
     val address: String? = null

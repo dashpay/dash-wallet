@@ -45,15 +45,7 @@ data class BuyOrderData(
     val updatedAt: String? = null,
     @SerializedName("user_reference")
     val userReference: String? = null
-) {
-    fun mapToPlaceBuyUIModel(): PlaceBuyOrderUIModel {
-        return PlaceBuyOrderUIModel(this.id ?:"", this.paymentMethod?.id?:"", this.fee?.amount?: "", this.fee?.currency?: "")
-    }
-
-    fun mapToCommitBuyUIModel(): CommitBuyOrderUIModel {
-        return CommitBuyOrderUIModel(dashAmount = this.amount?.amount?: "")
-    }
-}
+)
 
 data class UnitPrice(
     val amount: String? = null,
