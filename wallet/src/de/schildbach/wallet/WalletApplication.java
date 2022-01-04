@@ -202,7 +202,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
         WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(
                 "Sync Explore Data",
-                ExistingWorkPolicy.REPLACE,
+                ExistingWorkPolicy.KEEP,
                 syncDataWorkRequest
         );
     }
