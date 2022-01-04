@@ -170,7 +170,6 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                             dismiss()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
-                            dismiss()
                             viewModel.retry()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS -> {
