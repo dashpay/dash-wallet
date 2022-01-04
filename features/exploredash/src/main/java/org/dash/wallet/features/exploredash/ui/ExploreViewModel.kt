@@ -199,6 +199,7 @@ class ExploreViewModel @Inject constructor(
                     _selectedRadiusOption.flatMapLatest { selectedRadius ->
                         _selectedTerritory.flatMapLatest { territory ->
                             _filterMode.flatMapLatest { mode ->
+                                clearSearchResults()
                                 _searchBounds
                                     .filterNotNull()
                                     .filter { screenState.value == ScreenState.SearchResults }
@@ -468,8 +469,8 @@ class ExploreViewModel @Inject constructor(
     }
 
     private fun clearSearchResults() {
-        _pagingSearchResults.value = PagingData.from(listOf())
-        _physicalSearchResults.value = listOf()
+        _pagingSearchResults.postValue(PagingData.from(listOf()))
+        _physicalSearchResults.postValue(listOf())
     }
 
     private fun getBoundedFlow(
