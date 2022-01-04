@@ -73,6 +73,8 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     }
 
     fun sendDashToWallet(params: SendTransactionToWalletParams) = viewModelScope.launch(Dispatchers.Main) {
+        if (_showLoading.value == false)
+            _showLoading.value = true
         when (val result = coinBaseRepository.sendFundsToWallet(params)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false

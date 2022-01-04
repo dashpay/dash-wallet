@@ -84,9 +84,6 @@ class CoinbaseServicesViewModel @Inject constructor(
                     coinBaseRepository.saveUserAccountId(userAccountData.id)
                 }
             }
-            is ResponseResource.Loading -> {
-                _showLoading.value = true
-            }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
             }

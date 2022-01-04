@@ -60,20 +60,38 @@
         android:paddingVertical="11dp"
         android:text="@string/cancel"
         android:textAllCaps="false"
-        app:layout_constraintBottom_toBottomOf="@+id/confirm_btn"
+        app:layout_constraintBottom_toBottomOf="@+id/confirm_btn_container"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/confirm_btn" />
+        app:layout_constraintTop_toTopOf="@+id/confirm_btn_container" />
 
-    <Button
-        android:id="@+id/confirm_btn"
-        style="@style/Button.Primary.Large.Blue"
+    <LinearLayout
+        android:id="@+id/confirm_btn_container"
         android:layout_width="0dp"
+        android:orientation="horizontal"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="15dp"
-        android:layout_marginBottom="25dp"
-        android:text="@string/confirm"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/cancel_btn" />
+        android:layout_marginBottom="25dp"
+        android:layout_marginHorizontal="15dp"
+        app:layout_constraintStart_toEndOf="@+id/cancel_btn">
+        <ImageView
+            android:id="@+id/retry_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_retry"
+            android:visibility="gone"
+            />
+        <TextView
+            android:id="@+id/confirm_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/confirm"
+            android:layout_marginHorizontal="8dp"
+            android:textColor="@color/dash_white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/cancel_btn" />
 
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

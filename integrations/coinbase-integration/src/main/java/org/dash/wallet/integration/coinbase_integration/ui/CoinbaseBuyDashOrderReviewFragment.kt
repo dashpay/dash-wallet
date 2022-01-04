@@ -48,10 +48,12 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
         override fun onTick(millisUntilFinished: Long) {
             binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
+            binding.retryIcon.visibility = View.GONE
         }
 
         override fun onFinish() {
             binding.confirmBtn.text = getString(R.string.retry)
+            binding.retryIcon.visibility = View.VISIBLE
             isRetrying =true
         }
      }
@@ -115,35 +117,29 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
         countDownTimer.start()
 
-        viewModel.showLoading.observe(
-            viewLifecycleOwner,
-            {
-                if (it) {
-                    showProgress(R.string.loading)
-                } else
-                    dismissProgress()
-            }
-        )
+        viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
+            if (showLoading) {
+                showProgress(R.string.loading)
+            } else
+                dismissProgress()
+        }
 
-        viewModel.commitBuyOrderFailedCallback.observe(
-            viewLifecycleOwner,
-            {
-                showBuyOrderDialog(CoinBaseBuyDashDialog.Type.PURCHASE_ERROR)
-            }
-        )
 
-        viewModel.transactionCompleted.observe(
-            viewLifecycleOwner,
-            {
-                if (it) {
-                    showBuyOrderDialog(CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS)
-                    countDownTimer.cancel()
-                }
-                else {
-                    showBuyOrderDialog(CoinBaseBuyDashDialog.Type.TRANSFER_ERROR)
-                }
+        viewModel.commitBuyOrderFailedCallback.observe(viewLifecycleOwner){
+            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.PURCHASE_ERROR)
+        }
+
+
+        viewModel.transactionCompleted.observe(viewLifecycleOwner){ isTransactionCompleted ->
+            if (isTransactionCompleted) {
+                showBuyOrderDialog(CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS)
+                countDownTimer.cancel()
             }
-        )
+            else {
+                showBuyOrderDialog(CoinBaseBuyDashDialog.Type.TRANSFER_ERROR)
+            }
+        }
+
         binding.contentOrderReview.coinbaseFeeInfo.setOnClickListener {
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.orderReviewToFeeInfo())
         }
@@ -170,11 +166,12 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             this.onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
                     when (type) {
-                        CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
+                        CoinBaseBuyDashDialog.Type.PURCHASE_ERROR -> {
                             dismiss()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
-                           viewModel.retry()
+                            dismiss()
+                            viewModel.retry()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS -> {
                             dismiss()
