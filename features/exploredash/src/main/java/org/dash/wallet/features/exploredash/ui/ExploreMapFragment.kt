@@ -131,16 +131,14 @@ class ExploreMapFragment : SupportMapFragment() {
         }
 
         viewModel.screenState.observe(viewLifecycleOwner) { state ->
-            if (viewModel.filterMode.value == FilterMode.Online) {
-                return@observe
-            }
-
             selectedMarker?.remove()
             markersGlideRequestManager.clear(selectedIconRequest)
 
             if (state == ScreenState.Details || state == ScreenState.DetailsGrouped) {
                 showSelectedMarker(state)
-            } else if (viewModel.isLocationEnabled.value == true) {
+            } else if (viewModel.isLocationEnabled.value == true &&
+                (state == ScreenState.MerchantLocations || viewModel.filterMode.value != FilterMode.Online)
+            ) {
                 showMarkerSet(state)
             }
 
@@ -470,8 +468,7 @@ class ExploreMapFragment : SupportMapFragment() {
     }
 
     private fun canFocusOnItem(item: SearchResult): Boolean =
-        viewModel.filterMode.value != FilterMode.Online &&
-                item.type != MerchantType.ONLINE &&
+        item.type != MerchantType.ONLINE &&
                 item.latitude != null && item.longitude != null
 
     private fun getBitmapFromDrawable(drawableId: Int): Bitmap? {
