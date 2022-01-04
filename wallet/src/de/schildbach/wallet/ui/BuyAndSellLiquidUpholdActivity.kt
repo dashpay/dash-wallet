@@ -134,6 +134,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         if (!LiquidConstants.hasValidCredentials() || !UpholdConstants.hasValidCredentials()) {
             keys_missing_error.isVisible = true
         }
+        dash_services_list.setHasFixedSize(true)
         dash_services_list.adapter = buyAndSellDashServicesAdapter
     }
 
@@ -185,7 +186,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         }
 
         viewModel.servicesList.observe(this) {
-            buyAndSellDashServicesAdapter.submitList(it)
+            buyAndSellDashServicesAdapter.submitList(it.toMutableList())
         }
 
         viewModel.upholdBalanceLiveData.observe(this) {
