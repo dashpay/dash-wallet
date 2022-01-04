@@ -868,7 +868,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_HOME, Bundle.EMPTY);
         startActivity(BuyAndSellLiquidUpholdActivity.Companion.createIntent(this));
     }
 

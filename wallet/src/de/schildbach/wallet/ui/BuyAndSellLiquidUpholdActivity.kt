@@ -126,7 +126,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         updateBalances()
 
         liquid_container.setOnClickListener {
-            analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
+            analytics.logEvent(if (LiquidClient.getInstance()?.isAuthenticated == true) {
                 AnalyticsConstants.Liquid.ENTER_CONNECTED
             } else {
                 AnalyticsConstants.Liquid.ENTER_DISCONNECTED
@@ -139,6 +139,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         }
 
         uphold_container.setOnClickListener {
+            analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
+                AnalyticsConstants.Uphold.ENTER_CONNECTED
+            } else {
+                AnalyticsConstants.Uphold.ENTER_DISCONNECTED
+            }, bundleOf())
+
             startActivity(UpholdAccountActivity.createIntent(this))
         }
 

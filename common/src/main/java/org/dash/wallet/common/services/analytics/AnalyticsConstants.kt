@@ -22,8 +22,7 @@ object AnalyticsConstants {
     const val CALLING_ACTIVITY = "calling_activity"
 
     object Liquid {
-        const val BUY_SELL_HOME = "liquid_buy_sell_home_screen"
-        const val BUY_SELL_MORE = "liquid_buy_sell_more_screen"
+        const val BUY_SELL_MORE = "more_buy_sell_dash"
         const val ENTER_CONNECTED = "liquid_enter_connected"
         const val ENTER_DISCONNECTED = "liquid_enter_disconnected"
         const val DISCONNECT = "liquid_disconnect"
@@ -34,8 +33,16 @@ object AnalyticsConstants {
         const val WIDGET_QUOTE_BUY = "liquid_quote_screen_buy_with_visa"
         const val WIDGET_PROCESSING_DURATION = "liquid_processing_duration"
         const val WIDGET_PROCESSING_CLOSE_TOP_LEFT = "liquid_processing_close_top_left"
-        // TODO NMA-1014
         const val WIDGET_PROCESSING_CLOSE_OVERLAY = "liquid_processing_close_overlay"
+    }
+
+    object Uphold {
+        const val ENTER_CONNECTED = "uphold_enter_connected"
+        const val ENTER_DISCONNECTED = "uphold_enter_disconnected"
+        const val DISCONNECT = "uphold_disconnect"
+        const val LINK_ACCOUNT = "uphold_link_account"
+        const val TRANSFER_DASH = "uphold_transfer_dash"
+        const val BUY_DASH = "uphold_buy_dash"
     }
 
     object Security {
