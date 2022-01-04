@@ -43,6 +43,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private var loadingDialog: FancyAlertDialog? = null
     private var actionDialog: FancyAlertDialog? = null
     private var isRetrying =false
+    private var transactionStateDialog: CoinBaseBuyDashDialog? = null
 
     private val countDownTimer by lazy {   object : CountDownTimer(10000, 1000) {
 
@@ -162,7 +163,9 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private fun showBuyOrderDialog(
         type: CoinBaseBuyDashDialog.Type
     ) {
-        val dialog = CoinBaseBuyDashDialog.newInstance(type).apply {
+        if (transactionStateDialog?.dialog?.isShowing == true)
+            transactionStateDialog?.dismissAllowingStateLoss()
+        transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type).apply {
             this.onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
                     when (type) {
@@ -180,6 +183,6 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 }
             }
         }
-        dialog.showNow(parentFragmentManager, "CoinBaseBuyDashDialog")
+        transactionStateDialog?.showNow(parentFragmentManager, "CoinBaseBuyDashDialog")
     }
 }
