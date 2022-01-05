@@ -274,7 +274,6 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun initViewModel() {
-        //lockScreenViewModel = ViewModelProvider(this)[LockScreenViewModel::class.java]
         checkPinViewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
         checkPinViewModel.checkPinLiveData.observe(this, Observer {
             when (it.status) {

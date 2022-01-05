@@ -30,15 +30,14 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 class FancyAlertDialog : DialogFragment() {
-    private lateinit var lockScreenViewModel: LockScreenViewModel
-    private lateinit var sharedViewModel: FancyAlertDialogViewModel
-    var onFancyAlertButtonsClickListener: FancyAlertButtonsClickListener? = null
+    private val lockScreenViewModel by activityViewModels<LockScreenViewModel>()
+    private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
 
     enum class Type {
         INFO,
@@ -48,13 +47,8 @@ class FancyAlertDialog : DialogFragment() {
 
     companion object {
 
-        fun newInstance(
-            @StringRes title: Int,
-            @StringRes message: Int,
-            @DrawableRes image: Int,
-            @StringRes positiveButtonText: Int,
-            @StringRes negativeButtonText: Int
-        ): FancyAlertDialog {
+        fun newInstance(@StringRes title: Int, @StringRes message: Int, @DrawableRes image: Int,
+                        @StringRes positiveButtonText: Int, @StringRes negativeButtonText: Int): FancyAlertDialog {
             val args = Bundle().apply {
                 putString("type", Type.INFO.name)
                 putInt("title", title)
@@ -122,7 +116,6 @@ class FancyAlertDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        initViewModels()
         setOrHideIfEmpty(title, "title")
         setOrHideIfEmpty(message, "message")
         setOrHideIfEmpty(image, "image")
@@ -140,12 +133,7 @@ class FancyAlertDialog : DialogFragment() {
                 setupAction()
             }
         }
-        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner) {
-            dismiss()
-        }
-
-        sharedViewModel.onPositiveButtonClick.observe(viewLifecycleOwner) {
-            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
+        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
             dismiss()
         }
     }
@@ -176,19 +164,6 @@ class FancyAlertDialog : DialogFragment() {
         }
     }
 
-    private fun setupAction() {
-        progress.visibility = View.GONE
-        image.visibility = View.GONE
-        positive_button.setOnClickListener {
-            dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
-        }
-        negative_button.setOnClickListener {
-            dismiss()
-            sharedViewModel.onNegativeButtonClick.call()
-        }
-    }
-
     private fun setupProgress() {
         progress.visibility = View.VISIBLE
         image.visibility = View.GONE
@@ -211,14 +186,5 @@ class FancyAlertDialog : DialogFragment() {
                 setCanceledOnTouchOutside(false)
             }
         }
-    }
-
-    private fun initViewModels() {
-        lockScreenViewModel = ViewModelProvider(this)[LockScreenViewModel::class.java]
-        sharedViewModel = ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
-    }
-
-    public interface FancyAlertButtonsClickListener {
-        fun onPositiveButtonClick()
     }
 }
