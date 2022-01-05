@@ -44,11 +44,11 @@ class TestPagingSource : PagingSource<Int, MerchantInfo>() {
 class MerchantDaoTest {
     private val atmDaoMock = mock<AtmDao>()
     private val merchantDaoMock = mock<MerchantDao> {
-        on { pagingGetGrouped(any(), any()) } doReturn TestPagingSource()
+        on { pagingGetGrouped(any(), any(), any(), any()) } doReturn TestPagingSource()
         on { pagingGetByTerritory(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
         on { pagingGetByCoordinates(any(), any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
 
-        on { pagingSearchGrouped(any(), any(), any()) } doReturn TestPagingSource()
+        on { pagingSearchGrouped(any(), any(), any(), any(), any()) } doReturn TestPagingSource()
         on { pagingSearchByTerritory(any(), any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
         on { pagingSearchByCoordinates(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
     }
@@ -70,7 +70,7 @@ class MerchantDaoTest {
         dataSourceSpy.observeMerchantsPaging("", "", MerchantType.ONLINE, "",
             GeoBounds.noBounds, false, 0.0, 0.0, false)
 
-        verify(merchantDaoMock).pagingGetGrouped(requiredOnlineTypes, "")
+        verify(merchantDaoMock).pagingGetGrouped(requiredOnlineTypes, "", 0.0, 0.0)
         verifyNoMoreInteractions(merchantDaoMock)
 
         // --- Online type with query should call sanitizeQuery and pagingSearchGrouped methods ---
@@ -81,7 +81,7 @@ class MerchantDaoTest {
             GeoBounds.noBounds, false, 0.0, 0.0, false)
 
         verify(dataSourceSpy).sanitizeQuery(query)
-        verify(merchantDaoMock).pagingSearchGrouped(sanitizedQuery, requiredOnlineTypes, "")
+        verify(merchantDaoMock).pagingSearchGrouped(sanitizedQuery, requiredOnlineTypes, "", 0.0, 0.0)
         verifyNoMoreInteractions(merchantDaoMock)
     }
 
