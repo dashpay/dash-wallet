@@ -14,6 +14,8 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
+import org.dash.wallet.common.UserInteractionAwareCallback
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -38,13 +40,13 @@ class CoinbaseFeeInfoDialog: DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.coinbaseFeeInfoCloseBtn.setOnClickListener { dismiss() }
+        binding.coinbaseFeeInfoCloseBtn.setOnClickListener { findNavController().navigateUp() }
         binding.coinbaseFeeInfoLearnMore.setOnClickListener {
-            dismiss()
+            findNavController().navigateUp()
             openWebPage()
         }
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
-            dismiss()
+            findNavController().navigateUp()
         }
     }
 
@@ -65,6 +67,17 @@ class CoinbaseFeeInfoDialog: DialogFragment() {
             val intent = Intent(Intent.ACTION_VIEW)
             intent.data = uri
             startActivity(intent)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.apply {
+            window?.apply {
+                setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                callback = UserInteractionAwareCallback(this.callback, requireActivity())
+            }
         }
     }
 }

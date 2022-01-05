@@ -35,7 +35,7 @@ class CancelTransactionDialog: DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
-            dismiss()
+            findNavController().navigateUp()
         }
         binding.negativeButton.setOnClickListener {
             findNavController().navigateUp()
