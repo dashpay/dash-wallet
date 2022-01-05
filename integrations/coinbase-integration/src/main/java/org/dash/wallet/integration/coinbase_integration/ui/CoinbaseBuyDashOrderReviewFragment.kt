@@ -104,14 +104,14 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 binding.contentOrderReview.totalAmount.text =
                     getString(R.string.fiat_balance_with_currency, this.totalAmount, GenericUtils.currencySymbol(this.totalCurrency))
 
-                binding.confirmBtn.setOnClickListener {
-                   if(isRetrying){
-                       countDownTimer.start()
-                       isRetrying=false
-                   }else{
-                       this.buyOrderId?.let { id -> viewModel.commitBuyOrder(id) }
+                binding.confirmBtnContainer.setOnClickListener {
+                    countDownTimer.cancel()
+                    if(isRetrying) {
+                        countDownTimer.start()
+                        isRetrying = false
+                   }else {
+                        viewModel.commitBuyOrder(this.buyOrderId)
                    }
-
                 }
             }
         }
@@ -132,13 +132,8 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
 
         viewModel.transactionCompleted.observe(viewLifecycleOwner){ isTransactionCompleted ->
-            if (isTransactionCompleted) {
-                showBuyOrderDialog(CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS)
-                countDownTimer.cancel()
-            }
-            else {
-                showBuyOrderDialog(CoinBaseBuyDashDialog.Type.TRANSFER_ERROR)
-            }
+            showBuyOrderDialog(if (isTransactionCompleted)
+                CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR)
         }
 
         binding.contentOrderReview.coinbaseFeeInfo.setOnClickListener {
@@ -184,5 +179,10 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             }
         }
         transactionStateDialog?.showNow(parentFragmentManager, "CoinBaseBuyDashDialog")
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        countDownTimer.cancel()
     }
 }

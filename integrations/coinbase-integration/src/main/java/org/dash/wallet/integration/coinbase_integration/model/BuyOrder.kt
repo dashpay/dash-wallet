@@ -107,15 +107,15 @@ data class PlaceBuyOrderParams(
 
 @Parcelize
 data class PlaceBuyOrderUIModel(
-    val buyOrderId:String? = "",
-    val paymentMethodId:String? = "",
-    val purchaseAmount:String? = "",
-    val purchaseCurrency: String? = "",
-    val coinBaseFeeAmount:String? = "",
-    val coinbaseFeeCurrency: String? = "",
-    val totalAmount:String? = "",
-    val totalCurrency: String? = "",
-    val dashAmount:String? = "",
+    val buyOrderId:String = "",
+    val paymentMethodId:String = "",
+    val purchaseAmount:String = "",
+    val purchaseCurrency: String = "",
+    val coinBaseFeeAmount:String = "",
+    val coinbaseFeeCurrency: String = "",
+    val totalAmount:String = "",
+    val totalCurrency: String = "",
+    val dashAmount:String = "",
 ): Parcelable
 
 data class CommitBuyOrderUIModel(
