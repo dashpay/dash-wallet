@@ -55,7 +55,8 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
 
         if (savedInstanceState == null) {
             val fragment = EnterAmountFragment.newInstance(
-                isMaxButtonVisible = false
+                isMaxButtonVisible = false,
+                showCurrencySelector = false
             )
             val headerBinding = KeyboardHeaderViewBinding.inflate(layoutInflater, null, false)
             fragment.setViewDetails(getString(R.string.button_continue), headerBinding.root)

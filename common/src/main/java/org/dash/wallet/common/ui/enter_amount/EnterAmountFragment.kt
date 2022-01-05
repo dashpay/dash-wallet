@@ -18,7 +18,6 @@
 package org.dash.wallet.common.ui.enter_amount
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -26,6 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.android.synthetic.main.amount_view.view.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Monetary
@@ -45,16 +45,19 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         private const val ARG_INITIAL_AMOUNT = "initial_amount"
         private const val ARG_DASH_TO_FIAT = "dash_to_fiat"
         private const val ARG_MAX_BUTTON_VISIBLE = "max_visible"
+        private const val ARG_SHOW_CURRENCY_SELECTOR_BUTTON = "show_currency_selector"
 
         @JvmStatic
         fun newInstance(
             dashToFiat: Boolean = false,
             initialAmount: Monetary? = null,
-            isMaxButtonVisible: Boolean = true
+            isMaxButtonVisible: Boolean = true,
+            showCurrencySelector: Boolean = true
         ): EnterAmountFragment {
             val args = bundleOf(
                 ARG_DASH_TO_FIAT to dashToFiat,
-                ARG_MAX_BUTTON_VISIBLE to isMaxButtonVisible
+                ARG_MAX_BUTTON_VISIBLE to isMaxButtonVisible,
+                ARG_SHOW_CURRENCY_SELECTOR_BUTTON to showCurrencySelector
             )
             initialAmount?.let { args.putSerializable(ARG_INITIAL_AMOUNT, it) }
 
@@ -74,6 +77,10 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         val args = requireArguments()
 
         binding.maxButtonWrapper.isVisible = args.getBoolean(ARG_MAX_BUTTON_VISIBLE)
+        binding.amountView.input_currency_toggle.visibility = if (args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON))
+            View.VISIBLE else View.GONE
+        binding.amountView.result_currency_toggle.visibility = if (args.getBoolean(
+            ARG_SHOW_CURRENCY_SELECTOR_BUTTON)) View.VISIBLE else View.GONE
         val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
         binding.amountView.dashToFiat = dashToFiat
 
