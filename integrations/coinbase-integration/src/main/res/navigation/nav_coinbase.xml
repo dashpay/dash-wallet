@@ -64,11 +64,21 @@
             android:id="@+id/orderReviewToFeeInfo"
             app:destination="@id/coinbaseFeeInfoDialog"
             />
+        <action
+            android:id="@+id/confirmCancelBuyDashTransaction"
+            app:destination="@id/cancelTransactionDialog"
+            />
     </fragment>
     <dialog
         android:id="@+id/coinbaseFeeInfoDialog"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinbaseFeeInfoDialog"
         android:label="coinbase_info_fee"
         tools:layout="@layout/dialog_coinbase_fee_info"
+        />
+    <dialog
+        android:id="@+id/cancelTransactionDialog"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CancelTransactionDialog"
+        android:label="cancel_pending_transaction"
+        tools:layout="@layout/dialog_cancel_transaction"
         />
 </navigation>

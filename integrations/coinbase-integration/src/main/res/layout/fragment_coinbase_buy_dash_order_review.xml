@@ -52,16 +52,16 @@
 
     <TextView
         android:id="@+id/cancel_btn"
-        style="@style/MontserratRegular.G900"
+        style="@style/Caption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="15dp"
-        android:paddingHorizontal="25dp"
+        android:paddingHorizontal="40dp"
         android:paddingVertical="11dp"
         android:text="@string/cancel"
         android:textAllCaps="false"
         app:layout_constraintBottom_toBottomOf="@+id/confirm_btn_container"
         app:layout_constraintStart_toStartOf="parent"
+        android:textSize="15sp"
         app:layout_constraintTop_toTopOf="@+id/confirm_btn_container" />
 
     <LinearLayout
@@ -71,9 +71,8 @@
         style="@style/Button.Primary.Large.Blue"
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/content_review_buy_order_dash_amount"
         android:layout_marginBottom="25dp"
-        android:layout_marginHorizontal="15dp"
         app:layout_constraintStart_toEndOf="@+id/cancel_btn">
         <ImageView
             android:id="@+id/retry_icon"
@@ -87,6 +86,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/confirm"
+            style="@style/MontserratRegular"
             android:layout_marginHorizontal="8dp"
             android:textColor="@color/dash_white"
             app:layout_constraintBottom_toBottomOf="parent"

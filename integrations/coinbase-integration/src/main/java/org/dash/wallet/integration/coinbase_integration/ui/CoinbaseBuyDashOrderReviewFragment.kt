@@ -41,7 +41,6 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private val viewModel by viewModels<CoinbaseBuyDashOrderReviewViewModel>()
 
     private var loadingDialog: FancyAlertDialog? = null
-    private var actionDialog: FancyAlertDialog? = null
     private var isRetrying =false
     private var transactionStateDialog: CoinBaseBuyDashDialog? = null
 
@@ -66,18 +65,8 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             findNavController().popBackStack()
         }
 
-        actionDialog = FancyAlertDialog.newAction(R.string.cancel_transaction, R.string.yes_cancel, R.string.no_keep_it)
-            .apply {
-                onFancyAlertButtonsClickListener =
-                    object : FancyAlertDialog.FancyAlertButtonsClickListener {
-                        override fun onPositiveButtonClick() {
-                            findNavController().popBackStack()
-                        }
-                    }
-            }
-
         binding.cancelBtn.setOnClickListener {
-            actionDialog?.show(parentFragmentManager, "progress")
+            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.confirmCancelBuyDashTransaction())
         }
 
         arguments?.let {
@@ -106,10 +95,10 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
                 binding.confirmBtnContainer.setOnClickListener {
                     countDownTimer.cancel()
-                    if(isRetrying) {
+                    if (isRetrying) {
                         countDownTimer.start()
                         isRetrying = false
-                   }else {
+                   } else {
                         viewModel.commitBuyOrder(this.buyOrderId)
                    }
                 }
