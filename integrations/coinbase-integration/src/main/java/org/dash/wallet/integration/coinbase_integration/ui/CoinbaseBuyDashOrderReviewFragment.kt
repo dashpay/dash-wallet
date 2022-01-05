@@ -125,7 +125,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR)
         }
 
-        binding.contentOrderReview.coinbaseFeeInfo.setOnClickListener {
+        binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.orderReviewToFeeInfo())
         }
     }

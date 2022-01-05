@@ -90,45 +90,56 @@
         android:background="@color/divider_color"
         app:layout_constraintBottom_toBottomOf="@+id/purchase_label" />
 
-    <TextView
-        android:id="@+id/coinbase_fee_label"
-        style="@style/Caption.Gray700"
-        android:layout_width="wrap_content"
-        android:layout_height="46dp"
-        android:textAllCaps="true"
-        android:gravity="center_vertical"
-        android:text="@string/coinbase_fee"
-        android:theme="@style/ListViewButtonBackground"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/coinbase_fee_info_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/purchase_label" />
+        app:layout_constraintTop_toBottomOf="@id/purchase_label"
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <ImageView
-        android:id="@+id/coinbase_fee_info"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="7dp"
-        android:src="@drawable/ic_info_blue"
-        app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_label"
-        app:layout_constraintStart_toEndOf="@id/coinbase_fee_label"
-        app:layout_constraintTop_toTopOf="@id/coinbase_fee_label" />
+        <TextView
+            android:id="@+id/coinbase_fee_label"
+            style="@style/Caption.Gray700"
+            android:layout_width="wrap_content"
+            android:layout_height="46dp"
+            android:textAllCaps="true"
+            android:gravity="center_vertical"
+            android:text="@string/coinbase_fee"
+            android:theme="@style/ListViewButtonBackground"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+           />
 
+        <ImageView
+            android:id="@+id/coinbase_fee_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="7dp"
+            android:src="@drawable/ic_info_blue"
+            app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_label"
+            app:layout_constraintStart_toEndOf="@id/coinbase_fee_label"
+            app:layout_constraintTop_toTopOf="@id/coinbase_fee_label" />
 
-    <TextView
-        android:id="@+id/coinbase_fee_amount"
-        style="@style/Caption"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="@id/coinbase_fee_label"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/coinbase_fee_label"
-        tools:text="10.00 US$" />
+        <TextView
+            android:id="@+id/coinbase_fee_amount"
+            style="@style/Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="@id/coinbase_fee_label"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/coinbase_fee_label"
+            tools:text="10.00 US$" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <View
         android:id="@+id/coinbase_fee_separator"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/divider_color"
-        app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_label" />
+        app:layout_constraintBottom_toBottomOf="@+id/coinbase_fee_info_container" />
 
     <TextView
         android:id="@+id/total_label"
@@ -140,7 +151,7 @@
         android:textAllCaps="true"
         android:theme="@style/ListViewButtonBackground"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/coinbase_fee_label" />
+        app:layout_constraintTop_toBottomOf="@id/coinbase_fee_info_container" />
 
     <TextView
         android:id="@+id/total_amount"
