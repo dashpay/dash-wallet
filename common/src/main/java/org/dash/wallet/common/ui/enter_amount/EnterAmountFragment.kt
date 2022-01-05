@@ -25,7 +25,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.amount_view.view.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Monetary
@@ -75,12 +74,8 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val args = requireArguments()
-
         binding.maxButtonWrapper.isVisible = args.getBoolean(ARG_MAX_BUTTON_VISIBLE)
-        binding.amountView.input_currency_toggle.visibility = if (args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON))
-            View.VISIBLE else View.GONE
-        binding.amountView.result_currency_toggle.visibility = if (args.getBoolean(
-            ARG_SHOW_CURRENCY_SELECTOR_BUTTON)) View.VISIBLE else View.GONE
+        binding.amountView.showCurrencySelector = args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON)
         val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
         binding.amountView.dashToFiat = dashToFiat
 

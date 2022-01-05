@@ -185,7 +185,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         }
 
         viewModel.servicesList.observe(this) {
-            buyAndSellDashServicesAdapter.submitList(it)
+            buyAndSellDashServicesAdapter.submitList(it.toMutableList())
         }
 
         viewModel.upholdBalanceLiveData.observe(this) {

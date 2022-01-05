@@ -25,6 +25,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
+import org.dash.wallet.integration.coinbase_integration.repository.TEMP_REFRESH_TOKEN
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
 import javax.inject.Inject
 
@@ -35,23 +36,30 @@ class TokenAuthenticator @Inject constructor(
 
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
-            when (val tokenResponse = getUpdatedToken()) {
-                is ResponseResource.Success -> {
-                    tokenResponse.value.body()?.let {
-                        userPreferences.setLastCoinBaseAccessToken(it.accessToken)
-                        userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
-                        response.request().newBuilder()
-                            .header("Authorization", "Bearer ${it.accessToken}")
-                            .build()
+            if (response.code() == 401) {
+                when (val tokenResponse = getUpdatedToken()) {
+                    is ResponseResource.Success -> {
+                        tokenResponse.value.body()?.let {
+                            userPreferences.setLastCoinBaseAccessToken(it.accessToken)
+                            userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
+                            response.request().newBuilder()
+                                .header("Authorization", "Bearer ${it.accessToken}")
+                                .build()
+                        }
                     }
+                    else -> null
                 }
-                else -> null
-            }
+            } else null
         }
     }
 
     private suspend fun getUpdatedToken(): ResponseResource<retrofit2.Response<TokenResponse>> {
-        val refreshToken = userPreferences.lastCoinbaseRefreshToken
+        val refreshToken = if (userPreferences.hasTempTokenBeenUsed) {
+            userPreferences.lastCoinbaseRefreshToken
+        } else {
+            userPreferences.hasTempTokenBeenUsed = true
+            TEMP_REFRESH_TOKEN
+        }
         return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
     }
 }
