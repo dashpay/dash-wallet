@@ -559,6 +559,7 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
         }
         alertDialog = baseAlertDialogBuilder.buildAlertDialog();
         alertDialog.show();
+        decryptDialog = alertDialog;
     }
 
     private void handleDecrypt() {

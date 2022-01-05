@@ -148,6 +148,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             startActivity(UpholdAccountActivity.createIntent(this))
         }
     }
+
     private fun onLiquidItemClicked() {
         if (isNetworkOnline && LiquidConstants.hasValidCredentials()) {
             analytics.logEvent(
