@@ -33,8 +33,11 @@ import androidx.core.content.ContextCompat;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.Constants;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.WalletDataProvider;
 import org.dash.wallet.integration.uphold.R;
@@ -44,8 +47,13 @@ import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integration.uphold.data.UpholdException;
 
 import java.math.BigDecimal;
+
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import kotlin.Unit;
 
+@AndroidEntryPoint
 public class UpholdAccountActivity extends InteractionAwareActivity {
 
     public static final int REQUEST_CODE_TRANSFER = 1;
@@ -54,6 +62,9 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     private BigDecimal balance;
     private String receivingAddress;
     private final MonetaryFormat monetaryFormat = new MonetaryFormat().noCode().minDecimals(8);
+
+    @Inject
+    public AnalyticsService analytics;
 
     public static Intent createIntent(Context context) {
         Intent intent;
@@ -92,6 +103,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
             @Override
             public void onClick(View v) {
                 if (balance != null && receivingAddress != null) {
+                    analytics.logEvent(AnalyticsConstants.Uphold.TRANSFER_DASH, Bundle.EMPTY);
                     showWithdrawalDialog();
                 }
             }
@@ -99,6 +111,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         findViewById(R.id.uphold_buy_dash_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                analytics.logEvent(AnalyticsConstants.Uphold.BUY_DASH, Bundle.EMPTY);
                 openBuyDashUrl();
             }
         });
@@ -230,6 +243,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         alertDialogBuilder.setPositiveText(getString(R.string.uphold_logout_go_to_website));
         alertDialogBuilder.setPositiveAction(
                 () -> {
+                    analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, Bundle.EMPTY);
                     revokeUpholdAccessToken();
                     return Unit.INSTANCE;
                 }

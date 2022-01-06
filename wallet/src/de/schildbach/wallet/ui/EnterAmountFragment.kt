@@ -41,7 +41,7 @@ import java.util.*
 import android.content.Intent
 import android.app.Activity
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
+import de.schildbach.wallet.ui.ExchangeRatesFragment.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.util.FiatAmountFormat
@@ -177,12 +177,16 @@ class EnterAmountFragment : Fragment() {
         input_select_currency_toggle.setOnClickListener {
             val intent = Intent(activity, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, true)
+            val currencyCode = sharedViewModel.exchangeRate?.fiat?.currencyCode ?: configuration.exchangeCurrencyCode
+            intent.putExtra(ARG_CURRENCY_CODE, currencyCode)
             startActivityForResult(intent, RC_FIAT_CURRENCY_SELECTED)
         }
 
         calc_select_currency_toggle.setOnClickListener {
             val intent = Intent(activity, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, true)
+            val currencyCode = sharedViewModel.exchangeRate?.fiat?.currencyCode ?: configuration.exchangeCurrencyCode
+            intent.putExtra(ARG_CURRENCY_CODE, currencyCode)
             startActivityForResult(intent, RC_FIAT_CURRENCY_SELECTED)
         }
     }
