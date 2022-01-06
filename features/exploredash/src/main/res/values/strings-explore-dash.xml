@@ -23,6 +23,8 @@
     <string name="explore_merchants_subtitle">Find merchants who accept Dash as payment.</string>
     <string name="explore_atms_title">ATMs</string>
     <string name="explore_atms_subtitle">Find where to buy or sell DASH and other cryptocurrencies for cash.</string>
+    <string name="explore_staking_title">Staking</string>
+    <string name="explore_staking_subtitle">Easily stake Dash and earn passive income with a few simple clicks.</string>
 
     <!-- Search -->
     <string name="explore_search_results">Search results</string>

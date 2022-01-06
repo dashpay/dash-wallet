@@ -21,10 +21,9 @@ repositories {
 dependencies {
     implementation project(path: ':common')
     implementation project(path: ":features:exploredash")
-    //Liquid Integration
     implementation project(path: ':liquid-integration')
-    //Uphold Integration
     implementation project(path: ':uphold-integration')
+    implementation project(path: ":integrations:crowdnode")
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
