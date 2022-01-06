@@ -8,12 +8,10 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
-import org.dash.wallet.integration.coinbase_integration.SendFundsToWalletMapper
 import org.dash.wallet.integration.coinbase_integration.TestUtils
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderParams
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
-import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletUIModel
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
@@ -21,6 +19,7 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.`is`
 import org.junit.Before
 import org.junit.Test
+import retrofit2.Response
 
 
 class CoinBaseRepositoryTest {
@@ -29,7 +28,6 @@ class CoinBaseRepositoryTest {
     @MockK lateinit var configuration: Configuration
     @MockK lateinit var placeBuyOrderMapper: PlaceBuyOrderMapper
     @MockK lateinit var commitBuyOrderMapper: CommitBuyOrderMapper
-    @MockK lateinit var sendFundsToWalletMapper: SendFundsToWalletMapper
     private lateinit var coinBaseRepository: CoinBaseRepository
     private val accountId = "423095d3-bb89-5cef-b1bc-d1dfe6e13857"
 
@@ -41,8 +39,7 @@ class CoinBaseRepositoryTest {
             coinBaseAuthApi,
             configuration,
             placeBuyOrderMapper,
-            commitBuyOrderMapper,
-            sendFundsToWalletMapper
+            commitBuyOrderMapper
         )
         coEvery { configuration.coinbaseUserAccountId } returns accountId
     }
@@ -75,17 +72,15 @@ class CoinBaseRepositoryTest {
         assertThat(actualSuccessResponse, `is`(ResponseResource.Success(expectedPlaceBuyOrderUIModel)))
     }
 
+
     @Test
-    fun `when sending funds to dash wallet, repository returns success with data`(){
+    fun `when sending funds to dash wallet, repository returns success response code`(){
         val params = SendTransactionToWalletParams("0.5", "usd", "9316dd16-0c05", "XfVe4NAHTp6NwWuM3PGpmUSwuZuWWE9qY3", "send")
         val expectedSendFundsToWalletResponse = TestUtils.sendFundsToWalletApiResponse()
-        val expectedSendFundsToWalletData = TestUtils.sendFundsToWalletData
-        val expectedSendFundsToWalletUIModel = SendTransactionToWalletUIModel("completed")
 
-        coEvery { coinBaseServicesApi.sendCoinsToWallet(accountId = accountId, sendTransactionToWalletParams = params) } returns expectedSendFundsToWalletResponse
-        coEvery { sendFundsToWalletMapper.map(expectedSendFundsToWalletData) } returns expectedSendFundsToWalletUIModel
+        coEvery { coinBaseServicesApi.sendCoinsToWallet(accountId = accountId, sendTransactionToWalletParams = params) } returns Response.success(expectedSendFundsToWalletResponse)
 
         val actualSuccessResponse = runBlocking { coinBaseRepository.sendFundsToWallet(params) }
-        assertThat(actualSuccessResponse, `is`(ResponseResource.Success(expectedSendFundsToWalletUIModel)))
+        assertThat(actualSuccessResponse, `is`(ResponseResource.Success(200)))
     }
 }

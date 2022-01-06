@@ -59,5 +59,5 @@ interface CoinBaseServicesApi {
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Path("account_id") accountId: String,
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
-        ): SendTransactionToWalletResponse?
+        ): Response<SendTransactionToWalletResponse?>
 }

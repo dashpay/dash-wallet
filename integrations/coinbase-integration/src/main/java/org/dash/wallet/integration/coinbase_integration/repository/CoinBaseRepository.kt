@@ -19,7 +19,6 @@ package org.dash.wallet.integration.coinbase_integration.repository
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
-import org.dash.wallet.integration.coinbase_integration.SendFundsToWalletMapper
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
@@ -33,8 +32,7 @@ class CoinBaseRepository @Inject constructor(
     private val authApi: CoinBaseAuthApi,
     private val userPreferences: Configuration,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
-    private val commitBuyOrderMapper: CommitBuyOrderMapper,
-    private val sendFundsToWalletMapper: SendFundsToWalletMapper
+    private val commitBuyOrderMapper: CommitBuyOrderMapper
 ): CoinBaseRepositoryInt {
     override suspend fun getUserAccount() = safeApiCall { api.getUserAccount() }
 
@@ -73,7 +71,7 @@ class CoinBaseRepository @Inject constructor(
 
     override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams) = safeApiCall {
         val apiResult = api.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams)
-        sendFundsToWalletMapper.map(apiResult?.data)
+        apiResult.code()
     }
 }
 
@@ -86,5 +84,5 @@ interface CoinBaseRepositoryInt {
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
-    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<SendTransactionToWalletUIModel>
+    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<Int>
 }

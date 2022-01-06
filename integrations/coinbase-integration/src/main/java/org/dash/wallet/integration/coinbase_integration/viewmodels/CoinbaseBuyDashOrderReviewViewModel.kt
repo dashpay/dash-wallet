@@ -22,7 +22,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.integration.coinbase_integration.TRANSACTION_STATUS_COMPLETED
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
@@ -78,16 +77,11 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
         when (val result = coinBaseRepository.sendFundsToWallet(params)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                when {
-                    result.value == SendTransactionToWalletResponse.EMPTY -> {
-                        _transactionCompleted.value = false
-                    }
-                    result.value.sendTransactionStatus != TRANSACTION_STATUS_COMPLETED -> {
-                        _transactionCompleted.value = false
-                    }
-                    else -> {
+                when (result.value) {
+                    200, 201 -> {
                         _transactionCompleted.value = true
                     }
+                    else -> _transactionCompleted.value = false
                 }
             }
             is ResponseResource.Failure -> {

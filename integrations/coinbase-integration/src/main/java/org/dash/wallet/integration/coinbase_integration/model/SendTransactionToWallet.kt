@@ -7,11 +7,7 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class SendTransactionToWalletResponse(
     val `data`: SendTransactionToWalletData?
-): Parcelable {
-    companion object {
-        val EMPTY = SendTransactionToWalletUIModel("")
-    }
-}
+): Parcelable
 
 @Parcelize
 data class SendTransactionToWalletData(
@@ -109,9 +105,4 @@ data class SendTransactionToWalletParams(
     val idem: String?,
     val to: String?,
     val type: String?
-): Parcelable
-
-@Parcelize
-data class SendTransactionToWalletUIModel(
-    val sendTransactionStatus: String? = "",
 ): Parcelable

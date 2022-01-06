@@ -24,7 +24,6 @@ import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
-import org.dash.wallet.integration.coinbase_integration.SendFundsToWalletMapper
 import org.dash.wallet.integration.coinbase_integration.network.RemoteDataSource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
@@ -63,8 +62,6 @@ object CoinBaseModule {
     fun providePlaceBuyOrderMapper(): PlaceBuyOrderMapper = PlaceBuyOrderMapper()
     @Provides
     fun provideCommitBuyOrderMapper(): CommitBuyOrderMapper = CommitBuyOrderMapper()
-    @Provides
-    fun provideSendFundsToWalletMapper(): SendFundsToWalletMapper = SendFundsToWalletMapper()
 }
 
 @Module

@@ -34,14 +34,3 @@ class CommitBuyOrderMapper: Mapper<BuyOrderData?, CommitBuyOrderUIModel> {
         }
     }
 }
-
-class SendFundsToWalletMapper: Mapper<SendTransactionToWalletData?, SendTransactionToWalletUIModel> {
-    override fun map(input: SendTransactionToWalletData?): SendTransactionToWalletUIModel {
-        return if (input == null) {
-            SendTransactionToWalletResponse.EMPTY
-        }
-        else {
-            SendTransactionToWalletUIModel(input.status)
-        }
-    }
-}

@@ -62,7 +62,5 @@ object TestUtils {
         val apiResponse = readFileWithoutNewLineFromResources("send_funds_to_wallet.json")
         return generateResource(apiResponse, SendTransactionToWalletResponse::class.java)
     }
-
-    val sendFundsToWalletData = sendFundsToWalletApiResponse().data
 }
 
