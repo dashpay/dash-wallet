@@ -27,7 +27,7 @@
     <string name="currency_GUSD">Gemini Dollar</string>
 
     <!-- Generic Buttons -->
-    <string name="button_dismiss">Annuleren</string>
+    <string name="button_dismiss">Annuleer</string>
     <string name="network_unavailable_return">Keer terug naar portemonnee</string>
 
 </resources>

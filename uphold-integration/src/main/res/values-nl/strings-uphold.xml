@@ -6,7 +6,7 @@
     <string name="uphold_buy_dash_with_uphold">Koop Dash met Uphold-rekening</string>
     <string name="uphold_buy_dash_button">Koop Dash</string>
     <string name="uphold_transfer_to_this_wallet_button">Maak over vanaf Uphold</string>
-    <string name="uphold_link_account">Koppel Uphold account</string>
+    <string name="uphold_link_account">Koppel Uphold-account</string>
     <string name="uphold_account_dash_balance">Je Dash-saldo in je Uphold-rekening is</string>
     <string name="uphold_transfer_to_this_wallet">Maak Dash van je Uphold-rekening over naar deze portemonnee</string>
     <string name="uphold_withdrawal_deduct_fee_disclaimer">Kosten worden ingehouden van het gevraagde bedrag.</string>
@@ -21,15 +21,15 @@
     <string name="uphold_logout_explanation_text">Je dient ook nog uit te loggen bij Uphold website in je webbrowser.</string>
     <string name="uphold_logout_go_to_website">Ga naar website</string>
     <string name="uphold_error">Uphold fout</string>
-    <string name="uphold_error_not_logged_in">Dash Wallet is niet langer gekoppeld aan uw Uphold account. Druk Link Uphold account in het volgende scherm.</string>
+    <string name="uphold_error_not_logged_in">Dash Wallet is niet langer gekoppeld aan uw Uphold-account. Druk Link Uphold-account in het volgende scherm.</string>
     <string name="uphold_error_not_available">De service van Uphold is niet beschikbaar. Probeer het later opnieuw.</string>
     <string name="uphold_error_report_issue">Meld dit probleem aan het Dash Wallet team met behulp van "Probleem melden" in het hoofdmenu.</string>
 
     <string name="uphold_general_error_title">Fout</string>
     <string name="uphold_api_error_title">Uphold fout</string>
-    <string name="uphold_api_error_identity">Uw Uphold account is nog niet geverifieerd. Geld kan niet worden opgenomen.</string>
-    <string name="uphold_api_error_403_description">Uw Uphold account is gemarkeerd voor beoordeling.\n\nUphold heeft uw account tijdelijk beperkt en u kunt geen geld opnemen.\n\nUphold neemt contact met u op om u te helpen dit snel op te lossen.</string>
-    <string name="uphold_api_error_400_description">Overboekingen worden 24 uur lang geblokkeerd.\n\nU heeft met %svoldoende saldo voor deze overboeking.</string>
+    <string name="uphold_api_error_identity">Uw Uphold-account is nog niet geverifieerd. Geld kan niet worden opgenomen.</string>
+    <string name="uphold_api_error_403_description">Uw Uphold-account is gemarkeerd voor beoordeling.\n\nUphold heeft uw account tijdelijk beperkt en u kunt geen geld opnemen.\n\nUphold neemt contact met u op om u te helpen dit snel op te lossen.</string>
+    <string name="uphold_api_error_400_description">Overboekingen worden 24 uur lang geblokkeerd.\n\nU heeft met %s voldoende saldo voor deze overboeking.</string>
     <string name="uphold_api_error_400_locked">Uphold saldo (%1$s %2$s) worden maximaal 65 dagen geblokkeerd.\n\nEr is voldoende saldo voor deze overboeking over%3$s.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">U heeft niet voldoende saldo voor deze overboeking</string>
     <string name="uphold_api_error_400_less_than_or_equal_to">Deze waarde moet kleiner zijn dan of gelijk zijn aan %s.</string>

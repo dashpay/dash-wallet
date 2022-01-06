@@ -17,7 +17,7 @@ Features:
 * Integraties van derden zodat gebruikers Dash kunnen kopen en verkopen
 * Met de herstelzin kunt u uw saldo herstellen wanneer u uw apparaat verloren bent of gewijzigd is
 * Flexibele instellingen om te voldoen aan een reeks aangepaste beveiligingsvoorkeuren
-* Directe Dash netwerkclient - geen centrale server om gehackt te worden of om offline te gaan
+* Directe Dash netwerkcliënt - geen centrale server om gehackt te worden of om offline te gaan
 
 Dash Wallet is open source en gratis. Transactiekosten zijn lager dan de meeste cryptomunten en er zijn geen extra gecentraliseerde kosten. Stuur binnen een paar seconden een willekeurig bedrag naar wie dan ook ter wereld. Accepteer betalingen direct en betrouwbaar voor uw bedrijf. Dit is hoe geld zou moeten zijn.
 
