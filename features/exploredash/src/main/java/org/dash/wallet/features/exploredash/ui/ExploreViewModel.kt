@@ -91,7 +91,10 @@ class ExploreViewModel @Inject constructor(
 
     val isMetric = Locale.getDefault().isMetric
 
-    private val searchQuery = MutableStateFlow("")
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: String
+        get() = _searchQuery.value
+
     var exploreTopic = ExploreTopic.Merchants
         private set
 
@@ -191,7 +194,7 @@ class ExploreViewModel @Inject constructor(
         get() = _screenState
 
     // Used for the list of search results
-    private val pagingSearchFlow: Flow<PagingData<SearchResult>> = searchQuery
+    private val pagingSearchFlow: Flow<PagingData<SearchResult>> = _searchQuery
         .debounce(QUERY_DEBOUNCE_VALUE)
         .flatMapLatest { query ->
             _paymentMethodFilter.flatMapLatest { payment ->
@@ -235,7 +238,7 @@ class ExploreViewModel @Inject constructor(
         }
 
     // Used for the map
-    val boundedSearchFlow = searchQuery
+    val boundedSearchFlow = _searchQuery
         .debounce(QUERY_DEBOUNCE_VALUE)
         .flatMapLatest { query ->
             _paymentMethodFilter.flatMapLatest { payment ->
@@ -338,7 +341,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun submitSearchQuery(query: String) {
-        searchQuery.value = query
+        _searchQuery.value = query
     }
 
     suspend fun getTerritoriesWithPOIs(): List<String> {
@@ -462,7 +465,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun clearFilters() {
-        searchQuery.value = ""
+        _searchQuery.value = ""
         _selectedTerritory.value = ""
         _paymentMethodFilter.value = ""
         _selectedRadiusOption.value = DEFAULT_RADIUS_OPTION
@@ -522,12 +525,7 @@ class ExploreViewModel @Inject constructor(
                 data.filter { it.merchant != null }
                     .map {
                         it.merchant!!.apply {
-                            this.physicalAmount =
-                                if (filterMode != FilterMode.Online) {
-                                    it.physicalAmount ?: 1
-                                } else {
-                                    0
-                                }
+                            this.physicalAmount = it.physicalAmount ?: 0
                             this.distance = calculateDistance(this, userLat, userLng)
                         }
                     }
@@ -563,13 +561,13 @@ class ExploreViewModel @Inject constructor(
             val result = if (exploreTopic == ExploreTopic.Merchants) {
                 val type = getMerchantType(filterMode.value ?: FilterMode.Online)
                 exploreData.getMerchantsResultCount(
-                        searchQuery.value, selectedTerritory.value!!, type,
+                        _searchQuery.value, selectedTerritory.value!!, type,
                         paymentMethodFilter, radiusBounds ?: GeoBounds.noBounds
                 )
             } else {
                 val types = getAtmTypes(filterMode.value ?: FilterMode.All)
                 exploreData.getAtmsResultsCount(
-                        searchQuery.value, types,
+                        _searchQuery.value, types,
                         selectedTerritory.value!!, radiusBounds ?: GeoBounds.noBounds
                 )
             }
