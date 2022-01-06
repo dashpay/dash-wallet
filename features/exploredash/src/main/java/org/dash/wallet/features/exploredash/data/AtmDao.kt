@@ -146,7 +146,7 @@ interface AtmDao : BaseDao<Atm> {
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
         WHERE atm_fts MATCH :query
-            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+            AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
         ORDER BY
             CASE WHEN :sortByDistance = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC, 
@@ -166,7 +166,7 @@ interface AtmDao : BaseDao<Atm> {
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
         WHERE atm_fts MATCH :query
-            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+            AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
     """)
     suspend fun searchByTerritoryResultCount(
@@ -230,7 +230,7 @@ interface AtmDao : BaseDao<Atm> {
         FROM atm
         JOIN atm_fts ON atm.id = atm_fts.docid
         WHERE atm_fts MATCH :query
-            AND (:territoryFilter = '' OR atm_fts.territory = :territoryFilter)
+            AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND type IN (:types)
         ORDER BY name ASC
     """)

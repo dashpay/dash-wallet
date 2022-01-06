@@ -41,12 +41,10 @@ class AppDatabaseMigrations {
 
 
                 database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `merchant_fts` " +
-                        "USING FTS4(`name`, `address1`, `address2`, `address3`, `address4`, " +
-                        "`territory`, `city`, content=`merchant`)")
+                        "USING FTS4(`name`, content=`merchant`)")
 
                 database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `atm_fts` " +
-                        "USING FTS4(`name`, `manufacturer`, `address1`, `address2`, `address3`, " +
-                        "`address4`, `city`, `territory`, content=`atm`)")
+                        "USING FTS4(`name`, content=`atm`)")
             }
         }
     }

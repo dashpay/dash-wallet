@@ -203,7 +203,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
-            AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+            AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
         GROUP BY source, merchantId
@@ -234,7 +234,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
-            AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+            AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND type IN (:types)
     """)
@@ -378,7 +378,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
-            AND (:territoryFilter = '' OR merchant_fts.territory = :territoryFilter)
+            AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:excludeType = '' OR type != :excludeType)
     """)
