@@ -28,6 +28,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.isGone
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
@@ -80,6 +81,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
 
         binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
             dismiss()
+            findNavController().popBackStack()
         }
     }
 

@@ -18,6 +18,7 @@ package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.util.Log
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -105,7 +106,6 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             }
         }
 
-        countDownTimer.start()
 
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
             if (showLoading) {
@@ -155,6 +155,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                     when (type) {
                         CoinBaseBuyDashDialog.Type.PURCHASE_ERROR -> {
                             dismiss()
+                            findNavController().popBackStack()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
                             viewModel.retry()
@@ -170,8 +171,13 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         transactionStateDialog?.showNow(parentFragmentManager, "CoinBaseBuyDashDialog")
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
+    override fun onResume() {
+        super.onResume()
+        countDownTimer.start()
+    }
+
+    override fun onPause() {
         countDownTimer.cancel()
+        super.onPause()
     }
 }
