@@ -38,6 +38,7 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 class FancyAlertDialog : DialogFragment() {
     private val lockScreenViewModel by activityViewModels<LockScreenViewModel>()
     private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
+    var onFancyAlertButtonsClickListener: FancyAlertButtonsClickListener? = null
 
     enum class Type {
         INFO,
@@ -136,6 +137,11 @@ class FancyAlertDialog : DialogFragment() {
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
             dismiss()
         }
+
+        sharedViewModel.onPositiveButtonClick.observe(viewLifecycleOwner) {
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
+            dismiss()
+        }
     }
 
     private fun setOrHideIfEmpty(view: View, argKey: String) {
@@ -164,6 +170,19 @@ class FancyAlertDialog : DialogFragment() {
         }
     }
 
+    private fun setupAction() {
+        progress.visibility = View.GONE
+        image.visibility = View.GONE
+        positive_button.setOnClickListener {
+            dismiss()
+            sharedViewModel.onPositiveButtonClick.call()
+        }
+        negative_button.setOnClickListener {
+            dismiss()
+            sharedViewModel.onNegativeButtonClick.call()
+        }
+    }
+
     private fun setupProgress() {
         progress.visibility = View.VISIBLE
         image.visibility = View.GONE
@@ -177,8 +196,6 @@ class FancyAlertDialog : DialogFragment() {
         dialog?.apply {
             window?.apply {
                 setLayout(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-                setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                //   requestFeature(Window.FEATURE_NO_TITLE)
                 callback = UserInteractionAwareCallback(this.callback, requireActivity())
             }
             if (type == Type.PROGRESS) {
@@ -186,5 +203,9 @@ class FancyAlertDialog : DialogFragment() {
                 setCanceledOnTouchOutside(false)
             }
         }
+    }
+
+    public interface FancyAlertButtonsClickListener {
+        fun onPositiveButtonClick()
     }
 }

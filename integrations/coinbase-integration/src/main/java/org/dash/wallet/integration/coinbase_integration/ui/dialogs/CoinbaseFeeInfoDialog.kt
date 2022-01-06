@@ -75,7 +75,6 @@ class CoinbaseFeeInfoDialog: DialogFragment() {
         dialog?.apply {
             window?.apply {
                 setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                 callback = UserInteractionAwareCallback(this.callback, requireActivity())
             }
         }
