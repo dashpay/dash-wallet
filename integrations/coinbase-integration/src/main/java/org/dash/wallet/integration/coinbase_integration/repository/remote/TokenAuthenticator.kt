@@ -36,20 +36,18 @@ class TokenAuthenticator @Inject constructor(
 
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
-            if (response.code() == 401) {
-                when (val tokenResponse = getUpdatedToken()) {
-                    is ResponseResource.Success -> {
-                        tokenResponse.value.body()?.let {
-                            userPreferences.setLastCoinBaseAccessToken(it.accessToken)
-                            userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
-                            response.request().newBuilder()
-                                .header("Authorization", "Bearer ${it.accessToken}")
-                                .build()
-                        }
+            when (val tokenResponse = getUpdatedToken()) {
+                is ResponseResource.Success -> {
+                    tokenResponse.value.body()?.let {
+                        userPreferences.setLastCoinBaseAccessToken(it.accessToken)
+                        userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
+                        response.request().newBuilder()
+                            .header("Authorization", "Bearer ${it.accessToken}")
+                            .build()
                     }
-                    else -> null
                 }
-            } else null
+                else -> null
+            }
         }
     }
 
