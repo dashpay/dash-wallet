@@ -18,8 +18,6 @@ package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
 import android.view.View
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,7 +32,7 @@ import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseErrorDialog
+import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -113,26 +111,28 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         viewModel.userAccountError.observe(
             viewLifecycleOwner,
             {
-                showErrorDialog(
+                val error = CoinbaseGenericErrorUIModel(
                     R.string.coinbase_dash_wallet_error_title,
                     getString(R.string.coinbase_dash_wallet_error_message),
                     R.drawable.ic_info_red,
                     R.string.CreateـDashـAccount,
                     R.string.close
                 )
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(error)
             }
         )
 
         viewModel.activePaymentMethodsFailureCallback.observe(
             viewLifecycleOwner,
             {
-                showErrorDialog(
+                val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
                     R.string.coinbase_dash_wallet_no_payment_methods_error_title,
                     getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
                     R.drawable.ic_info_red,
                     R.string.add_payment_method,
                     R.string.close
                 )
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError)
             }
         )
     }
@@ -156,16 +156,5 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-    }
-
-    private fun showErrorDialog(
-        @StringRes title: Int,
-        message: String,
-        @DrawableRes image: Int,
-        @StringRes positiveButtonText: Int,
-        @StringRes negativeButtonText: Int
-    ) {
-        val dialog = CoinBaseErrorDialog.newInstance(title, message, image, positiveButtonText, negativeButtonText)
-        dialog.showNow(parentFragmentManager, "error")
     }
 }

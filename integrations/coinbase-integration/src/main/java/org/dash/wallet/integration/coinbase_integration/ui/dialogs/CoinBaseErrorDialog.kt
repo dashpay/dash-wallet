@@ -30,8 +30,10 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
@@ -58,16 +60,32 @@ class CoinBaseErrorDialog : DialogFragment() {
 
         lockScreenViewModel.activatingLockScreen.observe(this){
             Log.e(this::class.java.simpleName, "Closing dialog")
-            dismiss()
+            findNavController().navigateUp()
         }
 
-        setOrHideIfEmpty(binding.coinbaseDialogTitle, "title")
-        arguments?.getString("message")?.let {
-            binding.coinbaseDialogMessage.text = it
+        arguments?.let {
+            CoinBaseErrorDialogArgs.fromBundle(it).errorUiModel.apply {
+                binding.coinbaseDialogTitle.setText(this.title)
+                this.message?.let { errorMessage ->
+                    binding.coinbaseDialogMessage.text = errorMessage
+                }
+                if (this.image == null){
+                    binding.coinbaseDialogIcon.isVisible = false
+                }else {
+                    binding.coinbaseDialogIcon.setImageResource(this.image!!)
+                }
+                if (this.positiveButtonText == null){
+                    binding.coinbaseDialogPositiveButton.isVisible = false
+                } else {
+                    binding.coinbaseDialogPositiveButton.setText(this.positiveButtonText!!)
+                }
+                if (this.negativeButtonText == null){
+                    binding.coinbaseDialogNegativeButton.isVisible = false
+                } else {
+                    binding.coinbaseDialogNegativeButton.setText(this.negativeButtonText!!)
+                }
+            }
         }
-        setOrHideIfEmpty(binding.coinbaseDialogIcon, "image")
-        setOrHideIfEmpty(binding.coinbaseDialogPositiveButton, "positive_text")
-        setOrHideIfEmpty(binding.coinbaseDialogNegativeButton, "negative_text")
 
         binding.coinbaseDialogPositiveButton.setOnClickListener {
             val defaultBrowser = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER)
@@ -76,7 +94,7 @@ class CoinBaseErrorDialog : DialogFragment() {
         }
 
         binding.coinbaseDialogNegativeButton.setOnClickListener {
-            dismiss()
+            findNavController().navigateUp()
         }
     }
 

@@ -20,8 +20,10 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
@@ -44,6 +46,10 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
         get() = _transactionCompleted
 
     var sendFundToWalletParams: SendTransactionToWalletParams ? = null
+    val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
+    private val _placeBuyOrder: MutableLiveData<Event<PlaceBuyOrderUIModel>> = MutableLiveData()
+    val placeBuyOrder: LiveData<Event<PlaceBuyOrderUIModel>>
+        get() = _placeBuyOrder
 
     fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
@@ -95,5 +101,40 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
         sendFundToWalletParams?.let {
             sendDashToWallet(it)
         }
+    }
+
+    private fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
+        when (val result = coinBaseRepository.placeBuyOrder(params)) {
+            is ResponseResource.Success -> {
+                if (result.value == BuyOrderResponse.EMPTY_PLACE_BUY) {
+                    _showLoading.value = false
+                    placeBuyOrderFailedCallback.call()
+                } else {
+                    _showLoading.value = false
+
+                    _placeBuyOrder.value = Event(result.value)
+                }
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+
+                val error = result.errorBody?.string()
+                if (error.isNullOrEmpty()) {
+                    placeBuyOrderFailedCallback.call()
+                } else {
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)
+                    if (message.isNullOrEmpty()) {
+                        placeBuyOrderFailedCallback.call()
+                    } else {
+                        placeBuyOrderFailedCallback.value = message
+                    }
+                }
+            }
+        }
+    }
+
+    fun onRefreshOrderClicked(fiat: Fiat?, paymentMethodId: String) {
+        placeBuyOrder(PlaceBuyOrderParams(fiat?.toPlainString(), fiat?.currencyCode, paymentMethodId))
     }
 }

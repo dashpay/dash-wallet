@@ -34,6 +34,11 @@
             app:popExitAnim="@anim/slide_out_left" />
           </fragment>
 
+        <action
+            android:id="@+id/coinbaseServicesToError"
+            app:destination="@id/coinbaseErrorDialog"
+            />
+
     <fragment
         android:id="@+id/coinbaseBuyDashFragment"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashFragment"
@@ -48,6 +53,10 @@
             android:name="paymentMethods"
             app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod[]" />
 
+        <action
+            android:id="@+id/coinbaseBuyDashToError"
+            app:destination="@id/coinbaseErrorDialog"
+            />
     </fragment>
 
     <fragment
@@ -68,6 +77,10 @@
             android:id="@+id/confirmCancelBuyDashTransaction"
             app:destination="@id/cancelTransactionDialog"
             />
+        <action
+            android:id="@+id/coinbaseBuyDashOrderReviewToError"
+            app:destination="@id/coinbaseErrorDialog"
+            />
     </fragment>
     <dialog
         android:id="@+id/coinbaseFeeInfoDialog"
@@ -81,4 +94,14 @@
         android:label="cancel_pending_transaction"
         tools:layout="@layout/dialog_cancel_transaction"
         />
+    <dialog
+        android:id="@+id/coinbaseErrorDialog"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseErrorDialog"
+        android:label="coinbase_generic_error_dialog"
+        tools:layout="@layout/dialog_coinbase_error">
+        <argument
+            android:name="error_ui_model"
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel"
+            />
+    </dialog>
 </navigation>

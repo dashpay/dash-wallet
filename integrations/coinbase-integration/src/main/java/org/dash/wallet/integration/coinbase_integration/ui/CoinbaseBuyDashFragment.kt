@@ -19,8 +19,6 @@ package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
 import android.view.View
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
@@ -39,7 +37,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashBinding
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
-import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseErrorDialog
+import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashViewModel
 
 @AndroidEntryPoint
@@ -104,12 +102,13 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
         )
 
         viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner){
-            showErrorDialog(
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                 R.string.error,
                 it,
                 R.drawable.ic_info_red,
                 negativeButtonText= R.string.close
             )
+            CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError)
         }
     }
 
@@ -135,17 +134,6 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-    }
-
-    private fun showErrorDialog(
-        @StringRes title: Int,
-        message: String,
-        @DrawableRes image: Int,
-        @StringRes positiveButtonText: Int?= null,
-        @StringRes negativeButtonText: Int
-    ) {
-        val dialog = CoinBaseErrorDialog.newInstance(title, message, image, positiveButtonText, negativeButtonText)
-        dialog.showNow(parentFragmentManager, "error")
     }
 
 }

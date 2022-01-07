@@ -18,14 +18,16 @@ package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.util.Log
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.payment_method_picker.CardUtils
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.common.ui.viewBinding
@@ -33,17 +35,22 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseBuyDashOrderReviewBinding
+import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
+import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashOrderReviewViewModel
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_buy_dash_order_review) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashOrderReviewBinding::bind)
     private val viewModel by viewModels<CoinbaseBuyDashOrderReviewViewModel>()
-
+    private val amountViewModel by activityViewModels<EnterAmountViewModel>()
+    private lateinit var selectedPaymentMethodId: String
     private var loadingDialog: FancyAlertDialog? = null
-    private var isRetrying =false
+    private var isRetrying = false
     private var transactionStateDialog: CoinBaseBuyDashDialog? = null
+    private var newBuyOrderId: String? = null
 
     private val countDownTimer by lazy {   object : CountDownTimer(10000, 1000) {
 
@@ -81,31 +88,24 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 binding.contentOrderReview.paymentMethodName.isVisible = cardIcon == null
                 binding.contentOrderReview.paymentMethodIcon.setImageResource(cardIcon ?: 0)
                 binding.contentOrderReview.account.text = this.account
+                selectedPaymentMethodId = this.paymentMethodId
             }
 
             CoinbaseBuyDashOrderReviewFragmentArgs.fromBundle(it).placeBuyOrderUIModel.apply {
-
-                binding.contentReviewBuyOrderDashAmount.dashAmount.text = this.dashAmount
-                binding.contentReviewBuyOrderDashAmount.message.text = getString(R.string.you_will_receive_dash_on_your_dash_wallet, this.dashAmount)
-                binding.contentOrderReview.purchaseAmount.text =
-                    getString(R.string.fiat_balance_with_currency, this.purchaseAmount, GenericUtils.currencySymbol(this.purchaseCurrency))
-                binding.contentOrderReview.coinbaseFeeAmount.text =
-                    getString(R.string.fiat_balance_with_currency, this.coinBaseFeeAmount, GenericUtils.currencySymbol(this.coinbaseFeeCurrency))
-                binding.contentOrderReview.totalAmount.text =
-                    getString(R.string.fiat_balance_with_currency, this.totalAmount, GenericUtils.currencySymbol(this.totalCurrency))
-
-                binding.confirmBtnContainer.setOnClickListener {
-                    countDownTimer.cancel()
-                    if (isRetrying) {
-                        countDownTimer.start()
-                        isRetrying = false
-                   } else {
-                        viewModel.commitBuyOrder(this.buyOrderId)
-                   }
-                }
+                updateOrderReviewUI()
             }
         }
 
+        binding.confirmBtnContainer.setOnClickListener {
+            countDownTimer.cancel()
+            if (isRetrying) {
+                viewModel.onRefreshOrderClicked(amountViewModel.onContinueEvent.value?.second,
+                    selectedPaymentMethodId)
+                isRetrying = false
+            } else {
+                newBuyOrderId?.let { buyOrderId -> viewModel.commitBuyOrder(buyOrderId) }
+            }
+        }
 
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
             if (showLoading) {
@@ -128,6 +128,46 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.orderReviewToFeeInfo())
         }
+
+        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner){
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.error,
+                it,
+                R.drawable.ic_info_red,
+                negativeButtonText= R.string.close
+            )
+            CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError)
+        }
+
+        viewModel.placeBuyOrder.observe(viewLifecycleOwner){
+            it?.getContentIfNotHandled()?.updateOrderReviewUI()
+            countDownTimer.start()
+        }
+    }
+
+    private fun PlaceBuyOrderUIModel.updateOrderReviewUI() {
+        newBuyOrderId = this.buyOrderId
+        binding.contentReviewBuyOrderDashAmount.dashAmount.text = this.dashAmount
+        binding.contentReviewBuyOrderDashAmount.message.text =
+            getString(R.string.you_will_receive_dash_on_your_dash_wallet, this.dashAmount)
+        binding.contentOrderReview.purchaseAmount.text =
+            getString(
+                R.string.fiat_balance_with_currency,
+                this.purchaseAmount,
+                GenericUtils.currencySymbol(this.purchaseCurrency)
+            )
+        binding.contentOrderReview.coinbaseFeeAmount.text =
+            getString(
+                R.string.fiat_balance_with_currency,
+                this.coinBaseFeeAmount,
+                GenericUtils.currencySymbol(this.coinbaseFeeCurrency)
+            )
+        binding.contentOrderReview.totalAmount.text =
+            getString(
+                R.string.fiat_balance_with_currency,
+                this.totalAmount,
+                GenericUtils.currencySymbol(this.totalCurrency)
+            )
     }
 
     private fun showProgress(messageResId: Int) {
