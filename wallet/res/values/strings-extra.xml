@@ -273,6 +273,9 @@
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_dash_sync">Explore Dash data updated at: %1$s\nLast sync: %2$s</string>
+    <string name="about_last_explore_dash_update_error">cannot fetch</string>
+    <string name="about_last_explore_dash_sync_never">never</string>
 
     <string name="block">Block</string>
     <string name="time">Time</string>
