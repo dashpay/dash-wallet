@@ -24,5 +24,6 @@ import androidx.room.Fts4
 @Entity(tableName = "atm_fts")
 @Fts4(contentEntity = Atm::class)
 data class AtmFTS(
-    val name: String
+    val name: String,
+    var manufacturer: String
 )

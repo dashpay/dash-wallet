@@ -18,7 +18,6 @@ package de.schildbach.wallet.data
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.google.firebase.database.PropertyName
 
 class AppDatabaseMigrations {
     companion object {
@@ -44,7 +43,7 @@ class AppDatabaseMigrations {
                         "USING FTS4(`name`, content=`merchant`)")
 
                 database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `atm_fts` " +
-                        "USING FTS4(`name`, content=`atm`)")
+                        "USING FTS4(`name`, `manufacturer`, content=`atm`)")
             }
         }
     }
