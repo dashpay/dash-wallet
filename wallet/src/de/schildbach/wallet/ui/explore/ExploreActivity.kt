@@ -17,16 +17,22 @@
 
 package de.schildbach.wallet.ui.explore
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet.ui.PaymentsActivity
+import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.NavigationRequest
 
 @AndroidEntryPoint
+@FlowPreview
+@ExperimentalCoroutinesApi
 class ExploreActivity : BaseMenuActivity() {
     private val viewModel: ExploreViewModel by viewModels()
 
@@ -47,7 +53,9 @@ class ExploreActivity : BaseMenuActivity() {
                     val sendCoinsIntent = PaymentsActivity.createIntent(this, 1)
                     startActivity(sendCoinsIntent)
                 }
-                else -> {}
+                NavigationRequest.Staking -> {
+                    startActivity(Intent(this, StakingActivity::class.java))
+                }
             }
         }
     }

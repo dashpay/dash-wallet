@@ -23,11 +23,11 @@
     android:background="@color/bg_explore"
     tools:context="org.dash.wallet.features.exploredash.ui.ExploreFragment">
 
-    <include
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"
-        layout="@layout/app_bar_general"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="?attr/actionBarSize"
+        app:navigationIcon="@drawable/ic_arrow_back"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
@@ -38,7 +38,7 @@
         app:layout_constraintBottom_toTopOf="@id/explore_title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/title_bar" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/explore_title"
@@ -67,14 +67,13 @@
     <LinearLayout
         android:id="@+id/bottom_content"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="-8dp"
         android:background="@drawable/rounded_background"
         android:orientation="vertical"
         android:paddingTop="15dp"
         android:theme="@style/ExploreBottomContentBackground"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintHeight_percent="0.42">
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <androidx.cardview.widget.CardView
             style="@style/CardViewRaised"
@@ -115,7 +114,7 @@
                         style="@style/Subtitle2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="59dp"
+                        android:layout_marginStart="63dp"
                         android:text="@string/explore_merchants_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
@@ -126,7 +125,6 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:lineSpacingExtra="2sp"
                         android:text="@string/explore_merchants_subtitle"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="@+id/merchants_title"
@@ -136,7 +134,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginStart="59dp"
+                    android:layout_marginStart="63dp"
                     android:background="@color/divider_color" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
@@ -148,7 +146,7 @@
                     android:focusable="true"
                     android:paddingTop="12dp"
                     android:paddingEnd="15dp"
-                    android:paddingBottom="22dp">
+                    android:paddingBottom="12dp">
 
                     <ImageView
                         android:id="@+id/atms_icon"
@@ -165,7 +163,7 @@
                         style="@style/Subtitle2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="59dp"
+                        android:layout_marginStart="63dp"
                         android:text="@string/explore_atms_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
@@ -176,7 +174,6 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:lineSpacingExtra="2sp"
                         android:text="@string/explore_atms_subtitle"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="@+id/atms_title"
@@ -186,7 +183,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:layout_marginStart="59dp"
+                    android:layout_marginStart="63dp"
                     android:background="@color/divider_color" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
@@ -215,7 +212,7 @@
                         style="@style/Subtitle2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="59dp"
+                        android:layout_marginStart="63dp"
                         android:text="@string/explore_staking_title"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
@@ -226,7 +223,6 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:lineSpacingExtra="2sp"
                         android:text="@string/explore_staking_subtitle"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="@+id/staking_title"

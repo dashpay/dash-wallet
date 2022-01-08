@@ -86,7 +86,7 @@
     <color name="bg_explore">#003470</color>
     <color name="divider_color">#EBEDF0</color>
     <color name="bg_accuracy_circle">#26008DE4</color>
-    <color name="bg_filter_dialog">#eff0f4</color>
+    <color name="common_background">#eff0f4</color>
     <color name="disabled_button_bg">#eeeeee</color>
     <color name="extra_small_btn_bg">#f2f9fd</color>
 </resources>

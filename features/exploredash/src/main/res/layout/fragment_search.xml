@@ -50,7 +50,6 @@
             </androidx.appcompat.widget.Toolbar>
         </com.google.android.material.appbar.AppBarLayout>
 
-
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/explore_map"
             android:name="org.dash.wallet.features.exploredash.ui.ExploreMapFragment"
@@ -58,6 +57,7 @@
             android:layout_height="match_parent"
             android:layout_marginTop="?attr/actionBarSize"
             app:layout_behavior="org.dash.wallet.features.exploredash.ui.bottomsheetbehavior.ExploreMapBottomSheetBehavior" />
+
         <ImageButton
             android:id="@+id/recenter_map_btn"
             android:layout_width="wrap_content"

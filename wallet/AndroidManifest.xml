@@ -285,6 +285,11 @@
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
+            android:name="de.schildbach.wallet.ui.staking.StakingActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/LockScreenActivity.Child.Theme" />
+
+        <activity
             android:name="de.schildbach.wallet.ui.AboutActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />

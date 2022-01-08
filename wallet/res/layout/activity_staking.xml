@@ -14,16 +14,20 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/nav_crowdnode"
-    app:startDestination="@id/entryPointFragment">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/container"
+    android:background="@color/common_background"
+    tools:context="de.schildbach.wallet.ui.staking.StakingActivity">
 
-    <fragment
-        android:id="@+id/entryPointFragment"
-        android:name="org.dash.wallet.integrations.crowdnode.ui.entry_point.EntryPointFragment"
-        android:label="CrowdnodeFragment">
-
-    </fragment>
-</navigation>
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/nav_host_fragment"
+        android:name="androidx.navigation.fragment.NavHostFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:defaultNavHost="true"
+        app:navGraph="@navigation/nav_crowdnode" />
+</FrameLayout>
