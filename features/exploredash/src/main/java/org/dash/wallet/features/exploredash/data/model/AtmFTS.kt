@@ -25,11 +25,5 @@ import androidx.room.Fts4
 @Fts4(contentEntity = Atm::class)
 data class AtmFTS(
     val name: String,
-    val manufacturer: String,
-    val address1: String,
-    val address2: String,
-    val address3: String,
-    val address4: String,
-    val city: String,
-    val territory: String
+    var manufacturer: String
 )

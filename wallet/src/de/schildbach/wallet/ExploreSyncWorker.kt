@@ -25,6 +25,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.BaseDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
@@ -39,15 +40,15 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.math.ceil
 
-private const val PAGE_SIZE = 2000
-
-private const val SHARED_PREFS_NAME = "explore"
-private const val PREFS_LAST_SYNC_KEY = "last_sync"
-
-private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
-
 class ExploreSyncWorker constructor(val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
+        private const val PAGE_SIZE = 2000
+        const val SHARED_PREFS_NAME = "explore"
+        const val PREFS_LAST_SYNC_KEY = "last_sync"
+    }
 
     private val exploreRepository by lazy {
         entryPoint.exploreRepository()
@@ -57,12 +58,17 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         appContext.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    private val analytics by lazy {
+        entryPoint.analytics()
+    }
+
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface ExploreSyncWorkerEntryPoint {
         fun atmDao(): AtmDao
         fun merchantDao(): MerchantDao
         fun exploreRepository(): ExploreRepository
+        fun analytics(): AnalyticsService
     }
 
     private val entryPoint by lazy {
@@ -73,20 +79,20 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         log.info("Sync Explore Dash started")
         val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
 
-        return try {
+        try {
             val lastDataUpdate = exploreRepository.getLastUpdate()
 
             if (lastSync >= lastDataUpdate) {
                 log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
-                Result.success()
+                return Result.success()
             }
 
             val allSynced = maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, entryPoint.merchantDao())
                          && maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, entryPoint.atmDao())
                          && maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, entryPoint.merchantDao())
 
-            if (allSynced) {
-                preferences.edit().putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate).apply()
+            return if (allSynced) {
+                preferences.edit().putLong(PREFS_LAST_SYNC_KEY, Calendar.getInstance().timeInMillis).apply()
                 log.info("Sync Explore Dash finished")
                 Result.success()
             } else {
@@ -95,7 +101,8 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             }
         } catch (ex: Exception) {
             log.info("Sync Explore Dash error: ${ex.message}")
-            Result.retry()
+            analytics.logError(ex)
+            return Result.retry()
         }
     }
 
@@ -123,6 +130,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             true
         } catch (ex: Exception) {
             log.error("Error while syncing ${tableName}: ${ex.message}")
+            analytics.logError(ex, tableName)
             false
         }
     }

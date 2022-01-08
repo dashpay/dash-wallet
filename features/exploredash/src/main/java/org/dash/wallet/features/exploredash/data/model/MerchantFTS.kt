@@ -24,11 +24,5 @@ import androidx.room.Fts4
 @Entity(tableName = "merchant_fts")
 @Fts4(contentEntity = Merchant::class)
 data class MerchantFTS(
-    val name: String,
-    val address1: String,
-    val address2: String,
-    val address3: String,
-    val address4: String,
-    val city: String,
-    var territory: String
+    val name: String
 )

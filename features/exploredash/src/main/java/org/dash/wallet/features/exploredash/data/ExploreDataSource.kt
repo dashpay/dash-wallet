@@ -134,9 +134,9 @@ open class MerchantAtmDataSource @Inject constructor(
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod)
+                    merchantDao.pagingSearchGrouped(sanitizeQuery(query), types, paymentMethod, userLat, userLng)
                 } else {
-                    merchantDao.pagingGetGrouped(types, paymentMethod)
+                    merchantDao.pagingGetGrouped(types, paymentMethod, userLat, userLng)
                 }
             }
             type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {

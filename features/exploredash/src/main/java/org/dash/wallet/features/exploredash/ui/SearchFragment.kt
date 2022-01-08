@@ -317,7 +317,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
             if (item != null) {
-                binding.itemDetails.bindItem(item, viewModel.filterMode.value ?: FilterMode.Online)
+                binding.itemDetails.bindItem(item)
                 binding.toolbarTitle.text = item.name
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
@@ -399,8 +399,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun transitToDetails() {
         val item = viewModel.selectedItem.value ?: return
-        val isOnline = viewModel.filterMode.value == FilterMode.Online ||
-                item.type == MerchantType.ONLINE
+        val isOnline = item.type == MerchantType.ONLINE
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
@@ -439,6 +438,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.searchResults.adapter = ConcatAdapter(searchHeaderAdapter, searchResultsAdapter)
+        searchHeaderAdapter.searchText = viewModel.searchQuery
+
         val layoutParams = binding.searchResults.layoutParams as ConstraintLayout.LayoutParams
         layoutParams.topMargin = resources.getDimensionPixelOffset(R.dimen.search_results_margin_top)
         binding.searchResults.isVisible = true
@@ -630,8 +631,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun isBottomSheetDraggable(): Boolean {
         val screenState = viewModel.screenState.value
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
-        val nearbySearch = viewModel.filterMode.value != FilterMode.Online &&
-                viewModel.selectedTerritory.value.isNullOrEmpty() &&
+        val nearbySearch = viewModel.selectedTerritory.value.isNullOrEmpty() &&
                 viewModel.isLocationEnabled.value == true
 
         return !isDetails && nearbySearch
@@ -641,8 +641,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setBottomSheetState(forceExpand: Boolean = false): Int {
         val screenState = viewModel.screenState.value
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
-        val nearbySearch = viewModel.filterMode.value != FilterMode.Online &&
-                           viewModel.selectedTerritory.value.isNullOrEmpty() &&
+        val nearbySearch = viewModel.selectedTerritory.value.isNullOrEmpty() &&
                            viewModel.isLocationEnabled.value == true
 
         return when {
