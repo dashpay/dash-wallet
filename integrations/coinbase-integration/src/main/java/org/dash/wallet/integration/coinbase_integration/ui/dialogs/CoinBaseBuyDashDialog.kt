@@ -82,6 +82,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
             dismiss()
             findNavController().popBackStack()
+            findNavController().popBackStack()
         }
     }
 
