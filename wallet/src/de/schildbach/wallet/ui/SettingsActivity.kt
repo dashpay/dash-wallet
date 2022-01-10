@@ -25,10 +25,9 @@ import kotlinx.android.synthetic.main.activity_settings.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.slf4j.LoggerFactory
-import de.schildbach.wallet.ui.ExchangeRatesFragment.ARG_SHOW_AS_DIALOG
-import de.schildbach.wallet.ui.ExchangeRatesFragment.BUNDLE_EXCHANGE_RATE
 import android.app.Activity
 import org.dash.wallet.common.data.ExchangeRate
+import de.schildbach.wallet.ui.ExchangeRatesFragment.*
 
 
 class SettingsActivity : BaseMenuActivity() {
@@ -52,6 +51,7 @@ class SettingsActivity : BaseMenuActivity() {
             analytics.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY, bundleOf())
             val intent = Intent(this, ExchangeRatesActivity::class.java)
             intent.putExtra(ARG_SHOW_AS_DIALOG, false)
+            intent.putExtra(ARG_CURRENCY_CODE, configuration.exchangeCurrencyCode)
             startActivityForResult(intent, RC_DEFAULT_FIAT_CURRENCY_SELECTED)
         }
         rescan_blockchain.setOnClickListener { resetBlockchain() }

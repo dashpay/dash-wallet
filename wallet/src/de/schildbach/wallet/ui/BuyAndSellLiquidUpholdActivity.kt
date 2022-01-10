@@ -139,14 +139,21 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     }
 
     private fun onUpHoldItemClicked() {
-        if (isNetworkOnline&&UpholdConstants.hasValidCredentials()) {
+        if (isNetworkOnline && UpholdConstants.hasValidCredentials()) {
+            analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
+                AnalyticsConstants.Uphold.ENTER_CONNECTED
+            } else {
+                AnalyticsConstants.Uphold.ENTER_DISCONNECTED
+            }, bundleOf())
+
             startActivity(UpholdAccountActivity.createIntent(this))
         }
     }
+
     private fun onLiquidItemClicked() {
-        if (isNetworkOnline&&LiquidConstants.hasValidCredentials())
+        if (isNetworkOnline && LiquidConstants.hasValidCredentials()) {
             analytics.logEvent(
-                if (UpholdClient.getInstance().isAuthenticated) {
+                if (LiquidClient.getInstance()?.isAuthenticated == true) {
                     AnalyticsConstants.Liquid.ENTER_CONNECTED
                 } else {
                     AnalyticsConstants.Liquid.ENTER_DISCONNECTED
@@ -154,10 +161,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 bundleOf()
             )
 
-        startActivityForResult(
-            LiquidBuyAndSellDashActivity.createIntent(this),
-            USER_BUY_SELL_DASH
-        )
+            startActivityForResult(
+                LiquidBuyAndSellDashActivity.createIntent(this),
+                USER_BUY_SELL_DASH
+            )
+        }
     }
 
     private fun onCoinBaseItemClicked() {
