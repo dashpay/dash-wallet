@@ -351,4 +351,6 @@
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
     <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND LIQUID in README.md for more information.</string>
+    <string name="set_pin_error_missing_wallet_title">Missing Wallet Error</string>
+    <string name="set_pin_error_missing_wallet_message">The wallet is missing.  Please report this to the Support Desk.</string>
 </resources>
