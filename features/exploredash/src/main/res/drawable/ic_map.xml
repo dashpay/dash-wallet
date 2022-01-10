@@ -1,0 +1,28 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="34dp"
+    android:height="34dp"
+    android:viewportWidth="34"
+    android:viewportHeight="34">
+  <path
+      android:pathData="M17,34C19.3222,34 21.5083,33.5555 23.5583,32.6666C25.6083,31.7778 27.4167,30.55 28.9833,28.9833C30.55,27.4167 31.7777,25.6083 32.6665,23.5583C33.5556,21.5083 34.0001,19.3222 34.0001,17C34.0001,14.6778 33.5556,12.4917 32.6665,10.4417C31.7777,8.3917 30.55,6.5833 28.9833,5.0167C27.4167,3.45 25.6056,2.2222 23.55,1.3333C21.4944,0.4445 19.3056,0 16.9833,0C14.6611,0 12.475,0.4445 10.425,1.3333C8.375,2.2222 6.5694,3.45 5.0083,5.0167C3.4472,6.5833 2.2222,8.3917 1.3333,10.4417C0.4444,12.4917 0,14.6778 0,17C0,19.3222 0.4444,21.5083 1.3333,23.5583C2.2222,25.6083 3.45,27.4167 5.0167,28.9833C6.5833,30.55 8.3917,31.7778 10.4417,32.6666C12.4917,33.5555 14.6778,34 17,34Z"
+      android:fillColor="#3CA9EE"/>
+  <path
+      android:pathData="M7.65,24.4333V12.3834C7.65,12.0833 7.7112,11.8222 7.8334,11.6C7.9556,11.3778 8.15,11.1945 8.4167,11.05L12.6667,8.6167C12.7556,8.5722 12.8445,8.5278 12.9334,8.4833C13.0223,8.4389 13.1056,8.3945 13.1834,8.35V23.2L9.4167,25.2334C9.2723,25.3111 9.1389,25.3722 9.0167,25.4167C8.8945,25.4611 8.7778,25.4834 8.6667,25.4834C8.3445,25.4834 8.0945,25.3917 7.9167,25.2083C7.7389,25.025 7.65,24.7667 7.65,24.4333ZM14.4,23.0334V8.2C14.5,8.2222 14.5917,8.25 14.675,8.2834C14.7584,8.3167 14.8389,8.3556 14.9167,8.4L19.3334,11.1V25.7334C19.2778,25.7222 19.2139,25.7028 19.1417,25.675C19.0695,25.6472 18.9945,25.6167 18.9167,25.5834L14.4,23.0334ZM20.55,25.7167V10.9334L24.5167,8.75C24.7723,8.5945 25.0223,8.5167 25.2667,8.5167C25.5889,8.5167 25.8361,8.6028 26.0084,8.775C26.1806,8.9472 26.2667,9.2056 26.2667,9.55V21.6167C26.2667,21.9056 26.2056,22.1611 26.0833,22.3834C25.9611,22.6056 25.7667,22.7945 25.5,22.95L20.8334,25.6C20.7445,25.6445 20.65,25.6834 20.55,25.7167Z"
+      android:fillColor="#ffffff"/>
+</vector>

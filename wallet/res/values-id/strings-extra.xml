@@ -262,7 +262,7 @@
     <string name="about_review_and_rate">Ulas &amp; Beri nilai aplikasi</string>
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
-    <string name="about_copyright">Hak Cipta © 2020 Dash Core</string>
+    <string name="about_copyright">Hak Cipta © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
 

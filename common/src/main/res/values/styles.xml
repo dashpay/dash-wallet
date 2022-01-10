@@ -178,18 +178,6 @@
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="MontserratRegular.G900">
-        <item name="android:textColor">@color/gray_900</item>
-    </style>
-
-    <style name="MontserratRegular.G900.13">
-        <item name="android:textSize">13sp</item>
-    </style>
-
-    <style name="MontserratRegular.G900.15">
-        <item name="android:textSize">15sp</item>
-    </style>
-
     <style name="MontserratMedium">
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>
@@ -224,10 +212,6 @@
 
     <style name="NewMontserratButton.Primary" parent="MontserratButton">
         <item name="android:background">@drawable/primary_button</item>
-    </style>
-
-    <style name="NewMontserratButton.Primary.SemiBold" parent="NewMontserratButton.Primary">
-        <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
 
     <style name="NewMontserratButton.Secondary" parent="MontserratButton">
@@ -536,11 +520,6 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
-    <style name="DashButton.Blue.SemiBold" parent="DashButton.Blue">
-        <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:textSize">15sp</item>
-    </style>
-
     <style name="DashButton.White.Bordered" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/white_button_bordered_text</item>
         <item name="android:background">@drawable/white_button_bordered_background</item>
@@ -714,6 +693,10 @@
         <item name="android:textColor">@color/dash_white</item>
     </style>
 
+    <style name="Body2.Gray400">
+        <item name="android:textColor">@color/gray_400</item>
+    </style>
+
     <style name="Body2.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
     </style>
@@ -744,7 +727,24 @@
     <style name="Caption" parent="TextAppearance.MaterialComponents.Caption">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
+        <item name="android:letterSpacing">0.0</item>
         <item name="android:lineSpacingExtra">3sp</item>
+    </style>
+
+    <style name="Caption.Medium">
+        <item name="fontFamily">@font/montserrat_medium</item>
+    </style>
+
+    <style name="Caption.Medium.Blue">
+        <item name="android:textColor">@color/dash_blue</item>
+    </style>
+
+    <style name="Caption.Medium.SteelGray">
+        <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Caption.Medium.SteelGray400">
+        <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
     <style name="Caption.SemiBold">
@@ -785,6 +785,87 @@
 
     <!-- Buttons -->
 
+    <!-- Primary -->
+
+    <style name="PrimaryButtonTheme">
+        <item name="cornerRadius">8dp</item>
+        <item name="titleTextColor">@color/white</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Blue">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@color/dash_blue</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Green">
+        <item name="backgroundColor">@color/green_300</item>
+        <item name="strokeColor">@color/green_300</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Large">
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.Large.Blue">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@color/dash_blue</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.ExtraSmall">
+        <item name="cornerRadius">6dp</item>
+        <item name="titleTextColor">@color/gray_900</item>
+    </style>
+
+    <style name="PrimaryButtonTheme.ExtraSmall.Blue">
+        <item name="backgroundColor">@color/extra_small_btn_bg</item>
+        <item name="strokeColor">@color/extra_small_btn_bg</item>
+        <item name="titleTextColor">@color/dash_blue</item>
+    </style>
+
+    <style name="Button.Primary" parent="Widget.AppCompat.Button.Borderless">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="android:background">@drawable/rounded_ripple_background</item>
+        <item name="android:theme">@style/PrimaryButtonTheme</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <style name="Button.Primary.Blue">
+        <item name="android:theme">@style/PrimaryButtonTheme.Blue</item>
+    </style>
+
+    <style name="Button.Primary.Green">
+        <item name="android:theme">@style/PrimaryButtonTheme.Green</item>
+    </style>
+
+    <style name="Button.Primary.Large">
+        <item name="android:textSize">15sp</item>
+        <item name="android:minHeight">46dp</item>
+    </style>
+
+    <style name="Button.Primary.Large.Blue">
+        <item name="android:theme">@style/PrimaryButtonTheme.Large.Blue</item>
+    </style>
+
+    <style name="Button.Primary.ExtraSmall">
+        <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:minHeight">24dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+    </style>
+
+    <style name="Button.Primary.ExtraSmall.Blue">
+        <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall.Blue</item>
+    </style>
+
+
+    <!-- Tertiary -->
+
     <style name="TertiaryButtonTheme">
         <item name="cornerRadius">8dp</item>
         <item name="titleTextColor">@color/gray_900</item>
@@ -802,8 +883,16 @@
         <item name="cornerRadius">6dp</item>
     </style>
 
+    <style name="TertiaryButtonTheme.ExtraSmall">
+        <item name="cornerRadius">6dp</item>
+    </style>
+
     <style name="TertiaryButtonTheme.Small.Blue">
         <item name="titleTextColor">@color/dash_blue</item>
+    </style>
+
+    <style name="TertiaryButtonTheme.Small.Red">
+        <item name="titleTextColor">@color/red_300</item>
     </style>
 
     <style name="TertiaryButtonTheme.Large">
@@ -812,29 +901,6 @@
 
     <style name="TertiaryButtonTheme.Large.Red">
         <item name="titleTextColor">@color/red_300</item>
-    </style>
-
-    <style name="Button.Primary" parent="Widget.AppCompat.Button.Borderless">
-        <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:textColor">@color/white</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:paddingStart">12dp</item>
-        <item name="android:paddingEnd">12dp</item>
-        <item name="android:minHeight">40dp</item>
-    </style>
-
-    <style name="Button.Primary.Blue">
-        <item name="android:background">@drawable/blue_button_background</item>
-    </style>
-
-    <style name="Button.Primary.Large">
-        <item name="android:textSize">15sp</item>
-        <item name="android:minHeight">46dp</item>
-    </style>
-
-    <style name="Button.Primary.Large.Blue">
-        <item name="android:background">@drawable/blue_button_background</item>
     </style>
 
     <style name="Button.Tertiary" parent="Widget.AppCompat.Button.Borderless">
@@ -853,6 +919,16 @@
         <item name="android:theme">@style/TertiaryButtonTheme.Blue</item>
     </style>
 
+    <style name="Button.Tertiary.Large">
+        <item name="android:textSize">15sp</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:theme">@style/TertiaryButtonTheme.Large</item>
+    </style>
+
+    <style name="Button.Tertiary.Large.Red">
+        <item name="android:theme">@style/TertiaryButtonTheme.Large.Red</item>
+    </style>
+
     <style name="Button.Tertiary.Small">
         <item name="android:textSize">13sp</item>
         <item name="android:minHeight">36dp</item>
@@ -863,14 +939,16 @@
         <item name="android:theme">@style/TertiaryButtonTheme.Small.Blue</item>
     </style>
 
-    <style name="Button.Tertiary.Large">
-        <item name="android:textSize">15sp</item>
-        <item name="android:minHeight">46dp</item>
-        <item name="android:theme">@style/TertiaryButtonTheme.Large</item>
+    <style name="Button.Tertiary.Small.Red">
+        <item name="android:theme">@style/TertiaryButtonTheme.Small.Red</item>
     </style>
 
-    <style name="Button.Tertiary.Large.Red">
-        <item name="android:theme">@style/TertiaryButtonTheme.Large.Red</item>
+    <style name="Button.Tertiary.ExtraSmall">
+        <item name="android:textSize">11sp</item>
+        <item name="android:minHeight">24dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:theme">@style/TertiaryButtonTheme.ExtraSmall</item>
     </style>
 
     <style name="DialogCloseButton">

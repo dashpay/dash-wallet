@@ -258,6 +258,8 @@
     <string name="menu_rescan_blockchain">Rescan Blockchain</string>
     <string name="menu_contact_support_title">Contact Support</string>
     <string name="menu_contact_support_subtitle">Report an issue</string>
+    <string name="menu_explore_title">Explore</string>
+    <string name="menu_explore_subtitle">Shop with DASH at over 155,000 merchants</string>
 
     <string name="tools_address_book">Address Book</string>
     <string name="tools_import_private_key">Import Private Key</string>
@@ -267,10 +269,13 @@
     <string name="about_review_and_rate">Review &amp; Rate the app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">Dash Wallet %s</string>
+    <string name="about_last_explore_dash_sync">Explore Dash data updated at: %1$s\nLast sync: %2$s</string>
+    <string name="about_last_explore_dash_update_error">cannot fetch</string>
+    <string name="about_last_explore_dash_sync_never">never</string>
 
     <string name="block">Block</string>
     <string name="time">Time</string>
