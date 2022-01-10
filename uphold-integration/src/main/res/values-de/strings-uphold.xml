@@ -28,11 +28,9 @@
     <string name="uphold_general_error_title">Fehler</string>
     <string name="uphold_api_error_title">Uphold Fehler</string>
     <string name="uphold_api_error_identity">Dein Uphold-Account wurde noch nicht verifiziert. Guthaben kann nicht abgebucht werden.</string>
-    <string name="uphold_api_error_403_description">Dein Uphold-Account wurde zur Überprüfung gekennzeichnet.\n\nUphold hat deinen Account temporär eingeschränkt und es können keine Abbuchungen vorgenommen werden.\n\nUphold wird sich in Kürze bei dir melden, um dieses Problem zu beheben.</string>
     <string name="uphold_api_error_400_description">Uphold-Guthaben wurde für 24 Stunden gesperrt.\n\nDein Guthaben für diese Transaktion wird um %s bereitstehen.</string>
     <string name="uphold_api_error_400_locked">Uphold-Guthaben (%1$s %2$s) ist bis zu 65 Tage gesperrt.\n\nDein Guthaben für diese Transaktion wird am %3$s bereitstehen.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">Dein Guthaben reicht nicht aus, um diese Transaktion zu tätigen</string>
-    <string name="uphold_api_error_400_less_than_or_equal_to">Der Wert sollte gleich oder weniger sein als %s.</string>
     <string name="uphold_api_error_400_tx_validation">Du kannst nicht so viel mit dieser App versenden (max. 3000$)</string>
     <string name="uphold_api_error_400_password_reset">Uphold-Guthaben wurde durch eine Passwortänderung gesperrt.\n\nDu musst bis %s warten, bevor du dein Guthaben versenden kannst.</string>
     <string name="uphold_api_error_400_authentication_change">Uphold-Guthaben wurde durch eine Änderung der Authentifizierungsmethode gesperrt.\n\nDu musst bis %s warten, bevor du dein Guthaben versenden kannst.</string>

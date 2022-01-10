@@ -28,11 +28,9 @@
     <string name="uphold_general_error_title">Chyba</string>
     <string name="uphold_api_error_title">Chyba Upholdu</string>
     <string name="uphold_api_error_identity">Váš Uphold účet zatiaľ nie je overený. Finančné prostriedky nie je možné vybrať.</string>
-    <string name="uphold_api_error_403_description">Váš Uphold účet bol označený na kontrolu.\n\nUphold dočasne obmedzil váš účet a nebudete môcť vyberať finančné prostriedky.\n\nUphold sa s vami spoji, aby vám pomohol túto situáciu rýchlo vyriešiť.</string>
     <string name="uphold_api_error_400_description">Finančné prostriedkov na Upholde sú uzamknuté na 24 hodín.\n\nDostatok prostriedkov na tento prevod budete mať k dispozícii za%s.</string>
     <string name="uphold_api_error_400_locked">Finančné prostriedky (%1$s %2$s) na Upholde sú uzamknuté až na 65 hodín.\n\nDostatok prostriedkov na tento prevod budete mať k dispozícii za %3$s.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">Na tento prevod nemáte dostatok finančných prostriedkov</string>
-    <string name="uphold_api_error_400_less_than_or_equal_to">Táto hodnota by mala byť menšia alebo rovná %s.</string>
     <string name="uphold_api_error_400_tx_validation">S aplikáciou nie je možné toľkoto previesť (maximálne 3000 dolárov)</string>
     <string name="uphold_api_error_400_password_reset">Prostriedky na Upholde sú uzamknuté z dôvodu nedávnej zmeny hesla.\n\nKým budete môcť prevádzať prostriedky, musíte počkať do %s.</string>
     <string name="uphold_api_error_400_authentication_change">Prostriedky Upholde sú uzamknuté z dôvodu nedávnej zmeny spôsobu autentifikácie.\n\nKým budete môcť prevádzať prostriedky, musíte počkať do %s.</string>

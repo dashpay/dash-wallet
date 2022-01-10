@@ -28,11 +28,9 @@
     <string name="uphold_general_error_title">Errore</string>
     <string name="uphold_api_error_title">Errore di uphold</string>
     <string name="uphold_api_error_identity">Il tuo account Uphold non è ancora verificato. I fondi non possono essere ritirati.</string>
-    <string name="uphold_api_error_403_description">Il tuo account Uphold è stato contrassegnato per la revisione. \ n \ nUphold ha temporaneamente limitato il tuo account e non sarai in grado di prelevare fondi. \ n \ nUphold ti contatterà per aiutarti a risolvere rapidamente il problema.</string>
     <string name="uphold_api_error_400_description">I fondi mantenuti sono bloccati per 24 ore. \ n \ nAvrai fondi sufficienti per questo trasferimento da %s.</string>
     <string name="uphold_api_error_400_locked">I fondi Uphold (%1$s%2$s) sono bloccati per un massimo di 65 giorni. \n\nAvrai fondi sufficenti per questo trasferimanto entro %3$s.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">Non hai fondi sufficienti per questo trasferimento.</string>
-    <string name="uphold_api_error_400_less_than_or_equal_to">Questo valore deve essere minore o uguale a %s.</string>
     <string name="uphold_api_error_400_tx_validation">Non è possibile trasferire somme elevate con questa app (max $ 3000)</string>
     <string name="uphold_api_error_400_password_reset">I fondi di mantenimento sono bloccati a causa di una recente modifica della password.\n\nDevi attendere %s prima di poter trasferire i fondi.</string>
     <string name="uphold_api_error_400_authentication_change">I fondi di mantenimento sono bloccati a causa di una recente modifica del metodo di autenticazione.\n\nDevi attendere %s prima di poter trasferire i fondi.</string>
