@@ -57,4 +57,6 @@
     <string name="fees_in_crypto_purchase">Fees in crypto purchases</string>
     <string name="coinbase_fee_info_msg_content">In addition to the displayed Coinbase fee, we include a spread in the price. Cryptocurrency markets are volatile, and this allows us to temporary lock in a price for trade execution.</string>
     <string name="learn_more">Learn More</string>
+    <string name="something_wrong_title">Something went wrong!</string>
+    <string name="retry_later_message">Please retry a little bit later or contact our support center to get help</string>
 </resources>

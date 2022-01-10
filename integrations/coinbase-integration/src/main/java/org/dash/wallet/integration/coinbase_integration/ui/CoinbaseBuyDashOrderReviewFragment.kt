@@ -131,8 +131,8 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
         viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner){
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.error,
-                it,
+                R.string.something_wrong_title,
+                getString(R.string.retry_later_message),
                 R.drawable.ic_info_red,
                 negativeButtonText= R.string.close
             )
