@@ -20,14 +20,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_explore"
+    android:background="@color/background_explore"
     tools:context="org.dash.wallet.features.exploredash.ui.ExploreFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIcon="@drawable/ic_arrow_back_white"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView

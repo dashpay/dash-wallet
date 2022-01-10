@@ -19,6 +19,7 @@ package org.dash.wallet.common
 
 import android.app.Activity
 import androidx.lifecycle.LiveData
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -41,4 +42,5 @@ interface WalletDataProvider {
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
+    fun observeBalance(): Flow<Coin>
 }

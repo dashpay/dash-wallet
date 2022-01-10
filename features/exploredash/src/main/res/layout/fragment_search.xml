@@ -39,7 +39,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
                 app:menu="@menu/info_menu"
-                app:navigationIcon="@drawable/ic_back_arrow">
+                app:navigationIcon="@drawable/ic_arrow_back">
 
                 <TextView
                     android:id="@+id/toolbar_title"

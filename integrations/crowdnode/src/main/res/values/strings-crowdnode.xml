@@ -15,15 +15,12 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <style name="CardViewRaised" parent="Base.CardView">
-        <item name="android:background">@color/dash_white</item>
-        <item name="cardCornerRadius">10dp</item>
-        <item name="cardElevation">20dp</item>
-        <item name="android:outlineSpotShadowColor">#0DB8C1CC</item>
-    </style>
-
-    <style name="SegmentedPickerThumb">
-        <item name="android:elevation">6dp</item>
-        <item name="android:outlineSpotShadowColor">#0DB8C1CC</item>
-    </style>
+    <string name="crowdnode_get_started">Getting started with CrowdNode</string>
+    <string name="crowdnode_get_started_hint">To start staking, create an account on CrowdNode or connect to an existing one.</string>
+    <string name="account_create">Create Account</string>
+    <string name="account_exist">I Have Account</string>
+    <string name="required_passphrase_backup">You must <b><u>backup your passphrase</u></b></string>
+    <string name="required_dash_amount">You need at least %s Dash</string>
+    <string name="required_crowdnode_transaction">We didn’t see any CrowdNode transactions in this wallet</string>
+    <string name="crowdnode_restore_hint">You can <b><u>restore your Dash Wallet</u></b> that is connected to your CrowdNode account.</string>
 </resources>

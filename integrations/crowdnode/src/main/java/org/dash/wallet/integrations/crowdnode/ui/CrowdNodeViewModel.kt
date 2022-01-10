@@ -17,13 +17,45 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import org.bitcoinj.core.Coin
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import javax.inject.Inject
 
 @HiltViewModel
-class CrowdNodeViewModel @Inject constructor() : ViewModel() {
+class CrowdNodeViewModel @Inject constructor(
+    configuration: Configuration,
+    walletDataProvider: WalletDataProvider
+) : ViewModel() {
+    companion object {
+        val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(500000)
+    }
 
+    val needPassphraseBackUp = configuration.remindBackupSeed
+
+    private val _hasEnoughBalance = MutableLiveData<Boolean>()
+    val hasEnoughBalance: LiveData<Boolean>
+        get() = _hasEnoughBalance
+
+    private val _dashBalance = MutableLiveData<Coin>()
+    val dashBalance: LiveData<Coin>
+        get() = _dashBalance
+
+    init {
+        walletDataProvider.observeBalance()
+            .distinctUntilChanged()
+            .onEach {
+                _dashBalance.postValue(it)
+                _hasEnoughBalance.postValue(it >= MINIMUM_REQUIRED_DASH)
+            }
+            .launchIn(viewModelScope)
+    }
 }

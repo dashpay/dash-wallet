@@ -14,7 +14,10 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <corners android:radius="10dp" />
-    <solid android:color="@color/common_background" />
-</shape>
+<resources>
+    <style name="CrowdNodeLogoBackground">
+        <item name="backgroundColor">@color/white</item>
+        <item name="strokeColor">@color/gray_40</item>
+        <item name="cornerRadius">20dp</item>
+    </style>
+</resources>

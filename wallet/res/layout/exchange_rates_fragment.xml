@@ -128,7 +128,7 @@
                     android:paddingBottom="12dp"
                     android:singleLine="true"
                     android:textColor="@color/gray_900"
-                    android:textColorHint="@color/gray_300"
+                    android:textColorHint="@color/steel_gray_300"
                     android:textSize="15sp"
                     app:drawableLeftCompat="@drawable/ic_search_exchange_rates" />
 

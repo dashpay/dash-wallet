@@ -653,7 +653,9 @@
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:lineSpacingExtra">1sp</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Headline4.Bold">
@@ -664,9 +666,22 @@
         <item name="android:textColor">@color/dash_white</item>
     </style>
 
+    <style name="Headline5" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="fontFamily">@font/montserrat_medium</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:lineSpacingExtra">3sp</item>
+        <item name="android:letterSpacing">0.0</item>
+    </style>
+
+    <style name="Headline5.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
     <style name="Headline6" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="fontFamily">@font/montserrat_medium</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:lineSpacingExtra">4sp</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Headline6.Bold">
@@ -675,7 +690,8 @@
 
     <style name="Body1" parent="TextAppearance.MaterialComponents.Body1">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Body1.SemiBold">
@@ -684,21 +700,22 @@
 
     <style name="Body2" parent="TextAppearance.MaterialComponents.Body2">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/gray_900</item>
-        <item name="android:textColorHint">@color/gray_300</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:textColorHint">@color/content_tertiary</item>
         <item name="android:lineSpacingExtra">5sp</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Body2.White">
         <item name="android:textColor">@color/dash_white</item>
     </style>
 
-    <style name="Body2.Gray400">
-        <item name="android:textColor">@color/gray_400</item>
-    </style>
-
     <style name="Body2.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Body2.SteelGray400">
+        <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
     <style name="Body2.Medium">
@@ -763,8 +780,8 @@
         <item name="android:textColor">@color/gray_600</item>
     </style>
 
-    <style name="Caption.Gray400">
-        <item name="android:textColor">@color/gray_400</item>
+    <style name="Caption.SteelGray400">
+        <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
     <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">
@@ -968,4 +985,20 @@
     <style name="bottomSheetStyleWrapper" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
     </style>
+
+    <style name="NavigationIconStyle">
+        <item name="android:layout_width">14dp</item>
+        <item name="android:layout_height">14dp</item>
+        <item name="android:rotation">180</item>
+        <item name="android:src">@drawable/ic_arrow_back</item>
+        <item name="android:tint">@color/steel_gray_200</item>
+    </style>
+
+<!--    android:layout_width="14dp"-->
+<!--    android:layout_height="14dp"-->
+<!--    android:rotation="180"-->
+<!--    android:src="@drawable/ic_arrow_back"-->
+<!--    android:layout_gravity="end|center"-->
+<!--    app:tint="@color/steel_gray_200"-->
+<!--    tools:tint="@color/steel_gray_200"-->
 </resources>
