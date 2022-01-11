@@ -118,7 +118,7 @@ class SetPinActivity : InteractionAwareActivity() {
 
         walletApplication = application as WalletApplication
 
-        //if (walletApplication.wallet == null) {
+        if (walletApplication.wallet == null) {
             val dialog = FancyAlertDialog.newInstance(
                 R.string.set_pin_error_missing_wallet_title,
                 R.string.set_pin_error_missing_wallet_message, R.drawable.ic_error,
@@ -132,7 +132,7 @@ class SetPinActivity : InteractionAwareActivity() {
                 alertDialog.show()
             }
             dialog.show(supportFragmentManager, "serious_error_dialog")
-        //}
+        }
 
         if (walletApplication.wallet.isEncrypted) {
             if (initialPin != null) {
