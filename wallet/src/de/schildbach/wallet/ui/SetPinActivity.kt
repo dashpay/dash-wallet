@@ -132,29 +132,29 @@ class SetPinActivity : InteractionAwareActivity() {
                 alertDialog.show()
             }
             dialog.show(supportFragmentManager, "serious_error_dialog")
-        }
-
-        if (walletApplication.wallet.isEncrypted) {
-            if (initialPin != null) {
-                if (changePin) {
-                    viewModel.oldPinCache = initialPin
-                    setState(State.SET_PIN)
-                } else {
-                    viewModel.decryptKeys(initialPin)
-                }
-            } else {
-                if (changePin) {
-                    if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
+        } else {
+            if (walletApplication.wallet.isEncrypted) {
+                if (initialPin != null) {
+                    if (changePin) {
+                        viewModel.oldPinCache = initialPin
+                        setState(State.SET_PIN)
                     } else {
-                        setState(State.CHANGE_PIN)
+                        viewModel.decryptKeys(initialPin)
                     }
                 } else {
-                    setState(State.DECRYPT)
+                    if (changePin) {
+                        if (pinRetryController.isLocked) {
+                            setState(State.LOCKED)
+                        } else {
+                            setState(State.CHANGE_PIN)
+                        }
+                    } else {
+                        setState(State.DECRYPT)
+                    }
                 }
+            } else {
+                seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
             }
-        } else {
-            seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
         }
     }
 
