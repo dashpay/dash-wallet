@@ -25,7 +25,7 @@ enum class IconSelectMode {
 
 data class IconifiedViewItem(
     val title: String,
-    val subtitle: String,
+    val subtitle: String = "",
     @DrawableRes
     val icon: Int? = null,
     val iconSelectMode: IconSelectMode = IconSelectMode.Tint,

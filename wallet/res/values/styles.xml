@@ -108,7 +108,7 @@
     <style name="SwitchCompat">
         <item name="colorControlActivated">@color/dash_blue</item>
     </style>
-
+    
     <style name="ScreenshotWarningPanel">
         <item name="android:background">@drawable/rounded_background</item>
         <item name="android:theme">@style/ScreenshotWarningBackground</item>

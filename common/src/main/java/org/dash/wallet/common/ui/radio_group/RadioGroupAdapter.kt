@@ -19,6 +19,7 @@ package org.dash.wallet.common.ui.radio_group
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
@@ -27,6 +28,7 @@ import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
 import org.dash.wallet.common.ui.getRoundedBackground
+import org.dash.wallet.common.ui.ListDividerDecorator
 
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
@@ -150,4 +152,15 @@ class RadioButtonViewHolder(
             binding.checkmark.isVisible = isSelected
         }
     }
+}
+
+fun RecyclerView.setupRadioGroup(radioGroupAdapter: RadioGroupAdapter) {
+    val divider = ContextCompat.getDrawable(context, R.drawable.list_divider)!!
+    val decorator = ListDividerDecorator(
+            divider,
+            showAfterLast = false,
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal)
+    )
+    addItemDecoration(decorator)
+    adapter = radioGroupAdapter
 }

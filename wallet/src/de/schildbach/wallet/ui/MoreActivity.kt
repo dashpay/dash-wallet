@@ -22,6 +22,9 @@ import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.BlockchainState
+import de.schildbach.wallet.ui.explore.ExploreActivity
+import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
@@ -71,6 +74,9 @@ class MoreActivity : GlobalFooterActivity() {
             alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                     WalletApplication.getInstance()).buildAlertDialog()
             alertDialog.show()
+        }
+        explore.setOnClickListener {
+            startActivity(Intent(this, ExploreActivity::class.java))
         }
     }
 

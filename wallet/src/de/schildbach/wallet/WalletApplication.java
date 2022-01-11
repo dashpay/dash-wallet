@@ -43,8 +43,11 @@ import android.widget.Toast;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
-import org.dash.wallet.integration.liquid.data.LiquidClient;
+import androidx.work.BackoffPolicy;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
 
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
@@ -182,6 +185,26 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         if (walletFileExists()) {
             fullInitialization();
         }
+
+        syncExploreData();
+    }
+
+    private void syncExploreData() {
+
+        OneTimeWorkRequest syncDataWorkRequest =
+                new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
+                        .setBackoffCriteria(
+                                BackoffPolicy.EXPONENTIAL,
+                                WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
+                                TimeUnit.MILLISECONDS
+                        )
+                        .build();
+
+        WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(
+                "Sync Explore Data",
+                ExistingWorkPolicy.KEEP,
+                syncDataWorkRequest
+        );
     }
 
     public void fullInitialization() {

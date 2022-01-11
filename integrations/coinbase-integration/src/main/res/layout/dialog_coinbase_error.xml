@@ -19,8 +19,7 @@
 
     <TextView
         android:id="@+id/coinbase_dialog_title"
-        style="@style/MontserratRegular.G900.16"
-        android:textStyle="bold"
+        style="@style/Subtitle1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"

@@ -50,3 +50,10 @@ lang_map = sl_SI:sl, zh_TW:zh-rTW
 source_file = liquid-integration/src/main/res/values/strings-liquid.xml
 source_lang = en
 type = ANDROID
+
+[dash-mobile-wallets.strings-exploredash]
+file_filter = features/exploredash/src/main/res/values-<lang>/strings-explore-dash.xml
+lang_map = sl_SI:sl, zh_TW:zh-rTW
+source_file = features/exploredash/src/main/res/values/strings-explore-dash.xml
+source_lang = en
+type = ANDROID

@@ -271,7 +271,7 @@
     <string name="about_review_and_rate">Ohodnotiť aplikáciu</string>
     <string name="about_contact_support">Kontaktovať Podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
-    <string name="about_copyright">Autorské práva © 2020 Dash Core</string>
+    <string name="about_copyright">Autorské práva © 2022 Dash Core</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
 
