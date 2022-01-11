@@ -54,11 +54,26 @@
         tools:text="DashJ 17.0.0" />
 
     <TextView
+        android:id="@+id/explore_dash_last_sync"
+        style="@style/Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/selectable_background_dark"
+        android:gravity="center"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/library_version_name"
+        tools:text="Explore Dash data updated at: 1/7/2022 10:15 AM\nLast sync: 1/7/2022 12:46 PM" />
+
+    <TextView
         android:id="@+id/firebase_installation_id"
         style="@style/MontserratRegular"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="10dp"
         android:background="@drawable/selectable_background_dark"
         android:gravity="center"
         android:paddingStart="8dp"
@@ -68,7 +83,7 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/library_version_name"
+        app:layout_constraintTop_toBottomOf="@+id/explore_dash_last_sync"
         tools:text="Firebase Installation ID"
         tools:visibility="visible" />
 
@@ -85,7 +100,7 @@
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/library_version_name" />
+        app:layout_constraintTop_toBottomOf="@+id/firebase_installation_id" />
 
     <TextView
         android:id="@+id/github_link"

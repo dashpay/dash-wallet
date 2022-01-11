@@ -19,7 +19,6 @@ package org.dash.wallet.common.ui.segmented_picker
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -48,7 +47,12 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         }
 
     var pickedOptionIndex = 0
-        private set
+        set(value) {
+            if (field != value) {
+                field = value
+                moveThumb(value, false)
+            }
+        }
 
     val pickedOption: String
         get() = options[pickedOptionIndex]
@@ -63,14 +67,14 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
                 binding.thumb.measuredHeight,
                 Gravity.CENTER_VERTICAL
             )
-            animateThumb(pickedOptionIndex)
+            moveThumb(pickedOptionIndex, false)
         }
     }
 
     fun provideOptions(options: List<String>) {
         this.options = options
         val adapter = PickerOptionsAdapter(options) { option, index ->
-            animateThumb(index)
+            moveThumb(index)
 
             if (pickedOptionIndex != index) {
                 pickedOptionIndex = index
@@ -84,7 +88,7 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         optionPickedListener = listener
     }
 
-    private fun animateThumb(index: Int) {
+    private fun moveThumb(index: Int, animate: Boolean = true) {
         val optionsParams = binding.options.layoutParams as LayoutParams
         // Allows animating a thumb that's bigger than option size
         val optionWidth = trackWidth / options.size
@@ -94,10 +98,14 @@ class SegmentedPicker(context: Context, attrs: AttributeSet): FrameLayout(contex
         val animateTo = optionWidth * index - (thumbWidth - optionWidth - minX) / 2f
         val actualX = max(minX, min(animateTo, maxX))
 
-        animate(binding.thumb).apply {
-            duration = 200
-            translationX(actualX)
-        }.start()
+        if (animate) {
+            animate(binding.thumb).apply {
+                duration = 200
+                translationX(actualX)
+            }.start()
+        } else {
+            binding.thumb.translationX = actualX
+        }
     }
 
     override fun onDraw(canvas: Canvas) {

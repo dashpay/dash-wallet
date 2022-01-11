@@ -30,7 +30,7 @@
             <item android:state_enabled="false">
                 <shape android:shape="rectangle">
                     <corners android:radius="?attr/cornerRadius" tools:radius="10dp" />
-                    <solid android:color="@color/disabled_button_bg" />
+                    <solid android:color="?attr/disabledBackgroundColor" />
                 </shape>
             </item>
 
@@ -38,7 +38,7 @@
                 <shape android:shape="rectangle">
                     <corners android:radius="?attr/cornerRadius" tools:radius="10dp" />
                     <solid android:color="?attr/backgroundColor" tools:color="@color/dash_blue" />
-                    <stroke android:color="?attr/strokeColor" android:width="1dp" tools:color="@color/dash_blue"/>
+                    <stroke android:color="?attr/strokeColor" android:width="2dp" tools:color="@color/dash_blue"/>
                 </shape>
             </item>
         </selector>

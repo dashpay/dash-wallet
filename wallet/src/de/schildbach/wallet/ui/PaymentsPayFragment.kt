@@ -28,7 +28,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.core.os.bundleOf
-import androidx.fragment.app.Fragment
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsInternalActivity
@@ -39,7 +38,6 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.BaseLockScreenFragment
 import org.dash.wallet.common.ui.formatString
 
@@ -86,7 +84,7 @@ class PaymentsPayFragment : BaseLockScreenFragment() {
     }
 
     private fun getClipboardManager(): ClipboardManager {
-        return context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager;
+        return context?.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     }
 
     private val onWindowFocusChangeListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
