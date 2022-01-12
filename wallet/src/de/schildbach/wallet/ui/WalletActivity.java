@@ -157,8 +157,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
 
         handleIntent(getIntent());
 
-        MaybeMaintenanceFragment.add(getSupportFragmentManager());
-
         initView();
 
         //Prevent showing dialog twice or more when activity is recreated (e.g: rotating device, etc)
