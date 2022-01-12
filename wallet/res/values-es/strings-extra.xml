@@ -256,7 +256,7 @@
     <string name="menu_rescan_blockchain">Reescanear la cadena de bloques</string>
     <string name="menu_contact_support_title">Contactar Soporte</string>
     <string name="menu_contact_support_subtitle">Reportar un problema</string>
-
+    <string name="menu_explore_title">Explorar</string>
     <string name="tools_address_book">Libreta de direcciones</string>
     <string name="tools_import_private_key">Barrer billetera de papel</string>
     <string name="tools_network_monitor">Monitor de Red</string>
@@ -347,4 +347,4 @@
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recibido</string>
     <string name="sent_transactions">Enviado</string>
-</resources>
+    </resources>

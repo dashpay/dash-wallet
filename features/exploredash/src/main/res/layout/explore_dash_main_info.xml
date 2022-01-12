@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageButton
+        android:id="@+id/collapse_button"
+        style="@style/DialogCloseButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/info_header_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/collapse_button"
+        android:layout_marginTop="40dp"
+        android:textSize="28sp"
+        android:text="@string/explore_info_header_text"
+        style="@style/Headline4.Bold"
+        android:lineSpacingExtra="0sp"
+        />
+
+    <ImageView
+        android:id="@+id/dash_logo_blue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/info_header_label"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="32dp"
+        app:srcCompat="@drawable/ic_explore_info_screen_dash_circle_filled"
+        />
+
+    <TextView
+        android:id="@+id/accept_dash_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/dash_logo_blue"
+        android:layout_marginTop="12dp"
+        style="@style/Subtitle1.Bold"
+        android:textSize="16sp"
+        android:text="@string/accept_dash_text"
+        android:paddingBottom="2dp"
+        />
+
+    <TextView
+        android:id="@+id/pay_with_dash_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/accept_dash_label"
+        android:layout_marginTop="2dp"
+        android:paddingTop="2dp"
+        style="@style/Body2.SteelGray"
+        android:text="@string/pay_with_dash_text"
+        />
+
+    <ImageView
+        android:id="@+id/dash_gift_card_orange_icon"
+        android:layout_width="50dp"
+        android:layout_height="36dp"
+        app:layout_constraintTop_toBottomOf="@id/pay_with_dash_label"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="38dp"
+        android:src="@drawable/ic_gift_card"
+        android:scaleType="centerCrop"
+        app:tint="@color/gift_card_orange"
+        tools:tint="@color/gift_card_orange"
+        />
+
+    <TextView
+        android:id="@+id/buy_gift_card_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/dash_gift_card_orange_icon"
+        android:layout_marginTop="12dp"
+        style="@style/Subtitle1.Bold"
+        android:textSize="16sp"
+        android:text="@string/buy_gift_card_text"
+        android:paddingBottom="2dp"
+        android:paddingTop="2dp"
+        />
+
+    <TextView
+        android:id="@+id/buy_gift_card_desc"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:gravity="center"
+        android:layout_marginLeft="30dp"
+        android:layout_marginRight="30dp"
+        app:layout_constraintTop_toBottomOf="@id/buy_gift_card_label"
+        android:layout_marginTop="2dp"
+        android:paddingTop="2dp"
+        style="@style/Body2.SteelGray"
+        android:text="@string/buy_gift_card_desc_text"
+        />
+
+    <TextView
+        android:id="@+id/learn_more_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/buy_gift_card_desc"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:text="@string/learn_more_text"
+        android:layout_marginTop="10dp"
+        android:paddingTop="4dp"
+        style="@style/Button.Tertiary.Small.Blue"
+        />
+
+    <TextView
+        android:id="@+id/explore_dash_info_continue_btn"
+        style="@style/Button.Primary.Large.Blue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/horizontal_guideline"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginBottom="48dp"
+        android:layout_marginHorizontal="16dp"
+        android:text="@string/continue_text"
+        />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/horizontal_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintGuide_percent="0.91"
+        android:orientation="horizontal"
+        />
+</androidx.constraintlayout.widget.ConstraintLayout>

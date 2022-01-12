@@ -1,0 +1,25 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+  <path
+      android:pathData="M1.5725,10.8009L8.9653,10.8415C9.0552,10.8415 9.1159,10.8573 9.1474,10.8889C9.1789,10.9205 9.1946,10.977 9.1946,11.0582L9.2216,18.4406C9.2216,18.874 9.3318,19.224 9.5521,19.4903C9.7725,19.7567 10.0468,19.9193 10.3751,19.978C10.7033,20.0367 11.0294,19.978 11.3531,19.8019C11.6769,19.6258 11.9377,19.321 12.1356,18.8876L19.7712,2.3349C19.96,1.9105 20.032,1.5267 19.987,1.1835C19.9421,0.8404 19.8049,0.565 19.5756,0.3573C19.3462,0.1496 19.0562,0.0322 18.7054,0.0051C18.3547,-0.022 17.9724,0.0593 17.5587,0.2489L0.9654,7.9563C0.5877,8.1279 0.3224,8.3694 0.1695,8.681C0.0166,8.9925 -0.0328,9.3109 0.0211,9.636C0.0751,9.9611 0.2325,10.2342 0.4933,10.4555C0.7541,10.6767 1.1138,10.7919 1.5725,10.8009Z"
+      android:fillColor="#008DE4"/>
+</vector>

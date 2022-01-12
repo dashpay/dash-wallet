@@ -28,11 +28,9 @@
     <string name="uphold_general_error_title">Kesalahan</string>
     <string name="uphold_api_error_title">Kesalahan Uphold</string>
     <string name="uphold_api_error_identity">Akun Uphold Anda belum diverifikasi. Dana tidak dapat ditarik.</string>
-    <string name="uphold_api_error_403_description">Akun Uphold Anda telah ditandai untuk ditinjau.\n\nUphold telah membatasi akun Anda untuk sementara dan Anda tidak akan dapat menarik dana.\n\nUphold akan menghubungi untuk membantu Anda menyelesaikannya dengan cepat.</string>
     <string name="uphold_api_error_400_description">Dana Uphold dikunci selama 24 jam.\n\nAnda akan memiliki cukup dana untuk transfer ini pada %s</string>
     <string name="uphold_api_error_400_locked">Dana Uphold (%1$s %2$s) dikunci hingga 65 hari.\n\nAnda akan memiliki dana yang cukup untuk transfer ini dengan %3$s.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">Anda tidak memiliki dana yang cukup untuk transfer ini</string>
-    <string name="uphold_api_error_400_less_than_or_equal_to">Nilai ini harus kurang dari atau sama dengan %s.</string>
     <string name="uphold_api_error_400_tx_validation">Tidak dapat mentransfer sebanyak itu dengan aplikasi ini (maks $3000)</string>
     <string name="uphold_api_error_400_password_reset">Dana Uphold terkunci karena perubahan kata sandi baru-baru ini.\n\nAnda harus menunggu sampai %s Anda dapat mentransfer dana.</string>
     <string name="uphold_api_error_400_authentication_change">Dana Uphold dikunci karena perubahan metode autentikasi baru-baru ini.\n\nAnda harus menunggu hingga %s sebelum anda dapat mentransfer dana.</string>

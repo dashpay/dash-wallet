@@ -28,6 +28,14 @@
     <string name="uphold_general_error_title">오류</string>
     <string name="uphold_api_error_title">업홀드 오류</string>
     <string name="uphold_api_error_identity">당신의 업홀드 계정이 아직 인증되지 않았습니다. 자금을 출금할 수 없습니다.</string>
-    <string name="uphold_api_error_403_description">당신의 업홀드 계정이 리뷰를 위해 마크되었습니다.\n\n업홀드는 당신의 계정을 임시로 제한함에 따라 출금할 수 없게 됩니다.\n\n이 상황을 해결하기 위하여 업홀드가 빠른 시일 내에 당신에게 연락을 드릴 예정입니다.</string>
     <string name="uphold_api_error_400_description">업홀드 자금이 24시간 동안 잠겼습니다.\n\n이 송금을 위한 충분한 자금을 %s까지 보유하게 됩니다.</string>
+    <string name="uphold_api_error_400_locked">업홀드 자금 (%1$s %2$s) 이 최장 65일간 잠겼습니다.\n\n해당 송금에 필요한 자금을 %3$s까지 보유하게 될 것입니다.</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">이 거래를 위한 자금이 충분하지 않습니다</string>
+    <string name="uphold_api_error_400_tx_validation">이 어플로 송금할 수 있는 자금을 초과합니다 (최대 $3000)</string>
+    <string name="uphold_api_error_400_password_reset">업홀드 자금이 최근 비밀번호 변경으로 인해 잠겼습니다.\n\n자금 송금을 위해서는 %s까지 기다려야 합니다.</string>
+    <string name="uphold_api_error_400_authentication_change">업홀드 자금이 최근 인증 방법 변경으로 인해 잠겼습니다.\n\n자금 송금을 위해서는 %s까지 기다려야 합니다.</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">이 어플로 송금할 수 있는 자금을 초과합니다 (최대 $3000)\n\n해당 송금을 위해서는 업홀드 계정을 사용하십시오.</string>
+    <string name="uphold_api_error_400_required">이 어플로 송금할 수 있는 자금을 초과합니다 (최대 $3000)\n\n해당 송금을 위해서는 업홀드 계정을 사용하십시오.</string>
+
 </resources>
