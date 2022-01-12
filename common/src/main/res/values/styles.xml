@@ -182,8 +182,24 @@
         <item name="android:textColor">@color/gray_900</item>
     </style>
 
-    <style name="MontserratRegular.G900.17">
-        <item name="android:textSize">17sp</item>
+    <style name="MontserratRegular.G900.10">
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.13">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.14">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.15">
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.16">
+        <item name="android:textSize">16sp</item>
     </style>
 
     <style name="MontserratMedium">
@@ -220,6 +236,10 @@
 
     <style name="NewMontserratButton.Primary" parent="MontserratButton">
         <item name="android:background">@drawable/primary_button</item>
+    </style>
+
+    <style name="NewMontserratButton.Primary.SemiBold" parent="NewMontserratButton.Primary">
+        <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
 
     <style name="NewMontserratButton.Secondary" parent="MontserratButton">
@@ -534,6 +554,11 @@
         <item name="android:background">@drawable/white_button_bordered_background</item>
     </style>
 
+    <style name="DashButton.grey.Bordered" parent="DashButton.Blue">
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:background">@drawable/white_button_grey_bordered_background</item>
+    </style>
+
     <style name="DashButton.White.Borderedless" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/white_button_bordered_text</item>
         <item name="android:background">@null</item>
@@ -703,6 +728,23 @@
         <item name="fontFamily">@font/montserrat_bold</item>
     </style>
 
+    <style name="Headline5" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/montserrat_medium</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Headline5.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="Headline5.Bold.green">
+        <item name="android:textColor">@color/green_300</item>
+    </style>
+
+    <style name="Headline5.Bold.red">
+        <item name="android:textColor">@color/red_300</item>
+    </style>
+
     <style name="Body1" parent="TextAppearance.MaterialComponents.Body1">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
@@ -728,12 +770,24 @@
         <item name="android:textColor">@color/dash_white</item>
     </style>
 
+    <style name="Body2.Gray">
+        <item name="android:textColor">@color/gray_500</item>
+    </style>
+
     <style name="Body2.Gray400">
         <item name="android:textColor">@color/gray_400</item>
     </style>
 
     <style name="Body2.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Body2.dashBlue">
+        <item name="android:textColor">@color/dash_blue</item>
+    </style>
+
+    <style name="Body2.red_300">
+        <item name="android:textColor">@color/red_300</item>
     </style>
 
     <style name="Body2.Medium">
@@ -764,6 +818,14 @@
         <item name="android:textColor">@color/gray_900</item>
         <item name="android:letterSpacing">0.0</item>
         <item name="android:lineSpacingExtra">3sp</item>
+    </style>
+
+    <style name="Caption.Gray400">
+        <item name="android:textColor">@color/gray_400</item>
+    </style>
+
+    <style name="Caption.dashBlue">
+        <item name="android:textColor">@color/dash_blue</item>
     </style>
 
     <style name="Caption.Gray600">
@@ -1085,5 +1147,14 @@
 
     <style name="bottomSheetStyleWrapper" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="FullScreenDialog" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowCloseOnTouchOutside">false</item>
     </style>
 </resources>

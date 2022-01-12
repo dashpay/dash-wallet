@@ -33,6 +33,7 @@ import com.google.common.base.Strings;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.data.CurrencyInfo;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,6 +94,8 @@ public class Configuration {
     public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
     public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
+    public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
+    public static final String PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED = "coinbase_is_temp_refreshed_token_used";
 
 
 
@@ -569,5 +572,20 @@ public class Configuration {
 
     public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
         prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
+    }
+    public void setCoinBaseUserAccountId(String accountId) {
+        prefs.edit().putString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, accountId).apply();
+    }
+
+    public String getCoinbaseUserAccountId(){
+        return prefs.getString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, null);
+    }
+
+    public boolean getHasTempTokenBeenUsed(){
+        return prefs.getBoolean(PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED, false);
+    }
+
+    public void setHasTempTokenBeenUsed(boolean hasTokenBeenUsed){
+        prefs.edit().putBoolean(PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED, hasTokenBeenUsed).apply();
     }
 }

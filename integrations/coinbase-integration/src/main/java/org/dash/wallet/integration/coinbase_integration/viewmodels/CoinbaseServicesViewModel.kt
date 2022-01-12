@@ -16,25 +16,34 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
+import android.app.Application
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
+import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
+import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseServicesViewModel @Inject constructor(
+    application: Application,
     private val coinBaseRepository: CoinBaseRepository,
     private val exchangeRatesProvider: ExchangeRatesProvider,
     val config: Configuration
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
     val user: LiveData<CoinBaseUserAccountData>
@@ -48,12 +57,18 @@ class CoinbaseServicesViewModel @Inject constructor(
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
 
+    private val _activePaymentMethods: MutableLiveData<Event<List<PaymentMethod>>> = MutableLiveData()
+    val activePaymentMethods: LiveData<Event<List<PaymentMethod>>>
+        get() = _activePaymentMethods
+
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
-    private fun getUserAccountInfo() = viewModelScope.launch {
+    val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
 
+    private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
         when (val response = coinBaseRepository.getUserAccount()) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
@@ -66,10 +81,8 @@ class CoinbaseServicesViewModel @Inject constructor(
                 } else {
                     _user.value = userAccountData
                     coinBaseRepository.saveLastCoinbaseDashAccountBalance(userAccountData.balance?.amount)
+                    coinBaseRepository.saveUserAccountId(userAccountData.id)
                 }
-            }
-            is ResponseResource.Loading -> {
-                _showLoading.value = true
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
@@ -88,5 +101,61 @@ class CoinbaseServicesViewModel @Inject constructor(
         exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
+    }
+
+    fun getPaymentMethods() = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
+        when (val response = coinBaseRepository.getActivePaymentMethods()) {
+            is ResponseResource.Success -> {
+                _showLoading.value = false
+                if (response.value.isEmpty()) {
+                    activePaymentMethodsFailureCallback.call()
+                } else {
+                    _activePaymentMethods.value = Event(
+                        response.value.filter { it.isBuyingAllowed == true }
+                            .map {
+                                val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
+                                val nameAccountPair = splitNameAndAccount(it.name)
+                                PaymentMethod(
+                                    it.id ?: "",
+                                    nameAccountPair.first,
+                                    nameAccountPair.second,
+                                    "", // set "Checking" to get "****1234 • Checking" in subtitle
+                                    paymentMethodType = type
+                                )
+                            }
+                    )
+                }
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+                activePaymentMethodsFailureCallback.call()
+            }
+        }
+    }
+
+    private fun splitNameAndAccount(nameAccount: String?): Pair<String, String> {
+        nameAccount?.let {
+            val match = "(\\d+)?\\s?[a-z]?\\*+".toRegex().find(nameAccount)
+            match?.range?.first?.let { index ->
+                val name = nameAccount.substring(0, index).trim(' ', '-', ',', ':')
+                val account = nameAccount.substring(index, nameAccount.length).trim()
+                return Pair(name, account)
+            }
+        }
+
+        return Pair("", "")
+    }
+
+    private fun paymentMethodTypeFromCoinbaseType(type: String): PaymentMethodType {
+        return when (type) {
+            "fiat_account" -> PaymentMethodType.Fiat
+            "secure3d_card", "worldpay_card", "credit_card", "debit_card" -> PaymentMethodType.Card
+            "ach_bank_account", "sepa_bank_account",
+            "ideal_bank_account", "eft_bank_account", "interac" -> PaymentMethodType.BankAccount
+            "bank_wire" -> PaymentMethodType.WireTransfer
+            "paypal_account" -> PaymentMethodType.PayPal
+            else -> PaymentMethodType.Unknown
+        }
     }
 }
