@@ -510,6 +510,6 @@ open class LockScreenActivity : SecureActivity() {
             alertDialog.dismissDialog()
         }
         bottomSheetDialog?.dismiss()
-        dialogFragment?.dismiss()
+        dialogFragment?.dismissAllowingStateLoss()
     }
 }

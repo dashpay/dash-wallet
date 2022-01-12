@@ -69,7 +69,7 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.util.WalletDataProvider;
+import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -101,7 +101,6 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
-import de.schildbach.wallet.ui.WalletBalanceLoader;
 import de.schildbach.wallet.ui.WalletBalanceObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
@@ -110,9 +109,6 @@ import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlinx.coroutines.flow.Flow;
-import kotlinx.coroutines.flow.MutableStateFlow;
-import kotlinx.coroutines.flow.SharedFlow;
-import kotlinx.coroutines.flow.StateFlow;
 
 /**
  * @author Andreas Schildbach

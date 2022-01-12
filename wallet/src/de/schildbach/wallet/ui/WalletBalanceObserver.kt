@@ -14,6 +14,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
@@ -31,6 +32,31 @@ class WalletBalanceObserver(context: Context, private val wallet: Wallet) {
         val walletChangeListener = object : ThrottlingWalletChangeListener() {
             override fun onThrottledWalletChanged() {
                 emitBalance()
+            }
+
+            override fun onCoinsReceived(
+                wallet: Wallet?,
+                tx: Transaction?,
+                prevBalance: Coin?,
+                newBalance: Coin?
+            ) {
+                super.onCoinsReceived(wallet, tx, prevBalance, newBalance)
+                Log.i("CROWDNODE", "onCoinsReceived: ${tx?.toString() ?: "null"}")
+            }
+
+            override fun onCoinsSent(
+                wallet: Wallet?,
+                tx: Transaction?,
+                prevBalance: Coin?,
+                newBalance: Coin?
+            ) {
+                super.onCoinsSent(wallet, tx, prevBalance, newBalance)
+                Log.i("CROWDNODE", "onCoinsSent: ${tx?.toString() ?: "null"}")
+            }
+
+            override fun onTransactionConfidenceChanged(wallet: Wallet?, tx: Transaction?) {
+                super.onTransactionConfidenceChanged(wallet, tx)
+                Log.i("CROWDNODE", "onTransactionConfidenceChanged: ${tx?.toString() ?: "null"}")
             }
         }
         val walletChangedReceiver = object : BroadcastReceiver() {

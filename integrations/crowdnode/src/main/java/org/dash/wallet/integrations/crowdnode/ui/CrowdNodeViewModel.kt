@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -25,21 +26,49 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.params.MainNetParams
+import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.services.SendPaymentService
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.system.measureTimeMillis
+
+enum class NavigationRequest {
+    BackupPassphrase, RestoreWallet
+}
 
 @HiltViewModel
 class CrowdNodeViewModel @Inject constructor(
-    configuration: Configuration,
-    walletDataProvider: WalletDataProvider
+    private val config: Configuration,
+    private val walletDataProvider: WalletDataProvider,
+    private val paymentsService: SendPaymentService
 ) : ViewModel() {
     companion object {
-        val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(500000)
+        val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(100000)
+        val OFFSET: Coin = Coin.valueOf(546)
+        val SIGNUP_REQUEST: Coin = Coin.valueOf(2048)
+
+        val CROWD_NODE_ADDRESS = if (BuildConfig.DEBUG) { // TODO: network, not build type
+            "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
+        } else {
+            "XjbaGWaGnvEtuQAUoBgDxJWe8ZNv45upG2"
+        }
     }
 
-    val needPassphraseBackUp = configuration.remindBackupSeed
+    val navigationCallback = SingleLiveEvent<NavigationRequest>()
+
+    private val params = MainNetParams.get() // TODO
+    private val crowdNodeAddress = Address.fromBase58(params, CROWD_NODE_ADDRESS)
+    private val accountAddress = getOrCreateAccountAddress()
+
+    val dashAccountAddress: String = accountAddress.toBase58()
+    val needPassphraseBackUp = config.remindBackupSeed
 
     private val _hasEnoughBalance = MutableLiveData<Boolean>()
     val hasEnoughBalance: LiveData<Boolean>
@@ -57,5 +86,41 @@ class CrowdNodeViewModel @Inject constructor(
                 _hasEnoughBalance.postValue(it >= MINIMUM_REQUIRED_DASH)
             }
             .launchIn(viewModelScope)
+    }
+    
+    fun backupPassphrase() {
+        navigationCallback.postValue(NavigationRequest.BackupPassphrase)
+    }
+
+    fun restoreWallet() {
+        navigationCallback.postValue(NavigationRequest.RestoreWallet)
+    }
+
+    fun signUp() {
+        // TODO: Move to crowdnode API, viewModel shouldn't care about sending coins
+        // and tracking transaction
+        viewModelScope.launch {
+            Log.i("CROWDNODE", "sending to address: ${crowdNodeAddress.toBase58()}")
+            Log.i("CROWDNODE", "sending from address: ${accountAddress.toBase58()}")
+//            paymentsService.sendCoins(accountAddress, MINIMUM_REQUIRED_DASH)
+            paymentsService.sendCoins(crowdNodeAddress, OFFSET + SIGNUP_REQUEST, accountAddress)
+        }
+    }
+
+    private fun getOrCreateAccountAddress(): Address {
+        val savedAddress = config.crowdNodeAccountAddress
+        Log.i("CROWDNODE", "crowdnode savedAddress: ${savedAddress}")
+
+        return if (savedAddress.isNullOrEmpty()) {
+            var address: Address
+            val time = measureTimeMillis {
+                address = walletDataProvider.freshReceiveAddress()
+            }
+            Log.i("CROWDNODE", "freshReceiveAddress exec time: ${TimeUnit.MILLISECONDS.toSeconds(time)}")
+            config.crowdNodeAccountAddress = address.toBase58()
+            return address
+        } else {
+            Address.fromString(params, savedAddress)
+        }
     }
 }

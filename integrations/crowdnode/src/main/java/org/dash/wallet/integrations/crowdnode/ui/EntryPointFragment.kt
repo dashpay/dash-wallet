@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui.entry_point
+package org.dash.wallet.integrations.crowdnode.ui
 
 import android.os.Bundle
 import android.util.Log
@@ -25,9 +25,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentEntryPointBinding
-import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 
 @AndroidEntryPoint
 class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
@@ -46,24 +46,57 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             CrowdNodeViewModel.MINIMUM_REQUIRED_DASH.toPlainString()
         )
 
-        viewModel.hasEnoughBalance.observe(viewLifecycleOwner) {
-            Log.i("CROWDNODE", "Has enough balance: ${it}, minimum: ${CrowdNodeViewModel.MINIMUM_REQUIRED_DASH.toPlainString()}, current balance: ${viewModel.dashBalance.value?.toPlainString() ?: "null"}")
-            displayRequirements(viewModel.needPassphraseBackUp, it)
+        binding.newAccountBtn.setOnClickListener {
+            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
         }
+
+        binding.backupPassphraseLink.setOnClickListener {
+            viewModel.backupPassphrase()
+        }
+
+        binding.restoreWalletHint.setOnClickListener {
+            viewModel.restoreWallet()
+        }
+
+        viewModel.hasEnoughBalance.observe(viewLifecycleOwner) {
+            Log.i("CROWDNODE", "Enough balance: ${it}, minimum: ${CrowdNodeViewModel.MINIMUM_REQUIRED_DASH.toPlainString()}, current balance: ${viewModel.dashBalance.value?.toPlainString() ?: "null"}")
+            displayNewAccountRequirements(viewModel.needPassphraseBackUp, it)
+        }
+
+        displayExistingAccountRequirements(false) // TODO
     }
 
-    private fun displayRequirements(needBackup: Boolean, enoughBalance: Boolean) {
+    private fun displayNewAccountRequirements(needBackup: Boolean, enoughBalance: Boolean) {
         binding.errorPassphrase.isVisible = needBackup
         binding.errorBalance.isVisible = !enoughBalance
 
-        if (needBackup || !enoughBalance) {
+        val disableNewAccount = needBackup || !enoughBalance
+        binding.newAccountBtn.isClickable = !disableNewAccount
+        binding.newAccountBtn.isFocusable = !disableNewAccount
+        binding.newAccountDivider.isVisible = disableNewAccount
+        binding.newAccountNavIcon.isVisible = !disableNewAccount
+
+        if (disableNewAccount) {
             binding.newAccountImg.clearColorFilter()
-            binding.newAccountDivider.isVisible = true
-            binding.newAccountNavIcon.isVisible = false
         } else {
             binding.newAccountImg.setColorFilter(resources.getColor(R.color.blue_300, null))
-            binding.newAccountDivider.isVisible = false
-            binding.newAccountNavIcon.isVisible = true
+        }
+    }
+
+
+    private fun displayExistingAccountRequirements(hasCrowdNodeTransaction: Boolean) {
+        binding.crowdnodeTransactionError.isVisible = !hasCrowdNodeTransaction
+        binding.restoreWalletHint.isVisible = !hasCrowdNodeTransaction
+
+        binding.existingAccountBtn.isClickable = hasCrowdNodeTransaction
+        binding.existingAccountBtn.isFocusable = hasCrowdNodeTransaction
+        binding.existingAccountDivider.isVisible = !hasCrowdNodeTransaction
+        binding.existingAccountNavIcon.isVisible = hasCrowdNodeTransaction
+
+        if (!hasCrowdNodeTransaction) {
+            binding.existingAccountImg.clearColorFilter()
+        } else {
+            binding.existingAccountImg.setColorFilter(resources.getColor(R.color.green_300, null))
         }
     }
 }

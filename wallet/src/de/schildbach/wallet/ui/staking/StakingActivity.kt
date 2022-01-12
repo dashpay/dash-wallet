@@ -17,13 +17,14 @@
 
 package de.schildbach.wallet.ui.staking
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
-import de.schildbach.wallet_test.databinding.DialogTransactionsFilterBinding
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
 
 @AndroidEntryPoint
 class StakingActivity : LockScreenActivity() {
@@ -33,6 +34,20 @@ class StakingActivity : LockScreenActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityStakingBinding.inflate(layoutInflater)
+
+        viewModel.navigationCallback.observe(this) { request ->
+            when (request) {
+                NavigationRequest.BackupPassphrase -> {
+//                    val backupPassphraseIntent = Intent
+//                    startActivity(backupPassphraseIntent)
+                }
+                NavigationRequest.RestoreWallet -> {
+//                    val restoreWalletIntent = Intent
+//                    startActivity(restoreWalletIntent)
+                }
+            }
+        }
+
         setContentView(binding.root)
     }
 }

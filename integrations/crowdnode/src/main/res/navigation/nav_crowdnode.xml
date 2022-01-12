@@ -22,8 +22,19 @@
 
     <fragment
         android:id="@+id/entryPointFragment"
-        android:name="org.dash.wallet.integrations.crowdnode.ui.entry_point.EntryPointFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.EntryPointFragment"
         android:label="CrowdnodeFragment">
 
+        <action
+            android:id="@+id/entry_point_to_new_account"
+            app:destination="@id/newAccountFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
+
+    <fragment
+        android:id="@+id/newAccountFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.NewAccountFragment"
+        android:label="NewAccountFragment"/>
 </navigation>

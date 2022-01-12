@@ -26,12 +26,14 @@ import android.net.Uri;
 import android.text.format.DateUtils;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.google.common.base.Strings;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.data.CurrencyInfo;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,6 +101,9 @@ public class Configuration {
     // Explore Dash
     public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
     public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
+
+    // CrowdNode
+    public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -515,6 +520,8 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, isChanged).apply();
     }
 
+    // Explore dash
+
     public boolean hasExploreDashInfoScreenBeenShown() {
         return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
     }
@@ -529,5 +536,14 @@ public class Configuration {
 
     public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
         prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
+    }
+
+    // CrowdNode
+    public String getCrowdNodeAccountAddress() {
+        return prefs.getString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, "");
+    }
+
+    public void setCrowdNodeAccountAddress(@NotNull String address) {
+        prefs.edit().putString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, address).apply();
     }
 }

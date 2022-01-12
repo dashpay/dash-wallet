@@ -30,6 +30,8 @@ interface WalletDataProvider {
 
     fun freshReceiveAddress(): Address
 
+    fun currentReceiveAddress(): Address
+
     fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate>
 
     fun getExchangeRates(): LiveData<List<ExchangeRate>>
@@ -37,8 +39,6 @@ interface WalletDataProvider {
     fun currencyCodes(): LiveData<List<String>>
 
     fun defaultCurrencyCode(): String
-
-    fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 

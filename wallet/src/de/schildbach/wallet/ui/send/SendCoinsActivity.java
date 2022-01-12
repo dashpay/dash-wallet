@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.AbstractBindServiceActivity;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
+
 @AndroidEntryPoint
 public class SendCoinsActivity extends AbstractBindServiceActivity {
 

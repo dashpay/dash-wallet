@@ -663,7 +663,7 @@
     </style>
 
     <style name="Headline4.Bold.White">
-        <item name="android:textColor">@color/dash_white</item>
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="Headline5" parent="TextAppearance.MaterialComponents.Headline5">
@@ -675,6 +675,10 @@
 
     <style name="Headline5.Bold">
         <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="Headline5.Bold.White">
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="Headline6" parent="TextAppearance.MaterialComponents.Headline6">
@@ -707,7 +711,7 @@
     </style>
 
     <style name="Body2.White">
-        <item name="android:textColor">@color/dash_white</item>
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="Body2.SteelGray">
@@ -968,6 +972,16 @@
         <item name="android:theme">@style/TertiaryButtonTheme.ExtraSmall</item>
     </style>
 
+    <style name="Button.Tertiary.Square">
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+        <item name="android:minHeight">20dp</item>
+        <item name="android:minWidth">20dp</item>
+    </style>
+
+
+    <!-- Other -->
+
     <style name="DialogCloseButton">
         <item name="android:layout_width">40dp</item>
         <item name="android:layout_height">40dp</item>
@@ -993,12 +1007,4 @@
         <item name="android:src">@drawable/ic_arrow_back</item>
         <item name="android:tint">@color/steel_gray_200</item>
     </style>
-
-<!--    android:layout_width="14dp"-->
-<!--    android:layout_height="14dp"-->
-<!--    android:rotation="180"-->
-<!--    android:src="@drawable/ic_arrow_back"-->
-<!--    android:layout_gravity="end|center"-->
-<!--    app:tint="@color/steel_gray_200"-->
-<!--    tools:tint="@color/steel_gray_200"-->
 </resources>

@@ -19,7 +19,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.entry_point.EntryPointFragment">
+    android:background="@color/background_primary"
+    tools:context=".ui.EntryPointFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"
@@ -69,6 +70,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="15dp"
             android:layout_marginTop="30dp"
+            android:foreground="?android:attr/selectableItemBackground"
             app:contentPadding="15dp">
 
             <LinearLayout
@@ -182,6 +184,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="15dp"
             android:layout_marginVertical="15dp"
+            android:foreground="?attr/selectableItemBackground"
             app:contentPadding="15dp">
 
             <LinearLayout
@@ -194,10 +197,10 @@
                     android:layout_height="wrap_content">
 
                     <ImageView
+                        android:id="@+id/existing_account_img"
                         android:layout_width="34dp"
                         android:layout_height="34dp"
-                        android:src="@drawable/ic_account_existing"
-                        app:tint="@color/green_300" />
+                        android:src="@drawable/ic_account_existing" />
 
                     <TextView
                         style="@style/Subtitle2"
@@ -209,11 +212,13 @@
                         android:text="@string/account_exist" />
 
                     <ImageView
+                        android:id="@+id/existing_account_nav_icon"
                         style="@style/NavigationIconStyle"
                         android:layout_gravity="end|center" />
                 </LinearLayout>
 
                 <View
+                    android:id="@+id/existing_account_divider"
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="14dp"
@@ -222,6 +227,7 @@
                     tools:visibility="visible" />
 
                 <LinearLayout
+                    android:id="@+id/crowdnode_transaction_error"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
@@ -252,6 +258,7 @@
                 </LinearLayout>
 
                 <TextView
+                    android:id="@+id/restore_wallet_hint"
                     style="@style/Caption"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
