@@ -52,12 +52,15 @@ class TokenAuthenticator @Inject constructor(
     }
 
     private suspend fun getUpdatedToken(): ResponseResource<retrofit2.Response<TokenResponse>> {
+        /*
         val refreshToken = if (userPreferences.hasTempTokenBeenUsed) {
             userPreferences.lastCoinbaseRefreshToken
         } else {
             userPreferences.hasTempTokenBeenUsed = true
             TEMP_REFRESH_TOKEN
         }
+        */
+        val refreshToken = userPreferences.lastCoinbaseRefreshToken
         return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
     }
 }

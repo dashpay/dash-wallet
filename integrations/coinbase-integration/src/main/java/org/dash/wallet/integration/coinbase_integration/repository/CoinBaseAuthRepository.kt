@@ -32,8 +32,8 @@ class CoinBaseAuthRepository @Inject constructor(
     ) = safeApiCall {
         api.getToken(code = code).also {
             it.body()?.let {
-                //saveAccessTokens(it.accessToken, it.refreshToken)
-                saveAccessTokens(TEMP_ACCESS_TOKEN, TEMP_REFRESH_TOKEN)   // Temp values for refresh & access tokens
+                saveAccessTokens(it.accessToken, it.refreshToken)
+                //saveAccessTokens(TEMP_ACCESS_TOKEN, TEMP_REFRESH_TOKEN)   // Temp values for refresh & access tokens
             }
         }
     }
