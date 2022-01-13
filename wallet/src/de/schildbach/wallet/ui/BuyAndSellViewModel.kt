@@ -25,6 +25,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseAuthRepository
 import org.dash.wallet.integration.uphold.data.UpholdClient
@@ -60,6 +61,7 @@ class BuyAndSellViewModel @Inject constructor(
         get() = _servicesList
 
     private var buyAndSellDashServicesModel = BuyAndSellDashServicesModel.getBuyAndSellDashServicesList()
+    val successfulCoinbaseLoginCallback = SingleLiveEvent<String>()
 
     init {
         isUserConnectedToCoinbase()
@@ -161,6 +163,7 @@ class BuyAndSellViewModel @Inject constructor(
         viewModelScope.launch {
             when (val response = coinBaseRepository.getUserToken(code)) {
                 is ResponseResource.Success -> {
+                    successfulCoinbaseLoginCallback.call()
                     _coinbaseIsConnected.value =
                         response.value.body()?.accessToken?.isEmpty()?.not()
                 }

@@ -340,6 +340,9 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 setLoginStatus(isNetworkOnline)
             }
         )
+        viewModel.successfulCoinbaseLoginCallback.observe(this){
+            startActivity(Intent(this, CoinbaseActivity::class.java))
+        }
     }
 
     fun setNetworkState(online: Boolean) {
