@@ -18,6 +18,7 @@ package org.dash.wallet.integration.coinbase_integration.repository
 
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
@@ -28,15 +29,24 @@ import retrofit2.Response
 import javax.inject.Inject
 
 class CoinBaseRepository @Inject constructor(
-    private val api: CoinBaseServicesApi,
+    private val servicesApi: CoinBaseServicesApi,
     private val authApi: CoinBaseAuthApi,
     private val userPreferences: Configuration,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
     private val commitBuyOrderMapper: CommitBuyOrderMapper
 ): CoinBaseRepositoryInt {
-    override suspend fun getUserAccount() = safeApiCall { api.getUserAccount() }
+    override suspend fun getUserAccount() = safeApiCall {
+        val apiResponse = servicesApi.getUserAccount()
+        val userAccountData = apiResponse.body()?.data?.firstOrNull {
+            it.balance?.currency?.equals(DASH_CURRENCY) ?: false
+        }
+        userAccountData?.also {
+            saveLastCoinbaseDashAccountBalance(it.balance?.amount)
+            saveUserAccountId(it.id)
+        }
+    }
 
-    override suspend fun getExchangeRates() = safeApiCall { api.getExchangeRates() }
+    override suspend fun getExchangeRates() = safeApiCall { servicesApi.getExchangeRates() }
 
     override suspend fun disconnectCoinbaseAccount() {
         userPreferences.setLastCoinBaseAccessToken(null)
@@ -55,28 +65,42 @@ class CoinBaseRepository @Inject constructor(
     }
 
     override suspend fun getActivePaymentMethods() = safeApiCall {
-        val apiResult = api.getActivePaymentMethods()
+        val apiResult = servicesApi.getActivePaymentMethods()
         apiResult?.data ?: emptyList()
     }
 
     override suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams) = safeApiCall {
-        val apiResult = api.placeBuyOrder(accountId = userPreferences.coinbaseUserAccountId, placeBuyOrderParams = placeBuyOrderParams)
+        val apiResult = servicesApi.placeBuyOrder(accountId = userPreferences.coinbaseUserAccountId, placeBuyOrderParams = placeBuyOrderParams)
         placeBuyOrderMapper.map(apiResult?.data)
     }
 
     override suspend fun commitBuyOrder(buyOrderId: String) = safeApiCall {
-        val commitBuyResult = api.commitBuyOrder(accountId = userPreferences.coinbaseUserAccountId, buyOrderId = buyOrderId)
+        val commitBuyResult = servicesApi.commitBuyOrder(accountId = userPreferences.coinbaseUserAccountId, buyOrderId = buyOrderId)
         commitBuyOrderMapper.map(commitBuyResult?.data)
     }
 
     override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams) = safeApiCall {
-        val apiResult = api.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams)
+        val apiResult = servicesApi.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams)
         apiResult.code()
     }
+
+    override suspend fun authenticateOnCoinbase(requestCode: String): ResponseResource<Boolean> = safeApiCall {
+        authApi.getToken(code = requestCode).also {
+            it.body()?.let { tokenResponse ->
+                userPreferences.setLastCoinBaseAccessToken(tokenResponse.accessToken)
+                userPreferences.setLastCoinBaseRefreshToken(tokenResponse.refreshToken)
+                //saveAccessTokens(TEMP_ACCESS_TOKEN, TEMP_REFRESH_TOKEN)   // Temp values for refresh & access tokens
+            }
+        }
+        userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+    }
+
+    override fun getUserLastCoinbaseBalance(): String = userPreferences.lastCoinbaseBalance ?: ""
+    override fun isUserConnected(): Boolean = userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
 }
 
 interface CoinBaseRepositoryInt {
-    suspend fun getUserAccount(): ResponseResource<Response<CoinBaseUserAccountInfo>>
+    suspend fun getUserAccount(): ResponseResource<CoinBaseUserAccountData?>
     suspend fun getExchangeRates(): ResponseResource<Response<CoinBaseUserAccountInfo>>
     suspend fun disconnectCoinbaseAccount()
     fun saveLastCoinbaseDashAccountBalance(amount: String?)
@@ -85,4 +109,7 @@ interface CoinBaseRepositoryInt {
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
     suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<Int>
+    suspend fun authenticateOnCoinbase(requestCode: String): ResponseResource<Boolean>
+    fun getUserLastCoinbaseBalance(): String
+    fun isUserConnected(): Boolean
 }

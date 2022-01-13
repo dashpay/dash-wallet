@@ -118,7 +118,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                     R.string.CreateـDashـAccount,
                     R.string.close
                 )
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(error)
+                safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(error))
             }
         )
 
@@ -132,7 +132,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                     R.string.add_payment_method,
                     R.string.close
                 )
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError)
+                safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError))
             }
         )
     }

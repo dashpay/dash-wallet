@@ -23,6 +23,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -70,8 +71,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     private var currentExchangeRate: ExchangeRate? = null
 
-    private lateinit var viewModel: BuyAndSellViewModel
-    private lateinit var liquidViewModel: LiquidViewModel
+    private val viewModel by viewModels<BuyAndSellViewModel>()
+    private val liquidViewModel by viewModels<LiquidViewModel>()
     private var isNetworkOnline: Boolean = true
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
@@ -136,6 +137,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         }
         dash_services_list.setHasFixedSize(true)
         dash_services_list.adapter = buyAndSellDashServicesAdapter
+
+        viewModel.showLoading.observe(this){ showDialog ->
+            if (showDialog) loadingDialog?.show()
+            else loadingDialog?.dismiss()
+        }
     }
 
     private fun onUpHoldItemClicked() {
@@ -184,9 +190,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     }
 
     fun initViewModel() {
-        viewModel = ViewModelProvider(this)[BuyAndSellViewModel::class.java]
-        liquidViewModel = ViewModelProvider(this)[LiquidViewModel::class.java]
-
         liquidViewModel.connectivityLiveData.observe(this) { isConnected ->
             if (isConnected != null) {
                 setNetworkState(isConnected)
@@ -201,11 +204,10 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                        // TODO: start progress bar
+                        loadingDialog?.show()
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            // TODO: hide progress bar
                             val balance = it.data.toString()
                             config.lastUpholdBalance = balance
                             viewModel.showRowBalance(
@@ -213,11 +215,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                 currentExchangeRate,
                                 balance
                             )
+                            loadingDialog?.dismiss()
                         }
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
-                            // TODO: error progress bar
 
                             // TODO: if the exception is UnknownHostException and isNetworkOnline is true
                             // then there is a problem contacting the server and we don't have
@@ -229,10 +231,10 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                     config.lastUpholdBalance
                                 )
                             }
+                            loadingDialog?.dismiss()
                         }
                     }
                     Status.CANCELED -> {
-                        // TODO: stop progress bar
                         config.lastUpholdBalance?.let {
                             viewModel.showRowBalance(
                                 BuyAndSellDashServicesModel.ServiceType.UPHOLD,
@@ -240,6 +242,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                 config.lastUpholdBalance
                             )
                         }
+                        loadingDialog?.dismiss()
                     }
                 }
             }
@@ -249,17 +252,16 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             if (it != null) {
                 when (it.status) {
                     Status.LOADING -> {
-                        // TODO: start progress bar
+                       loadingDialog?.show()
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            // TODO: finish progress bar
                             showDashLiquidBalance(it.data!!)
                         }
+                        loadingDialog?.dismiss()
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
-                            // TODO: error progress bar
                             if (it.exception is LiquidUnauthorizedException) {
                                 // do we need this
                                 setLoginStatus(isNetworkOnline)
@@ -287,15 +289,16 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                                     it1
                                 )
                             }
+                            loadingDialog?.dismiss()
                         }
                     }
                     Status.CANCELED -> {
-                        // TODO: stop progress bar
                         liquidViewModel.lastLiquidBalance?.let { it1 ->
                             viewModel.showRowBalance(BuyAndSellDashServicesModel.ServiceType.LIQUID, currentExchangeRate,
                                 it1
                             )
                         }
+                        loadingDialog?.dismiss()
                     }
                 }
             }
@@ -370,7 +373,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     }
 
     private fun setLoginStatus(online: Boolean) {
-        viewModel.setServicesStatus(online, LiquidClient.getInstance()!!.isAuthenticated, UpholdClient.getInstance().isAuthenticated)
+        viewModel.setServicesStatus(online, config.lastCoinbaseAccessToken.isNullOrEmpty().not(),
+            LiquidClient.getInstance()!!.isAuthenticated, UpholdClient.getInstance().isAuthenticated)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

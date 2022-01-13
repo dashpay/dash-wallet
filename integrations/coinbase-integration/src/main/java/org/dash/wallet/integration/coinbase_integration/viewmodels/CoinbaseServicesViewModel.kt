@@ -30,11 +30,9 @@ import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
-import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
@@ -72,16 +70,10 @@ class CoinbaseServicesViewModel @Inject constructor(
         when (val response = coinBaseRepository.getUserAccount()) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                val userAccountData = response.value.body()?.data?.firstOrNull {
-                    it.balance?.currency?.equals("DASH") ?: false
-                }
-
-                if (userAccountData == null) {
+                if (response.value == null) {
                     _userAccountError.value = true
                 } else {
-                    _user.value = userAccountData
-                    coinBaseRepository.saveLastCoinbaseDashAccountBalance(userAccountData.balance?.amount)
-                    coinBaseRepository.saveUserAccountId(userAccountData.id)
+                    _user.value = response.value
                 }
             }
             is ResponseResource.Failure -> {

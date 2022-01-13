@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
@@ -64,7 +65,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
 
     private var returnHome: Boolean = false
     private var liquidClient: LiquidClient? = null
-    private lateinit var viewModel: LiquidViewModel
+    private val viewModel by viewModels<LiquidViewModel>()
     private lateinit var viewBinding: ActivityLiquidBuyAndSellDashBinding
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private var countrySupportDialog: CountrySupportDialog? = null
@@ -151,7 +152,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     }
 
     fun initViewModel() {
-        viewModel = ViewModelProvider(this)[LiquidViewModel::class.java]
         viewModel.connectivityLiveData.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectivityState(isConnected)
