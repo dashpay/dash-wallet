@@ -1,4 +1,7 @@
 Dash Wallet
+v7.4.2
+* Fix crash when syncing Explore Dash database
+
 v7.4.1
 * add Explore Dash
 * Better error support for Uphold
