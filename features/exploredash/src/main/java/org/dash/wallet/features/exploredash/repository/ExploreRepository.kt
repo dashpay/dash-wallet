@@ -27,6 +27,7 @@ import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.lang.Exception
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -69,13 +70,20 @@ class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
             query.addListenerForSingleValueEvent(object: ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     val data = mutableListOf<T>()
-                    dataSnapshot.children.forEach {
-                        val merchant = it.getValue(valueType)!!
-                        data.add(merchant)
-                    }
 
-                    if (coroutine.isActive) {
-                        coroutine.resume(data)
+                    try {
+                        dataSnapshot.children.forEach {
+                            val merchant = it.getValue(valueType)!!
+                            data.add(merchant)
+                        }
+
+                        if (coroutine.isActive) {
+                            coroutine.resume(data)
+                        }
+                    } catch (ex: Exception) {
+                        if (coroutine.isActive) {
+                            coroutine.resumeWithException(ex)
+                        }
                     }
                 }
 
@@ -96,7 +104,11 @@ class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
             query.addListenerForSingleValueEvent(object: ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     if (coroutine.isActive) {
-                        coroutine.resume(dataSnapshot.getValue<Int>()!!)
+                        try {
+                            coroutine.resume(dataSnapshot.getValue<Int>()!!)
+                        } catch (ex: Exception) {
+                            coroutine.resumeWithException(ex)
+                        }
                     }
                 }
 
@@ -117,7 +129,11 @@ class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
             query.addListenerForSingleValueEvent(object: ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     if (coroutine.isActive) {
-                        coroutine.resume(dataSnapshot.getValue<Long>()!!)
+                        try {
+                            coroutine.resume(dataSnapshot.getValue<Long>()!!)
+                        } catch (ex: Exception) {
+                            coroutine.resumeWithException(ex)
+                        }
                     }
                 }
 
@@ -138,7 +154,11 @@ class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
             query.addListenerForSingleValueEvent(object: ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     if (coroutine.isActive) {
-                        coroutine.resume(dataSnapshot.getValue<Long>()!!)
+                        try {
+                            coroutine.resume(dataSnapshot.getValue<Long>()!!)
+                        } catch (ex: Exception) {
+                            coroutine.resumeWithException(ex)
+                        }
                     }
                 }
 
