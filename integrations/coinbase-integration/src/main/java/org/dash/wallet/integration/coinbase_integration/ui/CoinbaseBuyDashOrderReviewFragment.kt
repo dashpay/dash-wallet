@@ -26,6 +26,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.payment_method_picker.CardUtils
@@ -202,6 +203,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS -> {
                             dismiss()
+                            requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
                             requireActivity().finish()
                         }
                     }
