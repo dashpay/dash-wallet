@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui;
 
 import dagger.hilt.android.AndroidEntryPoint;
+import org.dash.wallet.common.services.LockScreenBroadcaster;
 import de.schildbach.wallet_test.R;
 
 import android.os.Bundle;
@@ -25,14 +26,13 @@ import android.os.Bundle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.ListFragment;
-import androidx.lifecycle.ViewModelProvider;
 
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import org.dash.wallet.common.ui.LockScreenViewModel;
+import javax.inject.Inject;
 
 
 /**
@@ -40,14 +40,18 @@ import org.dash.wallet.common.ui.LockScreenViewModel;
  */
 @AndroidEntryPoint
 public class FancyListFragment extends ListFragment {
-    protected LockScreenViewModel lockScreenViewModel;
     protected AlertDialog alertDialog;
+    @Inject
+    LockScreenBroadcaster lockScreenBroadcaster;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        lockScreenViewModel = new ViewModelProvider(requireActivity()).get(LockScreenViewModel.class);
-        lockScreenViewModel.getActivatingLockScreen().observe(this, unused -> alertDialog.dismiss());
+        lockScreenBroadcaster.getActivatingLockScreen().observe(this, unused -> {
+            if (alertDialog != null) {
+                alertDialog.dismiss();
+            }
+        });
     }
 
     @Override

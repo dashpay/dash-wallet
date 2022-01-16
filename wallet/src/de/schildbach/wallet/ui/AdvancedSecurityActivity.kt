@@ -115,10 +115,6 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
 
         updateView()
         setTitle(R.string.security_title)
-
-        lockScreenViewModel.activatingLockScreen.observe(this) {
-            finish()
-        }
     }
 
     private fun getSecurityLevel(): SecurityLevel {
@@ -250,5 +246,10 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
             3 -> 1f
             else -> 5f
         }
+    }
+
+    override fun onLockScreenActivated() {
+        super.onLockScreenActivated()
+        finish()
     }
 }

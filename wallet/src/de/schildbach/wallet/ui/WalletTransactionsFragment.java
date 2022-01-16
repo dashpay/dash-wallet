@@ -391,7 +391,7 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     public void onTransactionRowClicked(Transaction tx) {
         TransactionDetailsDialogFragment transactionDetailsDialogFragment =
                 TransactionDetailsDialogFragment.newInstance(tx.getTxId());
-        transactionDetailsDialogFragment.show(getChildFragmentManager(), null);
+        transactionDetailsDialogFragment.show(getParentFragmentManager(), null);
         analytics.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS, Bundle.EMPTY);
     }
 

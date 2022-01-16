@@ -21,12 +21,13 @@ import java.io.IOException;
 import java.util.Locale;
 
 import org.bitcoinj.crypto.DeterministicKey;
+import org.dash.wallet.common.services.LockScreenBroadcaster;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
-import org.dash.wallet.common.ui.LockScreenViewModel;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.ReportIssueDialogBuilder;
@@ -47,15 +48,17 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+
+import javax.inject.Inject;
 
 
 /**
  * @author Andreas Schildbach
  * Extending from PreferenceFragment doesn't allow us to get the lifecycleowner
  */
+@AndroidEntryPoint
 public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 	private Activity activity;
 	private WalletApplication application;
@@ -65,6 +68,9 @@ public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 	private static final String PREFS_KEY_EXTENDED_PUBLIC_KEY = "extended_public_key";
 
 	private static final Logger log = LoggerFactory.getLogger(DiagnosticsFragment.class);
+
+	@Inject
+	LockScreenBroadcaster lockScreenBroadcaster;
 
 	@Override
     public void onAttach(final Activity activity) {
@@ -82,12 +88,11 @@ public final class DiagnosticsFragment extends PreferenceFragmentCompat {
 	@Override
 	public void onViewCreated(@NonNull @NotNull View view, @Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
-		LockScreenViewModel lockScreenViewModel = new ViewModelProvider(requireActivity()).get(LockScreenViewModel.class);
-		lockScreenViewModel.getActivatingLockScreen().observe(getViewLifecycleOwner(), unused -> {
-			if (alertDialog != null)
-			alertDialog.dismiss();
-		}
-		);
+		lockScreenBroadcaster.getActivatingLockScreen().observe(getViewLifecycleOwner(), unused -> {
+			if (alertDialog != null) {
+				alertDialog.dismiss();
+			}
+		});
 	}
 
 	@Override

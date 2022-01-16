@@ -70,18 +70,13 @@ class ViewSeedActivity : BaseMenuActivity() {
         }
 
         setTitle(R.string.view_seed_title)
-
-        lockScreenViewModel.activatingLockScreen.observe(this) {
-            finish()
-        }
     }
 
     override fun onBackPressed() {
         finish()
     }
 
-    //override fun finish() {
-    //    super.finish()
-    //    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
-    //}
+    override fun onLockScreenActivated() {
+        finish()
+    }
 }
