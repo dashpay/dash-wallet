@@ -334,10 +334,10 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected open fun showLockedAlert(context: Context) {
-        BaseAlertDialogBuilder(requireContext()).apply {
-            title = getString(R.string.wallet_lock_wallet_disabled)
+        BaseAlertDialogBuilder(context).apply {
+            title = context.getString(R.string.wallet_lock_wallet_disabled)
             message = pinRetryController.getWalletTemporaryLockedMessage(context)
-            positiveText = getString(android.R.string.ok)
+            positiveText = context.getString(android.R.string.ok)
         }.buildAlertDialog().show()
     }
 }

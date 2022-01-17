@@ -28,11 +28,9 @@
     <string name="uphold_general_error_title">Hata</string>
     <string name="uphold_api_error_title">Uphold hatası</string>
     <string name="uphold_api_error_identity">Uphold hesabınız henüz onaylanmadı. Fonlarınız çekilemez.</string>
-    <string name="uphold_api_error_403_description">Uphold hesabınız incelenmek üzere işaretlendi. \n\nUphold hesabınızı kısıtladı ve geçici olarak fonlarınızı çekemeyeceksiniz. \n\nUphold bu sorunu hızla çözmenize yardımcı olmak için sizinle iletişime geçecektir.</string>
     <string name="uphold_api_error_400_description">Uphold fonlarınız 24 saat süreyle kilitlendi. %s\'e kadar \n\nsizin transfer için yeterli fonunuz olacaktır .</string>
     <string name="uphold_api_error_400_locked">Uphold fonları (%1$s%2$s) 65 güne kadar kitlendi.\n\n%3$s kadar bu transfer için yeterli bakiyeniz olacaktır.</string>
     <string name="uphold_api_error_400_tx_insufficentfunds">Bu transfer için yeterli paranız yok</string>
-    <string name="uphold_api_error_400_less_than_or_equal_to">Bu değer, %s\'ten küçük veya eşit olmalıdır.</string>
     <string name="uphold_api_error_400_tx_validation">Bu uygulamayla bu miktarı gönderemezsiniz (maksimum 3000$)</string>
     <string name="uphold_api_error_400_password_reset">Yakın zamanda yapılan bir şifre değişikliği nedeniyle, Uphold\'daki fonlarız kilitlendi. \n\nPara transferi yapabilmek için %s kadar beklemeniz gerekmektedir.</string>
     <string name="uphold_api_error_400_authentication_change">Yakın zamanda yapılan bir kimlik doğrulama yöntemi değişikliği nedeniyle Uphold fonlarınız kilitlendi. \n\nPara transferi yapabilmek için %s kadar beklemeniz gerekmektedir.</string>
