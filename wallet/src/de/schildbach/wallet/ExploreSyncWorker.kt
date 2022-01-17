@@ -32,13 +32,11 @@ import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.SearchResult
-import org.dash.wallet.features.exploredash.repository.AssetExploreDatabase
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.ATM_TABLE
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.DASH_DIRECT_TABLE
 import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.DCG_MERCHANT_TABLE
 import org.slf4j.LoggerFactory
-import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.math.ceil
 
@@ -82,7 +80,6 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
 
         try {
-            (exploreRepository as AssetExploreDatabase).contextRef = WeakReference(appContext)
             val lastDataUpdate = exploreRepository.getLastUpdate()
 
             if (lastSync >= lastDataUpdate) {

@@ -15,11 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+@file:Suppress("BlockingMethodInNonBlockingContext")
+
 package org.dash.wallet.features.exploredash.repository
 
 import android.content.Context
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -29,9 +32,9 @@ import javax.inject.Inject
 
 private val log = LoggerFactory.getLogger(AssetExploreDatabase::class.java)
 
-class AssetExploreDatabase @Inject constructor() : ExploreRepository {
+class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) : ExploreRepository {
 
-    var contextRef: WeakReference<Context?> = WeakReference(null)
+    var contextRef: WeakReference<Context> = WeakReference(context)
 
     override suspend fun <T> get(
         tableName: String,
