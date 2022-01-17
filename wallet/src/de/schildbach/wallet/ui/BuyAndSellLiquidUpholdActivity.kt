@@ -178,7 +178,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         viewModel.coinbaseIsConnected.value?.let {
             if (isNetworkOnline) {
                 if (it) {
-                    startActivity(Intent(this, CoinbaseActivity::class.java))
+                    startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
                 } else {
                     startActivityForResult(
                         Intent(this, CoinBaseWebClientActivity::class.java),
@@ -339,7 +339,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             }
         )
         viewModel.successfulCoinbaseLoginCallback.observe(this){
-            startActivity(Intent(this, CoinbaseActivity::class.java))
+            startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
         }
     }
 
@@ -414,14 +414,11 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == RESULT_CODE_GO_HOME) {
-            if(requestCode == USER_BUY_SELL_DASH){
-                log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
-                if (LiquidClient.getInstance()!!.isAuthenticated) {
-                    liquidViewModel.updateLiquidBalance()
-                }
+        if (requestCode == USER_BUY_SELL_DASH && resultCode == RESULT_CODE_GO_HOME) {
+            log.info("liquid: activity result for user buy sell dash was RESULT_CODE_GO_HOME")
+            if (LiquidClient.getInstance()!!.isAuthenticated) {
+                liquidViewModel.updateLiquidBalance()
             }
-
             setResult(RESULT_CODE_GO_HOME)
             finish()
         } else if (requestCode == COIN_BASE_AUTH) {
