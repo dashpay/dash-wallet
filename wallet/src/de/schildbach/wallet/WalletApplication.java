@@ -151,6 +151,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public void onCreate() {
         super.onCreate();
+        initLogging();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
@@ -222,7 +223,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         basicWalletInitalizationFinished = true;
 
         new LinuxSecureRandom(); // init proper random number generator
-        initLogging();
 
         if (!Constants.IS_PROD_BUILD) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()
