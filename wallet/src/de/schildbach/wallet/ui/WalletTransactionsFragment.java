@@ -154,8 +154,6 @@ public class WalletTransactionsFragment extends BaseLockScreenFragment implement
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setRetainInstance(true);
-
         adapter = new TransactionsAdapter(activity, wallet, application.maxConnectedPeers(), this);
         adapter.setShowTransactionRowMenu(true);
 
