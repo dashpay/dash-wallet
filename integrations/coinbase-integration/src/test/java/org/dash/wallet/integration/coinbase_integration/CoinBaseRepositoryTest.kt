@@ -1,4 +1,4 @@
-package org.dash.wallet.integration.coinbase_integration.repository
+package org.dash.wallet.integration.coinbase_integration
 
 import io.mockk.MockKAnnotations
 import io.mockk.coEvery
@@ -6,13 +6,11 @@ import io.mockk.coVerify
 import io.mockk.impl.annotations.MockK
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
-import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
-import org.dash.wallet.integration.coinbase_integration.TestUtils
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderParams
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import org.hamcrest.MatcherAssert.assertThat
