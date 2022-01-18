@@ -42,6 +42,7 @@ interface ExploreRepository {
         endBefore: Int,
         valueType: Class<T>
     ): List<T>
+    fun finish()
 }
 
 class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
@@ -196,4 +197,6 @@ class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
             }
         }
     }
+
+    override fun finish() {}
 }
