@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import android.app.Application
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -30,20 +29,17 @@ import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
-import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
-import java.util.*
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseServicesViewModel @Inject constructor(
-    application: Application,
-    private val coinBaseRepository: CoinBaseRepository,
-    private val exchangeRatesProvider: ExchangeRatesProvider,
+    private val coinBaseRepository: CoinBaseRepositoryInt,
+    val exchangeRatesProvider: ExchangeRatesProvider,
     val config: Configuration
-) : AndroidViewModel(application) {
+) : ViewModel() {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()
     val user: LiveData<CoinBaseUserAccountData>
