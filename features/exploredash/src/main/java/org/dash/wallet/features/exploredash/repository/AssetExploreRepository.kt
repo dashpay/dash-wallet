@@ -32,7 +32,8 @@ import javax.inject.Inject
 
 private val log = LoggerFactory.getLogger(AssetExploreDatabase::class.java)
 
-class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) : ExploreRepository {
+class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
+    ExploreRepository {
 
     private var contextRef: WeakReference<Context> = WeakReference(context)
 
@@ -49,11 +50,11 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
         return withContext(Dispatchers.IO) {
             val result = mutableListOf<T>()
             try {
-                if(startAt == 0) {
+                if (startAt == 0) {
                     if (::scanner.isInitialized) {
                         scanner.close()
                     }
-                    scanner = Scanner(contextRef.get()!!.assets.open("explore/$tableName.dat"))
+                    scanner = createScanner(tableName)
                     scanner.nextLine() // skip the update date
                     scanner.nextLine() // skip the data size
                 }
@@ -66,6 +67,10 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
                         break
                     }
                 }
+                if (!scanner.hasNextLine()) {
+                    scanner.close()
+                    println("ExploreSyncWorker\tclose1")
+                }
             } catch (ex: Exception) {
                 scanner.close()
                 log.error(ex.message, ex)
@@ -77,7 +82,7 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
     override suspend fun getDataSize(tableName: String): Int {
         return withContext(Dispatchers.IO) {
             try {
-                Scanner(contextRef.get()!!.assets.open("explore/$tableName.dat")).use {
+                createScanner(tableName).use {
                     it.nextLine() // skip the update date
                     if (it.hasNextLine()) { // second line is the the update date
                         val dataSize = it.nextLine()
@@ -98,7 +103,7 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
     override suspend fun getLastUpdate(tableName: String): Long {
         return withContext(Dispatchers.IO) {
             try {
-                Scanner(contextRef.get()!!.assets.open("explore/$tableName.dat")).use {
+                createScanner(tableName).use {
                     if (it.hasNextLine()) { // very first line is the the update date
                         val updateDate = it.nextLine()
                         return@withContext updateDate.toLong()
@@ -111,9 +116,7 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
         }
     }
 
-    override fun finish() {
-        if (::scanner.isInitialized) {
-            scanner.close()
-        }
+    private fun createScanner(tableName: String): Scanner {
+        return Scanner(contextRef.get()!!.assets.open("explore/$tableName.dat"))
     }
 }
