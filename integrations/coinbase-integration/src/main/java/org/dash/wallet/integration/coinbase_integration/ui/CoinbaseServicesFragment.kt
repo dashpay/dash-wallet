@@ -17,13 +17,13 @@
 package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
@@ -65,12 +65,9 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             viewModel.getPaymentMethods()
 
         }
-        viewModel.activePaymentMethods.observe(
-            viewLifecycleOwner,
-            EventObserver {
-                safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
-            }
-        )
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner){
+            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
+        }
 
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)

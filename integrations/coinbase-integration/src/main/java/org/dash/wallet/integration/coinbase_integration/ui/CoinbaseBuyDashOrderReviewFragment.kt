@@ -141,7 +141,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
         viewModel.placeBuyOrder.observe(viewLifecycleOwner){
-            it?.getContentIfNotHandled()?.updateOrderReviewUI()
+            it.updateOrderReviewUI()
             countDownTimer.start()
         }
     }
