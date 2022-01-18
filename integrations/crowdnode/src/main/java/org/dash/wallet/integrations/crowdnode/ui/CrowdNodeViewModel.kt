@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.params.MainNetParams
+import org.bitcoinj.params.TestNet3Params
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -63,12 +64,13 @@ class CrowdNodeViewModel @Inject constructor(
 
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
 
-    private val params = MainNetParams.get() // TODO
+    private val params = TestNet3Params.get() // TODO
     private val crowdNodeAddress = Address.fromBase58(params, CROWD_NODE_ADDRESS)
     private val accountAddress = getOrCreateAccountAddress()
 
     val dashAccountAddress: String = accountAddress.toBase58()
-    val needPassphraseBackUp = config.remindBackupSeed
+    val needPassphraseBackUp
+        get() = config.remindBackupSeed
 
     private val _hasEnoughBalance = MutableLiveData<Boolean>()
     val hasEnoughBalance: LiveData<Boolean>
@@ -112,11 +114,7 @@ class CrowdNodeViewModel @Inject constructor(
         Log.i("CROWDNODE", "crowdnode savedAddress: ${savedAddress}")
 
         return if (savedAddress.isNullOrEmpty()) {
-            var address: Address
-            val time = measureTimeMillis {
-                address = walletDataProvider.freshReceiveAddress()
-            }
-            Log.i("CROWDNODE", "freshReceiveAddress exec time: ${TimeUnit.MILLISECONDS.toSeconds(time)}")
+            val address = walletDataProvider.freshReceiveAddress()
             config.crowdNodeAccountAddress = address.toBase58()
             return address
         } else {

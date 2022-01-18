@@ -99,4 +99,12 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             binding.existingAccountImg.setColorFilter(resources.getColor(R.color.green_300, null))
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        displayNewAccountRequirements(
+            viewModel.needPassphraseBackUp,
+            viewModel.hasEnoughBalance.value ?: false
+        )
+    }
 }

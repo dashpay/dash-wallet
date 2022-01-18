@@ -17,12 +17,15 @@
 
 package de.schildbach.wallet.ui.staking
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.VerifySeedActivity
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
 
@@ -37,10 +40,7 @@ class StakingActivity : LockScreenActivity() {
 
         viewModel.navigationCallback.observe(this) { request ->
             when (request) {
-                NavigationRequest.BackupPassphrase -> {
-//                    val backupPassphraseIntent = Intent
-//                    startActivity(backupPassphraseIntent)
-                }
+                NavigationRequest.BackupPassphrase -> checkPinAndBackupPassphrase()
                 NavigationRequest.RestoreWallet -> {
 //                    val restoreWalletIntent = Intent
 //                    startActivity(restoreWalletIntent)
@@ -49,5 +49,16 @@ class StakingActivity : LockScreenActivity() {
         }
 
         setContentView(binding.root)
+    }
+
+    private fun checkPinAndBackupPassphrase() {
+        lifecycleScope.launch {
+            val pin = CheckPinDialog.showAsync(this@StakingActivity)
+
+            if (pin != null) {
+                val intent = VerifySeedActivity.createIntent(this@StakingActivity, pin)
+                startActivity(intent)
+            }
+        }
     }
 }

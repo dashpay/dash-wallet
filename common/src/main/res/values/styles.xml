@@ -924,6 +924,10 @@
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
+    <style name="TertiaryButtonTheme.Large.Blue">
+        <item name="titleTextColor">@color/dash_blue</item>
+    </style>
+
     <style name="Button.Tertiary" parent="Widget.AppCompat.Button.Borderless">
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:textColor">@color/button_text</item>
@@ -948,6 +952,10 @@
 
     <style name="Button.Tertiary.Large.Red">
         <item name="android:theme">@style/TertiaryButtonTheme.Large.Red</item>
+    </style>
+
+    <style name="Button.Tertiary.Large.Blue">
+        <item name="android:theme">@style/TertiaryButtonTheme.Large.Blue</item>
     </style>
 
     <style name="Button.Tertiary.Small">
