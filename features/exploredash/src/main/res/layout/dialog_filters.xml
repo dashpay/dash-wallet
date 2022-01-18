@@ -309,7 +309,7 @@
 
             <Button
                 android:id="@+id/reset_filters_btn"
-                style="@style/Button.Tertiary.Large.Red"
+                style="@style/Button.Tertiary.Large.Red300"
                 android:layout_marginTop="26dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
