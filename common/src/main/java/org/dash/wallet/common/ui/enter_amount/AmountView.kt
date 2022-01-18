@@ -147,8 +147,8 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     }
 
     private fun updateDashSymbols() {
-        binding.inputCurrencyToggle.isVisible = !dashToFiat && showCurrencySelector
-        binding.resultCurrencyToggle.isVisible = dashToFiat && showCurrencySelector
+        binding.inputCurrencyToggle.isVisible = showCurrencySelector
+        binding.resultCurrencyToggle.isVisible = showCurrencySelector
 
         if (dashToFiat) {
             binding.inputSymbolDash.isVisible = isCurrencySymbolFirst
@@ -176,7 +176,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     var showCurrencySelector: Boolean = true
         set(value) {
             field = value
-            binding.inputCurrencyToggle.isVisible = value
-            binding.resultCurrencyToggle.isVisible = value
+            binding.inputCurrencyToggle.isVisible = !dashToFiat && value
+            binding.resultCurrencyToggle.isVisible = dashToFiat && value
         }
 }
