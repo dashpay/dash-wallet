@@ -796,7 +796,7 @@
         <item name="android:lineSpacingExtra">3sp</item>
     </style>
 
-    <style name="Caption.dashBlue">
+    <style name="Caption.Blue">
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
