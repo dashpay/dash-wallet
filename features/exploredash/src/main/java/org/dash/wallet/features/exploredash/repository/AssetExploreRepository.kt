@@ -69,7 +69,6 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
                 }
                 if (!scanner.hasNextLine()) {
                     scanner.close()
-                    println("ExploreSyncWorker\tclose1")
                 }
             } catch (ex: Exception) {
                 scanner.close()
