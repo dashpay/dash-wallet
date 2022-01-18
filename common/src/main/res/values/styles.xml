@@ -721,7 +721,7 @@
         <item name="android:textColor">@color/green_300</item>
     </style>
 
-    <style name="Headline5.Bold.red">
+    <style name="Headline5.Bold.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -762,7 +762,7 @@
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
-    <style name="Body2.red_300">
+    <style name="Body2.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -785,7 +785,7 @@
         <item name="android:lineSpacingExtra">5sp</item>
     </style>
 
-    <style name="Subtitle2.Red">
+    <style name="Subtitle2.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -848,7 +848,7 @@
         <item name="android:letterSpacing">0.0</item>
     </style>
 
-    <style name="Overline.Red">
+    <style name="Overline.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -1020,7 +1020,7 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Red">
+    <style name="TertiaryButtonTheme.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
@@ -1036,7 +1036,7 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Small.Red">
+    <style name="TertiaryButtonTheme.Small.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
@@ -1044,7 +1044,7 @@
         <item name="cornerRadius">10dp</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Large.Red">
+    <style name="TertiaryButtonTheme.Large.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
