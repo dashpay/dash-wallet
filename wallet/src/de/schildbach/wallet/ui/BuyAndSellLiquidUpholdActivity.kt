@@ -45,7 +45,6 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
@@ -62,7 +61,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 @AndroidEntryPoint
-class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
+class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
     private var liquidClient: LiquidClient? = null
     private var loadingDialog: ProgressDialog? = null
@@ -261,14 +260,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                             if (it.exception is LiquidUnauthorizedException) {
                                 // do we need this
                                 setLoginStatus(isNetworkOnline)
-                                val viewModel =
-                                    ViewModelProvider(this@BuyAndSellLiquidUpholdActivity)[FancyAlertDialogViewModel::class.java]
-                                viewModel.onPositiveButtonClick.observe(
-                                    this@BuyAndSellLiquidUpholdActivity,
-                                    Observer {
-                                        startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
-                                    }
-                                )
                                 FancyAlertDialog.newInstance(
                                     org.dash.wallet.integration.liquid.R.string.liquid_logout_title,
                                     org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
@@ -436,4 +427,10 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         loadingDialog?.dismiss()
         super.onDestroy()
     }
+
+    override fun onPositiveButtonClick() {
+        startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
+    }
+
+    override fun onNegativeButtonClick() {}
 }
