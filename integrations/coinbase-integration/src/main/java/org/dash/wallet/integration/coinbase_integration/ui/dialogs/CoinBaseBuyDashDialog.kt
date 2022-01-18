@@ -89,7 +89,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     private fun setPurchaseError(){
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_failed)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_red)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
         binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
         binding.buyDialogContactCoinbaseSupportGroup.isGone = true
         binding.coinbaseBuyDialogNegativeButton.isGone = true
@@ -99,7 +99,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
         binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_red)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
         binding.buyDialogContactCoinbaseSupportGroup.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
