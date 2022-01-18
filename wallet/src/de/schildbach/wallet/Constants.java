@@ -30,7 +30,7 @@ import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.SchnappsDevNetParams;
+import org.bitcoinj.params.KrupnikDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -101,12 +101,12 @@ public final class Constants {
             case "schnapps": {
                 // Schnapps Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = SchnappsDevNetParams.get();
+                NETWORK_PARAMETERS = KrupnikDevNetParams.get();
                 // TODO: remove this next line when Platform Supports Core 0.18
                 NETWORK_PARAMETERS.setSupportsV18(false);
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
-                FILENAME_NETWORK_SUFFIX = "-schnapps";
+                FILENAME_NETWORK_SUFFIX = "-krupnik";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);

@@ -767,6 +767,15 @@ class CreateIdentityService : LifecycleService() {
                             // TODO: allow for received (IX_REQUEST) instantsend locks
                             // until the bug related to instantsend lock verification is fixed.
                             if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
+                                log.info("credit funding transaction verified with instantsend: ${cftx.txId}")
+                                confidence.removeEventListener(this)
+                                continuation.resumeWith(Result.success(true))
+                            }
+                        }
+
+                        TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> {
+                            if (confidence!!.isChainLocked) {
+                                log.info("credit funding transaction verified with chainlock: ${cftx.txId}")
                                 confidence.removeEventListener(this)
                                 continuation.resumeWith(Result.success(true))
                             }

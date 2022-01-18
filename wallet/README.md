@@ -129,7 +129,7 @@ The `_testNet3` flavor builds for the TestNet.
     # optional
     git clone -b evonet https://github.com/dashevo/dashj.git dashj
     cd dashj
-    mvn clean install -DskipTests
+    ./gradlew assemble
     cd ..
 
 	# each time or build in Android Studio

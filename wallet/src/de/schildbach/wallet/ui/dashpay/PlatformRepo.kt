@@ -57,7 +57,7 @@ import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNA
 import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_UNIQUE
 import org.dashj.platform.dpp.document.Document
-import org.dashj.platform.dpp.errors.InvalidIdentityAssetLockProofError
+import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofException
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.identity.IdentityPublicKey
@@ -553,10 +553,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val cr = contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
         log.info("contact request sent")
 
-        //Verify that the Contact Request was seen on the network
-        //val cr = contactRequests.watchContactRequest(Identifier.from(this.blockchainIdentity.uniqueId.bytes),
-        //        Identifier.from(toUserId), 100, 500, RetryDelayType.LINEAR)
-
         // add our receiving from this contact keychain if it doesn't exist
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
@@ -680,12 +676,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 try {
                     blockchainIdentity.registerIdentity(keyParameter)
                     return@withContext
-                } catch (e: InvalidIdentityAssetLockProofError) {
+                } catch (e: InvalidInstantAssetLockProofException) {
                     log.info("instantSendLock error: retry registerIdentity again ($i)")
                     delay(3000)
                 }
             }
-            throw InvalidIdentityAssetLockProofError("failed after 3 tries")
+            throw InvalidInstantAssetLockProofException("failed after 3 tries")
         }
     }
 
