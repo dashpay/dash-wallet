@@ -32,11 +32,9 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 
 open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
     @DrawableRes protected open val background: Int = R.drawable.white_background_rounded
-    protected lateinit var lockScreenViewModel: LockScreenViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        lockScreenViewModel = ViewModelProvider(requireActivity())[LockScreenViewModel::class.java]
         dialog?.setOnShowListener { dialog ->
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
@@ -69,9 +67,6 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
             }
         }
         view.findViewById<View>(R.id.collapse_button).setOnClickListener {
-            dismiss()
-        }
-        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
             dismiss()
         }
         dialog?.window?.callback = UserInteractionAwareCallback(dialog?.window?.callback, requireActivity())
