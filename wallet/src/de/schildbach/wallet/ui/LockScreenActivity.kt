@@ -27,16 +27,16 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
-import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.bottomsheet.BottomSheetDialog
+import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
@@ -51,7 +51,7 @@ import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
-import org.dash.wallet.common.ui.LockScreenViewModel
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.ui.dismissDialog
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -67,13 +67,12 @@ open class LockScreenActivity : SecureActivity() {
 
     @Inject lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
     protected lateinit var alertDialog: AlertDialog
-    protected var bottomSheetDialog: BottomSheetDialog? = null
-    protected var dialogFragment: DialogFragment? = null
 
     val walletApplication: WalletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
     private val autoLogout: AutoLogout = walletApplication.autoLogout
-    protected val lockScreenViewModel: LockScreenViewModel by viewModels()
+    @Inject
+    lateinit var lockScreenBroadcaster: LockScreenBroadcaster
 
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
@@ -138,9 +137,8 @@ open class LockScreenActivity : SecureActivity() {
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
         Log.e(this::class.java.simpleName, "OnLogoutListener")
-        lockScreenViewModel.activatingLockScreen.call()
         setLockState(State.USE_DEFAULT)
-        hideDialog()
+        onLockScreenActivated()
     }
 
     override fun onUserInteraction() {
@@ -203,13 +201,12 @@ open class LockScreenActivity : SecureActivity() {
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
             Log.e(this::class.java.simpleName, "Lock screen displayed")
-            lockScreenViewModel.activatingLockScreen.call()
             setLockState(State.USE_DEFAULT)
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
                 autoLogout.stopTimer()
             }
-            hideDialog()
+            onLockScreenActivated()
         } else {
             root_view_switcher.displayedChild = 1
             if (!keepUnlocked)
@@ -503,13 +500,26 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
-    open fun hideDialog() {
+    open fun onLockScreenActivated() {
         Log.e(this::class.java.simpleName, "Closing dialog")
         if (this::alertDialog.isInitialized){
             Log.e(this::class.java.simpleName, "Dialog is initialized")
             alertDialog.dismissDialog()
         }
-        bottomSheetDialog?.dismiss()
-        dialogFragment?.dismissAllowingStateLoss()
+
+        lockScreenBroadcaster.activatingLockScreen.call()
+        dismissDialogFragments(supportFragmentManager)
+    }
+
+    private fun dismissDialogFragments(fragmentManager: FragmentManager) {
+        fragmentManager.fragments
+            .takeIf { it.isNotEmpty() }
+            ?.forEach { fragment ->
+                if (fragment is DialogFragment) {
+                    fragment.dismissAllowingStateLoss()
+                } else if (fragment is NavHostFragment) {
+                    dismissDialogFragments(fragment.childFragmentManager)
+                }
+            }
     }
 }

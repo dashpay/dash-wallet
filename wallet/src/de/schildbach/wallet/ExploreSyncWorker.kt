@@ -45,7 +45,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
     companion object {
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
-        private const val PAGE_SIZE = 2000
+        private const val PAGE_SIZE = 10000
         const val SHARED_PREFS_NAME = "explore"
         const val PREFS_LAST_SYNC_KEY = "last_sync"
     }

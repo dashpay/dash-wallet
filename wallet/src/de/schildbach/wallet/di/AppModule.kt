@@ -27,8 +27,10 @@ import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -38,6 +40,10 @@ abstract class AppModule {
         fun provideApplication(
             @ApplicationContext context: Context
         ): WalletApplication = context as WalletApplication
+
+        @Singleton
+        @Provides
+        fun provideLockScreenBroadcaster(): LockScreenBroadcaster = LockScreenBroadcaster()
     }
 
     @Binds

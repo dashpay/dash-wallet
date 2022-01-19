@@ -36,7 +36,6 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 class FancyAlertDialog : DialogFragment() {
-    private val lockScreenViewModel by activityViewModels<LockScreenViewModel>()
     private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
 
     enum class Type {
@@ -115,9 +114,6 @@ class FancyAlertDialog : DialogFragment() {
             Type.PROGRESS -> {
                 setupProgress()
             }
-        }
-        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
-            dismiss()
         }
     }
 
