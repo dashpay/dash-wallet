@@ -28,6 +28,7 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import de.schildbach.wallet.Constants
@@ -70,6 +71,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     private var liquidClient: LiquidClient? = null
     private var loadingDialog: ProgressDialog? = null
+    private var bottomSheetDialog: BottomSheetDialog? = null
     private lateinit var application: WalletApplication
     private lateinit var config: Configuration
     private var upholdCurrencyArrayList = ArrayList<UpholdCurrencyResponse>()
@@ -548,6 +550,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 }
             })
         bottomSheetDialog?.show()
+    }
+
+    override fun onLockScreenActivated() {
+        super.onLockScreenActivated()
+        // TODO: replace with BottomSheetDialogFragment to dismiss automatically
+        bottomSheetDialog?.dismiss()
     }
 
     /**

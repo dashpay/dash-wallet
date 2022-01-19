@@ -50,15 +50,11 @@
 
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d merchant</item>
-        <item quantity="two">%d merchants</item>
-        <item quantity="few">%d merchants</item>
         <item quantity="other">%d merchants</item>
     </plurals>
 
     <plurals name="explore_atm_amount">
         <item quantity="one">%d ATM</item>
-        <item quantity="two">%d ATMs</item>
-        <item quantity="few">%d ATMs</item>
         <item quantity="other">%d ATMs</item>
     </plurals>
 
@@ -125,15 +121,11 @@
 
     <plurals name="radius_miles">
         <item quantity="one">%d mile</item>
-        <item quantity="two">%d miles</item>
-        <item quantity="few">%d miles</item>
         <item quantity="other">%d miles</item>
     </plurals>
 
     <plurals name="radius_kilometers">
         <item quantity="one">%d kilometer</item>
-        <item quantity="two">%d kilometers</item>
-        <item quantity="few">%d kilometers</item>
         <item quantity="other">%d kilometers</item>
     </plurals>
 

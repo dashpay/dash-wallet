@@ -23,7 +23,6 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -43,7 +42,6 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
-import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
 
@@ -85,7 +83,6 @@ open class CheckPinDialog : DialogFragment() {
 
     protected lateinit var viewModel: CheckPinViewModel
     protected lateinit var sharedModel: CheckPinSharedModel
-    protected lateinit var lockScreenViewModel: LockScreenViewModel
 
     protected val pinRetryController = PinRetryController.getInstance()
     protected var fingerprintHelper: FingerprintHelper? = null
@@ -114,7 +111,6 @@ open class CheckPinDialog : DialogFragment() {
         initViewModel()
         negativeButton.setText(R.string.button_cancel)
         negativeButton.setOnClickListener {
-            sharedModel.onCancelCallback.call()
             dismiss()
         }
         positiveButton.setOnClickListener {
@@ -218,18 +214,8 @@ open class CheckPinDialog : DialogFragment() {
         } ?: throw IllegalStateException("Invalid Activity")
     }
 
-    protected fun initLockScreenViewModel(activity: FragmentActivity) {
-        lockScreenViewModel = ViewModelProvider(activity)[LockScreenViewModel::class.java]
-        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner) {
-            Log.e(this::class.java.simpleName, "Dialog dismissed")
-            sharedModel.onCancelCallback.call()
-            dismiss()
-        }
-    }
-
     protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
         sharedModel = ViewModelProvider(activity)[CheckPinSharedModel::class.java]
-        initLockScreenViewModel(activity)
     }
 
     protected fun setState(newState: State) {
@@ -272,6 +258,7 @@ open class CheckPinDialog : DialogFragment() {
         if (::fingerprintCancellationSignal.isInitialized) {
             fingerprintCancellationSignal.cancel()
         }
+        sharedModel.onCancelCallback.call()
         super.onDismiss(dialog)
     }
 
@@ -334,10 +321,10 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected open fun showLockedAlert(context: Context) {
-        BaseAlertDialogBuilder(requireContext()).apply {
-            title = getString(R.string.wallet_lock_wallet_disabled)
+        BaseAlertDialogBuilder(context).apply {
+            title = context.getString(R.string.wallet_lock_wallet_disabled)
             message = pinRetryController.getWalletTemporaryLockedMessage(context)
-            positiveText = getString(android.R.string.ok)
+            positiveText = context.getString(android.R.string.ok)
         }.buildAlertDialog().show()
     }
 }

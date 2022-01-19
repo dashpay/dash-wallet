@@ -54,8 +54,8 @@ class ReceiveActivity : LockScreenActivity() {
         enterAmountSharedViewModel.buttonClickEvent.observe(this, Observer {
             val dashAmount = enterAmountSharedViewModel.dashAmount
             val fiatAmount = enterAmountSharedViewModel.exchangeRate?.coinToFiat(dashAmount)
-            dialogFragment = ReceiveDetailsDialog.createDialog(dashAmount, fiatAmount)
-            dialogFragment?.show(supportFragmentManager, "ReceiveDetailsDialog")
+            val dialogFragment = ReceiveDetailsDialog.createDialog(dashAmount, fiatAmount)
+            dialogFragment.show(supportFragmentManager, "ReceiveDetailsDialog")
         })
     }
 

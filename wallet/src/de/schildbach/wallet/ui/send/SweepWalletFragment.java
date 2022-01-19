@@ -163,7 +163,6 @@ public class SweepWalletFragment extends BaseLockScreenFragment {
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setRetainInstance(true);
         setHasOptionsMenu(true);
 
         backgroundThread = new HandlerThread("backgroundThread", Process.THREAD_PRIORITY_BACKGROUND);

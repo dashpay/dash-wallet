@@ -37,7 +37,6 @@ open class SendCoinsActivityViewModel(application: Application) : AndroidViewMod
     }
 
     val walletApplication = application as WalletApplication
-    val wallet = walletApplication.wallet!!
 
     val basePaymentIntent = MutableLiveData<Resource<PaymentIntent>>()
 

@@ -67,6 +67,7 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.util.WalletDataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
@@ -86,6 +87,8 @@ import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
+import javax.inject.Inject;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -138,6 +141,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     private AutoLogout autoLogout;
 
+    @Inject
+    AnalyticsService analyticsService;
+
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -151,6 +157,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public void onCreate() {
         super.onCreate();
+        initLogging();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
@@ -186,7 +193,11 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
             fullInitialization();
         }
 
-        syncExploreData();
+        try {
+            syncExploreData();
+        } catch (Exception ex) {
+            analyticsService.logError(ex, "syncExploreData");
+        }
     }
 
     private void syncExploreData() {
@@ -222,7 +233,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         basicWalletInitalizationFinished = true;
 
         new LinuxSecureRandom(); // init proper random number generator
-        initLogging();
 
         if (!Constants.IS_PROD_BUILD) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()

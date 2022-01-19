@@ -30,4 +30,8 @@
     <string name="button_dismiss">Rechazar</string>
     <string name="network_unavailable_return">Regresar a la billetera</string>
 
+    <!-- Design system UI elements -->
+    <string name="search_hint">Buscar</string>
+    <string name="permission_allow">Permitir</string>
+    <string name="permission_deny">Denigar</string>
 </resources>
