@@ -35,15 +35,12 @@ object MerchantType {
     const val BOTH = "both"
 }
 
-@Keep
 @Entity(
     tableName = "merchant",
     indices = [
         Index("latitude"),
         Index("longitude"),
-    ]
-)
-
+    ])
 data class Merchant(
     var deeplink: String? = "",
 
