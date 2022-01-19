@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.integration.coinbase_integration.ui
+package org.dash.wallet.integration.coinbase_integration.ui.dialogs
 
 import android.content.Intent
 import android.graphics.Color
@@ -29,13 +29,18 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
+import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseErrorBinding
 
 class CoinBaseErrorDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseErrorBinding::bind)
+    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -52,11 +57,24 @@ class CoinBaseErrorDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setOrHideIfEmpty(binding.coinbaseDialogTitle, "title")
-        setOrHideIfEmpty(binding.coinbaseDialogMessage, "message")
-        setOrHideIfEmpty(binding.coinbaseDialogIcon, "image")
-        setOrHideIfEmpty(binding.coinbaseDialogPositiveButton, "positive_text")
-        setOrHideIfEmpty(binding.coinbaseDialogNegativeButton, "negative_text")
+        lockScreenViewModel.activatingLockScreen.observe(this){
+            findNavController().navigateUp()
+        }
+
+        arguments?.let {
+            CoinBaseErrorDialogArgs.fromBundle(it).errorUiModel.apply {
+                binding.coinbaseDialogTitle.setText(this.title)
+                if (this.message.isNullOrEmpty()){
+                    binding.coinbaseDialogMessage.isVisible = false
+                } else {
+                    binding.coinbaseDialogMessage.text = this.message
+                    binding.coinbaseDialogMessage.isVisible = true
+                }
+                setOrHideIfEmpty(binding.coinbaseDialogIcon, this.image)
+                setOrHideIfEmpty(binding.coinbaseDialogPositiveButton, this.positiveButtonText)
+                setOrHideIfEmpty(binding.coinbaseDialogNegativeButton, this.negativeButtonText)
+            }
+        }
 
         binding.coinbaseDialogPositiveButton.setOnClickListener {
             val defaultBrowser = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER)
@@ -65,42 +83,36 @@ class CoinBaseErrorDialog : DialogFragment() {
         }
 
         binding.coinbaseDialogNegativeButton.setOnClickListener {
-            dismiss()
+            findNavController().navigateUp()
         }
     }
 
-    private fun setOrHideIfEmpty(view: View, argKey: String) {
-        if (arguments == null) {
-            view.visibility = View.GONE
-            return
-        }
-        arguments?.getInt(argKey)?.let {
-            if (it != 0) {
-                when (view) {
-                    is TextView -> view.setText(it)
-                    is ImageView -> view.setImageResource(it)
-                }
-                view.visibility = View.VISIBLE
-            } else {
-                view.visibility = View.GONE
+    private fun setOrHideIfEmpty(view: View, value: Int?) {
+        if (value != null) {
+            when (view) {
+                is TextView -> view.setText(value)
+                is ImageView -> view.setImageResource(value)
             }
+            view.isVisible = true
+        } else {
+            view.isVisible = false
         }
     }
     companion object {
 
         fun newInstance(
             @StringRes title: Int,
-            @StringRes message: Int,
+            message: String,
             @DrawableRes image: Int,
-            @StringRes positiveButtonText: Int,
-            @StringRes negativeButtonText: Int
+            @StringRes positiveButtonText: Int?,
+            @StringRes negativeButtonText: Int?
         ): CoinBaseErrorDialog {
             val args = Bundle().apply {
                 putInt("title", title)
-                putInt("message", message)
+                putString("message", message)
                 putInt("image", image)
-                putInt("positive_text", positiveButtonText)
-                putInt("negative_text", negativeButtonText)
+                positiveButtonText?.let { putInt("positive_text", it) }
+                negativeButtonText?.let { putInt("negative_text", it) }
             }
             return CoinBaseErrorDialog().apply {
                 arguments = args

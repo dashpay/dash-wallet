@@ -18,7 +18,6 @@
 package org.dash.wallet.common.ui.enter_amount
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -45,16 +44,19 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         private const val ARG_INITIAL_AMOUNT = "initial_amount"
         private const val ARG_DASH_TO_FIAT = "dash_to_fiat"
         private const val ARG_MAX_BUTTON_VISIBLE = "max_visible"
+        private const val ARG_SHOW_CURRENCY_SELECTOR_BUTTON = "show_currency_selector"
 
         @JvmStatic
         fun newInstance(
             dashToFiat: Boolean = false,
             initialAmount: Monetary? = null,
-            isMaxButtonVisible: Boolean = true
+            isMaxButtonVisible: Boolean = true,
+            showCurrencySelector: Boolean = true
         ): EnterAmountFragment {
             val args = bundleOf(
                 ARG_DASH_TO_FIAT to dashToFiat,
-                ARG_MAX_BUTTON_VISIBLE to isMaxButtonVisible
+                ARG_MAX_BUTTON_VISIBLE to isMaxButtonVisible,
+                ARG_SHOW_CURRENCY_SELECTOR_BUTTON to showCurrencySelector
             )
             initialAmount?.let { args.putSerializable(ARG_INITIAL_AMOUNT, it) }
 
@@ -72,8 +74,8 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val args = requireArguments()
-
         binding.maxButtonWrapper.isVisible = args.getBoolean(ARG_MAX_BUTTON_VISIBLE)
+        binding.amountView.showCurrencySelector = args.getBoolean(ARG_SHOW_CURRENCY_SELECTOR_BUTTON)
         val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
         binding.amountView.dashToFiat = dashToFiat
 

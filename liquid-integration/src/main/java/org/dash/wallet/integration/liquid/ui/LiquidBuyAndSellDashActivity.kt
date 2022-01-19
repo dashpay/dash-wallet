@@ -14,7 +14,6 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
@@ -37,7 +36,6 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.liquid.R
@@ -48,7 +46,7 @@ import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 @AndroidEntryPoint
-class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
+class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(LiquidBuyAndSellDashActivity::class.java)
@@ -178,14 +176,6 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                             viewModel.lastLiquidBalance?.let { it1 -> showLiquidBalance(it1) }
                         }
                         if (it.exception is LiquidUnauthorizedException) {
-                            val viewModel =
-                                ViewModelProvider(this@LiquidBuyAndSellDashActivity)[FancyAlertDialogViewModel::class.java]
-                            viewModel.onPositiveButtonClick.observe(
-                                this@LiquidBuyAndSellDashActivity,
-                                Observer {
-                                    startActivity(LiquidSplashActivity.createIntent(this@LiquidBuyAndSellDashActivity))
-                                    finish()
-                                })
                             FancyAlertDialog.newInstance(
                                 R.string.liquid_logout_title, R.string.liquid_forced_logout,
                                 R.drawable.ic_liquid_icon, android.R.string.ok, 0
@@ -611,4 +601,11 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         countrySupportDialog?.dismiss()
         super.onDestroy()
     }
+
+    override fun onPositiveButtonClick() {
+        startActivity(LiquidSplashActivity.createIntent(this@LiquidBuyAndSellDashActivity))
+        finish()
+    }
+
+    override fun onNegativeButtonClick() {}
 }

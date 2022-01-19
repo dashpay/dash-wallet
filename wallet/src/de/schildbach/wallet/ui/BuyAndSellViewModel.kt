@@ -20,11 +20,13 @@ import android.app.Application
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseAuthRepository
 import org.dash.wallet.integration.uphold.data.UpholdClient
@@ -60,6 +62,12 @@ class BuyAndSellViewModel @Inject constructor(
         get() = _servicesList
 
     private var buyAndSellDashServicesModel = BuyAndSellDashServicesModel.getBuyAndSellDashServicesList()
+
+    private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
+    val showLoading: LiveData<Boolean>
+        get() = _showLoading
+
+    val successfulCoinbaseLoginCallback = SingleLiveEvent<String>()
 
     init {
         isUserConnectedToCoinbase()
@@ -158,11 +166,14 @@ class BuyAndSellViewModel @Inject constructor(
     fun getUserLastCoinBaseAccountBalance() = coinBaseRepository.getUserLastCoinbaseBalance()
 
     fun loginToCoinbase(code: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
+            _showLoading.value = true
             when (val response = coinBaseRepository.getUserToken(code)) {
                 is ResponseResource.Success -> {
                     _coinbaseIsConnected.value =
                         response.value.body()?.accessToken?.isEmpty()?.not()
+                    successfulCoinbaseLoginCallback.call()
+                    _showLoading.value = false
                 }
                 is ResponseResource.Loading -> {
                 }

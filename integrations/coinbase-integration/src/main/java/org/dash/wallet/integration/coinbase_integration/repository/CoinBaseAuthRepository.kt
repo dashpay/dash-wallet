@@ -21,6 +21,7 @@ import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import javax.inject.Inject
 
+
 class CoinBaseAuthRepository @Inject constructor(
     private val api: CoinBaseAuthApi,
     private val userPreferences: Configuration

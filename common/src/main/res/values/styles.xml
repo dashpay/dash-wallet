@@ -534,6 +534,11 @@
         <item name="android:background">@drawable/white_button_bordered_background</item>
     </style>
 
+    <style name="DashButton.grey.Bordered" parent="DashButton.Blue">
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:background">@drawable/white_button_grey_bordered_background</item>
+    </style>
+
     <style name="DashButton.White.Borderedless" parent="DashButton.Blue">
         <item name="android:textColor">@drawable/white_button_bordered_text</item>
         <item name="android:background">@null</item>
@@ -703,6 +708,23 @@
         <item name="fontFamily">@font/montserrat_bold</item>
     </style>
 
+    <style name="Headline5" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/montserrat_medium</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Headline5.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="Headline5.Bold.green">
+        <item name="android:textColor">@color/green_300</item>
+    </style>
+
+    <style name="Headline5.Bold.Red300">
+        <item name="android:textColor">@color/red_300</item>
+    </style>
+
     <style name="Body1" parent="TextAppearance.MaterialComponents.Body1">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
@@ -736,6 +758,14 @@
         <item name="android:textColor">@color/steel_gray_500</item>
     </style>
 
+    <style name="Body2.dashBlue">
+        <item name="android:textColor">@color/dash_blue</item>
+    </style>
+
+    <style name="Body2.Red300">
+        <item name="android:textColor">@color/red_300</item>
+    </style>
+
     <style name="Body2.Medium">
         <item name="fontFamily">@font/montserrat_medium</item>
     </style>
@@ -755,7 +785,7 @@
         <item name="android:lineSpacingExtra">5sp</item>
     </style>
 
-    <style name="Subtitle2.Red">
+    <style name="Subtitle2.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -764,6 +794,10 @@
         <item name="android:textColor">@color/gray_900</item>
         <item name="android:letterSpacing">0.0</item>
         <item name="android:lineSpacingExtra">3sp</item>
+    </style>
+
+    <style name="Caption.Blue">
+        <item name="android:textColor">@color/dash_blue</item>
     </style>
 
     <style name="Caption.Gray600">
@@ -814,7 +848,7 @@
         <item name="android:letterSpacing">0.0</item>
     </style>
 
-    <style name="Overline.Red">
+    <style name="Overline.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -986,7 +1020,7 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Red">
+    <style name="TertiaryButtonTheme.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
@@ -1002,7 +1036,7 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Small.Red">
+    <style name="TertiaryButtonTheme.Small.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
@@ -1010,7 +1044,7 @@
         <item name="cornerRadius">10dp</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Large.Red">
+    <style name="TertiaryButtonTheme.Large.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
@@ -1036,8 +1070,8 @@
         <item name="android:theme">@style/TertiaryButtonTheme.Large</item>
     </style>
 
-    <style name="Button.Tertiary.Large.Red">
-        <item name="android:theme">@style/TertiaryButtonTheme.Large.Red</item>
+    <style name="Button.Tertiary.Large.Red300">
+        <item name="android:theme">@style/TertiaryButtonTheme.Large.Red300</item>
     </style>
 
     <style name="Button.Tertiary.Small">
@@ -1050,8 +1084,8 @@
         <item name="android:theme">@style/TertiaryButtonTheme.Small.Blue</item>
     </style>
 
-    <style name="Button.Tertiary.Small.Red">
-        <item name="android:theme">@style/TertiaryButtonTheme.Small.Red</item>
+    <style name="Button.Tertiary.Small.Red300">
+        <item name="android:theme">@style/TertiaryButtonTheme.Small.Red300</item>
     </style>
 
     <style name="Button.Tertiary.ExtraSmall">
@@ -1085,5 +1119,14 @@
 
     <style name="bottomSheetStyleWrapper" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="FullScreenDialog" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowCloseOnTouchOutside">false</item>
     </style>
 </resources>

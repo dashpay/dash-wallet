@@ -23,6 +23,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -44,7 +45,6 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.FancyAlertDialogViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 @AndroidEntryPoint
-class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
+class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
     private var liquidClient: LiquidClient? = null
     private var loadingDialog: ProgressDialog? = null
@@ -70,8 +70,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
 
     private var currentExchangeRate: ExchangeRate? = null
 
-    private lateinit var viewModel: BuyAndSellViewModel
-    private lateinit var liquidViewModel: LiquidViewModel
+    private val viewModel by viewModels<BuyAndSellViewModel>()
+    private val liquidViewModel by viewModels<LiquidViewModel>()
     private var isNetworkOnline: Boolean = true
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
@@ -134,7 +134,13 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         if (!LiquidConstants.hasValidCredentials() || !UpholdConstants.hasValidCredentials()) {
             keys_missing_error.isVisible = true
         }
+        dash_services_list.setHasFixedSize(true)
         dash_services_list.adapter = buyAndSellDashServicesAdapter
+
+        viewModel.showLoading.observe(this){ showDialog ->
+            if (showDialog) loadingDialog?.show()
+            else loadingDialog?.dismiss()
+        }
     }
 
     private fun onUpHoldItemClicked() {
@@ -171,7 +177,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         viewModel.coinbaseIsConnected.value?.let {
             if (isNetworkOnline) {
                 if (it) {
-                    startActivity(Intent(this, CoinbaseActivity::class.java))
+                    startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
                 } else {
                     startActivityForResult(
                         Intent(this, CoinBaseWebClientActivity::class.java),
@@ -183,9 +189,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     }
 
     fun initViewModel() {
-        viewModel = ViewModelProvider(this)[BuyAndSellViewModel::class.java]
-        liquidViewModel = ViewModelProvider(this)[LiquidViewModel::class.java]
-
         liquidViewModel.connectivityLiveData.observe(this) { isConnected ->
             if (isConnected != null) {
                 setNetworkState(isConnected)
@@ -193,7 +196,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
         }
 
         viewModel.servicesList.observe(this) {
-            buyAndSellDashServicesAdapter.submitList(it)
+            buyAndSellDashServicesAdapter.submitList(it.toMutableList())
         }
 
         viewModel.upholdBalanceLiveData.observe(this) {
@@ -204,7 +207,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            // TODO: hide progress bar
                             val balance = it.data.toString()
                             config.lastUpholdBalance = balance
                             viewModel.showRowBalance(
@@ -216,7 +218,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
-                            // TODO: error progress bar
 
                             // TODO: if the exception is UnknownHostException and isNetworkOnline is true
                             // then there is a problem contacting the server and we don't have
@@ -231,7 +232,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                         }
                     }
                     Status.CANCELED -> {
-                        // TODO: stop progress bar
                         config.lastUpholdBalance?.let {
                             viewModel.showRowBalance(
                                 BuyAndSellDashServicesModel.ServiceType.UPHOLD,
@@ -252,24 +252,14 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                     }
                     Status.SUCCESS -> {
                         if (!isFinishing) {
-                            // TODO: finish progress bar
                             showDashLiquidBalance(it.data!!)
                         }
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
-                            // TODO: error progress bar
                             if (it.exception is LiquidUnauthorizedException) {
                                 // do we need this
                                 setLoginStatus(isNetworkOnline)
-                                val viewModel =
-                                    ViewModelProvider(this@BuyAndSellLiquidUpholdActivity)[FancyAlertDialogViewModel::class.java]
-                                viewModel.onPositiveButtonClick.observe(
-                                    this@BuyAndSellLiquidUpholdActivity,
-                                    Observer {
-                                        startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
-                                    }
-                                )
                                 FancyAlertDialog.newInstance(
                                     org.dash.wallet.integration.liquid.R.string.liquid_logout_title,
                                     org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
@@ -289,7 +279,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                         }
                     }
                     Status.CANCELED -> {
-                        // TODO: stop progress bar
                         liquidViewModel.lastLiquidBalance?.let { it1 ->
                             viewModel.showRowBalance(BuyAndSellDashServicesModel.ServiceType.LIQUID, currentExchangeRate,
                                 it1
@@ -340,6 +329,9 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
                 setLoginStatus(isNetworkOnline)
             }
         )
+        viewModel.successfulCoinbaseLoginCallback.observe(this){
+            startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
+        }
     }
 
     fun setNetworkState(online: Boolean) {
@@ -430,4 +422,15 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
             }
         }
     }
+
+    override fun onDestroy() {
+        loadingDialog?.dismiss()
+        super.onDestroy()
+    }
+
+    override fun onPositiveButtonClick() {
+        startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
+    }
+
+    override fun onNegativeButtonClick() {}
 }

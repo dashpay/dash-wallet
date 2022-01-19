@@ -95,7 +95,6 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         val padding = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
         updatePadding(left = padding, right = padding)
         updateCurrency()
-
         binding.convertDirectionBtn.setOnClickListener {
             dashToFiat = !dashToFiat
         }
@@ -148,8 +147,8 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     }
 
     private fun updateDashSymbols() {
-        binding.inputCurrencyToggle.isVisible = !dashToFiat
-        binding.resultCurrencyToggle.isVisible = dashToFiat
+        binding.inputCurrencyToggle.isVisible = showCurrencySelector
+        binding.resultCurrencyToggle.isVisible = showCurrencySelector
 
         if (dashToFiat) {
             binding.inputSymbolDash.isVisible = isCurrencySymbolFirst
@@ -173,4 +172,11 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             else -> "$input $currencySymbol"
         }
     }
+
+    var showCurrencySelector: Boolean = true
+        set(value) {
+            field = value
+            binding.inputCurrencyToggle.isVisible = !dashToFiat && value
+            binding.resultCurrencyToggle.isVisible = dashToFiat && value
+        }
 }

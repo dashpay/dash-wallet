@@ -37,11 +37,12 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 
 class FancyAlertDialog : DialogFragment() {
     private val lockScreenViewModel by activityViewModels<LockScreenViewModel>()
-    private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
+    var onFancyAlertButtonsClickListener: FancyAlertButtonsClickListener? = null
 
     enum class Type {
         INFO,
-        PROGRESS
+        PROGRESS,
+        ACTION
     }
 
     companion object {
@@ -71,6 +72,19 @@ class FancyAlertDialog : DialogFragment() {
             return FancyAlertDialog().apply {
                 arguments = args
                 show(fragmentManager, "progress")
+            }
+        }
+
+        @JvmStatic
+        fun newAction(@StringRes title: Int, @StringRes positiveButtonText: Int, @StringRes negativeButtonText: Int): FancyAlertDialog {
+            val args = Bundle().apply {
+                putString("type", Type.ACTION.name)
+                putInt("title", title)
+                putInt("positive_text", positiveButtonText)
+                putInt("negative_text", negativeButtonText)
+            }
+            return FancyAlertDialog().apply {
+                arguments = args
             }
         }
 
@@ -115,6 +129,9 @@ class FancyAlertDialog : DialogFragment() {
             Type.PROGRESS -> {
                 setupProgress()
             }
+            Type.ACTION -> {
+                setupAction()
+            }
         }
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
             dismiss()
@@ -139,11 +156,24 @@ class FancyAlertDialog : DialogFragment() {
         image.visibility = View.VISIBLE
         positive_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
         negative_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
+        }
+    }
+
+    private fun setupAction() {
+        progress.visibility = View.GONE
+        image.visibility = View.GONE
+        positive_button.setOnClickListener {
+            dismiss()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
+        }
+        negative_button.setOnClickListener {
+            dismiss()
+            onFancyAlertButtonsClickListener?.onNegativeButtonClick()
         }
     }
 
@@ -167,5 +197,10 @@ class FancyAlertDialog : DialogFragment() {
                 setCanceledOnTouchOutside(false)
             }
         }
+    }
+
+    interface FancyAlertButtonsClickListener {
+        fun onPositiveButtonClick()
+        fun onNegativeButtonClick()
     }
 }
