@@ -27,7 +27,6 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
@@ -82,13 +81,10 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
             viewModel.onContinueClicked(pair.second,binding.paymentMethodPicker.selectedMethodIndex)
         }
 
-        viewModel.placeBuyOrder.observe(
-            viewLifecycleOwner, EventObserver {
-                    safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
-                        binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex],
-                        it))
-            }
-        )
+        viewModel.placeBuyOrder.observe(viewLifecycleOwner) {
+            safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
+                binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex], it))
+        }
 
 
         viewModel.showLoading.observe(

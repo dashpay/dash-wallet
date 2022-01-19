@@ -27,4 +27,6 @@
         <attr format="boolean" name="nk_functionEnabled" />
         <attr format="boolean" name="nk_decSeparatorEnabled" />
     </declare-styleable>
+
+    <attr format="color" name="disabledBackgroundColor"/>
 </resources>

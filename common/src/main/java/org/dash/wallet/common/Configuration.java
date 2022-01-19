@@ -95,7 +95,6 @@ public class Configuration {
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
     public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
     public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
-    public static final String PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED = "coinbase_is_temp_refreshed_token_used";
 
 
 
@@ -105,6 +104,11 @@ public class Configuration {
     public static final String PREFS_KEY_SEND_PAYMENT_EXCHANGE_CURRENCY = "send_payment_exchange_currency";
     public static final String PREFS_KEY_DEFAULT_FIAT_CURRENCY_CHANGED = "fiat_currency_changed";
     public static final String PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED = "current_fiat_currency_changed";
+
+    // Explore Dash
+    public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
+    public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
+
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration(final SharedPreferences prefs, final Resources res) {
@@ -553,19 +557,26 @@ public class Configuration {
         return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
     }
 
+    public boolean hasExploreDashInfoScreenBeenShown() {
+        return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
+    }
+
+    public void setHasExploreDashInfoScreenBeenShown(boolean isShown){
+        prefs.edit().putBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, isShown).apply();
+    }
+
+    public boolean hasExploreDashLocationDialogBeenShown() {
+        return prefs.getBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, false);
+    }
+
+    public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
+        prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
+    }
     public void setCoinBaseUserAccountId(String accountId) {
         prefs.edit().putString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, accountId).apply();
     }
 
     public String getCoinbaseUserAccountId(){
         return prefs.getString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, null);
-    }
-
-    public boolean getHasTempTokenBeenUsed(){
-        return prefs.getBoolean(PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED, false);
-    }
-
-    public void setHasTempTokenBeenUsed(boolean hasTokenBeenUsed){
-        prefs.edit().putBoolean(PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED, hasTokenBeenUsed).apply();
     }
 }

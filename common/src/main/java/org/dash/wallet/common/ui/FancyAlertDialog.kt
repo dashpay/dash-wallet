@@ -37,7 +37,6 @@ import org.dash.wallet.common.UserInteractionAwareCallback
 
 class FancyAlertDialog : DialogFragment() {
     private val lockScreenViewModel by activityViewModels<LockScreenViewModel>()
-    private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
     var onFancyAlertButtonsClickListener: FancyAlertButtonsClickListener? = null
 
     enum class Type {
@@ -137,11 +136,6 @@ class FancyAlertDialog : DialogFragment() {
         lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
             dismiss()
         }
-
-        sharedViewModel.onPositiveButtonClick.observe(viewLifecycleOwner) {
-            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
-            dismiss()
-        }
     }
 
     private fun setOrHideIfEmpty(view: View, argKey: String) {
@@ -162,11 +156,11 @@ class FancyAlertDialog : DialogFragment() {
         image.visibility = View.VISIBLE
         positive_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
         negative_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
     }
 
@@ -175,11 +169,11 @@ class FancyAlertDialog : DialogFragment() {
         image.visibility = View.GONE
         positive_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
         negative_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onNegativeButtonClick.call()
+            onFancyAlertButtonsClickListener?.onNegativeButtonClick()
         }
     }
 
@@ -205,7 +199,8 @@ class FancyAlertDialog : DialogFragment() {
         }
     }
 
-    public interface FancyAlertButtonsClickListener {
+    interface FancyAlertButtonsClickListener {
         fun onPositiveButtonClick()
+        fun onNegativeButtonClick()
     }
 }

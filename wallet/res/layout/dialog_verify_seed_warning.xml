@@ -3,6 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingBottom="18dp"
@@ -31,7 +32,7 @@
 
     <TextView
         android:id="@+id/textView"
-        style="@style/MontserratRegular.G900.15"
+        style="@style/Body2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="25dp"
@@ -69,7 +70,7 @@
 
     <TextView
         android:id="@+id/info_text_1"
-        style="@style/MontserratRegular.G900.13"
+        style="@style/Caption"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
@@ -93,7 +94,7 @@
 
     <TextView
         android:id="@+id/info_text_2"
-        style="@style/MontserratRegular.G900.13"
+        style="@style/Caption"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
@@ -118,7 +119,7 @@
 
     <TextView
         android:id="@+id/info_text_3"
-        style="@style/MontserratRegular.G900.13"
+        style="@style/Caption"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"

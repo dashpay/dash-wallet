@@ -25,7 +25,6 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
-import org.dash.wallet.integration.coinbase_integration.repository.TEMP_REFRESH_TOKEN
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
 import javax.inject.Inject
 
@@ -52,12 +51,7 @@ class TokenAuthenticator @Inject constructor(
     }
 
     private suspend fun getUpdatedToken(): ResponseResource<retrofit2.Response<TokenResponse>> {
-        val refreshToken = if (userPreferences.hasTempTokenBeenUsed) {
-            userPreferences.lastCoinbaseRefreshToken
-        } else {
-            userPreferences.hasTempTokenBeenUsed = true
-            TEMP_REFRESH_TOKEN
-        }
+        val refreshToken = userPreferences.lastCoinbaseRefreshToken
         return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
     }
 }

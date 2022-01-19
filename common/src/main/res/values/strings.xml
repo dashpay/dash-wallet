@@ -39,6 +39,9 @@
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>
+    <string name="permission_allow">Allow</string>
+    <string name="permission_deny">Deny</string>
+
     <string name="pay_with">Pay with</string>
     <string name="choose_payment_method">Choose Payment Method</string>
     <string name="debit_credit_card">Debit/Credit card</string>

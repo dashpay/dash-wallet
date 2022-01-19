@@ -18,7 +18,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/Caption.Gray400"
+        style="@style/Caption.SteelGray400"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
@@ -58,7 +58,7 @@
 
     <org.dash.wallet.common.ui.CurrencyTextView
         android:id="@+id/wallet_balance_local"
-        style="@style/MontserratRegular.G900.15"
+        style="@style/MontserratRegular.G900.17"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"

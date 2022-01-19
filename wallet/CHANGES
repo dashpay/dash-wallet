@@ -1,4 +1,14 @@
 Dash Wallet
+v7.4.1
+* add Explore Dash
+* Better error support for Uphold
+* Close all dialogs on autologout
+* Minimum Android version is 6.0
+* Improvements on Enter Amount Screen
+
+v7.4.0
+* Beta Program for Explore Dash
+
 v7.3.5
 * The 7.3.4 build on Google Play left out several fixes
 

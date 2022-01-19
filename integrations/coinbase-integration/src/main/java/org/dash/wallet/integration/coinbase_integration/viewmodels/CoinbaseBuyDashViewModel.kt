@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
@@ -48,8 +47,8 @@ class CoinbaseBuyDashViewModel @Inject constructor(
     val activePaymentMethods: LiveData<List<PaymentMethod>>
         get() = _activePaymentMethods
 
-    private val _placeBuyOrder: MutableLiveData<Event<PlaceBuyOrderUIModel>> = MutableLiveData()
-    val placeBuyOrder: LiveData<Event<PlaceBuyOrderUIModel>>
+    private val _placeBuyOrder: MutableLiveData<PlaceBuyOrderUIModel> = MutableLiveData()
+    val placeBuyOrder: LiveData<PlaceBuyOrderUIModel>
         get() = _placeBuyOrder
 
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
@@ -73,7 +72,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(
                 } else {
                     _showLoading.value = false
 
-                    _placeBuyOrder.value = Event(result.value)
+                    _placeBuyOrder.value = result.value
                 }
             }
             is ResponseResource.Failure -> {

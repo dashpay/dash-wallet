@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.uphold.data.UpholdClient
@@ -60,6 +61,8 @@ class BuyAndSellViewModel @Inject constructor(
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
+
+    val successfulCoinbaseLoginCallback = SingleLiveEvent<String>()
 
     init {
         isUserConnectedToCoinbase()
@@ -147,33 +150,17 @@ class BuyAndSellViewModel @Inject constructor(
     fun loginToCoinbase(code: String) {
         viewModelScope.launch(Dispatchers.Main) {
             _showLoading.value = true
-            when (val response = coinBaseRepository.authenticateOnCoinbase(code)) {
+            when (val response = coinBaseRepository.getUserToken(code)) {
                 is ResponseResource.Success -> {
-                    getUserCoinbaseBalance()
                     _coinbaseIsConnected.value = response.value
+                    successfulCoinbaseLoginCallback.call()
+                    _showLoading.value = false
                 }
 
                 is ResponseResource.Failure -> {
                     _showLoading.value = false
                     _coinbaseIsConnected.value = false
                 }
-            }
-        }
-    }
-
-    private suspend fun getUserCoinbaseBalance() {
-        when (val response = coinBaseRepository.getUserAccount()) {
-            is ResponseResource.Success -> {
-                val userAccountData = response.value
-                //TODO: Handle use-case: failure to get user data and hence no balance to display in Buy & Sell Dash UI
-                if (userAccountData == null){
-
-                }
-
-                _showLoading.value = false
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
             }
         }
     }

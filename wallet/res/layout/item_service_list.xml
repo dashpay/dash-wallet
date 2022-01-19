@@ -52,7 +52,7 @@
 
     <TextView
         android:id="@+id/connected"
-        style="@style/MontserratRegular.G900.10"
+        style="@style/Overline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:drawablePadding="5dp"
@@ -66,7 +66,7 @@
 
     <TextView
         android:id="@+id/disconnected"
-        style="@style/MontserratRegular.G900.10"
+        style="@style/Overline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:drawablePadding="5dp"
@@ -120,7 +120,7 @@
 
     <TextView
         android:id="@+id/last_known_balance"
-        style="@style/Overline.Red"
+        style="@style/Overline.Red300"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/last_known_balance"
