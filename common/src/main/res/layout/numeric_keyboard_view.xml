@@ -1,4 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2019 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -6,7 +22,7 @@
     android:layout_height="wrap_content"
     android:padding="16dp"
     android:stretchColumns="*"
-    tools:context="de.schildbach.wallet.ui.widget.NumericKeyboardView"
+    tools:context="org.dash.wallet.common.ui.enter_amount.NumericKeyboardView"
     tools:parentTag="android.widget.TableLayout"
     tools:ignore="HardcodedText">
 
@@ -107,7 +123,7 @@
             style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/button_cancel"
+            android:text="@android:string/cancel"
             android:textColor="@color/keyboard_button" />
 
         <Button
@@ -124,8 +140,9 @@
             style="@style/NewMontserratButton.Secondary.Inverted.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:srcCompat="@drawable/ic_backspace"
+            app:srcCompat="@drawable/ic_delete_backward"
             android:textColor="@color/keyboard_button"
+            app:tint="@color/keyboard_button"
             tools:ignore="ContentDescription" />
     </TableRow>
 

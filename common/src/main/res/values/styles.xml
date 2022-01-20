@@ -225,7 +225,8 @@
     </style>
 
     <style name="NewMontserratButton.Secondary.Inverted.Large" parent="NewMontserratButton.Secondary.Inverted">
-        <item name="android:textSize">18sp</item>
+        <item name="android:textSize">@dimen/keyboard_button_font_size</item>
+        <item name="android:minHeight">@dimen/keyboard_button_min_height</item>
     </style>
 
     <style name="MontserratButton.Inverted">
@@ -649,6 +650,22 @@
         <item name="cardElevation">5dp</item>
     </style>
 
+    <style name="CardViewRaised.Radius15">
+        <item name="cardCornerRadius">15dp</item>
+    </style>
+
+    <style name="EncircledIconTheme">
+        <item name="backgroundColor">@color/steel_gray_40</item>
+        <item name="strokeColor">@color/steel_gray_40</item>
+        <item name="cornerRadius">15dp</item>
+    </style>
+
+    <style name="EncircledIconSelectedTheme">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@color/dash_blue</item>
+        <item name="cornerRadius">15dp</item>
+    </style>
+
     <!-- Typography -->
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
@@ -676,6 +693,10 @@
     <style name="Body1" parent="TextAppearance.MaterialComponents.Body1">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="Body1.SteelGray">
+        <item name="android:textColor">@color/steel_gray_500</item>
     </style>
 
     <style name="Body1.SemiBold">
@@ -754,6 +775,11 @@
     <style name="Caption.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
     </style>
+
+    <style name="Caption.SteelGray400">
+        <item name="android:textColor">@color/steel_gray_400</item>
+    </style>
+
 
     <style name="Caption.SemiBold.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
@@ -864,6 +890,64 @@
     </style>
 
 
+    <!-- Secondary -->
+
+    <style name="SecondaryButtonTheme">
+        <item name="cornerRadius">8dp</item>
+        <item name="titleTextColor">@color/gray_900</item>
+        <item name="strokeColor">@color/gray_900</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+    </style>
+
+    <style name="SecondaryButtonTheme.Small">
+        <item name="cornerRadius">6dp</item>
+    </style>
+
+    <style name="SecondaryButtonTheme.Small.Blue">
+        <item name="titleTextColor">@color/dash_blue</item>
+        <item name="strokeColor">@color/dash_blue</item>
+    </style>
+
+    <style name="Button.Secondary" parent="Widget.AppCompat.Button.Borderless">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:textColor">@color/button_text</item>
+        <item name="android:background">@drawable/rounded_ripple_background</item>
+        <item name="android:theme">@style/SecondaryButtonTheme</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:minWidth">72dp</item>
+    </style>
+
+    <style name="Button.Secondary.Small">
+        <item name="android:textSize">13sp</item>
+        <item name="android:minHeight">30dp</item>
+        <item name="android:minWidth">60dp</item>
+        <item name="android:theme">@style/SecondaryButtonTheme.Small</item>
+    </style>
+
+    <style name="Button.Secondary.Small.Blue">
+        <item name="android:theme">@style/SecondaryButtonTheme.Small.Blue</item>
+    </style>
+
+    <style name="SecondaryButtonTheme.Small.Round">
+        <item name="titleTextColor">@color/gray_900</item>
+        <item name="strokeColor">@color/steel_gray_150</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <style name="Button.Secondary.Small.Round">
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+        <item name="android:minHeight">20dp</item>
+        <item name="android:minWidth">20dp</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:theme">@style/SecondaryButtonTheme.Small.Round</item>
+    </style>
+
+
     <!-- Tertiary -->
 
     <style name="TertiaryButtonTheme">
@@ -949,6 +1033,13 @@
         <item name="android:paddingStart">8dp</item>
         <item name="android:paddingEnd">8dp</item>
         <item name="android:theme">@style/TertiaryButtonTheme.ExtraSmall</item>
+    </style>
+
+    <style name="Button.Tertiary.Square">
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+        <item name="android:minHeight">20dp</item>
+        <item name="android:minWidth">20dp</item>
     </style>
 
     <style name="DialogCloseButton">
