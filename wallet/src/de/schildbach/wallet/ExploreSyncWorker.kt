@@ -74,11 +74,14 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         log.info("Sync Explore Dash started")
 
+        var merchantDataSizeDB = 0
+        var lastSync = 0L
+        var lastDataUpdate = 0L
         try {
             exploreRepository.init()
 
-            val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
-            val lastDataUpdate = exploreRepository.getLastUpdate()
+            lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
+            lastDataUpdate = exploreRepository.getLastUpdate()
 
             if (lastSync >= lastDataUpdate) {
                 log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
@@ -86,7 +89,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             }
 
             val merchantDao = entryPoint.merchantDao()
-            val merchantDataSizeDB = merchantDao.getCount()
+            merchantDataSizeDB = merchantDao.getCount()
 
             val tableSyncWatch = Stopwatch.createStarted()
 
@@ -139,7 +142,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             return@withContext Result.success()
 
         } catch (ex: Exception) {
-            analytics.logError(ex)
+            analytics.logError(ex, "syncing from $merchantDataSizeDB ($lastSync/$lastDataUpdate")
             log.info("Sync Explore Dash not fully finished: ${ex.message}")
             return@withContext Result.failure()
         }
