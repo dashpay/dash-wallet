@@ -204,7 +204,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
             syncExploreData();
         } catch (Exception ex) {
             log.error(ex.getMessage(), ex);
-            analyticsService.logError(ex, "syncExploreData");
+            CrashReporter.saveBackgroundTrace(ex, packageInfo);
         }
     }
 
