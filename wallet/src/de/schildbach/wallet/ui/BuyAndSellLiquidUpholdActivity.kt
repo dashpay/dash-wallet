@@ -27,7 +27,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
@@ -59,6 +58,7 @@ import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
+import kotlin.concurrent.schedule
 
 @AndroidEntryPoint
 class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
@@ -72,7 +72,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
 
     private val viewModel by viewModels<BuyAndSellViewModel>()
     private val liquidViewModel by viewModels<LiquidViewModel>()
-    private var isNetworkOnline: Boolean = true
+    private var isDeviceConnectedToInternet: Boolean = true
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
         BuyAndSellDashServicesAdapter(
@@ -106,7 +106,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
         application = WalletApplication.getInstance()
         config = application.configuration
         liquidClient = LiquidClient.getInstance()
-
         val actionBar = supportActionBar
         actionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
@@ -144,7 +143,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onUpHoldItemClicked() {
-        if (isNetworkOnline && UpholdConstants.hasValidCredentials()) {
+        if (isDeviceConnectedToInternet && UpholdConstants.hasValidCredentials()) {
             analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
                 AnalyticsConstants.Uphold.ENTER_CONNECTED
             } else {
@@ -156,7 +155,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onLiquidItemClicked() {
-        if (isNetworkOnline && LiquidConstants.hasValidCredentials()) {
+        if (isDeviceConnectedToInternet && LiquidConstants.hasValidCredentials()) {
             analytics.logEvent(
                 if (LiquidClient.getInstance()?.isAuthenticated == true) {
                     AnalyticsConstants.Liquid.ENTER_CONNECTED
@@ -175,9 +174,9 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
 
     private fun onCoinBaseItemClicked() {
         viewModel.coinbaseIsConnected.value?.let {
-            if (isNetworkOnline) {
+            if (isDeviceConnectedToInternet) {
                 if (it) {
-                    startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
+                    launchCoinBasePortal()
                 } else {
                     startActivityForResult(
                         Intent(this, CoinBaseWebClientActivity::class.java),
@@ -214,8 +213,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
                                 currentExchangeRate,
                                 balance
                             )
-                            loadingDialog?.dismiss()
                         }
+                        loadingDialog?.dismiss()
                     }
                     Status.ERROR -> {
                         if (!isFinishing) {
@@ -230,8 +229,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
                                     config.lastUpholdBalance
                                 )
                             }
-                            loadingDialog?.dismiss()
                         }
+                        loadingDialog?.dismiss()
                     }
                     Status.CANCELED -> {
                         config.lastUpholdBalance?.let {
@@ -263,7 +262,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
                         if (!isFinishing) {
                             if (it.exception is LiquidUnauthorizedException) {
                                 // do we need this
-                                setLoginStatus(isNetworkOnline)
+                                setLoginStatus(isDeviceConnectedToInternet)
                                 FancyAlertDialog.newInstance(
                                     org.dash.wallet.integration.liquid.R.string.liquid_logout_title,
                                     org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
@@ -280,8 +279,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
                                     it1
                                 )
                             }
-                            loadingDialog?.dismiss()
                         }
+                        loadingDialog?.dismiss()
                     }
                     Status.CANCELED -> {
                         liquidViewModel.lastLiquidBalance?.let { it1 ->
@@ -318,7 +317,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
                         )
                     }
 
-                    viewModel.getUserLastCoinBaseAccountBalance()
+                    config.lastCoinbaseBalance
                         ?.let {
                             viewModel.showRowBalance(
                                 BuyAndSellDashServicesModel.ServiceType.COINBASE,
@@ -330,23 +329,22 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
             }
         )
 
-        viewModel.coinbaseIsConnected.observe(
-            this, {
-                setLoginStatus(isNetworkOnline)
+        viewModel.coinbaseIsConnected.observe(this){ setLoginStatus(isDeviceConnectedToInternet) }
+
+        viewModel.coinbaseAuthTokenCallback.observe(this) {
+            Timer().schedule(1000) {
+                launchCoinBasePortal()
             }
-        )
-        viewModel.successfulCoinbaseLoginCallback.observe(this){
-            startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
         }
     }
 
     fun setNetworkState(online: Boolean) {
         network_status_container.isVisible = !online
         setLoginStatus(online)
-        if (!isNetworkOnline && online) {
+        if (!isDeviceConnectedToInternet && online) {
             updateBalances()
         }
-        isNetworkOnline = online
+        isDeviceConnectedToInternet = online
     }
 
     private fun updateBalances() {
@@ -362,7 +360,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
 
     override fun onResume() {
         super.onResume()
-        setLoginStatus(isNetworkOnline)
+        setLoginStatus(isDeviceConnectedToInternet)
         updateBalances()
     }
 
@@ -430,9 +428,9 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
         }
     }
 
-    override fun onDestroy() {
-        loadingDialog?.dismiss()
-        super.onDestroy()
+    override fun onPause() {
+        viewModel.setLoadingState(false)
+        super.onPause()
     }
 
     override fun onPositiveButtonClick() {
@@ -440,4 +438,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     override fun onNegativeButtonClick() {}
+
+    private fun launchCoinBasePortal(){
+        startActivityForResult(Intent(this, CoinbaseActivity::class.java), USER_BUY_SELL_DASH)
+    }
 }

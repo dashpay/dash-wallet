@@ -84,17 +84,6 @@ class CoinBaseRepository @Inject constructor(
         apiResult.code()
     }
 
-    override suspend fun authenticateOnCoinbase(requestCode: String): ResponseResource<Boolean> = safeApiCall {
-        authApi.getToken(code = requestCode).also {
-            it.body()?.let { tokenResponse ->
-                userPreferences.setLastCoinBaseAccessToken(tokenResponse.accessToken)
-                userPreferences.setLastCoinBaseRefreshToken(tokenResponse.refreshToken)
-                //saveAccessTokens(TEMP_ACCESS_TOKEN, TEMP_REFRESH_TOKEN)   // Temp values for refresh & access tokens
-            }
-        }
-        userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
-    }
-
     override fun getUserLastCoinbaseBalance(): String = userPreferences.lastCoinbaseBalance ?: ""
     override fun isUserConnected(): Boolean = userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
 }
@@ -109,7 +98,6 @@ interface CoinBaseRepositoryInt {
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
     suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<Int>
-    suspend fun authenticateOnCoinbase(requestCode: String): ResponseResource<Boolean>
     fun getUserLastCoinbaseBalance(): String
     fun isUserConnected(): Boolean
 }

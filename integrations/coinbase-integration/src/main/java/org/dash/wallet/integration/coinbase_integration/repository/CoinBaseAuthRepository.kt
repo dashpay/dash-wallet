@@ -34,6 +34,7 @@ class CoinBaseAuthRepository @Inject constructor(
                 saveAccessTokens(it.accessToken, it.refreshToken)
             }
         }
+        userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
     }
 
     private fun saveAccessTokens(accessToken: String, refreshToken: String) {

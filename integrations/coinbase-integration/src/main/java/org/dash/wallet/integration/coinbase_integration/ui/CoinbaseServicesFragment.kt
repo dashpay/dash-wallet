@@ -17,7 +17,6 @@
 package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -33,8 +32,6 @@ import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoin
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
-import java.util.*
-import kotlin.concurrent.schedule
 
 @AndroidEntryPoint
 class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
@@ -55,10 +52,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         binding.disconnectLayout.setOnClickListener {
             viewModel.disconnectCoinbaseAccount()
-            // Use
-            Timer().schedule(1000) {
-                requireActivity().finish()
-            }
         }
 
         binding.buyDashBtn.setOnClickListener {
@@ -132,6 +125,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError))
             }
         )
+
+        viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner){
+            requireActivity().finish()
+        }
     }
 
     private fun setLocalFaitAmount(balance:String) {
@@ -153,5 +150,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
+    }
+
+    override fun onStop() {
+        dismissProgress()
+        super.onStop()
     }
 }

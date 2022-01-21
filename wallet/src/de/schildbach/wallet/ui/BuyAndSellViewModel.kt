@@ -26,7 +26,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseAuthRepository
 import org.dash.wallet.integration.uphold.data.UpholdClient
 import java.math.BigDecimal
 import javax.inject.Inject
@@ -37,7 +37,7 @@ import kotlin.coroutines.suspendCoroutine
  */
 @HiltViewModel
 class BuyAndSellViewModel @Inject constructor(
-    private val coinBaseRepository: CoinBaseRepository) : ViewModel() {
+    private val coinBaseRepository: CoinBaseAuthRepository) : ViewModel() {
 
     // TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
@@ -58,11 +58,15 @@ class BuyAndSellViewModel @Inject constructor(
 
     private var buyAndSellDashServicesModel = BuyAndSellDashServicesModel.getBuyAndSellDashServicesList()
 
-    private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
+    private var _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    val successfulCoinbaseLoginCallback = SingleLiveEvent<String>()
+    fun setLoadingState(show: Boolean){
+        _showLoading.value = show
+    }
+
+    val coinbaseAuthTokenCallback = SingleLiveEvent<Boolean>()
 
     init {
         isUserConnectedToCoinbase()
@@ -152,14 +156,17 @@ class BuyAndSellViewModel @Inject constructor(
             _showLoading.value = true
             when (val response = coinBaseRepository.getUserToken(code)) {
                 is ResponseResource.Success -> {
-                    _coinbaseIsConnected.value = response.value
-                    successfulCoinbaseLoginCallback.call()
-                    _showLoading.value = false
+                    if (response.value){
+                        _coinbaseIsConnected.value = true
+                        coinbaseAuthTokenCallback.call()
+                    } else {
+                        _coinbaseIsConnected.value = false
+                        _showLoading.value = false
+                    }
                 }
 
-                is ResponseResource.Failure -> {
+                is ResponseResource.Failure -> { //TODO If login failed, inform the user
                     _showLoading.value = false
-                    _coinbaseIsConnected.value = false
                 }
             }
         }

@@ -61,6 +61,7 @@ class CoinbaseServicesViewModel @Inject constructor(
         get() = _exchangeRate
 
     val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
+    val coinbaseLogOutCallback = SingleLiveEvent<Unit>()
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
@@ -79,10 +80,11 @@ class CoinbaseServicesViewModel @Inject constructor(
         }
     }
 
-    fun disconnectCoinbaseAccount() {
-        viewModelScope.launch {
-            coinBaseRepository.disconnectCoinbaseAccount()
-        }
+    fun disconnectCoinbaseAccount() = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
+        coinBaseRepository.disconnectCoinbaseAccount()
+        _showLoading.value = false
+        coinbaseLogOutCallback.call()
     }
 
     init {
