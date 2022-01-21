@@ -20,25 +20,21 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.common.base.Stopwatch
-import com.google.firebase.FirebaseException
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.AtmDao
-import org.dash.wallet.features.exploredash.data.BaseDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.SearchResult
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
-import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.ATM_TABLE
-import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.DASH_DIRECT_TABLE
-import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase.Tables.DCG_MERCHANT_TABLE
 import org.slf4j.LoggerFactory
 import java.util.*
-import kotlin.math.ceil
 
 class ExploreSyncWorker constructor(val appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -75,91 +71,78 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         EntryPointAccessors.fromApplication(appContext, ExploreSyncWorkerEntryPoint::class.java)
     }
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         log.info("Sync Explore Dash started")
-        val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
 
         try {
+            exploreRepository.init()
+
+            val lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
             val lastDataUpdate = exploreRepository.getLastUpdate()
 
             if (lastSync >= lastDataUpdate) {
                 log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
-                return Result.success()
+                return@withContext Result.success()
             }
 
-            val allSynced = maybeSyncTable(DCG_MERCHANT_TABLE, "DCG", Merchant::class.java, entryPoint.merchantDao())
-                         && maybeSyncTable(ATM_TABLE, "CoinFlip", Atm::class.java, entryPoint.atmDao())
-                         && maybeSyncTable(DASH_DIRECT_TABLE, "DashDirect", Merchant::class.java, entryPoint.merchantDao())
+            val merchantDao = entryPoint.merchantDao()
+            val merchantDataSizeDB = merchantDao.getCount()
 
-            return if (allSynced) {
-                preferences.edit().putLong(PREFS_LAST_SYNC_KEY, Calendar.getInstance().timeInMillis).apply()
-                log.info("Sync Explore Dash finished")
-                Result.success()
+            val tableSyncWatch = Stopwatch.createStarted()
+
+            if (merchantDataSizeDB == 0) {
+                val atmDao = entryPoint.atmDao()
+                atmDao.deleteAll()
+                val atmCache = mutableListOf<Atm>()
+                exploreRepository.getAtmData().collect {
+                    atmCache.add(it)
+                }
+                atmDao.save(atmCache)
+                tableSyncWatch.stop()
+                log.info("ATM sync took $tableSyncWatch (${atmCache.size} records)")
+                atmCache.clear()
+            }
+
+            tableSyncWatch.reset()
+            tableSyncWatch.start()
+
+            val merchantDataSize = exploreRepository.getMerchantDataSize()
+            if (merchantDataSizeDB == 0) {
+                merchantDao.deleteAll()
             } else {
-                log.info("Sync Explore Dash not fully finished")
-                Result.retry()
+                log.info("MERCHANT data partially synced ($merchantDataSizeDB of $merchantDataSize), continuing")
             }
+            val merchantCache = mutableListOf<Merchant>()
+            var counter = 0
+            exploreRepository.getMerchantData(merchantDataSizeDB).collect {
+                counter++
+                merchantCache.add(it)
+                if (merchantCache.size == PAGE_SIZE) {
+                    merchantDao.save(merchantCache)
+                    merchantCache.clear()
+                    log.info("MERCHANT $counter of ${merchantDataSize - merchantDataSizeDB} sync took $tableSyncWatch")
+                }
+            }
+            if (merchantCache.size > 0) {
+                merchantDao.save(merchantCache)
+                merchantCache.clear()
+            }
+            tableSyncWatch.stop()
+            log.info("MERCHANT sync took $tableSyncWatch ($counter records)")
+
+            preferences.edit()
+                .putLong(PREFS_LAST_SYNC_KEY, Calendar.getInstance().timeInMillis)
+                .apply()
+
+            log.info("Sync Explore Dash finished")
+
+            return@withContext Result.success()
+
         } catch (ex: Exception) {
-            log.info("Sync Explore Dash error: ${ex.message}")
             analytics.logError(ex)
-            return Result.retry()
-        }
-    }
-
-    private suspend fun <T: SearchResult> maybeSyncTable(
-        tableName: String,
-        source: String,
-        valueType: Class<T>,
-        dao: BaseDao<T>
-    ): Boolean {
-        return try {
-            val prefsLastSyncKey = "${PREFS_LAST_SYNC_KEY}_$tableName"
-            val lastSync = preferences.getLong(prefsLastSyncKey, 0)
-            val lastDataUpdate = exploreRepository.getLastUpdate(tableName)
-
-            if (lastSync < lastDataUpdate) {
-                log.info("Local $tableName data timestamp\t$lastSync (${Date(lastSync)})")
-                log.info("Remote $tableName data timestamp\t$lastDataUpdate (${Date(lastDataUpdate)})")
-                dao.deleteAll(source)
-                syncTable(tableName, valueType, dao)
-                preferences.edit().putLong(prefsLastSyncKey, lastDataUpdate).apply()
-                log.info("Sync $tableName finished")
-            } else {
-                log.info("Data $tableName timestamp $lastSync, nothing to sync (${Date(lastSync)})")
-            }
-            true
-        } catch (ex: Exception) {
-            log.error("Error while syncing ${tableName}: ${ex.message}")
-            analytics.logError(ex, tableName)
-            false
-        }
-    }
-
-    private suspend fun <T: SearchResult> syncTable(
-        tableName: String,
-        valueType: Class<T>,
-        dao: BaseDao<T>
-    ) {
-        val dataSize = exploreRepository.getDataSize(tableName)
-        val totalPages = ceil(dataSize.toDouble() / PAGE_SIZE).toInt()
-        log.info("$tableName $dataSize records in $totalPages chunks")
-        val tableSyncWatch = Stopwatch.createStarted()
-        var synced = 0
-
-        for (page in 0 until totalPages) {
-            val startAt = page * PAGE_SIZE
-            val endAt = startAt + PAGE_SIZE
-            log.info("$tableName chunk ${page + 1} of $totalPages ($startAt to $endAt)")
-            val data = exploreRepository.get(tableName, startAt, endAt, valueType)
-            synced += data.size
-            dao.save(data)
+            log.info("Sync Explore Dash not fully finished: ${ex.message}")
+            return@withContext Result.failure()
         }
 
-        if (synced != dataSize) {
-            throw FirebaseException("sync is broken, expected $dataSize records, got $synced")
-        }
-
-        tableSyncWatch.stop()
-        log.info("$tableName sync took $tableSyncWatch")
     }
 }
