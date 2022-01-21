@@ -160,7 +160,6 @@ class BuyAndSellViewModel @Inject constructor(
                         _coinbaseIsConnected.value = true
                         coinbaseAuthTokenCallback.call()
                     } else {
-                        _coinbaseIsConnected.value = false
                         _showLoading.value = false
                     }
                 }
