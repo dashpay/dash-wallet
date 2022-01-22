@@ -18,11 +18,8 @@
 package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.Entity
-import androidx.annotation.Keep
-import androidx.room.ColumnInfo
 import androidx.room.Ignore
 import androidx.room.Index
-import com.google.firebase.database.PropertyName
 
 object PaymentMethod {
     const val DASH = "dash"
@@ -43,20 +40,10 @@ object MerchantType {
     ])
 data class Merchant(
     var deeplink: String? = "",
-
-    @get:PropertyName("plus_code") @set:PropertyName("plus_code")
     var plusCode: String? = "",
-
-    @get:PropertyName("add_date") @set:PropertyName("add_date")
     var addDate: String? = "",
-
-    @get:PropertyName("update_date") @set:PropertyName("update_date")
     var updateDate: String? = "",
-
-    @get:PropertyName("payment_method") @set:PropertyName("payment_method")
     var paymentMethod: String? = "",
-
-    @get:PropertyName("merchant_id") @set:PropertyName("merchant_id")
     var merchantId: Long? = null,
 
     @Ignore
