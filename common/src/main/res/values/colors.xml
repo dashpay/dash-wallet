@@ -43,6 +43,7 @@
     <color name="gray_300">#99A2AD</color>
     <color name="gray_100">#E1E3E6</color>
     <color name="gray_40">#F2F3F5</color>
+    <color name="steel_gray_700">#434A52</color>
     <color name="steel_gray_500">#6D7885</color>
     <color name="steel_gray_400">#818C99</color>
     <color name="steel_gray_250">#A3ADB8</color>
@@ -90,4 +91,5 @@
     <color name="background_primary">#eff0f4</color>
     <color name="disabled_button_bg">#eeeeee</color>
     <color name="extra_small_btn_bg">#f2f9fd</color>
+    <color name="secondary_btn_border_color">#e1e3e6</color>
 </resources>

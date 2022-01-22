@@ -642,6 +642,7 @@
 
     <style name="ListViewButtonBackground" parent="WhiteBackground">
         <item name="cornerRadius">10dp</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="CardViewRaised" parent="Base.CardView">
@@ -664,6 +665,12 @@
         <item name="backgroundColor">@color/dash_blue</item>
         <item name="strokeColor">@color/dash_blue</item>
         <item name="cornerRadius">15dp</item>
+    </style>
+
+    <style name="DialogBackground">
+        <item name="backgroundColor">@color/white</item>
+        <item name="strokeColor">@color/white</item>
+        <item name="cornerRadius">14dp</item>
     </style>
 
     <!-- Typography -->
@@ -780,6 +787,9 @@
         <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
+    <style name="Caption.SteelGray700">
+        <item name="android:textColor">@color/steel_gray_700</item>
+    </style>
 
     <style name="Caption.SemiBold.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
@@ -816,16 +826,22 @@
     <style name="PrimaryButtonTheme">
         <item name="cornerRadius">8dp</item>
         <item name="titleTextColor">@color/white</item>
+        <item name="backgroundColor">@color/gray_900</item>
+        <item name="strokeColor">@color/gray_900</item>
+        <item name="rippleColor">@color/ripple_light</item>
+        <item name="disabledBackgroundColor">@color/disabled_button_bg</item>
     </style>
 
     <style name="PrimaryButtonTheme.Blue">
         <item name="backgroundColor">@color/dash_blue</item>
         <item name="strokeColor">@color/dash_blue</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="PrimaryButtonTheme.Green">
         <item name="backgroundColor">@color/green_300</item>
         <item name="strokeColor">@color/green_300</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="PrimaryButtonTheme.Large">
@@ -835,6 +851,7 @@
     <style name="PrimaryButtonTheme.Large.Blue">
         <item name="backgroundColor">@color/dash_blue</item>
         <item name="strokeColor">@color/dash_blue</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="PrimaryButtonTheme.ExtraSmall">
@@ -846,6 +863,7 @@
         <item name="backgroundColor">@color/extra_small_btn_bg</item>
         <item name="strokeColor">@color/extra_small_btn_bg</item>
         <item name="titleTextColor">@color/dash_blue</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="Button.Primary" parent="Widget.AppCompat.Button.Borderless">
@@ -895,7 +913,7 @@
     <style name="SecondaryButtonTheme">
         <item name="cornerRadius">8dp</item>
         <item name="titleTextColor">@color/gray_900</item>
-        <item name="strokeColor">@color/gray_900</item>
+        <item name="strokeColor">@color/secondary_btn_border_color</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
@@ -953,6 +971,8 @@
     <style name="TertiaryButtonTheme">
         <item name="cornerRadius">8dp</item>
         <item name="titleTextColor">@color/gray_900</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="TertiaryButtonTheme.Blue">
@@ -990,7 +1010,7 @@
     <style name="Button.Tertiary" parent="Widget.AppCompat.Button.Borderless">
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:textColor">@color/button_text</item>
-        <item name="android:background">@drawable/rounded_ripple_transparent</item>
+        <item name="android:background">@drawable/rounded_ripple_background</item>
         <item name="android:theme">@style/TertiaryButtonTheme</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textAllCaps">false</item>
