@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.Entity
 import androidx.room.Index
-import com.google.firebase.database.PropertyName
 
 object AtmType {
     const val BUY = "Buy Only"
