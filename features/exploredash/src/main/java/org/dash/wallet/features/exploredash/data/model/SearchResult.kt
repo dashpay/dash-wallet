@@ -50,7 +50,7 @@ open class SearchResult(
     var googleMaps: String? = "",
     @get:PropertyName("cover_image") @set:PropertyName("cover_image")
     var coverImage: String? = "",
-    open var type: String? = "",
+    var type: String? = "",
 
     @Ignore
     var distance: Double = Double.NaN

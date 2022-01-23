@@ -32,9 +32,14 @@ import javax.inject.Inject
 
 private val log = LoggerFactory.getLogger(AssetExploreDatabase::class.java)
 
-class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) : ExploreRepository {
+class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
+    ExploreRepository {
 
-    var contextRef: WeakReference<Context> = WeakReference(context)
+    private var contextRef: WeakReference<Context> = WeakReference(context)
+
+    private val moshi: Moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+
+    private lateinit var scanner: Scanner
 
     override suspend fun <T> get(
         tableName: String,
@@ -45,24 +50,28 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
         return withContext(Dispatchers.IO) {
             val result = mutableListOf<T>()
             try {
-                Scanner(contextRef.get()!!.assets.open("explore/$tableName.dat")).use {
-                    it.nextLine() // skip the update date
-                    it.nextLine() // skip the data size
-                    for (i in 0 until startAt) { // the hacky way to simulate pagination
-                        it.nextLine()
+                if (startAt == 0) {
+                    if (::scanner.isInitialized) {
+                        scanner.close()
                     }
-                    while (it.hasNextLine()) {
-                        val line = it.nextLine()
-                        val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-                        val jsonAdapter = moshi.adapter<T>(valueType)
-                        val data = jsonAdapter.fromJson(line)
-                        result.add(data!! as T)
-                        if (result.size == (endBefore - startAt)) {
-                            break
-                        }
+                    scanner = createScanner(tableName)
+                    scanner.nextLine() // skip the update date
+                    scanner.nextLine() // skip the data size
+                }
+                while (scanner.hasNextLine()) {
+                    val line = scanner.nextLine()
+                    val jsonAdapter = moshi.adapter<T>(valueType)
+                    val data = jsonAdapter.fromJson(line)
+                    result.add(data!! as T)
+                    if (result.size == (endBefore - startAt)) {
+                        break
                     }
                 }
+                if (!scanner.hasNextLine()) {
+                    scanner.close()
+                }
             } catch (ex: Exception) {
+                scanner.close()
                 log.error(ex.message, ex)
             }
             return@withContext result
@@ -72,7 +81,7 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
     override suspend fun getDataSize(tableName: String): Int {
         return withContext(Dispatchers.IO) {
             try {
-                Scanner(contextRef.get()!!.assets.open("explore/$tableName.dat")).use {
+                createScanner(tableName).use {
                     it.nextLine() // skip the update date
                     if (it.hasNextLine()) { // second line is the the update date
                         val dataSize = it.nextLine()
@@ -93,7 +102,7 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
     override suspend fun getLastUpdate(tableName: String): Long {
         return withContext(Dispatchers.IO) {
             try {
-                Scanner(contextRef.get()!!.assets.open("explore/$tableName.dat")).use {
+                createScanner(tableName).use {
                     if (it.hasNextLine()) { // very first line is the the update date
                         val updateDate = it.nextLine()
                         return@withContext updateDate.toLong()
@@ -104,5 +113,9 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
             }
             return@withContext -1
         }
+    }
+
+    private fun createScanner(tableName: String): Scanner {
+        return Scanner(contextRef.get()!!.assets.open("explore/$tableName.dat"))
     }
 }
