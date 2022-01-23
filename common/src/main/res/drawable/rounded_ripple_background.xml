@@ -15,22 +15,29 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="@color/button_ripple_color"
-    xmlns:tools="http://schemas.android.com/tools">
+    android:color="?attr/rippleColor">
+
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <corners android:radius="?attr/cornerRadius" />
+            <solid android:color="@android:color/white" />
+        </shape>
+    </item>
 
     <item>
         <selector>
             <item android:state_enabled="false">
                 <shape android:shape="rectangle">
-                    <corners android:radius="?attr/cornerRadius" tools:radius="10dp" />
-                    <solid android:color="@color/disabled_button_bg" />
+                    <corners android:radius="?attr/cornerRadius" />
+                    <solid android:color="?attr/disabledBackgroundColor" />
                 </shape>
             </item>
+
             <item>
                 <shape android:shape="rectangle">
-                    <corners android:radius="?attr/cornerRadius" tools:radius="10dp" />
-                    <solid android:color="?attr/backgroundColor" tools:color="@color/dash_blue" />
-                    <stroke android:color="?attr/strokeColor" android:width="2dp" tools:color="@color/dash_blue"/>
+                    <corners android:radius="?attr/cornerRadius" />
+                    <solid android:color="?attr/backgroundColor" />
+                    <stroke android:color="?attr/strokeColor" android:width="1dp" />
                 </shape>
             </item>
         </selector>

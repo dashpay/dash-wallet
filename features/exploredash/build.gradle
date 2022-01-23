@@ -68,10 +68,6 @@ dependencies {
     implementation 'androidx.hilt:hilt-work:1.0.0'
     kapt 'androidx.hilt:hilt-compiler:1.0.0'
 
-    // Firebase
-    implementation 'com.google.firebase:firebase-database-ktx'
-    implementation 'com.google.firebase:firebase-auth-ktx'
-
     // UI
     implementation 'com.google.android.material:material:1.4.0'
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
@@ -89,6 +85,7 @@ dependencies {
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
     
     implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
+    implementation 'com.google.protobuf:protobuf-javalite:3.14.0'
 
     // Tests
     testImplementation 'junit:junit:4.13.2'

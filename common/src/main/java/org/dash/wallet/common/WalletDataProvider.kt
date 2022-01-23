@@ -23,21 +23,22 @@ import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Resource
 
 interface WalletDataProvider {
 
-    fun freshReceiveAddress(): Address
-
     fun currentReceiveAddress(): Address
 
-    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRate>
+    fun freshReceiveAddress(): Address
 
-    fun getExchangeRates(): LiveData<List<ExchangeRate>>
+    @Deprecated("Inject ExchangeRatesProvider instead")
+    fun getExchangeRate(currencyCode: String): LiveData<ExchangeRateData>
 
-    fun currencyCodes(): LiveData<List<String>>
+    @Deprecated("Inject ExchangeRatesProvider instead")
+    fun getExchangeRates(): LiveData<List<ExchangeRateData>>
 
+    @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)

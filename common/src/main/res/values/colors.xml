@@ -28,6 +28,8 @@
     <color name="menu_gray">#FFC9C9C9</color>
     <color name="gray">#FF979797</color>
     <color name="medium_gray">#ff4a4a4a</color>
+
+
     <color name="black_text">#ff171717</color>
     <color name="shadow_color">#33000000</color>
 
@@ -58,8 +60,6 @@
     <color name="black_liquid">#171717</color>
     <color name="grey_liquid">#9B9B9B</color>
     <color name="warning_yellow">#FFFAF0</color>
-    <color name="disabled_button_bg">#eeeeee</color>
-    <color name="extra_small_btn_bg">#f2f9fd</color>
 
 
     <!-- Design System colors -->
@@ -80,6 +80,8 @@
     <color name="background_explore">@color/blue_700</color>
     <color name="background_accuracy_circle">#26008DE4</color>
     <color name="button_ripple_color">#1f000000</color>
+    <color name="disabled_button_bg">#eeeeee</color>
+    <color name="extra_small_btn_bg">#f2f9fd</color>
 
     <!-- Palette -->
     <color name="blue_50">#F0F8FE</color>

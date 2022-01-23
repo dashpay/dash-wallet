@@ -9,6 +9,7 @@ import androidx.appcompat.app.AlertDialog
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
+@Deprecated("Use AdaptiveDialog")
 open class BaseAlertDialogBuilder(private val context: Context) {
     var title: CharSequence? = null
     var message: CharSequence? = null

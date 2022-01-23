@@ -31,7 +31,7 @@ import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
@@ -169,7 +169,7 @@ class SetPinActivity : InteractionAwareActivity() {
         pinPreviewView.setTextColor(R.color.dash_light_gray)
         pinPreviewView.hideForgotPinAction()
 
-        numericKeyboardView.setFunctionEnabled(false)
+        numericKeyboardView.isFunctionEnabled = false
         numericKeyboardView.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {

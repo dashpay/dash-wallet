@@ -21,7 +21,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.fragment.app.activityViewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -30,6 +29,7 @@ import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
 @AndroidEntryPoint
+@Deprecated("Use OffsetDialogFragment")
 open class BaseBottomSheetDialogFragment : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

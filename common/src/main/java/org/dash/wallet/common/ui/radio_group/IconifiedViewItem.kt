@@ -19,8 +19,17 @@ package org.dash.wallet.common.ui.radio_group
 
 import androidx.annotation.DrawableRes
 
+enum class IconSelectMode {
+    None, Encircle, Tint
+}
+
 data class IconifiedViewItem(
-    val name: String,
+    val title: String,
+    val subtitle: String = "",
     @DrawableRes
-    val icon: Int? = null
+    val icon: Int? = null,
+    val iconSelectMode: IconSelectMode = IconSelectMode.Tint,
+    val additionalInfo: String? = null,
+    @DrawableRes
+    val subtitleDrawable: Int? = null,
 )
