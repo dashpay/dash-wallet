@@ -193,10 +193,18 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
             fullInitialization();
         }
 
+        CrashReporter.init(getCacheDir());
+
+        Threading.uncaughtExceptionHandler = (thread, throwable) -> {
+            log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
+            CrashReporter.saveBackgroundTrace(throwable, packageInfo);
+        };
+
         try {
             syncExploreData();
         } catch (Exception ex) {
-            analyticsService.logError(ex, "syncExploreData");
+            log.error(ex.getMessage(), ex);
+            CrashReporter.saveBackgroundTrace(ex, packageInfo);
         }
     }
 
@@ -247,16 +255,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 Constants.NETWORK_PARAMETERS.getId());
 
         packageInfo = packageInfoFromContext(this);
-
-        CrashReporter.init(getCacheDir());
-
-        Threading.uncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(final Thread thread, final Throwable throwable) {
-                log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
-                CrashReporter.saveBackgroundTrace(throwable, packageInfo);
-            }
-        };
 
         MnemonicCodeExt.initMnemonicCode(this);
 

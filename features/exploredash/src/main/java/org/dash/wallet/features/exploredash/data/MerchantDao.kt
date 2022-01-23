@@ -392,6 +392,9 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("SELECT DISTINCT territory FROM merchant")
     suspend fun getTerritories(): List<String>
 
-    @Query("DELETE FROM merchant WHERE source LIKE :source")
-    override suspend fun deleteAll(source: String): Int
+    @Query("DELETE FROM merchant")
+    override suspend fun deleteAll(): Int
+
+    @Query("SELECT count(*) FROM merchant")
+    suspend fun getCount() : Int
 }
