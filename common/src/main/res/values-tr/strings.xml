@@ -7,6 +7,8 @@
     <string name="network_unavailable_title">Ağ Kullanılamıyor</string>
     <string name="network_unavailable_check_connection">Lütfen ağ bağlantınızı kontrol edin</string>
     <string name="network_unavailable_balance_not_accurate">Bağlantının kesilmesi nedeniyle bakiye doğru olmayabilir</string>
+    <string name="buy_dash">Dash Al</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
     <!-- Local Currency List: JEP -->

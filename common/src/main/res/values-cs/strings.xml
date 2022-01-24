@@ -7,6 +7,8 @@
     <string name="network_unavailable_title">Síť je nedostupná</string>
     <string name="network_unavailable_check_connection">Zkontrolujte připojení k síti</string>
     <string name="network_unavailable_balance_not_accurate">Zůstatek nemusí být přesný kvůli ztrátě připojení</string>
+    <string name="buy_dash">Koupit Dash</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernseyská libra</string>
     <!-- Local Currency List: JEP -->

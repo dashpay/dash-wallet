@@ -71,7 +71,10 @@
             android:layout_marginHorizontal="15dp"
             android:layout_marginTop="30dp"
             android:foreground="?android:attr/selectableItemBackground"
-            app:contentPadding="15dp">
+            app:contentPaddingLeft="15dp"
+            app:contentPaddingTop="15dp"
+            app:contentPaddingBottom="13dp"
+            app:contentPaddingRight="11dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -81,7 +84,8 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:layout_marginEnd="4dp">
 
                     <ImageView
                         android:id="@+id/new_account_img"
@@ -109,7 +113,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="14dp"
-                    android:layout_marginBottom="10dp"
+                    android:layout_marginBottom="8dp"
+                    android:layout_marginEnd="4dp"
                     android:visibility="gone"
                     android:background="@color/divider_color"
                     tools:visibility="visible" />
@@ -118,7 +123,6 @@
                     android:id="@+id/error_passphrase"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="6dp"
                     android:orientation="horizontal"
                     android:visibility="gone"
                     tools:visibility="visible">
@@ -136,12 +140,15 @@
                         android:layout_height="match_parent"
                         android:layout_marginStart="8dp"
                         android:layout_weight="1"
+                        android:gravity="center_vertical"
                         android:text="@string/required_passphrase_backup" />
 
-                    <ImageView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
+                    <ImageButton
+                        android:id="@+id/backup_passphrase_hint"
+                        android:layout_height="22dp"
+                        android:layout_width="22dp"
                         android:src="@drawable/ic_question_mark"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_gravity="end|center" />
                 </LinearLayout>
 
@@ -166,12 +173,15 @@
                         android:layout_height="match_parent"
                         android:layout_marginStart="8dp"
                         android:layout_weight="1"
+                        android:gravity="center_vertical"
                         android:text="@string/required_dash_amount" />
 
-                    <ImageView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
+                    <ImageButton
+                        android:id="@+id/required_dash_hint"
+                        android:layout_height="22dp"
+                        android:layout_width="22dp"
                         android:src="@drawable/ic_question_mark"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:layout_gravity="end|center" />
                 </LinearLayout>
             </LinearLayout>
@@ -185,7 +195,10 @@
             android:layout_marginHorizontal="15dp"
             android:layout_marginVertical="15dp"
             android:foreground="?attr/selectableItemBackground"
-            app:contentPadding="15dp">
+            app:contentPaddingLeft="15dp"
+            app:contentPaddingTop="15dp"
+            app:contentPaddingBottom="15dp"
+            app:contentPaddingRight="11dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -194,7 +207,8 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp">
 
                     <ImageView
                         android:id="@+id/existing_account_img"
@@ -222,6 +236,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginTop="14dp"
+                    android:layout_marginEnd="4dp"
                     android:background="@color/divider_color"
                     android:visibility="gone"
                     tools:visibility="visible" />
@@ -230,7 +245,7 @@
                     android:id="@+id/crowdnode_transaction_error"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="6dp"
                     android:orientation="horizontal"
                     android:visibility="gone"
                     tools:visibility="visible">
@@ -238,6 +253,7 @@
                     <ImageView
                         android:layout_width="16dp"
                         android:layout_height="16dp"
+                        android:layout_marginTop="4dp"
                         android:layout_gravity="start|top"
                         android:src="@drawable/ic_bullet_error" />
 
@@ -247,12 +263,15 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:layout_marginEnd="12dp"
+                        android:layout_marginTop="4dp"
                         android:layout_weight="1"
-                        android:text="@string/required_crowdnode_transaction" />
+                        android:text="@string/crowdnode_required_transaction" />
 
-                    <ImageView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
+                    <ImageButton
+                        android:id="@+id/crowdnode_transaction_hint"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:layout_height="22dp"
+                        android:layout_width="22dp"
                         android:src="@drawable/ic_question_mark"
                         android:layout_gravity="end|top" />
                 </LinearLayout>
@@ -264,7 +283,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="24dp"
                     android:layout_marginEnd="28dp"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="7dp"
                     android:visibility="gone"
                     android:text="@string/crowdnode_restore_hint"
                     tools:visibility="visible" />

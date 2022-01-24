@@ -24,6 +24,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
@@ -56,6 +57,57 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
 
         binding.restoreWalletHint.setOnClickListener {
             viewModel.restoreWallet()
+        }
+
+        binding.backupPassphraseHint.setOnClickListener {
+            val dialog = AdaptiveDialog.new(
+                R.drawable.ic_info_blue_encircled,
+                getString(R.string.crowdnode_secure_wallet),
+                getString(R.string.crowdnode_secure_wallet_explainer),
+                getString(R.string.close),
+                getString(R.string.backup_passphrase)
+            )
+
+            dialog.show(requireActivity()) { result ->
+                if (result == true) {
+                    viewModel.backupPassphrase()
+                }
+            }
+        }
+
+        binding.requiredDashHint.setOnClickListener {
+            val dialog = AdaptiveDialog.new(
+                R.drawable.ic_info_blue_encircled,
+                getString(R.string.insufficient_funds),
+                getString(
+                    R.string.crowdnode_minimum_dash,
+                    CrowdNodeViewModel.MINIMUM_REQUIRED_DASH.toPlainString()
+                ),
+                getString(R.string.close),
+                getString(R.string.buy_dash)
+            )
+
+            dialog.show(requireActivity()) { result ->
+                if (result == true) {
+                    viewModel.buyDash()
+                }
+            }
+        }
+
+        binding.crowdnodeTransactionHint.setOnClickListener {
+            val dialog = AdaptiveDialog.new(
+                R.drawable.ic_dialog_arrows,
+                getString(R.string.crowdnode_required_transaction),
+                getString(R.string.crowdnode_restore_wallet),
+                getString(R.string.close),
+                getString(R.string.restore_wallet)
+            )
+
+            dialog.show(requireActivity()) { result ->
+                if (result == true) {
+                    viewModel.restoreWallet()
+                }
+            }
         }
 
         viewModel.hasEnoughBalance.observe(viewLifecycleOwner) {

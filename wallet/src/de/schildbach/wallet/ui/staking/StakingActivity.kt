@@ -21,9 +21,7 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.CheckPinDialog
-import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.VerifySeedActivity
+import de.schildbach.wallet.ui.*
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
@@ -42,8 +40,10 @@ class StakingActivity : LockScreenActivity() {
             when (request) {
                 NavigationRequest.BackupPassphrase -> checkPinAndBackupPassphrase()
                 NavigationRequest.RestoreWallet -> {
-//                    val restoreWalletIntent = Intent
-//                    startActivity(restoreWalletIntent)
+                    ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
+                }
+                NavigationRequest.BuyDash -> {
+                    startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
                 }
             }
         }

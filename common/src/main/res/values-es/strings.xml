@@ -7,6 +7,8 @@
     <string name="network_unavailable_title">Red no disponible</string>
     <string name="network_unavailable_check_connection">Comprueba tu conexión de red</string>
     <string name="network_unavailable_balance_not_accurate">Es posible que el saldo no sea exacto debido a la pérdida de conexión</string>
+    <string name="buy_dash">Comprar Dash</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Libra de Guernsey</string>
     <!-- Local Currency List: JEP -->

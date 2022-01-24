@@ -12,7 +12,6 @@
     <string name="credit_card">信用卡</string>
 
     <string name="buy">购买</string>
-    <string name="buy_dash">购买Dash</string>
     <string name="sell_dash">出售Dash</string>
     <string name="buy_sell_dash_">买 &amp; 卖 Dash</string>
     <string name="button_cancel">取消</string>

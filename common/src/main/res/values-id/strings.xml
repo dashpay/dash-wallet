@@ -7,6 +7,8 @@
     <string name="network_unavailable_title">Jaringan tak tersedia</string>
     <string name="network_unavailable_check_connection">Silakan periksa koneksi jaringan Anda</string>
     <string name="network_unavailable_balance_not_accurate">Saldo mungkin tidak akurat karena koneksi terputus</string>
+    <string name="buy_dash">Beli Dash</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Pound Guernsey</string>
     <!-- Local Currency List: JEP -->

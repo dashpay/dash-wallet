@@ -7,6 +7,8 @@
     <string name="network_unavailable_title">Netzwerk nicht verfügbar</string>
     <string name="network_unavailable_check_connection">Bitte überprüfe deine Netzwerksverbindung</string>
     <string name="network_unavailable_balance_not_accurate">Die Guthabensanzeige ist möglicherweise inakkurat, da keine Verbindung besteht</string>
+    <string name="buy_dash">Dash kaufen</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>
     <!-- Local Currency List: JEP -->

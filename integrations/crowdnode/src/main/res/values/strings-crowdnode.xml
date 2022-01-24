@@ -21,10 +21,17 @@
     <string name="account_create">Create Account</string>
     <string name="account_exist">I Have Account</string>
     <string name="required_passphrase_backup">You must <b><u>backup your passphrase</u></b></string>
+    <string name="backup_passphrase">Backup Passphrase</string>
     <string name="required_dash_amount">You need at least %s Dash</string>
-    <string name="required_crowdnode_transaction">We didn’t see any CrowdNode transactions in this wallet</string>
+    <string name="crowdnode_required_transaction">We didn’t see any CrowdNode transactions in this wallet</string>
     <string name="crowdnode_restore_hint">You can <b><u>restore your Dash Wallet</u></b> that is connected to your CrowdNode account.</string>
+    <string name="crowdnode_restore_wallet">Please restore your Dash Wallet that is connected to your CrowdNode account.</string>
     <string name="crowdnode_new_account_warning_1">CrowdNode uses this address as your account ID. You will lose access to your funds in within this wallet and your CrowdNode account if you lose the passphrase associated to this address.</string>
     <string name="crowdnode_new_account_warning_2">Very small amounts of Dash will be sent to CrowdNode to verify that you are the owner of this wallet address.</string>
     <string name="dash_address">Dash Address</string>
+    <string name="restore_wallet">Restore Dash Wallet</string>
+    <string name="crowdnode_secure_wallet">To create an account on CrowdNode your Dash Wallet should be secured</string>
+    <string name="crowdnode_secure_wallet_explainer">If you lose your passphrase for this wallet and lose this device or uninstall Dash Wallet, you will lose access to your funds on CrowdNode and the funds within this wallet.</string>
+    <string name="insufficient_funds">You have insufficient funds to proceed.</string>
+    <string name="crowdnode_minimum_dash">You should have at least %s Dash to proceed with the CrowdNode verification.</string>
 </resources>

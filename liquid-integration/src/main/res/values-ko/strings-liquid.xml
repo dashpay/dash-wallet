@@ -12,7 +12,6 @@
     <string name="credit_card">신용카드</string>
 
     <string name="buy">구매</string>
-    <string name="buy_dash">대시 매수</string>
     <string name="sell_dash">대시 매도</string>
     <string name="buy_sell_dash_">대시 매수 &amp; 매도</string>
     <string name="button_cancel">취소</string>

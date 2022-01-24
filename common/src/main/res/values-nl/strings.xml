@@ -7,6 +7,8 @@
     <string name="network_unavailable_title">Netwerk niet beschikbaar</string>
     <string name="network_unavailable_check_connection">Controleer de netwerkverbinding</string>
     <string name="network_unavailable_balance_not_accurate">Het saldo is mogelijk niet correct vanwege de verbroken verbinding</string>
+    <string name="buy_dash">Koop Dash</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
     <!-- Local Currency List: JEP -->

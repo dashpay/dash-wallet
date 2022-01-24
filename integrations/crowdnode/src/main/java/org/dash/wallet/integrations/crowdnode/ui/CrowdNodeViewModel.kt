@@ -41,7 +41,7 @@ import javax.inject.Inject
 import kotlin.system.measureTimeMillis
 
 enum class NavigationRequest {
-    BackupPassphrase, RestoreWallet
+    BackupPassphrase, RestoreWallet, BuyDash
 }
 
 @HiltViewModel
@@ -52,7 +52,7 @@ class CrowdNodeViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(100000)
-        val OFFSET: Coin = Coin.valueOf(546)
+        val OFFSET: Coin = Coin.valueOf(18000)
         val SIGNUP_REQUEST: Coin = Coin.valueOf(2048)
 
         val CROWD_NODE_ADDRESS = if (BuildConfig.DEBUG) { // TODO: network, not build type
@@ -98,14 +98,18 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.RestoreWallet)
     }
 
+    fun buyDash() {
+        navigationCallback.postValue(NavigationRequest.BuyDash)
+    }
+
     fun signUp() {
         // TODO: Move to crowdnode API, viewModel shouldn't care about sending coins
         // and tracking transaction
         viewModelScope.launch {
             Log.i("CROWDNODE", "sending to address: ${crowdNodeAddress.toBase58()}")
             Log.i("CROWDNODE", "sending from address: ${accountAddress.toBase58()}")
-//            paymentsService.sendCoins(accountAddress, MINIMUM_REQUIRED_DASH)
-            paymentsService.sendCoins(crowdNodeAddress, OFFSET + SIGNUP_REQUEST, accountAddress)
+            paymentsService.sendCoins(accountAddress, MINIMUM_REQUIRED_DASH)
+//            paymentsService.sendCoins(crowdNodeAddress, OFFSET + SIGNUP_REQUEST, accountAddress)
         }
     }
 

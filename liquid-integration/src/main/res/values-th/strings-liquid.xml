@@ -12,7 +12,6 @@
     <string name="credit_card">บัตรเครดิต</string>
 
     <string name="buy">ซื้อ</string>
-    <string name="buy_dash">ซื้อ Dash </string>
     <string name="sell_dash">ขาย Dash</string>
     <string name="buy_sell_dash_">ซื้อ &amp; ขาย Dash</string>
     <string name="button_cancel">ยกเลิก</string>

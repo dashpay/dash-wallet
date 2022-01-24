@@ -12,7 +12,6 @@
     <string name="credit_card">Carte bancaire</string>
 
     <string name="buy">Acheter</string>
-    <string name="buy_dash">Acheter Dash</string>
     <string name="sell_dash">Vendre des dashs</string>
     <string name="buy_sell_dash_">Acheter &amp; vendre des dashs</string>
     <string name="button_cancel">Annuler</string>
