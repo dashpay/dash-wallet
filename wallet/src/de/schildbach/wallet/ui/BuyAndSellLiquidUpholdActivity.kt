@@ -133,7 +133,6 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
         if (!LiquidConstants.hasValidCredentials() || !UpholdConstants.hasValidCredentials()) {
             keys_missing_error.isVisible = true
         }
-        dash_services_list.setHasFixedSize(true)
         dash_services_list.adapter = buyAndSellDashServicesAdapter
 
         viewModel.showLoading.observe(this){ showDialog ->

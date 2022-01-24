@@ -69,71 +69,57 @@
     </com.google.android.material.appbar.AppBarLayout>
 
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/rlTop"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-
         android:layout_gravity="bottom"
         android:orientation="vertical"
         android:paddingTop="40dp"
         android:paddingBottom="4dp"
         app:layout_anchor="@id/select_a_service_to_buy_and_sell_Dash"
         app:layout_anchorGravity="bottom"
-        app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/select_a_service_to_buy_and_sell_Dash">
-        <!--    <include-->
-        <!--        layout="@layout/app_bar_general"-->
-        <!--        android:visibility="gone"-->
-        <!--        android:layout_width="match_parent"-->
-        <!--        android:layout_height="wrap_content" />-->
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/dash_services_list"
+       
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="15dp"
-
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior"
-            tools:itemCount="3"
-            tools:listitem="@layout/item_service_list" />
-
-        <TextView
-            android:id="@+id/keys_missing_error"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginStart="15dp"
-            android:layout_marginTop="15dp"
-            android:layout_marginEnd="15dp"
-            android:text="@string/services_portal_subtitle_error"
-            android:textColor="@color/dash_red"
-            android:textSize="12sp"
-            android:visibility="gone"
-            tools:visibility="visible" />
-
-        <ScrollView
-            android:layout_width="match_parent"
+            android:orientation="vertical"
             android:layout_height="match_parent">
 
-            <LinearLayout
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/dash_services_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:clipToPadding="false"
-                android:orientation="vertical">
+                android:layout_marginHorizontal="15dp"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:itemCount="3"
+                tools:listitem="@layout/item_service_list" />
 
-                <FrameLayout
-                    android:id="@+id/network_status_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:visibility="gone"
-                    tools:ignore="UselessLeaf" />
+            <TextView
+                android:id="@+id/keys_missing_error"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="15dp"
+                android:layout_marginEnd="15dp"
+                android:text="@string/services_portal_subtitle_error"
+                android:textColor="@color/dash_red"
+                android:textSize="12sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
-            </LinearLayout>
-        </ScrollView>
-    </LinearLayout>
+            <FrameLayout
+                android:id="@+id/network_status_container"
+                app:layout_behavior="de.schildbach.wallet.ui.CollapsingImageBehavior"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:visibility="gone"
+                tools:ignore="UselessLeaf" />
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
