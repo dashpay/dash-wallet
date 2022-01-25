@@ -68,7 +68,6 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
-import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -87,8 +86,6 @@ import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -140,9 +137,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     public boolean myPackageReplaced = false;
 
     private AutoLogout autoLogout;
-
-    @Inject
-    AnalyticsService analyticsService;
 
     @Override
     protected void attachBaseContext(Context base) {
