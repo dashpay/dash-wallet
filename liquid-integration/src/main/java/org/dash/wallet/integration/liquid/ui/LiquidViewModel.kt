@@ -33,10 +33,10 @@ import kotlin.coroutines.suspendCoroutine
 @HiltViewModel
 class LiquidViewModel @Inject constructor(
     application: Application,
-    private val config: Configuration
+    private val config: Configuration,
+    walletDataProvider: WalletDataProvider
 ) : ConnectivityViewModel(application) {
 
-    private val walletDataProvider = application as WalletDataProvider
     val defaultCurrency = walletDataProvider.defaultCurrencyCode()
 
     private val triggerLiquidBalanceUpdate = MutableLiveData<Unit>()

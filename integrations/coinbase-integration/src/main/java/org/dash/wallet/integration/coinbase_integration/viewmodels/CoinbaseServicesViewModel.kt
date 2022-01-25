@@ -61,22 +61,17 @@ class CoinbaseServicesViewModel @Inject constructor(
         get() = _exchangeRate
 
     val activePaymentMethodsFailureCallback = SingleLiveEvent<Unit>()
+    val coinbaseLogOutCallback = SingleLiveEvent<Unit>()
 
     private fun getUserAccountInfo() = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
         when (val response = coinBaseRepository.getUserAccount()) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                val userAccountData = response.value.body()?.data?.firstOrNull {
-                    it.balance?.currency?.equals("DASH") ?: false
-                }
-
-                if (userAccountData == null) {
+                if (response.value == null) {
                     _userAccountError.value = true
                 } else {
-                    _user.value = userAccountData
-                    coinBaseRepository.saveLastCoinbaseDashAccountBalance(userAccountData.balance?.amount)
-                    coinBaseRepository.saveUserAccountId(userAccountData.id)
+                    _user.value = response.value
                 }
             }
             is ResponseResource.Failure -> {
@@ -85,10 +80,11 @@ class CoinbaseServicesViewModel @Inject constructor(
         }
     }
 
-    fun disconnectCoinbaseAccount() {
-        viewModelScope.launch {
-            coinBaseRepository.disconnectCoinbaseAccount()
-        }
+    fun disconnectCoinbaseAccount() = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
+        coinBaseRepository.disconnectCoinbaseAccount()
+        _showLoading.value = false
+        coinbaseLogOutCallback.call()
     }
 
     init {
