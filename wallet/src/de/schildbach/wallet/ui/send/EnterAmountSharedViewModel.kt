@@ -22,13 +22,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.ui.SingleLiveEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.data.ExchangeRate
 
 class EnterAmountSharedViewModel(application: Application) : AndroidViewModel(application) {
 

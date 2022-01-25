@@ -35,6 +35,7 @@ import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
+@Deprecated("Use AdaptiveDialog")
 class FancyAlertDialog : DialogFragment() {
     private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
 

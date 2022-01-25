@@ -39,6 +39,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.ui.CurrencyTextView;
@@ -50,7 +51,6 @@ import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.data.BlockchainState;
-import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
 import de.schildbach.wallet_test.R;
 

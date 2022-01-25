@@ -108,7 +108,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         ListDividerDecorator(
             divider,
             showAfterLast = false,
-            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal)
         )
     }
 

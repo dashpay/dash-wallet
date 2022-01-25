@@ -67,7 +67,7 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.util.WalletDataProvider;
+import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;

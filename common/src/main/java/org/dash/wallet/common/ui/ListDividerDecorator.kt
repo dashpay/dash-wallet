@@ -25,7 +25,8 @@ class ListDividerDecorator(
     private val dividerDrawable: Drawable,
     private val showAfterLast: Boolean = false,
     private val divideDifferentTypes: Boolean = false,
-    private val marginStart: Int = 0
+    private val marginStart: Int = 0,
+    private val marginEnd: Int = 0
 ) : RecyclerView.ItemDecoration() {
 
     override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
@@ -56,7 +57,7 @@ class ListDividerDecorator(
             val topBound = child.bottom + params.bottomMargin
             val bottomBound = topBound + dividerDrawable.intrinsicHeight
 
-            dividerDrawable.setBounds(marginStart, topBound, parent.width, bottomBound)
+            dividerDrawable.setBounds(marginStart, topBound, parent.width - marginEnd, bottomBound)
             dividerDrawable.draw(c)
         }
     }

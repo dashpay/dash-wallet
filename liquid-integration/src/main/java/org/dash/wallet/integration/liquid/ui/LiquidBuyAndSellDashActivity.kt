@@ -31,7 +31,7 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
@@ -75,7 +75,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private var isSelectFiatCurrency = false
     private var isClickLogoutButton = false
 
-    var currentExchangeRate: ExchangeRate? = null
+    var currentExchangeRate: ExchangeRateData? = null
 
     override
     fun onCreate(savedInstanceState: Bundle?) {

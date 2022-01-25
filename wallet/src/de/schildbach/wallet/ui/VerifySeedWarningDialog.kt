@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.constraintlayout.widget.ConstraintLayout
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.ui.OffsetDialogFragment
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 
 class VerifySeedWarningDialog: OffsetDialogFragment<ConstraintLayout>() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {

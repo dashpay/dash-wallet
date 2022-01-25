@@ -31,7 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.ui.OffsetDialogFragment
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
 import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
@@ -166,7 +166,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
             val optionNames = binding.root.resources.getStringArray(
                 R.array.sort_by_options_names
-            ).map { IconifiedViewItem(it, null) }
+            ).map { IconifiedViewItem(it) }
 
             val initialIndex = if (sortByDistance) 1 else 0
             val adapter = RadioGroupAdapter(initialIndex) { _, optionIndex ->
@@ -196,7 +196,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
             val optionNames = binding.root.resources.getStringArray(
                 if (viewModel.isMetric) R.array.radius_filter_options_kilometers else R.array.radius_filter_options_miles
-            ).map { IconifiedViewItem(it, null) }
+            ).map { IconifiedViewItem(it) }
 
             val radiusOption = selectedRadiusOption
             val adapter = RadioGroupAdapter(radiusOptions.indexOf(radiusOption)) { _, optionIndex ->
@@ -243,7 +243,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
         binding.locationBtn.setOnClickListener {
             val firstOption = if (viewModel.isLocationEnabled.value == true) {
-                IconifiedViewItem(getString(R.string.explore_current_location), R.drawable.ic_current_location)
+                IconifiedViewItem(getString(R.string.explore_current_location), "", R.drawable.ic_current_location)
             } else {
                 IconifiedViewItem(getString(R.string.explore_all_states))
             }
@@ -261,7 +261,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
                 val dialogTitle = getString(R.string.explore_location)
                 OptionPickerDialog(dialogTitle, allTerritories, currentIndex) { item, index, dialog ->
                     dialog.dismiss()
-                    setTerritoryName(if (index == 0) "" else item.name)
+                    setTerritoryName(if (index == 0) "" else item.title)
                 }.show(parentFragmentManager, "territory_filter")
             }
         }

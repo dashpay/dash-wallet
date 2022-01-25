@@ -10,6 +10,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@Deprecated("Use AdaptiveDialog")
 abstract class BaseDialogFragment : DialogFragment() {
     protected lateinit var alertDialog: AlertDialog
     @Inject lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder

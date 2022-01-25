@@ -76,7 +76,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity() {
     private lateinit var config: Configuration
     private var upholdCurrencyArrayList = ArrayList<UpholdCurrencyResponse>()
     private val liquidCurrencyArrayList = ArrayList<PayloadItem>()
-    private var currentExchangeRate: de.schildbach.wallet.rates.ExchangeRate? = null
+    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
 
     private var selectedFilterCurrencyItems: PayloadItem? = null
 
