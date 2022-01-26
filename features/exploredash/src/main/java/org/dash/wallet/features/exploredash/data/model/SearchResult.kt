@@ -20,10 +20,7 @@ package org.dash.wallet.features.exploredash.data.model
 import androidx.room.ColumnInfo
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import com.google.firebase.database.PropertyName
 import org.dash.wallet.features.exploredash.ui.extensions.Const
-import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import java.util.*
 
 open class SearchResult(
     @PrimaryKey(autoGenerate = true)
@@ -42,15 +39,11 @@ open class SearchResult(
     var territory: String? = "",
     var city: String? = "",
     var source: String? = "",
-    @get:PropertyName("source_id") @set:PropertyName("source_id")
     var sourceId: Int? = -1,
-    @get:PropertyName("logo_location") @set:PropertyName("logo_location")
     var logoLocation: String? = "",
-    @get:PropertyName("google_maps") @set:PropertyName("google_maps")
     var googleMaps: String? = "",
-    @get:PropertyName("cover_image") @set:PropertyName("cover_image")
     var coverImage: String? = "",
-    open var type: String? = "",
+    var type: String? = "",
 
     @Ignore
     var distance: Double = Double.NaN

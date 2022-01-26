@@ -11,6 +11,7 @@ import org.dash.wallet.common.services.LockScreenBroadcaster
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@Deprecated("Use AdaptiveDialog to show dialogs that are auto-dismissible with lock screen")
 open class BaseLockScreenFragment: Fragment() {
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     protected lateinit var alertDialog: AlertDialog

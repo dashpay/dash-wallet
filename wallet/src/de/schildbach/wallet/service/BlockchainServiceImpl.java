@@ -192,7 +192,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
             if (tx.getExchangeRate() == null && ((!replaying || insideTxExchangeRateTimeThreshold) || tx.getConfidence().getConfidenceType() == ConfidenceType.PENDING)) {
                 try {
-                    final de.schildbach.wallet.rates.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
+                    final org.dash.wallet.common.data.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
                             .exchangeRatesDao().getRateSync(config.getExchangeCurrencyCode());
                     if (exchangeRate != null) {
                         log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate.toString() + " tx: " + tx.getHashAsString());

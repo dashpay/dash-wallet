@@ -67,8 +67,7 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.services.analytics.AnalyticsService;
-import org.dash.wallet.common.util.WalletDataProvider;
+import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -87,8 +86,6 @@ import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -141,9 +138,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     private AutoLogout autoLogout;
 
-    @Inject
-    AnalyticsService analyticsService;
-
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
@@ -193,10 +187,18 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
             fullInitialization();
         }
 
+        CrashReporter.init(getCacheDir());
+
+        Threading.uncaughtExceptionHandler = (thread, throwable) -> {
+            log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
+            CrashReporter.saveBackgroundTrace(throwable, packageInfo);
+        };
+
         try {
             syncExploreData();
         } catch (Exception ex) {
-            analyticsService.logError(ex, "syncExploreData");
+            log.error(ex.getMessage(), ex);
+            CrashReporter.saveBackgroundTrace(ex, packageInfo);
         }
     }
 
@@ -247,16 +249,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 Constants.NETWORK_PARAMETERS.getId());
 
         packageInfo = packageInfoFromContext(this);
-
-        CrashReporter.init(getCacheDir());
-
-        Threading.uncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(final Thread thread, final Throwable throwable) {
-                log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
-                CrashReporter.saveBackgroundTrace(throwable, packageInfo);
-            }
-        };
 
         MnemonicCodeExt.initMnemonicCode(this);
 

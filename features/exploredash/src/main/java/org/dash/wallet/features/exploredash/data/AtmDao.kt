@@ -243,6 +243,6 @@ interface AtmDao : BaseDao<Atm> {
     @Query("SELECT DISTINCT territory FROM atm")
     suspend fun getTerritories(): List<String>
 
-    @Query("DELETE FROM atm WHERE source LIKE :source")
-    override suspend fun deleteAll(source: String): Int
+    @Query("DELETE FROM atm")
+    override suspend fun deleteAll(): Int
 }

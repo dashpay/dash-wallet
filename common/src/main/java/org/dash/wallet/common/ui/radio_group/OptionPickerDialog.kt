@@ -35,13 +35,14 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
 import org.dash.wallet.common.ui.ListDividerDecorator
-import org.dash.wallet.common.ui.OffsetDialogFragment
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
 class OptionPickerDialog(
     private val dialogTitle: String,
     private val itemList: List<IconifiedViewItem>,
-    private val selectedIndex: Int,
+    private val selectedIndex: Int = 0,
+    private val showSearch: Boolean = true,
     private val clickListener: (IconifiedViewItem, Int, DialogFragment) -> Unit
 ) : OffsetDialogFragment<LinearLayout>() {
     private val binding by viewBinding(DialogOptionPickerBinding::bind)
@@ -57,6 +58,7 @@ class OptionPickerDialog(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.searchBox.isVisible = showSearch
         binding.searchTitle.text = dialogTitle
 
         val adapter = RadioGroupAdapter(selectedIndex) { item, index ->
@@ -66,7 +68,8 @@ class OptionPickerDialog(
         val decorator = ListDividerDecorator(
             divider,
             showAfterLast = false,
-            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal),
+            marginEnd = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal)
         )
         binding.contentList.addItemDecoration(decorator)
         binding.contentList.adapter = adapter
@@ -79,7 +82,7 @@ class OptionPickerDialog(
                 adapter.submitList(itemList)
             } else {
                 val filteredList = itemList.filter {
-                    it.name.lowercase().contains(text.toString().lowercase())
+                    it.title.lowercase().contains(text.toString().lowercase())
                 }
                 adapter.submitList(filteredList)
             }

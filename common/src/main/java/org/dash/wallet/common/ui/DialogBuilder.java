@@ -32,9 +32,12 @@ import androidx.annotation.StringRes;
 
 import org.dash.wallet.common.R;
 
+import kotlin.Deprecated;
+
 /**
  * @author Andreas Schildbach
  */
+@Deprecated(message = "Use AdaptiveDialog")
 public class DialogBuilder extends AlertDialog.Builder {
     private final View customTitle;
     private final ImageView iconView;

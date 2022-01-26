@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.data.model
 
 import androidx.room.Entity
 import androidx.room.Index
-import com.google.firebase.database.PropertyName
 
 object AtmType {
     const val BUY = "Buy Only"
@@ -36,7 +35,4 @@ object AtmType {
 data class Atm(
     var postcode: String? = "",
     var manufacturer: String? = "",
-
-    @get:PropertyName("buy_sell") @set:PropertyName("buy_sell")
-    override var type: String? = "",
 ) : SearchResult()
