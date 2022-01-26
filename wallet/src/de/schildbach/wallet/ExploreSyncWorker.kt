@@ -44,6 +44,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         private const val PAGE_SIZE = 10000
         const val SHARED_PREFS_NAME = "explore"
         const val PREFS_LAST_SYNC_KEY = "last_sync"
+        const val PREFS_SYNC_IN_PROGRESS_KEY = "sync_in_progress"
     }
 
     private val exploreRepository by lazy {
@@ -74,6 +75,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         log.info("Sync Explore Dash started")
 
+        var atmDataSizeDB = 0
         var merchantDataSizeDB = 0
         var lastSync = 0L
         var lastDataUpdate = 0L
@@ -88,16 +90,23 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
                 return@withContext Result.success()
             }
 
+            val atmDao = entryPoint.atmDao()
             val merchantDao = entryPoint.merchantDao()
-            merchantDataSizeDB = merchantDao.getCount()
+
+            val syncInProgress = preferences.getBoolean(PREFS_SYNC_IN_PROGRESS_KEY, false)
+            if (!syncInProgress) {
+                preferences.edit().putBoolean(PREFS_SYNC_IN_PROGRESS_KEY, true).apply()
+                atmDao.deleteAll()
+                merchantDao.deleteAll()
+            }
 
             val tableSyncWatch = Stopwatch.createStarted()
 
-            if (merchantDataSizeDB == 0) {
-                val atmDao = entryPoint.atmDao()
-                atmDao.deleteAll()
+            atmDataSizeDB = atmDao.getCount()
+            val atmDataSize = exploreRepository.getAtmDataSize()
+            if (atmDataSizeDB < atmDataSize) {
                 val atmCache = mutableListOf<Atm>()
-                exploreRepository.getAtmData().collect {
+                exploreRepository.getAtmData(atmDataSizeDB).collect {
                     atmCache.add(it)
                 }
                 atmDao.save(atmCache)
@@ -106,44 +115,53 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
                 atmCache.clear()
             }
 
+            // skip Atm records if needed
+            exploreRepository.getAtmData(atmDataSizeDB).collect()
+
             tableSyncWatch.reset()
             tableSyncWatch.start()
 
+            merchantDataSizeDB = merchantDao.getCount()
             val merchantDataSize = exploreRepository.getMerchantDataSize()
-            if (merchantDataSizeDB == 0) {
-                merchantDao.deleteAll()
-            } else {
-                log.info("MERCHANT data partially synced ($merchantDataSizeDB of $merchantDataSize), continuing")
-            }
-            val merchantCache = mutableListOf<Merchant>()
-            var counter = 0
-            exploreRepository.getMerchantData(merchantDataSizeDB).collect {
-                counter++
-                merchantCache.add(it)
-                if (merchantCache.size == PAGE_SIZE) {
+
+            if (merchantDataSizeDB < merchantDataSize) {
+
+                if (merchantDataSizeDB > 0) {
+                    log.info("MERCHANT data partially synced ($merchantDataSizeDB of $merchantDataSize), continuing")
+                } else {
+                    log.info("MERCHANT data empty, fresh sync")
+                }
+                val merchantCache = mutableListOf<Merchant>()
+                var counter = 0
+                exploreRepository.getMerchantData(merchantDataSizeDB).collect {
+                    counter++
+                    merchantCache.add(it)
+                    if (merchantCache.size == PAGE_SIZE) {
+                        merchantDao.save(merchantCache)
+                        merchantCache.clear()
+                        log.info("MERCHANT $counter of ${merchantDataSize - merchantDataSizeDB} sync took $tableSyncWatch")
+                    }
+                }
+                if (merchantCache.size > 0) {
                     merchantDao.save(merchantCache)
                     merchantCache.clear()
-                    log.info("MERCHANT $counter of ${merchantDataSize - merchantDataSizeDB} sync took $tableSyncWatch")
                 }
+                tableSyncWatch.stop()
+                log.info("MERCHANT sync took $tableSyncWatch ($counter records)")
             }
-            if (merchantCache.size > 0) {
-                merchantDao.save(merchantCache)
-                merchantCache.clear()
-            }
-            tableSyncWatch.stop()
-            log.info("MERCHANT sync took $tableSyncWatch ($counter records)")
 
-            preferences.edit()
-                .putLong(PREFS_LAST_SYNC_KEY, Calendar.getInstance().timeInMillis)
-                .apply()
+            preferences.edit().apply {
+                putBoolean(PREFS_SYNC_IN_PROGRESS_KEY, false)
+                putLong(PREFS_LAST_SYNC_KEY, lastDataUpdate)
+            }.apply()
 
             log.info("Sync Explore Dash finished")
 
             return@withContext Result.success()
 
         } catch (ex: Exception) {
-            analytics.logError(ex, "syncing from $merchantDataSizeDB ($lastSync/$lastDataUpdate")
-            log.info("Sync Explore Dash not fully finished: ${ex.message}")
+            analytics.logError(ex, "syncing from $atmDataSizeDB, $merchantDataSizeDB ($lastSync/$lastDataUpdate")
+            log.info("Sync Explore Dash not fully finished: ${ex.message}", ex)
             return@withContext Result.failure()
         }
 

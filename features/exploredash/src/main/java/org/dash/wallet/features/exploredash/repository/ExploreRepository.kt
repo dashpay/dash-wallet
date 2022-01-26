@@ -23,11 +23,15 @@ import com.google.protobuf.Int64Value
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.withContext
+import net.lingala.zip4j.ZipFile
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.Protos
+import java.io.File
 import java.io.InputStream
 import java.lang.ref.WeakReference
 import javax.inject.Inject
@@ -37,21 +41,20 @@ interface ExploreRepository {
     fun getLastUpdate(): Long
     fun getAtmDataSize(): Int
     fun getMerchantDataSize(): Int
-    suspend fun getAtmData(): Flow<Atm>
+    suspend fun getAtmData(skipFirst: Int): Flow<Atm>
     suspend fun getMerchantData(skipFirst: Int): Flow<Merchant>
 }
 
+@Suppress("BlockingMethodInNonBlockingContext")
 class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
     ExploreRepository {
 
     companion object {
-        private const val HEADER_SIZE = 3
+        private const val HEADER_SIZE = 2 //update date, data version
+        private const val DATA_FILE_NAME = "explore.dat"
     }
 
     private var contextRef: WeakReference<Context> = WeakReference(context)
-
-    private val tmpAtm = Atm()
-    private val tmpMerchant = Merchant()
 
     private lateinit var exploreDataStream: InputStream
 
@@ -59,14 +62,26 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
     private var atmDataSize = -1
     private var merchantDataSize = -1
 
-    private var offset = 0
+    private var offset = -1
 
     override suspend fun init() = withContext(Dispatchers.IO) {
-        exploreDataStream = contextRef.get()!!.assets.open("explore/exploredata.bin")
+        val cacheDir = contextRef.get()!!.cacheDir
+        val file = File(cacheDir, DATA_FILE_NAME)
+//        file.createNewFile()
+        contextRef.get()!!.assets.open("explore/$DATA_FILE_NAME").use { input ->
+            file.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        val zipFile = ZipFile(file)
+        val pass =
+            zipFile.comment.toLong().toString(16).hashCode().toString(16).reversed().toCharArray()
+        zipFile.setPassword(pass)
+        val zipHeader = zipFile.getFileHeader("explore.bin")
+        exploreDataStream = zipFile.getInputStream(zipHeader)
         updateDate = Int64Value.parseDelimitedFrom(exploreDataStream).value
-        atmDataSize = Int32Value.parseDelimitedFrom(exploreDataStream).value
-        merchantDataSize = Int32Value.parseDelimitedFrom(exploreDataStream).value
-        offset += HEADER_SIZE
+        val dataVersion = Int32Value.parseDelimitedFrom(exploreDataStream).value
+        offset = HEADER_SIZE
     }
 
     override fun getLastUpdate(): Long {
@@ -74,27 +89,44 @@ class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Cont
     }
 
     override fun getAtmDataSize(): Int {
+        if (offset == HEADER_SIZE) {
+            atmDataSize = Int32Value.parseDelimitedFrom(exploreDataStream).value
+        } else {
+            throw IllegalStateException("Read header first")
+        }
         return atmDataSize
     }
 
     override fun getMerchantDataSize(): Int {
+        if (offset == (HEADER_SIZE + atmDataSize)) {
+            merchantDataSize = Int32Value.parseDelimitedFrom(exploreDataStream).value
+        } else {
+            throw IllegalStateException("Read header first!")
+        }
         return merchantDataSize
     }
 
-    override suspend fun getAtmData(): Flow<Atm> = flow {
-        for (i in 0 until atmDataSize) {
+    override suspend fun getAtmData(skipFirst: Int): Flow<Atm> = flow {
+        while (offset < (HEADER_SIZE + atmDataSize)) {
             val atmData = Protos.AtmData.parseDelimitedFrom(exploreDataStream)
-            emit(convert(atmData))
+            offset++
+            if (offset <= (skipFirst + HEADER_SIZE)) continue
+            emit(atmData)
         }
-    }
+    }.transform {
+        emit(convert(it))
+    }.buffer()
 
     override suspend fun getMerchantData(skipFirst: Int): Flow<Merchant> = flow {
-        for (i in 0 until merchantDataSize) {
+        while (offset < (HEADER_SIZE + atmDataSize + merchantDataSize)) {
             val merchantData = Protos.MerchantData.parseDelimitedFrom(exploreDataStream)
-            if (i < skipFirst) continue
-            emit(convert(merchantData))
+            offset++
+            if (offset <= (skipFirst + HEADER_SIZE + atmDataSize)) continue
+            emit(merchantData)
         }
-    }
+    }.transform {
+        emit(convert(it))
+    }.buffer()
 
     private fun convert(merchantData: Protos.MerchantData): Merchant {
         return Merchant().apply {
