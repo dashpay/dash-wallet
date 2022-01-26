@@ -100,4 +100,24 @@ object AnalyticsConstants {
         const val TRANSACTION_FILTER = "home_transaction_filter"
         const val SEND_RECEIVE_BUTTON = "home_send_receive_button"
     }
+
+    object Coinbase {
+        const val ENTER_CONNECTED = "coinbase_enter_authenticated"
+        const val ENTER_DISCONNECTED = "coinbase_enter_not_authenticated"
+        const val NO_DASH_WALLET = "coinbase_no_dash_wallet"
+        const val BUY_DASH = "coinbase_buy_dash"
+        const val NO_PAYMENT_METHODS = "coinbase_no_payment_methods"
+        const val CHANGE_PAYMENT_METHOD = "coinbase_change_payment_method"
+        const val ENTER_AMOUNT_FIAT = "coinbase_enter_amount_fiat_amount"
+        const val ENTER_AMOUNT_DASH = "coinbase_enter_amount_dash_amount"
+        const val CHANGE_FIAT_CURRENCY = "coinbase_change_fiat_currency"
+        const val CONTINUE_DASH_PURCHASE = "coinbase_continue_purchase"
+        const val TOP_BACK_TO_ENTER_AMOUNT = "coinbase_top_back_to_enter_amount"
+        const val BOTTOM_BACK_TO_ENTER_AMOUNT = "coinbase_bottom_back_to_enter_amount"
+        const val CANCEL_DASH_PURCHASE = "coinbase_cancel_purchase"
+        const val CANCEL_DASH_PURCHASE_NO = "coinbase_cancel_purchase_no"
+        const val CANCEL_DASH_PURCHASE_YES = "coinbase_cancel_purchase_yes"
+        const val CONFIRM_DASH_PURCHASE = "coinbase_confirm_purchase"
+        const val FEE_INFO = "coinbase_fee_info"
+    }
 }

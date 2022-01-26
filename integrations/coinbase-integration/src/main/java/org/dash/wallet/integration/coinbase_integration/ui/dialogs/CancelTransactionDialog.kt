@@ -7,10 +7,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.UserInteractionAwareCallback
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
@@ -19,6 +22,7 @@ import org.dash.wallet.integration.coinbase_integration.databinding.DialogCancel
 class CancelTransactionDialog: DialogFragment() {
     private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
     private val binding by viewBinding(DialogCancelTransactionBinding::bind)
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -38,10 +42,12 @@ class CancelTransactionDialog: DialogFragment() {
             findNavController().navigateUp()
         }
         binding.negativeButton.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE_YES, bundleOf())
             findNavController().navigateUp()
             findNavController().popBackStack()
         }
         binding.positiveButton.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE_NO, bundleOf())
             findNavController().navigateUp()
         }
     }

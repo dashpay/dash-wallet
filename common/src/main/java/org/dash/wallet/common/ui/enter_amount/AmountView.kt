@@ -22,6 +22,7 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import org.bitcoinj.core.Coin
@@ -30,6 +31,8 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.AmountViewBinding
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormat
 import java.text.NumberFormat
@@ -43,6 +46,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     private var currencySymbol = "$"
     private var isCurrencySymbolFirst = true
@@ -97,6 +101,10 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         updateCurrency()
         binding.convertDirectionBtn.setOnClickListener {
             dashToFiat = !dashToFiat
+            analytics.logEvent(if (dashToFiat) AnalyticsConstants.Coinbase.ENTER_AMOUNT_DASH
+                else AnalyticsConstants.Coinbase.ENTER_AMOUNT_FIAT,
+                bundleOf()
+            )
         }
         binding.inputCurrencyToggle.setOnClickListener {
             onCurrencyToggleClicked?.invoke()
