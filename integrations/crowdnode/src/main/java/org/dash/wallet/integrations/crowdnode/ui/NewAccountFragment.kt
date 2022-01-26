@@ -35,11 +35,24 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.dashAddressTxt.text = viewModel.dashAccountAddress
+        val existingAccount = viewModel.crowdNodeAccountFound.value == true
+
+        binding.title.setText(if (existingAccount) {
+            R.string.account_exist_title
+        } else {
+            R.string.new_account
+        })
+
+        binding.createAccountBtn.setText(if (existingAccount) {
+            R.string.account_link
+        } else {
+            R.string.account_create
+        })
+
         binding.titleBar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
-
-        binding.dashAddressTxt.text = viewModel.dashAccountAddress
 
         binding.createAccountBtn.setOnClickListener {
             binding.createAccountBtn.isEnabled = false

@@ -33,12 +33,13 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
+            android:id="@+id/title"
             style="@style/Headline5.Bold.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="?attr/actionBarSize"
             android:layout_marginHorizontal="15dp"
-            android:text="@string/new_account" />
+            tools:text="@string/new_account" />
 
         <TextView
             style="@style/Body2.White"
@@ -93,10 +94,11 @@
                     android:id="@+id/dash_address_txt"
                     style="@style/Caption"
                     android:layout_width="0dp"
+                    android:ellipsize="middle"
                     android:layout_height="match_parent"
                     android:gravity="center_vertical"
-                    android:textIsSelectable="true"
                     android:layout_weight="1"
+                    android:maxLines="1"
                     tools:text="XjfK5ivsGw7Ynxj99CEAJpcB5qNjsJpMH2" />
 
                 <ImageButton
@@ -113,9 +115,11 @@
                 android:background="@color/divider_color" />
 
             <CheckBox
+                android:id="@+id/accept_terms_checkbox"
+                style="@style/CheckBoxSimple"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="I agree to CrowdNode Terms of use and Privacy Policy" />
+                android:text="@string/crowdnode_terms_accept" />
 
             <Button
                 android:id="@+id/create_account_btn"
@@ -123,7 +127,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginTop="20dp"
-                android:text="@string/account_create" />
+                tools:text="@string/account_create" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 </androidx.constraintlayout.widget.ConstraintLayout>

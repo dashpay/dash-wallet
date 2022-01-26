@@ -51,9 +51,9 @@ class CrowdNodeViewModel @Inject constructor(
     private val paymentsService: SendPaymentService
 ) : ViewModel() {
     companion object {
-        val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(100000)
-        val OFFSET: Coin = Coin.valueOf(18000)
-        val SIGNUP_REQUEST: Coin = Coin.valueOf(2048)
+        val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
+        val OFFSET: Coin = Coin.valueOf(20000)
+        val SIGNUP_REQUEST: Coin = Coin.valueOf(131072)
 
         val CROWD_NODE_ADDRESS = if (BuildConfig.DEBUG) { // TODO: network, not build type
             "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
@@ -79,6 +79,10 @@ class CrowdNodeViewModel @Inject constructor(
     private val _dashBalance = MutableLiveData<Coin>()
     val dashBalance: LiveData<Coin>
         get() = _dashBalance
+
+    private val _crowdNodeAccountFound = MutableLiveData<Boolean>(true)
+    val crowdNodeAccountFound: LiveData<Boolean>
+        get() = _crowdNodeAccountFound
 
     init {
         walletDataProvider.observeBalance()
@@ -108,8 +112,8 @@ class CrowdNodeViewModel @Inject constructor(
         viewModelScope.launch {
             Log.i("CROWDNODE", "sending to address: ${crowdNodeAddress.toBase58()}")
             Log.i("CROWDNODE", "sending from address: ${accountAddress.toBase58()}")
-            paymentsService.sendCoins(accountAddress, MINIMUM_REQUIRED_DASH)
-//            paymentsService.sendCoins(crowdNodeAddress, OFFSET + SIGNUP_REQUEST, accountAddress)
+//            paymentsService.sendCoins(accountAddress, MINIMUM_REQUIRED_DASH)
+            paymentsService.sendCoins(crowdNodeAddress, OFFSET + SIGNUP_REQUEST, accountAddress)
         }
     }
 

@@ -51,6 +51,10 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
         }
 
+        binding.existingAccountBtn.setOnClickListener {
+            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
+        }
+
         binding.backupPassphraseLink.setOnClickListener {
             viewModel.backupPassphrase()
         }
@@ -115,7 +119,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             displayNewAccountRequirements(viewModel.needPassphraseBackUp, it)
         }
 
-        displayExistingAccountRequirements(false) // TODO
+        viewModel.crowdNodeAccountFound.observe(viewLifecycleOwner, ::displayExistingAccountRequirements)
     }
 
     private fun displayNewAccountRequirements(needBackup: Boolean, enoughBalance: Boolean) {

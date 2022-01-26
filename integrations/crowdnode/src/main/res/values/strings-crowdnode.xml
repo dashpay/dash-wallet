@@ -19,7 +19,9 @@
     <string name="crowdnode_get_started_hint">To start staking, create an account on CrowdNode or connect to an existing one.</string>
     <string name="new_account">New Account</string>
     <string name="account_create">Create Account</string>
+    <string name="account_link">Link Account</string>
     <string name="account_exist">I Have Account</string>
+    <string name="account_exist_title">I have an account</string>
     <string name="required_passphrase_backup">You must <b><u>backup your passphrase</u></b></string>
     <string name="backup_passphrase">Backup Passphrase</string>
     <string name="required_dash_amount">You need at least %s Dash</string>
@@ -34,4 +36,5 @@
     <string name="crowdnode_secure_wallet_explainer">If you lose your passphrase for this wallet and lose this device or uninstall Dash Wallet, you will lose access to your funds on CrowdNode and the funds within this wallet.</string>
     <string name="insufficient_funds">You have insufficient funds to proceed.</string>
     <string name="crowdnode_minimum_dash">You should have at least %s Dash to proceed with the CrowdNode verification.</string>
+    <string name="crowdnode_terms_accept">I agree to CrowdNode Terms of use and Privacy Policy</string>
 </resources>

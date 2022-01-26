@@ -56,7 +56,6 @@ class SendCoinsTaskRunner @Inject constructor(
         return SendRequest.to(address, amount).apply {
             coinSelector = ZeroConfCoinSelector.get()
             coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else MyOwnSelector(constrainInputsTo)
-            useInstantSend = false
             feePerKb = SendCoinsBaseViewModel.ECONOMIC_FEE // TODO reference to an unrelated ViewModel. ECONOMIC_FEE should probably be moved to a dedicated class
             ensureMinRequiredFee = true
             changeAddress = constrainInputsTo
