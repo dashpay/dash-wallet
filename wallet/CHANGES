@@ -1,4 +1,19 @@
 Dash Wallet
+v7.4.4
+* Fix crash when starting app
+
+v7.4.4
+* support interruptions when processing explore-dash data from a protobuf file (not json)
+
+v7.4.3
+* disable explore-dash sync
+* allow for local database for explore dash
+* Fix crashes on Lock Screen
+* Ask user to send a report if the wallet is missing
+
+v7.4.2
+* Fix crash when syncing Explore Dash database
+
 v7.4.1
 * add Explore Dash
 * Better error support for Uphold

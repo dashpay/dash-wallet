@@ -5,6 +5,7 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 
+import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.features.exploredash.data.AtmDao;
 import org.dash.wallet.features.exploredash.data.MerchantDao;
 import org.dash.wallet.features.exploredash.data.model.Atm;
@@ -16,7 +17,6 @@ import de.schildbach.wallet.data.AppDatabaseMigrations;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.data.RoomConverters;
-import org.dash.wallet.common.data.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 
 /**

@@ -21,7 +21,7 @@
     android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:background="@color/bg_filter_dialog"
+    tools:background="@color/background_primary"
     tools:context="org.dash.wallet.features.exploredash.ui.dialogs.FiltersDialog">
 
     <FrameLayout

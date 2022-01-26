@@ -30,13 +30,12 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.activityViewModels
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
+@Deprecated("Use AdaptiveDialog")
 class FancyAlertDialog : DialogFragment() {
-    private val lockScreenViewModel by activityViewModels<LockScreenViewModel>()
     var onFancyAlertButtonsClickListener: FancyAlertButtonsClickListener? = null
 
     enum class Type {
@@ -132,9 +131,6 @@ class FancyAlertDialog : DialogFragment() {
             Type.ACTION -> {
                 setupAction()
             }
-        }
-        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
-            dismiss()
         }
     }
 

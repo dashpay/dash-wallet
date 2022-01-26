@@ -19,7 +19,6 @@ package org.dash.wallet.integration.coinbase_integration.ui.dialogs
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,16 +26,13 @@ import android.view.Window
 import androidx.core.view.isVisible
 import androidx.core.view.isGone
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
-import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseBuyDashBinding
 
 class CoinBaseBuyDashDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseBuyDashBinding::bind)
-    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
     var onCoinBaseBuyDashDialogButtonsClickListener: CoinBaseBuyDashDialogButtonsClickListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,11 +55,6 @@ class CoinBaseBuyDashDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        lockScreenViewModel.activatingLockScreen.observe(this){
-            Log.e(this::class.java.simpleName, "Closing dialog")
-            dismiss()
-        }
 
         arguments?. getInt("Type")?.let {type->
            when (type){

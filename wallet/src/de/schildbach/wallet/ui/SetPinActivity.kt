@@ -35,6 +35,7 @@ import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 class SetPinActivity : InteractionAwareActivity() {
 
@@ -115,27 +116,45 @@ class SetPinActivity : InteractionAwareActivity() {
         pinRetryController = PinRetryController.getInstance()
 
         walletApplication = application as WalletApplication
-        if (walletApplication.wallet.isEncrypted) {
-            if (initialPin != null) {
-                if (changePin) {
-                    viewModel.oldPinCache = initialPin
-                    setState(State.SET_PIN)
-                } else {
-                    viewModel.decryptKeys(initialPin)
-                }
-            } else {
-                if (changePin) {
-                    if (pinRetryController.isLocked) {
-                        setState(State.LOCKED)
-                    } else {
-                        setState(State.CHANGE_PIN)
-                    }
-                } else {
-                    setState(State.DECRYPT)
+
+        if (walletApplication.wallet == null) {
+            val dialog = AdaptiveDialog.new(
+                R.drawable.ic_info_red,
+                getString(R.string.set_pin_error_missing_wallet_title),
+                getString(R.string.set_pin_error_missing_wallet_message),
+                getString(R.string.button_cancel),
+                getString(R.string.button_ok)
+            )
+            dialog.show(this) {
+                if (it == true) {
+                    alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
+                        WalletApplication.getInstance()).buildAlertDialog()
+                    alertDialog.show()
                 }
             }
         } else {
-            seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
+            if (walletApplication.wallet.isEncrypted) {
+                if (initialPin != null) {
+                    if (changePin) {
+                        viewModel.oldPinCache = initialPin
+                        setState(State.SET_PIN)
+                    } else {
+                        viewModel.decryptKeys(initialPin)
+                    }
+                } else {
+                    if (changePin) {
+                        if (pinRetryController.isLocked) {
+                            setState(State.LOCKED)
+                        } else {
+                            setState(State.CHANGE_PIN)
+                        }
+                    } else {
+                        setState(State.DECRYPT)
+                    }
+                }
+            } else {
+                seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
+            }
         }
     }
 

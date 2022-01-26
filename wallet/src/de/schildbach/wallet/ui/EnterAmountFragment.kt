@@ -24,8 +24,8 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.send.EnterAmountSharedViewModel
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.enter_amount_fragment.*
 import org.bitcoinj.core.Coin
@@ -43,7 +43,7 @@ import android.app.Activity
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.ExchangeRatesFragment.*
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.util.FiatAmountFormat
 
 
