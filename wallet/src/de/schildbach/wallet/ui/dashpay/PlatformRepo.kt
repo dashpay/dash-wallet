@@ -62,6 +62,7 @@ import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.dpp.toHex
+import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.sdk.platform.Platform
 import org.dashj.platform.sdk.platform.multicall.MulticallQuery
@@ -1389,9 +1390,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun getIdentityForName(nameDocument: Document): Identifier {
-        val records = nameDocument.data["records"] as Map<*, *>
-        return Identifier.from(records["dashUniqueIdentityId"])
+    /**
+     * obtains the identity associated with the username (domain document)
+     * @throws NullPointerException if neither the unique id or alias exists
+     */
+    private fun getIdentityForName(nameDocument: Document): Identifier {
+        val domainDocument = DomainDocument(nameDocument)
+
+        // look at the unique identity first, followed by the alias
+        return domainDocument.dashUniqueIdentityId ?: domainDocument.dashAliasIdentityId!!
     }
 
     suspend fun getLocalUserProfile(): DashPayProfile? {
@@ -1475,9 +1482,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 ?: return null
         val fundingKey = blockchainIdentityKeyChain.watchingKey
         return try {
-            val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
-            if (identityBytes != null) {
-                platform.dpp.identity.createFromBuffer(identityBytes.toByteArray())
+            val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash, true)
+            if (identityBytes != null && identityBytes.isNotEmpty()) {
+                platform.dpp.identity.createFromBuffer(identityBytes)
             } else {
                 null
             }
