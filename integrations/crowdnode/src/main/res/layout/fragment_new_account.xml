@@ -29,7 +29,8 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@drawable/bg_dash_gradient"
-        android:paddingBottom="60dp"
+        android:paddingBottom="62dp"
+        android:paddingHorizontal="20dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
@@ -38,23 +39,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="?attr/actionBarSize"
-            android:layout_marginHorizontal="15dp"
             tools:text="@string/new_account" />
 
         <TextView
             style="@style/Body2.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:layout_marginHorizontal="15dp"
+            android:layout_marginTop="12dp"
             android:text="@string/crowdnode_new_account_warning_1" />
 
         <TextView
             style="@style/Body2.White"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:layout_marginHorizontal="15dp"
+            android:layout_marginTop="12dp"
             android:text="@string/crowdnode_new_account_warning_2" />
     </LinearLayout>
 
@@ -88,6 +86,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="-6dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -114,19 +113,34 @@
                 android:layout_marginTop="15dp"
                 android:background="@color/divider_color" />
 
-            <CheckBox
-                android:id="@+id/accept_terms_checkbox"
-                style="@style/CheckBoxSimple"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/crowdnode_terms_accept" />
+                android:layout_height="60dp"
+                android:layout_marginTop="9dp"
+                android:layout_marginHorizontal="8dp"
+                android:orientation="horizontal">
+
+                <CheckBox
+                    android:id="@+id/accept_terms_checkbox"
+                    style="@style/CheckBoxSimple"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/accept_terms_txt"
+                    style="@style/Body2"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="10dp"
+                    tools:text="@string/agree_to_terms" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/create_account_btn"
                 style="@style/Button.Primary.Large.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="18dp"
                 tools:text="@string/account_create" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>

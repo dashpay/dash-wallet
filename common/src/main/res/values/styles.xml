@@ -843,10 +843,9 @@
     <style name="CheckBoxSimple" parent="Body2">
         <item name="android:button">@drawable/checkbox_simple</item>
         <item name="android:drawablePadding">10dp</item>
-        <item name="android:paddingEnd">16dp</item>
         <item name="android:paddingTop">11dp</item>
         <item name="android:paddingBottom">11dp</item>
-        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingStart">12dp</item>
     </style>
 
     <!-- Buttons -->
@@ -1127,5 +1126,12 @@
         <item name="android:rotation">180</item>
         <item name="android:src">@drawable/ic_arrow_back</item>
         <item name="android:tint">@color/steel_gray_200</item>
+    </style>
+
+
+
+    <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:background">@color/white</item>
+        <item name="android:textColor">@color/gray_900</item>
     </style>
 </resources>

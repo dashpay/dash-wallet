@@ -84,6 +84,8 @@ class CrowdNodeViewModel @Inject constructor(
     val crowdNodeAccountFound: LiveData<Boolean>
         get() = _crowdNodeAccountFound
 
+    val termsAccepted = MutableLiveData<Boolean>(false)
+
     init {
         walletDataProvider.observeBalance()
             .distinctUntilChanged()
@@ -112,8 +114,8 @@ class CrowdNodeViewModel @Inject constructor(
         viewModelScope.launch {
             Log.i("CROWDNODE", "sending to address: ${crowdNodeAddress.toBase58()}")
             Log.i("CROWDNODE", "sending from address: ${accountAddress.toBase58()}")
-//            paymentsService.sendCoins(accountAddress, MINIMUM_REQUIRED_DASH)
-            paymentsService.sendCoins(crowdNodeAddress, OFFSET + SIGNUP_REQUEST, accountAddress)
+            paymentsService.sendCoins(accountAddress, MINIMUM_REQUIRED_DASH)
+//            paymentsService.sendCoins(crowdNodeAddress, OFFSET + SIGNUP_REQUEST, accountAddress)
         }
     }
 

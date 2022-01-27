@@ -15,11 +15,6 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
-        <item name="android:background">@color/white</item>
-        <item name="android:textColor">@color/gray_900</item>
-    </style>
-
     <style name="ExploreTestBottomContentBackground" parent="WhiteBackground">
         <item name="cornerRadius">8dp</item>
     </style>
