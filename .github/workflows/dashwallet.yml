@@ -82,6 +82,7 @@ jobs:
         rm  -rf wallet/assets/explore/*
         ls -l wallet/assets/explore/
         ruby -r ./exploredata.rb
+        ls -l wallet/assets/explore/
 
     - name: Test
       run: bundle exec fastlane test flavor:"" type:"debug"
