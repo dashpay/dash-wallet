@@ -78,7 +78,9 @@ jobs:
     - name: Copy explore.dat from GC Storage
       run: |
         gem install google-cloud-storage
+        ls -l wallet/assets/explore/
         rm  -rf wallet/assets/explore/*
+        ls -l wallet/assets/explore/
         ruby -r ./exploredata.rb
 
     - name: Test
