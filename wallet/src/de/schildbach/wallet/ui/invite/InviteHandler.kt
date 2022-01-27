@@ -37,7 +37,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialogViewModel
-import org.dashj.platform.dpp.errors.ErrorMetadata
+import org.dashj.platform.dpp.errors.ConcensusErrorMetadata
 import org.dashj.platform.dpp.errors.concensus.ConcensusException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
@@ -215,7 +215,7 @@ class InviteHandler(val activity: AppCompatActivity, private val analytics: Anal
         // handle errors
         var exception: ConcensusException
         if (blockchainIdentityData.creationStateErrorMessage.also {
-            val errorMetadata = ErrorMetadata(it!!)
+            val errorMetadata = ConcensusErrorMetadata(it!!)
                 exception = ConcensusException.Companion.create(errorMetadata)
         } != null) {
 
