@@ -115,7 +115,7 @@ public final class Constants {
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                FAUCET_URL = "http://insight.krupnik.networks.dash.org:3001/insight";
+                FAUCET_URL = "http://faucet.krupnik.networks.dash.org/";
                 break;
             }
             default: {
