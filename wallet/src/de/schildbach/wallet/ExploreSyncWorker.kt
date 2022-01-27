@@ -162,7 +162,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             return@withContext Result.success()
 
         } catch (ex: Exception) {
-            analytics.logError(ex, "syncing from $atmDataSizeDB, $merchantDataSizeDB ($lastSync/$lastDataUpdate")
+            analytics.logError(ex, "syncing from $atmDataSizeDB, $merchantDataSizeDB ($lastSync/$lastDataUpdate)")
             log.info("Sync Explore Dash not fully finished: ${ex.message}", ex)
             return@withContext Result.failure()
         }
