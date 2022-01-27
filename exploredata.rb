@@ -17,7 +17,7 @@ end
 
 bucket = storage.bucket bucket_name, skip_lookup: true
 file = bucket.file file_name
-timestamp = file.updated_at.to_time.to_i
+timestamp = file.updated_at.strftime("%Q")
 
 file.download "#{local_file_path}#{timestamp}.dat"
 
