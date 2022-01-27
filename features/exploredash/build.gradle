@@ -83,7 +83,12 @@ dependencies {
 
     // Logs
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
-    
+
+    // Firebase
+    implementation 'com.google.firebase:firebase-storage-ktx'
+    implementation 'com.google.firebase:firebase-auth-ktx'
+
+    // Other
     implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation 'com.google.protobuf:protobuf-javalite:3.14.0'
     implementation 'net.lingala.zip4j:zip4j:2.9.1'

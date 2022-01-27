@@ -80,9 +80,9 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         var lastSync = 0L
         var lastDataUpdate = 0L
         try {
-            exploreRepository.init()
-
             lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
+
+            exploreRepository.initMetadata()
             lastDataUpdate = exploreRepository.getLastUpdate()
 
             if (lastSync >= lastDataUpdate) {
@@ -99,6 +99,8 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
                 atmDao.deleteAll()
                 merchantDao.deleteAll()
             }
+
+            exploreRepository.initData(true)
 
             val tableSyncWatch = Stopwatch.createStarted()
 
