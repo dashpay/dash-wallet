@@ -38,6 +38,7 @@ class WebViewFragment : Fragment(R.layout.fragment_webview) {
         super.onViewCreated(view, savedInstanceState)
         binding.toolbarTitle.text = args.title
 
+        val binding = binding // Avoids IllegalStateException in onPageFinished callback
         binding.webView.webViewClient = object: WebViewClient() {
             override fun onPageFinished(view: WebView, url: String?) {
                 binding.progressBar.isVisible = false
