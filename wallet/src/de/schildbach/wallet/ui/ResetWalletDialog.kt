@@ -38,7 +38,12 @@ class ResetWalletDialog : BaseDialogFragment() {
                 negativeAction = {
                     analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
                     (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
+                    // 1. wipe the wallet
+                    // 2. start OnboardingActivity
+                    // 3. close the backstack (Home->More->Security)
                     WalletApplication.getInstance().triggerWipe(context)
+                    startActivity(OnboardingActivity.createIntent(requireContext()))
+                    activity?.finishAffinity()
                 }
                 positiveText = getString(android.R.string.no)
                 cancelable = false
