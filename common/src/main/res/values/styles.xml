@@ -684,6 +684,13 @@
         <item name="cornerRadius">15dp</item>
     </style>
 
+    <style name="DialogBackground">
+        <item name="backgroundColor">@color/white</item>
+        <item name="strokeColor">@color/white</item>
+        <item name="cornerRadius">14dp</item>
+    </style>
+
+
     <!-- Typography -->
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
@@ -808,12 +815,16 @@
         <item name="android:textColor">@color/gray_700</item>
     </style>
 
+    <style name="Caption.SteelGray">
+        <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
     <style name="Caption.SteelGray400">
         <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
-    <style name="Caption.SteelGray">
-        <item name="android:textColor">@color/steel_gray_500</item>
+    <style name="Caption.SteelGray700">
+        <item name="android:textColor">@color/steel_gray_700</item>
     </style>
 
     <style name="Caption.Medium">
@@ -954,7 +965,7 @@
     <style name="SecondaryButtonTheme">
         <item name="cornerRadius">8dp</item>
         <item name="titleTextColor">@color/gray_900</item>
-        <item name="strokeColor">@color/gray_900</item>
+        <item name="strokeColor">@color/gray_100</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 

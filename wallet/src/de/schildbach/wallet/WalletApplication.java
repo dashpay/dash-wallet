@@ -67,7 +67,7 @@ import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.util.WalletDataProvider;
+import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -151,6 +151,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public void onCreate() {
         super.onCreate();
+        initLogging();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
@@ -186,7 +187,19 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
             fullInitialization();
         }
 
-        syncExploreData();
+        CrashReporter.init(getCacheDir());
+
+        Threading.uncaughtExceptionHandler = (thread, throwable) -> {
+            log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
+            CrashReporter.saveBackgroundTrace(throwable, packageInfo);
+        };
+
+        try {
+            syncExploreData();
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            CrashReporter.saveBackgroundTrace(ex, packageInfo);
+        }
     }
 
     private void syncExploreData() {
@@ -222,7 +235,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         basicWalletInitalizationFinished = true;
 
         new LinuxSecureRandom(); // init proper random number generator
-        initLogging();
 
         if (!Constants.IS_PROD_BUILD) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()
@@ -237,16 +249,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 Constants.NETWORK_PARAMETERS.getId());
 
         packageInfo = packageInfoFromContext(this);
-
-        CrashReporter.init(getCacheDir());
-
-        Threading.uncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(final Thread thread, final Throwable throwable) {
-                log.info(CoinDefinition.coinName + "j uncaught exception", throwable);
-                CrashReporter.saveBackgroundTrace(throwable, packageInfo);
-            }
-        };
 
         MnemonicCodeExt.initMnemonicCode(this);
 

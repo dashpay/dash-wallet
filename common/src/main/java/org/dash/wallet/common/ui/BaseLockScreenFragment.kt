@@ -6,20 +6,21 @@ import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@Deprecated("Use AdaptiveDialog to show dialogs that are auto-dismissible with lock screen")
 open class BaseLockScreenFragment: Fragment() {
-    protected val lockScreenViewModel: LockScreenViewModel by activityViewModels()
+    @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     protected lateinit var alertDialog: AlertDialog
     protected lateinit var dialogFragment: DialogFragment
     @Inject protected lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        lockScreenViewModel.activatingLockScreen.observe(this) {
+        lockScreenBroadcaster.activatingLockScreen.observe(this) {
             Log.e(this::class.java.simpleName, "Lock screen observed")
             if (this::alertDialog.isInitialized) {
                 alertDialog.dismissDialog()

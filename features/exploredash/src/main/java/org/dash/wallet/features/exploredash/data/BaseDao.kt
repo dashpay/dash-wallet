@@ -27,5 +27,5 @@ interface BaseDao<T: SearchResult> {
     suspend fun save(list: List<T>)
 
     // add @Query(...) in sub classes to avoid build failures
-    suspend fun deleteAll(source: String): Int
+    suspend fun deleteAll(): Int
 }

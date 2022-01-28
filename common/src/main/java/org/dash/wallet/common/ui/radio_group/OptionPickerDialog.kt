@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
 import org.dash.wallet.common.ui.ListDividerDecorator
-import org.dash.wallet.common.ui.OffsetDialogFragment
+import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
 class OptionPickerDialog(

@@ -17,163 +17,133 @@
 
 package org.dash.wallet.features.exploredash.repository
 
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.ValueEventListener
-import com.google.firebase.database.ktx.database
-import com.google.firebase.database.ktx.getValue
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.suspendCancellableCoroutine
+import android.content.Context
+import com.google.protobuf.Int32Value
+import com.google.protobuf.Int64Value
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
+import org.dash.wallet.features.exploredash.data.model.Atm
+import org.dash.wallet.features.exploredash.data.model.Merchant
+import org.dash.wallet.features.exploredash.data.model.Protos
+import java.io.InputStream
+import java.lang.ref.WeakReference
 import javax.inject.Inject
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 interface ExploreRepository {
-    suspend fun getLastUpdate(): Long
-    suspend fun getLastUpdate(tableName: String): Long
-    suspend fun getDataSize(tableName: String): Int
-    suspend fun <T> get(
-        tableName: String,
-        startAt: Int,
-        endBefore: Int,
-        valueType: Class<T>
-    ): List<T>
+    suspend fun init()
+    fun getLastUpdate(): Long
+    fun getAtmDataSize(): Int
+    fun getMerchantDataSize(): Int
+    suspend fun getAtmData(): Flow<Atm>
+    suspend fun getMerchantData(skipFirst: Int): Flow<Merchant>
 }
 
-class FirebaseExploreDatabase @Inject constructor() : ExploreRepository {
-    companion object Tables {
-        const val DASH_DIRECT_TABLE = "dash_direct"
-        const val DCG_MERCHANT_TABLE = "dcg_merchant"
-        const val ATM_TABLE = "atm"
+class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
+    ExploreRepository {
+
+    companion object {
+        private const val HEADER_SIZE = 3
     }
 
-    private val auth = Firebase.auth
-    private val fbDatabase = Firebase.database
+    private var contextRef: WeakReference<Context> = WeakReference(context)
 
-    override suspend fun <T> get(
-        tableName: String,
-        startAt: Int,
-        endBefore: Int,
-        valueType: Class<T>
-    ): List<T> {
-        ensureAuthenticated()
-        val query = fbDatabase.getReference("explore/$tableName/data")
-            .orderByKey()
-            .startAt(startAt.toString())
-            .endBefore(endBefore.toString())
+    private val tmpAtm = Atm()
+    private val tmpMerchant = Merchant()
 
-        return suspendCancellableCoroutine { coroutine ->
-            query.addListenerForSingleValueEvent(object: ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    val data = mutableListOf<T>()
-                    dataSnapshot.children.forEach {
-                        val merchant = it.getValue(valueType)!!
-                        data.add(merchant)
-                    }
+    private lateinit var exploreDataStream: InputStream
 
-                    if (coroutine.isActive) {
-                        coroutine.resume(data)
-                    }
-                }
+    private var updateDate = -1L
+    private var atmDataSize = -1
+    private var merchantDataSize = -1
 
-                override fun onCancelled(error: DatabaseError) {
-                    if (coroutine.isActive) {
-                        coroutine.resumeWithException(error.toException())
-                    }
-                }
-            })
+    private var offset = 0
+
+    override suspend fun init() = withContext(Dispatchers.IO) {
+        exploreDataStream = contextRef.get()!!.assets.open("explore/exploredata.bin")
+        updateDate = Int64Value.parseDelimitedFrom(exploreDataStream).value
+        atmDataSize = Int32Value.parseDelimitedFrom(exploreDataStream).value
+        merchantDataSize = Int32Value.parseDelimitedFrom(exploreDataStream).value
+        offset += HEADER_SIZE
+    }
+
+    override fun getLastUpdate(): Long {
+        return updateDate
+    }
+
+    override fun getAtmDataSize(): Int {
+        return atmDataSize
+    }
+
+    override fun getMerchantDataSize(): Int {
+        return merchantDataSize
+    }
+
+    override suspend fun getAtmData(): Flow<Atm> = flow {
+        for (i in 0 until atmDataSize) {
+            val atmData = Protos.AtmData.parseDelimitedFrom(exploreDataStream)
+            emit(convert(atmData))
         }
     }
 
-    override suspend fun getDataSize(tableName: String): Int {
-        ensureAuthenticated()
-        val query = fbDatabase.getReference("explore/$tableName/data_size")
-
-        return suspendCancellableCoroutine { coroutine ->
-            query.addListenerForSingleValueEvent(object: ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    if (coroutine.isActive) {
-                        coroutine.resume(dataSnapshot.getValue<Int>()!!)
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    if (coroutine.isActive) {
-                        coroutine.resumeWithException(error.toException())
-                    }
-                }
-            })
+    override suspend fun getMerchantData(skipFirst: Int): Flow<Merchant> = flow {
+        for (i in 0 until merchantDataSize) {
+            val merchantData = Protos.MerchantData.parseDelimitedFrom(exploreDataStream)
+            if (i < skipFirst) continue
+            emit(convert(merchantData))
         }
     }
 
-    override suspend fun getLastUpdate(): Long {
-        ensureAuthenticated()
-        val query = fbDatabase.getReference("explore/last_update")
-
-        return suspendCancellableCoroutine { coroutine ->
-            query.addListenerForSingleValueEvent(object: ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    if (coroutine.isActive) {
-                        coroutine.resume(dataSnapshot.getValue<Long>()!!)
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    if (coroutine.isActive) {
-                        coroutine.resumeWithException(error.toException())
-                    }
-                }
-            })
+    private fun convert(merchantData: Protos.MerchantData): Merchant {
+        return Merchant().apply {
+            deeplink = merchantData.deeplink
+            plusCode = merchantData.plusCode
+            addDate = merchantData.addDate
+            updateDate = merchantData.updateDate
+            paymentMethod = merchantData.paymentMethod
+            merchantId = merchantData.merchantId
+            active = merchantData.active
+            name = merchantData.name
+            address1 = merchantData.address1
+            address2 = merchantData.address2
+            address3 = merchantData.address2
+            address4 = merchantData.address4
+            latitude = merchantData.latitude
+            longitude = merchantData.longitude
+            website = merchantData.website
+            phone = merchantData.phone
+            territory = merchantData.territory
+            city = merchantData.city
+            sourceId = merchantData.sourceId
+            source = merchantData.source
+            logoLocation = merchantData.logoLocation
+            googleMaps = merchantData.googleMaps
+            coverImage = merchantData.coverImage
+            type = merchantData.type
         }
     }
 
-    override suspend fun getLastUpdate(tableName: String): Long {
-        ensureAuthenticated()
-        val query = fbDatabase.getReference("explore/$tableName/last_update")
-
-        return suspendCancellableCoroutine { coroutine ->
-            query.addListenerForSingleValueEvent(object: ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    if (coroutine.isActive) {
-                        coroutine.resume(dataSnapshot.getValue<Long>()!!)
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    if (coroutine.isActive) {
-                        coroutine.resumeWithException(error.toException())
-                    }
-                }
-            })
-        }
-    }
-
-    private suspend fun ensureAuthenticated() {
-        if (auth.currentUser == null) {
-            signingAnonymously()
-        }
-    }
-
-    private suspend fun signingAnonymously(): FirebaseUser {
-        return suspendCancellableCoroutine { coroutine ->
-            auth.signInAnonymously().addOnSuccessListener { result ->
-                if (coroutine.isActive) {
-                    val user = result.user
-
-                    if (user != null) {
-                        coroutine.resume(user)
-                    } else {
-                        coroutine.resumeWithException(FirebaseAuthException("-1", "User is null after anon sign in"))
-                    }
-                }
-            }.addOnFailureListener {
-                if (coroutine.isActive) {
-                    coroutine.resumeWithException(it)
-                }
-            }
+    private fun convert(atmData: Protos.AtmData): Atm {
+        return Atm().apply {
+            postcode = atmData.postcode
+            manufacturer = atmData.manufacturer
+            active = atmData.active
+            name = atmData.name
+            address1 = atmData.address
+            latitude = atmData.latitude
+            longitude = atmData.longitude
+            website = atmData.website
+            phone = atmData.phone
+            territory = atmData.territory
+            city = atmData.city
+            source = atmData.source
+            sourceId = atmData.sourceId
+            logoLocation = atmData.logoLocation
+            latitude = atmData.latitude
+            coverImage = atmData.coverImage
+            type = atmData.type
         }
     }
 }
