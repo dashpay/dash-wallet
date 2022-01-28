@@ -28,6 +28,7 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.adapter.BuyAndSellDashServicesAdapter
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
@@ -64,9 +65,9 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
 
     private var liquidClient: LiquidClient? = null
     private var loadingDialog: ProgressDialog? = null
+    private var bottomSheetDialog: BottomSheetDialog? = null
     private lateinit var application: WalletApplication
     private lateinit var config: Configuration
-
     private var currentExchangeRate: ExchangeRate? = null
 
     private val viewModel by viewModels<BuyAndSellViewModel>()
@@ -430,6 +431,12 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
 
     override fun onPositiveButtonClick() {
         startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
+    }
+
+    override fun onLockScreenActivated() {
+        super.onLockScreenActivated()
+        // TODO: replace with BottomSheetDialogFragment to dismiss automatically
+        bottomSheetDialog?.dismiss()
     }
 
     override fun onNegativeButtonClick() {}

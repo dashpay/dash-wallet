@@ -29,8 +29,8 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.MerchantAtmDataSource
+import org.dash.wallet.features.exploredash.repository.AssetExploreDatabase
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
-import org.dash.wallet.features.exploredash.repository.FirebaseExploreDatabase
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 
@@ -39,7 +39,7 @@ import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 abstract class ExploreDashModule {
     @Binds
     abstract fun bindExploreRepository(
-        exploreRepository: FirebaseExploreDatabase
+        exploreRepository: AssetExploreDatabase
     ): ExploreRepository
 
     @ExperimentalCoroutinesApi

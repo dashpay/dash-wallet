@@ -26,6 +26,9 @@ import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Resource
 
 interface WalletDataProvider {
+
+    fun currentReceiveAddress(): Address
+
     fun freshReceiveAddress(): Address
 
     @Deprecated("Inject ExchangeRatesProvider instead")

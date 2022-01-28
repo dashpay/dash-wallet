@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2019 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,13 +31,13 @@ class NumericKeyboardView : TableLayout, View.OnClickListener {
 
     companion object {
         private val NUMERIC_BUTTONS_RES_ID = arrayOf(
-                R.id.btn_1, R.id.btn_2, R.id.btn_3,
-                R.id.btn_4, R.id.btn_5, R.id.btn_6,
-                R.id.btn_7, R.id.btn_8, R.id.btn_9,
-                R.id.btn_0)
+            R.id.btn_1, R.id.btn_2, R.id.btn_3,
+            R.id.btn_4, R.id.btn_5, R.id.btn_6,
+            R.id.btn_7, R.id.btn_8, R.id.btn_9,
+            R.id.btn_0)
 
         private val FUNCTION_BUTTONS_RES_ID = arrayOf(
-                R.id.btn_function, R.id.btn_back
+            R.id.btn_function, R.id.btn_back
         )
 
         private val ALL_BUTTONS_RES_ID = NUMERIC_BUTTONS_RES_ID + FUNCTION_BUTTONS_RES_ID

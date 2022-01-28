@@ -7,6 +7,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
+@Deprecated("Use OffsetDialogFragment")
 open class BaseBottomSheetDialog(context: Context) : BottomSheetDialog(context, R.style.BottomSheetDialog) {
 
     override fun onCreate(savedInstanceState: Bundle?) {
