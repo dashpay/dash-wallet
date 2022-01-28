@@ -99,7 +99,6 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
-import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
