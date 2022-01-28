@@ -35,11 +35,11 @@ class ExploreTestNetFragment : BottomNavFragment(R.layout.fragment_explore_testn
             val clipboardManager =
                 requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-            clipboardManager.setPrimaryClip(ClipData.newPlainText("Bitcoin address", receiveAddress.toString()))
+            clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", receiveAddress.toString()))
 
             val faucetIntent = Intent(
                 Intent.ACTION_VIEW,
-                Uri.parse(Constants.TESTNET_FAUCET_URL)
+                Uri.parse(Constants.FAUCET_URL)
             )
             startActivity(faucetIntent)
         }
