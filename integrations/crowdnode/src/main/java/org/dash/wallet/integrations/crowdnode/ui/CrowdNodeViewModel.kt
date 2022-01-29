@@ -29,16 +29,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
-import org.bitcoinj.params.MainNetParams
-import org.bitcoinj.params.TestNet3Params
-import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.services.SendPaymentService
-import java.util.concurrent.TimeUnit
+import org.dash.wallet.integrations.crowdnode.logic.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.logic.CrowdNodeTransaction
+import org.dash.wallet.integrations.crowdnode.utils.Constants
 import javax.inject.Inject
-import kotlin.system.measureTimeMillis
 
 enum class NavigationRequest {
     BackupPassphrase, RestoreWallet, BuyDash
@@ -48,24 +45,10 @@ enum class NavigationRequest {
 class CrowdNodeViewModel @Inject constructor(
     private val config: Configuration,
     private val walletDataProvider: WalletDataProvider,
-    private val paymentsService: SendPaymentService
+    private val crowdNodeApi: CrowdNodeApi
 ) : ViewModel() {
-    companion object {
-        val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
-        val OFFSET: Coin = Coin.valueOf(20000)
-        val SIGNUP_REQUEST: Coin = Coin.valueOf(131072)
-
-        val CROWD_NODE_ADDRESS = if (BuildConfig.DEBUG) { // TODO: network, not build type
-            "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
-        } else {
-            "XjbaGWaGnvEtuQAUoBgDxJWe8ZNv45upG2"
-        }
-    }
-
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
 
-    private val params = TestNet3Params.get() // TODO
-    private val crowdNodeAddress = Address.fromBase58(params, CROWD_NODE_ADDRESS)
     private val accountAddress = getOrCreateAccountAddress()
 
     val dashAccountAddress: String = accountAddress.toBase58()
@@ -84,14 +67,14 @@ class CrowdNodeViewModel @Inject constructor(
     val crowdNodeAccountFound: LiveData<Boolean>
         get() = _crowdNodeAccountFound
 
-    val termsAccepted = MutableLiveData<Boolean>(false)
+    val termsAccepted = MutableLiveData(false)
 
     init {
         walletDataProvider.observeBalance()
             .distinctUntilChanged()
             .onEach {
                 _dashBalance.postValue(it)
-                _hasEnoughBalance.postValue(it >= MINIMUM_REQUIRED_DASH)
+                _hasEnoughBalance.postValue(it >= Constants.MINIMUM_REQUIRED_DASH)
             }
             .launchIn(viewModelScope)
     }
@@ -109,13 +92,8 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     fun signUp() {
-        // TODO: Move to crowdnode API, viewModel shouldn't care about sending coins
-        // and tracking transaction
         viewModelScope.launch {
-            Log.i("CROWDNODE", "sending to address: ${crowdNodeAddress.toBase58()}")
-            Log.i("CROWDNODE", "sending from address: ${accountAddress.toBase58()}")
-            paymentsService.sendCoins(accountAddress, MINIMUM_REQUIRED_DASH)
-//            paymentsService.sendCoins(crowdNodeAddress, OFFSET + SIGNUP_REQUEST, accountAddress)
+            crowdNodeApi.signUp(accountAddress)
         }
     }
 
@@ -128,7 +106,7 @@ class CrowdNodeViewModel @Inject constructor(
             config.crowdNodeAccountAddress = address.toBase58()
             return address
         } else {
-            Address.fromString(params, savedAddress)
+            Address.fromString(Constants.NETWORK_PARAMETERS, savedAddress)
         }
     }
 }

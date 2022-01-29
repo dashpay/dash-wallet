@@ -29,6 +29,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentEntryPointBinding
+import org.dash.wallet.integrations.crowdnode.utils.Constants
 
 @AndroidEntryPoint
 class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
@@ -44,7 +45,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
 
         binding.requiredDashTxt.text = getString(
             R.string.required_dash_amount,
-            CrowdNodeViewModel.MINIMUM_REQUIRED_DASH.toPlainString()
+            Constants.MINIMUM_REQUIRED_DASH.toPlainString()
         )
 
         binding.newAccountBtn.setOnClickListener {
@@ -85,7 +86,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
                 getString(R.string.insufficient_funds),
                 getString(
                     R.string.crowdnode_minimum_dash,
-                    CrowdNodeViewModel.MINIMUM_REQUIRED_DASH.toPlainString()
+                    Constants.MINIMUM_REQUIRED_DASH.toPlainString()
                 ),
                 getString(R.string.close),
                 getString(R.string.buy_dash)
@@ -115,7 +116,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         viewModel.hasEnoughBalance.observe(viewLifecycleOwner) {
-            Log.i("CROWDNODE", "Enough balance: ${it}, minimum: ${CrowdNodeViewModel.MINIMUM_REQUIRED_DASH.toPlainString()}, current balance: ${viewModel.dashBalance.value?.toPlainString() ?: "null"}")
+            Log.i("CROWDNODE", "Enough balance: ${it}, minimum: ${Constants.MINIMUM_REQUIRED_DASH.toPlainString()}, current balance: ${viewModel.dashBalance.value?.toPlainString() ?: "null"}")
             displayNewAccountRequirements(viewModel.needPassphraseBackUp, it)
         }
 

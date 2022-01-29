@@ -1,4 +1,21 @@
-package de.schildbach.wallet.ui
+/*
+ * Copyright 2022 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.transactions
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -20,9 +37,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
 
 @ExperimentalCoroutinesApi
-class WalletBalanceObserver(context: Context, private val wallet: Wallet) {
-    private val broadcastManager = LocalBroadcastManager.getInstance(context.applicationContext)
-
+class WalletBalanceObserver(private val wallet: Wallet) {
     fun observe(): Flow<Coin> = callbackFlow {
         fun emitBalance() {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
@@ -41,7 +56,8 @@ class WalletBalanceObserver(context: Context, private val wallet: Wallet) {
                 newBalance: Coin?
             ) {
                 super.onCoinsReceived(wallet, tx, prevBalance, newBalance)
-                Log.i("CROWDNODE", "onCoinsReceived: ${tx?.toString() ?: "null"}")
+                emitBalance()
+//                Log.i("CROWDNODE", "balance onCoinsReceived, old: ${prevBalance}, new: ${newBalance}")
             }
 
             override fun onCoinsSent(
@@ -51,32 +67,25 @@ class WalletBalanceObserver(context: Context, private val wallet: Wallet) {
                 newBalance: Coin?
             ) {
                 super.onCoinsSent(wallet, tx, prevBalance, newBalance)
-                Log.i("CROWDNODE", "onCoinsSent: ${tx?.toString() ?: "null"}")
+                emitBalance()
+//                Log.i("CROWDNODE", "balance onCoinsSent, old: ${prevBalance}, new: ${newBalance}")
             }
 
             override fun onTransactionConfidenceChanged(wallet: Wallet?, tx: Transaction?) {
                 super.onTransactionConfidenceChanged(wallet, tx)
-                Log.i("CROWDNODE", "onTransactionConfidenceChanged: ${tx?.toString() ?: "null"}")
-            }
-        }
-        val walletChangedReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
                 emitBalance()
+//                Log.i("CROWDNODE", "balance onTransactionConfidenceChanged")
             }
         }
 
         wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
         wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
         wallet.addChangeEventListener(Threading.SAME_THREAD, walletChangeListener)
-        broadcastManager.registerReceiver(walletChangedReceiver,
-            IntentFilter(WalletApplication.ACTION_WALLET_REFERENCE_CHANGED)
-        )
 
         emitBalance()
 
         awaitClose {
-            Log.i("CROWDNODE", "Closing observer")
-            broadcastManager.unregisterReceiver(walletChangedReceiver)
+            Log.i("CROWDNODE", "Closing balance observer")
             wallet.removeChangeEventListener(walletChangeListener)
             wallet.removeCoinsSentEventListener(walletChangeListener)
             wallet.removeCoinsReceivedEventListener(walletChangeListener)

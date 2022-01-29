@@ -70,6 +70,7 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
+import org.dash.wallet.common.transactions.TransactionFilter;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -101,7 +102,8 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
-import de.schildbach.wallet.ui.WalletBalanceObserver;
+import de.schildbach.wallet.transactions.WalletBalanceObserver;
+import de.schildbach.wallet.transactions.WalletTransactionObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
@@ -854,6 +856,12 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @NonNull
     @Override
     public Flow<Coin> observeBalance() {
-        return new WalletBalanceObserver(this, wallet).observe();
+        return new WalletBalanceObserver(wallet).observe();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
+        return new WalletTransactionObserver(wallet).observe(filters);
     }
 }

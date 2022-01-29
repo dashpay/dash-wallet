@@ -15,7 +15,6 @@
  */
 package de.schildbach.wallet.payments
 
-import android.util.Log
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -26,11 +25,11 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
-import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.*
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.transactions.FilterByAddressSelector
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -55,7 +54,7 @@ class SendCoinsTaskRunner @Inject constructor(
     private fun createSendRequest(address: Address, amount: Coin, constrainInputsTo: Address? = null): SendRequest {
         return SendRequest.to(address, amount).apply {
             coinSelector = ZeroConfCoinSelector.get()
-            coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else MyOwnSelector(constrainInputsTo)
+            coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else FilterByAddressSelector(constrainInputsTo)
             feePerKb = SendCoinsBaseViewModel.ECONOMIC_FEE // TODO reference to an unrelated ViewModel. ECONOMIC_FEE should probably be moved to a dedicated class
             ensureMinRequiredFee = true
             changeAddress = constrainInputsTo
@@ -134,34 +133,5 @@ class SendCoinsTaskRunner @Inject constructor(
 
         // Hand back the (possibly changed) encryption key.
         return key
-    }
-
-    private class MyOwnSelector(private val address: Address) : CoinSelector {
-        private val selector = ZeroConfCoinSelector.get()
-
-        override fun select(
-            target: Coin,
-            candidates: MutableList<TransactionOutput>
-        ): CoinSelection {
-            Log.i("CROWDNODE", "Select override")
-//            candidates?.forEach {
-//                Log.i("CROWDNODE", "\ncandidate: ${it.index}, ${}")
-//                Log.i("CROWDNODE", "parent transaction: ${it.parentTransaction?.toString()}")
-//            }
-            val filtered = candidates.filter { output ->
-                val script = output.scriptPubKey
-                val match = (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                        script.getToAddress(address.parameters).toBase58() == address.toBase58()
-                Log.i("CROWDNODE", "\nfiltering, match? ${match}\n$output")
-
-                match
-            }
-            Log.i("CROWDNODE", "Filtered gathered: ${filtered.size}")
-
-            val selection = selector.select(target, filtered)
-            Log.i("CROWDNODE", "selection gathered: ${selection.gathered.size}")
-
-            return selection
-        }
     }
 }
