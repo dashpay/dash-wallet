@@ -95,7 +95,6 @@ public class Configuration {
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
     public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
     public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
-    public static final String PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED = "coinbase_is_temp_refreshed_token_used";
 
 
 
@@ -579,13 +578,5 @@ public class Configuration {
 
     public String getCoinbaseUserAccountId(){
         return prefs.getString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, null);
-    }
-
-    public boolean getHasTempTokenBeenUsed(){
-        return prefs.getBoolean(PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED, false);
-    }
-
-    public void setHasTempTokenBeenUsed(boolean hasTokenBeenUsed){
-        prefs.edit().putBoolean(PREFS_KEY_COINBASE_IS_TEMP_TOKEN_USED, hasTokenBeenUsed).apply();
     }
 }

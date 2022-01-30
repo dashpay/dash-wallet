@@ -708,6 +708,13 @@
         <item name="cornerRadius">15dp</item>
     </style>
 
+    <style name="DialogBackground">
+        <item name="backgroundColor">@color/white</item>
+        <item name="strokeColor">@color/white</item>
+        <item name="cornerRadius">14dp</item>
+    </style>
+
+
     <!-- Typography -->
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
@@ -745,7 +752,7 @@
         <item name="android:textColor">@color/green_300</item>
     </style>
 
-    <style name="Headline5.Bold.red">
+    <style name="Headline5.Bold.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -790,7 +797,7 @@
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 
-    <style name="Body2.red_300">
+    <style name="Body2.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -813,7 +820,7 @@
         <item name="android:lineSpacingExtra">5sp</item>
     </style>
 
-    <style name="Subtitle2.Red">
+    <style name="Subtitle2.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -840,12 +847,16 @@
         <item name="android:textColor">@color/gray_700</item>
     </style>
 
+    <style name="Caption.SteelGray">
+        <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
     <style name="Caption.SteelGray400">
         <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
-    <style name="Caption.SteelGray">
-        <item name="android:textColor">@color/steel_gray_500</item>
+    <style name="Caption.SteelGray700">
+        <item name="android:textColor">@color/steel_gray_700</item>
     </style>
 
     <style name="Caption.Medium">
@@ -880,7 +891,7 @@
         <item name="android:letterSpacing">0.0</item>
     </style>
 
-    <style name="Overline.Red">
+    <style name="Overline.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
 
@@ -986,7 +997,7 @@
     <style name="SecondaryButtonTheme">
         <item name="cornerRadius">8dp</item>
         <item name="titleTextColor">@color/gray_900</item>
-        <item name="strokeColor">@color/gray_900</item>
+        <item name="strokeColor">@color/gray_100</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
@@ -1052,7 +1063,7 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Red">
+    <style name="TertiaryButtonTheme.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
@@ -1068,7 +1079,7 @@
         <item name="titleTextColor">@color/dash_blue</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Small.Red">
+    <style name="TertiaryButtonTheme.Small.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
@@ -1076,7 +1087,7 @@
         <item name="cornerRadius">10dp</item>
     </style>
 
-    <style name="TertiaryButtonTheme.Large.Red">
+    <style name="TertiaryButtonTheme.Large.Red300">
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
@@ -1102,8 +1113,8 @@
         <item name="android:theme">@style/TertiaryButtonTheme.Large</item>
     </style>
 
-    <style name="Button.Tertiary.Large.Red">
-        <item name="android:theme">@style/TertiaryButtonTheme.Large.Red</item>
+    <style name="Button.Tertiary.Large.Red300">
+        <item name="android:theme">@style/TertiaryButtonTheme.Large.Red300</item>
     </style>
 
     <style name="Button.Tertiary.Small">
@@ -1116,8 +1127,8 @@
         <item name="android:theme">@style/TertiaryButtonTheme.Small.Blue</item>
     </style>
 
-    <style name="Button.Tertiary.Small.Red">
-        <item name="android:theme">@style/TertiaryButtonTheme.Small.Red</item>
+    <style name="Button.Tertiary.Small.Red300">
+        <item name="android:theme">@style/TertiaryButtonTheme.Small.Red300</item>
     </style>
 
     <style name="Button.Tertiary.ExtraSmall">

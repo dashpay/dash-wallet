@@ -13,17 +13,14 @@ import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.UserInteractionAwareCallback
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
-import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseFeeInfoBinding
 
 class CoinbaseFeeInfoDialog: DialogFragment() {
-    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
     private val binding by viewBinding(DialogCoinbaseFeeInfoBinding::bind)
 
     override fun onCreateView(
@@ -44,9 +41,6 @@ class CoinbaseFeeInfoDialog: DialogFragment() {
         binding.coinbaseFeeInfoLearnMore.setOnClickListener {
             findNavController().navigateUp()
             openWebPage()
-        }
-        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
-            findNavController().navigateUp()
         }
     }
 

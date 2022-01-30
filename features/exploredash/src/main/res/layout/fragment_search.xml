@@ -152,7 +152,7 @@
 
                 <Button
                     android:id="@+id/reset_filters_btn"
-                    style="@style/Button.Tertiary.Small.Red"
+                    style="@style/Button.Tertiary.Small.Red300"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"

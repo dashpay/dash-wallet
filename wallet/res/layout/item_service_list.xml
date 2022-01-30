@@ -120,7 +120,7 @@
 
     <TextView
         android:id="@+id/last_known_balance"
-        style="@style/Overline.Red"
+        style="@style/Overline.Red300"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/last_known_balance"

@@ -21,7 +21,6 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -34,14 +33,12 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
-import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseErrorBinding
 
 class CoinBaseErrorDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseErrorBinding::bind)
-    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -58,32 +55,18 @@ class CoinBaseErrorDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        lockScreenViewModel.activatingLockScreen.observe(this){
-            Log.e(this::class.java.simpleName, "Closing dialog")
-            findNavController().navigateUp()
-        }
-
         arguments?.let {
             CoinBaseErrorDialogArgs.fromBundle(it).errorUiModel.apply {
                 binding.coinbaseDialogTitle.setText(this.title)
-                this.message?.let { errorMessage ->
-                    binding.coinbaseDialogMessage.text = errorMessage
-                }
-                if (this.image == null){
-                    binding.coinbaseDialogIcon.isVisible = false
-                }else {
-                    binding.coinbaseDialogIcon.setImageResource(this.image!!)
-                }
-                if (this.positiveButtonText == null){
-                    binding.coinbaseDialogPositiveButton.isVisible = false
+                if (this.message.isNullOrEmpty()){
+                    binding.coinbaseDialogMessage.isVisible = false
                 } else {
-                    binding.coinbaseDialogPositiveButton.setText(this.positiveButtonText!!)
+                    binding.coinbaseDialogMessage.text = this.message
+                    binding.coinbaseDialogMessage.isVisible = true
                 }
-                if (this.negativeButtonText == null){
-                    binding.coinbaseDialogNegativeButton.isVisible = false
-                } else {
-                    binding.coinbaseDialogNegativeButton.setText(this.negativeButtonText!!)
-                }
+                setOrHideIfEmpty(binding.coinbaseDialogIcon, this.image)
+                setOrHideIfEmpty(binding.coinbaseDialogPositiveButton, this.positiveButtonText)
+                setOrHideIfEmpty(binding.coinbaseDialogNegativeButton, this.negativeButtonText)
             }
         }
 
@@ -98,21 +81,15 @@ class CoinBaseErrorDialog : DialogFragment() {
         }
     }
 
-    private fun setOrHideIfEmpty(view: View, argKey: String) {
-        if (arguments == null) {
-            view.visibility = View.GONE
-            return
-        }
-        arguments?.getInt(argKey)?.let {
-            if (it != 0) {
-                when (view) {
-                    is TextView -> view.setText(it)
-                    is ImageView -> view.setImageResource(it)
-                }
-                view.visibility = View.VISIBLE
-            } else {
-                view.visibility = View.GONE
+    private fun setOrHideIfEmpty(view: View, value: Int?) {
+        if (value != null) {
+            when (view) {
+                is TextView -> view.setText(value)
+                is ImageView -> view.setImageResource(value)
             }
+            view.isVisible = true
+        } else {
+            view.isVisible = false
         }
     }
     companion object {

@@ -23,7 +23,6 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
@@ -47,8 +46,8 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
 
     var sendFundToWalletParams: SendTransactionToWalletParams ? = null
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
-    private val _placeBuyOrder: MutableLiveData<Event<PlaceBuyOrderUIModel>> = MutableLiveData()
-    val placeBuyOrder: LiveData<Event<PlaceBuyOrderUIModel>>
+    private val _placeBuyOrder: MutableLiveData<PlaceBuyOrderUIModel> = MutableLiveData()
+    val placeBuyOrder: LiveData<PlaceBuyOrderUIModel>
         get() = _placeBuyOrder
 
     fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
@@ -113,7 +112,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                 } else {
                     _showLoading.value = false
 
-                    _placeBuyOrder.value = Event(result.value)
+                    _placeBuyOrder.value = result.value
                 }
             }
             is ResponseResource.Failure -> {

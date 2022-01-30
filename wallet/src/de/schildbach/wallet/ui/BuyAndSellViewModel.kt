@@ -16,15 +16,15 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Application
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseAuthRepository
 import org.dash.wallet.integration.uphold.data.UpholdClient
@@ -37,10 +37,7 @@ import kotlin.coroutines.suspendCoroutine
  */
 @HiltViewModel
 class BuyAndSellViewModel @Inject constructor(
-    application: Application,
-    private val coinBaseRepository: CoinBaseAuthRepository,
-    private val config: Configuration
-) : AndroidViewModel(application) {
+    private val coinBaseRepository: CoinBaseAuthRepository) : ViewModel() {
 
     // TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
@@ -60,6 +57,16 @@ class BuyAndSellViewModel @Inject constructor(
         get() = _servicesList
 
     private var buyAndSellDashServicesModel = BuyAndSellDashServicesModel.getBuyAndSellDashServicesList()
+
+    private var _showLoading: MutableLiveData<Boolean> = MutableLiveData()
+    val showLoading: LiveData<Boolean>
+        get() = _showLoading
+
+    fun setLoadingState(show: Boolean){
+        _showLoading.value = show
+    }
+
+    val coinbaseAuthTokenCallback = SingleLiveEvent<Boolean>()
 
     init {
         isUserConnectedToCoinbase()
@@ -92,37 +99,24 @@ class BuyAndSellViewModel @Inject constructor(
         buyAndSellDashServicesModel = list
     }
 
-    private fun changeCoinBaseItemStatus(isOnline: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
-        return if (coinBaseRepository.getUserLastCoinbaseBalance()== null) {
-            BuyAndSellDashServicesModel.ServiceStatus.IDLE
-        } else {
-            if (coinBaseRepository.isUserConnected() && isOnline) {
+
+    private fun changeItemStatus(isOnline: Boolean, clientIsAuthenticated: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
+        return if (clientIsAuthenticated){
+            if (isOnline){
                 BuyAndSellDashServicesModel.ServiceStatus.CONNECTED
             } else {
                 BuyAndSellDashServicesModel.ServiceStatus.DISCONNECTED
             }
-        }
+        } else BuyAndSellDashServicesModel.ServiceStatus.IDLE
     }
 
-    private fun changeItemStatus(isOnline: Boolean, clientIsAuthenticated: Boolean, userHadBalance: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
-        return if (!userHadBalance) {
-            BuyAndSellDashServicesModel.ServiceStatus.IDLE
-        } else {
-            if (clientIsAuthenticated && isOnline) {
-                BuyAndSellDashServicesModel.ServiceStatus.CONNECTED
-            } else {
-                BuyAndSellDashServicesModel.ServiceStatus.DISCONNECTED
-            }
-        }
-    }
-
-    fun setServicesStatus(isOnline: Boolean, liquidClientIsAuthenticated: Boolean, upHoldClientIsAuthenticated: Boolean) {
+    fun setServicesStatus(isOnline: Boolean, coinBaseClientIsAuthenticated: Boolean, liquidClientIsAuthenticated: Boolean, upHoldClientIsAuthenticated: Boolean) {
         setDashServiceList(
             buyAndSellDashServicesModel.toMutableList().map { model ->
                 val serviceStatus = when (model.serviceType) {
-                    BuyAndSellDashServicesModel.ServiceType.LIQUID -> changeItemStatus(isOnline, liquidClientIsAuthenticated, config.lastLiquidBalance.isNullOrEmpty().not())
-                    BuyAndSellDashServicesModel.ServiceType.UPHOLD -> changeItemStatus(isOnline, upHoldClientIsAuthenticated, config.lastUpholdBalance.isNullOrEmpty().not())
-                    BuyAndSellDashServicesModel.ServiceType.COINBASE -> changeCoinBaseItemStatus(isOnline)
+                    BuyAndSellDashServicesModel.ServiceType.LIQUID -> changeItemStatus(isOnline, liquidClientIsAuthenticated)
+                    BuyAndSellDashServicesModel.ServiceType.UPHOLD -> changeItemStatus(isOnline, upHoldClientIsAuthenticated)
+                    BuyAndSellDashServicesModel.ServiceType.COINBASE -> changeItemStatus(isOnline, coinBaseClientIsAuthenticated)
                 }
                 if (serviceStatus != model.serviceStatus) {
                     model.copy(serviceStatus = serviceStatus)
@@ -158,16 +152,20 @@ class BuyAndSellViewModel @Inject constructor(
     fun getUserLastCoinBaseAccountBalance() = coinBaseRepository.getUserLastCoinbaseBalance()
 
     fun loginToCoinbase(code: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
+            _showLoading.value = true
             when (val response = coinBaseRepository.getUserToken(code)) {
                 is ResponseResource.Success -> {
-                    _coinbaseIsConnected.value =
-                        response.value.body()?.accessToken?.isEmpty()?.not()
+                    if (response.value){
+                        _coinbaseIsConnected.value = true
+                        coinbaseAuthTokenCallback.call()
+                    } else {
+                        _showLoading.value = false
+                    }
                 }
-                is ResponseResource.Loading -> {
-                }
-                is ResponseResource.Failure -> {
-                    _coinbaseIsConnected.value = false
+
+                is ResponseResource.Failure -> { //TODO If login failed, inform the user
+                    _showLoading.value = false
                 }
             }
         }

@@ -23,7 +23,6 @@ import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
@@ -33,8 +32,6 @@ import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoin
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
-import java.util.*
-import kotlin.concurrent.schedule
 
 @AndroidEntryPoint
 class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
@@ -55,22 +52,15 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         binding.disconnectLayout.setOnClickListener {
             viewModel.disconnectCoinbaseAccount()
-            // Use
-            Timer().schedule(1000) {
-                requireActivity().finish()
-            }
         }
 
         binding.buyDashBtn.setOnClickListener {
             viewModel.getPaymentMethods()
 
         }
-        viewModel.activePaymentMethods.observe(
-            viewLifecycleOwner,
-            EventObserver {
-                safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
-            }
-        )
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner){
+            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
+        }
 
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
         binding.walletBalanceDash.setApplyMarkup(false)
@@ -118,7 +108,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                     R.string.CreateـDashـAccount,
                     R.string.close
                 )
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(error)
+                safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(error))
             }
         )
 
@@ -132,9 +122,13 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                     R.string.add_payment_method,
                     R.string.close
                 )
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError)
+                safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError))
             }
         )
+
+        viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner){
+            requireActivity().finish()
+        }
     }
 
     private fun setLocalFaitAmount(balance:String) {
@@ -156,5 +150,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
+    }
+
+    override fun onStop() {
+        dismissProgress()
+        super.onStop()
     }
 }

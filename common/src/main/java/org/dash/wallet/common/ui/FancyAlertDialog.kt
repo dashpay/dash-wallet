@@ -30,14 +30,12 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.activityViewModels
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
 
+@Deprecated("Use AdaptiveDialog")
 class FancyAlertDialog : DialogFragment() {
-    private val lockScreenViewModel by activityViewModels<LockScreenViewModel>()
-    private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
     var onFancyAlertButtonsClickListener: FancyAlertButtonsClickListener? = null
 
     enum class Type {
@@ -134,14 +132,6 @@ class FancyAlertDialog : DialogFragment() {
                 setupAction()
             }
         }
-        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner){
-            dismiss()
-        }
-
-        sharedViewModel.onPositiveButtonClick.observe(viewLifecycleOwner) {
-            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
-            dismiss()
-        }
     }
 
     private fun setOrHideIfEmpty(view: View, argKey: String) {
@@ -162,11 +152,11 @@ class FancyAlertDialog : DialogFragment() {
         image.visibility = View.VISIBLE
         positive_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
         negative_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
     }
 
@@ -175,11 +165,11 @@ class FancyAlertDialog : DialogFragment() {
         image.visibility = View.GONE
         positive_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onPositiveButtonClick.call()
+            onFancyAlertButtonsClickListener?.onPositiveButtonClick()
         }
         negative_button.setOnClickListener {
             dismiss()
-            sharedViewModel.onNegativeButtonClick.call()
+            onFancyAlertButtonsClickListener?.onNegativeButtonClick()
         }
     }
 
@@ -205,7 +195,8 @@ class FancyAlertDialog : DialogFragment() {
         }
     }
 
-    public interface FancyAlertButtonsClickListener {
+    interface FancyAlertButtonsClickListener {
         fun onPositiveButtonClick()
+        fun onNegativeButtonClick()
     }
 }

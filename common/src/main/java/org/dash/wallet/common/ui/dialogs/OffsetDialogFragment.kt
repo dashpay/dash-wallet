@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.ui
+package org.dash.wallet.common.ui.dialogs
 
 import android.os.Bundle
 import android.view.View
@@ -23,7 +23,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.DrawableRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -53,7 +52,7 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
 
                 val height = if (forceExpand) displayHeight - FULLSCREEN_DIFF else bottomSheet.height
                 rootLayout.layoutParams = FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT, height)
+                    FrameLayout.LayoutParams.MATCH_PARENT, height)
 
                 val coordinatorLayout = bottomSheet.parent as CoordinatorLayout
                 val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
