@@ -195,6 +195,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val isNearby = viewModel.filterMode.value == FilterMode.Nearby
         binding.manageGpsView.managePermissionsBtn.isVisible = !isLocationEnabled && isNearby
         binding.manageGpsView.locationRequestTxt.isVisible = !isLocationEnabled && isNearby
+        searchHeaderAdapter.controlsVisible = isLocationEnabled || !isNearby
     }
 
     private fun setupFilters(
