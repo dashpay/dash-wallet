@@ -82,6 +82,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.convertView.dashToCrypto = dashToFiat
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
+        binding.continueBtn.isEnabled = false
         binding.continueBtn.setOnClickListener {
             getFaitAmount(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)?.let {
                 viewModel.onContinueEvent.value = Pair(
@@ -275,6 +276,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         viewModel.enteredConvertAmount = balance
 
         val hasBalance = balance.isNotEmpty() && balance != "0"
+        binding.continueBtn.isEnabled =hasBalance
         binding.youWillReceiveLabel.isVisible = hasBalance
         binding.youWillReceiveValue.isVisible = hasBalance
         if (hasBalance) {
