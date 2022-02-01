@@ -112,7 +112,7 @@ class ExchangeRatesRepository private constructor(): ExchangeRatesProvider {
     }
 
     // This will return null if not found
-    fun getExchangeRate(currencyCode: String?): ExchangeRate? {
+    fun getExchangeRate(currencyCode: String): ExchangeRate? {
         return exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
     }
 

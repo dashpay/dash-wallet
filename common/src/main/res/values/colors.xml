@@ -96,4 +96,5 @@
     <color name="background_primary">#eff0f4</color>
     <color name="disabled_button_bg">#eeeeee</color>
     <color name="extra_small_btn_bg">#f2f9fd</color>
+    <color name="secondary_btn_border_color">#e1e3e6</color>
 </resources>

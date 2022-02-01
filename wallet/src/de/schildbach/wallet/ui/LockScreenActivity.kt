@@ -507,6 +507,7 @@ open class LockScreenActivity : SecureActivity() {
             alertDialog.dismissDialog()
         }
 
+        lockScreenBroadcaster.activatingLockScreen.call()
         dismissDialogFragments(supportFragmentManager)
     }
 
