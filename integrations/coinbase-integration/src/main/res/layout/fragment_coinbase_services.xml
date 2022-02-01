@@ -124,6 +124,61 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/convert_dash_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:background="@color/dash_white"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/buy_dash_btn">
+
+        <ImageView
+            android:id="@+id/convert_dash_icon"
+            style="@style/MenuRowIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_convert_circle_fill"
+            app:layout_constraintBottom_toBottomOf="@+id/convert_dash_subtitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/convert_dash_title" />
+
+        <TextView
+            android:id="@+id/convert_dash_title"
+            style="@style/Subtitle2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="11dp"
+            android:text="@string/convert_crypto"
+            app:layout_constraintStart_toEndOf="@+id/convert_dash_icon"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/convert_dash_subtitle"
+            style="@style/Caption.SteelGray"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:lineSpacingExtra="2sp"
+            android:text="@string/between_dash_wallet_and_coinbase"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/convert_dash_title"
+            app:layout_constraintTop_toBottomOf="@+id/convert_dash_title" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="11dp"
+            android:background="@color/divider_color"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/convert_dash_title"
+            app:layout_constraintTop_toBottomOf="@+id/convert_dash_subtitle" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/disconnect_layout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"

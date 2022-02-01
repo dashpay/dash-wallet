@@ -27,11 +27,11 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
-import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
-import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
+import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 
 @AndroidEntryPoint
 class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
@@ -39,7 +39,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
     private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
-
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -56,9 +55,12 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         binding.buyDashBtn.setOnClickListener {
             viewModel.getPaymentMethods()
-
         }
-        viewModel.activePaymentMethods.observe(viewLifecycleOwner){
+
+        binding.convertDashBtn.setOnClickListener {
+            safeNavigate(CoinbaseServicesFragmentDirections.servicesToConvertCrypto(true))
+        }
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner) {
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
         }
 
@@ -66,72 +68,71 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.walletBalanceDash.setApplyMarkup(false)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
-
-        viewModel.exchangeRate.observe(viewLifecycleOwner,
-            { rate ->
-                if (rate != null) {
-                    currentExchangeRate = rate
-                    if (currentExchangeRate != null) {
-                        setLocalFaitAmount(viewModel.user.value?.balance?.amount ?: "0")
-                    }
+        viewModel.exchangeRate.observe(
+            viewLifecycleOwner
+        ) { rate ->
+            if (rate != null) {
+                currentExchangeRate = rate
+                if (currentExchangeRate != null) {
+                    setLocalFaitAmount(viewModel.user.value?.balance?.amount ?: "0")
                 }
-            })
+            }
+        }
 
         viewModel.user.observe(
-            viewLifecycleOwner,
-            {
-                binding.walletBalanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
-                if (currentExchangeRate != null) {
-                    setLocalFaitAmount(it.balance?.amount ?:"0")
-                }
-
+            viewLifecycleOwner
+        ) {
+            binding.walletBalanceDash.setAmount(Coin.parseCoin(it.balance?.amount))
+            if (currentExchangeRate != null) {
+                setLocalFaitAmount(it.balance?.amount ?: "0")
             }
-        )
+        }
 
         viewModel.showLoading.observe(
-            viewLifecycleOwner,
-            {
-                if (it) {
-                    showProgress(R.string.loading)
-                } else
-                    dismissProgress()
-            }
-        )
+            viewLifecycleOwner
+        ) {
+            if (it) {
+                showProgress(R.string.loading)
+            } else
+                dismissProgress()
+        }
 
         viewModel.userAccountError.observe(
-            viewLifecycleOwner,
-            {
-                val error = CoinbaseGenericErrorUIModel(
-                    R.string.coinbase_dash_wallet_error_title,
-                    getString(R.string.coinbase_dash_wallet_error_message),
-                    R.drawable.ic_info_red,
-                    R.string.CreateـDashـAccount,
-                    R.string.close
-                )
-                safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(error))
-            }
-        )
+            viewLifecycleOwner
+        ) {
+            val error = CoinbaseGenericErrorUIModel(
+                R.string.coinbase_dash_wallet_error_title,
+                getString(R.string.coinbase_dash_wallet_error_message),
+                R.drawable.ic_info_red,
+                R.string.CreateـDashـAccount,
+                R.string.close
+            )
+            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(error))
+        }
 
         viewModel.activePaymentMethodsFailureCallback.observe(
-            viewLifecycleOwner,
-            {
-                val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
-                    R.string.coinbase_dash_wallet_no_payment_methods_error_title,
-                    getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
-                    R.drawable.ic_info_red,
-                    R.string.add_payment_method,
-                    R.string.close
+            viewLifecycleOwner
+        ) {
+            val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
+                R.string.coinbase_dash_wallet_no_payment_methods_error_title,
+                getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
+                R.drawable.ic_info_red,
+                R.string.add_payment_method,
+                R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    activePaymentMethodsError
                 )
-                safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError))
-            }
-        )
+            )
+        }
 
-        viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner){
+        viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner) {
             requireActivity().finish()
         }
     }
 
-    private fun setLocalFaitAmount(balance:String) {
+    private fun setLocalFaitAmount(balance: String) {
         val exchangeRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
         val localValue =
             exchangeRate.coinToFiat(Coin.parseCoin(balance))

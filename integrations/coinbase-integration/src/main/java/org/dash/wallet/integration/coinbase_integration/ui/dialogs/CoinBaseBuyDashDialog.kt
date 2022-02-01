@@ -19,25 +19,20 @@ package org.dash.wallet.integration.coinbase_integration.ui.dialogs
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
-import androidx.core.view.isVisible
 import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.navigation.fragment.findNavController
-import androidx.fragment.app.activityViewModels
-import androidx.navigation.fragment.findNavController
-import org.dash.wallet.common.ui.LockScreenViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCoinbaseBuyDashBinding
 
 class CoinBaseBuyDashDialog : DialogFragment() {
     private val binding by viewBinding(DialogCoinbaseBuyDashBinding::bind)
-    private val lockScreenViewModel: LockScreenViewModel by activityViewModels()
     var onCoinBaseBuyDashDialogButtonsClickListener: CoinBaseBuyDashDialogButtonsClickListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,19 +56,19 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        arguments?. getInt("Type")?.let {type->
-           when (type){
-               Type.PURCHASE_ERROR.ordinal-> setPurchaseError()
-               Type.TRANSFER_ERROR.ordinal-> setTransferError()
-               Type.TRANSFER_SUCCESS.ordinal->setTransferSuccess()
-           }
+        arguments?. getInt("Type")?.let { type ->
+            when (type) {
+                Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
+                Type.TRANSFER_ERROR.ordinal -> setTransferError()
+                Type.TRANSFER_SUCCESS.ordinal -> setTransferSuccess()
+                Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess()
+                Type.CONVERSION_ERROR.ordinal -> setConversionError()
+            }
 
             binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
-                onCoinBaseBuyDashDialogButtonsClickListener?.onPositiveButtonClick(Type.values().first { it.ordinal==type })
+                onCoinBaseBuyDashDialogButtonsClickListener?.onPositiveButtonClick(Type.values().first { it.ordinal == type })
             }
         }
-
-
 
         binding.coinbaseBuyDialogNegativeButton.setOnClickListener {
             dismiss()
@@ -82,7 +77,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         }
     }
 
-    private fun setPurchaseError(){
+    private fun setPurchaseError() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_failed)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
@@ -91,7 +86,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
     }
-    private fun setTransferError(){
+    private fun setTransferError() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
         binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
@@ -101,7 +96,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.retry)
     }
-    private fun setTransferSuccess(){
+    private fun setTransferSuccess() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_succes_green)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_green)
@@ -111,10 +106,29 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
     }
 
+    private fun setConversionError() {
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
+        binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
+        binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
+        binding.buyDialogContactCoinbaseSupportGroup.isVisible = true
+        binding.coinbaseBuyDialogNegativeButton.isVisible = true
+        binding.coinbaseBuyDialogNegativeButton.setText(R.string.close)
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.retry)
+    }
+    private fun setConversionSuccess() {
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_succes_green)
+        binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_green)
+        binding.coinbaseBuyDialogMessage.setText(R.string.it_could_take_up_to_5_minutes)
+        binding.buyDialogContactCoinbaseSupportGroup.isGone = true
+        binding.coinbaseBuyDialogNegativeButton.isGone = true
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
+    }
     companion object {
 
         fun newInstance(
-           type: Type
+            type: Type
         ): CoinBaseBuyDashDialog {
             val args = Bundle().apply {
                 putInt("Type", type.ordinal)
@@ -128,9 +142,10 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     enum class Type {
         TRANSFER_SUCCESS,
         TRANSFER_ERROR,
-        PURCHASE_ERROR
+        PURCHASE_ERROR,
+        CONVERSION_SUCCESS,
+        CONVERSION_ERROR
     }
-
 
     interface CoinBaseBuyDashDialogButtonsClickListener {
         fun onPositiveButtonClick(type: Type)
