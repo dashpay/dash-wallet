@@ -19,6 +19,9 @@ package org.dash.wallet.features.exploredash.ui.extensions
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
@@ -94,4 +97,26 @@ suspend fun Fragment.showPermissionExplainerDialog(exploreTopic: ExploreTopic): 
         getString(R.string.permission_allow)
     )
     return dialog.showAsync(requireActivity())
+}
+
+fun Fragment.runLocationFlow(
+    exploreTopic: ExploreTopic,
+    configuration: Configuration,
+    requestLauncher: ActivityResultLauncher<Array<String>>
+) {
+    if (isLocationPermissionGranted) {
+        openAppSettings()
+    } else {
+        requestLocationPermission(exploreTopic, configuration, requestLauncher)
+    }
+}
+
+fun Fragment.openAppSettings() {
+    val intent = Intent().apply {
+        action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        data = Uri.fromParts("package", requireContext().packageName, null)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+
+    startActivity(intent)
 }

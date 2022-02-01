@@ -23,9 +23,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
-import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
@@ -113,7 +111,7 @@ class ExploreViewModelTest {
             }
 
             val viewModel = ExploreViewModel(dataSource, locationState)
-            viewModel.setFilterMode(FilterMode.Physical)
+            viewModel.setFilterMode(FilterMode.Nearby)
             viewModel.searchBounds = bounds
             viewModel.paymentMethodFilter = PaymentMethod.DASH
             viewModel.submitSearchQuery(query)
@@ -201,7 +199,7 @@ class ExploreViewModelTest {
             val viewModel = ExploreViewModel(dataSource, locationMock)
             viewModel.searchBounds = GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng)
                     .apply { zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1 }
-            viewModel.setFilterMode(FilterMode.Physical)
+            viewModel.setFilterMode(FilterMode.Nearby)
 
             val expected = merchants
                     .filter { (it.type == MerchantType.PHYSICAL || it.type == MerchantType.BOTH) }
