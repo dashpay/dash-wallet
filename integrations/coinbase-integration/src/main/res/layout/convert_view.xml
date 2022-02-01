@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    tools:context="org.dash.wallet.integration.coinbase_integration.ui.convert_currency.ConvertView"
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        style="@style/CardViewRaised"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="15dp"
+        android:paddingStart="15dp"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/from_label"
+            style="@style/MontserratRegular.G500.10"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/from"
+            android:textAllCaps="true"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/convert_from_btn" />
+
+        <ImageView
+            android:id="@+id/swap_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="7dp"
+            android:layout_marginEnd="5dp"
+            android:src="@drawable/ic_swap_blue"
+            app:layout_constraintBottom_toBottomOf="@+id/convert_dash_divider"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/convert_dash_divider" />
+
+
+        <View
+            android:id="@+id/convert_dash_divider"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginVertical="12dp"
+            android:layout_marginStart="20dp"
+            android:background="@color/divider_color"
+            app:layout_constraintBottom_toTopOf="@id/convert_to_btn"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/swap_btn"
+            app:layout_constraintTop_toBottomOf="@+id/convert_from_dash_balance" />
+
+        <org.dash.wallet.integration.coinbase_integration.ui.convert_currency.CryptoConvertItem
+            android:id="@+id/convert_from_btn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="19dp"
+            android:background="@color/dash_white"
+            app:is_crypto_convert_item_arrow_visible="true"
+            app:is_crypto_convert_item_group_visible="false"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/convert_dash_divider"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <org.dash.wallet.common.ui.CurrencyTextView
+            android:id="@+id/convert_from_dash_balance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:lineSpacingExtra="2sp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            app:layout_constraintBottom_toTopOf="@+id/convert_dash_divider"
+            app:layout_constraintStart_toStartOf="@+id/convert_from_btn"
+            app:layout_constraintTop_toBottomOf="@+id/convert_from_btn"
+            android:textColor="@color/dash_black"
+            android:textSize="10sp"
+            tools:text="Dash Wallet" />
+
+        <org.dash.wallet.common.ui.CurrencyTextView
+            android:id="@+id/convert_from_dash_fiat_amount"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_gravity="center"
+            android:layout_marginStart="5dp"
+            android:includeFontPadding="false"
+            android:textColor="@color/dash_gray"
+            android:textSize="10sp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="@+id/convert_from_dash_balance"
+            app:layout_constraintStart_toEndOf="@+id/convert_from_dash_balance"
+            app:layout_constraintTop_toTopOf="@+id/convert_from_dash_balance"
+            tools:text="USD 0.00" />
+
+        <TextView
+            android:id="@+id/to_label"
+            style="@style/MontserratRegular.G500.10"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/to"
+            android:textAllCaps="true"
+            app:layout_constraintBottom_toBottomOf="@+id/convert_to_btn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/convert_to_btn" />
+
+        <org.dash.wallet.integration.coinbase_integration.ui.convert_currency.CryptoConvertItem
+            android:id="@+id/convert_to_btn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@color/dash_white"
+            app:crypto_convert_item_icon="@drawable/ic_dash_blue_filled"
+            app:crypto_convert_item_service_title="@string/dash_wallet_name"
+            app:crypto_convert_item_title="@string/dash"
+            app:is_crypto_convert_item_arrow_visible="false"
+            app:is_crypto_convert_item_group_visible="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/convert_dash_divider"
+            app:layout_constraintTop_toBottomOf="@+id/convert_dash_divider" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</merge>

@@ -32,7 +32,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:drawablePadding="8dp"
-        android:drawableStart="@drawable/ic_dash_encircled"
+        android:drawableStart="@drawable/ic_dash_circle_filled"
         android:text="@string/dash_wallet_device"
         android:layout_gravity="center_horizontal" />
 </LinearLayout>

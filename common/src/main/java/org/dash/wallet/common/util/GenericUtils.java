@@ -199,4 +199,13 @@ public class GenericUtils {
             return format.format(fiat) + " " + currencySymbol;
         }
     }
+
+    public static String fiatToStringWithoutCurrencyCode(Fiat fiat) {
+        MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
+        return  format.format(fiat).toString();
+    }
+
+    public static String getCoinIcon(String code) {
+        return  "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/"+code.toLowerCase()+".png";
+    }
 }

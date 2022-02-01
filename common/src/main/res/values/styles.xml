@@ -186,6 +186,13 @@
         <item name="android:textSize">10sp</item>
     </style>
 
+    <style name="MontserratRegular.G500">
+        <item name="android:textColor">@color/gray_500</item>
+    </style>
+    <style name="MontserratRegular.G500.10">
+        <item name="android:textSize">10sp</item>
+    </style>
+
     <style name="MontserratRegular.G900.13">
         <item name="android:textSize">13sp</item>
     </style>
@@ -696,6 +703,10 @@
         <item name="cardCornerRadius">15dp</item>
     </style>
 
+    <style name="CardViewRaised.Radius7">
+        <item name="cardCornerRadius">7dp</item>
+    </style>
+
     <style name="EncircledIconTheme">
         <item name="backgroundColor">@color/steel_gray_40</item>
         <item name="strokeColor">@color/steel_gray_40</item>
@@ -716,6 +727,11 @@
 
 
     <!-- Typography -->
+
+    <style name="Headline3" parent="TextAppearance.MaterialComponents.Headline3">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/montserrat_regular</item>
@@ -791,6 +807,10 @@
 
     <style name="Body2.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Body2.Gray900">
+        <item name="android:textColor">@color/gray_900</item>
     </style>
 
     <style name="Body2.dashBlue">

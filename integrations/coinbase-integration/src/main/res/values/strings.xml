@@ -26,6 +26,7 @@
     <string name="disconnect_coinbase_account">Disconnect Coinbase Account</string>
     <string name="receive_directly_into_dash_wallet">Receive directly into Dash Wallet.</string>
     <string name="buy_dash">Buy Dash</string>
+    <string name="balance">Balance:</string>
     <string name="balance_on_coinbase">Balance on Coinbase</string>
     <string name="sending_to">Sending to</string>
     <string name="dash_wallet_device">Dash Wallet on this device</string>
@@ -48,15 +49,27 @@
     <string name="yes_cancel">Yes, cancel</string>
     <string name="no_keep_it">No, keep it</string>
     <string name="purchase_successful">Purchase successful</string>
+    <string name="conversion_successful">Conversion successful</string>
     <string name="purchase_failed">Purchase Failed</string>
     <string name="transfer_failed">Transfer Failed</string>
+    <string name="conversion_failed">Conversion Failed</string>
     <string name="transfer_failed_msg"> The Dash was successfully deposited to your Coinbase account. But there was a problem transferring it to Dash Wallet on this device.</string>
     <string name="purchase_failed_msg"> Something went wrong</string>
     <string name="it_could_take_up_to_2_3_minutes">It could take up to 2-3 minutes for the Dash to be transferred to your Dash Wallet on this device.</string>
+    <string name="it_could_take_up_to_5_minutes">It could take up to 5 minutes to convert DASH from Dash Wallet on this device to Y in your Coinbase account..</string>
     <string name="contact_coinbase_support">Contact Coinbase Support</string>
     <string name="fees_in_crypto_purchase">Fees in crypto purchases</string>
     <string name="coinbase_fee_info_msg_content">In addition to the displayed Coinbase fee, we include a spread in the price. Cryptocurrency markets are volatile, and this allows us to temporary lock in a price for trade execution.</string>
     <string name="learn_more">Learn More</string>
     <string name="something_wrong_title">Something went wrong!</string>
     <string name="retry_later_message">Please retry a little bit later or contact our support center to get help</string>
+    <string name="convert_crypto">Convert Crypto</string>
+    <string name="between_dash_wallet_and_coinbase">Between Dash Wallet and Coinbase.</string>
+    <string name="conversion_preview">Conversion Preview</string>
+    <string name="you_send">you send</string>
+    <string name="from_your_coinbase_account">From your Coinbase account</string>
+    <string name="you_receive">you receive</string>
+    <string name="to_dash_wallet_on_this_device">To Dash wallet on this device</string>
+    <string name="you_will_receive">You will receive</string>
+    <string name="you_will_receive_dash" translatable="false">%s DASH</string>
 </resources>
