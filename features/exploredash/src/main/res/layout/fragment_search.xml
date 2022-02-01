@@ -58,6 +58,7 @@
             android:layout_height="match_parent"
             android:layout_marginTop="?attr/actionBarSize"
             app:layout_behavior="org.dash.wallet.features.exploredash.ui.bottomsheetbehavior.ExploreMapBottomSheetBehavior" />
+
         <ImageButton
             android:id="@+id/recenter_map_btn"
             android:layout_width="wrap_content"
@@ -71,8 +72,8 @@
             android:layout_marginRight="8dp"
             android:padding="8dp"
             tools:visibility="visible"
-            android:visibility="visible"
-            />
+            android:visibility="visible" />
+
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/content_panel"
             android:layout_width="match_parent"
@@ -129,6 +130,17 @@
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 tools:itemCount="5"
                 tools:listitem="@layout/merchant_row" />
+
+            <include
+                android:id="@+id/manage_gps_view"
+                layout="@layout/manage_gps_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
 
             <LinearLayout
                 android:id="@+id/no_results_panel"
