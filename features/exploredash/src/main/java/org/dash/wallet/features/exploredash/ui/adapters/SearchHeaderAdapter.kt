@@ -92,7 +92,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
                     if (topic == ExploreTopic.Merchants) {
                         when (index) {
                             0 -> FilterMode.Online
-                            1 -> FilterMode.Physical
+                            1 -> FilterMode.Nearby
                             else -> FilterMode.All
                         }
                     } else {
@@ -138,7 +138,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         val index = if (topic == ExploreTopic.Merchants) {
             when (mode) {
                 FilterMode.Online -> 0
-                FilterMode.Physical -> 1
+                FilterMode.Nearby -> 1
                 else -> 2
             }
         } else {

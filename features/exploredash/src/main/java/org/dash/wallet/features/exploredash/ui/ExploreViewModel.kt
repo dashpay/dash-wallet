@@ -46,7 +46,7 @@ enum class NavigationRequest {
 }
 
 enum class FilterMode {
-    All, Online, Physical, Buy, Sell, BuySell
+    All, Online, Nearby, Buy, Sell, BuySell
 }
 
 enum class ScreenState {
@@ -201,35 +201,37 @@ class ExploreViewModel @Inject constructor(
                 _sortByDistance.flatMapLatest { sortByDistance ->
                     _selectedRadiusOption.flatMapLatest { selectedRadius ->
                         _selectedTerritory.flatMapLatest { territory ->
-                            _filterMode.flatMapLatest { mode ->
-                                clearSearchResults()
-                                _searchBounds
-                                    .filterNotNull()
-                                    .filter { screenState.value == ScreenState.SearchResults }
-                                    .map { bounds ->
-                                        if (isLocationEnabled.value == true &&
-                                           (exploreTopic == ExploreTopic.ATMs ||
-                                            mode == FilterMode.Physical)
-                                        ) {
-                                            val radiusBounds = locationProvider.getRadiusBounds(
-                                                bounds.centerLat,
-                                                bounds.centerLng,
-                                                radius
-                                            )
-                                            this.radiusBounds = radiusBounds
-                                            radiusBounds
-                                        } else {
-                                            radiusBounds = null
-                                            GeoBounds.noBounds
+                            _filterMode
+                                .onEach { clearSearchResults() }
+                                .filter { mode -> mode != FilterMode.Nearby || _isLocationEnabled.value == true }
+                                .flatMapLatest { mode ->
+                                    _searchBounds
+                                        .filterNotNull()
+                                        .filter { screenState.value == ScreenState.SearchResults }
+                                        .map { bounds ->
+                                            if (isLocationEnabled.value == true &&
+                                               (exploreTopic == ExploreTopic.ATMs ||
+                                                mode == FilterMode.Nearby)
+                                            ) {
+                                                val radiusBounds = locationProvider.getRadiusBounds(
+                                                    bounds.centerLat,
+                                                    bounds.centerLng,
+                                                    radius
+                                                )
+                                                this.radiusBounds = radiusBounds
+                                                radiusBounds
+                                            } else {
+                                                radiusBounds = null
+                                                GeoBounds.noBounds
+                                            }
                                         }
-                                    }
-                                    .flatMapLatest { bounds ->
-                                        _appliedFilters.postValue(
-                                            FilterOptions(query, territory, payment, selectedRadius)
-                                        )
-                                        getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
-                                            .cachedIn(viewModelScope)
-                                    }
+                                        .flatMapLatest { bounds ->
+                                            _appliedFilters.postValue(
+                                                FilterOptions(query, territory, payment, selectedRadius)
+                                            )
+                                            getPagingFlow(query, territory, payment, mode, bounds, sortByDistance)
+                                                .cachedIn(viewModelScope)
+                                        }
                             }
                         }
                     }
@@ -592,7 +594,7 @@ class ExploreViewModel @Inject constructor(
     private fun getMerchantType(filterMode: FilterMode): String {
         return when (filterMode) {
             FilterMode.Online -> MerchantType.ONLINE
-            FilterMode.Physical -> MerchantType.PHYSICAL
+            FilterMode.Nearby -> MerchantType.PHYSICAL
             else -> MerchantType.BOTH
         }
     }
