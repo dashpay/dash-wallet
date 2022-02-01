@@ -51,7 +51,6 @@ import java.math.RoundingMode
 @ExperimentalCoroutinesApi
 class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     companion object {
-        private const val ARG_INITIAL_AMOUNT = "initial_amount"
         private const val ARG_DASH_TO_FIAT = "dash_to_fiat"
         private const val DECIMAL_SEPARATOR = '.'
         @JvmStatic
@@ -60,7 +59,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             initialAmount: Monetary? = null
         ): ConvertViewFragment {
             val args = bundleOf(ARG_DASH_TO_FIAT to dashToFiat)
-            initialAmount?.let { args.putSerializable(ARG_INITIAL_AMOUNT, it) }
 
             return ConvertViewFragment().apply {
                 arguments = args
@@ -83,24 +81,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
         binding.convertView.dashToCrypto = dashToFiat
 
-        if (args.containsKey(ARG_INITIAL_AMOUNT)) {
-            val initialAmount = args.getSerializable(ARG_INITIAL_AMOUNT)
-//            binding.amountView.input = when {
-//                initialAmount is Coin && dashToFiat -> initialAmount.toPlainString()
-//                initialAmount is Fiat && !dashToFiat -> initialAmount.toPlainString()
-//                else -> throw IllegalArgumentException("dashToFiat argument and type of initialAmount do not match")
-//            }
-        }
-
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
-            getFaitAmount(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)?.let{
+            getFaitAmount(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)?.let {
                 viewModel.onContinueEvent.value = Pair(
                     binding.convertView.dashToCrypto,
                     it
                 )
             }
-
         }
 
         binding.maxButton.setOnClickListener {
@@ -122,8 +110,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 binding.currencyOptions.isVisible = true
                 binding.maxButtonWrapper.isVisible = true
                 binding.inputWrapper.isVisible = true
+                binding.bottomCard.isVisible = true
             }
         }
+
+        binding.bottomCard.isVisible = false
 
         binding.currencyOptions.pickedOptionIndex = 0
 
@@ -146,7 +137,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         viewModel.setSelectedCryptoCurrency(list[index])
 
                         val iconUrl = if (list[index].coinBaseUserAccountData.balance?.currency.isNullOrEmpty().not()) {
-                            "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/${list[index].coinBaseUserAccountData.balance?.currency?.lowercase()}.png"
+                            GenericUtils.getCoinIcon(list[index].coinBaseUserAccountData.balance?.currency?.lowercase())
                         } else {
                             null
                         }
@@ -163,8 +154,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         }
                         dialog.dismiss()
                     }
-                    if (!cryptoWalletsDialog.isVisible)
+                    if (!cryptoWalletsDialog.isVisible) {
                         cryptoWalletsDialog.show(fragmentManager, "payment_method")
+                    }
                 }
             }
         }
@@ -291,7 +283,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 selectedCurrencyCodeExchangeRate?.let { rate ->
 
                     val dashAmount = when {
-                        (  it.coinBaseUserAccountData.balance?.currency ==currencyCode &&   it.coinBaseUserAccountData.balance.currency !="DASH")-> {
+                        (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != "DASH") -> {
                             val cleanedValue =
                                 it.coinBaseUserAccountData.balance?.amount?.toBigDecimal()!! /
                                     it.exchangeRate.toBigDecimal()
@@ -300,7 +292,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                             val fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
                             rate.fiatToCoin(fiatAmount)
                         }
-                        (  viewModel.selectedLocalCurrencyCode ==currencyCode &&   it.coinBaseUserAccountData.balance?.currency !="DASH")  -> {
+                        (viewModel.selectedLocalCurrencyCode == currencyCode && it.coinBaseUserAccountData.balance?.currency != "DASH") -> {
 
                             val fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, balance)
                             rate.fiatToCoin(fiatAmount)
@@ -321,28 +313,26 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
     }
 
-    fun getFaitAmount(balance:String,currencyCode: String): Fiat? {
+    private fun getFaitAmount(balance: String, currencyCode: String): Fiat? {
         viewModel.selectedCryptoCurrencyAccount.value?.let {
             selectedCurrencyCodeExchangeRate?.let { rate ->
-            return    when {
+                return when {
                     (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != "DASH") -> {
                         val cleanedValue =
                             it.coinBaseUserAccountData.balance?.amount?.toBigDecimal()!! /
-                                    it.exchangeRate.toBigDecimal()
+                                it.exchangeRate.toBigDecimal()
                         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
-                       Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
-
+                        Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
                     }
                     (viewModel.selectedLocalCurrencyCode == currencyCode && it.coinBaseUserAccountData.balance?.currency != "DASH") -> {
 
-                         Fiat.parseFiat(rate.fiat.currencyCode, balance)
-
+                        Fiat.parseFiat(rate.fiat.currencyCode, balance)
                     }
 
                     else -> {
                         val formattedValue = GenericUtils.formatFiatWithoutComma(balance)
-                        val dashAmount=try {
+                        val dashAmount = try {
                             Coin.parseCoin(formattedValue)
                         } catch (x: Exception) {
                             Coin.ZERO
@@ -350,7 +340,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         rate.coinToFiat(dashAmount)
                     }
                 }
-            }}
+            }
+        }
         return null
     }
     private var onFilterOptionChosen: ((String) -> Unit)? = null

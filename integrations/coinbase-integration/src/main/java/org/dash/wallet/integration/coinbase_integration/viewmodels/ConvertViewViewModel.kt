@@ -94,6 +94,7 @@ class ConvertViewViewModel @Inject constructor(
             it.coinBaseUserAccountData.balance?.amount?.toDouble()?.isNaN() == false ||
                 it.coinBaseUserAccountData.balance?.amount?.toDouble() != null ||
                 it.coinBaseUserAccountData.balance?.amount?.toDouble()!! > 0
+            it.coinBaseUserAccountData.balance?.currency!="DASH"
         }
         if (userAccountsWithBalanceList.isNullOrEmpty()) {
             _userAccountError.value = true

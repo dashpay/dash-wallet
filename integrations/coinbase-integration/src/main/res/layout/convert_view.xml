@@ -23,7 +23,7 @@
     tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        style="@style/CardViewRaised"
+        android:background="@drawable/selectable_round_corners"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="15dp"

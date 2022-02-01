@@ -58,9 +58,6 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
     var exchangeRate: ExchangeRate? = null
         set(value) {
             field = value
-//            updateCurrency()
-//            updateAmount()
-//            updateDashSymbols()
         }
 
     var dashToCrypto: Boolean = false
@@ -68,31 +65,13 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
             if (field != value) {
                 field = value
                 updateUiWithSwap()
-                // updateDashSymbols()
-
-//                if (value) {
-//                    input = dashFormat.minDecimals(0)
-//                        .optionalDecimals(0,6).format(dashAmount).toString()
-//                } else {
-//                    binding.resultAmount.text = dashFormat.format(dashAmount)
-//
-//                    exchangeRate?.let {
-//                        fiatAmount = it.coinToFiat(dashAmount)
-//                        _input = fiatFormat.minDecimals(0)
-//                            .optionalDecimals(0,2).format(fiatAmount).toString()
-//                        binding.inputAmount.text = formatInputWithCurrency()
-//                    }
-//                }
             }
         }
 
     init {
 
-//        binding.convertFromDashTitle.isVisible =input== null
-//        binding.fromDataGroup.isVisible = input!= null
         binding.convertFromDashBalance.isVisible = input != null
         updateUiWithSwap()
-        //  updateCurrency()
         binding.swapBtn.setOnClickListener {
             dashToCrypto = !dashToCrypto
             updateUiWithSwap()
@@ -114,8 +93,6 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
                 }
             }
         }
-
-        // binding.selectTheCoinTitle.isVisible = input == null
     }
 
     private fun updateUiWithSwap() {
@@ -193,16 +170,6 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
         onSwapClicked = listener
     }
 
-//    private fun updateCurrency() {
-//        exchangeRate?.let { rate ->
-//            val currencyFormat = (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
-//                currency = Currency.getInstance(rate.fiat.currencyCode)
-//            }
-//            this.currencySymbol = currencyFormat.decimalFormatSymbols.currencySymbol
-//            this.isCurrencySymbolFirst = currencyFormat.format(1.0).startsWith(currencySymbol)
-//        }
-//    }
-
     private fun updateAmount() {
 
         if (dashToCrypto) {
@@ -210,62 +177,5 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
         } else {
             setFromBtnData()
         }
-
-//        val rate = exchangeRate
-//
-//        if (rate != null) {
-//            val cleanedValue = GenericUtils.formatFiatWithoutComma(input)
-//
-//            if (dashToFiat) {
-//                dashAmount = Coin.parseCoin(cleanedValue)
-//                fiatAmount = rate.coinToFiat(dashAmount)
-//            } else {
-//                fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, cleanedValue)
-//                dashAmount = rate.fiatToCoin(fiatAmount)
-//            }
-//
-//            binding.resultAmount.text = if (dashToFiat) {
-//                GenericUtils.fiatToString(fiatAmount)
-//            } else {
-//                dashFormat.format(dashAmount)
-//            }
-//        } else {
-//            binding.resultAmount.text = "0"
-//            Log.e(ConvertView::class.java.name, "Exchange rate is not initialized")
-//        }
     }
-
-//    private fun updateDashSymbols() {
-//        binding.inputCurrencyToggle.isVisible = !dashToFiat && showCurrencySelector
-//        binding.resultCurrencyToggle.isVisible = dashToFiat && showCurrencySelector
-//
-//        if (dashToFiat) {
-//            binding.inputSymbolDash.isVisible = isCurrencySymbolFirst
-//            binding.inputSymbolDashPostfix.isVisible = !isCurrencySymbolFirst
-//
-//            binding.resultSymbolDash.isVisible = false
-//            binding.resultSymbolDashPostfix.isVisible = false
-//        } else {
-//            binding.resultSymbolDash.isVisible = isCurrencySymbolFirst
-//            binding.resultSymbolDashPostfix.isVisible = !isCurrencySymbolFirst
-//
-//            binding.inputSymbolDash.isVisible = false
-//            binding.inputSymbolDashPostfix.isVisible = false
-//        }
-//    }
-
-//    private fun formatInputWithCurrency(): String {
-//        return when {
-//            dashToFiat -> input
-//            isCurrencySymbolFirst -> "$currencySymbol $input"
-//            else -> "$input $currencySymbol"
-//        }
-//    }
-
-//    var showCurrencySelector: Boolean = true
-//        set(value) {
-//            field = value
-//            binding.inputCurrencyToggle.isVisible = value
-//            binding.resultCurrencyToggle.isVisible = value
-//        }
 }
