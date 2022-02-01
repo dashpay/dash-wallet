@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.dash.wallet.integration.coinbase_integration
 
 import io.mockk.MockKAnnotations
@@ -19,12 +35,12 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 
-
 class CoinBaseRepositoryTest {
     @MockK lateinit var coinBaseServicesApi: CoinBaseServicesApi
     @MockK lateinit var coinBaseAuthApi: CoinBaseAuthApi
     @MockK lateinit var configuration: Configuration
     @MockK lateinit var placeBuyOrderMapper: PlaceBuyOrderMapper
+    @MockK lateinit var swapTradeMapper: SwapTradeMapper
     @MockK lateinit var commitBuyOrderMapper: CommitBuyOrderMapper
     private lateinit var coinBaseRepository: CoinBaseRepository
     private val accountId = "423095d3-bb89-5cef-b1bc-d1dfe6e13857"
@@ -37,6 +53,7 @@ class CoinBaseRepositoryTest {
             coinBaseAuthApi,
             configuration,
             placeBuyOrderMapper,
+            swapTradeMapper,
             commitBuyOrderMapper
         )
         coEvery { configuration.coinbaseUserAccountId } returns accountId
@@ -52,16 +69,18 @@ class CoinBaseRepositoryTest {
     }
 
     @Test
-    fun `when placing a buy order, repository returns success with data`(){
+    fun `when placing a buy order, repository returns success with data`() {
         val expectedPlaceBuyOrderResponse = TestUtils.placeBuyOrderApiResponse()
         val expectedPlaceBuyOrderUIModel = PlaceBuyOrderUIModel(
             "5ccb6a4a-6296-5ca6-8fb5-8e66740925ef",
-        "931aa7a2-6500-505b-bf0b-35f031466711",
-        "0.99",
-        "usd")
+            "931aa7a2-6500-505b-bf0b-35f031466711",
+            "0.99",
+            "usd"
+        )
         val expectedPlaceBuyOrderData = TestUtils.buyOrderData
         val accountId = "423095d3-bb89-5cef-b1bc-d1dfe6e13857"
-        val params = PlaceBuyOrderParams("0.5", "usd", "931aa7a2-6500-505b-bf0b-35f031466711",
+        val params = PlaceBuyOrderParams(
+            "0.5", "usd", "931aa7a2-6500-505b-bf0b-35f031466711",
             commit = true
         )
         coEvery { coinBaseServicesApi.placeBuyOrder(accountId = accountId, placeBuyOrderParams = params) } returns expectedPlaceBuyOrderResponse
@@ -70,9 +89,8 @@ class CoinBaseRepositoryTest {
         assertThat(actualSuccessResponse, `is`(ResponseResource.Success(expectedPlaceBuyOrderUIModel)))
     }
 
-
     @Test
-    fun `when sending funds to dash wallet, repository returns success response code`(){
+    fun `when sending funds to dash wallet, repository returns success response code`() {
         val params = SendTransactionToWalletParams("0.5", "usd", "9316dd16-0c05", "XfVe4NAHTp6NwWuM3PGpmUSwuZuWWE9qY3", "send")
         val expectedSendFundsToWalletResponse = TestUtils.sendFundsToWalletApiResponse()
 

@@ -25,7 +25,7 @@ import retrofit2.http.*
 interface CoinBaseServicesApi {
 
     @GET("v2/accounts")
-    suspend fun getUserAccount(
+    suspend fun getUserAccounts(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Query("limit") limit: Int = 300
     ): Response<CoinBaseUserAccountInfo>
@@ -33,7 +33,7 @@ interface CoinBaseServicesApi {
     @GET("v2/exchange-rates")
     suspend fun getExchangeRates(
         @Query("currency")currency: String = "DASH"
-    ): Response<CoinBaseUserAccountInfo>
+    ): CoinBaseExchangeRates?
 
     @GET("v2/payment-methods")
     suspend fun getActivePaymentMethods(
@@ -59,5 +59,22 @@ interface CoinBaseServicesApi {
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Path("account_id") accountId: String,
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
-        ): Response<SendTransactionToWalletResponse?>
+    ): Response<SendTransactionToWalletResponse?>
+
+    @GET("v2/assets/prices?base=USD&filter=holdable&resolution=latest")
+    suspend fun getBaseIdForUSDModel(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+    ): Response<BaseIdForUSDModel?>
+
+    @POST("v2/trades")
+    suspend fun swapTrade(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Body tradesRequest: TradesRequest
+    ): SwapTradeResponse?
+
+    @POST("v2/trades/{trade_id}/commit")
+    suspend fun commitSwapTrade(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Path("trade_id") tradeId: String,
+    ): SwapTradeResponse?
 }
