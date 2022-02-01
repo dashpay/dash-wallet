@@ -121,6 +121,13 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
             binding.amountView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
         }
+
+        binding.amountView.setOnConvertDirectionBtnClicked {
+            analyticsService.logEvent(if (binding.amountView.dashToFiat) AnalyticsConstants.Coinbase.ENTER_AMOUNT_DASH
+            else AnalyticsConstants.Coinbase.ENTER_AMOUNT_FIAT,
+                bundleOf()
+            )
+        }
     }
 
     fun setViewDetails(continueText: String, keyboardHeader: View?) {
