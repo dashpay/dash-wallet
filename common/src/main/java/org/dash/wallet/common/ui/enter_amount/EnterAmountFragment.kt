@@ -95,7 +95,12 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Coinbase.CONTINUE_DASH_PURCHASE, bundleOf())
+            if (!binding.amountView.showCurrencySelector) {
+                analyticsService.logEvent(
+                    AnalyticsConstants.Coinbase.CONTINUE_DASH_PURCHASE,
+                    bundleOf()
+                )
+            }
             viewModel.onContinueEvent.value = Pair(
                 binding.amountView.dashAmount,
                 binding.amountView.fiatAmount
@@ -112,7 +117,6 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             parentFragmentManager.let { fragmentManager ->
                 ExchangeRatesDialog(viewModel.selectedCurrencyCode) { rate, _, dialog ->
                     viewModel.selectedCurrencyCode = rate.currencyCode
-                    analyticsService.logEvent(AnalyticsConstants.Coinbase.CHANGE_FIAT_CURRENCY, bundleOf())
                     dialog.dismiss()
                 }.show(fragmentManager, "payment_method")
             }

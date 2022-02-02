@@ -110,7 +110,6 @@ object AnalyticsConstants {
         const val CHANGE_PAYMENT_METHOD = "coinbase_change_payment_method"
         const val ENTER_AMOUNT_FIAT = "coinbase_enter_amount_fiat_amount"
         const val ENTER_AMOUNT_DASH = "coinbase_enter_amount_dash_amount"
-        const val CHANGE_FIAT_CURRENCY = "coinbase_change_fiat_currency"
         const val CONTINUE_DASH_PURCHASE = "coinbase_continue_purchase"
         const val TOP_BACK_TO_ENTER_AMOUNT = "coinbase_top_back_to_enter_amount"
         const val BOTTOM_BACK_TO_ENTER_AMOUNT = "coinbase_bottom_back_to_enter_amount"
