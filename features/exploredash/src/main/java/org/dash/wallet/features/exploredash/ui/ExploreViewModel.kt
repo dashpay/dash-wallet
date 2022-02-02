@@ -46,7 +46,7 @@ enum class NavigationRequest {
 }
 
 enum class FilterMode {
-    All, Online, Physical, Buy, Sell, BuySell
+    All, Online, Nearby, Buy, Sell, BuySell
 }
 
 enum class ScreenState {
@@ -205,11 +205,13 @@ class ExploreViewModel @Inject constructor(
                                 clearSearchResults()
                                 _searchBounds
                                     .filterNotNull()
-                                    .filter { screenState.value == ScreenState.SearchResults }
+                                    .filter {
+                                        (mode != FilterMode.Nearby || _isLocationEnabled.value == true)
+                                                && screenState.value == ScreenState.SearchResults
+                                    }
                                     .map { bounds ->
                                         if (isLocationEnabled.value == true &&
-                                           (exploreTopic == ExploreTopic.ATMs ||
-                                            mode == FilterMode.Physical)
+                                            (exploreTopic == ExploreTopic.ATMs || mode == FilterMode.Nearby)
                                         ) {
                                             val radiusBounds = locationProvider.getRadiusBounds(
                                                 bounds.centerLat,
@@ -596,7 +598,7 @@ class ExploreViewModel @Inject constructor(
     private fun getMerchantType(filterMode: FilterMode): String {
         return when (filterMode) {
             FilterMode.Online -> MerchantType.ONLINE
-            FilterMode.Physical -> MerchantType.PHYSICAL
+            FilterMode.Nearby -> MerchantType.PHYSICAL
             else -> MerchantType.BOTH
         }
     }
