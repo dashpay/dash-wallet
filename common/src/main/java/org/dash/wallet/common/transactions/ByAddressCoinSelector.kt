@@ -25,7 +25,7 @@ import org.bitcoinj.wallet.CoinSelection
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 
-class FilterByAddressSelector(private val address: Address) : CoinSelector {
+class ByAddressCoinSelector(private val address: Address) : CoinSelector {
     private val selector = ZeroConfCoinSelector.get()
 
     override fun select(

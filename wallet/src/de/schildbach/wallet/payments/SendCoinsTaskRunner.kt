@@ -29,7 +29,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.*
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.transactions.FilterByAddressSelector
+import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -44,17 +44,12 @@ class SendCoinsTaskRunner @Inject constructor(
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
 
         return sendCoins(wallet, sendRequest, scryptIterationsTarget)
-
-//        if (checkDust(sendRequest)) {
-//            sendRequest = createSendRequest(wallet, false, paymentIntent, signInputs = false, forceEnsureMinRequiredFee = true)
-//            wallet.completeTx(sendRequest)
-//        }
     }
 
     private fun createSendRequest(address: Address, amount: Coin, constrainInputsTo: Address? = null): SendRequest {
         return SendRequest.to(address, amount).apply {
             coinSelector = ZeroConfCoinSelector.get()
-            coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else FilterByAddressSelector(constrainInputsTo)
+            coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else ByAddressCoinSelector(constrainInputsTo)
             feePerKb = SendCoinsBaseViewModel.ECONOMIC_FEE // TODO reference to an unrelated ViewModel. ECONOMIC_FEE should probably be moved to a dedicated class
             ensureMinRequiredFee = true
             changeAddress = constrainInputsTo
@@ -87,6 +82,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
             val transaction = sendRequest.tx
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
+            walletApplication.broadcastTransaction(transaction)
             transaction
         } catch (ex: Exception) {
             when (ex) {

@@ -15,19 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.logic
+package org.dash.wallet.common.transactions
 
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.transactions.TransactionFilter
-import org.dash.wallet.integrations.crowdnode.utils.Constants
+import org.dash.wallet.common.Constants
 
-class CrowdNodeTransaction(private val accountAddress: Address): TransactionFilter {
-    val crowdNodeAddress = Address.fromBase58(Constants.NETWORK_PARAMETERS, Constants.CROWD_NODE_ADDRESS)
-
+open class CoinsFromAddressTxFilter(
+    private val address: Address,
+    private val coins: Coin
+): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
         val inputs = tx.inputs
-        val outputs = tx.outputs
 
         if (inputs.isNotEmpty()) {
             for (input in inputs) {
@@ -37,10 +37,10 @@ class CrowdNodeTransaction(private val accountAddress: Address): TransactionFilt
 
                     if (connectedOutput != null) {
                         val scriptPubKey = connectedOutput.scriptPubKey
-                        val address = scriptPubKey.getToAddress(Constants.NETWORK_PARAMETERS)
+                        val currentAddress = scriptPubKey.getToAddress(Constants.NETWORK_PARAMETERS)
 
-                        if (address == crowdNodeAddress || address == accountAddress) {
-                            return true
+                        if (currentAddress == address) {
+                            return tx.outputs.any { it.value == coins }
                         }
                     } else {
                         // TODO: unconnected
@@ -51,19 +51,6 @@ class CrowdNodeTransaction(private val accountAddress: Address): TransactionFilt
             }
         } else {
             // TODO: no inputs
-        }
-
-        for (out in outputs) {
-            try {
-                val scriptPubKey = out.scriptPubKey
-                val address = scriptPubKey.getToAddress(Constants.NETWORK_PARAMETERS)
-
-                if (address == crowdNodeAddress || address == accountAddress) {
-                    return true
-                }
-            } catch (e: Exception) {
-                // TODO: exception
-            }
         }
 
         return false

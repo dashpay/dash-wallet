@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.di
+package org.dash.wallet.common.transactions
 
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.integrations.crowdnode.api.*
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.transactions.TransactionFilter
 
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class CrowdNodeModule {
-    @Binds
-    abstract fun bindCrowdNodeApi(crowdNodeApi: CrowdNodeBlockchainApi): CrowdNodeApi
+class LockedTransaction(private val topUpTxId: Sha256Hash): TransactionFilter {
+    override fun matches(tx: Transaction): Boolean {
+        return tx.txId == topUpTxId && tx.confidence.isTransactionLocked
+    }
 }

@@ -17,14 +17,8 @@
 
 package de.schildbach.wallet.transactions
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.util.Log
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -57,7 +51,6 @@ class WalletBalanceObserver(private val wallet: Wallet) {
             ) {
                 super.onCoinsReceived(wallet, tx, prevBalance, newBalance)
                 emitBalance()
-//                Log.i("CROWDNODE", "balance onCoinsReceived, old: ${prevBalance}, new: ${newBalance}")
             }
 
             override fun onCoinsSent(
@@ -68,13 +61,6 @@ class WalletBalanceObserver(private val wallet: Wallet) {
             ) {
                 super.onCoinsSent(wallet, tx, prevBalance, newBalance)
                 emitBalance()
-//                Log.i("CROWDNODE", "balance onCoinsSent, old: ${prevBalance}, new: ${newBalance}")
-            }
-
-            override fun onTransactionConfidenceChanged(wallet: Wallet?, tx: Transaction?) {
-                super.onTransactionConfidenceChanged(wallet, tx)
-                emitBalance()
-//                Log.i("CROWDNODE", "balance onTransactionConfidenceChanged")
             }
         }
 

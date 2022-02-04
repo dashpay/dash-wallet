@@ -32,9 +32,8 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.integrations.crowdnode.logic.CrowdNodeApi
-import org.dash.wallet.integrations.crowdnode.logic.CrowdNodeTransaction
-import org.dash.wallet.integrations.crowdnode.utils.Constants
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 enum class NavigationRequest {
@@ -74,7 +73,7 @@ class CrowdNodeViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach {
                 _dashBalance.postValue(it)
-                _hasEnoughBalance.postValue(it >= Constants.MINIMUM_REQUIRED_DASH)
+                _hasEnoughBalance.postValue(it >= CrowdNodeConstants.MINIMUM_REQUIRED_DASH)
             }
             .launchIn(viewModelScope)
     }
@@ -98,15 +97,15 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     private fun getOrCreateAccountAddress(): Address {
-        val savedAddress = config.crowdNodeAccountAddress
-        Log.i("CROWDNODE", "crowdnode savedAddress: ${savedAddress}")
+//        val savedAddress = config.crowdNodeAccountAddress
 
-        return if (savedAddress.isNullOrEmpty()) {
+//        return if (savedAddress.isNullOrEmpty()) {
             val address = walletDataProvider.freshReceiveAddress()
+        Log.i("CROWDNODE", "crowdnode savedAddress: ${address}")
             config.crowdNodeAccountAddress = address.toBase58()
             return address
-        } else {
-            Address.fromString(Constants.NETWORK_PARAMETERS, savedAddress)
-        }
+//        } else {
+//            Address.fromString(Constants.NETWORK_PARAMETERS, savedAddress)
+//        }
     }
 }

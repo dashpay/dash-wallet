@@ -30,19 +30,18 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.transactions.TransactionFilter
-import org.dash.wallet.integrations.crowdnode.logic.CrowdNodeTransaction
 
 @ExperimentalCoroutinesApi
 class WalletTransactionObserver(private val wallet: Wallet) {
     fun observe(vararg filters: TransactionFilter): Flow<Transaction> = callbackFlow {
 
         Context.propagate(Context(Constants.NETWORK_PARAMETERS))
-        filters.forEach { filter ->
-            if (filter is CrowdNodeTransaction) {
-                wallet.addWatchedAddress(filter.crowdNodeAddress)
-                Log.i("CROWDNODE", "addWatchedAddress")
-            }
-        }
+//        filters.forEach { filter ->
+//            if (filter is CrowdNodeTransaction) {
+//                wallet.addWatchedAddress(filter.crowdNodeAddress)
+//                Log.i("CROWDNODE", "addWatchedAddress")
+//            }
+//        }
 
         val walletChangeListener = object : ThrottlingWalletChangeListener() {
             override fun onThrottledWalletChanged() { }
@@ -55,7 +54,7 @@ class WalletTransactionObserver(private val wallet: Wallet) {
             ) {
                 super.onCoinsReceived(wallet, tx, prevBalance, newBalance)
                 Log.i("CROWDNODE", "onCoinsReceived, tx conf: ${tx?.confidence ?: "null"}, tx hash: ${tx?.hash ?: "null"}")
-                Log.i("CROWDNODE", "watched outputs: ${wallet?.getWatchedOutputs(true) ?: "null"}")
+//                Log.i("CROWDNODE", "watched outputs: ${wallet?.getWatchedOutputs(true) ?: "null"}")
 
                 if (tx != null && filters.any { it.matches(tx) }) {
                     trySend(tx)
@@ -70,7 +69,7 @@ class WalletTransactionObserver(private val wallet: Wallet) {
             ) {
                 super.onCoinsSent(wallet, tx, prevBalance, newBalance)
                 Log.i("CROWDNODE", "onCoinsSent, tx hash: ${tx?.hash ?: "null"}, tx confidence: ${tx?.confidence ?: "null"}")
-                Log.i("CROWDNODE", "watched outputs: ${wallet?.getWatchedOutputs(true) ?: "null"}")
+//                Log.i("CROWDNODE", "watched outputs: ${wallet?.getWatchedOutputs(true) ?: "null"}")
 
                 if (tx != null && filters.any { it.matches(tx) }) {
                     trySend(tx)

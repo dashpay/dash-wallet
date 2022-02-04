@@ -15,19 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.utils
+package org.dash.wallet.integrations.crowdnode.transactions
 
 import org.bitcoinj.core.Coin
-import org.bitcoinj.params.TestNet3Params
-import org.dash.wallet.common.BuildConfig
+import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-object Constants {
-    val CROWD_NODE_ADDRESS = if (BuildConfig.DEBUG) { // TODO: network, not build type
-        "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
-    } else {
-        "XjbaGWaGnvEtuQAUoBgDxJWe8ZNv45upG2"
+class CrowdNodeAcceptTermsResponse: CoinsFromAddressTxFilter(
+    CrowdNodeConstants.CROWDNODE_ADDRESS,
+    CrowdNodeConstants.CROWDNODE_OFFSET + ACCEPT_TERMS_RESPONSE
+) {
+    companion object {
+        private val ACCEPT_TERMS_RESPONSE: Coin = Coin.valueOf(4)
     }
-
-    val NETWORK_PARAMETERS = TestNet3Params.get() // TODO
-    val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
 }
