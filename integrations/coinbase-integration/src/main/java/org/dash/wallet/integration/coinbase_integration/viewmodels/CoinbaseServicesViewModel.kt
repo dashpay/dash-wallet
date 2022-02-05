@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
@@ -52,8 +53,8 @@ class CoinbaseServicesViewModel @Inject constructor(
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
 
-    private val _activePaymentMethods: MutableLiveData<List<PaymentMethod>> = MutableLiveData()
-    val activePaymentMethods: LiveData<List<PaymentMethod>>
+    private val _activePaymentMethods: MutableLiveData<Event<List<PaymentMethod>>> = MutableLiveData()
+    val activePaymentMethods: LiveData<Event<List<PaymentMethod>>>
         get() = _activePaymentMethods
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
@@ -102,7 +103,7 @@ class CoinbaseServicesViewModel @Inject constructor(
                 if (response.value.isEmpty()) {
                     activePaymentMethodsFailureCallback.call()
                 } else {
-                    _activePaymentMethods.value =
+                    _activePaymentMethods.value = Event(
                         response.value.filter { it.isBuyingAllowed == true }
                             .map {
                                 val type = paymentMethodTypeFromCoinbaseType(it.type ?: "")
@@ -114,7 +115,7 @@ class CoinbaseServicesViewModel @Inject constructor(
                                     "", // set "Checking" to get "****1234 • Checking" in subtitle
                                     paymentMethodType = type
                                 )
-                            }
+                            })
                 }
             }
             is ResponseResource.Failure -> {

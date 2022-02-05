@@ -78,6 +78,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
             analyticsService.logEvent(AnalyticsConstants.Coinbase.BOTTOM_BACK_TO_ENTER_AMOUNT, bundleOf())
+            findNavController().popBackStack()
         }
 
         binding.toolbar.setNavigationOnClickListener {
@@ -151,7 +152,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 R.drawable.ic_info_red,
                 negativeButtonText= R.string.close
             )
-            CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError)
+            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToError(placeBuyOrderError))
         }
 
         viewModel.placeBuyOrder.observe(viewLifecycleOwner){

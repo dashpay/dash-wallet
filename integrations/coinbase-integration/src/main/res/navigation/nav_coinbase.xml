@@ -32,12 +32,12 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
-          </fragment>
 
         <action
             android:id="@+id/coinbaseServicesToError"
             app:destination="@id/coinbaseErrorDialog"
             />
+    </fragment>
 
     <fragment
         android:id="@+id/coinbaseBuyDashFragment"

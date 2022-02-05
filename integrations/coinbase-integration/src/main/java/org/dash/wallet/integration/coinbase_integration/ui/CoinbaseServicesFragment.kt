@@ -18,6 +18,7 @@ package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
 import android.view.View
+import androidx.activity.addCallback
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -54,6 +55,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             requireActivity().finish()
         }
 
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
+            requireActivity().finish()
+        }
+
         binding.disconnectLayout.setOnClickListener {
             viewModel.disconnectCoinbaseAccount()
         }
@@ -63,8 +68,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             viewModel.getPaymentMethods()
 
         }
-        viewModel.activePaymentMethods.observe(viewLifecycleOwner){
-            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner){ event ->
+            event.getContentIfNotHandled()?.toTypedArray()?.let { paymentMethodsArray ->
+                CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray)
+            }?.let { navDirection -> safeNavigate(navDirection) }
         }
 
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())

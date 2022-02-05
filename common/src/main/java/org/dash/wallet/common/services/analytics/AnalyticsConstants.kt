@@ -102,8 +102,8 @@ object AnalyticsConstants {
     }
 
     object Coinbase {
-        const val ENTER_CONNECTED = "coinbase_enter_authenticated"
-        const val ENTER_DISCONNECTED = "coinbase_enter_not_authenticated"
+        const val ENTER_CONNECTED = "coinbase_enter_connected"
+        const val ENTER_DISCONNECTED = "coinbase_enter_disconnected"
         const val NO_DASH_WALLET = "coinbase_no_dash_wallet"
         const val BUY_DASH = "coinbase_buy_dash"
         const val NO_PAYMENT_METHODS = "coinbase_no_payment_methods"

@@ -35,12 +35,12 @@ class CancelTransactionDialog: DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.negativeButton.setOnClickListener {
+        binding.yesCancelButton.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE_YES, bundleOf())
             findNavController().navigateUp()
             findNavController().popBackStack()
         }
-        binding.positiveButton.setOnClickListener {
+        binding.noCancelButton.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE_NO, bundleOf())
             findNavController().navigateUp()
         }
@@ -49,6 +49,7 @@ class CancelTransactionDialog: DialogFragment() {
     override fun onStart() {
         super.onStart()
         dialog?.apply {
+            setCancelable(false)
             window?.apply {
                 setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 callback = UserInteractionAwareCallback(this.callback, requireActivity())
