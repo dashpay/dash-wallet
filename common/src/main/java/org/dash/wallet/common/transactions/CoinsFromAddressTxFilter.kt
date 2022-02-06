@@ -26,31 +26,23 @@ open class CoinsFromAddressTxFilter(
     private val address: Address,
     private val coins: Coin
 ): TransactionFilter {
+    var toAddress: Address? = null
+        private set
+
     override fun matches(tx: Transaction): Boolean {
-        val inputs = tx.inputs
+        for (input in tx.inputs) {
+            input.outpoint.connectedOutput?.let { connectedOutput ->
+                val scriptPubKey = connectedOutput.scriptPubKey
+                val currentAddress = scriptPubKey.getToAddress(Constants.NETWORK_PARAMETERS)
 
-        if (inputs.isNotEmpty()) {
-            for (input in inputs) {
-                try {
-                    val outpoint = input.outpoint
-                    val connectedOutput = outpoint.connectedOutput
-
-                    if (connectedOutput != null) {
-                        val scriptPubKey = connectedOutput.scriptPubKey
-                        val currentAddress = scriptPubKey.getToAddress(Constants.NETWORK_PARAMETERS)
-
-                        if (currentAddress == address) {
-                            return tx.outputs.any { it.value == coins }
-                        }
-                    } else {
-                        // TODO: unconnected
+                if (currentAddress == address) {
+                    val output = tx.outputs.firstOrNull { it.value == coins }
+                    output?.run {
+                        toAddress = this.scriptPubKey.getToAddress(Constants.NETWORK_PARAMETERS)
+                        return true
                     }
-                } catch (e: Exception) {
-                    // TODO: exception
                 }
             }
-        } else {
-            // TODO: no inputs
         }
 
         return false

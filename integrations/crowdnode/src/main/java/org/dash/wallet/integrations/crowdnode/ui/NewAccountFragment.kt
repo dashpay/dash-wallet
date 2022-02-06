@@ -42,7 +42,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.dashAddressTxt.text = viewModel.dashAccountAddress
-        val existingAccount = viewModel.crowdNodeAccountFound.value == true
+        val existingAccount = false // TODO: online account
 
         binding.title.setText(if (existingAccount) {
             R.string.account_exist_title

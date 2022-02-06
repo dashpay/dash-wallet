@@ -18,12 +18,18 @@
 package de.schildbach.wallet.ui.staking
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.viewModels
+import androidx.fragment.app.findFragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.*
+import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
+import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
 
@@ -34,7 +40,9 @@ class StakingActivity : LockScreenActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         binding = ActivityStakingBinding.inflate(layoutInflater)
+        setNavigationGraph()
 
         viewModel.navigationCallback.observe(this) { request ->
             when (request) {
@@ -60,5 +68,20 @@ class StakingActivity : LockScreenActivity() {
                 startActivity(intent)
             }
         }
+    }
+
+    private fun setNavigationGraph() {
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+        val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
+
+        navGraph.startDestination =
+            if (viewModel.crowdNodeSignUpStatus.value == SignUpStatus.Finished) {
+                R.id.crowdNodePortalFragment
+            } else {
+                R.id.entryPointFragment
+            }
+
+        navController.graph = navGraph
     }
 }

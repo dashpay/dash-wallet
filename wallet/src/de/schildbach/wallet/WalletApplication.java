@@ -864,4 +864,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
         return new WalletTransactionObserver(wallet).observe(filters);
     }
+
+    @NonNull
+    @Override
+    public Iterable<Transaction> getTransactions() {
+        return wallet.getTransactions(false);
+    }
 }

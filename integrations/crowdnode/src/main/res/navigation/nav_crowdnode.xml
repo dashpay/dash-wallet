@@ -16,8 +16,7 @@
   -->
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/nav_crowdnode"
-    app:startDestination="@id/entryPointFragment">
+    android:id="@+id/nav_crowdnode">
 
     <fragment
         android:id="@+id/entryPointFragment"
@@ -43,6 +42,13 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/new_account_to_portal"
+            app:destination="@id/crowdNodePortalFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -52,5 +58,12 @@
 
         <argument android:name="title" app:argType="string" />
         <argument android:name="url" app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/crowdNodePortalFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.PortalFragment"
+        android:label="PortalFragment">
+
     </fragment>
 </navigation>

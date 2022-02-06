@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.di
 
+import android.app.NotificationManager
 import android.content.Context
 import dagger.Binds
 import dagger.Module
@@ -26,8 +27,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
-import org.dash.wallet.common.services.SendPaymentService
+import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.services.NotificationService
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import javax.inject.Singleton
@@ -55,4 +58,9 @@ abstract class AppModule {
     abstract fun bindSendPaymentService(
         sendCoinsTaskRunner: SendCoinsTaskRunner
     ): SendPaymentService
+
+    @Binds
+    abstract fun bindNotificationService(
+        notificationService: NotificationManagerWrapper
+    ): NotificationService
 }

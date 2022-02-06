@@ -15,17 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.transactions
+package org.dash.wallet.common.services
 
-import org.bitcoinj.core.Coin
-import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
-
-class CrowdNodeSignUpResponse: CoinsFromAddressTxFilter(
-    CrowdNodeConstants.CROWDNODE_ADDRESS,
-    CrowdNodeConstants.CROWDNODE_OFFSET + SIGNUP_RESPONSE
-) {
-    companion object {
-        private val SIGNUP_RESPONSE: Coin = Coin.valueOf(2)
-    }
+interface NotificationService {
+    fun showNotification(tag: String, title: String, message: String)
 }

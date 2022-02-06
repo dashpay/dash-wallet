@@ -46,4 +46,6 @@ interface WalletDataProvider {
     fun observeBalance(): Flow<Coin>
 
     fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
+
+    fun getTransactions(): Iterable<Transaction>
 }

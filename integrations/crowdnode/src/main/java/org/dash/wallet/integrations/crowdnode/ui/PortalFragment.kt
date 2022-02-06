@@ -15,17 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.transactions
+package org.dash.wallet.integrations.crowdnode.ui
 
-import org.bitcoinj.core.Coin
-import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import androidx.fragment.app.Fragment
+import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.integrations.crowdnode.R
+import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
 
-class CrowdNodeAcceptTermsResponse: CoinsFromAddressTxFilter(
-    CrowdNodeConstants.CROWDNODE_ADDRESS,
-    CrowdNodeConstants.CROWDNODE_OFFSET + ACCEPT_TERMS_RESPONSE_CODE
-) {
-    companion object {
-        private val ACCEPT_TERMS_RESPONSE_CODE: Coin = Coin.valueOf(2)
-    }
+@AndroidEntryPoint
+class PortalFragment : Fragment(R.layout.fragment_portal) {
+    private val binding by viewBinding(FragmentPortalBinding::bind)
 }

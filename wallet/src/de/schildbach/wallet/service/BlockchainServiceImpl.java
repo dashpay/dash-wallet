@@ -217,7 +217,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 public void run() {
                     final boolean isReceived = amount.signum() > 0;
                     final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
-
+//.//
                     if (isReceived && !isReplayedTx)
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
                 }
@@ -281,7 +281,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
         notification.setNumber(notificationCount == 1 ? 0 : notificationCount);
         notification.setWhen(System.currentTimeMillis());
         notification.setSound(Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.coins_received));
-        nm.notify(Constants.NOTIFICATION_ID_COINS_RECEIVED, notification.getNotification());
+        nm.notify(Constants.NOTIFICATION_ID_COINS_RECEIVED, notification.build());
     }
 
     private final class PeerConnectivityListener
@@ -339,7 +339,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                                 OnboardingActivity.createIntent(BlockchainServiceImpl.this), 0));
                         notification.setWhen(System.currentTimeMillis());
                         notification.setOngoing(true);
-                        nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.getNotification());
+                        nm.notify(Constants.NOTIFICATION_ID_CONNECTED, notification.build());
                     }
 
                     // send broadcast

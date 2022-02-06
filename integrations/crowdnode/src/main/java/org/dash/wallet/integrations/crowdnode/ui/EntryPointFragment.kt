@@ -53,6 +53,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         binding.existingAccountBtn.setOnClickListener {
+            // TODO: online account
             safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
         }
 
@@ -120,7 +121,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             displayNewAccountRequirements(viewModel.needPassphraseBackUp, it)
         }
 
-        viewModel.crowdNodeAccountFound.observe(viewLifecycleOwner, ::displayExistingAccountRequirements)
+        displayExistingAccountRequirements(false) // TODO online account
     }
 
     private fun displayNewAccountRequirements(needBackup: Boolean, enoughBalance: Boolean) {
@@ -141,16 +142,16 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
     }
 
 
-    private fun displayExistingAccountRequirements(hasCrowdNodeTransaction: Boolean) {
-        binding.crowdnodeTransactionError.isVisible = !hasCrowdNodeTransaction
-        binding.restoreWalletHint.isVisible = !hasCrowdNodeTransaction
+    private fun displayExistingAccountRequirements(hasExistingAccount: Boolean) {
+        binding.crowdnodeTransactionError.isVisible = !hasExistingAccount
+        binding.restoreWalletHint.isVisible = !hasExistingAccount
 
-        binding.existingAccountBtn.isClickable = hasCrowdNodeTransaction
-        binding.existingAccountBtn.isFocusable = hasCrowdNodeTransaction
-        binding.existingAccountDivider.isVisible = !hasCrowdNodeTransaction
-        binding.existingAccountNavIcon.isVisible = hasCrowdNodeTransaction
+        binding.existingAccountBtn.isClickable = hasExistingAccount
+        binding.existingAccountBtn.isFocusable = hasExistingAccount
+        binding.existingAccountDivider.isVisible = !hasExistingAccount
+        binding.existingAccountNavIcon.isVisible = hasExistingAccount
 
-        if (!hasCrowdNodeTransaction) {
+        if (!hasExistingAccount) {
             binding.existingAccountImg.clearColorFilter()
         } else {
             binding.existingAccountImg.setColorFilter(resources.getColor(R.color.green_300, null))

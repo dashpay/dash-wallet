@@ -18,10 +18,7 @@
 package org.dash.wallet.integrations.crowdnode.ui
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
@@ -30,9 +27,11 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
@@ -62,10 +61,10 @@ class CrowdNodeViewModel @Inject constructor(
     val dashBalance: LiveData<Coin>
         get() = _dashBalance
 
-    private val _crowdNodeAccountFound = MutableLiveData<Boolean>(true)
-    val crowdNodeAccountFound: LiveData<Boolean>
-        get() = _crowdNodeAccountFound
-
+    var crowdNodeSignUpStatus: LiveData<SignUpStatus> = MediatorLiveData<SignUpStatus>().apply {
+        addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
+        value = crowdNodeApi.signUpStatus.value
+    }
     val termsAccepted = MutableLiveData(false)
 
     init {
@@ -76,6 +75,9 @@ class CrowdNodeViewModel @Inject constructor(
                 _hasEnoughBalance.postValue(it >= CrowdNodeConstants.MINIMUM_REQUIRED_DASH)
             }
             .launchIn(viewModelScope)
+
+        val crowdNodeAccount = crowdNodeApi.findCrowdNodeAccount()
+        Log.i("CROWDNODE", "FOUND crowdNodeAccount: ${crowdNodeAccount}")
     }
     
     fun backupPassphrase() {
@@ -97,15 +99,15 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     private fun getOrCreateAccountAddress(): Address {
-//        val savedAddress = config.crowdNodeAccountAddress
+        val savedAddress = config.crowdNodeAccountAddress
+        Log.i("CROWDNODE", "crowdnode savedAddress: ${savedAddress}")
 
-//        return if (savedAddress.isNullOrEmpty()) {
+        return if (savedAddress.isNullOrEmpty()) {
             val address = walletDataProvider.freshReceiveAddress()
-        Log.i("CROWDNODE", "crowdnode savedAddress: ${address}")
             config.crowdNodeAccountAddress = address.toBase58()
             return address
-//        } else {
-//            Address.fromString(Constants.NETWORK_PARAMETERS, savedAddress)
-//        }
+        } else {
+            Address.fromString(Constants.NETWORK_PARAMETERS, savedAddress)
+        }
     }
 }

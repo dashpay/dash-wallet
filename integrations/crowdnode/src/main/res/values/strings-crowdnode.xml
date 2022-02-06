@@ -15,6 +15,7 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
+    <string name="crowdnode">CrowdNode</string>
     <string name="crowdnode_get_started">Getting started with CrowdNode</string>
     <string name="crowdnode_get_started_hint">To start staking, create an account on CrowdNode or connect to an existing one.</string>
     <string name="new_account">New Account</string>
@@ -39,6 +40,8 @@
     <string name="agree_to_terms">I agree to CrowdNode %1$s and %2$s</string>
     <string name="terms_of_use">Terms of use</string>
     <string name="privacy_policy">Privacy Policy</string>
-    <string name="terms_of_use_url">https://crowdnode.io/terms/</string>
-    <string name="privacy_policy_url">https://crowdnode.io/privacy/</string>
+    <string name="crowdnode_account_ready">Your account is set up and ready to use!</string>
+
+    <string name="terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
+    <string name="privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>`
 </resources>
