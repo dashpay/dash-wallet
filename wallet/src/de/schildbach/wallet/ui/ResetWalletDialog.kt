@@ -17,16 +17,20 @@
 package de.schildbach.wallet.ui
 
 import android.app.Dialog
+import android.content.DialogInterface
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
+import androidx.fragment.app.DialogFragment
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
-import org.dash.wallet.common.ui.BaseDialogFragment
+import org.dash.wallet.common.ui.dismissDialog
 
-class ResetWalletDialog : BaseDialogFragment() {
+class ResetWalletDialog : DialogFragment() {
+    private lateinit var alertDialog: AlertDialog
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -38,13 +42,24 @@ class ResetWalletDialog : BaseDialogFragment() {
                 negativeAction = {
                     analytics.logEvent(AnalyticsConstants.Security.RESET_WALLET, bundleOf())
                     (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
+                    // 1. wipe the wallet
+                    // 2. start OnboardingActivity
+                    // 3. close the backstack (Home->More->Security)
                     WalletApplication.getInstance().triggerWipe(context)
+                    startActivity(OnboardingActivity.createIntent(requireContext()))
+                    activity?.finishAffinity()
                 }
                 positiveText = getString(android.R.string.no)
                 cancelable = false
                 isCancelableOnTouchOutside = false
             }.buildAlertDialog()
-        return super.onCreateDialog(savedInstanceState)
+
+        return alertDialog
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        alertDialog.dismissDialog()
     }
 
     companion object {
