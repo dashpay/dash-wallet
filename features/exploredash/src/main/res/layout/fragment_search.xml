@@ -59,6 +59,41 @@
             android:layout_marginTop="?attr/actionBarSize"
             app:layout_behavior="org.dash.wallet.features.exploredash.ui.bottomsheetbehavior.ExploreMapBottomSheetBehavior" />
 
+        <LinearLayout
+            android:id="@+id/sync_status"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:layout_marginTop="?attr/actionBarSize"
+            android:background="@color/dash_blue"
+            android:alpha="0.9"
+            android:orientation="horizontal"
+            tools:visibility="visible"
+            android:visibility="visible" >
+
+            <ProgressBar
+                android:id="@+id/progress"
+                style="?android:attr/progressBarStyle"
+                android:indeterminate="true"
+                android:indeterminateTintMode="src_atop"
+                android:indeterminateTint="@color/dash_white"
+                android:layout_marginTop="7dp"
+                android:layout_marginStart="26dp"
+                android:layout_width="18dp"
+                android:layout_height="18dp" />
+
+            <TextView
+                android:id="@+id/syncMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                style="@style/Caption"
+                android:textColor="@color/white"
+                android:layout_gravity="center_vertical"
+                android:ellipsize="end"
+                android:text="@string/sync_in_progress_not_complete" />
+        </LinearLayout>
+
+
         <ImageButton
             android:id="@+id/recenter_map_btn"
             android:layout_width="wrap_content"

@@ -25,6 +25,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -33,6 +34,7 @@ import org.dash.wallet.features.exploredash.data.MerchantDao
 import org.dash.wallet.features.exploredash.data.model.Atm
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.repository.DataSyncStatus
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -58,6 +60,10 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         entryPoint.analytics()
     }
 
+    private val syncStatus by lazy {
+        entryPoint.syncStatus()
+    }
+
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface ExploreSyncWorkerEntryPoint {
@@ -65,6 +71,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         fun merchantDao(): MerchantDao
         fun exploreRepository(): ExploreRepository
         fun analytics(): AnalyticsService
+        fun syncStatus(): DataSyncStatus
     }
 
     private val entryPoint by lazy {
@@ -79,12 +86,14 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         var lastDataUpdate = 0L
         try {
             exploreRepository.init()
+            syncStatus.setSyncProgress(0.0)
 
             lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
             lastDataUpdate = exploreRepository.getLastUpdate()
 
             if (lastSync >= lastDataUpdate) {
                 log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+                syncStatus.setSyncProgress(100.0)
                 return@withContext Result.success()
             }
 
@@ -107,6 +116,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             }
 
             tableSyncWatch.reset()
+            syncStatus.setSyncProgress(10.0)
             tableSyncWatch.start()
 
             val merchantDataSize = exploreRepository.getMerchantDataSize()
@@ -117,6 +127,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             }
             val merchantCache = mutableListOf<Merchant>()
             var counter = 0
+            var merchantsLoaded = 0
             exploreRepository.getMerchantData(merchantDataSizeDB).collect {
                 counter++
                 merchantCache.add(it)
@@ -124,7 +135,13 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
                     merchantDao.save(merchantCache)
                     merchantCache.clear()
                     log.info("MERCHANT $counter of ${merchantDataSize - merchantDataSizeDB} sync took $tableSyncWatch")
+
+                    delay(10000)
+                    merchantsLoaded += PAGE_SIZE
+                    log.info("{} - {}", merchantsLoaded, merchantDataSize)
+                    syncStatus.setSyncProgress(10.0 + 0.9 * (merchantsLoaded.toDouble() / merchantDataSize) * 100.0)
                 }
+                // this math may not be correct
             }
             if (merchantCache.size > 0) {
                 merchantDao.save(merchantCache)
@@ -139,11 +156,13 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
             log.info("Sync Explore Dash finished")
 
+            syncStatus.setSyncProgress(100.0)
             return@withContext Result.success()
 
         } catch (ex: Exception) {
             analytics.logError(ex, "syncing from $merchantDataSizeDB ($lastSync/$lastDataUpdate")
             log.info("Sync Explore Dash not fully finished: ${ex.message}")
+            syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         }
 
