@@ -71,11 +71,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     @Inject
     lateinit var configuration: Configuration
 
-    @Inject
-    lateinit var dataSyncStatus: DataSyncStatus
-
-    val syncProgress by lazy { dataSyncStatus.getSyncProgress() }
-
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private val args by navArgs<SearchFragmentArgs>()
@@ -184,7 +179,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             merchantLocationsAdapter.submitList(merchantLocations)
         }
 
-        syncProgress.observe(viewLifecycleOwner) { syncProgress ->
+        viewModel.syncProgress.observe(viewLifecycleOwner) { syncProgress ->
             if (syncProgress != null) {
                 when (syncProgress.status) {
                     Status.LOADING -> {

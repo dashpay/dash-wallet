@@ -28,6 +28,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
+import org.dash.wallet.features.exploredash.repository.DataSyncStatus
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.extensions.Const
@@ -647,4 +648,10 @@ class ExploreViewModel @Inject constructor(
     internal fun setPhysicalResults(results: List<SearchResult>) {
         _physicalSearchResults.value = results
     }
+
+    @Inject
+    lateinit var dataSyncStatus: DataSyncStatus
+
+    val syncProgress by lazy { dataSyncStatus.getSyncProgress() }
+
 }
