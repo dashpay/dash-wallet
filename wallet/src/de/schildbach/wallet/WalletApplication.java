@@ -815,7 +815,8 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
-        ProcessPhoenix.triggerRebirth(this);
+        // wallet must be null for the OnboardingActivity flow
+        wallet = null;
     }
 
     public static WalletApplication getInstance() {

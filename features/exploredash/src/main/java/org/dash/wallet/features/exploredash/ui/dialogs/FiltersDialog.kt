@@ -17,10 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.dialogs
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -43,9 +40,7 @@ import org.dash.wallet.features.exploredash.databinding.DialogFiltersBinding
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.FilterMode
-import org.dash.wallet.features.exploredash.ui.extensions.isLocationPermissionGranted
-import org.dash.wallet.features.exploredash.ui.extensions.registerPermissionLauncher
-import org.dash.wallet.features.exploredash.ui.extensions.requestLocationPermission
+import org.dash.wallet.features.exploredash.ui.extensions.*
 import javax.inject.Inject
 
 @FlowPreview
@@ -190,8 +185,8 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
         if (viewModel.isLocationEnabled.value == true) {
             binding.radiusFilter.isVisible = true
-            binding.managePermissionsBtn.isVisible = false
-            binding.locationRequestTxt.isVisible = false
+            binding.manageGpsView.managePermissionsBtn.isVisible = false
+            binding.manageGpsView.locationRequestTxt.isVisible = false
             binding.locationExplainerTxt.isVisible = false
 
             val optionNames = binding.root.resources.getStringArray(
@@ -208,8 +203,8 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
             radiusOptionsAdapter = adapter
         } else {
             binding.radiusFilter.isVisible = false
-            binding.managePermissionsBtn.isVisible = true
-            binding.locationRequestTxt.isVisible = true
+            binding.manageGpsView.managePermissionsBtn.isVisible = true
+            binding.manageGpsView.locationRequestTxt.isVisible = true
             binding.locationExplainerTxt.isVisible = true
         }
     }
@@ -278,11 +273,11 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         })
 
         binding.locationSettingsBtn.setOnClickListener {
-            runLocationFlow()
+            runLocationFlow(viewModel.exploreTopic, configuration, permissionRequestLauncher)
         }
 
-        binding.managePermissionsBtn.setOnClickListener {
-            runLocationFlow()
+        binding.manageGpsView.managePermissionsBtn.setOnClickListener {
+            runLocationFlow(viewModel.exploreTopic, configuration, permissionRequestLauncher)
         }
     }
 
@@ -348,27 +343,5 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         sortByOptionsAdapter?.selectedIndex = if (sortByDistance) 1 else 0
 
         binding.resetFiltersBtn.isEnabled = false
-    }
-
-    private fun runLocationFlow() {
-        if (isLocationPermissionGranted) {
-            openAppSettings()
-        } else {
-            requestLocationPermission(
-                viewModel.exploreTopic,
-                configuration,
-                permissionRequestLauncher
-            )
-        }
-    }
-
-    private fun openAppSettings() {
-        val intent = Intent().apply {
-            action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-            data = Uri.fromParts("package", requireContext().packageName, null)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-
-        startActivity(intent)
     }
 }
