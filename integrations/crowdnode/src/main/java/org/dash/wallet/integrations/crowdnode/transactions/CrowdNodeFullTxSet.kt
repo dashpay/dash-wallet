@@ -17,14 +17,25 @@
 
 package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Coin
-import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.transactions.TransactionWrapper
 
-class CrowdNodeAcceptTermsResponse: CoinsFromAddressTxFilter(
-    CrowdNodeConstants.CROWDNODE_ADDRESS, ACCEPT_TERMS_RESPONSE_CODE
-) {
-    companion object {
-        val ACCEPT_TERMS_RESPONSE_CODE: Coin = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(2)
+class CrowdNodeFullTxSet: TransactionWrapper {
+    private val crowdNodeTxFilters = listOf(
+        CrowdNodeSignUpTx(),
+        CrowdNodeAcceptTermsResponse(),
+        CrowdNodeAcceptTermsTx(),
+        CrowdNodeWelcomeToApiResponse()
+    )
+
+    override val transactions = mutableSetOf<Transaction>()
+
+    override fun tryInclude(tx: Transaction): Boolean {
+        if (crowdNodeTxFilters.any { it.matches(tx) }) {
+            transactions.add(tx)
+            return true
+        }
+
+        return false
     }
 }

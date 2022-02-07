@@ -18,5 +18,5 @@
 package org.dash.wallet.common.services
 
 interface NotificationService {
-    fun showNotification(tag: String, title: String, message: String)
+    fun showNotification(tag: String, message: String)
 }

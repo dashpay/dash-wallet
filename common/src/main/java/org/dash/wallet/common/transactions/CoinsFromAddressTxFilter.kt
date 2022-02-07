@@ -23,8 +23,8 @@ import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Constants
 
 open class CoinsFromAddressTxFilter(
-    private val address: Address,
-    private val coins: Coin
+    val fromAddress: Address,
+    val coins: Coin
 ): TransactionFilter {
     var toAddress: Address? = null
         private set
@@ -35,7 +35,7 @@ open class CoinsFromAddressTxFilter(
                 val scriptPubKey = connectedOutput.scriptPubKey
                 val currentAddress = scriptPubKey.getToAddress(Constants.NETWORK_PARAMETERS)
 
-                if (currentAddress == address) {
+                if (currentAddress == fromAddress) {
                     val output = tx.outputs.firstOrNull { it.value == coins }
                     output?.run {
                         toAddress = this.scriptPubKey.getToAddress(Constants.NETWORK_PARAMETERS)

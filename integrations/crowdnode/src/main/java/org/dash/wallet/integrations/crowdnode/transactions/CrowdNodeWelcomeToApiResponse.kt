@@ -22,10 +22,9 @@ import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeWelcomeToApiResponse: CoinsFromAddressTxFilter(
-    CrowdNodeConstants.CROWDNODE_ADDRESS,
-    CrowdNodeConstants.CROWDNODE_OFFSET + WELCOME_TO_API_RESPONSE_CODE
+    CrowdNodeConstants.CROWDNODE_ADDRESS, WELCOME_TO_API_RESPONSE_CODE
 ) {
     companion object {
-        private val WELCOME_TO_API_RESPONSE_CODE: Coin = Coin.valueOf(4)
+        val WELCOME_TO_API_RESPONSE_CODE: Coin = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(4)
     }
 }

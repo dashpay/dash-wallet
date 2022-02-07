@@ -15,16 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.transactions
+package org.dash.wallet.common.transactions
 
-import org.bitcoinj.core.Coin
-import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import org.bitcoinj.core.Transaction
 
-class CrowdNodeAcceptTermsResponse: CoinsFromAddressTxFilter(
-    CrowdNodeConstants.CROWDNODE_ADDRESS, ACCEPT_TERMS_RESPONSE_CODE
-) {
-    companion object {
-        val ACCEPT_TERMS_RESPONSE_CODE: Coin = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(2)
-    }
+interface TransactionWrapper {
+    val transactions: Set<Transaction>
+    fun tryInclude(tx: Transaction): Boolean
 }

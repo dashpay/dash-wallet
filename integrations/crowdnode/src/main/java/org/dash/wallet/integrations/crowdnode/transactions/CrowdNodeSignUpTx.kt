@@ -21,10 +21,10 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeAcceptTermsResponse: CoinsFromAddressTxFilter(
-    CrowdNodeConstants.CROWDNODE_ADDRESS, ACCEPT_TERMS_RESPONSE_CODE
+class CrowdNodeSignUpTx: CoinsFromAddressTxFilter(
+    CrowdNodeConstants.CROWDNODE_ADDRESS, SIGNUP_REQUEST_CODE
 ) {
     companion object {
-        val ACCEPT_TERMS_RESPONSE_CODE: Coin = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(2)
+        val SIGNUP_REQUEST_CODE: Coin = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(131072)
     }
 }

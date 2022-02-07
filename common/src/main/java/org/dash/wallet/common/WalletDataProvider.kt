@@ -25,6 +25,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionWrapper
 
 interface WalletDataProvider {
 
@@ -47,5 +48,5 @@ interface WalletDataProvider {
 
     fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
 
-    fun getTransactions(): Iterable<Transaction>
+    fun getAllTransactions(vararg wrappers: TransactionWrapper): Iterable<TransactionWrapper>
 }

@@ -33,16 +33,17 @@ class NotificationManagerWrapper @Inject constructor(
         Context.NOTIFICATION_SERVICE
     ) as NotificationManager
 
-    override fun showNotification(tag: String, title: String, message: String) {
+    override fun showNotification(tag: String, message: String) {
         val notification: NotificationCompat.Builder = NotificationCompat.Builder(
             appContext,
             Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS
         )
         notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom)
-        notification.setTicker(title)
-        notification.setContentTitle(title)
+        val appName = appContext.getString(R.string.app_name)
+        notification.setTicker(appName)
+        notification.setContentTitle(appName)
         notification.setContentText(message)
-//        notification.setContentIntent(PendingIntent.getActivity(this, 0, createIntent(this), 0))
+//        notification.setContentIntent(PendingIntent.getActivity(this, 0, createIntent(this), 0)) TODO
         notification.setWhen(System.currentTimeMillis())
 
         notificationManager.notify(tag.hashCode(), notification.build())

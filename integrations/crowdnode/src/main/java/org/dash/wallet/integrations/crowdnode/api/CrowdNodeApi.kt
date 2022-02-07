@@ -27,8 +27,7 @@ import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.LockedTransaction
 import org.dash.wallet.integrations.crowdnode.R
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeAcceptTermsResponse
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWelcomeToApiResponse
+import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
@@ -42,6 +41,7 @@ enum class SignUpStatus {
 
 interface CrowdNodeApi {
     val signUpStatus: StateFlow<SignUpStatus>
+    var showNotificationOnFinished: Boolean
 
     fun findCrowdNodeAccount(): Address?
     suspend fun signUp(accountAddress: Address)
@@ -53,25 +53,22 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private val notificationService: NotificationService,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
-    companion object {
-        private val SIGNUP_REQUEST: Coin = Coin.valueOf(131072)
-        private val ACCEPT_TERMS: Coin = Coin.valueOf(65536)
-    }
-
     override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
+    override var showNotificationOnFinished = false
 
     init {
         checkCrowdNodeTransactions()
     }
 
     override fun findCrowdNodeAccount(): Address? {
-        val transactions = walletDataProvider.getTransactions()
-        val crowdNodeWelcomeResponse = CrowdNodeWelcomeToApiResponse()
-        transactions.forEach { tx ->
-            if (crowdNodeWelcomeResponse.matches(tx)) {
-                return crowdNodeWelcomeResponse.toAddress
-            }
-        }
+        // TODO
+//        val transactions = walletDataProvider.getTransactions()
+//        val crowdNodeWelcomeResponse = CrowdNodeWelcomeToApiResponse()
+//        transactions.forEach { tx ->
+//            if (crowdNodeWelcomeResponse.matches(tx)) {
+//                return crowdNodeWelcomeResponse.toAddress
+//            }
+//        }
 
         return null
     }
@@ -89,25 +86,37 @@ class CrowdNodeBlockchainApi @Inject constructor(
         val acceptTermsResponseTx = acceptTerms(accountAddress)
         Log.i("CROWDNODE", "acceptTermsResponseTx conf: ${acceptTermsResponseTx.confidence}; transo: ${acceptTermsResponseTx}")
         signUpStatus.value = SignUpStatus.Finished
-        notificationService.showNotification(
-            "crowdnode_ready",
-            appContext.getString(R.string.crowdnode),
-            appContext.getString(R.string.crowdnode_account_ready)
-        )
+
+        if (showNotificationOnFinished) {
+            notificationService.showNotification(
+                "crowdnode_ready",
+                appContext.getString(R.string.crowdnode_account_ready)
+            )
+        }
     }
 
     private fun checkCrowdNodeTransactions() {
-        val crowdNodeWelcomeResponse = CrowdNodeWelcomeToApiResponse()
-        val crowdNodeAcceptTermsResponse = CrowdNodeAcceptTermsResponse()
+//        val crowdNodeWelcomeResponse = CrowdNodeWelcomeToApiResponse()
+//        val crowdNodeAcceptTermsResponse = CrowdNodeAcceptTermsResponse()
+//        for (tx in walletDataProvider.getTransactions()) {
+//            if (crowdNodeWelcomeResponse.matches(tx)) {
+//                signUpStatus.value = SignUpStatus.Finished
+//                return
+//            }
+//
+//            if (crowdNodeAcceptTermsResponse.matches(tx)) {
+//                signUpStatus.value = SignUpStatus.AcceptingTerms
+//            }
+//        }
 
-        for (tx in walletDataProvider.getTransactions()) {
-            if (crowdNodeWelcomeResponse.matches(tx)) {
-                signUpStatus.value = SignUpStatus.Finished
-                return
-            }
 
-            if (crowdNodeAcceptTermsResponse.matches(tx)) {
-                signUpStatus.value = SignUpStatus.AcceptingTerms
+        val wrappedTransactions = walletDataProvider.getAllTransactions(CrowdNodeFullTxSet())
+        val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
+        crowdNodeFullSet?.let { wrapper ->
+            when (wrapper.transactions.size) {
+                4 -> signUpStatus.value = SignUpStatus.Finished
+                2 -> signUpStatus.value = SignUpStatus.AcceptingTerms
+                else -> {} // TODO
             }
         }
     }
@@ -120,14 +129,14 @@ class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     private suspend fun makeSignUpRequest(accountAddress: Address): Transaction {
-        val requestValue = CrowdNodeConstants.CROWDNODE_OFFSET + SIGNUP_REQUEST
+        val requestValue = CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE
         val signUpTx = paymentService.sendCoins(CrowdNodeConstants.CROWDNODE_ADDRESS, requestValue, accountAddress)
         Log.i("CROWDNODE", "signUp conf: ${signUpTx.confidence}; transo: ${signUpTx}")
         return walletDataProvider.observeTransactions(CrowdNodeAcceptTermsResponse()).first()
     }
 
     private suspend fun acceptTerms(accountAddress: Address): Transaction {
-        val requestValue = CrowdNodeConstants.CROWDNODE_OFFSET + ACCEPT_TERMS
+        val requestValue = CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE
         val acceptTx = paymentService.sendCoins(CrowdNodeConstants.CROWDNODE_ADDRESS, requestValue, accountAddress)
         Log.i("CROWDNODE", "acceptTx conf: ${acceptTx.confidence}; transo: ${acceptTx}")
         return walletDataProvider.observeTransactions(CrowdNodeWelcomeToApiResponse()).first()

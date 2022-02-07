@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -96,6 +96,10 @@ class CrowdNodeViewModel @Inject constructor(
         viewModelScope.launch {
             crowdNodeApi.signUp(accountAddress)
         }
+    }
+
+    fun changeNotifyWhenDone(toNotify: Boolean) {
+        crowdNodeApi.showNotificationOnFinished = toNotify
     }
 
     private fun getOrCreateAccountAddress(): Address {

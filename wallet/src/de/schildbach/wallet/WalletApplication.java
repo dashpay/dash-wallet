@@ -71,6 +71,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -86,7 +87,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -868,7 +871,32 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     @NonNull
     @Override
-    public Iterable<Transaction> getTransactions() {
-        return wallet.getTransactions(false);
+    public Iterable<TransactionWrapper> getAllTransactions(@NonNull TransactionWrapper... wrappers) {
+        Set<Transaction> transactions = wallet.getTransactions(true);
+        ArrayList<TransactionWrapper> wrappedTransactions = new ArrayList<>();
+
+        for (Transaction transaction : transactions) {
+            for (TransactionWrapper wrapper : wrappers) {
+                if (wrapper.tryInclude(transaction)) {
+                    wrappedTransactions.add(wrapper);
+                    break;
+                }
+
+                wrappedTransactions.add(new TransactionWrapper() {
+                    @Override
+                    public boolean tryInclude(@NonNull Transaction tx) {
+                        return true;
+                    }
+
+                    @NonNull
+                    @Override
+                    public Set<Transaction> getTransactions() {
+                        return java.util.Collections.singleton(transaction);
+                    }
+                });
+            }
+        }
+
+        return wrappedTransactions;
     }
 }

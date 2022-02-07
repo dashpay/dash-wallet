@@ -217,7 +217,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 public void run() {
                     final boolean isReceived = amount.signum() > 0;
                     final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
-//.//
+//.// TODO: check replaying state
                     if (isReceived && !isReplayedTx)
                         notifyCoinsReceived(address, amount, tx.getExchangeRate());
                 }
