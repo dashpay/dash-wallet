@@ -46,6 +46,8 @@
         <action
             android:id="@+id/new_account_to_portal"
             app:destination="@id/crowdNodePortalFragment"
+            app:popUpTo="@id/nav_crowdnode"
+            app:popUpToInclusive="true"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />

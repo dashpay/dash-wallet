@@ -328,7 +328,6 @@
 
     <string name="appwidget_wallet_not_ready">Nastavte si peněženku</string>
 
-    <string name="payment_request_please_wait_title">Čekejte prosím</string>
     <string name="payment_request_please_wait_message">Připojování k platebnímu serveru</string>
     <string name="payment_request_unable_to_connect">Nelze se připojit</string>
     <string name="payment_request_unable_to_send">Nelze odeslat</string>

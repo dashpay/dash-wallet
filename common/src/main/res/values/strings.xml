@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- Generic titles/messages -->
     <string name="loading">Loading…</string>
     <string name="loading_error">An error occurred. Please try again later.</string>
+    <string name="please_wait_title">Please wait</string>
     <string name="dash_available">%1$s available</string>
     <string name="network_unavailable_title">Network Unavailable</string>
     <string name="network_unavailable_check_connection">Please check your network connection</string>

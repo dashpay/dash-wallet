@@ -322,7 +322,6 @@
 
     <string name="appwidget_wallet_not_ready">Lütfen cüzdanınızı kurun</string>
 
-    <string name="payment_request_please_wait_title">Lütfen bekleyin</string>
     <string name="payment_request_please_wait_message">Ödeme Sunucusuna Bağlanıyor</string>
     <string name="payment_request_unable_to_connect">Bağlanılamıyor</string>
     <string name="payment_request_unable_to_send">Gönderilemiyor</string>

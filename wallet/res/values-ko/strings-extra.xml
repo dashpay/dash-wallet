@@ -319,7 +319,6 @@
 
     <string name="appwidget_wallet_not_ready">당신의 지갑을 설정하십시오</string>
 
-    <string name="payment_request_please_wait_title">기다려주십시오</string>
     <string name="payment_request_please_wait_message">지불 서버에 연결 중</string>
     <string name="payment_request_unable_to_connect">연결할 수 없습니다</string>
     <string name="payment_request_unable_to_send">전송할 수 없습니다</string>

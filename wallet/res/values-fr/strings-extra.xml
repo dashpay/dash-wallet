@@ -322,7 +322,6 @@
 
     <string name="appwidget_wallet_not_ready">Veuillez configurer votre portefeuille</string>
 
-    <string name="payment_request_please_wait_title">Veuillez patienter</string>
     <string name="payment_request_please_wait_message">Connexion au serveur de paiement…</string>
     <string name="payment_request_unable_to_connect">Impossible de se connecter</string>
     <string name="payment_request_unable_to_send">Impossible d\'envoyer</string>

@@ -17,7 +17,10 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
@@ -26,4 +29,9 @@ import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
 @AndroidEntryPoint
 class PortalFragment : Fragment(R.layout.fragment_portal) {
     private val binding by viewBinding(FragmentPortalBinding::bind)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Log.i("CROWDNODE", "PortalFragment, onCreate")
+    }
 }

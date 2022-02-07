@@ -3,6 +3,7 @@
 
     <string name="loading">Φορτώνει...</string>
     <string name="loading_error">Παρουσιάστηκε σφάλμα. Παρακαλώ προσπαθήστε ξανά αργότερα.</string>
+    <string name="please_wait_title">Παρακαλώ περιμένετε</string>
     <string name="dash_available">%1$s διαθέσιμα</string>
     <string name="network_unavailable_title">Μη διαθέσιμο δίκτυο</string>
     <string name="network_unavailable_check_connection">Ελέγξτε τη σύνδεση δικτύου σας</string>

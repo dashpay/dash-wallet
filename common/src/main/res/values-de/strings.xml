@@ -3,6 +3,7 @@
 
     <string name="loading">Laden...</string>
     <string name="loading_error">Ein Fehler ist aufgetreten. Bitte versuche es später noch einmal.</string>
+    <string name="please_wait_title">Bitte warten</string>
     <string name="dash_available">%1$s verfügbar</string>
     <string name="network_unavailable_title">Netzwerk nicht verfügbar</string>
     <string name="network_unavailable_check_connection">Bitte überprüfe deine Netzwerksverbindung</string>

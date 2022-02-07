@@ -322,7 +322,6 @@
 
     <string name="appwidget_wallet_not_ready">Paki setup ang iyong pitaka</string>
 
-    <string name="payment_request_please_wait_title">Mangyaring maghintay</string>
     <string name="payment_request_please_wait_message">Pagkonekta sa Server ng pagbabayad</string>
     <string name="payment_request_unable_to_connect">Hindi maka-konekta</string>
     <string name="payment_request_unable_to_send">Hindi maipadala</string>

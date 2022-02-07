@@ -3,6 +3,7 @@
 
     <string name="loading">Chargement...</string>
     <string name="loading_error">Une erreur est survenue. Veuillez réessayer plus tard.</string>
+    <string name="please_wait_title">Veuillez patienter</string>
     <string name="dash_available">%1$s disponibles</string>
     <string name="network_unavailable_title">Réseau non disponible</string>
     <string name="network_unavailable_check_connection">Veuillez vérifier votre connexion réseau</string>

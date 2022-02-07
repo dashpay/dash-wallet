@@ -313,7 +313,6 @@
 
     <string name="appwidget_wallet_not_ready">あなたのウォレットをセットアップしてください</string>
 
-    <string name="payment_request_please_wait_title">お待ちください</string>
     <string name="payment_request_please_wait_message">支払い元に接続中</string>
     <string name="payment_request_unable_to_connect">接続できません</string>
     <string name="payment_request_unable_to_send">送金できません</string>

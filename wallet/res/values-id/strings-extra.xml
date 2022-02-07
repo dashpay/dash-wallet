@@ -319,7 +319,6 @@
 
     <string name="appwidget_wallet_not_ready">Harap siapkan dompet Anda</string>
 
-    <string name="payment_request_please_wait_title">Silahkan tunggu</string>
     <string name="payment_request_please_wait_message">Mengghubungkan ke server pembayaran</string>
     <string name="payment_request_unable_to_connect">Tidak dapat terhubung</string>
     <string name="payment_request_unable_to_send">Tidak dapat mengirim</string>

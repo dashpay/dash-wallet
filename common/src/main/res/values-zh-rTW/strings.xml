@@ -3,6 +3,7 @@
 
     <string name="loading">載入中...</string>
     <string name="loading_error">發生錯誤。 請稍後再試。</string>
+    <string name="please_wait_title">請稍等</string>
     <string name="dash_available">%1$s 可用</string>
     <string name="network_unavailable_title">網絡不可用</string>
     <string name="network_unavailable_check_connection">請檢查您的網絡連接</string>

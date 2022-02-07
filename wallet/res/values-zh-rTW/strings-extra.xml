@@ -319,7 +319,6 @@
 
     <string name="appwidget_wallet_not_ready">請設置您的錢包</string>
 
-    <string name="payment_request_please_wait_title">請稍等</string>
     <string name="payment_request_please_wait_message">連接到支付服務器</string>
     <string name="payment_request_unable_to_connect">無法連接</string>
     <string name="payment_request_unable_to_send">無法發送</string>

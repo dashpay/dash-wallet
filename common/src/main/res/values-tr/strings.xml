@@ -3,6 +3,7 @@
 
     <string name="loading">Yükleniyor...</string>
     <string name="loading_error">Bir hata oluştu. Lütfen tekrar deneyin.</string>
+    <string name="please_wait_title">Lütfen bekleyin</string>
     <string name="dash_available">%1$s mevcut</string>
     <string name="network_unavailable_title">Ağ Kullanılamıyor</string>
     <string name="network_unavailable_check_connection">Lütfen ağ bağlantınızı kontrol edin</string>

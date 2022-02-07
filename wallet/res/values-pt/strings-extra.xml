@@ -322,7 +322,6 @@
 
     <string name="appwidget_wallet_not_ready">Configure sua carteira por favor</string>
 
-    <string name="payment_request_please_wait_title">Espere por favor</string>
     <string name="payment_request_please_wait_message">Conectando ao Servidor de Pagamentos</string>
     <string name="payment_request_unable_to_connect">Não foi possível conectar-se</string>
     <string name="payment_request_unable_to_send">Não foi possível Enviar</string>

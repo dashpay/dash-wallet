@@ -334,7 +334,6 @@
 
     <string name="appwidget_wallet_not_ready">يرجى إعداد محفظتك</string>
 
-    <string name="payment_request_please_wait_title">الرجاء الانتظار</string>
     <string name="payment_request_please_wait_message">الاتصال بخادم الدفع</string>
     <string name="payment_request_unable_to_connect">غير قادر على الاتصال</string>
     <string name="payment_request_unable_to_send">غير قادر على الارسال</string>

@@ -322,7 +322,6 @@
 
     <string name="appwidget_wallet_not_ready">Ρυθμίστε το πορτοφόλι σας</string>
 
-    <string name="payment_request_please_wait_title">Παρακαλώ περιμένετε</string>
     <string name="payment_request_please_wait_message">Σύνδεση με το διακομιστή πληρωμών</string>
     <string name="payment_request_unable_to_connect">Δεν είναι δυνατή η σύνδεση</string>
     <string name="payment_request_unable_to_send">Δεν είναι δυνατή η Αποστολή</string>

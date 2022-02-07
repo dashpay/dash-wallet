@@ -3,6 +3,7 @@
 
     <string name="loading">กำลังโหลด...</string>
     <string name="loading_error">เกิดข้อผิดพลาด  กรุณาลองใหม่อีกครั้งในภายหลัง.</string>
+    <string name="please_wait_title">กรุณารอสักครู่</string>
     <string name="dash_available">%1$s  นำไปใช้ได้</string>
     <string name="network_unavailable_title">เครือข่ายไม่พร้อมใช้งาน</string>
     <string name="network_unavailable_check_connection">โปรดตรวจสอบการเชื่อมต่อเครือข่ายของคุณ</string>

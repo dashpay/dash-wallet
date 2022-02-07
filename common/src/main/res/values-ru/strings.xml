@@ -3,6 +3,7 @@
 
     <string name="loading">Загрузка…</string>
     <string name="loading_error">Произошла ошибка. Попробуйте ещё раз позже.</string>
+    <string name="please_wait_title">Пожалуйста, подождите</string>
     <string name="dash_available">%1$s доступно</string>
     <string name="network_unavailable_title">Сеть недоступна</string>
     <string name="network_unavailable_check_connection">Пожалуйста, проверьте ваше подключение к сети</string>

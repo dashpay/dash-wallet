@@ -308,7 +308,6 @@
 
     <string name="appwidget_wallet_not_ready">Hãy vui lòng thiết lập ví của bạn</string>
 
-    <string name="payment_request_please_wait_title">Vui lòng đợi</string>
     <string name="payment_request_please_wait_message">Đang kết nối với Máy Chủ Thanh Toán</string>
     <string name="payment_request_unable_to_connect">Không thể kết nối</string>
     <string name="payment_request_unable_to_send">Không thể gửi</string>

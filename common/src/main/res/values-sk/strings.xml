@@ -3,6 +3,7 @@
 
     <string name="loading">Načítava sa...</string>
     <string name="loading_error">Nastala chyba. Skúste neskôr prosím.</string>
+    <string name="please_wait_title">Prosím čakajte</string>
     <string name="dash_available">Dostupných %1$s</string>
     <string name="network_unavailable_title">Sieť nedostupná</string>
     <string name="network_unavailable_check_connection">Skontrolujte svoje sieťové pripojenie</string>

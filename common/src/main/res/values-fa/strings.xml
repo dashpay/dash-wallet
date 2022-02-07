@@ -3,6 +3,7 @@
 
     <string name="loading">در حال بارگذاری...</string>
     <string name="loading_error">خطایی روی داده است. لطفا دوباره تلاش کنید.</string>
+    <string name="please_wait_title">لطفا منتظر بمانید</string>
     <string name="dash_available">%1$sموجود است</string>
     <string name="network_unavailable_title">شبکه در دسترس نیست</string>
     <string name="network_unavailable_check_connection">لطفا اتصال شبکه‌تان را بررسی کنید</string>

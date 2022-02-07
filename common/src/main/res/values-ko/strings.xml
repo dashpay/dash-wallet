@@ -3,6 +3,7 @@
 
     <string name="loading">로딩중...</string>
     <string name="loading_error">오류가 발생했습니다. 나중에 다시 시도하십시오.</string>
+    <string name="please_wait_title">기다려주십시오</string>
     <string name="dash_available">%1$s 이용 가능</string>
     <string name="network_unavailable_title">네트워크를 이용할 수 없음</string>
     <string name="network_unavailable_check_connection">네트워크 연결을 확인하세요</string>

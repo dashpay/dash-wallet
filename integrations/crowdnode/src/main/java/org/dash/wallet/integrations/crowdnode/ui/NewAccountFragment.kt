@@ -22,8 +22,10 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
+import android.util.Log
 import android.view.View
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -31,6 +33,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
+import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentNewAccountBinding
 
 @AndroidEntryPoint
@@ -61,7 +64,6 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.createAccountBtn.setOnClickListener {
-            binding.createAccountBtn.isEnabled = false
             viewModel.signUp()
         }
 
@@ -74,12 +76,26 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         viewModel.termsAccepted.observe(viewLifecycleOwner) {
             binding.createAccountBtn.isEnabled = it
         }
+
+        viewModel.crowdNodeSignUpStatus.observe(viewLifecycleOwner) {
+            binding.registerPanel.isVisible = it == SignUpStatus.NotStarted
+            binding.inProgressPanel.isVisible = it != SignUpStatus.NotStarted
+
+            when (it) {
+                SignUpStatus.Finished -> {
+                    Log.i("CROWDNODE", "Finished, safeNavigate")
+                    safeNavigate(NewAccountFragmentDirections.newAccountToPortal())
+                }
+                SignUpStatus.AcceptingTerms -> binding.progressMessage.text = getString(R.string.accepting_terms)
+                else -> binding.progressMessage.text = getString(R.string.crowdnode_creating)
+            }
+        }
     }
 
     private fun setTermsTextView(textView: TextView) {
         val termsOfService = getString(R.string.terms_of_use)
         val privacyPolicy = getString(R.string.privacy_policy)
-        val completeString = getString(R.string.agree_to_terms, termsOfService, privacyPolicy)
+        val completeString = getString(R.string.crowdnode_agree_to_terms, termsOfService, privacyPolicy)
         val spannableStringBuilder = SpannableStringBuilder(completeString)
 
         val clickOnTerms = object : ClickableSpan() {
