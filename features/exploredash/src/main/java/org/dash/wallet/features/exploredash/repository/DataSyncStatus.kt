@@ -17,13 +17,12 @@
 
 package org.dash.wallet.features.exploredash.repository
 
-import androidx.lifecycle.LiveData
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.Resource
 import java.lang.Exception
 
 interface DataSyncStatus {
-    fun setSyncProgress(progress: Double)
-    fun setSyncError(exception: Exception)
-    fun getSyncProgress(): LiveData<Resource<Double>>
+    suspend fun setSyncProgress(progress: Double)
+    suspend fun setSyncError(exception: Exception)
+    fun getSyncProgressFlow(): Flow<Resource<Double>>
 }

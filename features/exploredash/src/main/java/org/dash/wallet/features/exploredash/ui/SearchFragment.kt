@@ -54,7 +54,6 @@ import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Status
-import org.dash.wallet.features.exploredash.repository.DataSyncStatus
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import java.io.FileNotFoundException
@@ -178,31 +177,34 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.allMerchantLocations.observe(viewLifecycleOwner) { merchantLocations ->
             merchantLocationsAdapter.submitList(merchantLocations)
         }
+        viewModel.syncProgressLiveDataFromFlow.observe(viewLifecycleOwner) { syncProgress ->
 
-        viewModel.syncProgress.observe(viewLifecycleOwner) { syncProgress ->
-            if (syncProgress != null) {
-                when (syncProgress.status) {
-                    Status.LOADING -> {
-                        binding.apply {
-                            syncStatus.isVisible = true
-                            progress.isVisible = true
-                            progress.progress = syncProgress.data?.toInt() ?: 0
-                            syncMessage.text = getString(R.string.sync_in_progress_not_complete)
+            when (syncProgress.status) {
+                Status.LOADING -> {
+                    binding.apply {
+                        syncStatus.isVisible = true
+                        progress.isVisible = true
+                        progress.progress = syncProgress.data?.toInt() ?: 0
+                        syncMessage.text = getString(R.string.sync_in_progress_not_complete)
+                    }
+                }
+                Status.SUCCESS -> binding.syncStatus.isVisible = false
+                Status.ERROR -> {
+                    binding.apply {
+                        syncStatus.isVisible = true
+                        syncStatus.setBackgroundResource(R.color.red_300)
+                        progress.isVisible = false
+                        when (syncProgress.exception) {
+                            is FileNotFoundException -> syncMessage.text = getString(R.string.sync_in_progress_file_not_found)
+                            else -> syncMessage.text = getString(R.string.sync_in_progress_error)
                         }
                     }
-                    Status.SUCCESS -> binding.syncStatus.isVisible = false
-                    Status.ERROR -> {
-                        binding.apply {
-                            syncStatus.isVisible = true
-                            syncStatus.setBackgroundResource(R.color.red_300)
-                            progress.isVisible = false
-                            when (syncProgress.exception) {
-                                is FileNotFoundException -> syncMessage.text = getString(R.string.sync_in_progress_file_not_found)
-                                else -> syncMessage.text = getString(R.string.sync_in_progress_error)
-                            }
-                        }
+                }
+                Status.CANCELED -> {
+                    binding.apply {
+                        syncStatus.isVisible = true
+                        syncMessage.text = getString(R.string.sync_in_progress_canceled)
                     }
-                    Status.CANCELED -> binding.syncStatus.isVisible = true
                 }
             }
         }

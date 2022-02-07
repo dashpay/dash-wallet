@@ -24,6 +24,7 @@ import androidx.paging.PagingData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
@@ -69,7 +70,8 @@ data class FilterOptions(
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
     private val exploreData: ExploreDataSource,
-    private val locationProvider: UserLocationStateInt
+    private val locationProvider: UserLocationStateInt,
+    private val dataSyncStatus: DataSyncStatus
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -649,9 +651,7 @@ class ExploreViewModel @Inject constructor(
         _physicalSearchResults.value = results
     }
 
-    @Inject
-    lateinit var dataSyncStatus: DataSyncStatus
-
-    val syncProgress by lazy { dataSyncStatus.getSyncProgress() }
-
+    var syncProgressLiveDataFromFlow: LiveData<Resource<Double>> = MediatorLiveData<Resource<Double>>().apply {
+        addSource(dataSyncStatus.getSyncProgressFlow().asLiveData(), this::setValue)
+    }
 }

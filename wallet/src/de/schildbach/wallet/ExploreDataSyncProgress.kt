@@ -1,7 +1,7 @@
 package de.schildbach.wallet
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.features.exploredash.repository.DataSyncStatus
 import org.slf4j.LoggerFactory
@@ -13,20 +13,18 @@ class ExploreDataSyncProgress @Inject constructor(): DataSyncStatus {
         val log = LoggerFactory.getLogger(ExploreDataSyncProgress::class.java)
     }
 
-    private val _syncProgress = MutableLiveData<Resource<Double>>()
+    private val _syncProgressFlow = MutableStateFlow(Resource.loading(0.00))
 
-    override fun getSyncProgress(): LiveData<Resource<Double>> {
-        return _syncProgress
+    override fun getSyncProgressFlow(): Flow<Resource<Double>> = _syncProgressFlow
+
+    override suspend fun setSyncError(exception: Exception) {
+        log.info("explore data sync failure", exception)
+        _syncProgressFlow.emit(Resource.error(exception))
     }
 
-    override fun setSyncError(exception: Exception) {
-        log.info("progress failure", exception)
-        _syncProgress.postValue(Resource.error(exception))
-    }
-
-    override fun setSyncProgress(progress: Double) {
-        log.info("progress {}", progress)
-        _syncProgress.postValue(if (progress < 100.0) {
+    override suspend fun setSyncProgress(progress: Double) {
+        log.info("explore data sync progress: {}", progress)
+        _syncProgressFlow.emit(if (progress < 100.0) {
             Resource.loading(progress)
         } else {
             Resource.success(100.0)
