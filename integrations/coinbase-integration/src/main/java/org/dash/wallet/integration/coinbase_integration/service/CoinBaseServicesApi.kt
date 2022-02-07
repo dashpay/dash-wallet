@@ -61,9 +61,10 @@ interface CoinBaseServicesApi {
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
     ): Response<SendTransactionToWalletResponse?>
 
-    @GET("v2/assets/prices?base=USD&filter=holdable&resolution=latest")
+    @GET("v2/assets/prices?filter=holdable&resolution=latest")
     suspend fun getBaseIdForUSDModel(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Query("base") baseCurrency: String,
     ): Response<BaseIdForUSDModel?>
 
     @POST("v2/trades")

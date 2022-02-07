@@ -82,7 +82,10 @@ data class CoinBaseBalance(
 @Parcelize
 data class CoinBaseUserAccountDataUIModel(
     val coinBaseUserAccountData: CoinBaseUserAccountData,
-    val exchangeRate: String = ""
+    val currencyToCryptoCurrencyExchangeRate: String,
+    val currencyToDashExchangeRate: String,
+    val cryptoCurrencyToDashExchangeRate: String
+
 ) : Parcelable
 
 fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
@@ -90,7 +93,7 @@ fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
 ): Pair<String, Coin> {
     val cleanedValue =
         this.coinBaseUserAccountData.balance?.amount?.toBigDecimal()!! /
-            this.exchangeRate.toBigDecimal()
+            this.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
     val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
     val currencyRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)

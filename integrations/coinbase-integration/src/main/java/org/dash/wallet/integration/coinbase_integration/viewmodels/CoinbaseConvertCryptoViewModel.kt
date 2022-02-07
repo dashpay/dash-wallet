@@ -64,7 +64,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         getBaseIdForUSDModel()
     }
     private fun getBaseIdForUSDModel() = viewModelScope.launch(Dispatchers.Main) {
-        when (val response = coinBaseRepository.getBaseIdForUSDModel()) {
+        when (val response = coinBaseRepository.getBaseIdForUSDModel(config.exchangeCurrencyCode)) {
             is ResponseResource.Success -> {
                 response.value?.data?.let {
                     _baseIdForUSDModelCoinBase.value = it

@@ -92,11 +92,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             }
         }
 
-        binding.maxButton.setOnClickListener {
-            applyNewValue(viewModel.maxAmount.toPlainString(), binding.currencyOptions.pickedOption)
-            maxAmountSelected = true
-        }
-
         binding.convertView.setOnCurrencyChooserClicked {
             viewModel.getUserWalletAccounts()
         }
@@ -104,7 +99,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         viewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) {
             it?.coinBaseUserAccountData?.balance?.currency?.let { currencyCode ->
                 currencyConversionOptionList = listOf(currencyCode, viewModel.selectedLocalCurrencyCode, "DASH")
-                binding.currencyOptions.provideOptions(currencyConversionOptionList)
+                binding.currencyOptions.apply {
+                    pickedOptionIndex = 0
+                    provideOptions(currencyConversionOptionList)
+                }
                 viewModel.enteredConvertAmount = "0"
                 viewModel.selectedPickerCurrencyCode = binding.currencyOptions.pickedOption
                 applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)
@@ -118,10 +116,37 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.bottomCard.isVisible = false
 
         binding.currencyOptions.pickedOptionIndex = 0
+        binding.maxButton.setOnClickListener {
+           viewModel.selectedCryptoCurrencyAccount.value?.let {userAccountData->
+                if (viewModel.selectedPickerCurrencyCode == userAccountData?.coinBaseUserAccountData?.balance?.currency &&
+                    viewModel.enteredConvertAmount != "0"
+                ) {
+                    applyNewValue(viewModel.maxAmount.toPlainString(), viewModel.selectedPickerCurrencyCode)
+                } else {
+                    val cleanedValue =  if ( viewModel.selectedPickerCurrencyCode == viewModel.selectedLocalCurrencyCode) {
+
+                        viewModel.maxAmount.toPlainString().toBigDecimal() /
+                                userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                    } else {
+
+                        viewModel.maxAmount.toPlainString().toBigDecimal() *
+                                userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                    }.setScale(8, RoundingMode.HALF_UP).toString()
+
+                    applyNewValue(cleanedValue,  viewModel.selectedPickerCurrencyCode)
+                }
+
+
+                maxAmountSelected = true
+            }
+
+
+        }
 
         binding.currencyOptions.setOnOptionPickedListener { value, index ->
+
+            setAmountValue(value, viewModel.enteredConvertAmount)
             viewModel.selectedPickerCurrencyCode = value
-            applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)
         }
 
         viewModel.userAccountsWithBalance.observe(viewLifecycleOwner) {
@@ -142,7 +167,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         } else {
                             null
                         }
-                        binding.currencyOptions.pickedOptionIndex = 0
                         viewModel.selectedLocalExchangeRate.value?.let { rate ->
 
                             binding.convertView.input = ServiceWallet(
@@ -166,6 +190,51 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             selectedCurrencyCodeExchangeRate = ExchangeRate(Coin.COIN, it.fiat)
             binding.convertView.exchangeRate = selectedCurrencyCodeExchangeRate
         }
+    }
+
+    private fun setAmountValue(pickedCurrencyOption: String, valueToBind: String) {
+        val userAccountData = viewModel.selectedCryptoCurrencyAccount.value
+
+        val cleanedValue =
+            if (viewModel.selectedPickerCurrencyCode !== pickedCurrencyOption && viewModel.enteredConvertAmount != "0") {
+                when {
+                    (userAccountData?.coinBaseUserAccountData?.balance?.currency == viewModel.selectedPickerCurrencyCode) -> {
+                        if (pickedCurrencyOption == viewModel.selectedLocalCurrencyCode) {
+
+                            valueToBind.toBigDecimal() /
+                                userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                        } else {
+
+                            valueToBind.toBigDecimal() *
+                                userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                        }
+                    }
+                    (viewModel.selectedLocalCurrencyCode == viewModel.selectedPickerCurrencyCode) -> {
+                        if (pickedCurrencyOption == userAccountData?.coinBaseUserAccountData?.balance?.currency) {
+                            valueToBind.toBigDecimal() *
+                                userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                        } else {
+                            valueToBind.toBigDecimal() *
+                                userAccountData?.currencyToDashExchangeRate?.toBigDecimal()!!
+                        }
+                    }
+
+                    else -> {
+                        if (pickedCurrencyOption == userAccountData?.coinBaseUserAccountData?.balance?.currency) {
+                            valueToBind.toBigDecimal() /
+                                userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                        } else {
+
+                            valueToBind.toBigDecimal() /
+                                userAccountData?.currencyToDashExchangeRate?.toBigDecimal()!!
+                        }
+                    }
+                }.setScale(8, RoundingMode.HALF_UP).toString()
+            } else {
+                valueToBind
+            }
+
+        applyNewValue(cleanedValue, pickedCurrencyOption)
     }
 
     fun setViewDetails(continueText: String, keyboardHeader: View?) {
@@ -276,7 +345,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         viewModel.enteredConvertAmount = balance
 
         val hasBalance = balance.isNotEmpty() && balance != "0"
-        binding.continueBtn.isEnabled =hasBalance
+        binding.continueBtn.isEnabled = hasBalance
         binding.youWillReceiveLabel.isVisible = hasBalance
         binding.youWillReceiveValue.isVisible = hasBalance
         if (hasBalance) {
@@ -288,7 +357,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != "DASH") -> {
                             val cleanedValue =
                                 it.coinBaseUserAccountData.balance?.amount?.toBigDecimal()!! /
-                                    it.exchangeRate.toBigDecimal()
+                                    it.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
                             val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
                             val fiatAmount = Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
@@ -322,7 +391,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                     (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != "DASH") -> {
                         val cleanedValue =
                             it.coinBaseUserAccountData.balance?.amount?.toBigDecimal()!! /
-                                it.exchangeRate.toBigDecimal()
+                                it.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
                         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
                         Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())

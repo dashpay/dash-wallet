@@ -43,7 +43,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private val viewModel by viewModels<CoinbaseConvertCryptoViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
     private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
-    private val _binding: FragmentCoinbaseConvertCryptoBinding? = null
     private val convertViewModel by activityViewModels<ConvertViewViewModel>()
     private var selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel? = null
 
@@ -61,6 +60,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             parentFragmentManager.commit {
                 setReorderingAllowed(true)
                 add(R.id.enter_amount_fragment_placeholder, fragment)
+                addToBackStack(null)
             }
 
             viewModel.userAccountsInfo.observe(viewLifecycleOwner) {
@@ -106,7 +106,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError)
+            safeNavigate( CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
         }
     }
 

@@ -23,6 +23,7 @@ import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
+import java.math.BigDecimal
 import javax.inject.Inject
 
 class CoinBaseRepository @Inject constructor(
@@ -49,13 +50,20 @@ class CoinBaseRepository @Inject constructor(
             val userAccounts = servicesApi.getUserAccounts().body()?.data ?: emptyList()
             val exchangeRates = servicesApi.getExchangeRates(exchangeCurrencyCode)?.data
             return@safeApiCall userAccounts.map {
-                val exchangeRate = exchangeRates?.rates?.get(it.currency?.code) ?: ""
-                CoinBaseUserAccountDataUIModel(it, exchangeRate)
+                val currencyToCryptoCurrencyExchangeRate = exchangeRates?.rates?.get(it.currency?.code).orEmpty()
+                val currencyToDashExchangeRate = exchangeRates?.rates?.get("DASH").orEmpty()
+                val cryptoCurrencyToDashExchangeRate = (BigDecimal(currencyToDashExchangeRate) / BigDecimal(currencyToCryptoCurrencyExchangeRate)).toString()
+                CoinBaseUserAccountDataUIModel(
+                    it,
+                    currencyToCryptoCurrencyExchangeRate,
+                    currencyToDashExchangeRate,
+                    cryptoCurrencyToDashExchangeRate
+                )
             } ?: emptyList()
         }
 
-    override suspend fun getBaseIdForUSDModel() = safeApiCall {
-        servicesApi.getBaseIdForUSDModel().body()
+    override suspend fun getBaseIdForUSDModel(baseCurrency: String) = safeApiCall {
+        servicesApi.getBaseIdForUSDModel(baseCurrency = baseCurrency).body()
     }
 
     override suspend fun getExchangeRates() = safeApiCall { servicesApi.getExchangeRates() }
@@ -113,7 +121,7 @@ class CoinBaseRepository @Inject constructor(
 interface CoinBaseRepositoryInt {
     suspend fun getUserAccount(): ResponseResource<CoinBaseUserAccountData?>
     suspend fun getUserAccounts(exchangeCurrencyCode: String): ResponseResource<List<CoinBaseUserAccountDataUIModel>>
-    suspend fun getBaseIdForUSDModel(): ResponseResource<BaseIdForUSDModel?>
+    suspend fun getBaseIdForUSDModel(baseCurrency: String): ResponseResource<BaseIdForUSDModel?>
     suspend fun getExchangeRates(): ResponseResource<CoinBaseExchangeRates?>
     suspend fun disconnectCoinbaseAccount()
     fun saveLastCoinbaseDashAccountBalance(amount: String?)

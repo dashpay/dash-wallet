@@ -46,7 +46,6 @@ import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConve
 class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_conversion_preview) {
     private val binding by viewBinding(FragmentCoinbaseConversionPreviewBinding::bind)
     private val viewModel by viewModels<CoinbaseConversionPreviewViewModel>()
-    private val amountViewModel by activityViewModels<EnterAmountViewModel>()
     private lateinit var swapTradeUIModel: SwapTradeUIModel
     private var loadingDialog: FancyAlertDialog? = null
     private var isRetrying = false
@@ -126,11 +125,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError)
+            safeNavigate( CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
-            // it.updateOrderReviewUI()
             countDownTimer.start()
         }
     }
@@ -180,7 +178,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.contentOrderReview.totalAmount.text =
             getString(
                 R.string.fiat_balance_with_currency,
-                this.displayInputAmount,
+                (this.displayInputAmount.toBigDecimal()+this.feeAmount.toBigDecimal()).toPlainString(),
                 GenericUtils.currencySymbol(this.displayInputCurrency)
             )
 
