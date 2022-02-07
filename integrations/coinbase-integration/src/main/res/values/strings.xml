@@ -72,4 +72,7 @@
     <string name="to_dash_wallet_on_this_device">To Dash wallet on this device</string>
     <string name="you_will_receive">You will receive</string>
     <string name="you_will_receive_dash" translatable="false">%s DASH</string>
+    <string name="we_didnt_find_any_assets" > We didn’t find any assets on your Coinbase account.</string>
+    <string name="you_dont_own_any_crypto" > You don’t own any crypto. Buy some crypto to get started..</string>
+    <string name="buy_crypto_on_coinbase" >Buy Crypto on Coinbase</string>
 </resources>

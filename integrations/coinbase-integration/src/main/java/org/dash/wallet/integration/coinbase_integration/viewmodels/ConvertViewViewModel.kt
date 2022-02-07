@@ -89,19 +89,32 @@ class ConvertViewViewModel @Inject constructor(
         _userAccountsInfo.value = userAccountsList
     }
 
-    fun getUserWalletAccounts() {
-        val userAccountsWithBalanceList = _userAccountsInfo.value?.filter {
-            it.coinBaseUserAccountData.balance?.amount?.toDouble()?.isNaN() == false ||
-                it.coinBaseUserAccountData.balance?.amount?.toDouble() != null ||
-                it.coinBaseUserAccountData.balance?.amount?.toDouble()!! > 0
-            it.coinBaseUserAccountData.balance?.currency!="DASH"
-        }
+    fun getUserWalletAccounts(dashToCrypt: Boolean) {
+        val userAccountsWithBalanceList =
+            if (dashToCrypt) {
+                _userAccountsInfo.value?.filter {
+                    isValidCoinBaseAccount(it)
+                }
+            } else {
+                _userAccountsInfo.value?.filter {
+                    isValidCoinBaseAccount(it) && it.coinBaseUserAccountData.balance?.amount?.toDouble() != 0.0
+                }
+            }
+
         if (userAccountsWithBalanceList.isNullOrEmpty()) {
             _userAccountError.value = true
         } else {
             _userAccountsWithBalance.value = userAccountsWithBalanceList
         }
     }
+
+    private fun isValidCoinBaseAccount(
+        it: CoinBaseUserAccountDataUIModel
+    ) = (
+        it.coinBaseUserAccountData.balance?.amount?.toDouble() != null &&
+            !it.coinBaseUserAccountData.balance.amount.toDouble().isNaN() &&
+            it.coinBaseUserAccountData.balance.currency != "DASH"
+        )
 
     fun setSelectedCryptoCurrency(account: CoinBaseUserAccountDataUIModel) {
         maxAmount = try {

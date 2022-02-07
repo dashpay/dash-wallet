@@ -55,10 +55,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         private const val DECIMAL_SEPARATOR = '.'
         @JvmStatic
         fun newInstance(
-            dashToFiat: Boolean = false,
+            dashToCrypto: Boolean = false,
             initialAmount: Monetary? = null
         ): ConvertViewFragment {
-            val args = bundleOf(ARG_DASH_TO_FIAT to dashToFiat)
+            val args = bundleOf(ARG_DASH_TO_FIAT to dashToCrypto)
 
             return ConvertViewFragment().apply {
                 arguments = args
@@ -78,8 +78,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         super.onViewCreated(view, savedInstanceState)
         val args = requireArguments()
 
-        val dashToFiat = args.getBoolean(ARG_DASH_TO_FIAT)
-        binding.convertView.dashToCrypto = dashToFiat
+        val dashToCrypto = args.getBoolean(ARG_DASH_TO_FIAT)
+        binding.convertView.dashToCrypto = dashToCrypto
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
@@ -93,7 +93,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
 
         binding.convertView.setOnCurrencyChooserClicked {
-            viewModel.getUserWalletAccounts()
+            viewModel.getUserWalletAccounts(binding.convertView.dashToCrypto)
         }
 
         viewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) {
@@ -117,30 +117,27 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
         binding.currencyOptions.pickedOptionIndex = 0
         binding.maxButton.setOnClickListener {
-           viewModel.selectedCryptoCurrencyAccount.value?.let {userAccountData->
+            viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
                 if (viewModel.selectedPickerCurrencyCode == userAccountData?.coinBaseUserAccountData?.balance?.currency &&
                     viewModel.enteredConvertAmount != "0"
                 ) {
                     applyNewValue(viewModel.maxAmount.toPlainString(), viewModel.selectedPickerCurrencyCode)
                 } else {
-                    val cleanedValue =  if ( viewModel.selectedPickerCurrencyCode == viewModel.selectedLocalCurrencyCode) {
+                    val cleanedValue = if (viewModel.selectedPickerCurrencyCode == viewModel.selectedLocalCurrencyCode) {
 
                         viewModel.maxAmount.toPlainString().toBigDecimal() /
-                                userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                            userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
                     } else {
 
                         viewModel.maxAmount.toPlainString().toBigDecimal() *
-                                userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                            userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
                     }.setScale(8, RoundingMode.HALF_UP).toString()
 
-                    applyNewValue(cleanedValue,  viewModel.selectedPickerCurrencyCode)
+                    applyNewValue(cleanedValue, viewModel.selectedPickerCurrencyCode)
                 }
-
 
                 maxAmountSelected = true
             }
-
-
         }
 
         binding.currencyOptions.setOnOptionPickedListener { value, index ->
@@ -150,13 +147,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
 
         viewModel.userAccountsWithBalance.observe(viewLifecycleOwner) {
-            val list = if (binding.convertView.dashToCrypto) {
-                viewModel.userAccountsInfo.value
-            } else {
-                it.filter { item -> item.coinBaseUserAccountData.balance?.amount?.toDouble() != 0.0 }
-            }
-
-            list?.sortedBy { item -> item.coinBaseUserAccountData.currency?.code }?.let { list ->
+            it?.sortedBy { item -> item.coinBaseUserAccountData.currency?.code }?.let { list ->
                 parentFragmentManager.let { fragmentManager ->
 
                     val cryptoWalletsDialog = CryptoWalletsDialog(list, viewModel.selectedLocalCurrencyCode) { index, dialog ->

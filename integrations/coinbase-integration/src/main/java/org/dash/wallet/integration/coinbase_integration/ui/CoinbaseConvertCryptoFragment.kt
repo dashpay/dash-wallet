@@ -106,7 +106,18 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            safeNavigate( CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+        }
+
+        convertViewModel.userAccountError.observe(viewLifecycleOwner) {
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.we_didnt_find_any_assets,
+                getString(R.string.you_dont_own_any_crypto),
+                R.drawable.ic_info_red,
+                R.string.buy_crypto_on_coinbase,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
         }
     }
 
