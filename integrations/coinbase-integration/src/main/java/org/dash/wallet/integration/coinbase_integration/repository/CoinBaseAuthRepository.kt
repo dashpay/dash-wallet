@@ -21,7 +21,7 @@ import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import javax.inject.Inject
 
-
+const val TEMP_ACCESS_TOKEN = "1a73ddd92e1c5cdbbb78f6d69dd6aa70605695a1a774151fcef377ba29212755"
 class CoinBaseAuthRepository @Inject constructor(
     private val api: CoinBaseAuthApi,
     private val userPreferences: Configuration
@@ -38,7 +38,7 @@ class CoinBaseAuthRepository @Inject constructor(
     }
 
     private fun saveAccessTokens(accessToken: String, refreshToken: String) {
-        userPreferences.setLastCoinBaseAccessToken(accessToken)
+        userPreferences.setLastCoinBaseAccessToken(TEMP_ACCESS_TOKEN)
         userPreferences.setLastCoinBaseRefreshToken(refreshToken)
     }
 
