@@ -48,5 +48,5 @@ interface WalletDataProvider {
 
     fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
 
-    fun getAllTransactions(vararg wrappers: TransactionWrapper): Iterable<TransactionWrapper>
+    fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Iterable<TransactionWrapper>
 }

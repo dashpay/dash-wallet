@@ -18,10 +18,10 @@
 package org.dash.wallet.integrations.crowdnode.transactions
 
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
+import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class CrowdNodeAcceptTermsTx: CoinsFromAddressTxFilter(
+class CrowdNodeAcceptTermsTx: CoinsToAddressTxFilter(
     CrowdNodeConstants.CROWDNODE_ADDRESS, ACCEPT_TERMS_REQUEST_CODE
 ) {
     companion object {

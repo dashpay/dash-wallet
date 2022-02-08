@@ -18,34 +18,35 @@
 package org.dash.wallet.common.transactions
 
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.script.ScriptPattern
 
-open class CoinsFromAddressTxFilter(
-    val fromAddress: Address,
-    val coins: Coin
-): TransactionFilter {
-    var toAddress: Address? = null
-        private set
-
+class IgnoreAddressTxFilter(private val ignoreAddress: Address): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
-        val networkParameters = fromAddress.parameters
+        val networkParameters = ignoreAddress.parameters
 
         for (input in tx.inputs) {
             input.outpoint.connectedOutput?.let { connectedOutput ->
-                val scriptPubKey = connectedOutput.scriptPubKey
-                val currentAddress = scriptPubKey.getToAddress(networkParameters)
+                val script = connectedOutput.scriptPubKey
 
-                if (currentAddress == fromAddress) {
-                    val output = tx.outputs.firstOrNull { it.value == coins }
-                    output?.run {
-                        toAddress = this.scriptPubKey.getToAddress(networkParameters)
-                        return true
-                    }
+                if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
+                    script.getToAddress(networkParameters) == ignoreAddress
+                ) {
+                    return false
                 }
             }
         }
 
-        return false
+        for (output in tx.outputs) {
+            val script = output.scriptPubKey
+
+            if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
+                script.getToAddress(networkParameters) == ignoreAddress
+            ) {
+                return false
+            }
+        }
+
+        return true
     }
 }

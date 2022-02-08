@@ -96,27 +96,16 @@ class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     private fun checkCrowdNodeTransactions() {
-//        val crowdNodeWelcomeResponse = CrowdNodeWelcomeToApiResponse()
-//        val crowdNodeAcceptTermsResponse = CrowdNodeAcceptTermsResponse()
-//        for (tx in walletDataProvider.getTransactions()) {
-//            if (crowdNodeWelcomeResponse.matches(tx)) {
-//                signUpStatus.value = SignUpStatus.Finished
-//                return
-//            }
-//
-//            if (crowdNodeAcceptTermsResponse.matches(tx)) {
-//                signUpStatus.value = SignUpStatus.AcceptingTerms
-//            }
-//        }
-
-
-        val wrappedTransactions = walletDataProvider.getAllTransactions(CrowdNodeFullTxSet())
+        val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet())
         val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
-        crowdNodeFullSet?.let { wrapper ->
-            when (wrapper.transactions.size) {
-                4 -> signUpStatus.value = SignUpStatus.Finished
-                2 -> signUpStatus.value = SignUpStatus.AcceptingTerms
-                else -> {} // TODO
+        (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
+            if (set.hasWelcomeToApiResponse) {
+                signUpStatus.value = SignUpStatus.Finished
+                return
+            }
+
+            if (set.hasAcceptTermsResponse) {
+                signUpStatus.value = SignUpStatus.AcceptingTerms
             }
         }
     }

@@ -35,7 +35,7 @@ class ByAddressCoinSelector(private val address: Address) : CoinSelector {
         val filtered = candidates.filter { output ->
             val script = output.scriptPubKey
             (ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                    script.getToAddress(address.parameters).toBase58() == address.toBase58() // TODO: just addresses?
+                    script.getToAddress(address.parameters) == address
         }
 
         return selector.select(target, filtered)

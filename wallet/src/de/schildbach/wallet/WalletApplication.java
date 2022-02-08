@@ -871,29 +871,35 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     @NonNull
     @Override
-    public Iterable<TransactionWrapper> getAllTransactions(@NonNull TransactionWrapper... wrappers) {
+    public Iterable<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapper... wrappers) {
         Set<Transaction> transactions = wallet.getTransactions(true);
         ArrayList<TransactionWrapper> wrappedTransactions = new ArrayList<>();
 
         for (Transaction transaction : transactions) {
-            for (TransactionWrapper wrapper : wrappers) {
-                if (wrapper.tryInclude(transaction)) {
-                    wrappedTransactions.add(wrapper);
-                    break;
+            TransactionWrapper anonWrapper = new TransactionWrapper() {
+                @Override
+                public boolean tryInclude(@NonNull Transaction tx) {
+                    return true;
                 }
 
-                wrappedTransactions.add(new TransactionWrapper() {
-                    @Override
-                    public boolean tryInclude(@NonNull Transaction tx) {
-                        return true;
+                @NonNull
+                @Override
+                public Set<Transaction> getTransactions() {
+                    return java.util.Collections.singleton(transaction);
+                }
+            };
+
+            if (wrappers.length > 0) {
+                for (TransactionWrapper wrapper : wrappers) {
+                    if (wrapper.tryInclude(transaction)) {
+                        wrappedTransactions.add(wrapper);
+                        break;
                     }
 
-                    @NonNull
-                    @Override
-                    public Set<Transaction> getTransactions() {
-                        return java.util.Collections.singleton(transaction);
-                    }
-                });
+                    wrappedTransactions.add(anonWrapper);
+                }
+            } else {
+                wrappedTransactions.add(anonWrapper);
             }
         }
 

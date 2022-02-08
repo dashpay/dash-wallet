@@ -20,29 +20,29 @@ package org.dash.wallet.common.transactions
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.script.ScriptPattern
 
-open class CoinsFromAddressTxFilter(
-    val fromAddress: Address,
+open class CoinsToAddressTxFilter(
+    val toAddress: Address,
     val coins: Coin
 ): TransactionFilter {
-    var toAddress: Address? = null
+    var fromAddress: Address? = null
         private set
 
     override fun matches(tx: Transaction): Boolean {
-        val networkParameters = fromAddress.parameters
+        val networkParameters = toAddress.parameters
 
-        for (input in tx.inputs) {
-            input.outpoint.connectedOutput?.let { connectedOutput ->
-                val scriptPubKey = connectedOutput.scriptPubKey
-                val currentAddress = scriptPubKey.getToAddress(networkParameters)
+        for (output in tx.outputs) {
+            val script = output.scriptPubKey
 
-                if (currentAddress == fromAddress) {
-                    val output = tx.outputs.firstOrNull { it.value == coins }
-                    output?.run {
-                        toAddress = this.scriptPubKey.getToAddress(networkParameters)
-                        return true
-                    }
-                }
+            if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
+                script.getToAddress(networkParameters) == toAddress &&
+                output.value == coins
+            ) {
+                fromAddress = tx.inputs.firstOrNull {
+                    it.value == coins
+                }?.connectedOutput?.scriptPubKey?.getToAddress(networkParameters)
+                return true
             }
         }
 

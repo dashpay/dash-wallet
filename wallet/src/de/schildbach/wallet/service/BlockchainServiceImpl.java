@@ -81,6 +81,8 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.transactions.IgnoreAddressTxFilter;
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,6 +176,13 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
+
+        private final IgnoreAddressTxFilter ignoreCrowdNodeFilter = new IgnoreAddressTxFilter(
+                Address.fromBase58(
+                        Constants.NETWORK_PARAMETERS,
+                        CrowdNodeConstants.INSTANCE.getCROWD_NODE_ADDRESS()
+                ));
+
         @Override
         public void onThrottledWalletChanged() {
             updateAppWidget();
@@ -195,7 +204,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     final org.dash.wallet.common.data.ExchangeRate exchangeRate = AppDatabase.getAppDatabase()
                             .exchangeRatesDao().getRateSync(config.getExchangeCurrencyCode());
                     if (exchangeRate != null) {
-                        log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate.toString() + " tx: " + tx.getHashAsString());
+                        log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate + " tx: " + tx.getTxId().toString());
                         tx.setExchangeRate(new ExchangeRate(Coin.COIN, exchangeRate.getFiat()));
                         application.saveWallet();
                     }
@@ -212,15 +221,12 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
             final boolean isRestoringBackup = application.getConfiguration().isRestoringBackup();
 
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    final boolean isReceived = amount.signum() > 0;
-                    final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
+            handler.post(() -> {
+                final boolean isReceived = amount.signum() > 0;
+                final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 //.// TODO: check replaying state
-                    if (isReceived && !isReplayedTx)
-                        notifyCoinsReceived(address, amount, tx.getExchangeRate());
-                }
+                if (isReceived && !isReplayedTx && ignoreCrowdNodeFilter.matches(tx))
+                    notifyCoinsReceived(address, amount, tx.getExchangeRate());
             });
             updateAppWidget();
         }

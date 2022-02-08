@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.crowdnode.transactions
 
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.transactions.TransactionFilter
 import org.dash.wallet.common.transactions.TransactionWrapper
 
 class CrowdNodeFullTxSet: TransactionWrapper {
@@ -28,11 +29,27 @@ class CrowdNodeFullTxSet: TransactionWrapper {
         CrowdNodeWelcomeToApiResponse()
     )
 
+    private val matchedFilters = mutableListOf<TransactionFilter>()
     override val transactions = mutableSetOf<Transaction>()
 
+    val hasSignUpRequest: Boolean
+        get() = matchedFilters.any { it is CrowdNodeSignUpTx }
+
+    val hasAcceptTermsResponse: Boolean
+        get() = matchedFilters.any { it is CrowdNodeAcceptTermsResponse }
+
+    val hasAcceptTermsRequest: Boolean
+        get() = matchedFilters.any { it is CrowdNodeAcceptTermsTx }
+
+    val hasWelcomeToApiResponse: Boolean
+        get() = matchedFilters.any { it is CrowdNodeWelcomeToApiResponse }
+
     override fun tryInclude(tx: Transaction): Boolean {
-        if (crowdNodeTxFilters.any { it.matches(tx) }) {
+        val matchedFilter = crowdNodeTxFilters.firstOrNull { it.matches(tx) }
+
+        if (matchedFilter != null) {
             transactions.add(tx)
+            matchedFilters.add(matchedFilter)
             return true
         }
 

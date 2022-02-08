@@ -47,7 +47,7 @@ class WalletTransactionObserver(private val wallet: Wallet) {
             ) {
                 super.onCoinsReceived(wallet, tx, prevBalance, newBalance)
 
-                if (tx != null && filters.any { it.matches(tx) }) {
+                if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
                     trySend(tx)
                 }
             }
@@ -60,7 +60,7 @@ class WalletTransactionObserver(private val wallet: Wallet) {
             ) {
                 super.onCoinsSent(wallet, tx, prevBalance, newBalance)
 
-                if (tx != null && filters.any { it.matches(tx) }) {
+                if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
                     trySend(tx)
                 }
             }
@@ -68,7 +68,7 @@ class WalletTransactionObserver(private val wallet: Wallet) {
             override fun onTransactionConfidenceChanged(wallet: Wallet?, tx: Transaction?) {
                 super.onTransactionConfidenceChanged(wallet, tx)
 
-                if (tx != null && filters.any { it.matches(tx) }) {
+                if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
                     trySend(tx)
                 }
             }
@@ -87,5 +87,9 @@ class WalletTransactionObserver(private val wallet: Wallet) {
             wallet.removeCoinsReceivedEventListener(walletChangeListener)
             walletChangeListener.removeCallbacks()
         }
+    }
+
+    fun observe(vararg filters: TransactionFilter, onResult: (Boolean?) -> Unit) {
+
     }
 }
