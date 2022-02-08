@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">โปรดตรวจสอบการเชื่อมต่อเครือข่ายของคุณ</string>
     <string name="network_unavailable_balance_not_accurate">ยอดเงินคงเหลืออาจไม่ถูกต้องเนื่องจากการเชื่อมต่อหายไป</string>
     <string name="buy_dash">ซื้อ Dash</string>
+    <string name="copied">คัดลอก</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>

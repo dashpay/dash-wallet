@@ -92,10 +92,8 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.BuyDash)
     }
 
-    fun signUp() {
-        viewModelScope.launch {
-            crowdNodeApi.signUp(accountAddress)
-        }
+    suspend fun signUp() {
+        crowdNodeApi.signUp(accountAddress)
     }
 
     fun changeNotifyWhenDone(toNotify: Boolean) {

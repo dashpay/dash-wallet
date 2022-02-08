@@ -84,7 +84,7 @@ open class CheckPinDialog(
             show(activity, requestCode, false)
         }
 
-        suspend fun showAsync(activity: FragmentActivity): String? {
+        suspend fun showAsync(activity: FragmentActivity, pinOnly: Boolean = false): String? {
             return suspendCancellableCoroutine { coroutine ->
                 val checkPinDialog = CheckPinDialog { pin ->
                     if (coroutine.isActive) {
@@ -93,7 +93,7 @@ open class CheckPinDialog(
                 }
 
                 try {
-                    showDialog(checkPinDialog, activity)
+                    showDialog(checkPinDialog, activity, 0, pinOnly)
                 } catch (ex: Exception) {
                     if (coroutine.isActive) {
                         coroutine.resumeWithException(ex)

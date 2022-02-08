@@ -132,7 +132,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             } else {
                 clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", address.toBase58()))
             }
-            Toast(context).toast(R.string.receive_copied)
+            Toast(context).toast(R.string.copied)
             log.info("address copied to clipboard: {}", address)
         } catch (ignore: BitcoinURIParseException) {
 

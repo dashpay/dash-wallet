@@ -17,6 +17,9 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -25,21 +28,30 @@ import android.text.style.ClickableSpan
 import android.util.Log
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentNewAccountBinding
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     private val binding by viewBinding(FragmentNewAccountBinding::bind)
     private val viewModel: CrowdNodeViewModel by activityViewModels()
+
+    @Inject
+    lateinit var securityModel: SecurityModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -64,7 +76,12 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.createAccountBtn.setOnClickListener {
-            viewModel.signUp()
+            GlobalScope.launch(Dispatchers.Main) {
+                securityModel.requestPinCode(requireActivity())?.let {
+                    // Launching in the global scope so that signup doesn't stop when staking is exited.
+                    viewModel.signUp()
+                }
+            }
         }
 
         setTermsTextView(binding.acceptTermsTxt)
@@ -75,7 +92,14 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
 
         binding.notifyWhenDone.setOnClickListener {
             viewModel.changeNotifyWhenDone(true)
-            findNavController().popBackStack(R.id.nav_crowdnode, true)
+            requireActivity().finish()
+        }
+
+        binding.copyAddressBtn.setOnClickListener {
+            (requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
+                setPrimaryClip(ClipData.newPlainText("dash address", viewModel.dashAccountAddress))
+            }
+            Toast.makeText(requireContext(), getString(R.string.copied), Toast.LENGTH_SHORT).show()
         }
 
         viewModel.termsAccepted.observe(viewLifecycleOwner) {

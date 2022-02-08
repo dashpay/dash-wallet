@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">Ελέγξτε τη σύνδεση δικτύου σας</string>
     <string name="network_unavailable_balance_not_accurate">Το υπόλοιπο ενδέχεται να μην είναι ακριβές λόγω της απώλειας σύνδεσης</string>
     <string name="buy_dash">Αγορά Dash</string>
+    <string name="copied">Αντιγράφηκε</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Γκέρνσεϊ Λίρα</string>

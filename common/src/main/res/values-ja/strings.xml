@@ -5,5 +5,6 @@
     <string name="loading_error">エラーが発生しました。後でもう一度お試しください。</string>
     <string name="please_wait_title">お待ちください</string>
     <string name="dash_available">%1$s 利用可能</string>
+    <string name="copied">コピーされた</string>
 
 </resources>

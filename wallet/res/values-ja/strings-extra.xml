@@ -66,7 +66,6 @@
     <string name="receive_enter_amount_message">受け取る金額を指定してください</string>
     <string name="receive_enter_amount_button">金額を指定する</string>
     <string name="receive_share_button">共有</string>
-    <string name="receive_copied">コピーされた</string>
 
     <string name="pay_title">送金</string>
     <string name="history_title">履歴</string>

@@ -65,7 +65,6 @@
     <string name="receive_enter_amount_message">Посочете  сумата за получаване</string>
     <string name="receive_enter_amount_button">Сума за получаване</string>
     <string name="receive_share_button">Сподели</string>
-    <string name="receive_copied">Копирано</string>
 
     <string name="pay_title">Изпрати</string>
     <string name="history_title">История</string>

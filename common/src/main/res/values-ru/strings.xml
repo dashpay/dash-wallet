@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">Пожалуйста, проверьте ваше подключение к сети</string>
     <string name="network_unavailable_balance_not_accurate">Из-за потери соединения баланс может отображаться некорректно</string>
     <string name="buy_dash">Купить Dash</string>
+    <string name="copied">Скопировано</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсийский фунт</string>

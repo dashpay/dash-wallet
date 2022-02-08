@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">يرجى التحقق من اتصال الشبكة الخاص بك</string>
     <string name="network_unavailable_balance_not_accurate">قد لا يكون الرصيد دقيقًا بسبب فقد الاتصال</string>
     <string name="buy_dash">شراء داش</string>
+    <string name="copied">تم النسخ</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">جيرنزي جنيه</string>

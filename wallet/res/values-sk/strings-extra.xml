@@ -66,7 +66,6 @@
     <string name="receive_enter_amount_message">Zadajte čiastku, ktorú chcete prijať</string>
     <string name="receive_enter_amount_button">Zadať množstvo</string>
     <string name="receive_share_button">Zdieľať</string>
-    <string name="receive_copied">Skopírované</string>
 
     <string name="pay_title">Poslať</string>
     <string name="history_title">História</string>

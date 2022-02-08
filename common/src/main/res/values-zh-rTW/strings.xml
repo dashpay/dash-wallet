@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">請檢查您的網絡連接</string>
     <string name="network_unavailable_balance_not_accurate">由於連接中斷，餘額可能不准確</string>
     <string name="buy_dash">購買達世幣</string>
+    <string name="copied">已複製</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>

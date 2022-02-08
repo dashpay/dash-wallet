@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">Veuillez vérifier votre connexion réseau</string>
     <string name="network_unavailable_balance_not_accurate">Le solde peut être imprécis en raison de la connexion perdue</string>
     <string name="buy_dash">Acheter Dash</string>
+    <string name="copied">Copié</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">livre de Guernesey</string>

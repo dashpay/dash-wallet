@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">Bitte überprüfe deine Netzwerksverbindung</string>
     <string name="network_unavailable_balance_not_accurate">Die Guthabensanzeige ist möglicherweise inakkurat, da keine Verbindung besteht</string>
     <string name="buy_dash">Dash kaufen</string>
+    <string name="copied">Kopiert</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>

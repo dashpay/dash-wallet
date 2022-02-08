@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">لطفا اتصال شبکه‌تان را بررسی کنید</string>
     <string name="network_unavailable_balance_not_accurate">موجودی حساب‌تان شاید به دلیل قطع دسترسی به شبکه، دقیق نباشد</string>
     <string name="buy_dash">خرید دش</string>
+    <string name="copied">کپی شد</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>

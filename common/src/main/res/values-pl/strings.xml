@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">Sprawdź połączenie z siecią</string>
     <string name="network_unavailable_balance_not_accurate">Saldo może być niedostępne z powodu utraty połączenia z siecią</string>
     <string name="buy_dash">Kup Dash</string>
+    <string name="copied">Skopiowano</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Funt Guernsey</string>

@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">Mangyaring suriin ang iyong koneksyon sa network</string>
     <string name="network_unavailable_balance_not_accurate">Ang balanse ay maaaring hindi tama dahil sa nawala na koneksyon</string>
     <string name="buy_dash">Bumili ng Dash</string>
+    <string name="copied">Kinopya</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>

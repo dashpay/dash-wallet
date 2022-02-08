@@ -66,7 +66,6 @@
     <string name="receive_enter_amount_message">Určte částku, kterou chcete obdržet</string>
     <string name="receive_enter_amount_button">Uvést částku</string>
     <string name="receive_share_button">Sdílet</string>
-    <string name="receive_copied">Zkopírováno</string>
 
     <string name="pay_title">Poslat</string>
     <string name="history_title">Historie</string>

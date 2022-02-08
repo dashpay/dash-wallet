@@ -9,6 +9,7 @@
     <string name="network_unavailable_check_connection">请检查您的网络连接</string>
     <string name="network_unavailable_balance_not_accurate">由于连接断开, 余额显示可能不准确</string>
     <string name="buy_dash">购买Dash</string>
+    <string name="copied">已复制</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey镑</string>
