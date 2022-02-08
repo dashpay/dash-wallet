@@ -23,11 +23,13 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
+import org.dash.wallet.features.exploredash.repository.DataSyncStatus
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.FilterMode
@@ -53,6 +55,8 @@ class ExploreViewModelTest {
             Merchant(plusCode = "", addDate = "", updateDate = "", deeplink = "https://dashdirect.page.link/Applebees", paymentMethod = "gift card").apply { id = 20826; name = "Applebee's"; active = true; address1 = "New Spring Road S.E."; latitude = 33.8846705; longitude = -84.4731042; website = "http://www.applebees.com"; territory = "Georgia"; city = "Atlanta"; type = "both"; logoLocation = "https://api.giftango.com/imageservice/Images/0117472_logo_600x380.png" }
     )
 
+    private val syncStatus = Resource.loading(50.0)
+
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
 
@@ -70,7 +74,11 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val viewModel = ExploreViewModel(dataSource, locationState)
+            val dataSyncStatus = mock<DataSyncStatus> {
+                on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+            }
+
+            val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
             viewModel.setSelectedTerritory(territory)
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
@@ -110,7 +118,11 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val viewModel = ExploreViewModel(dataSource, locationState)
+            val dataSyncStatus = mock<DataSyncStatus> {
+                on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+            }
+
+            val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
             viewModel.setFilterMode(FilterMode.Nearby)
             viewModel.searchBounds = bounds
             viewModel.paymentMethodFilter = PaymentMethod.DASH
@@ -151,7 +163,11 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val viewModel = ExploreViewModel(dataSource, locationState)
+            val dataSyncStatus = mock<DataSyncStatus> {
+                on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+            }
+
+            val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
             viewModel.setSelectedTerritory(territory)
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
@@ -196,7 +212,10 @@ class ExploreViewModelTest {
             val locationMock = mock<UserLocationStateInt> {
                 on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn bounds
             }
-            val viewModel = ExploreViewModel(dataSource, locationMock)
+            val dataSyncStatus = mock<DataSyncStatus> {
+                on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+            }
+            val viewModel = ExploreViewModel(dataSource, locationMock, dataSyncStatus)
             viewModel.searchBounds = GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng)
                     .apply { zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1 }
             viewModel.setFilterMode(FilterMode.Nearby)
@@ -224,8 +243,10 @@ class ExploreViewModelTest {
         runBlocking {
             val locationMock = mock<UserLocationStateInt>()
             val dataSource = mock<ExploreDataSource>()
-
-            val viewModel = ExploreViewModel(dataSource, locationMock)
+            val dataSyncStatus = mock<DataSyncStatus>{
+                on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+            }
+            val viewModel = ExploreViewModel(dataSource, locationMock, dataSyncStatus)
             viewModel.setPhysicalResults(merchants)
             viewModel.onMapMarkerSelected(5)
 
