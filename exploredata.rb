@@ -20,6 +20,10 @@ file = bucket.file file_name
 timestamp = file.updated_at.strftime("%Q")
 target_file_path = "#{assets_path}#{file_name}"
 
+// create output file
+out_file = File.new(target_file_path, "w")
+# out_file.close
+
 file.download target_file_path
 
 puts "Downloaded #{file.name} to #{target_file_path}"
