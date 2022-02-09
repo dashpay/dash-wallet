@@ -26,7 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
@@ -44,7 +44,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
     private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
-    @Inject lateinit var analyticsService: FirebaseAnalyticsServiceImpl
+    @Inject lateinit var analyticsService: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

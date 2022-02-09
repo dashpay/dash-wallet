@@ -32,13 +32,10 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import java.text.DecimalFormatSymbols
-import javax.inject.Inject
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
@@ -73,8 +70,6 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
     private val viewModel: EnterAmountViewModel by activityViewModels()
     private val decimalSeparator = DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxSelected: Boolean = false
-    @Inject
-    lateinit var analyticsService: FirebaseAnalyticsServiceImpl
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -95,12 +90,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
-            if (!binding.amountView.showCurrencySelector) {
-                analyticsService.logEvent(
-                    AnalyticsConstants.Coinbase.CONTINUE_DASH_PURCHASE,
-                    bundleOf()
-                )
-            }
+            viewModel.continueCallback.call()
             viewModel.onContinueEvent.value = Pair(
                 binding.amountView.dashAmount,
                 binding.amountView.fiatAmount
@@ -127,10 +117,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         }
 
         binding.amountView.setOnConvertDirectionBtnClicked {
-            analyticsService.logEvent(if (binding.amountView.dashToFiat) AnalyticsConstants.Coinbase.ENTER_AMOUNT_DASH
-            else AnalyticsConstants.Coinbase.ENTER_AMOUNT_FIAT,
-                bundleOf()
-            )
+            viewModel.convertDirectionCallback.value = binding.amountView.dashToFiat
         }
     }
 
