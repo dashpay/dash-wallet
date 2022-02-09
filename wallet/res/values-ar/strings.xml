@@ -332,7 +332,6 @@
     <string name="button_ok">حسنا</string>
     <string name="button_dismiss">تجاهل</string>
     <string name="button_cancel">إلغاء</string>
-    <string name="button_retry">إعادة المحاولة</string>
     <string name="button_help">مساعدة</string>
     <string name="button_add">إضافة</string>
     <string name="button_delete">حذف</string>

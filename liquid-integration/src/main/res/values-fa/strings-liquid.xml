@@ -19,7 +19,6 @@
     <string name="crypto_support">پشتیبانی کریپتو</string>
     <string name="credit_card_support">پشتیبانی از کارت اعتباری</string>
     <string name="okay">باشه</string>
-    <string name="close">بستن</string>
     <string name="list_of_countries">فهرستی از نام کشورها را ببینید. </string>
     <string name="buying_dash_not_supported_credit_cards">خرید دش با کارت اعتباری در برخی کشورها امکان‌پذیر نیست. </string>
     <string name="buying_dash_not_supported_crypto">خرید دش با رمزارز در برخی کشورها امکان‌پذیر نیست. </string>

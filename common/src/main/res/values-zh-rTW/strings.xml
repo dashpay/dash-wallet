@@ -33,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">取消</string>
     <string name="network_unavailable_return">返回錢包</string>
-
+    <string name="button_retry">重試</string>
+    <string name="button_close">關閉</string>
 </resources>

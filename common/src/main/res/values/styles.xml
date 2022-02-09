@@ -697,6 +697,10 @@
         <item name="android:textColor">@color/white</item>
     </style>
 
+    <style name="Headline5.Bold.Red">
+        <item name="android:textColor">@color/red_300</item>
+    </style>
+
     <style name="Headline6" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="fontFamily">@font/montserrat_medium</item>
         <item name="android:textColor">@color/content_primary</item>
@@ -889,8 +893,8 @@
     </style>
 
     <style name="PrimaryButtonTheme.ExtraSmall.Blue">
-        <item name="backgroundColor">@color/extra_small_btn_bg</item>
-        <item name="strokeColor">@color/extra_small_btn_bg</item>
+        <item name="backgroundColor">@color/blue_50</item>
+        <item name="strokeColor">@color/blue_50</item>
         <item name="titleTextColor">@color/dash_blue</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
@@ -922,6 +926,15 @@
 
     <style name="Button.Primary.Large.Blue">
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Blue</item>
+    </style>
+
+    <style name="Button.Primary.Small">
+        <item name="android:textSize">13sp</item>
+        <item name="android:minHeight">30dp</item>
+    </style>
+
+    <style name="Button.Primary.Small.Blue">
+        <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall.Blue</item>
     </style>
 
     <style name="Button.Primary.ExtraSmall">
@@ -1128,10 +1141,17 @@
         <item name="android:tint">@color/steel_gray_200</item>
     </style>
 
-
-
     <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
         <item name="android:background">@color/white</item>
         <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="FullScreenDialog" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowCloseOnTouchOutside">false</item>
     </style>
 </resources>

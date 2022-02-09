@@ -331,7 +331,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Отклонить</string>
     <string name="button_cancel">Отмена</string>
-    <string name="button_retry">Повторить</string>
     <string name="button_help">Помощь</string>
     <string name="button_add">Добавить</string>
     <string name="button_delete">Удалить</string>

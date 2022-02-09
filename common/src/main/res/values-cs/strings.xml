@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Načítání...</string>
     <string name="loading_error">Vyskytla se chyba. Zkuste to prosím později.</string>
     <string name="please_wait_title">Čekejte prosím</string>
@@ -33,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Zavřít</string>
     <string name="network_unavailable_return">Zpět do pěněženky</string>
-
+    <string name="button_retry">Opakovat</string>
+    <string name="button_close">Zavřít</string>
 </resources>

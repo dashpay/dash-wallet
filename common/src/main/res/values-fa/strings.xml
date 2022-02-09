@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">در حال بارگذاری...</string>
     <string name="loading_error">خطایی روی داده است. لطفا دوباره تلاش کنید.</string>
     <string name="please_wait_title">لطفا منتظر بمانید</string>
@@ -33,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">متوجه شدم!</string>
     <string name="network_unavailable_return">بازگشت به کیف‌ پول</string>
-
+    <string name="button_retry">تلاش دوباره</string>
+    <string name="button_close">بستن</string>
 </resources>

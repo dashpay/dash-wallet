@@ -19,7 +19,6 @@
     <string name="crypto_support">암호화폐 지원</string>
     <string name="credit_card_support">신용카드 지원</string>
     <string name="okay">알겠습니다</string>
-    <string name="close">닫기</string>
     <string name="list_of_countries">지원하지 않는 국가 목록 확인하기</string>
     <string name="buying_dash_not_supported_credit_cards">일부 국가에서는 신용카드를 이용한 대시 구매가 지원되지 않습니다.</string>
     <string name="buying_dash_not_supported_crypto">일부 국가에서는 암호화폐를 이용한 대시 구매가 지원되지 않습니다.</string>

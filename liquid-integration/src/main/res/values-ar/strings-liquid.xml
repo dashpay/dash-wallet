@@ -19,7 +19,6 @@
     <string name="crypto_support">دعم التشفير</string>
     <string name="credit_card_support">دعم بطاقة الائتمان</string>
     <string name="okay">اوك</string>
-    <string name="close">اغلاق</string>
     <string name="list_of_countries">راجع قائمة البلدان غير المدعومة.</string>
     <string name="buying_dash_not_supported_credit_cards">شراء داش ببطاقة ائتمان غير مدعوم في بعض البلدان.</string>
     <string name="buying_dash_not_supported_crypto">شراء داش بالعملات المشفرة غير مدعوم في بعض البلدان.</string>

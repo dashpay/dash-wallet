@@ -33,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Odrzuć</string>
     <string name="network_unavailable_return">Wróć do portfela</string>
-
+    <string name="button_retry">Ponów</string>
+    <string name="button_close">Zamknij</string>
 </resources>

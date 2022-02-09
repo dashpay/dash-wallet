@@ -19,7 +19,6 @@
     <string name="crypto_support">Podpora kryptoměn</string>
     <string name="credit_card_support">Podpora kreditní karty</string>
     <string name="okay">Dobře</string>
-    <string name="close">Zavřít</string>
     <string name="list_of_countries">Zobrazit seznam nepodporovaných zemí</string>
     <string name="buying_dash_not_supported_credit_cards">Nákup Dash kreditní kartou není v některých zemích podporován.</string>
     <string name="buying_dash_not_supported_crypto">Nákup Dash kryptoměnou není v některých zemích podporován.</string>

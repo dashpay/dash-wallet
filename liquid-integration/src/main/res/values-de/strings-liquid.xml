@@ -19,7 +19,6 @@
     <string name="crypto_support">Krypto-Support</string>
     <string name="credit_card_support">Kreditkarten-Unterstützung</string>
     <string name="okay">OK</string>
-    <string name="close">Schließen</string>
     <string name="list_of_countries">Sieh eine Liste nicht-unterstützter Länder an.</string>
     <string name="buying_dash_not_supported_credit_cards">Der Kauf von Dash mit Kreditkarten wird in manchen Ländern nicht unterstützt.</string>
     <string name="buying_dash_not_supported_crypto">Der Kauf von Dash mit Kryptowährungen wird in manchen Ländern nicht unterstützt.</string>

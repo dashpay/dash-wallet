@@ -38,4 +38,6 @@
     <string name="search_hint">Zoek</string>
     <string name="permission_allow">Sta toe</string>
     <string name="permission_deny">Weiger</string>
+    <string name="button_retry">Opnieuw</string>
+    <string name="button_close">Sluit</string>
 </resources>

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Cargando…</string>
     <string name="loading_error">Ocurrió un error. Por favor, intenta nuevamente más tarde.</string>
     <string name="please_wait_title">Por favor espera</string>
@@ -38,4 +37,6 @@
     <string name="search_hint">Buscar</string>
     <string name="permission_allow">Permitir</string>
     <string name="permission_deny">Denigar</string>
+    <string name="button_retry">Reintentar</string>
+    <string name="button_close">Cerrar</string>
 </resources>

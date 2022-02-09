@@ -328,7 +328,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">閉じる</string>
     <string name="button_cancel">キャンセル</string>
-    <string name="button_retry">リトライ</string>
     <string name="button_help">ヘルプ</string>
     <string name="button_add">追加</string>
     <string name="button_delete">削除</string>

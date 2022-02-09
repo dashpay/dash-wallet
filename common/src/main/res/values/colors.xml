@@ -19,7 +19,6 @@
     <!-- added for transaction status -->
     <color name="secondary_status">#E78010</color>
     <color name="primary_status">#4A4A4A</color>
-    <color name="red_300">#E85C4A</color>
 
     <color name="darkest_blue">#FF111921</color>
     <color name="vivid_red">#ec2227</color>
@@ -76,30 +75,16 @@
     <color name="background_accuracy_circle">#26008DE4</color>
     <color name="button_ripple_color">#1f000000</color>
     <color name="disabled_button_bg">#eeeeee</color>
-    <color name="extra_small_btn_bg">#f2f9fd</color>
 
     <!-- Palette -->
     <color name="blue_50">#F0F8FE</color>
-    <color name="blue_100">#B4DEFB</color>
-    <color name="blue_200">#78C4F5</color>
     <color name="blue_300">#3CA9EE</color>
     <color name="blue_400">#008DE4</color>
-    <color name="blue_500">#006CBD</color>
-    <color name="blue_600">#004E97</color>
     <color name="blue_700">#003470</color>
-    <color name="blue_800">#001F49</color>
-    <color name="blue_900">#000D22</color>
 
-    <color name="green_50">#EBF9F2</color>
-    <color name="green_100">#AFE5C9</color>
-    <color name="green_200">#74D0A0</color>
+    <color name="red_300">#E85C4A</color>
     <color name="green_300">#3CB878</color>
-    <color name="green_400">#2B9E63</color>
-    <color name="green_500">#1D824E</color>
-    <color name="green_600">#126239</color>
-    <color name="green_700">#094124</color>
 
-    <color name="gray_20">#F9F9F9</color>
     <color name="gray_40">#F2F3F5</color>
     <color name="gray_50">#EBEDF0</color>
     <color name="gray_100">#E1E3E6</color>
@@ -108,21 +93,16 @@
     <color name="gray_400">#909499</color>
     <color name="gray_500">#76787A</color>
     <color name="gray_600">#5D5F61</color>
-    <color name="gray_700">#454647</color>
-    <color name="gray_800">#2C2D2E</color>
     <color name="gray_900">#0C0C0D</color>
     <color name="gray_900_0.7">#B30C0C0D</color>
 
     <color name="steel_gray_40">#F3F5F6</color>
-    <color name="steel_gray_50">#E7EAEE</color>
     <color name="steel_gray_100">#D5DBE1</color>
     <color name="steel_gray_150">#B8C1CC</color>
     <color name="steel_gray_200">#AEB7C2</color>
     <color name="steel_gray_250">#A3ADB8</color>
     <color name="steel_gray_300">#99A2AD</color>
-    <color name="steel_gray_350">#9099A3</color>
     <color name="steel_gray_400">#818C99</color>
     <color name="steel_gray_500">#6D7885</color>
-    <color name="steel_gray_600">#58616B</color>
     <color name="steel_gray_700">#434A52</color>
 </resources>

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Caricamento in corso.....</string>
     <string name="loading_error">Si è verificato un errore. Per favore riprova più tardi.</string>
     <string name="please_wait_title">attendere prego</string>
@@ -33,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Chiudi</string>
     <string name="network_unavailable_return">Torna al Portafoglio</string>
-
+    <string name="button_retry">Riprova</string>
+    <string name="button_close">Chiudi</string>
 </resources>

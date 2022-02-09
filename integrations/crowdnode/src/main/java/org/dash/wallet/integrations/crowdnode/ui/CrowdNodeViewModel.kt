@@ -24,7 +24,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
@@ -37,7 +36,7 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 enum class NavigationRequest {
-    BackupPassphrase, RestoreWallet, BuyDash
+    BackupPassphrase, RestoreWallet, BuyDash, SendReport
 }
 
 @HiltViewModel
@@ -76,9 +75,6 @@ class CrowdNodeViewModel @Inject constructor(
                 _hasEnoughBalance.postValue(it >= CrowdNodeConstants.MINIMUM_REQUIRED_DASH)
             }
             .launchIn(viewModelScope)
-
-        val crowdNodeAccount = crowdNodeApi.findCrowdNodeAccount()
-        Log.i("CROWDNODE", "FOUND crowdNodeAccount: ${crowdNodeAccount}")
     }
     
     fun backupPassphrase() {
@@ -93,15 +89,27 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.BuyDash)
     }
 
+    fun sendReport() {
+        navigationCallback.postValue(NavigationRequest.SendReport)
+    }
+
     suspend fun signUp() {
         crowdNodeApi.signUp(accountAddress)
     }
 
     fun changeNotifyWhenDone(toNotify: Boolean, intent: Intent?) {
-        crowdNodeApi.setShowNotificationOnFinished(toNotify, intent)
+        crowdNodeApi.showNotificationOnFinished(toNotify, intent)
     }
 
     private fun getOrCreateAccountAddress(): Address {
+        val existingAddress = crowdNodeApi.existingAccountAddress
+
+        if (existingAddress != null) {
+            config.crowdNodeAccountAddress = existingAddress.toBase58()
+            Log.i("CROWDNODE", "existing savedAddress: ${existingAddress.toBase58()}")
+            return existingAddress
+        }
+
         val savedAddress = config.crowdNodeAccountAddress
         Log.i("CROWDNODE", "crowdnode savedAddress: ${savedAddress}")
 

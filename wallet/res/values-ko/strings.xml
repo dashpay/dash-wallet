@@ -331,7 +331,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">닫기</string>
     <string name="button_cancel">취소</string>
-    <string name="button_retry">재시도</string>
     <string name="button_help">도움말</string>
     <string name="button_add">추가</string>
     <string name="button_delete">삭제</string>

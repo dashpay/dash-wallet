@@ -29,12 +29,6 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
-    <style name="DialogIconBackground">
-        <item name="backgroundColor">@color/blue_50</item>
-        <item name="strokeColor">@color/blue_50</item>
-        <item name="cornerRadius">25dp</item>
-    </style>
-
     <style name="MerchantLocationBackground">
         <item name="backgroundColor">@color/steel_gray_40</item>
         <item name="strokeColor">@color/steel_gray_40</item>

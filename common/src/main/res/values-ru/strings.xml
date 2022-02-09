@@ -33,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Отклонить</string>
     <string name="network_unavailable_return">Вернуться в кошелёк</string>
-
+    <string name="button_retry">Повторить</string>
+    <string name="button_close">Закрыть</string>
 </resources>

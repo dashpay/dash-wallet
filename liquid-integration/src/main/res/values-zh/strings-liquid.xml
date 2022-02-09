@@ -19,7 +19,6 @@
     <string name="crypto_support">加密货币支持</string>
     <string name="credit_card_support">支持的信用卡</string>
     <string name="okay">好的</string>
-    <string name="close">关闭</string>
     <string name="list_of_countries">查看不支持的地区列表.</string>
     <string name="buying_dash_not_supported_credit_cards">一些地区不支持通过信用卡购买Dash.</string>
     <string name="buying_dash_not_supported_crypto">一些地区不支持通过加密货币购买Dash.</string>

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <!-- Generic titles/messages -->
     <string name="loading">Loading…</string>
     <string name="loading_error">An error occurred. Please try again later.</string>
@@ -37,7 +36,9 @@
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
     <string name="button_continue">Continue</string>
-    <string name="close">Close</string>
+    <string name="button_close">Close</string>
+    <string name="button_retry">Retry</string>
+    <string name="button_send_report">Send Report</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

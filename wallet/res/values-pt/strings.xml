@@ -331,7 +331,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Dispensar</string>
     <string name="button_cancel">Cancelar</string>
-    <string name="button_retry">Repetir</string>
     <string name="button_help">Ajuda</string>
     <string name="button_add">Adicionar</string>
     <string name="button_delete">Eliminar</string>

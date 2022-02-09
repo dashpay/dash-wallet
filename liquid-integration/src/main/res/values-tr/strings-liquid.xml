@@ -19,7 +19,6 @@
     <string name="crypto_support">Kripto Desteği</string>
     <string name="credit_card_support">Kredi Kartı Desteği</string>
     <string name="okay">Tamam</string>
-    <string name="close">Kapat</string>
     <string name="list_of_countries">Desteklenmeyen ülkelerin listesine bakın.</string>
     <string name="buying_dash_not_supported_credit_cards">Kredi kartıyla Dash satın almak bazı ülkelerde desteklenmiyor.</string>
     <string name="buying_dash_not_supported_crypto">Kripto para birimleriyle Dash satın almak bazı ülkelerde desteklenmiyor.</string>

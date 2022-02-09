@@ -331,7 +331,6 @@
     <string name="button_ok">TAMAM</string>
     <string name="button_dismiss">Son Ver</string>
     <string name="button_cancel">İptal et</string>
-    <string name="button_retry">Tekrar dene</string>
     <string name="button_help">Yardım</string>
     <string name="button_add">Ekle</string>
     <string name="button_delete">Sil</string>

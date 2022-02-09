@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Laden...</string>
     <string name="loading_error">Ein Fehler ist aufgetreten. Bitte versuche es später noch einmal.</string>
     <string name="please_wait_title">Bitte warten</string>
@@ -33,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Schließen</string>
     <string name="network_unavailable_return">Zur Wallet zurückkehren</string>
-
+    <string name="button_retry">Wiederholen</string>
+    <string name="button_close">Schließen</string>
 </resources>

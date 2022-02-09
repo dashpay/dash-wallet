@@ -33,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">ยกเลิก</string>
     <string name="network_unavailable_return">รีเซ็ตกระเป๋าสตางค์</string>
-
+    <string name="button_retry">ลองอีกครั้ง</string>
+    <string name="button_close">ปิด</string>
 </resources>

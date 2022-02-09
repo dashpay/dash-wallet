@@ -42,10 +42,10 @@ enum class SignUpStatus {
 
 interface CrowdNodeApi {
     val signUpStatus: StateFlow<SignUpStatus>
+    val existingAccountAddress: Address?
 
-    fun findCrowdNodeAccount(): Address?
     suspend fun signUp(accountAddress: Address)
-    fun setShowNotificationOnFinished(show: Boolean, clickIntent: Intent? = null)
+    fun showNotificationOnFinished(show: Boolean, clickIntent: Intent? = null)
 }
 
 class CrowdNodeBlockchainApi @Inject constructor(
@@ -54,25 +54,15 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private val notificationService: NotificationService,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
-    override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
     private var showNotificationOnFinished = false
     private var notificationIntent: Intent? = null
 
+    override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
+    override var existingAccountAddress: Address? = null
+        private set
+
     init {
         checkCrowdNodeTransactions()
-    }
-
-    override fun findCrowdNodeAccount(): Address? {
-        // TODO
-//        val transactions = walletDataProvider.getTransactions()
-//        val crowdNodeWelcomeResponse = CrowdNodeWelcomeToApiResponse()
-//        transactions.forEach { tx ->
-//            if (crowdNodeWelcomeResponse.matches(tx)) {
-//                return crowdNodeWelcomeResponse.toAddress
-//            }
-//        }
-
-        return null
     }
 
     override suspend fun signUp(accountAddress: Address) {
@@ -98,7 +88,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-    override fun setShowNotificationOnFinished(show: Boolean, clickIntent: Intent?) {
+    override fun showNotificationOnFinished(show: Boolean, clickIntent: Intent?) {
         this.showNotificationOnFinished = show
         notificationIntent = if (show) clickIntent else null
     }
@@ -108,6 +98,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
             val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet())
             val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
             (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
+                existingAccountAddress = set.accountAddress
+
                 if (set.hasWelcomeToApiResponse) {
                     signUpStatus.value = SignUpStatus.Finished
                     return
@@ -128,16 +120,34 @@ class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     private suspend fun makeSignUpRequest(accountAddress: Address): Transaction {
-        val requestValue = CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE
+        val requestValue = CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE + Coin.SATOSHI
         val signUpTx = paymentService.sendCoins(CrowdNodeConstants.CROWDNODE_ADDRESS, requestValue, accountAddress)
         Log.i("CROWDNODE", "signUp conf: ${signUpTx.confidence}; transo: ${signUpTx}")
-        return walletDataProvider.observeTransactions(CrowdNodeAcceptTermsResponse()).first()
+        val tx = walletDataProvider.observeTransactions(
+            CrowdNodeAcceptTermsResponse(),
+            CrowdNodeErrorResponse(requestValue)
+        ).first()
+
+        if (CrowdNodeErrorResponse(requestValue).matches(tx)) {
+            Log.i("CROWDNODE", "CrowdNodeErrorResponse CrowdNodeErrorResponse CrowdNodeErrorResponse")
+        }
+
+        return tx
     }
 
     private suspend fun acceptTerms(accountAddress: Address): Transaction {
-        val requestValue = CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE
+        val requestValue = CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE + Coin.SATOSHI
         val acceptTx = paymentService.sendCoins(CrowdNodeConstants.CROWDNODE_ADDRESS, requestValue, accountAddress)
         Log.i("CROWDNODE", "acceptTx conf: ${acceptTx.confidence}; transo: ${acceptTx}")
-        return walletDataProvider.observeTransactions(CrowdNodeWelcomeToApiResponse()).first()
+        val tx = walletDataProvider.observeTransactions(
+            CrowdNodeWelcomeToApiResponse(),
+            CrowdNodeErrorResponse(requestValue)
+        ).first()
+
+        if (CrowdNodeErrorResponse(requestValue).matches(tx)) {
+            Log.i("CROWDNODE", "CrowdNodeErrorResponse CrowdNodeErrorResponse CrowdNodeErrorResponse")
+        }
+
+        return tx
     }
 }

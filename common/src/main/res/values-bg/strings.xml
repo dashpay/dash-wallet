@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Зареждане…</string>
     <string name="loading_error">Възникна грешка. Моля опитайте отново по-късно.</string>
     <string name="please_wait_title">Моля изчакайте</string>
     <string name="dash_available">%1$s налични</string>
     <string name="copied">Копирано</string>
-
+    <string name="button_retry">Опитай отново</string>
 </resources>

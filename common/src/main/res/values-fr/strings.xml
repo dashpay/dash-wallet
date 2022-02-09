@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Chargement...</string>
     <string name="loading_error">Une erreur est survenue. Veuillez réessayer plus tard.</string>
     <string name="please_wait_title">Veuillez patienter</string>
@@ -33,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Ignorer</string>
     <string name="network_unavailable_return">Retourner au portefeuille</string>
-
+    <string name="button_retry">Réessayer</string>
+    <string name="button_close">Fermer</string>
 </resources>

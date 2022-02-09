@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Φορτώνει...</string>
     <string name="loading_error">Παρουσιάστηκε σφάλμα. Παρακαλώ προσπαθήστε ξανά αργότερα.</string>
     <string name="please_wait_title">Παρακαλώ περιμένετε</string>
@@ -33,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Ματαίωση</string>
     <string name="network_unavailable_return">Επιστροφή στο Πορτοφόλι</string>
-
+    <string name="button_retry">Επανάληψη</string>
+    <string name="button_close">κλείσιμο</string>
 </resources>

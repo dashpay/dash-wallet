@@ -332,7 +332,6 @@
     <string name="button_ok">باشه</string>
     <string name="button_dismiss">متوجه شدم!</string>
     <string name="button_cancel">لغو</string>
-    <string name="button_retry">تلاش دوباره</string>
     <string name="button_help">راهنما</string>
     <string name="button_add">اضافه کردن</string>
     <string name="button_delete">پارک کردن</string>

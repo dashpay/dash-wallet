@@ -33,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Dispensar</string>
     <string name="network_unavailable_return">Voltar para a carteira</string>
-
+    <string name="button_retry">Repetir</string>
+    <string name="button_close">Fechar</string>
 </resources>

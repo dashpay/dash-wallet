@@ -33,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Son Ver</string>
     <string name="network_unavailable_return">Cüzdan\'a Dön</string>
-
+    <string name="button_retry">Tekrar dene</string>
+    <string name="button_close">Kapat</string>
 </resources>

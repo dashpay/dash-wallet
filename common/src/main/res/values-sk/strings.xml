@@ -33,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Zrušiť</string>
     <string name="network_unavailable_return">Návrat do Peňaženky</string>
-
+    <string name="button_retry">Znovu</string>
+    <string name="button_close">Zatvoriť</string>
 </resources>

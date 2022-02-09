@@ -18,13 +18,11 @@
 package de.schildbach.wallet.ui.staking
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.viewModels
-import androidx.fragment.app.findFragment
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
@@ -57,6 +55,11 @@ class StakingActivity : LockScreenActivity() {
                 }
                 NavigationRequest.BuyDash -> {
                     startActivity(BuyAndSellLiquidUpholdActivity.createIntent(this))
+                }
+                NavigationRequest.SendReport -> {
+                    alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
+                        WalletApplication.getInstance()).buildAlertDialog()
+                    alertDialog.show()
                 }
             }
         }

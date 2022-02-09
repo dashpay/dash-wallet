@@ -331,7 +331,6 @@
     <string name="button_ok">OK</string>
     <string name="button_dismiss">Zavřít</string>
     <string name="button_cancel">Zrušit</string>
-    <string name="button_retry">Opakovat</string>
     <string name="button_help">Nápověda</string>
     <string name="button_add">Přidat</string>
     <string name="button_delete">Smazat</string>

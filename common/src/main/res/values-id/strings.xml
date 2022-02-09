@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Memuat...</string>
     <string name="loading_error">Terjadi kesalahan. Silakan coba lagi nanti.</string>
     <string name="please_wait_title">Silahkan tunggu</string>
@@ -33,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Tolak</string>
     <string name="network_unavailable_return">Kembali ke dompet</string>
-
+    <string name="button_retry">Coba lagi</string>
+    <string name="button_close">Tutup</string>
 </resources>

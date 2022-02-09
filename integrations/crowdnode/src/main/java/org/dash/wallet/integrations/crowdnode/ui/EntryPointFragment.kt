@@ -17,14 +17,15 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -60,7 +61,15 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
 
         binding.existingAccountBtn.setOnClickListener {
             // TODO: online account
-            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
+            lifecycleScope.launch {
+                val dialog = ErrorDialog.create("Ololo it's an error", "Send Report")
+                val result = dialog.showAsync(requireActivity()) {
+                    viewModel.sendReport()
+                }
+                Log.i("CROWDNODE", "result: ${result}")
+            }
+
+            //safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
         }
 
         binding.backupPassphraseLink.setOnClickListener {
@@ -76,7 +85,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
                 R.drawable.ic_info_blue_encircled,
                 getString(R.string.crowdnode_secure_wallet),
                 getString(R.string.crowdnode_secure_wallet_explainer),
-                getString(R.string.close),
+                getString(R.string.button_close),
                 getString(R.string.backup_passphrase)
             )
 
@@ -95,7 +104,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
                     R.string.crowdnode_minimum_dash,
                     CrowdNodeConstants.MINIMUM_REQUIRED_DASH.toPlainString()
                 ),
-                getString(R.string.close),
+                getString(R.string.button_close),
                 getString(R.string.buy_dash)
             )
 
@@ -111,7 +120,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
                 R.drawable.ic_dialog_arrows,
                 getString(R.string.crowdnode_required_transaction),
                 getString(R.string.crowdnode_restore_wallet),
-                getString(R.string.close),
+                getString(R.string.button_close),
                 getString(R.string.restore_wallet)
             )
 
@@ -135,8 +144,8 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         binding.errorBalance.isVisible = !enoughBalance
 
         val disableNewAccount = needBackup || !enoughBalance
-        binding.newAccountBtn.isClickable = true// !disableNewAccount
-        binding.newAccountBtn.isFocusable = true// !disableNewAccount
+        binding.newAccountBtn.isClickable = !disableNewAccount
+        binding.newAccountBtn.isFocusable = !disableNewAccount
         binding.newAccountDivider.isVisible = disableNewAccount
         binding.newAccountNavIcon.isVisible = !disableNewAccount
 
@@ -152,8 +161,8 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         binding.crowdnodeTransactionError.isVisible = !hasExistingAccount
         binding.restoreWalletHint.isVisible = !hasExistingAccount
 
-        binding.existingAccountBtn.isClickable = hasExistingAccount
-        binding.existingAccountBtn.isFocusable = hasExistingAccount
+        binding.existingAccountBtn.isClickable = true//hasExistingAccount
+        binding.existingAccountBtn.isFocusable = true//hasExistingAccount
         binding.existingAccountDivider.isVisible = !hasExistingAccount
         binding.existingAccountNavIcon.isVisible = hasExistingAccount
 

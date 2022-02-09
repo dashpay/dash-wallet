@@ -43,6 +43,7 @@
     <string name="notify_when_done">Let me know when it’s done</string>
     <string name="crowdnode_creating">Your CrowdNode account is creating…</string>
     <string name="accepting_terms">Accepting terms of use…</string>
+    <string name="crowdnode_error">We couldn’t create your CrowdNode account.</string>
 
     <string name="terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
     <string name="privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>`
