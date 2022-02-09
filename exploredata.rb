@@ -2,8 +2,8 @@
 project_id = "dash-wallet-firebase"
 key_file   = ".deploy/gc-storage-service-account.json"
 bucket_name = "dash-wallet-firebase.appspot.com"
-file_name = "explore/explore.dat"
-local_file_path = "wallet/assets/explore/"
+file_name = "explore/explore.db"
+assets_path = "wallet/assets/"
 require "google/cloud/storage"
 
 # Explicitly use service account credentials by specifying the private key
@@ -18,7 +18,7 @@ end
 bucket = storage.bucket bucket_name, skip_lookup: true
 file = bucket.file file_name
 timestamp = file.updated_at.strftime("%Q")
-target_file_path = "#{local_file_path}#{timestamp}.dat"
+target_file_path = "#{assets_path}#{file_name}"
 
 file.download target_file_path
 
