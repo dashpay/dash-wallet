@@ -27,6 +27,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocol;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyAmountView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -217,9 +218,9 @@ public final class RequestCoinsFragment extends Fragment implements NfcAdapter.C
         });
 
         exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
-                new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+                new Observer<ExchangeRate>() {
                     @Override
-                    public void onChanged(de.schildbach.wallet.rates.ExchangeRate exchangeRate) {
+                    public void onChanged(ExchangeRate exchangeRate) {
                         if (exchangeRate != null) {
                             amountCalculatorLink.setExchangeRate(new org.bitcoinj.utils.ExchangeRate(
                                     Coin.COIN, exchangeRate.getFiat()));

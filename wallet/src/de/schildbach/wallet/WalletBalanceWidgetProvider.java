@@ -36,6 +36,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.util.GenericUtils;
 import org.dash.wallet.common.util.MonetarySpannable;
 import org.slf4j.Logger;
@@ -43,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 
-import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet.ui.QuickReceiveActivity;
 import de.schildbach.wallet.ui.SendCoinsQrActivity;

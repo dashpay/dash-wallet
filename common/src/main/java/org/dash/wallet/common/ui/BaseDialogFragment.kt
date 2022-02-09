@@ -6,13 +6,16 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
-@AndroidEntryPoint
+@Deprecated("Use AdaptiveDialog")
 abstract class BaseDialogFragment : DialogFragment() {
     protected lateinit var alertDialog: AlertDialog
-    @Inject lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
+    lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        baseAlertDialogBuilder = BaseAlertDialogBuilder(requireContext())
+    }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         Log.e(this::class.java.simpleName, "onCreateDialog")

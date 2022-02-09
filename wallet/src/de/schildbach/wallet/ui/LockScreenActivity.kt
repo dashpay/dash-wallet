@@ -37,13 +37,12 @@ import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
@@ -236,7 +235,7 @@ open class LockScreenActivity : SecureActivity() {
             startActivity(SendCoinsQrActivity.createIntent(this, true))
             autoLogout.keepLockedUntilPinEntered = true
         }
-        numeric_keyboard.setFunctionEnabled(false)
+        numeric_keyboard.isFunctionEnabled = false
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {

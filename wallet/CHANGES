@@ -1,5 +1,8 @@
 Dash Wallet
 v7.4.4
+* Fix crash when starting app
+
+v7.4.4
 * support interruptions when processing explore-dash data from a protobuf file (not json)
 
 v7.4.3

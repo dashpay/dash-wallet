@@ -26,8 +26,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.slf4j.LoggerFactory
 import android.app.Activity
-import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.ui.ExchangeRatesFragment.*
+import org.dash.wallet.common.data.ExchangeRate
 
 
 class SettingsActivity : BaseMenuActivity() {

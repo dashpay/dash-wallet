@@ -79,11 +79,19 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private val isPhysicalSearch: Boolean
         get() = viewModel.exploreTopic == ExploreTopic.ATMs ||
-                viewModel.filterMode.value == FilterMode.Physical
+                viewModel.filterMode.value == FilterMode.Nearby
 
     private val permissionRequestLauncher = registerPermissionLauncher { isGranted ->
         if (isGranted) {
             viewModel.monitorUserLocation()
+        }
+    }
+
+    private val permissionRequestSettings = registerPermissionLauncher { isGranted ->
+        if (isGranted) {
+            viewModel.monitorUserLocation()
+        }  else {
+            openAppSettings()
         }
     }
 
@@ -108,7 +116,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         ListDividerDecorator(
             divider,
             showAfterLast = false,
-            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_start)
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal)
         )
     }
 
@@ -150,17 +158,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         setupScreenTransitions()
 
         viewModel.init(args.type)
-        binding.toolbarTitle.text = getToolbarTitle()
 
-        viewModel.isLocationEnabled.observe(viewLifecycleOwner) { _ ->
+        binding.toolbarTitle.text = getToolbarTitle()
+        binding.recenterMapBtn.setOnClickListener { viewModel.recenterMapCallback.call() }
+
+        binding.manageGpsView.managePermissionsBtn.setOnClickListener {
+            runLocationFlow(viewModel.exploreTopic, configuration, permissionRequestSettings)
+        }
+
+        viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
             bottomSheet.isDraggable = isBottomSheetDraggable()
             bottomSheet.state = setBottomSheetState()
+            refreshManageGpsView()
         }
 
         viewModel.allMerchantLocations.observe(viewLifecycleOwner) { merchantLocations ->
             merchantLocationsAdapter.submitList(merchantLocations)
         }
-        binding.recenterMapBtn.setOnClickListener { viewModel.recenterMapCallback.call() }
     }
 
     override fun onResume() {
@@ -176,13 +190,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.onExitSearch()
     }
 
+    private fun refreshManageGpsView() {
+        val isLocationEnabled = viewModel.isLocationEnabled.value ?: false
+        val isNearby = viewModel.filterMode.value == FilterMode.Nearby
+        binding.manageGpsView.managePermissionsBtn.isVisible = !isLocationEnabled && isNearby
+        binding.manageGpsView.locationRequestTxt.isVisible = !isLocationEnabled && isNearby
+        searchHeaderAdapter.controlsVisible = isLocationEnabled || !isNearby
+    }
+
     private fun setupFilters(
         bottomSheet: BottomSheetBehavior<ConstraintLayout>,
         topic: ExploreTopic
     ) {
         val defaultMode = when {
             topic == ExploreTopic.ATMs -> FilterMode.All
-            isLocationPermissionGranted -> FilterMode.Physical
+            isLocationPermissionGranted -> FilterMode.Nearby
             else -> FilterMode.Online
         }
 
@@ -206,6 +228,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             searchHeaderAdapter.subtitle = getSearchSubtitle()
             searchHeaderAdapter.setFilterMode(mode)
             binding.filterPanel.isVisible = shouldShowFiltersPanel()
+            refreshManageGpsView()
 
             if (mode == FilterMode.Online) {
                 bottomSheet.isDraggable = false

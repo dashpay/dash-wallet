@@ -18,6 +18,7 @@
 package org.dash.wallet.features.exploredash.ui.adapters
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import androidx.core.view.isVisible
@@ -67,6 +68,14 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
             }
         }
 
+    var controlsVisible: Boolean = true
+        set(value) {
+            field = value
+            if (::binding.isInitialized) {
+                refreshControls(value)
+            }
+        }
+
     override fun getItemCount() = 1
 
     override fun getItemViewType(position: Int) = R.layout.search_header_view
@@ -92,7 +101,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
                     if (topic == ExploreTopic.Merchants) {
                         when (index) {
                             0 -> FilterMode.Online
-                            1 -> FilterMode.Physical
+                            1 -> FilterMode.Nearby
                             else -> FilterMode.All
                         }
                     } else {
@@ -132,13 +141,14 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         binding.searchTitle.text = title
         binding.searchSubtitle.text = subtitle
         binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
+        refreshControls(controlsVisible)
     }
 
     fun setFilterMode(mode: FilterMode) {
         val index = if (topic == ExploreTopic.Merchants) {
             when (mode) {
                 FilterMode.Online -> 0
-                FilterMode.Physical -> 1
+                FilterMode.Nearby -> 1
                 else -> 2
             }
         } else {
@@ -175,5 +185,10 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
 
     fun setOnFilterButtonClicked(listener: () -> Unit) {
         onFilterButtonClicked = listener
+    }
+
+    private fun refreshControls(visible: Boolean) {
+        binding.searchPanel.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+        binding.titlePanel.visibility = if (visible) View.VISIBLE else View.INVISIBLE
     }
 }
