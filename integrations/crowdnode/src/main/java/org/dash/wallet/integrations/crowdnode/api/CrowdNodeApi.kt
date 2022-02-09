@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
@@ -41,10 +42,10 @@ enum class SignUpStatus {
 
 interface CrowdNodeApi {
     val signUpStatus: StateFlow<SignUpStatus>
-    var showNotificationOnFinished: Boolean
 
     fun findCrowdNodeAccount(): Address?
     suspend fun signUp(accountAddress: Address)
+    fun setShowNotificationOnFinished(show: Boolean, clickIntent: Intent? = null)
 }
 
 class CrowdNodeBlockchainApi @Inject constructor(
@@ -54,7 +55,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
-    override var showNotificationOnFinished = false
+    private var showNotificationOnFinished = false
+    private var notificationIntent: Intent? = null
 
     init {
         checkCrowdNodeTransactions()
@@ -90,22 +92,30 @@ class CrowdNodeBlockchainApi @Inject constructor(
         if (showNotificationOnFinished) {
             notificationService.showNotification(
                 "crowdnode_ready",
-                appContext.getString(R.string.crowdnode_account_ready)
+                appContext.getString(R.string.crowdnode_account_ready),
+                notificationIntent
             )
         }
     }
 
-    private fun checkCrowdNodeTransactions() {
-        val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet())
-        val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
-        (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
-            if (set.hasWelcomeToApiResponse) {
-                signUpStatus.value = SignUpStatus.Finished
-                return
-            }
+    override fun setShowNotificationOnFinished(show: Boolean, clickIntent: Intent?) {
+        this.showNotificationOnFinished = show
+        notificationIntent = if (show) clickIntent else null
+    }
 
-            if (set.hasAcceptTermsResponse) {
-                signUpStatus.value = SignUpStatus.AcceptingTerms
+    private fun checkCrowdNodeTransactions() {
+        if (signUpStatus.value == SignUpStatus.NotStarted) {
+            val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet())
+            val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
+            (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
+                if (set.hasWelcomeToApiResponse) {
+                    signUpStatus.value = SignUpStatus.Finished
+                    return
+                }
+
+                if (set.hasAcceptTermsResponse) {
+                    signUpStatus.value = SignUpStatus.AcceptingTerms
+                }
             }
         }
     }

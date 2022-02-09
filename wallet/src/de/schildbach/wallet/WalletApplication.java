@@ -320,16 +320,23 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     @TargetApi(Build.VERSION_CODES.O)
     private void createNotificationChannels() {
-        //Transactions
+        // Transactions
         createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS,
                 R.string.notification_transactions_channel_name,
                 R.string.notification_transactions_channel_description,
                 NotificationManager.IMPORTANCE_HIGH);
-        //Synchronization
+
+        // Synchronization
         createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_ONGOING,
                 R.string.notification_synchronization_channel_name,
                 R.string.notification_synchronization_channel_description,
                 NotificationManager.IMPORTANCE_LOW);
+
+        // Generic notifications
+        createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_GENERIC,
+                R.string.notification_generic_channel_name,
+                R.string.notification_generic_channel_description,
+                NotificationManager.IMPORTANCE_HIGH);
     }
 
     @TargetApi(Build.VERSION_CODES.O)

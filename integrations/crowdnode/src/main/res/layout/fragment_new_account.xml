@@ -69,6 +69,7 @@
         android:layout_height="230dp"
         android:layout_marginHorizontal="15dp"
         android:layout_marginTop="-30dp"
+        android:animateLayoutChanges="true"
         app:contentPadding="15dp"
         app:layout_constraintTop_toBottomOf="@id/header">
 

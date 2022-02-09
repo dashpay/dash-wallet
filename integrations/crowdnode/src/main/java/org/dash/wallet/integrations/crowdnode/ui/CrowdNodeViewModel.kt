@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -96,8 +97,8 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.signUp(accountAddress)
     }
 
-    fun changeNotifyWhenDone(toNotify: Boolean) {
-        crowdNodeApi.showNotificationOnFinished = toNotify
+    fun changeNotifyWhenDone(toNotify: Boolean, intent: Intent?) {
+        crowdNodeApi.setShowNotificationOnFinished(toNotify, intent)
     }
 
     private fun getOrCreateAccountAddress(): Address {

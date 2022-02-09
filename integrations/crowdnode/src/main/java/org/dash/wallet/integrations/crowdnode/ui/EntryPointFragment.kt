@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -24,17 +25,22 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentEntryPointBinding
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
     private val binding by viewBinding(FragmentEntryPointBinding::bind)
     private val viewModel: CrowdNodeViewModel by activityViewModels()
+
+    @Inject
+    lateinit var notificationService: NotificationService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -129,8 +135,8 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         binding.errorBalance.isVisible = !enoughBalance
 
         val disableNewAccount = needBackup || !enoughBalance
-        binding.newAccountBtn.isClickable = !disableNewAccount
-        binding.newAccountBtn.isFocusable = !disableNewAccount
+        binding.newAccountBtn.isClickable = true// !disableNewAccount
+        binding.newAccountBtn.isFocusable = true// !disableNewAccount
         binding.newAccountDivider.isVisible = disableNewAccount
         binding.newAccountNavIcon.isVisible = !disableNewAccount
 

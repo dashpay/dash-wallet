@@ -18,8 +18,11 @@
 package de.schildbach.wallet.ui.notifications
 
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.app.TaskStackBuilder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
@@ -33,18 +36,23 @@ class NotificationManagerWrapper @Inject constructor(
         Context.NOTIFICATION_SERVICE
     ) as NotificationManager
 
-    override fun showNotification(tag: String, message: String) {
+    override fun showNotification(tag: String, message: String, intent: Intent?) {
+        val appName = appContext.getString(R.string.app_name)
         val notification: NotificationCompat.Builder = NotificationCompat.Builder(
             appContext,
-            Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS
-        )
-        notification.setSmallIcon(R.drawable.ic_dash_d_white_bottom)
-        val appName = appContext.getString(R.string.app_name)
-        notification.setTicker(appName)
-        notification.setContentTitle(appName)
-        notification.setContentText(message)
-//        notification.setContentIntent(PendingIntent.getActivity(this, 0, createIntent(this), 0)) TODO
-        notification.setWhen(System.currentTimeMillis())
+            Constants.NOTIFICATION_CHANNEL_ID_GENERIC
+        ).setSmallIcon(R.drawable.ic_dash_d_white_bottom)
+            .setTicker(appName)
+            .setContentTitle(appName)
+            .setContentText(message)
+
+        if (intent != null) {
+            val pendingIntent = TaskStackBuilder.create(appContext).run {
+                addNextIntentWithParentStack(intent)
+                getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT)
+            }
+            notification.setContentIntent(pendingIntent).setAutoCancel(true)
+        }
 
         notificationManager.notify(tag.hashCode(), notification.build())
     }

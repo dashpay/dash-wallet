@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -37,6 +38,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
@@ -91,7 +93,8 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.notifyWhenDone.setOnClickListener {
-            viewModel.changeNotifyWhenDone(true)
+            val intent = Intent(requireContext(), requireActivity()::class.java)
+            viewModel.changeNotifyWhenDone(true, intent)
             requireActivity().finish()
         }
 
