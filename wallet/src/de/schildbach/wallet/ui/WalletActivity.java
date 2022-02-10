@@ -804,7 +804,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     private void checkWalletEncryptionDialog() {
         if (!wallet.isEncrypted()) {
             log.info("the wallet is not encrypted");
-            analytics.logError(new Exception("the wallet is not encrypted"),
+            analytics.logError(new Exception("the wallet is not encrypted / OnboardingActivity"),
                     "no other details are available without the user submitting a report");
             AdaptiveDialog dialog = AdaptiveDialog.custom(R.layout.dialog_adaptive,
                     R.drawable.ic_error,

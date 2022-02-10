@@ -124,7 +124,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private fun unencryptedFlow() {
         log.info("the wallet is not encrypted")
         analytics.logError(
-            Exception("the wallet is not encrypted"),
+            Exception("the wallet is not encrypted / OnboardingActivity"),
             "no other details are available without the user submitting a report"
         )
 
