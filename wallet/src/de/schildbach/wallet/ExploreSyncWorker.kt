@@ -165,6 +165,5 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         }
-
     }
 }

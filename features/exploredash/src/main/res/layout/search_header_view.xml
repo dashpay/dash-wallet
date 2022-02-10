@@ -22,6 +22,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context="org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter">
 
+    <FrameLayout
+        android:id="@+id/offset"
+        android:layout_width="match_parent"
+        android:layout_height="24dp"
+        android:background="@color/dash_gray"
+        android:visibility="gone"/>
+
     <org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
         android:id="@+id/filter_options"
         android:layout_width="match_parent"

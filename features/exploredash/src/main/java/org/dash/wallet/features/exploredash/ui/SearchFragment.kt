@@ -178,7 +178,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             merchantLocationsAdapter.submitList(merchantLocations)
         }
         viewModel.syncProgressLiveDataFromFlow.observe(viewLifecycleOwner) { syncProgress ->
-
             when (syncProgress.status) {
                 Status.LOADING -> {
                     binding.apply {
@@ -186,14 +185,25 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         progress.isVisible = true
                         progress.progress = syncProgress.data?.toInt() ?: 0
                         syncMessage.text = getString(R.string.sync_in_progress_not_complete)
+                        searchHeaderAdapter.allowSpaceForMessage = true
+                        recenterMapBtnSpacer.isVisible = true
                     }
                 }
-                Status.SUCCESS -> binding.syncStatus.isVisible = false
+                Status.SUCCESS -> {
+                    binding.apply {
+                        syncStatus.isVisible = false
+                        searchHeaderAdapter.allowSpaceForMessage = false
+                        recenterMapBtnSpacer.isVisible = false
+                    }
+                }
                 Status.ERROR -> {
                     binding.apply {
                         syncStatus.isVisible = true
-                        syncStatus.setBackgroundResource(R.color.red_300)
+                        syncStatus.setBackgroundResource(R.color.dash_red)
+                        syncStatus.alpha = 1.0f
                         progress.isVisible = false
+                        searchHeaderAdapter.allowSpaceForMessage = true
+                        recenterMapBtnSpacer.isVisible = true
                         when (syncProgress.exception) {
                             is FileNotFoundException -> syncMessage.text = getString(R.string.sync_in_progress_file_not_found)
                             else -> syncMessage.text = getString(R.string.sync_in_progress_error)
@@ -203,6 +213,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 Status.CANCELED -> {
                     binding.apply {
                         syncStatus.isVisible = true
+                        searchHeaderAdapter.allowSpaceForMessage = true
+                        recenterMapBtnSpacer.isVisible = true
                         syncMessage.text = getString(R.string.sync_in_progress_canceled)
                     }
                 }

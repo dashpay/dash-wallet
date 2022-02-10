@@ -71,8 +71,19 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     var controlsVisible: Boolean = true
         set(value) {
             field = value
+            println("controlsVisible value is now2 $value ${::binding.isInitialized}")
             if (::binding.isInitialized) {
                 refreshControls(value)
+            }
+        }
+
+    var allowSpaceForMessage: Boolean = false
+        set(value) {
+            field = value
+            println("allowSpaceForMessage value is now2 $value ${::binding.isInitialized}")
+            if (::binding.isInitialized) {
+                println("allowSpaceForMessage value is now $value ${::binding.isInitialized}")
+                refreshSpaceForMessage(value)
             }
         }
 
@@ -142,6 +153,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         binding.searchSubtitle.text = subtitle
         binding.searchSubtitle.isVisible = subtitle.isNotEmpty()
         refreshControls(controlsVisible)
+        refreshSpaceForMessage(allowSpaceForMessage)
     }
 
     fun setFilterMode(mode: FilterMode) {
@@ -190,5 +202,9 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     private fun refreshControls(visible: Boolean) {
         binding.searchPanel.visibility = if (visible) View.VISIBLE else View.INVISIBLE
         binding.titlePanel.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+    }
+
+    private fun refreshSpaceForMessage(visible: Boolean) {
+        binding.offset.isVisible = visible
     }
 }
