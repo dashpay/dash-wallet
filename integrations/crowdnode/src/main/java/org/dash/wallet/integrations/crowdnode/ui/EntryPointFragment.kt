@@ -23,25 +23,18 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentEntryPointBinding
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
     private val binding by viewBinding(FragmentEntryPointBinding::bind)
     private val viewModel: CrowdNodeViewModel by activityViewModels()
-
-    @Inject
-    lateinit var notificationService: NotificationService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -61,15 +54,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
 
         binding.existingAccountBtn.setOnClickListener {
             // TODO: online account
-            lifecycleScope.launch {
-                val dialog = ErrorDialog.create("Ololo it's an error", "Send Report")
-                val result = dialog.showAsync(requireActivity()) {
-                    viewModel.sendReport()
-                }
-                Log.i("CROWDNODE", "result: ${result}")
-            }
-
-            //safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
+            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount())
         }
 
         binding.backupPassphraseLink.setOnClickListener {
@@ -161,8 +146,8 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         binding.crowdnodeTransactionError.isVisible = !hasExistingAccount
         binding.restoreWalletHint.isVisible = !hasExistingAccount
 
-        binding.existingAccountBtn.isClickable = true//hasExistingAccount
-        binding.existingAccountBtn.isFocusable = true//hasExistingAccount
+        binding.existingAccountBtn.isClickable = hasExistingAccount
+        binding.existingAccountBtn.isFocusable = hasExistingAccount
         binding.existingAccountDivider.isVisible = !hasExistingAccount
         binding.existingAccountNavIcon.isVisible = hasExistingAccount
 

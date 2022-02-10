@@ -51,6 +51,13 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/new_account_to_error"
+            app:destination="@id/errorFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -61,6 +68,11 @@
         <argument android:name="title" app:argType="string" />
         <argument android:name="url" app:argType="string" />
     </fragment>
+
+    <fragment
+        android:id="@+id/errorFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.ErrorFragment"
+        android:label="ErrorFragment" />
 
     <fragment
         android:id="@+id/crowdNodePortalFragment"

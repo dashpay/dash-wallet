@@ -33,9 +33,6 @@ class CrowdNodeFullTxSet: TransactionWrapper {
     private val matchedFilters = mutableListOf<TransactionFilter>()
     override val transactions = mutableSetOf<Transaction>()
 
-    val hasSignUpRequest: Boolean
-        get() = matchedFilters.any { it is CrowdNodeSignUpTx }
-
     val hasAcceptTermsResponse: Boolean
         get() = matchedFilters.any { it is CrowdNodeAcceptTermsResponse }
 

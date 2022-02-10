@@ -22,10 +22,12 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.integrations.crowdnode.api.*
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class CrowdNodeModule {
     @Binds
+    @Singleton
     abstract fun bindCrowdNodeApi(crowdNodeApi: CrowdNodeBlockchainApi): CrowdNodeApi
 }

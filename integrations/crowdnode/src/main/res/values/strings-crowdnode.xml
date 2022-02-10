@@ -41,7 +41,7 @@
     <string name="privacy_policy">Privacy Policy</string>
     <string name="crowdnode_account_ready">Your CrowdNode account is set up and ready to use!</string>
     <string name="notify_when_done">Let me know when it’s done</string>
-    <string name="crowdnode_creating">Your CrowdNode account is creating…</string>
+    <string name="crowdnode_creating">Your CrowdNode account is creating\Do not close the app…</string>
     <string name="accepting_terms">Accepting terms of use…</string>
     <string name="crowdnode_error">We couldn’t create your CrowdNode account.</string>
 

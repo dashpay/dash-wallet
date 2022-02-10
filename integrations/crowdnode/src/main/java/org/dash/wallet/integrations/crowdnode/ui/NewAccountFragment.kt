@@ -26,7 +26,6 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -38,7 +37,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
@@ -58,7 +56,6 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.dashAddressTxt.text = viewModel.dashAccountAddress
         val existingAccount = false // TODO: online account
 
         binding.title.setText(if (existingAccount) {
@@ -99,26 +96,32 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.copyAddressBtn.setOnClickListener {
-            (requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
-                setPrimaryClip(ClipData.newPlainText("dash address", viewModel.dashAccountAddress))
+            viewModel.accountAddress.value?.let { address ->
+                (requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
+                    setPrimaryClip(ClipData.newPlainText("dash address", address))
+                }
+                Toast.makeText(requireContext(), getString(R.string.copied), Toast.LENGTH_SHORT).show()
             }
-            Toast.makeText(requireContext(), getString(R.string.copied), Toast.LENGTH_SHORT).show()
         }
 
         viewModel.termsAccepted.observe(viewLifecycleOwner) {
             binding.createAccountBtn.isEnabled = it
         }
 
+        viewModel.accountAddress.observe(viewLifecycleOwner) {
+            binding.dashAddressTxt.text = it
+        }
+
         viewModel.crowdNodeSignUpStatus.observe(viewLifecycleOwner) {
-            binding.registerPanel.isVisible = it == SignUpStatus.NotStarted
-            binding.inProgressPanel.isVisible = it != SignUpStatus.NotStarted
+            binding.registerPanel.isVisible = it == SignUpStatus.NotStarted || it == SignUpStatus.Error
+            binding.inProgressPanel.isVisible = it != SignUpStatus.NotStarted && it != SignUpStatus.Error
 
             when (it) {
                 SignUpStatus.Finished -> {
-                    Log.i("CROWDNODE", "Finished, safeNavigate")
                     safeNavigate(NewAccountFragmentDirections.newAccountToPortal())
                 }
                 SignUpStatus.AcceptingTerms -> binding.progressMessage.text = getString(R.string.accepting_terms)
+                SignUpStatus.Error -> showError()
                 else -> binding.progressMessage.text = getString(R.string.crowdnode_creating)
             }
         }
@@ -158,5 +161,9 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
 
         textView.text = spannableStringBuilder
         textView.movementMethod = LinkMovementMethod.getInstance()
+    }
+
+    private fun showError() {
+        safeNavigate(NewAccountFragmentDirections.newAccountToError())
     }
 }

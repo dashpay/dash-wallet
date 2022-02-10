@@ -30,6 +30,7 @@ open class CoinsToAddressTxFilter(
         private set
 
     override fun matches(tx: Transaction): Boolean {
+
         val networkParameters = toAddress.parameters
 
         for (output in tx.outputs) {
@@ -39,9 +40,8 @@ open class CoinsToAddressTxFilter(
                 script.getToAddress(networkParameters) == toAddress &&
                 output.value == coins
             ) {
-                fromAddress = tx.inputs.firstOrNull {
-                    it.value == coins
-                }?.connectedOutput?.scriptPubKey?.getToAddress(networkParameters)
+                fromAddress = tx.inputs.firstOrNull()
+                    ?.outpoint?.connectedOutput?.scriptPubKey?.getToAddress(networkParameters)
                 return true
             }
         }

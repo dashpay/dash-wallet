@@ -22,5 +22,5 @@ import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeErrorResponse(requestValue: Coin): CoinsFromAddressTxFilter(
-    CrowdNodeConstants.CROWDNODE_ADDRESS, requestValue
+    CrowdNodeConstants.CROWDNODE_ADDRESS, requestValue, includeFee = true
 )

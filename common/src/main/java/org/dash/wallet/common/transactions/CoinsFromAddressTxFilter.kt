@@ -31,7 +31,7 @@ open class CoinsFromAddressTxFilter(
         private set
 
     override fun matches(tx: Transaction): Boolean {
-        val actualValue = if (includeFee) coins - tx.fee else coins
+        val actualValue = if (includeFee && tx.fee != null) coins - tx.fee else coins
         val networkParameters = fromAddress.parameters
 
         for (input in tx.inputs) {

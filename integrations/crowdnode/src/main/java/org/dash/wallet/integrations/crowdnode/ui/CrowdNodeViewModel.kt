@@ -47,9 +47,14 @@ class CrowdNodeViewModel @Inject constructor(
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
 
-    private val accountAddress = getOrCreateAccountAddress()
+    private val _accountAddress = MutableLiveData(getOrCreateAccountAddress())
+    var accountAddress: LiveData<String> = MediatorLiveData<String>().apply {
+        addSource(_accountAddress) {
+            value = it.toBase58()
+        }
+//        value = crowdNodeApi.signUpStatus.value
+    }
 
-    val dashAccountAddress: String = accountAddress.toBase58()
     val needPassphraseBackUp
         get() = config.remindBackupSeed
 
@@ -65,6 +70,10 @@ class CrowdNodeViewModel @Inject constructor(
         addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
         value = crowdNodeApi.signUpStatus.value
     }
+
+    val crowdNodeError: Exception?
+        get() = crowdNodeApi.apiError
+
     val termsAccepted = MutableLiveData(false)
 
     init {
@@ -94,7 +103,17 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun signUp() {
-        crowdNodeApi.signUp(accountAddress)
+        crowdNodeApi.signUp(_accountAddress.value!!)
+    }
+
+    fun reset() {
+        _accountAddress.value = createNewAccountAddress()
+        crowdNodeApi.reset()
+    }
+
+    suspend fun retry() {
+        reset()
+        signUp()
     }
 
     fun changeNotifyWhenDone(toNotify: Boolean, intent: Intent?) {
@@ -106,19 +125,21 @@ class CrowdNodeViewModel @Inject constructor(
 
         if (existingAddress != null) {
             config.crowdNodeAccountAddress = existingAddress.toBase58()
-            Log.i("CROWDNODE", "existing savedAddress: ${existingAddress.toBase58()}")
             return existingAddress
         }
 
         val savedAddress = config.crowdNodeAccountAddress
-        Log.i("CROWDNODE", "crowdnode savedAddress: ${savedAddress}")
 
         return if (savedAddress.isNullOrEmpty()) {
-            val address = walletDataProvider.freshReceiveAddress()
-            config.crowdNodeAccountAddress = address.toBase58()
-            return address
+            return createNewAccountAddress()
         } else {
             Address.fromString(Constants.NETWORK_PARAMETERS, savedAddress)
         }
+    }
+
+    private fun createNewAccountAddress(): Address {
+        val address = walletDataProvider.freshReceiveAddress()
+        config.crowdNodeAccountAddress = address.toBase58()
+        return address
     }
 }
