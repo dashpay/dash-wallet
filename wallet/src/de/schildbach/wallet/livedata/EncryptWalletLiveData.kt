@@ -90,9 +90,11 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
                 // For the new key, we create a new key crypter according to the desired parameters.
                 val keyCrypter = KeyCrypterScrypt(scryptIterationsTarget)
                 val newKey = keyCrypter.deriveKey(password)
-                wallet.encrypt(keyCrypter, newKey)
+                // skip this for now
+                //wallet.encrypt(keyCrypter, newKey)
+                //throw KeyCrypterException("fake error")
 
-                if(initialize) {
+                if (initialize) {
                     walletApplication.saveWalletAndFinalizeInitialization()
                 }
 

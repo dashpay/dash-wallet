@@ -359,4 +359,9 @@
     <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND LIQUID in README.md for more information.</string>
     <string name="set_pin_error_missing_wallet_title">Missing Wallet Error</string>
     <string name="set_pin_error_missing_wallet_message">The wallet is missing.  Please report this to the Support Desk.</string>
+    <string name="wallet_encryption_error_title">Wallet Creation Error</string>
+    <string name="wallet_encryption_error_message">There is a problem creating the wallet.  Please report this to the Support Desk.</string>
+    <string name="wallet_not_encrypted_error_message">There is a problem with your wallet.\n\nIf you have no Dash in this wallet, then uninstall and reinstall this app. Then create a new wallet.\n\nIf you have a recovery phrase or a backup file, then uninstall this app and reinstall it.\n\nOtherwise, please report this to the Support Desk.</string>
+
+
 </resources>
