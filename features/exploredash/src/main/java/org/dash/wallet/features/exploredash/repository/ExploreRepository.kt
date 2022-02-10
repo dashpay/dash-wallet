@@ -41,14 +41,14 @@ interface ExploreRepository {
 }
 
 @Suppress("BlockingMethodInNonBlockingContext")
-class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
+class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
     ExploreRepository {
 
     companion object {
         const val DATA_FILE_NAME = "explore.db"
         private const val GC_FILE_PATH = "explore/explore.db"
 
-        private val log = LoggerFactory.getLogger(AssetExploreDatabase::class.java)
+        private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
     }
 
     private val auth = Firebase.auth

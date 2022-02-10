@@ -38,7 +38,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
     companion object {
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
         const val SHARED_PREFS_NAME = "explore"
-        const val PREFS_LAST_SYNC_KEY = "last_sync"
+        const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "last_sync"
     }
 
     private val exploreRepository by lazy {
@@ -73,9 +73,9 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         try {
             val tableSyncWatch = Stopwatch.createStarted()
 
-            lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
+            lastSync = preferences.getLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
             remoteDataTimestamp = exploreRepository.getLastUpdate()
-            log.info("remote data timestamp: $remoteDataTimestamp")
+            log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
 
             if (lastSync >= remoteDataTimestamp) {
                 log.info("data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
@@ -84,9 +84,9 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
             exploreRepository.download()
 
-            preferences.edit().putLong(PREFS_LAST_SYNC_KEY, remoteDataTimestamp).apply()
+            preferences.edit().putLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, remoteDataTimestamp).apply()
 
-            AppExploreDatabase.getAppDatabase().forceUpdate()
+            AppExploreDatabase.forceUpdate()
 
             log.info("sync explore db finished $tableSyncWatch")
 

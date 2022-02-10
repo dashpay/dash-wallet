@@ -97,7 +97,7 @@ class AboutActivity : BaseMenuActivity() {
             }
 
             val preferences = applicationContext.getSharedPreferences(ExploreSyncWorker.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-            val lastSync = preferences.getLong(ExploreSyncWorker.PREFS_LAST_SYNC_KEY, 0)
+            val lastSync = preferences.getLong(ExploreSyncWorker.PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
             val formattedSyncTime = if (lastSync == 0L) {
                 getString(R.string.about_last_explore_dash_sync_never)
             } else {

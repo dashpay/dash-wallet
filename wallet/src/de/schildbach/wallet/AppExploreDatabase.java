@@ -16,7 +16,7 @@ import org.dash.wallet.features.exploredash.data.model.Atm;
 import org.dash.wallet.features.exploredash.data.model.AtmFTS;
 import org.dash.wallet.features.exploredash.data.model.Merchant;
 import org.dash.wallet.features.exploredash.data.model.MerchantFTS;
-import org.dash.wallet.features.exploredash.repository.AssetExploreDatabase;
+import org.dash.wallet.features.exploredash.repository.GCExploreDatabase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,9 +44,11 @@ public abstract class AppExploreDatabase extends RoomDatabase {
     private static final Logger log = LoggerFactory.getLogger(AppExploreDatabase.class);
 
     private final static String DB_FILE_NAME = "explore-database";
-    private final static String DB_ASSET_FILE_NAME = "explore/" + AssetExploreDatabase.DATA_FILE_NAME;
+    private final static String DB_ASSET_FILE_NAME = "explore/" + GCExploreDatabase.DATA_FILE_NAME;
 
     private static AppExploreDatabase instance;
+
+    private static final WalletApplication walletApp = WalletApplication.getInstance();
 
     public abstract MerchantDao merchantDao();
 
@@ -60,16 +62,15 @@ public abstract class AppExploreDatabase extends RoomDatabase {
     }
 
     private static AppExploreDatabase create() {
-        WalletApplication walletApp = WalletApplication.getInstance();
         Builder<AppExploreDatabase> dbBuilder = Room.databaseBuilder(walletApp, AppExploreDatabase.class, DB_FILE_NAME);
         try {
             File dbFile = walletApp.getDatabasePath(DB_FILE_NAME);
-            File dbZipFile = new File(walletApp.getCacheDir(), AssetExploreDatabase.DATA_FILE_NAME);
+            File dbZipFile = new File(walletApp.getCacheDir(), GCExploreDatabase.DATA_FILE_NAME);
             if (!dbFile.exists() && !dbZipFile.exists()) {
                 preloadFromAssets(walletApp, dbZipFile);
             }
             if (dbZipFile.exists()) {
-                log.debug("found explore db update package");
+                log.info("found explore db update package {}", dbZipFile.getAbsolutePath());
                 dbBuilder.createFromInputStream(
                         new Callable<InputStream>() {
                             @Override
@@ -83,7 +84,7 @@ public abstract class AppExploreDatabase extends RoomDatabase {
                                 if (!dbZipFile.delete()) {
                                     log.error("unable to delete " + dbZipFile.getAbsolutePath());
                                 }
-                                log.debug("successfully loaded new version of explode db");
+                                log.info("successfully loaded new version of explode db");
                             }
                         });
             }
@@ -96,7 +97,7 @@ public abstract class AppExploreDatabase extends RoomDatabase {
     }
 
     private static void preloadFromAssets(WalletApplication walletApp, File dbZipFile) throws IOException {
-        log.debug("preloading explore db from assets {}", dbZipFile.getAbsolutePath());
+        log.info("preloading explore db from assets {}", dbZipFile.getAbsolutePath());
         try (InputStream in = walletApp.getAssets().open(DB_ASSET_FILE_NAME);
              FileOutputStream out = new FileOutputStream(dbZipFile)) {
             byte[] buffer = new byte[1024];
@@ -120,8 +121,22 @@ public abstract class AppExploreDatabase extends RoomDatabase {
         return zipFile.getInputStream(zipHeader);
     }
 
-    public void forceUpdate() {
-        close();
+    public static void forceUpdate() {
+        log.info("force update explore db");
+        if (instance != null) {
+            instance.close();
+        }
+        try {
+            File dbFile = walletApp.getApplicationContext().getDatabasePath(DB_FILE_NAME);
+            boolean dbDelete = dbFile.delete();
+            boolean dbShmDelete = new File(dbFile.getAbsolutePath() + "-shm").delete();
+            boolean dbWalDelete = new File(dbFile.getAbsolutePath() + "-wal").delete();
+            log.info("delete existing explore db ({}, {}, {})", dbDelete, dbShmDelete, dbWalDelete);
+        } catch (SecurityException ex) {
+            log.warn("unable to delete explore db", ex);
+        }
         instance = create();
+        // execute simple query to trigger database opening
+        instance.query("SELECT * FROM sqlite_master", null);
     }
 }
