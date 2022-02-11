@@ -57,6 +57,7 @@ import com.jakewharton.processphoenix.ProcessPhoenix;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
@@ -863,6 +864,12 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public Address currentReceiveAddress() {
         return wallet.currentReceiveAddress();
+    }
+
+    @NonNull
+    @Override
+    public NetworkParameters getNetworkParameters() {
+        return Constants.NETWORK_PARAMETERS;
     }
 
     @NonNull

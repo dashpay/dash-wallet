@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory
 class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewModel(application) {
 
     companion object {
-        val FAKE_FEE_FOR_EXCEPTIONS: Coin = ECONOMIC_FEE.multiply(261).divide(1000)
+        val FAKE_FEE_FOR_EXCEPTIONS: Coin = Constants.ECONOMIC_FEE.multiply(261).divide(1000)
     }
 
     private val log = LoggerFactory.getLogger(PaymentProtocolFragment::class.java)

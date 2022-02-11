@@ -177,11 +177,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
 
-        private final IgnoreAddressTxFilter ignoreCrowdNodeFilter = new IgnoreAddressTxFilter(
-                Address.fromBase58(
-                        Constants.NETWORK_PARAMETERS,
-                        CrowdNodeConstants.INSTANCE.getCROWD_NODE_ADDRESS()
-                ));
+        private final IgnoreAddressTxFilter ignoreCrowdNodeFilter =
+                new IgnoreAddressTxFilter(CrowdNodeConstants.INSTANCE.getCROWDNODE_ADDRESS());
 
         @Override
         public void onThrottledWalletChanged() {
@@ -224,7 +221,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             handler.post(() -> {
                 final boolean isReceived = amount.signum() > 0;
                 final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
-//.// TODO: check replaying state
+
                 if (isReceived && !isReplayedTx && ignoreCrowdNodeFilter.matches(tx))
                     notifyCoinsReceived(address, amount, tx.getExchangeRate());
             });

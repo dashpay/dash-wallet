@@ -19,19 +19,18 @@ package org.dash.wallet.integrations.crowdnode.utils
 
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
-import org.bitcoinj.params.MainNetParams
+import org.bitcoinj.core.Context
 import org.bitcoinj.params.TestNet3Params
-import org.dash.wallet.common.BuildConfig
-import org.dash.wallet.common.Constants
 
 object CrowdNodeConstants {
-    val CROWD_NODE_ADDRESS = if (BuildConfig.DEBUG) { // TODO: network, not build type
-        "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
-    } else {
-        "XjbaGWaGnvEtuQAUoBgDxJWe8ZNv45upG2"
-    }
-
     val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
     val CROWDNODE_OFFSET: Coin = Coin.valueOf(20000)
-    val CROWDNODE_ADDRESS: Address = Address.fromBase58(Constants.NETWORK_PARAMETERS, CROWD_NODE_ADDRESS)
+    val CROWDNODE_ADDRESS: Address = Address.fromBase58(
+        Context.get().params,
+        if (Context.get().params == TestNet3Params.get()) {
+            "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
+        } else {
+            "XjbaGWaGnvEtuQAUoBgDxJWe8ZNv45upG2"
+        }
+    )
 }

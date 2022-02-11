@@ -22,6 +22,7 @@ import androidx.lifecycle.LiveData
 import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.transactions.TransactionFilter
@@ -43,6 +44,8 @@ interface WalletDataProvider {
     fun defaultCurrencyCode(): String
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
+
+    val networkParameters: NetworkParameters
 
     fun observeBalance(): Flow<Coin>
 

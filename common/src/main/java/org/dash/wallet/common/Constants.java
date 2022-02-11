@@ -1,9 +1,7 @@
 package org.dash.wallet.common;
 
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.util.GenericUtils;
 
@@ -24,7 +22,4 @@ public class Constants {
     public static final int RESULT_CODE_GO_HOME = 100;
 
     public static final MonetaryFormat SEND_PAYMENT_LOCAL_FORMAT = new MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2).optionalDecimals();
-
-    public static final NetworkParameters NETWORK_PARAMETERS = TestNet3Params.get(); // TODO
-//    public final NetworkParameters NETWORK_PARAMETERS = MainNetParams.get(); // TODO
 }

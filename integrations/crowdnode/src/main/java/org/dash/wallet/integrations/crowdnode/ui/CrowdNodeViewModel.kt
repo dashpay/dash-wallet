@@ -18,7 +18,6 @@
 package org.dash.wallet.integrations.crowdnode.ui
 
 import android.content.Intent
-import android.util.Log
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -27,7 +26,6 @@ import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
@@ -52,7 +50,6 @@ class CrowdNodeViewModel @Inject constructor(
         addSource(_accountAddress) {
             value = it.toBase58()
         }
-//        value = crowdNodeApi.signUpStatus.value
     }
 
     val needPassphraseBackUp
@@ -133,7 +130,7 @@ class CrowdNodeViewModel @Inject constructor(
         return if (savedAddress.isNullOrEmpty()) {
             return createNewAccountAddress()
         } else {
-            Address.fromString(Constants.NETWORK_PARAMETERS, savedAddress)
+            Address.fromString(walletDataProvider.networkParameters, savedAddress)
         }
     }
 
