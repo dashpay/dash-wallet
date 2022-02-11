@@ -21,6 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 class AppDatabaseMigrations {
     companion object {
+        @JvmStatic
         val migration2To3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("CREATE TABLE `merchant` (`id` INTEGER NOT NULL, `name` TEXT, " +
@@ -44,6 +45,16 @@ class AppDatabaseMigrations {
 
                 database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `atm_fts` " +
                         "USING FTS4(`name`, `manufacturer`, content=`atm`)")
+            }
+        }
+
+        @JvmStatic
+        val migration4To9 = object : Migration(4, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DROP TABLE IF EXISTS `merchant`")
+                database.execSQL("DROP TABLE IF EXISTS `atm`")
+                database.execSQL("DROP TABLE IF EXISTS `merchant_fts`")
+                database.execSQL("DROP TABLE IF EXISTS `atm_fts`")
             }
         }
     }

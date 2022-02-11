@@ -245,4 +245,7 @@ interface AtmDao : BaseDao<Atm> {
 
     @Query("DELETE FROM atm")
     override suspend fun deleteAll(): Int
+
+    @Query("SELECT count(*) FROM atm")
+    suspend fun getCount() : Int
 }
