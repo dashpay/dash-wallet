@@ -26,7 +26,6 @@
         android:id="@+id/offset"
         android:layout_width="match_parent"
         android:layout_height="24dp"
-        android:background="@color/dash_gray"
         android:visibility="gone"/>
 
     <org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
