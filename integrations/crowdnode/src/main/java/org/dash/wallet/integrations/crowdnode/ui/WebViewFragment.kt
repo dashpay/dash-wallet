@@ -23,6 +23,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
@@ -47,5 +48,9 @@ class WebViewFragment : Fragment(R.layout.fragment_webview) {
 
         binding.progressBar.isVisible = true
         binding.webView.loadUrl(args.url)
+
+        binding.toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
+        }
     }
 }
