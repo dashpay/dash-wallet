@@ -46,7 +46,7 @@ class AboutActivity : BaseMenuActivity() {
     @Inject
     lateinit var analytics: AnalyticsService
     @Inject
-    lateinit var firebaseRepository: ExploreRepository
+    lateinit var exploreRepository: ExploreRepository
 
     override fun getLayoutId(): Int {
         return R.layout.activity_about
@@ -90,14 +90,13 @@ class AboutActivity : BaseMenuActivity() {
             val formatFlags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
 
             val formattedUpdateTime = try {
-                val timestamp = firebaseRepository.getLastUpdate()
+                val timestamp = exploreRepository.getRemoteTimestamp()
                 DateUtils.formatDateTime(applicationContext, timestamp, formatFlags)
             } catch (ex: Exception) {
                 getString(R.string.about_last_explore_dash_update_error)
             }
 
-            val preferences = applicationContext.getSharedPreferences(ExploreSyncWorker.SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-            val lastSync = preferences.getLong(ExploreSyncWorker.PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
+            val lastSync = exploreRepository.localTimestamp
             val formattedSyncTime = if (lastSync == 0L) {
                 getString(R.string.about_last_explore_dash_sync_never)
             } else {

@@ -49,12 +49,12 @@ class AppDatabaseMigrations {
         }
 
         @JvmStatic
-        val migration8To9 = object : Migration(8, 9) {
+        val migration4To9 = object : Migration(4, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("DROP TABLE IF EXISTS `merchant_fts`")
                 database.execSQL("DROP TABLE IF EXISTS `merchant`")
-                database.execSQL("DROP TABLE IF EXISTS `atm_fts`")
                 database.execSQL("DROP TABLE IF EXISTS `atm`")
+                database.execSQL("DROP TABLE IF EXISTS `merchant_fts`")
+                database.execSQL("DROP TABLE IF EXISTS `atm_fts`")
             }
         }
     }

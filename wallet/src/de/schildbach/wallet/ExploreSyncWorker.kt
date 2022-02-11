@@ -37,16 +37,10 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
     companion object {
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
-        const val SHARED_PREFS_NAME = "explore"
-        const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "last_sync"
     }
 
     private val exploreRepository by lazy {
         entryPoint.exploreRepository()
-    }
-
-    private val preferences by lazy {
-        appContext.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     private val analytics by lazy {
@@ -68,30 +62,27 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         log.info("sync explore db started")
 
-        var lastSync = 0L
+        var localDataTimestamp = 0L
         var remoteDataTimestamp = 0L
         try {
             val tableSyncWatch = Stopwatch.createStarted()
 
-            lastSync = preferences.getLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
-            remoteDataTimestamp = exploreRepository.getLastUpdate()
+            localDataTimestamp = exploreRepository.localTimestamp
+            remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
             log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
 
-            if (lastSync >= remoteDataTimestamp) {
-                log.info("data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+            if (localDataTimestamp >= remoteDataTimestamp) {
+                log.info("data timestamp $localDataTimestamp, nothing to sync (${Date(localDataTimestamp)})")
                 return@withContext Result.success()
             }
 
             exploreRepository.download()
-
-            preferences.edit().putLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, remoteDataTimestamp).apply()
-
             AppExploreDatabase.forceUpdate()
 
             log.info("sync explore db finished $tableSyncWatch")
 
         } catch (ex: Exception) {
-            analytics.logError(ex, "syncing from $lastSync, $remoteDataTimestamp")
+            analytics.logError(ex, "syncing from $localDataTimestamp, $remoteDataTimestamp")
             log.info("sync explore db crashed ${ex.message}", ex)
             return@withContext Result.failure()
         }

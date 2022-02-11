@@ -27,8 +27,9 @@ import com.google.firebase.storage.ktx.storage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import net.lingala.zip4j.ZipFile
 import org.slf4j.LoggerFactory
-import java.io.File
+import java.io.*
 import java.lang.System.currentTimeMillis
 import java.lang.ref.WeakReference
 import javax.inject.Inject
@@ -36,8 +37,14 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 interface ExploreRepository {
-    suspend fun getLastUpdate(): Long
+    suspend fun getRemoteTimestamp(): Long
+    fun getDatabaseInputStream(file: File): InputStream?
+    fun getUpdateFile(): File
+    var localTimestamp: Long
     suspend fun download()
+    fun deleteOldDB(dbFile: File)
+    fun preloadFromAssets(dbUpdateFile: File)
+    fun finalizeUpdate(dbUpdateFile: File)
 }
 
 @Suppress("BlockingMethodInNonBlockingContext")
@@ -47,6 +54,10 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
     companion object {
         const val DATA_FILE_NAME = "explore.db"
         private const val GC_FILE_PATH = "explore/explore.db"
+        private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
+
+        private const val SHARED_PREFS_NAME = "explore"
+        private const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "local_db_timestamp"
 
         private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
     }
@@ -58,7 +69,19 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
 
     private var remoteDataRef: StorageReference? = null
 
-    override suspend fun getLastUpdate(): Long {
+    private val preferences = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+
+    private var updateTimestampCache = -1L
+
+    override var localTimestamp: Long
+        get() = preferences.getLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
+        set(value) {
+            preferences.edit().apply {
+                putLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, value)
+            }.apply()
+        }
+
+    override suspend fun getRemoteTimestamp(): Long {
         ensureAuthenticated()
         val remoteDataInfo = try {
             remoteDataRef = storage.reference.child(GC_FILE_PATH)
@@ -67,7 +90,8 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
             log.warn("error getting remote data timestamp")
             null
         }
-        return remoteDataInfo?.updatedTimeMillis ?: -1L
+        val dataTimestamp = remoteDataInfo?.getCustomMetadata("Data-Timestamp")?.toLong()
+        return dataTimestamp ?: -1L
     }
 
     override suspend fun download() {
@@ -108,5 +132,65 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
                 }
             }
         }
+    }
+
+    @Throws(IOException::class)
+    override fun getDatabaseInputStream(file: File): InputStream? {
+        val zipFile = ZipFile(file)
+        val comment: Array<String> = zipFile.comment.split("#".toRegex()).toTypedArray()
+        updateTimestampCache = comment[0].toLong()
+        val checksum = comment[1]
+        log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
+        zipFile.setPassword(checksum.toCharArray())
+        val zipHeader = zipFile.getFileHeader("explore.db")
+        return zipFile.getInputStream(zipHeader)
+    }
+
+    override fun getUpdateFile(): File {
+        return File(contextRef.get()!!.cacheDir, DATA_FILE_NAME)
+    }
+
+    override fun deleteOldDB(dbFile: File) {
+        try {
+            var dbDelete = false
+            if (dbFile.exists()) {
+                dbDelete = dbFile.delete()
+            }
+            val dbShmFile = File(dbFile.absolutePath + "-shm")
+            var dbShmDelete = false
+            if (dbShmFile.exists()) {
+                dbShmDelete = dbShmFile.delete()
+            }
+            val dbWalFile = File(dbFile.absolutePath + "-wal")
+            var dbWalDelete = false
+            if (dbWalFile.exists()) {
+                dbWalDelete = dbWalFile.delete()
+            }
+            log.info("delete existing explore db ({}, {}, {})", dbDelete, dbShmDelete, dbWalDelete)
+        } catch (ex: SecurityException) {
+            log.warn("unable to delete explore db", ex)
+        }
+    }
+
+    @Throws(IOException::class)
+    override fun preloadFromAssets(dbUpdateFile: File) {
+        log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}")
+        try {
+            contextRef.get()!!.assets.open(DB_ASSET_FILE_NAME).use { inputStream ->
+                FileOutputStream(dbUpdateFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+        } catch (ex: FileNotFoundException) {
+            log.warn("missing {}, explore db will be empty", DB_ASSET_FILE_NAME)
+        }
+    }
+
+    override fun finalizeUpdate(dbUpdateFile: File) {
+        if (!dbUpdateFile.delete()) {
+            log.error("unable to delete " + dbUpdateFile.absolutePath)
+        }
+        localTimestamp = updateTimestampCache
+        log.info("successfully loaded new version of explode db")
     }
 }

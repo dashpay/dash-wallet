@@ -33,7 +33,7 @@ public abstract class AppDatabase extends RoomDatabase {
                     AppDatabase.class, "dash-wallet-database")
                     .addMigrations(
                             AppDatabaseMigrations.getMigration2To3(),
-                            AppDatabaseMigrations.getMigration8To9()
+                            AppDatabaseMigrations.getMigration4To9()
                     )
                     .fallbackToDestructiveMigration().build();
         }
