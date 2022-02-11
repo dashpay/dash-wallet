@@ -457,7 +457,7 @@ class SetPinActivity : InteractionAwareActivity() {
         )
         dialog.isCancelable = false
         dialog.show(this) {
-            if (it != null && it) {
+            if (it == true) {
                 alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
                     WalletApplication.getInstance()).buildAlertDialog()
                 alertDialog.show()
