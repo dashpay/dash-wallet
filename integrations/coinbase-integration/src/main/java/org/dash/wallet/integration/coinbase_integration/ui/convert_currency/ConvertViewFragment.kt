@@ -35,6 +35,7 @@ import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -73,13 +74,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     private var maxAmountSelected: Boolean = false
     var selectedCurrencyCodeExchangeRate: ExchangeRate? = null
     var currencyConversionOptionList: List<String> = emptyList()
+    private var cryptoWalletsDialog: CryptoWalletsDialog? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val args = requireArguments()
 
         val dashToCrypto = args.getBoolean(ARG_DASH_TO_FIAT)
-        binding.convertView.dashToCrypto = dashToCrypto
+       // binding.convertView.dashToCrypto = dashToCrypto
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
@@ -146,36 +148,47 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             viewModel.selectedPickerCurrencyCode = value
         }
 
-        viewModel.userAccountsWithBalance.observe(viewLifecycleOwner) {
-            it?.sortedBy { item -> item.coinBaseUserAccountData.currency?.code }?.let { list ->
-                parentFragmentManager.let { fragmentManager ->
+        viewModel.userAccountsWithBalance.observe(
+            viewLifecycleOwner,
+            EventObserver {
+                it?.sortedBy { item -> item.coinBaseUserAccountData.currency?.code }?.let { list ->
+                    parentFragmentManager.let { fragmentManager ->
 
-                    val cryptoWalletsDialog = CryptoWalletsDialog(list, viewModel.selectedLocalCurrencyCode) { index, dialog ->
-                        viewModel.setSelectedCryptoCurrency(list[index])
+                        cryptoWalletsDialog = CryptoWalletsDialog(
+                            list,
+                            viewModel.selectedLocalCurrencyCode
+                        ) { index, dialog ->
+                            viewModel.setSelectedCryptoCurrency(list[index])
 
-                        val iconUrl = if (list[index].coinBaseUserAccountData.balance?.currency.isNullOrEmpty().not()) {
-                            GenericUtils.getCoinIcon(list[index].coinBaseUserAccountData.balance?.currency?.lowercase())
-                        } else {
-                            null
+                            val iconUrl =
+                                if (list[index].coinBaseUserAccountData.balance?.currency.isNullOrEmpty()
+                                    .not()
+                                ) {
+                                    GenericUtils.getCoinIcon(list[index].coinBaseUserAccountData.balance?.currency?.lowercase())
+                                } else {
+                                    null
+                                }
+                            viewModel.selectedLocalExchangeRate.value?.let { rate ->
+
+                                binding.convertView.input = ServiceWallet(
+                                    list[index].coinBaseUserAccountData.currency?.name ?: "",
+                                    getString(R.string.coinbase),
+                                    list[index].coinBaseUserAccountData.balance?.amount ?: "",
+                                    list[index].coinBaseUserAccountData.balance?.currency ?: "",
+                                    list[index].getCoinBaseExchangeRateConversion(rate).first,
+                                    iconUrl
+                                )
+                            }
+                            dialog.dismiss()
                         }
-                        viewModel.selectedLocalExchangeRate.value?.let { rate ->
-
-                            binding.convertView.input = ServiceWallet(
-                                list[index].coinBaseUserAccountData.currency?.name ?: "", getString(R.string.coinbase),
-                                list[index].coinBaseUserAccountData.balance?.amount ?: "",
-                                list[index].coinBaseUserAccountData.balance?.currency ?: "",
-                                list[index].getCoinBaseExchangeRateConversion(rate).first,
-                                iconUrl
-                            )
+                        if (this.cryptoWalletsDialog?.isVisible == false) {
+                            cryptoWalletsDialog?.show(fragmentManager, "payment_method")
                         }
-                        dialog.dismiss()
-                    }
-                    if (!cryptoWalletsDialog.isVisible) {
-                        cryptoWalletsDialog.show(fragmentManager, "payment_method")
                     }
                 }
             }
-        }
+        )
+
 
         viewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
             selectedCurrencyCodeExchangeRate = ExchangeRate(Coin.COIN, it.fiat)

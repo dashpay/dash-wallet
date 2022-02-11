@@ -20,7 +20,6 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import coil.load
@@ -30,7 +29,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -82,7 +80,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
             CoinbaseConversionPreviewFragmentArgs.fromBundle(it).swapModel.apply {
                 updateConversionPreviewUI()
-                swapTradeUIModel=this
+                swapTradeUIModel = this
             }
         }
 
@@ -125,7 +123,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            safeNavigate( CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
@@ -178,7 +176,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.contentOrderReview.totalAmount.text =
             getString(
                 R.string.fiat_balance_with_currency,
-                (this.displayInputAmount.toBigDecimal()+this.feeAmount.toBigDecimal()).toPlainString(),
+                (this.displayInputAmount.toBigDecimal() + this.feeAmount.toBigDecimal()).toPlainString(),
                 GenericUtils.currencySymbol(this.displayInputCurrency)
             )
 

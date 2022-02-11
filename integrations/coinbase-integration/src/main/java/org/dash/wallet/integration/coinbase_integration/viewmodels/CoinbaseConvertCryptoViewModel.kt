@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -41,8 +42,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
     val config: Configuration
 ) : AndroidViewModel(application) {
-    private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
-    val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
+    private val _userAccountsInfo: MutableLiveData<Event<List<CoinBaseUserAccountDataUIModel>>> = MutableLiveData()
+    val userAccountsInfo: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
         get() = _userAccountsInfo
 
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
@@ -53,8 +54,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val baseIdForUSDModelCoinBase: LiveData<List<BaseIdForUSDData>>
         get() = _baseIdForUSDModelCoinBase
 
-    private val _swapTradeOrder: MutableLiveData<SwapTradeUIModel> = MutableLiveData()
-    val swapTradeOrder: LiveData<SwapTradeUIModel>
+    private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
+    val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
         get() = _swapTradeOrder
 
     val swapTradeFailedCallback = SingleLiveEvent<String>()
@@ -81,7 +82,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         when (val response = coinBaseRepository.getUserAccounts(config.exchangeCurrencyCode)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                _userAccountsInfo.value = response.value
+                _userAccountsInfo.value = Event(response.value)
             }
 
             is ResponseResource.Failure -> {
@@ -119,7 +120,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                         this.inputCurrencyName =
                             selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
                         this.outputCurrencyName = "Dash"
-                        _swapTradeOrder.value = this
+                        _swapTradeOrder.value = Event(this)
                     }
                 }
             }

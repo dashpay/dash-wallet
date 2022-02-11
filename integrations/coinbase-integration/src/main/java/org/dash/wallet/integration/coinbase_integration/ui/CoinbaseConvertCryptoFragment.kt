@@ -25,6 +25,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -62,10 +63,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 add(R.id.enter_amount_fragment_placeholder, fragment)
                 addToBackStack(null)
             }
-
-            viewModel.userAccountsInfo.observe(viewLifecycleOwner) {
-                fragment.setUserAccountsInfo(it)
-            }
         }
 
         viewModel.showLoading.observe(
@@ -76,6 +73,15 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             } else
                 dismissProgress()
         }
+
+        viewModel.userAccountsInfo.observe(
+            viewLifecycleOwner,
+            EventObserver {
+                convertViewModel.setUserAccountsList(it)
+            }
+        )
+
+       //
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) { rate ->
             binding.toolbarSubtitle.text = getString(
@@ -95,9 +101,13 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             }
         }
 
-        viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
-            safeNavigate(CoinbaseConvertCryptoFragmentDirections.coinbaseConvertCryptoFragmentTocoinbaseConversionPreviewFragment(it))
-        }
+        viewModel.swapTradeOrder.observe(
+            viewLifecycleOwner,
+            EventObserver {
+                safeNavigate(CoinbaseConvertCryptoFragmentDirections
+                    .coinbaseConvertCryptoFragmentTocoinbaseConversionPreviewFragment(it))
+            }
+        )
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(

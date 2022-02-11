@@ -29,6 +29,7 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import javax.inject.Inject
@@ -71,11 +72,11 @@ class ConvertViewViewModel @Inject constructor(
     val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
         get() = _userAccountsInfo
 
-    private val _userAccountsWithBalance: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
-    val userAccountsWithBalance: LiveData<List<CoinBaseUserAccountDataUIModel>>
+    private val _userAccountsWithBalance: MutableLiveData<Event<List<CoinBaseUserAccountDataUIModel>>> = MutableLiveData()
+    val userAccountsWithBalance: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
         get() = _userAccountsWithBalance
 
-    private val _userAccountError: MutableLiveData<Boolean> = MutableLiveData()
+    private val _userAccountError: SingleLiveEvent<Boolean> = SingleLiveEvent()
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
 
@@ -104,7 +105,7 @@ class ConvertViewViewModel @Inject constructor(
         if (userAccountsWithBalanceList.isNullOrEmpty()) {
             _userAccountError.value = true
         } else {
-            _userAccountsWithBalance.value = userAccountsWithBalanceList
+            _userAccountsWithBalance.value = Event(userAccountsWithBalanceList)
         }
     }
 
