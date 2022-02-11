@@ -37,6 +37,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -206,6 +207,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         recenterMapBtnSpacer.isVisible = true
                         when (syncProgress.exception) {
                             is FileNotFoundException -> syncMessage.text = getString(R.string.sync_in_progress_file_not_found)
+                            is FirebaseNetworkException -> {
+                                // TODO: Determine if database has some contents.  If nothing, then this
+                                // is the first time downloading and there will be no results
+                                // if something, then some results may be found, but won't be complete
+                                syncMessage.text = getString(R.string.sync_in_progress_network_error)
+                            }
                             else -> syncMessage.text = getString(R.string.sync_in_progress_error)
                         }
                     }

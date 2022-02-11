@@ -158,4 +158,5 @@
     <string name="sync_in_progress_canceled">Sync canceled... Another attempt will be made later.</string>
 
     <string name="sync_in_progress_file_not_found">Build Error: Database not found!</string>
+    <string name="sync_in_progress_network_error">Sync interrupted... Network is offline or unreachable</string>
 </resources>
