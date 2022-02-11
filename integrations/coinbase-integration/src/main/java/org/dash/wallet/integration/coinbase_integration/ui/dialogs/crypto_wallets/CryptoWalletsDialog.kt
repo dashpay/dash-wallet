@@ -76,7 +76,8 @@ class CryptoWalletsDialog(
 
         binding.searchTitle.text = getString(R.string.select_a_coin)
 
-        val adapter = RadioGroupAdapter(0, true) { item, index ->
+        val adapter = RadioGroupAdapter(0, true) { item, _ ->
+            val index = itemList.indexOfFirst { it.title == item.title }
             clickListener.invoke(index, this)
         }
         val divider = ContextCompat.getDrawable(requireContext(), R.drawable.list_divider)!!

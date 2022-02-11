@@ -81,7 +81,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         val args = requireArguments()
 
         val dashToCrypto = args.getBoolean(ARG_DASH_TO_FIAT)
-       // binding.convertView.dashToCrypto = dashToCrypto
+        // binding.convertView.dashToCrypto = dashToCrypto
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
