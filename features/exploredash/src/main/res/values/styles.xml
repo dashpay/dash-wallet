@@ -33,6 +33,7 @@
         <item name="backgroundColor">@color/steel_gray_40</item>
         <item name="strokeColor">@color/steel_gray_40</item>
         <item name="cornerRadius">10dp</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
     <style name="UpButtonBackground">

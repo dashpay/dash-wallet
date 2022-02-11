@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -130,7 +131,7 @@ class CrowdNodeViewModel @Inject constructor(
         return if (savedAddress.isNullOrEmpty()) {
             return createNewAccountAddress()
         } else {
-            Address.fromString(walletDataProvider.networkParameters, savedAddress)
+            Address.fromString(Context.get().params, savedAddress)
         }
     }
 

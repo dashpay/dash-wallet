@@ -45,8 +45,6 @@ interface WalletDataProvider {
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
-    val networkParameters: NetworkParameters
-
     fun observeBalance(): Flow<Coin>
 
     fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>

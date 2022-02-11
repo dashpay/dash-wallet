@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.transactions
 
-import android.util.Log
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -80,16 +79,11 @@ class WalletTransactionObserver(private val wallet: Wallet) {
         wallet.addTransactionConfidenceEventListener(Threading.SAME_THREAD, walletChangeListener)
 
         awaitClose {
-            Log.i("CROWDNODE", "Closing transaction observer")
             wallet.removeChangeEventListener(walletChangeListener)
             wallet.removeCoinsSentEventListener(walletChangeListener)
             wallet.removeCoinsReceivedEventListener(walletChangeListener)
             wallet.removeCoinsReceivedEventListener(walletChangeListener)
             walletChangeListener.removeCallbacks()
         }
-    }
-
-    fun observe(vararg filters: TransactionFilter, onResult: (Boolean?) -> Unit) {
-
     }
 }

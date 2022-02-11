@@ -71,7 +71,6 @@ class WalletBalanceObserver(private val wallet: Wallet) {
         emitBalance()
 
         awaitClose {
-            Log.i("CROWDNODE", "Closing balance observer")
             wallet.removeChangeEventListener(walletChangeListener)
             wallet.removeCoinsSentEventListener(walletChangeListener)
             wallet.removeCoinsReceivedEventListener(walletChangeListener)
