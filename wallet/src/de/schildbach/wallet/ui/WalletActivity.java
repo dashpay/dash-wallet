@@ -813,6 +813,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
                     getString(R.string.button_cancel),
                     getString(R.string.button_ok)
             );
+            dialog.setCancelable(false);
             dialog.show(this, reportIssue -> {
                 if (reportIssue != null) {
                     if (reportIssue) {

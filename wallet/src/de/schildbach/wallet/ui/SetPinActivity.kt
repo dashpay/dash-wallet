@@ -455,6 +455,7 @@ class SetPinActivity : InteractionAwareActivity() {
             getString(R.string.button_cancel),
             getString(R.string.button_ok)
         )
+        dialog.isCancelable = false
         dialog.show(this) {
             if (it != null && it) {
                 alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(this,
