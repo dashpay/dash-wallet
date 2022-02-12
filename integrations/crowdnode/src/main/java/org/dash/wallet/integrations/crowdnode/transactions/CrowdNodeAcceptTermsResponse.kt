@@ -21,6 +21,7 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
+// TODO: consider making sure that `toAddress` matches our account address
 class CrowdNodeAcceptTermsResponse: CoinsFromAddressTxFilter(
     CrowdNodeConstants.CROWDNODE_ADDRESS, ACCEPT_TERMS_RESPONSE_CODE
 ) {

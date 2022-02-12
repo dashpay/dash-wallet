@@ -177,6 +177,7 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
 
+        // TODO: don't filter out notifications for withdrawals from CrowdNode
         private final IgnoreAddressTxFilter ignoreCrowdNodeFilter =
                 new IgnoreAddressTxFilter(CrowdNodeConstants.INSTANCE.getCROWDNODE_ADDRESS());
 

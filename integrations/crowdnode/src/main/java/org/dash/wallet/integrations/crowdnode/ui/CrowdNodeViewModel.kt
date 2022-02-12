@@ -131,6 +131,7 @@ class CrowdNodeViewModel @Inject constructor(
         return if (savedAddress.isNullOrEmpty()) {
             return createNewAccountAddress()
         } else {
+            // TODO: replace with networkParameters getter in the WalletDataProvider
             Address.fromString(Context.get().params, savedAddress)
         }
     }

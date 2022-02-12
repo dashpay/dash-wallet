@@ -26,7 +26,7 @@ object CrowdNodeConstants {
     val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
     val CROWDNODE_OFFSET: Coin = Coin.valueOf(20000)
     val CROWDNODE_ADDRESS: Address = Address.fromBase58(
-        Context.get().params,
+        Context.get().params, // TODO: replace with networkParameters getter in the WalletDataProvider
         if (Context.get().params == TestNet3Params.get()) {
             "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"
         } else {

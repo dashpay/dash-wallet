@@ -33,7 +33,7 @@ import org.dash.wallet.common.transactions.TransactionFilter
 @ExperimentalCoroutinesApi
 class WalletTransactionObserver(private val wallet: Wallet) {
     fun observe(vararg filters: TransactionFilter): Flow<Transaction> = callbackFlow {
-        Context.propagate(Context(Constants.NETWORK_PARAMETERS)) // TODO: check (and in balance obs)
+        Context.propagate(Context(Constants.NETWORK_PARAMETERS)) // TODO: use wallet.context instead?
 
         val walletChangeListener = object : ThrottlingWalletChangeListener() {
             override fun onThrottledWalletChanged() { }
