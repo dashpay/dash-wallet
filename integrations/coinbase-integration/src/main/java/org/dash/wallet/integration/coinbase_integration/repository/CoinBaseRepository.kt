@@ -41,8 +41,8 @@ class CoinBaseRepository @Inject constructor(
             it.balance?.currency?.equals(DASH_CURRENCY) ?: false
         }
         userAccountData?.also {
-            saveLastCoinbaseDashAccountBalance(it.balance?.amount)
-            saveUserAccountId(it.id)
+            userPreferences.setCoinBaseUserAccountId(it.id)
+            userPreferences.setLastCoinBaseBalance(it.balance?.amount)
         }
     }
 
@@ -86,6 +86,17 @@ class CoinBaseRepository @Inject constructor(
 
     override fun getUserLastCoinbaseBalance(): String = userPreferences.lastCoinbaseBalance ?: ""
     override fun isUserConnected(): Boolean = userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+
+    override suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean> = safeApiCall {
+        authApi.getToken(code = authorizationCode).also {
+            it.body()?.let { tokenResponse ->
+                userPreferences.setLastCoinBaseAccessToken(tokenResponse.accessToken)
+                userPreferences.setLastCoinBaseRefreshToken(tokenResponse.refreshToken)
+            }
+        }
+
+        userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+    }
 }
 
 interface CoinBaseRepositoryInt {
@@ -100,4 +111,5 @@ interface CoinBaseRepositoryInt {
     suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<Int>
     fun getUserLastCoinbaseBalance(): String
     fun isUserConnected(): Boolean
+    suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
 }
