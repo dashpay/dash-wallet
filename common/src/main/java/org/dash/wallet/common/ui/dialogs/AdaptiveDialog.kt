@@ -47,6 +47,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         private const val POS_BUTTON_ARG = "positive_text"
         private const val NEG_BUTTON_ARG = "negative_text"
 
+        @JvmStatic
         fun simple(
             message: String,
             negativeButtonText: String,
@@ -61,7 +62,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
                 positiveButtonText
             )
         }
-
+        // not usable from Java
         fun new(
             @DrawableRes icon: Int,
             title: String,
@@ -79,6 +80,7 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
             )
         }
 
+        @JvmStatic
         fun custom(
             @LayoutRes layout: Int,
             @DrawableRes icon: Int?,
