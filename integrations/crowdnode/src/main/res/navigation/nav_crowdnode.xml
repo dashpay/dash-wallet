@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2021 Dash Core Group.
+  ~ Copyright 2022 Dash Core Group.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -16,14 +16,68 @@
   -->
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/nav_crowdnode"
-    app:startDestination="@id/entryPointFragment">
+    android:id="@+id/nav_crowdnode">
 
     <fragment
         android:id="@+id/entryPointFragment"
-        android:name="org.dash.wallet.integrations.crowdnode.ui.entry_point.EntryPointFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.EntryPointFragment"
         android:label="CrowdnodeFragment">
+
+        <action
+            android:id="@+id/entry_point_to_new_account"
+            app:destination="@id/newAccountFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/newAccountFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.NewAccountFragment"
+        android:label="NewAccountFragment">
+
+        <action
+            android:id="@+id/new_account_to_webview"
+            app:destination="@id/webViewFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/new_account_to_portal"
+            app:destination="@id/crowdNodePortalFragment"
+            app:popUpTo="@id/nav_crowdnode"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/new_account_to_error"
+            app:destination="@id/errorFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/webViewFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.WebViewFragment"
+        android:label="WebViewFragment">
+
+        <argument android:name="title" app:argType="string" />
+        <argument android:name="url" app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/errorFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.ErrorFragment"
+        android:label="ErrorFragment" />
+
+    <fragment
+        android:id="@+id/crowdNodePortalFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.PortalFragment"
+        android:label="PortalFragment">
 
     </fragment>
 </navigation>

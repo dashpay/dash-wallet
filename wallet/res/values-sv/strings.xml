@@ -263,7 +263,6 @@
 	<string name="button_ok">OK</string>
 	<string name="button_dismiss">Avsluta</string>
 	<string name="button_cancel">Avbryt</string>
-	<string name="button_retry">Försök igen</string>
 	<string name="button_help">Hjälp</string>
 	<string name="button_add">Lägg till</string>
 	<string name="button_delete">Ta bort</string>

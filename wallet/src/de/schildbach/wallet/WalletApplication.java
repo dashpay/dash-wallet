@@ -40,6 +40,7 @@ import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -53,6 +54,7 @@ import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import org.bitcoinj.core.Address;
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
@@ -68,6 +70,8 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
+import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -83,7 +87,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -99,12 +105,15 @@ import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
 import de.schildbach.wallet.service.BlockchainSyncJobService;
+import de.schildbach.wallet.transactions.WalletBalanceObserver;
+import de.schildbach.wallet.transactions.WalletTransactionObserver;
 import de.schildbach.wallet.ui.preference.PinRetryController;
 import de.schildbach.wallet.ui.security.SecurityGuard;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
+import kotlinx.coroutines.flow.Flow;
 
 /**
  * @author Andreas Schildbach
@@ -311,16 +320,23 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
     @TargetApi(Build.VERSION_CODES.O)
     private void createNotificationChannels() {
-        //Transactions
+        // Transactions
         createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS,
                 R.string.notification_transactions_channel_name,
                 R.string.notification_transactions_channel_description,
                 NotificationManager.IMPORTANCE_HIGH);
-        //Synchronization
+
+        // Synchronization
         createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_ONGOING,
                 R.string.notification_synchronization_channel_name,
                 R.string.notification_synchronization_channel_description,
                 NotificationManager.IMPORTANCE_LOW);
+
+        // Generic notifications
+        createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_GENERIC,
+                R.string.notification_generic_channel_name,
+                R.string.notification_generic_channel_description,
+                NotificationManager.IMPORTANCE_HIGH);
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -846,5 +862,54 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public Address currentReceiveAddress() {
         return wallet.currentReceiveAddress();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Coin> observeBalance() {
+        return new WalletBalanceObserver(wallet).observe();
+    }
+
+    @NonNull
+    @Override
+    public Flow<Transaction> observeTransactions(@NonNull TransactionFilter... filters) {
+        return new WalletTransactionObserver(wallet).observe(filters);
+    }
+
+    @NonNull
+    @Override
+    public Iterable<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapper... wrappers) {
+        Set<Transaction> transactions = wallet.getTransactions(true);
+        ArrayList<TransactionWrapper> wrappedTransactions = new ArrayList<>();
+
+        for (Transaction transaction : transactions) {
+            TransactionWrapper anonWrapper = new TransactionWrapper() {
+                @Override
+                public boolean tryInclude(@NonNull Transaction tx) {
+                    return true;
+                }
+
+                @NonNull
+                @Override
+                public Set<Transaction> getTransactions() {
+                    return java.util.Collections.singleton(transaction);
+                }
+            };
+
+            if (wrappers.length > 0) {
+                for (TransactionWrapper wrapper : wrappers) {
+                    if (wrapper.tryInclude(transaction)) {
+                        wrappedTransactions.add(wrapper);
+                        break;
+                    }
+
+                    wrappedTransactions.add(anonWrapper);
+                }
+            } else {
+                wrappedTransactions.add(anonWrapper);
+            }
+        }
+
+        return wrappedTransactions;
     }
 }

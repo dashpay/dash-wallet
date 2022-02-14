@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Laden...</string>
     <string name="loading_error">Ein Fehler ist aufgetreten. Bitte versuche es später noch einmal.</string>
+    <string name="please_wait_title">Bitte warten</string>
     <string name="dash_available">%1$s verfügbar</string>
     <string name="network_unavailable_title">Netzwerk nicht verfügbar</string>
     <string name="network_unavailable_check_connection">Bitte überprüfe deine Netzwerksverbindung</string>
     <string name="network_unavailable_balance_not_accurate">Die Guthabensanzeige ist möglicherweise inakkurat, da keine Verbindung besteht</string>
+    <string name="buy_dash">Dash kaufen</string>
+    <string name="copied">Kopiert</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>
     <!-- Local Currency List: JEP -->
@@ -29,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Schließen</string>
     <string name="network_unavailable_return">Zur Wallet zurückkehren</string>
-
+    <string name="button_retry">Wiederholen</string>
+    <string name="button_close">Schließen</string>
 </resources>

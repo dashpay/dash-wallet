@@ -12,7 +12,6 @@
     <string name="credit_card">Kartu Kredit</string>
 
     <string name="buy">Beli</string>
-    <string name="buy_dash">Beli Dash</string>
     <string name="sell_dash">Jual Dash</string>
     <string name="buy_sell_dash_">Beli &amp; Jual Dash</string>
     <string name="button_cancel">Batal</string>
@@ -20,7 +19,6 @@
     <string name="crypto_support">Dukungan Crypto</string>
     <string name="credit_card_support">Dukungan Kartu Kredit</string>
     <string name="okay">Oke</string>
-    <string name="close">Tutup</string>
     <string name="list_of_countries">Lihat daftar negara yang tidak didukung.</string>
     <string name="buying_dash_not_supported_credit_cards">Membeli Dash dengan kartu kredit tidak didukung di beberapa negara.</string>
     <string name="buying_dash_not_supported_crypto">Membeli Dash dengan cryptocurrency tidak didukung di beberapa negara.</string>

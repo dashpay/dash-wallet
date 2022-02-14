@@ -24,6 +24,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.AppDatabase
+import de.schildbach.wallet.data.BlockchainStateDao
 import org.dash.wallet.features.exploredash.data.AtmDao
 import org.dash.wallet.features.exploredash.data.MerchantDao
 import javax.inject.Singleton
@@ -45,5 +46,10 @@ object DatabaseModule {
     @Provides
     fun provideAtmDao(database: AppDatabase): AtmDao {
         return database.atmDao()
+    }
+
+    @Provides
+    fun provideBlockchainStateDao(database: AppDatabase): BlockchainStateDao {
+        return database.blockchainStateDao()
     }
 }

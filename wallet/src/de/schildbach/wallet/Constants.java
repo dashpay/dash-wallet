@@ -24,16 +24,15 @@ import android.text.format.DateUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.BaseEncoding;
 
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
-import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
-import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +51,8 @@ public final class Constants {
 
     /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS;
+
+    public static final Coin ECONOMIC_FEE = Coin.valueOf(1000);
 
     private static String FILENAME_NETWORK_SUFFIX;
 
@@ -221,6 +222,7 @@ public final class Constants {
 
     public static String NOTIFICATION_CHANNEL_ID_TRANSACTIONS = "dash.notifications.transactions";
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";
+    public static String NOTIFICATION_CHANNEL_ID_GENERIC = "dash.notifications.generic";
 
     /** Desired number of scrypt iterations for deriving the spending PIN */
     public static final int SCRYPT_ITERATIONS_TARGET = 65536;

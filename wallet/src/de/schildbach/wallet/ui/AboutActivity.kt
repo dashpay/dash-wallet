@@ -140,7 +140,7 @@ class AboutActivity : BaseMenuActivity() {
             (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
                 setPrimaryClip(ClipData.newPlainText(label, this.text))
             }
-            Toast(this@AboutActivity).toast("Copied")
+            Toast(this@AboutActivity).toast(getString(R.string.copied))
         }
     }
 }

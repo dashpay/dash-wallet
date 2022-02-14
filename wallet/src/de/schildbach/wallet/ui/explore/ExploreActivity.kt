@@ -20,21 +20,28 @@ package de.schildbach.wallet.ui.explore
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.data.BlockchainStateDao
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet.ui.PaymentsActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
+import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.launch
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.NavigationRequest
+import javax.inject.Inject
 
 @AndroidEntryPoint
 @FlowPreview
 @ExperimentalCoroutinesApi
 class ExploreActivity : BaseMenuActivity() {
     private val viewModel: ExploreViewModel by viewModels()
+    @Inject
+    lateinit var blockChainDao: BlockchainStateDao
 
     override fun getLayoutId(): Int {
         return R.layout.activity_explore
@@ -54,9 +61,22 @@ class ExploreActivity : BaseMenuActivity() {
                     startActivity(sendCoinsIntent)
                 }
                 NavigationRequest.Staking -> {
-                    startActivity(Intent(this, StakingActivity::class.java))
+                    lifecycleScope.launch {
+                        // TODO: NMA-1088
+                        if (isSynced()) {
+                            startActivity(Intent(this@ExploreActivity, StakingActivity::class.java))
+                        } else {
+                            Toast(this@ExploreActivity).toast("Not synced")
+                        }
+                    }
                 }
             }
         }
+    }
+
+    private suspend fun isSynced(): Boolean {
+        val blockChainState = blockChainDao.get()
+
+        return blockChainState != null && blockChainState.isSynced()
     }
 }

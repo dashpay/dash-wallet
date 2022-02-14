@@ -19,11 +19,14 @@ package org.dash.wallet.common
 
 import android.app.Activity
 import androidx.lifecycle.LiveData
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.data.ExchangeRateData
-import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.common.transactions.TransactionWrapper
 
 interface WalletDataProvider {
 
@@ -40,8 +43,11 @@ interface WalletDataProvider {
     @Deprecated("Inject Configuration instead")
     fun defaultCurrencyCode(): String
 
-    fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
-
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
+    fun observeBalance(): Flow<Coin>
+
+    fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
+
+    fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Iterable<TransactionWrapper>
 }

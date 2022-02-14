@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">Chargement...</string>
     <string name="loading_error">Une erreur est survenue. Veuillez réessayer plus tard.</string>
+    <string name="please_wait_title">Veuillez patienter</string>
     <string name="dash_available">%1$s disponibles</string>
     <string name="network_unavailable_title">Réseau non disponible</string>
     <string name="network_unavailable_check_connection">Veuillez vérifier votre connexion réseau</string>
     <string name="network_unavailable_balance_not_accurate">Le solde peut être imprécis en raison de la connexion perdue</string>
+    <string name="buy_dash">Acheter Dash</string>
+    <string name="copied">Copié</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">livre de Guernesey</string>
     <!-- Local Currency List: JEP -->
@@ -29,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Ignorer</string>
     <string name="network_unavailable_return">Retourner au portefeuille</string>
-
+    <string name="button_retry">Réessayer</string>
+    <string name="button_close">Fermer</string>
 </resources>

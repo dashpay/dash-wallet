@@ -501,11 +501,11 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     open fun onLockScreenActivated() {
-        Log.e(this::class.java.simpleName, "Closing dialog")
         if (this::alertDialog.isInitialized){
             Log.e(this::class.java.simpleName, "Dialog is initialized")
             alertDialog.dismissDialog()
         }
+
         lockScreenBroadcaster.activatingLockScreen.call()
         dismissDialogFragments(supportFragmentManager)
     }

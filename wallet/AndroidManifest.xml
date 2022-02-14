@@ -282,10 +282,12 @@
         <activity
             android:name="de.schildbach.wallet.ui.explore.ExploreActivity"
             android:screenOrientation="portrait"
+            android:parentActivityName="de.schildbach.wallet.ui.OnboardingActivity"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.staking.StakingActivity"
+            android:parentActivityName="de.schildbach.wallet.ui.explore.ExploreActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
 

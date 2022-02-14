@@ -45,4 +45,6 @@ abstract class BlockchainStateDao {
     @Query("SELECT * FROM blockchain_state LIMIT 1")
     abstract fun loadSync(): BlockchainState?
 
+    @Query("SELECT * FROM blockchain_state LIMIT 1")
+    abstract suspend fun get(): BlockchainState?
 }

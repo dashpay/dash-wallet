@@ -3,10 +3,14 @@
 
     <string name="loading">Yükleniyor...</string>
     <string name="loading_error">Bir hata oluştu. Lütfen tekrar deneyin.</string>
+    <string name="please_wait_title">Lütfen bekleyin</string>
     <string name="dash_available">%1$s mevcut</string>
     <string name="network_unavailable_title">Ağ Kullanılamıyor</string>
     <string name="network_unavailable_check_connection">Lütfen ağ bağlantınızı kontrol edin</string>
     <string name="network_unavailable_balance_not_accurate">Bağlantının kesilmesi nedeniyle bakiye doğru olmayabilir</string>
+    <string name="buy_dash">Dash Al</string>
+    <string name="copied">Kopyalandı</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Lirası</string>
     <!-- Local Currency List: JEP -->
@@ -29,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Son Ver</string>
     <string name="network_unavailable_return">Cüzdan\'a Dön</string>
-
+    <string name="button_retry">Tekrar dene</string>
+    <string name="button_close">Kapat</string>
 </resources>

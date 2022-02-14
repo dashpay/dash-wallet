@@ -66,7 +66,6 @@
     <string name="receive_enter_amount_message">Specificeer het te ontvangen bedrag</string>
     <string name="receive_enter_amount_button">Specificeer bedrag</string>
     <string name="receive_share_button">Delen</string>
-    <string name="receive_copied">Gekopieerd</string>
 
     <string name="pay_title">Verzenden</string>
     <string name="history_title">Geschiedenis</string>
@@ -322,7 +321,6 @@
 
     <string name="appwidget_wallet_not_ready">Stel uw portemonnee in</string>
 
-    <string name="payment_request_please_wait_title">Even wachten aub</string>
     <string name="payment_request_please_wait_message">Verbinding maken met betalingsserver</string>
     <string name="payment_request_unable_to_connect">Kan geen verbinding maken</string>
     <string name="payment_request_unable_to_send">Verzenden niet mogelijk</string>

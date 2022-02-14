@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +17,128 @@
 
 package org.dash.wallet.integrations.crowdnode.ui
 
-import androidx.lifecycle.ViewModel
+import android.content.Intent
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
-@HiltViewModel
-class CrowdNodeViewModel @Inject constructor() : ViewModel() {
+enum class NavigationRequest {
+    BackupPassphrase, RestoreWallet, BuyDash, SendReport
+}
 
+@HiltViewModel
+class CrowdNodeViewModel @Inject constructor(
+    private val config: Configuration,
+    private val walletDataProvider: WalletDataProvider,
+    private val crowdNodeApi: CrowdNodeApi
+) : ViewModel() {
+    val navigationCallback = SingleLiveEvent<NavigationRequest>()
+
+    private val _accountAddress = MutableLiveData(getOrCreateAccountAddress())
+    var accountAddress: LiveData<String> = MediatorLiveData<String>().apply {
+        addSource(_accountAddress) {
+            value = it.toBase58()
+        }
+    }
+
+    val needPassphraseBackUp
+        get() = config.remindBackupSeed
+
+    private val _hasEnoughBalance = MutableLiveData<Boolean>()
+    val hasEnoughBalance: LiveData<Boolean>
+        get() = _hasEnoughBalance
+
+    private val _dashBalance = MutableLiveData<Coin>()
+    val dashBalance: LiveData<Coin>
+        get() = _dashBalance
+
+    var crowdNodeSignUpStatus: LiveData<SignUpStatus> = MediatorLiveData<SignUpStatus>().apply {
+        addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
+        value = crowdNodeApi.signUpStatus.value
+    }
+
+    val crowdNodeError: Exception?
+        get() = crowdNodeApi.apiError
+
+    val termsAccepted = MutableLiveData(false)
+
+    init {
+        walletDataProvider.observeBalance()
+            .distinctUntilChanged()
+            .onEach {
+                _dashBalance.postValue(it)
+                _hasEnoughBalance.postValue(it >= CrowdNodeConstants.MINIMUM_REQUIRED_DASH)
+            }
+            .launchIn(viewModelScope)
+    }
+    
+    fun backupPassphrase() {
+        navigationCallback.postValue(NavigationRequest.BackupPassphrase)
+    }
+
+    fun restoreWallet() {
+        navigationCallback.postValue(NavigationRequest.RestoreWallet)
+    }
+
+    fun buyDash() {
+        navigationCallback.postValue(NavigationRequest.BuyDash)
+    }
+
+    fun sendReport() {
+        navigationCallback.postValue(NavigationRequest.SendReport)
+    }
+
+    suspend fun signUp() {
+        crowdNodeApi.signUp(_accountAddress.value!!)
+    }
+
+    fun reset() {
+        _accountAddress.value = createNewAccountAddress()
+        crowdNodeApi.reset()
+    }
+
+    suspend fun retry() {
+        reset()
+        signUp()
+    }
+
+    fun changeNotifyWhenDone(toNotify: Boolean, intent: Intent?) {
+        crowdNodeApi.showNotificationOnFinished(toNotify, intent)
+    }
+
+    private fun getOrCreateAccountAddress(): Address {
+        val existingAddress = crowdNodeApi.existingAccountAddress
+
+        if (existingAddress != null) {
+            config.crowdNodeAccountAddress = existingAddress.toBase58()
+            return existingAddress
+        }
+
+        val savedAddress = config.crowdNodeAccountAddress
+
+        return if (savedAddress.isNullOrEmpty()) {
+            return createNewAccountAddress()
+        } else {
+            // TODO: replace with networkParameters getter in the WalletDataProvider
+            Address.fromString(Context.get().params, savedAddress)
+        }
+    }
+
+    private fun createNewAccountAddress(): Address {
+        val address = walletDataProvider.freshReceiveAddress()
+        config.crowdNodeAccountAddress = address.toBase58()
+        return address
+    }
 }

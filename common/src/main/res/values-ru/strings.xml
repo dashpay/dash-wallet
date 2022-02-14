@@ -3,10 +3,14 @@
 
     <string name="loading">Загрузка…</string>
     <string name="loading_error">Произошла ошибка. Попробуйте ещё раз позже.</string>
+    <string name="please_wait_title">Пожалуйста, подождите</string>
     <string name="dash_available">%1$s доступно</string>
     <string name="network_unavailable_title">Сеть недоступна</string>
     <string name="network_unavailable_check_connection">Пожалуйста, проверьте ваше подключение к сети</string>
     <string name="network_unavailable_balance_not_accurate">Из-за потери соединения баланс может отображаться некорректно</string>
+    <string name="buy_dash">Купить Dash</string>
+    <string name="copied">Скопировано</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсийский фунт</string>
     <!-- Local Currency List: JEP -->
@@ -29,5 +33,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Отклонить</string>
     <string name="network_unavailable_return">Вернуться в кошелёк</string>
-
+    <string name="button_retry">Повторить</string>
+    <string name="button_close">Закрыть</string>
 </resources>

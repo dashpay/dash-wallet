@@ -403,16 +403,6 @@
         <item name="android:theme">@style/CheckboxStyle</item>
     </style>
 
-    <style name="CheckBox" parent="Body2.Medium">
-        <item name="android:button">@drawable/checkbox</item>
-        <item name="android:drawablePadding">10dp</item>
-        <item name="android:paddingEnd">16dp</item>
-        <item name="android:paddingTop">11dp</item>
-        <item name="android:paddingBottom">11dp</item>
-        <item name="android:paddingStart">14dp</item>
-        <item name="android:layout_marginStart">15dp</item>
-    </style>
-
     <style name="TwoPanesScreenSubtitle" parent="MontserratMedium">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
@@ -600,6 +590,8 @@
 
     <!-- Design System styles -->
 
+    <!-- Backgrounds -->
+
     <style name="WhiteBackground">
         <item name="backgroundColor">@android:color/white</item>
         <item name="strokeColor">@android:color/white</item>
@@ -677,7 +669,9 @@
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:lineSpacingExtra">1sp</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Headline4.Bold">
@@ -685,12 +679,33 @@
     </style>
 
     <style name="Headline4.Bold.White">
-        <item name="android:textColor">@color/dash_white</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Headline5" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="fontFamily">@font/montserrat_medium</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:lineSpacingExtra">3sp</item>
+        <item name="android:letterSpacing">0.0</item>
+    </style>
+
+    <style name="Headline5.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
+    </style>
+
+    <style name="Headline5.Bold.White">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Headline5.Bold.Red">
+        <item name="android:textColor">@color/red_300</item>
     </style>
 
     <style name="Headline6" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="fontFamily">@font/montserrat_medium</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:lineSpacingExtra">4sp</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Headline6.Bold">
@@ -699,7 +714,8 @@
 
     <style name="Body1" parent="TextAppearance.MaterialComponents.Body1">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Body1.SteelGray">
@@ -712,21 +728,22 @@
 
     <style name="Body2" parent="TextAppearance.MaterialComponents.Body2">
         <item name="fontFamily">@font/montserrat_regular</item>
-        <item name="android:textColor">@color/gray_900</item>
-        <item name="android:textColorHint">@color/gray_300</item>
+        <item name="android:textColor">@color/content_primary</item>
+        <item name="android:textColorHint">@color/content_tertiary</item>
         <item name="android:lineSpacingExtra">5sp</item>
+        <item name="android:letterSpacing">0.0</item>
     </style>
 
     <style name="Body2.White">
-        <item name="android:textColor">@color/dash_white</item>
-    </style>
-
-    <style name="Body2.Gray400">
-        <item name="android:textColor">@color/gray_400</item>
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="Body2.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Body2.SteelGray400">
+        <item name="android:textColor">@color/steel_gray_400</item>
     </style>
 
     <style name="Body2.Medium">
@@ -799,10 +816,6 @@
         <item name="android:textColor">@color/gray_600</item>
     </style>
 
-    <style name="Caption.Gray400">
-        <item name="android:textColor">@color/gray_400</item>
-    </style>
-
     <style name="Overline" parent="TextAppearance.MaterialComponents.Overline">
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/gray_900</item>
@@ -817,6 +830,26 @@
 
     <style name="Overline.SemiBold.Blue">
         <item name="android:textColor">@color/dash_blue</item>
+    </style>
+
+    <!-- CheckBox -->
+
+    <style name="CheckBox" parent="Body2.Medium">
+        <item name="android:button">@drawable/checkbox</item>
+        <item name="android:drawablePadding">10dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">11dp</item>
+        <item name="android:paddingBottom">11dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:layout_marginStart">15dp</item>
+    </style>
+
+    <style name="CheckBoxSimple" parent="Body2">
+        <item name="android:button">@drawable/checkbox_simple</item>
+        <item name="android:drawablePadding">10dp</item>
+        <item name="android:paddingTop">11dp</item>
+        <item name="android:paddingBottom">11dp</item>
+        <item name="android:paddingStart">12dp</item>
     </style>
 
     <!-- Buttons -->
@@ -860,8 +893,8 @@
     </style>
 
     <style name="PrimaryButtonTheme.ExtraSmall.Blue">
-        <item name="backgroundColor">@color/extra_small_btn_bg</item>
-        <item name="strokeColor">@color/extra_small_btn_bg</item>
+        <item name="backgroundColor">@color/blue_50</item>
+        <item name="strokeColor">@color/blue_50</item>
         <item name="titleTextColor">@color/dash_blue</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
@@ -895,6 +928,15 @@
         <item name="android:theme">@style/PrimaryButtonTheme.Large.Blue</item>
     </style>
 
+    <style name="Button.Primary.Small">
+        <item name="android:textSize">13sp</item>
+        <item name="android:minHeight">30dp</item>
+    </style>
+
+    <style name="Button.Primary.Small.Blue">
+        <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall.Blue</item>
+    </style>
+
     <style name="Button.Primary.ExtraSmall">
         <item name="android:theme">@style/PrimaryButtonTheme.ExtraSmall</item>
         <item name="android:textSize">11sp</item>
@@ -913,7 +955,7 @@
     <style name="SecondaryButtonTheme">
         <item name="cornerRadius">8dp</item>
         <item name="titleTextColor">@color/gray_900</item>
-        <item name="strokeColor">@color/secondary_btn_border_color</item>
+        <item name="strokeColor">@color/gray_100</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
@@ -1007,6 +1049,10 @@
         <item name="titleTextColor">@color/red_300</item>
     </style>
 
+    <style name="TertiaryButtonTheme.Large.Blue">
+        <item name="titleTextColor">@color/dash_blue</item>
+    </style>
+
     <style name="Button.Tertiary" parent="Widget.AppCompat.Button.Borderless">
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:textColor">@color/button_text</item>
@@ -1031,6 +1077,10 @@
 
     <style name="Button.Tertiary.Large.Red">
         <item name="android:theme">@style/TertiaryButtonTheme.Large.Red</item>
+    </style>
+
+    <style name="Button.Tertiary.Large.Blue">
+        <item name="android:theme">@style/TertiaryButtonTheme.Large.Blue</item>
     </style>
 
     <style name="Button.Tertiary.Small">
@@ -1062,6 +1112,9 @@
         <item name="android:minWidth">20dp</item>
     </style>
 
+
+    <!-- Other -->
+
     <style name="DialogCloseButton">
         <item name="android:layout_width">40dp</item>
         <item name="android:layout_height">40dp</item>
@@ -1078,5 +1131,27 @@
 
     <style name="bottomSheetStyleWrapper" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="NavigationIconStyle">
+        <item name="android:layout_width">14dp</item>
+        <item name="android:layout_height">14dp</item>
+        <item name="android:rotation">180</item>
+        <item name="android:src">@drawable/ic_arrow_back</item>
+        <item name="android:tint">@color/steel_gray_200</item>
+    </style>
+
+    <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:background">@color/white</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="FullScreenDialog" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowCloseOnTouchOutside">false</item>
     </style>
 </resources>

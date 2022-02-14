@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Generic titles/messages -->
     <string name="loading">Loading…</string>
     <string name="loading_error">An error occurred. Please try again later.</string>
+    <string name="please_wait_title">Please wait</string>
     <string name="dash_available">%1$s available</string>
     <string name="network_unavailable_title">Network Unavailable</string>
     <string name="network_unavailable_check_connection">Please check your network connection</string>
     <string name="network_unavailable_balance_not_accurate">The balance may not be accurate because of the lost connection</string>
     <string name="fiat_balance_with_currency" translatable="false">%s %s</string>
     <string name="zero_fiat_balance_with_currency" translatable="false">%s 0.00</string>
+    <string name="buy_dash">Buy Dash</string>
+    <string name="copied">Copied</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -33,6 +36,9 @@
     <string name="button_dismiss">Dismiss</string>
     <string name="network_unavailable_return">Return to Wallet</string>
     <string name="button_continue">Continue</string>
+    <string name="button_close">Close</string>
+    <string name="button_retry">Retry</string>
+    <string name="button_send_report">Send Report</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

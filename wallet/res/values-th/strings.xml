@@ -331,7 +331,6 @@
     <string name="button_ok">โอเค</string>
     <string name="button_dismiss">ยกเลิก</string>
     <string name="button_cancel">ยกเลิก</string>
-    <string name="button_retry">ลองอีกครั้ง</string>
     <string name="button_help">ช่วยเหลือ</string>
     <string name="button_add">เพิ่ม</string>
     <string name="button_delete">ลบ</string>

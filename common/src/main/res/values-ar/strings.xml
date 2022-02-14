@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="loading">جار التحميل…</string>
     <string name="loading_error">حدث خطأ. الرجاء معاودة المحاولة في وقت لاحق.</string>
+    <string name="please_wait_title">الرجاء الانتظار</string>
     <string name="dash_available">%1$s متاح</string>
     <string name="network_unavailable_title">الشبكة غير متوفرة</string>
     <string name="network_unavailable_check_connection">يرجى التحقق من اتصال الشبكة الخاص بك</string>
     <string name="network_unavailable_balance_not_accurate">قد لا يكون الرصيد دقيقًا بسبب فقد الاتصال</string>
+    <string name="buy_dash">شراء داش</string>
+    <string name="copied">تم النسخ</string>
+
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">جيرنزي جنيه</string>
     <!-- Local Currency List: JEP -->
@@ -29,5 +32,6 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">تجاهل</string>
     <string name="network_unavailable_return">العودة إلى المحفظة</string>
-
+    <string name="button_retry">إعادة المحاولة</string>
+    <string name="button_close">اغلاق</string>
 </resources>

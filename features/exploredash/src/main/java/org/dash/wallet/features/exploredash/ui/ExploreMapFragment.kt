@@ -300,7 +300,7 @@ class ExploreMapFragment : SupportMapFragment() {
         currentLocationCircle = googleMap?.addCircle(CircleOptions().apply {
             center(mCurrentUserLocation)
             radius(currentAccuracy)
-            fillColor(resources.getColor(R.color.bg_accuracy_circle, null))
+            fillColor(resources.getColor(R.color.background_accuracy_circle, null))
             strokeColor(Color.TRANSPARENT)
         })
     }
