@@ -147,7 +147,7 @@ class PaymentsPayFragment : BaseLockScreenFragment() {
                 if (fireAction) {
                     alertDialog = baseAlertDialogBuilder.apply {
                         title = getString(errorDialogTitleResId)
-                        message = requireContext().formatString(messageResId, messageArgs)
+                        message = getString(messageResId, *messageArgs)
                         neutralText = getString(R.string.button_dismiss)
                     }.buildAlertDialog()
                     alertDialog.show()
