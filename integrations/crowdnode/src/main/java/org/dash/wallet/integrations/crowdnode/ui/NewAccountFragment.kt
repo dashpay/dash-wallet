@@ -26,6 +26,7 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -71,7 +72,11 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         })
 
         binding.titleBar.setNavigationOnClickListener {
-            findNavController().popBackStack()
+            if (findNavController().previousBackStackEntry != null) {
+                findNavController().popBackStack()
+            } else {
+                requireActivity().finish()
+            }
         }
 
         binding.createAccountBtn.setOnClickListener {
