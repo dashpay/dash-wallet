@@ -29,9 +29,9 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
+import java.math.RoundingMode
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
@@ -41,9 +41,14 @@ class ConvertViewViewModel @Inject constructor(
     var configuration: Configuration
 ) : ViewModel() {
 
-    private val _selectedCryptoCurrency = MutableLiveData<CoinBaseUserAccountDataUIModel?>()
+    var dashToCrypto: Boolean = false
+    var enteredConvertAmount = "0"
+    var maxAmount: String = "0"
+    val onContinueEvent = SingleLiveEvent<Pair<Boolean, Fiat>>()
+
+    private val _selectedCryptoCurrencyAccount = MutableLiveData<CoinBaseUserAccountDataUIModel?>()
     val selectedCryptoCurrencyAccount: LiveData<CoinBaseUserAccountDataUIModel?>
-        get() = _selectedCryptoCurrency
+        get() = this._selectedCryptoCurrencyAccount
 
     private val _selectedLocalCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
     var selectedLocalCurrencyCode: String
@@ -59,26 +64,13 @@ class ConvertViewViewModel @Inject constructor(
             _selectedPickerCurrencyCode.value = value
         }
 
-    var enteredConvertAmount = "0"
+    private val _enteredConvertDashAmount = MutableLiveData<Coin>()
+    val enteredConvertDashAmount: LiveData<Coin>
+        get() = _enteredConvertDashAmount
 
     private val _selectedLocalExchangeRate = MutableLiveData<ExchangeRate>()
     val selectedLocalExchangeRate: LiveData<ExchangeRate>
         get() = _selectedLocalExchangeRate
-
-    var maxAmount: Coin = Coin.ZERO
-    val onContinueEvent = SingleLiveEvent<Pair<Boolean, Fiat>>()
-
-    private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
-    val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
-        get() = _userAccountsInfo
-
-    private val _userAccountsWithBalance: MutableLiveData<Event<List<CoinBaseUserAccountDataUIModel>>> = MutableLiveData()
-    val userAccountsWithBalance: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
-        get() = _userAccountsWithBalance
-
-    private val _userAccountError: SingleLiveEvent<Boolean> = SingleLiveEvent()
-    val userAccountError: LiveData<Boolean>
-        get() = _userAccountError
 
     init {
         _selectedLocalCurrencyCode.flatMapLatest { code ->
@@ -86,44 +78,27 @@ class ConvertViewViewModel @Inject constructor(
         }.onEach(_selectedLocalExchangeRate::postValue)
             .launchIn(viewModelScope)
     }
-    fun setUserAccountsList(userAccountsList: List<CoinBaseUserAccountDataUIModel>?) {
-        _userAccountsInfo.value = userAccountsList
-    }
 
-    fun getUserWalletAccounts(dashToCrypt: Boolean) {
-        val userAccountsWithBalanceList =
-            if (dashToCrypt) {
-                _userAccountsInfo.value?.filter {
-                    isValidCoinBaseAccount(it)
-                }
-            } else {
-                _userAccountsInfo.value?.filter {
-                    isValidCoinBaseAccount(it) && it.coinBaseUserAccountData.balance?.amount?.toDouble() != 0.0
-                }
-            }
-
-        if (userAccountsWithBalanceList.isNullOrEmpty()) {
-            _userAccountError.value = true
-        } else {
-            _userAccountsWithBalance.value = Event(userAccountsWithBalanceList)
-        }
-    }
-
-    private fun isValidCoinBaseAccount(
-        it: CoinBaseUserAccountDataUIModel
-    ) = (
-        it.coinBaseUserAccountData.balance?.amount?.toDouble() != null &&
-            !it.coinBaseUserAccountData.balance.amount.toDouble().isNaN() &&
-            it.coinBaseUserAccountData.balance.currency != "DASH"
-        )
 
     fun setSelectedCryptoCurrency(account: CoinBaseUserAccountDataUIModel) {
-        maxAmount = try {
-            Coin.parseCoin(account.coinBaseUserAccountData.balance?.amount?.toFloat().toString())
-        } catch (x: Exception) {
-            Coin.ZERO
+        maxAmount = account.coinBaseUserAccountData.balance?.amount ?: "0"
+        this._selectedLocalExchangeRate.value = selectedLocalExchangeRate.value?.currencyCode?.let {
+            val cleanedValue =
+                1.toBigDecimal() /
+                    account.currencyToDashExchangeRate.toBigDecimal()
+            val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
+            ExchangeRate(
+                it,
+                bd.toString()
+            )
         }
 
-        _selectedCryptoCurrency.value = account
+        this._selectedCryptoCurrencyAccount.value = account
     }
+
+    fun setEnteredConvertDashAmount(value: Coin) {
+        _enteredConvertDashAmount.value = value
+    }
+
+    fun clear(){ _selectedCryptoCurrencyAccount.value = null }
 }

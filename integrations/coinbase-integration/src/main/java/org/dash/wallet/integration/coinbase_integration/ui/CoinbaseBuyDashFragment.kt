@@ -41,9 +41,9 @@ import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDa
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
-class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
+class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
-        private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
+    private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
 
@@ -78,38 +78,40 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
 
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
-            viewModel.onContinueClicked(pair.second,binding.paymentMethodPicker.selectedMethodIndex)
+            viewModel.onContinueClicked(pair.second, binding.paymentMethodPicker.selectedMethodIndex)
         }
 
         viewModel.placeBuyOrder.observe(viewLifecycleOwner) {
-            safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
-                binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex], it))
+            safeNavigate(
+                CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
+                    binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex], it
+                )
+            )
         }
 
 
         viewModel.showLoading.observe(
-            viewLifecycleOwner,
-            {
-                if (it) {
-                    showProgress(R.string.loading)
-                } else
-                    dismissProgress()
-            }
-        )
+            viewLifecycleOwner
+        ) {
+            if (it) {
+                showProgress(R.string.loading)
+            } else
+                dismissProgress()
+        }
 
-        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner){
+        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner) {
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                 R.string.error,
                 it,
                 R.drawable.ic_info_red,
-                negativeButtonText= R.string.close
+                negativeButtonText = R.string.close
             )
             CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError)
         }
     }
 
     private fun setupPaymentMethodPayment() {
-        viewModel.activePaymentMethods.observe(viewLifecycleOwner){
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner) {
             binding.paymentMethodPicker.paymentMethods = it
         }
 
@@ -131,5 +133,4 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
             loadingDialog?.dismissAllowingStateLoss()
         }
     }
-
 }

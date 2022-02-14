@@ -42,8 +42,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
     val config: Configuration
 ) : AndroidViewModel(application) {
-    private val _userAccountsInfo: MutableLiveData<Event<List<CoinBaseUserAccountDataUIModel>>> = MutableLiveData()
-    val userAccountsInfo: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
+    private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
+    val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
         get() = _userAccountsInfo
 
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
@@ -59,6 +59,16 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         get() = _swapTradeOrder
 
     val swapTradeFailedCallback = SingleLiveEvent<String>()
+
+
+    private val _userAccountsWithBalance: MutableLiveData<Event<List<CoinBaseUserAccountDataUIModel>>> = MutableLiveData()
+    val userAccountsWithBalance: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
+        get() = _userAccountsWithBalance
+
+    private val _userAccountError: SingleLiveEvent<Boolean> = SingleLiveEvent()
+    val userAccountError: LiveData<Boolean>
+        get() = _userAccountError
+
 
     init {
         getUserAccountInfo()
@@ -82,7 +92,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         when (val response = coinBaseRepository.getUserAccounts(config.exchangeCurrencyCode)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                _userAccountsInfo.value = Event(response.value)
+                _userAccountsInfo.value = response.value
             }
 
             is ResponseResource.Failure -> {
@@ -135,10 +145,37 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                     if (message.isNullOrEmpty()) {
                         swapTradeFailedCallback.call()
                     } else {
-                        swapTradeFailedCallback.value = message
+                        swapTradeFailedCallback.value = message!!
                     }
                 }
             }
         }
     }
+
+    fun getUserWalletAccounts(dashToCrypt: Boolean) {
+        val userAccountsWithBalanceList =
+            if (dashToCrypt) {
+                _userAccountsInfo.value?.filter {
+                    isValidCoinBaseAccount(it)
+                }
+            } else {
+                _userAccountsInfo.value?.filter {
+                    isValidCoinBaseAccount(it) && it.coinBaseUserAccountData.balance?.amount?.toDouble() != 0.0
+                }
+            }
+
+        if (userAccountsWithBalanceList.isNullOrEmpty()) {
+            _userAccountError.value = true
+        } else {
+            _userAccountsWithBalance.value = Event(userAccountsWithBalanceList)
+        }
+    }
+
+    private fun isValidCoinBaseAccount(
+        it: CoinBaseUserAccountDataUIModel
+    ) = (
+        it.coinBaseUserAccountData.balance?.amount?.toDouble() != null &&
+            !it.coinBaseUserAccountData.balance.amount.toDouble().isNaN() &&
+            it.coinBaseUserAccountData.balance.currency != "DASH"
+        )
 }
