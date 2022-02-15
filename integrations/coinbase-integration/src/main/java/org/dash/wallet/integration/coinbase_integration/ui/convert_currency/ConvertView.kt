@@ -38,14 +38,9 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
     private val binding = ConvertViewBinding.inflate(LayoutInflater.from(context), this)
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
-    private val fiatFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
     private var onSwapClicked: (() -> Unit)? = null
-
-    private var currencySymbol = "$"
-    private var isCurrencySymbolFirst = true
 
     private var _input: ServiceWallet? = null
     var input: ServiceWallet?
@@ -164,10 +159,6 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
     fun setOnCurrencyChooserClicked(listener: () -> Unit) {
         onCurrencyChooserClicked = listener
-    }
-
-    fun setOnSwapClicked(listener: () -> Unit) {
-        onSwapClicked = listener
     }
 
     private fun updateAmount() {

@@ -54,7 +54,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private val binding by viewBinding(FragmentCoinbaseConvertCryptoBinding::bind)
     private val viewModel by viewModels<CoinbaseConvertCryptoViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
-    private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
     private val convertViewModel by activityViewModels<ConvertViewViewModel>()
     private var selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel? = null
     private var cryptoWalletsDialog: CryptoWalletsDialog? = null
