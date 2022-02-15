@@ -18,132 +18,179 @@
 package org.dash.wallet.features.exploredash.repository
 
 import android.content.Context
-import com.google.protobuf.Int32Value
-import com.google.protobuf.Int64Value
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.ktx.storage
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.withContext
-import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.data.model.Merchant
-import org.dash.wallet.features.exploredash.data.model.Protos
-import java.io.InputStream
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
+import net.lingala.zip4j.ZipFile
+import org.slf4j.LoggerFactory
+import java.io.*
+import java.lang.System.currentTimeMillis
 import java.lang.ref.WeakReference
 import javax.inject.Inject
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 interface ExploreRepository {
-    suspend fun init()
-    fun getLastUpdate(): Long
-    fun getAtmDataSize(): Int
-    fun getMerchantDataSize(): Int
-    suspend fun getAtmData(): Flow<Atm>
-    suspend fun getMerchantData(skipFirst: Int): Flow<Merchant>
+    suspend fun getRemoteTimestamp(): Long
+    fun getDatabaseInputStream(file: File): InputStream?
+    fun getUpdateFile(): File
+    var localTimestamp: Long
+    suspend fun download()
+    fun deleteOldDB(dbFile: File)
+    fun preloadFromAssets(dbUpdateFile: File)
+    fun finalizeUpdate(dbUpdateFile: File)
 }
 
-class AssetExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
+@Suppress("BlockingMethodInNonBlockingContext")
+class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context) :
     ExploreRepository {
 
     companion object {
-        private const val HEADER_SIZE = 3
+        const val DATA_FILE_NAME = "explore.db"
+        private const val GC_FILE_PATH = "explore/explore.db"
+        private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
+
+        private const val SHARED_PREFS_NAME = "explore"
+        private const val PREFS_LOCAL_DB_TIMESTAMP_KEY = "local_db_timestamp"
+
+        private val log = LoggerFactory.getLogger(GCExploreDatabase::class.java)
     }
+
+    private val auth = Firebase.auth
+    private val storage = Firebase.storage
 
     private var contextRef: WeakReference<Context> = WeakReference(context)
 
-    private val tmpAtm = Atm()
-    private val tmpMerchant = Merchant()
+    private var remoteDataRef: StorageReference? = null
 
-    private lateinit var exploreDataStream: InputStream
+    private val preferences = context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
 
-    private var updateDate = -1L
-    private var atmDataSize = -1
-    private var merchantDataSize = -1
+    private var updateTimestampCache = -1L
 
-    private var offset = 0
+    override var localTimestamp: Long
+        get() = preferences.getLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, 0)
+        set(value) {
+            preferences.edit().apply {
+                putLong(PREFS_LOCAL_DB_TIMESTAMP_KEY, value)
+            }.apply()
+        }
 
-    override suspend fun init() = withContext(Dispatchers.IO) {
-        exploreDataStream = contextRef.get()!!.assets.open("explore/exploredata.bin")
-        updateDate = Int64Value.parseDelimitedFrom(exploreDataStream).value
-        atmDataSize = Int32Value.parseDelimitedFrom(exploreDataStream).value
-        merchantDataSize = Int32Value.parseDelimitedFrom(exploreDataStream).value
-        offset += HEADER_SIZE
+    override suspend fun getRemoteTimestamp(): Long {
+        ensureAuthenticated()
+        val remoteDataInfo = try {
+            remoteDataRef = storage.reference.child(GC_FILE_PATH)
+            remoteDataRef!!.metadata.await()
+        } catch (ex: Exception) {
+            log.warn("error getting remote data timestamp")
+            null
+        }
+        val dataTimestamp = remoteDataInfo?.getCustomMetadata("Data-Timestamp")?.toLong()
+        return dataTimestamp ?: -1L
     }
 
-    override fun getLastUpdate(): Long {
-        return updateDate
+    override suspend fun download() {
+        ensureAuthenticated()
+        val context = contextRef.get()!!
+        val cacheDir = context.cacheDir
+        val exploreDatFile = File(cacheDir, DATA_FILE_NAME)
+
+        log.info("downloading explore db from server")
+        val startTime = currentTimeMillis()
+        val result = remoteDataRef!!.getFile(exploreDatFile).await()
+        val totalTime = (currentTimeMillis() - startTime).toFloat() / 1000
+        log.info("downloaded $remoteDataRef (${result.bytesTransferred} as $exploreDatFile [$totalTime s]")
     }
 
-    override fun getAtmDataSize(): Int {
-        return atmDataSize
-    }
-
-    override fun getMerchantDataSize(): Int {
-        return merchantDataSize
-    }
-
-    override suspend fun getAtmData(): Flow<Atm> = flow {
-        for (i in 0 until atmDataSize) {
-            val atmData = Protos.AtmData.parseDelimitedFrom(exploreDataStream)
-            emit(convert(atmData))
+    private suspend fun ensureAuthenticated() {
+        if (auth.currentUser == null) {
+            signingAnonymously()
         }
     }
 
-    override suspend fun getMerchantData(skipFirst: Int): Flow<Merchant> = flow {
-        for (i in 0 until merchantDataSize) {
-            val merchantData = Protos.MerchantData.parseDelimitedFrom(exploreDataStream)
-            if (i < skipFirst) continue
-            emit(convert(merchantData))
+    private suspend fun signingAnonymously(): FirebaseUser {
+        return suspendCancellableCoroutine { coroutine ->
+            auth.signInAnonymously().addOnSuccessListener { result ->
+                if (coroutine.isActive) {
+                    val user = result.user
+                    if (user != null) {
+                        coroutine.resume(user)
+                    } else {
+                        coroutine.resumeWithException(
+                            FirebaseAuthException("-1", "User is null after anon sign in")
+                        )
+                    }
+                }
+            }.addOnFailureListener {
+                if (coroutine.isActive) {
+                    coroutine.resumeWithException(it)
+                }
+            }
         }
     }
 
-    private fun convert(merchantData: Protos.MerchantData): Merchant {
-        return Merchant().apply {
-            deeplink = merchantData.deeplink
-            plusCode = merchantData.plusCode
-            addDate = merchantData.addDate
-            updateDate = merchantData.updateDate
-            paymentMethod = merchantData.paymentMethod
-            merchantId = merchantData.merchantId
-            active = merchantData.active
-            name = merchantData.name
-            address1 = merchantData.address1
-            address2 = merchantData.address2
-            address3 = merchantData.address2
-            address4 = merchantData.address4
-            latitude = merchantData.latitude
-            longitude = merchantData.longitude
-            website = merchantData.website
-            phone = merchantData.phone
-            territory = merchantData.territory
-            city = merchantData.city
-            sourceId = merchantData.sourceId
-            source = merchantData.source
-            logoLocation = merchantData.logoLocation
-            googleMaps = merchantData.googleMaps
-            coverImage = merchantData.coverImage
-            type = merchantData.type
+    @Throws(IOException::class)
+    override fun getDatabaseInputStream(file: File): InputStream? {
+        val zipFile = ZipFile(file)
+        val comment: Array<String> = zipFile.comment.split("#".toRegex()).toTypedArray()
+        updateTimestampCache = comment[0].toLong()
+        val checksum = comment[1]
+        log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
+        zipFile.setPassword(checksum.toCharArray())
+        val zipHeader = zipFile.getFileHeader("explore.db")
+        return zipFile.getInputStream(zipHeader)
+    }
+
+    override fun getUpdateFile(): File {
+        return File(contextRef.get()!!.cacheDir, DATA_FILE_NAME)
+    }
+
+    override fun deleteOldDB(dbFile: File) {
+        try {
+            var dbDelete = false
+            if (dbFile.exists()) {
+                dbDelete = dbFile.delete()
+            }
+            val dbShmFile = File(dbFile.absolutePath + "-shm")
+            var dbShmDelete = false
+            if (dbShmFile.exists()) {
+                dbShmDelete = dbShmFile.delete()
+            }
+            val dbWalFile = File(dbFile.absolutePath + "-wal")
+            var dbWalDelete = false
+            if (dbWalFile.exists()) {
+                dbWalDelete = dbWalFile.delete()
+            }
+            log.info("delete existing explore db ({}, {}, {})", dbDelete, dbShmDelete, dbWalDelete)
+        } catch (ex: SecurityException) {
+            log.warn("unable to delete explore db", ex)
         }
     }
 
-    private fun convert(atmData: Protos.AtmData): Atm {
-        return Atm().apply {
-            postcode = atmData.postcode
-            manufacturer = atmData.manufacturer
-            active = atmData.active
-            name = atmData.name
-            address1 = atmData.address
-            latitude = atmData.latitude
-            longitude = atmData.longitude
-            website = atmData.website
-            phone = atmData.phone
-            territory = atmData.territory
-            city = atmData.city
-            source = atmData.source
-            sourceId = atmData.sourceId
-            logoLocation = atmData.logoLocation
-            latitude = atmData.latitude
-            coverImage = atmData.coverImage
-            type = atmData.type
+    @Throws(IOException::class)
+    override fun preloadFromAssets(dbUpdateFile: File) {
+        log.info("preloading explore db from assets ${dbUpdateFile.absolutePath}")
+        try {
+            contextRef.get()!!.assets.open(DB_ASSET_FILE_NAME).use { inputStream ->
+                FileOutputStream(dbUpdateFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+        } catch (ex: FileNotFoundException) {
+            log.warn("missing {}, explore db will be empty", DB_ASSET_FILE_NAME)
         }
+    }
+
+    override fun finalizeUpdate(dbUpdateFile: File) {
+        if (!dbUpdateFile.delete()) {
+            log.error("unable to delete " + dbUpdateFile.absolutePath)
+        }
+        localTimestamp = updateTimestampCache
+        log.info("successfully loaded new version of explode db")
     }
 }

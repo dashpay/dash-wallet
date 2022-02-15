@@ -809,7 +809,8 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
-        ProcessPhoenix.triggerRebirth(this);
+        // wallet must be null for the OnboardingActivity flow
+        wallet = null;
     }
 
     public static WalletApplication getInstance() {
@@ -845,5 +846,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public Address currentReceiveAddress() {
         return wallet.currentReceiveAddress();
+    }
+
+    // wallets from v5.17.5 and earlier do not have a BIP44 path
+    public boolean isWalletUpgradedtoBIP44() {
+        return wallet != null && wallet.hasKeyChain(Constants.BIP44_PATH);
     }
 }
