@@ -22,9 +22,15 @@ import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
+import coil.transform.CircleCropTransformation
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
 import org.dash.wallet.common.ui.getRoundedBackground
@@ -110,14 +116,24 @@ class RadioButtonViewHolder(
                 IconSelectMode.Tint -> R.color.radiobutton_text_color
                 else -> null
             }
+
             tint?.let {
                 binding.icon.imageTintList = resources.getColorStateList(tint, null)
             }
+
 
             binding.iconWrapper.background = when {
                 option.iconSelectMode != IconSelectMode.Encircle  -> null
                 isSelected -> resources.getRoundedBackground(R.style.EncircledIconSelectedTheme)
                 else -> resources.getRoundedBackground(R.style.EncircledIconTheme)
+            }
+        }
+
+        option.iconUrl?.let {
+            binding.icon.load(it) {
+                crossfade(true)
+                placeholder(R.drawable.ic_default_flag)
+                transformations(CircleCropTransformation())
             }
         }
 
@@ -134,6 +150,14 @@ class RadioButtonViewHolder(
 
         binding.additionalInfo.isVisible = !option.additionalInfo.isNullOrEmpty()
         binding.additionalInfo.text = option.additionalInfo
+        if(!option.subtitleAdditionalInfo.isNullOrEmpty()){
+            TextViewCompat.setTextAppearance(  binding.additionalInfo, R.style.Body2_Gray900)
+        }else{
+            TextViewCompat.setTextAppearance(  binding.additionalInfo, R.style.Body2_Gray400)
+        }
+
+        binding.additionalInfoSubtitle.isVisible = !option.subtitleAdditionalInfo.isNullOrEmpty()
+        binding.additionalInfoSubtitle.text = option.subtitleAdditionalInfo
 
         if (this.roundCheckMark) {
             binding.checkmark.setImageDrawable(ResourcesCompat.getDrawable(

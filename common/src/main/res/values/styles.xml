@@ -182,6 +182,33 @@
         <item name="android:textColor">@color/gray_900</item>
     </style>
 
+    <style name="MontserratRegular.G900.10">
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <style name="MontserratRegular.G500">
+        <item name="android:textColor">@color/gray_500</item>
+    </style>
+    <style name="MontserratRegular.G500.10">
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.13">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.14">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.15">
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="MontserratRegular.G900.16">
+        <item name="android:textSize">16sp</item>
+    </style>
+
     <style name="MontserratRegular.G900.17">
         <item name="android:textSize">17sp</item>
     </style>
@@ -220,6 +247,10 @@
 
     <style name="NewMontserratButton.Primary" parent="MontserratButton">
         <item name="android:background">@drawable/primary_button</item>
+    </style>
+
+    <style name="NewMontserratButton.Primary.SemiBold" parent="NewMontserratButton.Primary">
+        <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
 
     <style name="NewMontserratButton.Secondary" parent="MontserratButton">
@@ -672,6 +703,10 @@
         <item name="cardCornerRadius">15dp</item>
     </style>
 
+    <style name="CardViewRaised.Radius7">
+        <item name="cardCornerRadius">7dp</item>
+    </style>
+
     <style name="EncircledIconTheme">
         <item name="backgroundColor">@color/steel_gray_40</item>
         <item name="strokeColor">@color/steel_gray_40</item>
@@ -692,6 +727,11 @@
 
 
     <!-- Typography -->
+
+    <style name="Headline3" parent="TextAppearance.MaterialComponents.Headline3">
+        <item name="fontFamily">@font/montserrat_regular</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
 
     <style name="Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="fontFamily">@font/montserrat_regular</item>
@@ -757,12 +797,20 @@
         <item name="android:textColor">@color/dash_white</item>
     </style>
 
+    <style name="Body2.Gray">
+        <item name="android:textColor">@color/gray_500</item>
+    </style>
+
     <style name="Body2.Gray400">
         <item name="android:textColor">@color/gray_400</item>
     </style>
 
     <style name="Body2.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Body2.Gray900">
+        <item name="android:textColor">@color/gray_900</item>
     </style>
 
     <style name="Body2.dashBlue">
@@ -803,7 +851,11 @@
         <item name="android:lineSpacingExtra">3sp</item>
     </style>
 
-    <style name="Caption.Blue">
+    <style name="Caption.Gray400">
+        <item name="android:textColor">@color/gray_400</item>
+    </style>
+
+    <style name="Caption.dashBlue">
         <item name="android:textColor">@color/dash_blue</item>
     </style>
 

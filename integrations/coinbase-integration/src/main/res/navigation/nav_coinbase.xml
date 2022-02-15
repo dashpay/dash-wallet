@@ -32,37 +32,43 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
-
         <action
-            android:id="@+id/coinbaseServicesToError"
-            app:destination="@id/coinbaseErrorDialog"
-            />
+            android:id="@+id/services_to_convert_crypto"
+            app:destination="@id/coinbaseConvertCryptoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
+
+    <action
+        android:id="@+id/coinbaseServicesToError"
+        app:destination="@id/coinbaseErrorDialog" />
 
     <fragment
         android:id="@+id/coinbaseBuyDashFragment"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashFragment"
-        android:label="CoinbaseBuyDashFragment">
+        android:label="CoinbaseBuyDashFragment"
+        tools:layout="@layout/fragment_coinbase_buy_dash">
         <action
             android:id="@+id/buy_dash_to_order_review"
             app:destination="@id/coinbaseBuyDashOrderReviewFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left"/>
+            app:popExitAnim="@anim/slide_out_left" />
         <argument
             android:name="paymentMethods"
             app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod[]" />
 
         <action
             android:id="@+id/coinbaseBuyDashToError"
-            app:destination="@id/coinbaseErrorDialog"
-            />
+            app:destination="@id/coinbaseErrorDialog" />
     </fragment>
 
     <fragment
         android:id="@+id/coinbaseBuyDashOrderReviewFragment"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseBuyDashOrderReviewFragment"
-        android:label="CoinbaseBuyDashOrderReviewFragment">
+        android:label="CoinbaseBuyDashOrderReviewFragment"
+        tools:layout="@layout/fragment_coinbase_buy_dash_order_review">
         <argument
             android:name="paymentMethod"
             app:argType="org.dash.wallet.common.ui.payment_method_picker.PaymentMethod" />
@@ -71,17 +77,30 @@
             app:argType="org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel" />
         <action
             android:id="@+id/orderReviewToFeeInfo"
-            app:destination="@id/coinbaseFeeInfoDialog"
-            />
+            app:destination="@id/coinbaseFeeInfoDialog" />
         <action
             android:id="@+id/confirmCancelBuyDashTransaction"
-            app:destination="@id/cancelTransactionDialog"
-            />
+            app:destination="@id/cancelTransactionDialog" />
         <action
             android:id="@+id/coinbaseBuyDashOrderReviewToError"
-            app:destination="@id/coinbaseErrorDialog"
-            />
+            app:destination="@id/coinbaseErrorDialog" />
     </fragment>
+
+    <fragment
+        android:id="@+id/coinbaseConvertCryptoFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseConvertCryptoFragment"
+        android:label="CoinbaseConvertCryptoFragment"
+        tools:layout="@layout/fragment_coinbase_convert_crypto">
+        <argument
+            android:name="hasCoinbaseCryptoBalance"
+            android:defaultValue="false"
+            app:argType="boolean" />
+
+        <action
+            android:id="@+id/coinbaseConvertCryptoFragmentTocoinbaseConversionPreviewFragment"
+            app:destination="@id/coinbaseConversionPreviewFragment" />
+    </fragment>
+
     <dialog
         android:id="@+id/coinbaseFeeInfoDialog"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinbaseFeeInfoDialog"
@@ -92,8 +111,7 @@
         android:id="@+id/cancelTransactionDialog"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CancelTransactionDialog"
         android:label="cancel_pending_transaction"
-        tools:layout="@layout/dialog_cancel_transaction"
-        />
+        tools:layout="@layout/dialog_cancel_transaction" />
     <dialog
         android:id="@+id/coinbaseErrorDialog"
         android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseErrorDialog"
@@ -101,7 +119,26 @@
         tools:layout="@layout/dialog_coinbase_error">
         <argument
             android:name="error_ui_model"
-            app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel"
-            />
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel" />
     </dialog>
+
+    <fragment
+        android:id="@+id/coinbaseConversionPreviewFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.CoinbaseConversionPreviewFragment"
+        android:label="CoinbaseConversionPreviewFragment"
+        tools:layout="@layout/fragment_coinbase_conversion_preview">
+
+        <action
+            android:id="@+id/orderReviewToFeeInfo"
+            app:destination="@id/coinbaseFeeInfoDialog" />
+        <action
+            android:id="@+id/confirmCancelBuyDashTransaction"
+            app:destination="@id/cancelTransactionDialog" />
+        <action
+            android:id="@+id/coinbaseBuyDashOrderReviewToError"
+            app:destination="@id/coinbaseErrorDialog" />
+        <argument
+            android:name="swapModel"
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.SwapTradeUIModel" />
+    </fragment>
 </navigation>

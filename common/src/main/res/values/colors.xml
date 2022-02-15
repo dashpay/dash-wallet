@@ -39,6 +39,7 @@
     <color name="gray_900">#0C0C0D</color>
     <color name="gray_900_0.7">#B30C0C0D</color>
     <color name="gray_900_0.1">#1A0C0C0D</color>
+    <color name="gray_900_0.5">#0D0C0C0D</color>
     <color name="gray_700">#434A52</color>
     <color name="gray_600">#5D5F61</color>
     <color name="gray_500">#6D7885</color>
