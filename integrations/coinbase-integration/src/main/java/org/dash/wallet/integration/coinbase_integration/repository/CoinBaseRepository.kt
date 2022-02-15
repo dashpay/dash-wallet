@@ -51,7 +51,7 @@ class CoinBaseRepository @Inject constructor(
             val exchangeRates = servicesApi.getExchangeRates(exchangeCurrencyCode)?.data
             return@safeApiCall userAccounts.map {
                 val currencyToCryptoCurrencyExchangeRate = exchangeRates?.rates?.get(it.currency?.code).orEmpty()
-                val currencyToDashExchangeRate = exchangeRates?.rates?.get("DASH").orEmpty()
+                val currencyToDashExchangeRate = exchangeRates?.rates?.get(DASH_CURRENCY).orEmpty()
                 val cryptoCurrencyToDashExchangeRate = (BigDecimal(currencyToDashExchangeRate) / BigDecimal(currencyToCryptoCurrencyExchangeRate)).toString()
                 CoinBaseUserAccountDataUIModel(
                     it,

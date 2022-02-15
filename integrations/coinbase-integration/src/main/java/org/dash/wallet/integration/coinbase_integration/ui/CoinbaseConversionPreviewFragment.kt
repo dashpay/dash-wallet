@@ -32,6 +32,7 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConversionPreviewBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
@@ -145,7 +146,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.contentOrderReview.inputAccountSubtitle.text = this.inputCurrency
         binding.contentOrderReview.convertOutputSubtitle.text = this.outputCurrency
 
-        if (this.inputCurrency == "DASH") {
+        if (this.inputCurrency == DASH_CURRENCY) {
             binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_your_coinbase_account)
             binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_dash_wallet_on_this_device)
         } else {

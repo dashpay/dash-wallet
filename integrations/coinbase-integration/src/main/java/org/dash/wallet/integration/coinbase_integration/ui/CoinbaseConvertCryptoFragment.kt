@@ -35,6 +35,7 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConvertCryptoBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
@@ -99,7 +100,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
-            if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != "DASH") {
+            if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
                 selectedCoinBaseAccount?.let { viewModel.swapTrade(pair.second, it) }
             }
         }

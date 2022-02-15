@@ -8,7 +8,6 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
-import org.dash.wallet.integration.coinbase_integration.TestUtils
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderParams
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel
 import org.dash.wallet.integration.coinbase_integration.model.SendTransactionToWalletParams

@@ -30,6 +30,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
@@ -107,7 +108,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         val source_asset =
             _baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
         val target_asset =
-            _baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == "DASH" }?.base_id ?: ""
+            _baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
 
         val tradesRequest = TradesRequest(
             GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),
@@ -176,6 +177,6 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     ) = (
         it.coinBaseUserAccountData.balance?.amount?.toDouble() != null &&
             !it.coinBaseUserAccountData.balance.amount.toDouble().isNaN() &&
-            it.coinBaseUserAccountData.balance.currency != "DASH"
+            it.coinBaseUserAccountData.balance.currency != DASH_CURRENCY
         )
 }
