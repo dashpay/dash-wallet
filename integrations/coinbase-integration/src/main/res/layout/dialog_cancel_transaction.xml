@@ -31,7 +31,7 @@
             />
 
         <Button
-            android:id="@+id/positive_button"
+            android:id="@+id/no_cancel_button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@id/title"
@@ -48,7 +48,7 @@
             />
 
         <Button
-            android:id="@+id/negative_button"
+            android:id="@+id/yes_cancel_button"
             style="@style/DashButton.Blue"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

@@ -90,6 +90,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.setOnClickListener {
+            viewModel.continueCallback.call()
             viewModel.onContinueEvent.value = Pair(
                 binding.amountView.dashAmount,
                 binding.amountView.fiatAmount
@@ -113,6 +114,10 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
             binding.amountView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
+        }
+
+        binding.amountView.setOnConvertDirectionBtnClicked {
+            viewModel.convertDirectionCallback.value = binding.amountView.dashToFiat
         }
     }
 

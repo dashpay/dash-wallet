@@ -7,15 +7,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.UserInteractionAwareCallback
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.DialogCancelTransactionBinding
 
 class CancelTransactionDialog: DialogFragment() {
     private val binding by viewBinding(DialogCancelTransactionBinding::bind)
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -31,11 +35,13 @@ class CancelTransactionDialog: DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.negativeButton.setOnClickListener {
+        binding.yesCancelButton.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE_YES, bundleOf())
             findNavController().navigateUp()
             findNavController().popBackStack()
         }
-        binding.positiveButton.setOnClickListener {
+        binding.noCancelButton.setOnClickListener {
+            analytics.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE_NO, bundleOf())
             findNavController().navigateUp()
         }
     }
@@ -43,6 +49,7 @@ class CancelTransactionDialog: DialogFragment() {
     override fun onStart() {
         super.onStart()
         dialog?.apply {
+            setCancelable(false)
             window?.apply {
                 setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 callback = UserInteractionAwareCallback(this.callback, requireActivity())

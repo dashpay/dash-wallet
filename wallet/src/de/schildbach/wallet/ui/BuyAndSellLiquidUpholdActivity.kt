@@ -22,7 +22,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
@@ -76,18 +75,13 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
     private var isDeviceConnectedToInternet: Boolean = true
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
-        BuyAndSellDashServicesAdapter(
-            config,
-            object : BuyAndSellDashServicesAdapter.ClickListener {
-                override fun onItemClick(position: Int, v: View, model: BuyAndSellDashServicesModel) {
-                    when (model.serviceType) {
-                        BuyAndSellDashServicesModel.ServiceType.LIQUID -> onLiquidItemClicked()
-                        BuyAndSellDashServicesModel.ServiceType.UPHOLD -> onUpHoldItemClicked()
-                        BuyAndSellDashServicesModel.ServiceType.COINBASE -> onCoinBaseItemClicked()
-                    }
-                }
+        BuyAndSellDashServicesAdapter(config){ model ->
+            when (model.serviceType) {
+                BuyAndSellDashServicesModel.ServiceType.LIQUID -> onLiquidItemClicked()
+                BuyAndSellDashServicesModel.ServiceType.UPHOLD -> onUpHoldItemClicked()
+                BuyAndSellDashServicesModel.ServiceType.COINBASE -> onCoinBaseItemClicked()
             }
-        )
+        }
     }
 
     companion object {
@@ -177,11 +171,13 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
             if (isDeviceConnectedToInternet) {
                 if (it) {
                     launchCoinBasePortal()
+                    analytics.logEvent(AnalyticsConstants.Coinbase.ENTER_CONNECTED, bundleOf())
                 } else {
                     startActivityForResult(
                         Intent(this, CoinBaseWebClientActivity::class.java),
                         COIN_BASE_AUTH
                     )
+                    analytics.logEvent(AnalyticsConstants.Coinbase.ENTER_DISCONNECTED, bundleOf())
                 }
             }
         }

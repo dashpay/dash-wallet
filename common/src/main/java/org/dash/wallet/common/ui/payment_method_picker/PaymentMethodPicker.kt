@@ -37,7 +37,7 @@ import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 
 class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayout(context, attrs) {
     private val binding = ViewPaymentMethodBinding.inflate(LayoutInflater.from(context), this)
-
+    private var onPaymentMethodSelected: (() -> Unit)? = null
     var paymentMethods: List<PaymentMethod> = listOf()
         set(value) {
             field = value
@@ -90,6 +90,7 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
                     showSearch = false
                 ) { _, index, dialog ->
                     dialog.dismiss()
+                    onPaymentMethodSelected?.invoke()
                     selectedMethodIndex = index
                 }.show(fragmentManager, "payment_method")
             }
@@ -130,5 +131,9 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
             is ViewComponentManager.FragmentContextWrapper -> getFragmentManager(context.baseContext)
             else -> null
         }
+    }
+
+    fun setOnPaymentMethodSelected(listener: () -> Unit){
+        onPaymentMethodSelected = listener
     }
 }
