@@ -19,6 +19,8 @@ package org.dash.wallet.integration.coinbase_integration.ui
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
+import androidx.activity.addCallback
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -27,6 +29,8 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.payment_method_picker.CardUtils
@@ -40,6 +44,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErr
 import org.dash.wallet.integration.coinbase_integration.model.PlaceBuyOrderUIModel
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashOrderReviewViewModel
+import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
@@ -52,7 +57,8 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private var isRetrying = false
     private var transactionStateDialog: CoinBaseBuyDashDialog? = null
     private var newBuyOrderId: String? = null
-
+    @Inject
+    lateinit var analyticsService: FirebaseAnalyticsServiceImpl
     private val countDownTimer by lazy {   object : CountDownTimer(10000, 1000) {
 
         override fun onTick(millisUntilFinished: Long) {
@@ -70,11 +76,18 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.BOTTOM_BACK_TO_ENTER_AMOUNT, bundleOf())
+            findNavController().popBackStack()
+        }
+
         binding.toolbar.setNavigationOnClickListener {
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.TOP_BACK_TO_ENTER_AMOUNT, bundleOf())
             findNavController().popBackStack()
         }
 
         binding.cancelBtn.setOnClickListener {
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE, bundleOf())
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.confirmCancelBuyDashTransaction())
         }
 
@@ -98,6 +111,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
         binding.confirmBtnContainer.setOnClickListener {
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.CONFIRM_DASH_PURCHASE, bundleOf())
             countDownTimer.cancel()
             if (isRetrying) {
                 viewModel.onRefreshOrderClicked(amountViewModel.onContinueEvent.value?.second,
@@ -127,6 +141,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.FEE_INFO, bundleOf())
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.orderReviewToFeeInfo())
         }
 
@@ -137,7 +152,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 R.drawable.ic_info_red,
                 negativeButtonText= R.string.close
             )
-            CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError)
+            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToError(placeBuyOrderError))
         }
 
         viewModel.placeBuyOrder.observe(viewLifecycleOwner){

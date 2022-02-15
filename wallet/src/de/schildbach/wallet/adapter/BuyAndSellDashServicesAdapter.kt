@@ -3,7 +3,6 @@ package de.schildbach.wallet.adapter
 
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
@@ -13,14 +12,16 @@ import de.schildbach.wallet_test.databinding.ItemServiceListBinding
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.BaseAdapter
 import org.dash.wallet.common.util.GenericUtils
 
-class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListener:ClickListener) : BaseAdapter<BuyAndSellDashServicesModel>(){
+class BuyAndSellDashServicesAdapter( val config: Configuration,
+                                     val onClickListener: (BuyAndSellDashServicesModel) -> Unit) : BaseAdapter<BuyAndSellDashServicesModel>(){
 
-    override fun viewHolder(layout: Int, viewGroup: ViewGroup): BaseViewHolder {
+    override fun viewHolder(layout: Int, view: ViewGroup): BaseViewHolder {
         return BuyAndSellDashServicesViewHolder(
-            ItemServiceListBinding.inflate(LayoutInflater.from(viewGroup.context), viewGroup, false)
+            ItemServiceListBinding.inflate(LayoutInflater.from(view.context), view, false)
         )
 
     }
@@ -29,9 +30,7 @@ class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListen
         @SuppressLint("SetTextI18n")
         override fun bindData(data: BuyAndSellDashServicesModel?) {
             data?.let {
-                binding.root.setOnClickListener {
-                    onClickListener.onItemClick(adapterPosition,view,data)
-                }
+                binding.root.setOnClickListener { onClickListener.invoke(data) }
                 binding.serviceImg.setImageDrawable(ContextCompat.getDrawable(view.context,  it.serviceType.serviceIcon))
                 binding.serviceName.text =view.context.getString(it.serviceType.serviceName)
                 when (it.serviceStatus) {
@@ -73,8 +72,5 @@ class BuyAndSellDashServicesAdapter( val config: Configuration,val onClickListen
             binding.disconnected.isVisible =true
             binding.lastKnownBalance.isVisible =true
         }
-    }
-    interface ClickListener {
-        fun onItemClick(position: Int, v: View,data: BuyAndSellDashServicesModel)
     }
 }

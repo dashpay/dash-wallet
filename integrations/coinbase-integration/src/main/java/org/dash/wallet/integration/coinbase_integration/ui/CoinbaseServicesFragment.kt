@@ -18,11 +18,15 @@ package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
 import android.view.View
+import androidx.activity.addCallback
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
 import org.dash.wallet.common.ui.viewBinding
@@ -32,6 +36,7 @@ import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
@@ -39,6 +44,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val viewModel by viewModels<CoinbaseServicesViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
     private var currentExchangeRate: org.dash.wallet.common.data.ExchangeRate? = null
+    @Inject lateinit var analyticsService: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -49,19 +55,26 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
             requireActivity().finish()
         }
 
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
+            requireActivity().finish()
+        }
+
         binding.disconnectLayout.setOnClickListener {
             viewModel.disconnectCoinbaseAccount()
         }
 
         binding.buyDashBtn.setOnClickListener {
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_DASH, bundleOf())
             viewModel.getPaymentMethods()
         }
 
         binding.convertDashBtn.setOnClickListener {
             safeNavigate(CoinbaseServicesFragmentDirections.servicesToConvertCrypto(true))
         }
-        viewModel.activePaymentMethods.observe(viewLifecycleOwner) {
-            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(it.toTypedArray()))
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner){ event ->
+            event.getContentIfNotHandled()?.toTypedArray()?.let { paymentMethodsArray ->
+                CoinbaseServicesFragmentDirections.servicesToBuyDash(paymentMethodsArray)
+            }?.let { navDirection -> safeNavigate(navDirection) }
         }
 
         binding.walletBalanceDash.setFormat(viewModel.config.format.noCode())
@@ -97,9 +110,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 dismissProgress()
         }
 
-        viewModel.userAccountError.observe(
-            viewLifecycleOwner
-        ) {
+        viewModel.userAccountError.observe(viewLifecycleOwner){
             val error = CoinbaseGenericErrorUIModel(
                 R.string.coinbase_dash_wallet_error_title,
                 getString(R.string.coinbase_dash_wallet_error_message),
@@ -107,12 +118,12 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 R.string.CreateـDashـAccount,
                 R.string.close
             )
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.NO_DASH_WALLET, bundleOf())
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(error))
         }
 
-        viewModel.activePaymentMethodsFailureCallback.observe(
-            viewLifecycleOwner
-        ) {
+
+        viewModel.activePaymentMethodsFailureCallback.observe(viewLifecycleOwner){
             val activePaymentMethodsError = CoinbaseGenericErrorUIModel(
                 R.string.coinbase_dash_wallet_no_payment_methods_error_title,
                 getString(R.string.coinbase_dash_wallet_no_payment_methods_error_message),
@@ -120,12 +131,10 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
                 R.string.add_payment_method,
                 R.string.close
             )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    activePaymentMethodsError
-                )
-            )
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.NO_PAYMENT_METHODS, bundleOf())
+            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(activePaymentMethodsError))
         }
+
 
         viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner) {
             requireActivity().finish()

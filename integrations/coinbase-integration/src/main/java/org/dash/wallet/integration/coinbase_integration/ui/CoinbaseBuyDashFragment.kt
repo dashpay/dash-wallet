@@ -19,6 +19,8 @@ package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
 import android.view.View
+import androidx.activity.addCallback
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
@@ -27,6 +29,8 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
@@ -38,14 +42,17 @@ import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoin
 import org.dash.wallet.integration.coinbase_integration.databinding.KeyboardHeaderViewBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseBuyDashViewModel
+import javax.inject.Inject
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
-    private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
+        private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
     private var loadingDialog: FancyAlertDialog? = null
+    @Inject
+    lateinit var analyticsService: AnalyticsService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -69,6 +76,10 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             findNavController().popBackStack()
         }
 
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
+            findNavController().popBackStack()
+        }
+
         amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
             binding.toolbarSubtitle.text = getString(
                 R.string.exchange_rate_template,
@@ -81,18 +92,15 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             viewModel.onContinueClicked(pair.second, binding.paymentMethodPicker.selectedMethodIndex)
         }
 
-        viewModel.placeBuyOrder.observe(viewLifecycleOwner) {
-            safeNavigate(
-                CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
-                    binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex], it
-                )
-            )
+        viewModel.placeBuyOrder.observe(viewLifecycleOwner) { placeBuyOrderEvent ->
+            placeBuyOrderEvent.getContentIfNotHandled()?.let {
+                safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview(
+                    binding.paymentMethodPicker.paymentMethods[binding.paymentMethodPicker.selectedMethodIndex], it))
+            }
         }
 
 
-        viewModel.showLoading.observe(
-            viewLifecycleOwner
-        ) {
+        viewModel.showLoading.observe(viewLifecycleOwner){
             if (it) {
                 showProgress(R.string.loading)
             } else
@@ -106,7 +114,21 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError)
+            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+        }
+
+        amountViewModel.continueCallback.observe(viewLifecycleOwner){
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.CONTINUE_DASH_PURCHASE, bundleOf())
+        }
+
+        amountViewModel.convertDirectionCallback.observe(viewLifecycleOwner){ dashToFiat ->
+            analyticsService.logEvent(if (dashToFiat) AnalyticsConstants.Coinbase.ENTER_AMOUNT_DASH
+            else AnalyticsConstants.Coinbase.ENTER_AMOUNT_FIAT,
+                bundleOf()
+            )
+        }
+        binding.paymentMethodPicker.setOnPaymentMethodSelected {
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.CHANGE_PAYMENT_METHOD, bundleOf())
         }
     }
 

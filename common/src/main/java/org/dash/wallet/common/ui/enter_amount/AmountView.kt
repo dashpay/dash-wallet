@@ -43,6 +43,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
+    private var onConvertDirectionBtnClicked: (() -> Unit)? = null
 
     private var currencySymbol = "$"
     private var isCurrencySymbolFirst = true
@@ -51,7 +52,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     var input: String
         get() = _input
         set(value) {
-            _input = if (value.isEmpty()) "0" else value
+            _input = if(value.isEmpty()) "0" else value
             updateAmount()
         }
 
@@ -77,14 +78,14 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
                 if (value) {
                     input = dashFormat.minDecimals(0)
-                        .optionalDecimals(0, 6).format(dashAmount).toString()
+                        .optionalDecimals(0,6).format(dashAmount).toString()
                 } else {
                     binding.resultAmount.text = dashFormat.format(dashAmount)
 
                     exchangeRate?.let {
                         fiatAmount = it.coinToFiat(dashAmount)
                         _input = fiatFormat.minDecimals(0)
-                            .optionalDecimals(0, 2).format(fiatAmount).toString()
+                            .optionalDecimals(0,2).format(fiatAmount).toString()
                         binding.inputAmount.text = formatInputWithCurrency()
                     }
                 }
@@ -104,6 +105,9 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         updateCurrency()
         binding.convertDirectionBtn.setOnClickListener {
             dashToFiat = !dashToFiat
+            if (!showCurrencySelector){
+                onConvertDirectionBtnClicked?.invoke()
+            }
         }
         binding.inputCurrencyToggle.setOnClickListener {
             onCurrencyToggleClicked?.invoke()
@@ -180,4 +184,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         }
     }
 
+    fun setOnConvertDirectionBtnClicked(listener: () -> Unit){
+        onConvertDirectionBtnClicked = listener
+    }
 }

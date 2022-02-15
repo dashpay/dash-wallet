@@ -58,4 +58,6 @@ class EnterAmountViewModel @Inject constructor(
         }.onEach(_selectedExchangeRate::postValue)
             .launchIn(viewModelScope)
     }
+    val continueCallback = SingleLiveEvent<Unit>()
+    val convertDirectionCallback = SingleLiveEvent<Boolean>()
 }
