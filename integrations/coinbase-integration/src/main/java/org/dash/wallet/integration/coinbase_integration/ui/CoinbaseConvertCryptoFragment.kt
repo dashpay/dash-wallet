@@ -19,7 +19,6 @@ package org.dash.wallet.integration.coinbase_integration.ui
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
-import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -140,6 +139,9 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             viewModel.getUserWalletAccounts(binding.convertView.dashToCrypto)
         }
 
+        binding.convertView.setOnSwapClicked {
+            convertViewModel.setOnSwapDashFromToCryptoClicked( it)
+        }
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
             binding.convertView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)

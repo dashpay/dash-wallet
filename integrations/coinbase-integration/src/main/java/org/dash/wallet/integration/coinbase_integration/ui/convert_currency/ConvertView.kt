@@ -40,7 +40,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
         .noCode().minDecimals(6).optionalDecimals()
 
     private var onCurrencyChooserClicked: (() -> Unit)? = null
-    private var onSwapClicked: (() -> Unit)? = null
+    private var onSwapClicked: ((Boolean) -> Unit)? = null
 
     private var _input: ServiceWallet? = null
     var input: ServiceWallet?
@@ -70,7 +70,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
         binding.swapBtn.setOnClickListener {
             dashToCrypto = !dashToCrypto
             updateUiWithSwap()
-            onSwapClicked?.invoke()
+            onSwapClicked?.invoke(dashToCrypto)
         }
         binding.convertFromBtn.convertItemClickListener = object :
             CryptoConvertItem.ConvertItemClickListener {
@@ -159,6 +159,10 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
     fun setOnCurrencyChooserClicked(listener: () -> Unit) {
         onCurrencyChooserClicked = listener
+    }
+
+    fun setOnSwapClicked(listener: (Boolean) -> Unit) {
+        onSwapClicked = listener
     }
 
     private fun updateAmount() {

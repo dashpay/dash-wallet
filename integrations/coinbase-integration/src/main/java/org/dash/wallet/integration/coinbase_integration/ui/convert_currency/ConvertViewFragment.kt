@@ -31,7 +31,6 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Monetary
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -39,6 +38,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentConvertCurrencyBinding
+import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
 import java.math.RoundingMode
 
@@ -51,7 +51,6 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         @JvmStatic
         fun newInstance(
             dashToCrypto: Boolean = false,
-            initialAmount: Monetary? = null
         ): ConvertViewFragment {
             val args = bundleOf(ARG_DASH_TO_FIAT to dashToCrypto)
 
@@ -74,14 +73,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         val args = requireArguments()
 
         val dashToCrypto = args.getBoolean(ARG_DASH_TO_FIAT)
-        viewModel.dashToCrypto = dashToCrypto
+        viewModel.setOnSwapDashFromToCryptoClicked(dashToCrypto)
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
         binding.continueBtn.setOnClickListener {
             getFaitAmount(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)?.let {
                 viewModel.onContinueEvent.value = Pair(
-                    viewModel.dashToCrypto,
+                    viewModel.dashToCrypto.value ?: false,
                     it
                 )
             }
@@ -93,22 +92,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
 
         viewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) {
-            it?.coinBaseUserAccountData?.balance?.currency?.let { currencyCode ->
-                currencyConversionOptionList = listOf(currencyCode, viewModel.selectedLocalCurrencyCode, "DASH")
-                binding.currencyOptions.apply {
-                    pickedOptionIndex = 0
-                    provideOptions(currencyConversionOptionList)
-                }
-                viewModel.enteredConvertAmount = "0"
-                viewModel.selectedPickerCurrencyCode = binding.currencyOptions.pickedOption
-                applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)
-                binding.currencyOptions.isVisible = true
-                binding.maxButtonWrapper.isVisible = true
-                binding.inputWrapper.isVisible = true
-                binding.bottomCard.isVisible = true
-            }
+            resetViewSelection(it)
         }
 
+        viewModel.dashToCrypto.observe(viewLifecycleOwner) {
+            viewModel.selectedCryptoCurrencyAccount.value?.let {
+                resetViewSelection(it)
+            }
+        }
         binding.bottomCard.isVisible = false
 
         binding.currencyOptions.pickedOptionIndex = 0
@@ -138,6 +129,26 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.currencyOptions.setOnOptionPickedListener { value, index ->
             setAmountValue(value, viewModel.enteredConvertAmount)
             viewModel.selectedPickerCurrencyCode = value
+        }
+    }
+
+    private fun resetViewSelection(it: CoinBaseUserAccountDataUIModel?) {
+        it?.coinBaseUserAccountData?.balance?.currency?.let { currencyCode ->
+            currencyConversionOptionList = if (viewModel.dashToCrypto.value == true)
+                listOf("DASH", viewModel.selectedLocalCurrencyCode, currencyCode)
+            else
+                listOf(currencyCode, viewModel.selectedLocalCurrencyCode, "DASH")
+            binding.currencyOptions.apply {
+                pickedOptionIndex = 0
+                provideOptions(currencyConversionOptionList)
+            }
+            viewModel.enteredConvertAmount = "0"
+            viewModel.selectedPickerCurrencyCode = binding.currencyOptions.pickedOption
+            applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)
+            binding.currencyOptions.isVisible = true
+            binding.maxButtonWrapper.isVisible = true
+            binding.inputWrapper.isVisible = true
+            binding.bottomCard.isVisible = true
         }
     }
 

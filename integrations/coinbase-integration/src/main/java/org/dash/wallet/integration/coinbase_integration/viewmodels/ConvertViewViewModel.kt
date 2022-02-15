@@ -41,7 +41,10 @@ class ConvertViewViewModel @Inject constructor(
     var configuration: Configuration
 ) : ViewModel() {
 
-    var dashToCrypto: Boolean = false
+    private val _dashToCrypto = MutableLiveData<Boolean>()
+    val dashToCrypto: LiveData<Boolean>
+        get() = this._dashToCrypto
+
     var enteredConvertAmount = "0"
     var maxAmount: String = "0"
     val onContinueEvent = SingleLiveEvent<Pair<Boolean, Fiat>>()
@@ -100,5 +103,9 @@ class ConvertViewViewModel @Inject constructor(
         _enteredConvertDashAmount.value = value
     }
 
-    fun clear(){ _selectedCryptoCurrencyAccount.value = null }
+    fun setOnSwapDashFromToCryptoClicked(dashToCrypto: Boolean) {
+        _dashToCrypto.value = dashToCrypto
+    }
+
+    fun clear() { _selectedCryptoCurrencyAccount.value = null }
 }
