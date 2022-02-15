@@ -6,13 +6,6 @@ import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 
 import org.dash.wallet.common.data.ExchangeRate;
-import org.dash.wallet.features.exploredash.data.AtmDao;
-import org.dash.wallet.features.exploredash.data.MerchantDao;
-import org.dash.wallet.features.exploredash.data.model.Atm;
-import org.dash.wallet.features.exploredash.data.model.AtmFTS;
-import org.dash.wallet.features.exploredash.data.model.Merchant;
-import org.dash.wallet.features.exploredash.data.model.MerchantFTS;
-
 import de.schildbach.wallet.data.AppDatabaseMigrations;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
@@ -24,12 +17,8 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
  */
 @Database(entities = {
         ExchangeRate.class,
-        BlockchainState.class,
-        Merchant.class,
-        MerchantFTS.class,
-        Atm.class,
-        AtmFTS.class
-    }, version = 8)
+        BlockchainState.class
+    }, version = 9)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -37,16 +26,17 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public abstract ExchangeRatesDao exchangeRatesDao();
     public abstract BlockchainStateDao blockchainStateDao();
-    public abstract MerchantDao merchantDao();
-    public abstract AtmDao atmDao();
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
             instance = Room.databaseBuilder(WalletApplication.getInstance(),
                     AppDatabase.class, "dash-wallet-database")
-                    .addMigrations(AppDatabaseMigrations.Companion.getMigration2To3())
+                    .addMigrations(
+                            AppDatabaseMigrations.getMigration3To9()
+                    )
                     .fallbackToDestructiveMigration().build();
         }
         return instance;
     }
+
 }

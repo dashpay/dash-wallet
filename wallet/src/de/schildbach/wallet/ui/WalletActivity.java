@@ -63,7 +63,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
-
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
@@ -251,6 +251,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
         super.onResume();
 
         checkLowStorageAlert();
+        checkWalletEncryptionDialog();
         detectUserCountry();
         showBackupWalletDialogIfNeeded();
         showHideSecureAction();
@@ -795,9 +796,39 @@ public final class WalletActivity extends AbstractBindServiceActivity
         alertDialog.show();
     }
 
+    // Normally OnboardingActivity will catch the non-encrypted wallets
+    // However, if OnboardingActivity does not catch it, such as after a new wallet is created,
+    // then we will catch it here.  This scenario was found during QA tests, but in a build that does
+    // not encrypt the wallet.
+
     private void checkWalletEncryptionDialog() {
         if (!wallet.isEncrypted()) {
-            EncryptKeysDialogFragment.show(false, getSupportFragmentManager());
+            log.info("the wallet is not encrypted");
+            analytics.logError(new Exception("the wallet is not encrypted / OnboardingActivity"),
+                    "no other details are available without the user submitting a report");
+            AdaptiveDialog dialog = AdaptiveDialog.custom(R.layout.dialog_adaptive,
+                    R.drawable.ic_error,
+                    getString(R.string.wallet_encryption_error_title),
+                    getString(R.string.wallet_not_encrypted_error_message),
+                    getString(R.string.button_cancel),
+                    getString(R.string.button_ok)
+            );
+            dialog.setCancelable(false);
+            dialog.show(this, reportIssue -> {
+                if (reportIssue != null) {
+                    if (reportIssue) {
+                        alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(WalletActivity.this,
+                                WalletApplication.getInstance()).buildAlertDialog();
+                        alertDialog.show();
+                    } else {
+                        // is there way to try to fix it?
+                        // can we encrypt the wallet with the SecurityGuard.Password
+                        // for now, lets close the app
+                        WalletActivity.this.finishAffinity();
+                    }
+                }
+                return Unit.INSTANCE;
+            });
         }
     }
 

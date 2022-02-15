@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -25,13 +26,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.features.exploredash.data.AtmDao
-import org.dash.wallet.features.exploredash.data.MerchantDao
-import org.dash.wallet.features.exploredash.data.model.Atm
-import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -41,17 +37,10 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
     companion object {
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
-        private const val PAGE_SIZE = 10000
-        const val SHARED_PREFS_NAME = "explore"
-        const val PREFS_LAST_SYNC_KEY = "last_sync"
     }
 
     private val exploreRepository by lazy {
         entryPoint.exploreRepository()
-    }
-
-    private val preferences by lazy {
-        appContext.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     private val analytics by lazy {
@@ -61,8 +50,6 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface ExploreSyncWorkerEntryPoint {
-        fun atmDao(): AtmDao
-        fun merchantDao(): MerchantDao
         fun exploreRepository(): ExploreRepository
         fun analytics(): AnalyticsService
     }
@@ -71,81 +58,35 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
         EntryPointAccessors.fromApplication(appContext, ExploreSyncWorkerEntryPoint::class.java)
     }
 
+    @SuppressLint("CommitPrefEdits")
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        log.info("Sync Explore Dash started")
+        log.info("sync explore db started")
 
-        var merchantDataSizeDB = 0
-        var lastSync = 0L
-        var lastDataUpdate = 0L
+        var localDataTimestamp = 0L
+        var remoteDataTimestamp = 0L
         try {
-            exploreRepository.init()
+            val tableSyncWatch = Stopwatch.createStarted()
 
-            lastSync = preferences.getLong(PREFS_LAST_SYNC_KEY, 0)
-            lastDataUpdate = exploreRepository.getLastUpdate()
+            localDataTimestamp = exploreRepository.localTimestamp
+            remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
+            log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
 
-            if (lastSync >= lastDataUpdate) {
-                log.info("Data timestamp $lastSync, nothing to sync (${Date(lastSync)})")
+            if (localDataTimestamp >= remoteDataTimestamp) {
+                log.info("data timestamp $localDataTimestamp, nothing to sync (${Date(localDataTimestamp)})")
                 return@withContext Result.success()
             }
 
-            val merchantDao = entryPoint.merchantDao()
-            merchantDataSizeDB = merchantDao.getCount()
+            exploreRepository.download()
+            AppExploreDatabase.forceUpdate()
 
-            val tableSyncWatch = Stopwatch.createStarted()
-
-            if (merchantDataSizeDB == 0) {
-                val atmDao = entryPoint.atmDao()
-                atmDao.deleteAll()
-                val atmCache = mutableListOf<Atm>()
-                exploreRepository.getAtmData().collect {
-                    atmCache.add(it)
-                }
-                atmDao.save(atmCache)
-                tableSyncWatch.stop()
-                log.info("ATM sync took $tableSyncWatch (${atmCache.size} records)")
-                atmCache.clear()
-            }
-
-            tableSyncWatch.reset()
-            tableSyncWatch.start()
-
-            val merchantDataSize = exploreRepository.getMerchantDataSize()
-            if (merchantDataSizeDB == 0) {
-                merchantDao.deleteAll()
-            } else {
-                log.info("MERCHANT data partially synced ($merchantDataSizeDB of $merchantDataSize), continuing")
-            }
-            val merchantCache = mutableListOf<Merchant>()
-            var counter = 0
-            exploreRepository.getMerchantData(merchantDataSizeDB).collect {
-                counter++
-                merchantCache.add(it)
-                if (merchantCache.size == PAGE_SIZE) {
-                    merchantDao.save(merchantCache)
-                    merchantCache.clear()
-                    log.info("MERCHANT $counter of ${merchantDataSize - merchantDataSizeDB} sync took $tableSyncWatch")
-                }
-            }
-            if (merchantCache.size > 0) {
-                merchantDao.save(merchantCache)
-                merchantCache.clear()
-            }
-            tableSyncWatch.stop()
-            log.info("MERCHANT sync took $tableSyncWatch ($counter records)")
-
-            preferences.edit()
-                .putLong(PREFS_LAST_SYNC_KEY, Calendar.getInstance().timeInMillis)
-                .apply()
-
-            log.info("Sync Explore Dash finished")
-
-            return@withContext Result.success()
+            log.info("sync explore db finished $tableSyncWatch")
 
         } catch (ex: Exception) {
-            analytics.logError(ex, "syncing from $merchantDataSizeDB ($lastSync/$lastDataUpdate")
-            log.info("Sync Explore Dash not fully finished: ${ex.message}")
+            analytics.logError(ex, "syncing from $localDataTimestamp, $remoteDataTimestamp")
+            log.info("sync explore db crashed ${ex.message}", ex)
             return@withContext Result.failure()
         }
 
+        return@withContext Result.success()
     }
 }
