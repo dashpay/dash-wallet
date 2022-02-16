@@ -94,7 +94,6 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             log.info("sync explore db finished $tableSyncWatch")
 
             syncStatus.setSyncProgress(100.0)
-            return@withContext Result.success()
 
         } catch (ex: Exception) {
             analytics.logError(ex, "syncing from $localDataTimestamp, $remoteDataTimestamp")
@@ -102,5 +101,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         }
+
+        return@withContext Result.success()
     }
 }

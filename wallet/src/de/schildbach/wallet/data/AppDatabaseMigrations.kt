@@ -22,34 +22,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 class AppDatabaseMigrations {
     companion object {
         @JvmStatic
-        val migration2To3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("CREATE TABLE `merchant` (`id` INTEGER NOT NULL, `name` TEXT, " +
-                        "`active` INTEGER DEFAULT 1, `plusCode` TEXT, `addDate` TEXT, " +
-                        "`updateDate` TEXT, `address1` TEXT, `address2` TEXT, `address3` TEXT, " +
-                        "`address4` TEXT, `latitude` REAL, `longitude` REAL, `territory` TEXT, " +
-                        "`phone` TEXT, `website` TEXT, `type` TEXT, `logoLocation` TEXT, " +
-                        "`deeplink` TEXT, `paymentMethod` TEXT, `source` TEXT, `sourceId` INTEGER, " +
-                        "`coverImage` TEXT, `city` TEXT, PRIMARY KEY(`id`))")
-
-                database.execSQL("CREATE TABLE `atm` (`id` INTEGER NOT NULL, `name` TEXT, " +
-                        "`active` INTEGER DEFAULT 1, `city` TEXT, `coverImage` TEXT, `phone` TEXT, " +
-                        "`postcode` TEXT, `website` TEXT, `type` TEXT, `manufacturer` TEXT, " +
-                        "`latitude` REAL, `longitude` REAL, `territory` TEXT, `address1` TEXT, " +
-                        "`address2` TEXT, `address3` TEXT, `address4` TEXT, `logoLocation` TEXT, " +
-                        "`source` TEXT, `sourceId` INTEGER, PRIMARY KEY(`id`))")
-
-
-                database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `merchant_fts` " +
-                        "USING FTS4(`name`, content=`merchant`)")
-
-                database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `atm_fts` " +
-                        "USING FTS4(`name`, `manufacturer`, content=`atm`)")
-            }
-        }
-
-        @JvmStatic
-        val migration4To9 = object : Migration(4, 9) {
+        val migration3To9 = object : Migration(4, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("DROP TABLE IF EXISTS `merchant`")
                 database.execSQL("DROP TABLE IF EXISTS `atm`")

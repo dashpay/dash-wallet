@@ -847,4 +847,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     public Address currentReceiveAddress() {
         return wallet.currentReceiveAddress();
     }
+
+    // wallets from v5.17.5 and earlier do not have a BIP44 path
+    public boolean isWalletUpgradedtoBIP44() {
+        return wallet != null && wallet.hasKeyChain(Constants.BIP44_PATH);
+    }
 }
