@@ -128,6 +128,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         if (!configuration.hasExploreDashInfoScreenBeenShown() && args.type == ExploreTopic.Merchants) {
             safeNavigate(SearchFragmentDirections.exploreToInfo())
             configuration.setHasExploreDashInfoScreenBeenShown(true)
@@ -136,6 +137,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        binding.toolbar.menu.findItem(R.id.menu_info).apply {
+            this.isVisible = args.type == ExploreTopic.Merchants
+        }
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
@@ -245,9 +250,19 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun refreshManageGpsView() {
         val isLocationEnabled = viewModel.isLocationEnabled.value ?: false
         val isNearby = viewModel.filterMode.value == FilterMode.Nearby
-        binding.manageGpsView.managePermissionsBtn.isVisible = !isLocationEnabled && isNearby
-        binding.manageGpsView.locationRequestTxt.isVisible = !isLocationEnabled && isNearby
-        searchHeaderAdapter.controlsVisible = isLocationEnabled || !isNearby
+        val isTabDisabled = !isLocationEnabled && isNearby
+        searchHeaderAdapter.controlsVisible = !isTabDisabled
+
+        if (isTabDisabled) {
+            binding.manageGpsView.root.isVisible = true
+        }
+
+        binding.manageGpsView.root
+            .animate()
+            .alpha(if (isTabDisabled) 1f else 0f)
+            .setDuration(300)
+            .withEndAction { binding.manageGpsView.root.isVisible = isTabDisabled }
+            .start()
     }
 
     private fun setupFilters(

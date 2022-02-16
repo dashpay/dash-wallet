@@ -185,8 +185,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
         if (viewModel.isLocationEnabled.value == true) {
             binding.radiusFilter.isVisible = true
-            binding.manageGpsView.managePermissionsBtn.isVisible = false
-            binding.manageGpsView.locationRequestTxt.isVisible = false
+            binding.manageGpsView.root.isVisible = false
             binding.locationExplainerTxt.isVisible = false
 
             val optionNames = binding.root.resources.getStringArray(
@@ -203,8 +202,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
             radiusOptionsAdapter = adapter
         } else {
             binding.radiusFilter.isVisible = false
-            binding.manageGpsView.managePermissionsBtn.isVisible = true
-            binding.manageGpsView.locationRequestTxt.isVisible = true
+            binding.manageGpsView.root.isVisible = true
             binding.locationExplainerTxt.isVisible = true
         }
     }

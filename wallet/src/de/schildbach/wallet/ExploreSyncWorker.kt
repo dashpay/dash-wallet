@@ -21,6 +21,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.common.base.Stopwatch
+import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -95,9 +96,12 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
             syncStatus.setSyncProgress(100.0)
 
+        } catch (ex: FirebaseNetworkException) {
+            log.warn("sync explore no network", ex)
+            return@withContext Result.failure()
         } catch (ex: Exception) {
             analytics.logError(ex, "syncing from $localDataTimestamp, $remoteDataTimestamp")
-            log.info("sync explore db crashed ${ex.message}", ex)
+            log.error("sync explore db crashed ${ex.message}", ex)
             syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         }
