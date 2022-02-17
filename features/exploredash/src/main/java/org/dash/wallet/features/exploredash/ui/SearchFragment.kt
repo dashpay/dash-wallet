@@ -21,6 +21,8 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
@@ -93,7 +95,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private val permissionRequestSettings = registerPermissionLauncher { isGranted ->
         if (isGranted) {
             viewModel.monitorUserLocation()
-        }  else {
+        } else {
             openAppSettings()
         }
     }
@@ -196,11 +198,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     }
                 }
                 Status.SUCCESS -> {
-                    binding.apply {
-                        syncStatus.isVisible = false
-                        searchHeaderAdapter.allowSpaceForMessage = false
-                        recenterMapBtnSpacer.isVisible = false
-                    }
+                    clearSyncStatus()
                 }
                 Status.ERROR -> {
                     binding.apply {
@@ -211,18 +209,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         searchHeaderAdapter.allowSpaceForMessage = true
                         recenterMapBtnSpacer.isVisible = true
                         when (syncProgress.exception) {
-                            is FileNotFoundException -> syncMessage.text = getString(R.string.sync_in_progress_file_not_found)
                             is FirebaseNetworkException -> {
-                                // TODO: Determine if database has some contents.  If nothing, then this
-                                // is the first time downloading and there will be no results
-                                // if something, then some results may be found, but won't be complete
-                                syncMessage.text = getString(R.string.sync_in_progress_network_error)
+                                // if the network is unreachable, show the error for 15 seconds
+                                syncMessage.text =
+                                    getString(R.string.sync_in_progress_network_error)
+                                Handler(Looper.getMainLooper()).postDelayed(
+                                    { clearSyncStatus() },
+                                    15000
+                                )
                             }
                             else -> syncMessage.text = getString(R.string.sync_in_progress_error)
                         }
                     }
                 }
                 Status.CANCELED -> {
+                    // this is not currently used
                     binding.apply {
                         syncStatus.isVisible = true
                         searchHeaderAdapter.allowSpaceForMessage = true
@@ -231,6 +232,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     }
                 }
             }
+        }
+    }
+
+    private fun clearSyncStatus() {
+        binding.apply {
+            syncStatus.isVisible = false
+            searchHeaderAdapter.allowSpaceForMessage = false
+            recenterMapBtnSpacer.isVisible = false
         }
     }
 
@@ -382,7 +391,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     filters.payment.isNotEmpty() || filters.territory.isNotEmpty()
         }
 
-        viewModel.selectedTerritory.observe(viewLifecycleOwner){
+        viewModel.selectedTerritory.observe(viewLifecycleOwner) {
             val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
             bottomSheet.isDraggable = isBottomSheetDraggable()
             bottomSheet.state = setBottomSheetState()
@@ -422,7 +431,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     delay(100)
                 }
 
-                when(state) {
+                when (state) {
                     ScreenState.SearchResults -> {
                         transitToSearchResults()
 
@@ -432,7 +441,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         }
                     }
                     ScreenState.Details, ScreenState.DetailsGrouped -> {
-                        val layoutManager = binding.searchResults.layoutManager as LinearLayoutManager
+                        val layoutManager =
+                            binding.searchResults.layoutManager as LinearLayoutManager
                         val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
 
                         if (previousScreenState == ScreenState.SearchResults) {
@@ -453,7 +463,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                             }
                         }
                     }
-                    else -> { }
+                    else -> {
+                    }
                 }
 
                 previousScreenState = state
@@ -480,7 +491,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
-            object: OnBackPressedCallback(true) {
+            object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     hardBackAction.invoke()
                 }
@@ -520,7 +531,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.backToNearestBtn.isVisible = false
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = isBottomSheetDraggable()
-        bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.default_expanded_offset)
+        bottomSheet.expandedOffset =
+            resources.getDimensionPixelOffset(R.dimen.default_expanded_offset)
         bottomSheet.state = setBottomSheetState(bottomSheetWasExpanded)
 
         if (binding.searchResults.itemDecorationCount < 1) {
@@ -531,7 +543,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         searchHeaderAdapter.searchText = viewModel.searchQuery
 
         val layoutParams = binding.searchResults.layoutParams as ConstraintLayout.LayoutParams
-        layoutParams.topMargin = resources.getDimensionPixelOffset(R.dimen.search_results_margin_top)
+        layoutParams.topMargin =
+            resources.getDimensionPixelOffset(R.dimen.search_results_margin_top)
         binding.searchResults.isVisible = true
         binding.dragIndicator.isVisible = true
 
@@ -557,7 +570,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.isDraggable = isBottomSheetDraggable()
-        bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.all_locations_expanded_offset)
+        bottomSheet.expandedOffset =
+            resources.getDimensionPixelOffset(R.dimen.all_locations_expanded_offset)
         bottomSheet.state = setBottomSheetState(expand)
 
         viewModel.selectedItem.value?.let { item ->
@@ -573,7 +587,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
             binding.searchResults.adapter = ConcatAdapter(header, merchantLocationsAdapter)
             val layoutParams = binding.searchResults.layoutParams as ConstraintLayout.LayoutParams
-            layoutParams.topMargin = resources.getDimensionPixelOffset(R.dimen.all_locations_margin_top)
+            layoutParams.topMargin =
+                resources.getDimensionPixelOffset(R.dimen.all_locations_margin_top)
             binding.searchResults.isVisible = true
         }
         binding.dragIndicator.isVisible = false
@@ -625,7 +640,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val searchLocation = if (viewModel.selectedTerritory.value?.isNotEmpty() == true) {
             viewModel.selectedTerritory.value
         } else {
-            val radiusOption = viewModel.selectedRadiusOption.value ?: ExploreViewModel.DEFAULT_RADIUS_OPTION
+            val radiusOption =
+                viewModel.selectedRadiusOption.value ?: ExploreViewModel.DEFAULT_RADIUS_OPTION
             resources.getQuantityString(
                 if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
                 radiusOption, radiusOption
@@ -686,7 +702,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.filteredByTxt.text = appliedFilterNames.joinToString(", ")
 
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-        val bottomSheetPeekHeight = resources.getDimensionPixelOffset(R.dimen.search_content_peek_height)
+        val bottomSheetPeekHeight =
+            resources.getDimensionPixelOffset(R.dimen.search_content_peek_height)
 
         if (appliedFilterNames.any()) {
             bottomSheet.peekHeight = binding.filterPanel.measuredHeight + bottomSheetPeekHeight
@@ -697,10 +714,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun shouldShowFiltersPanel(): Boolean {
         return viewModel.selectedItem.value == null &&
-               viewModel.isLocationEnabled.value == true &&
-               (isPhysicalSearch ||
-               viewModel.paymentMethodFilter.isNotEmpty() ||
-                       viewModel.selectedTerritory.value?.isNotEmpty() == true)
+                viewModel.isLocationEnabled.value == true &&
+                (isPhysicalSearch ||
+                        viewModel.paymentMethodFilter.isNotEmpty() ||
+                        viewModel.selectedTerritory.value?.isNotEmpty() == true)
     }
 
     private fun openFilters() {
@@ -720,7 +737,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun isBottomSheetDraggable(): Boolean {
         val screenState = viewModel.screenState.value
-        val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
+        val isDetails =
+            screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
         val nearbySearch = viewModel.selectedTerritory.value.isNullOrEmpty() &&
                 viewModel.isLocationEnabled.value == true
 
@@ -730,9 +748,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     @BottomSheetBehavior.State
     private fun setBottomSheetState(forceExpand: Boolean = false): Int {
         val screenState = viewModel.screenState.value
-        val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
+        val isDetails =
+            screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
         val nearbySearch = viewModel.selectedTerritory.value.isNullOrEmpty() &&
-                           viewModel.isLocationEnabled.value == true
+                viewModel.isLocationEnabled.value == true
 
         return when {
             forceExpand -> BottomSheetBehavior.STATE_EXPANDED
