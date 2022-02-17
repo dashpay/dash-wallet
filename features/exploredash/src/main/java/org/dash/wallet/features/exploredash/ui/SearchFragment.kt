@@ -59,7 +59,6 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
-import java.io.FileNotFoundException
 import javax.inject.Inject
 
 @FlowPreview
@@ -185,7 +184,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.allMerchantLocations.observe(viewLifecycleOwner) { merchantLocations ->
             merchantLocationsAdapter.submitList(merchantLocations)
         }
-        viewModel.syncProgressLiveDataFromFlow.observe(viewLifecycleOwner) { syncProgress ->
+        viewModel.syncStatus.observe(viewLifecycleOwner) { syncProgress ->
             when (syncProgress.status) {
                 Status.LOADING -> {
                     binding.apply {

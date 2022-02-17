@@ -650,7 +650,7 @@ class ExploreViewModel @Inject constructor(
         _physicalSearchResults.value = results
     }
 
-    var syncProgressLiveDataFromFlow: LiveData<Resource<Double>> = MediatorLiveData<Resource<Double>>().apply {
+    var syncStatus: LiveData<Resource<Double>> = MediatorLiveData<Resource<Double>>().apply {
         addSource(syncStatusService.getSyncProgressFlow().asLiveData(), this::setValue)
     }
 }
