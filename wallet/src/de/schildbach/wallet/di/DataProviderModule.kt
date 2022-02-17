@@ -21,10 +21,10 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.ExploreDataSyncProgress
+import de.schildbach.wallet.ExploreDataSyncStatus
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.features.exploredash.repository.DataSyncStatus
+import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import javax.inject.Singleton
 
 @Module
@@ -36,5 +36,5 @@ object DataProviderModule {
 
     @Singleton
     @Provides
-    fun provideDataSyncStatus(): DataSyncStatus = ExploreDataSyncProgress()
+    fun provideDataSyncStatus(): DataSyncStatusService = ExploreDataSyncStatus()
 }

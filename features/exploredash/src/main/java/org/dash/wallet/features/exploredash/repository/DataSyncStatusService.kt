@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.Resource
 import java.lang.Exception
 
-interface DataSyncStatus {
+interface DataSyncStatusService {
     suspend fun setSyncProgress(progress: Double)
     suspend fun setSyncError(exception: Exception)
     fun getSyncProgressFlow(): Flow<Resource<Double>>

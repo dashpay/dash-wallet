@@ -30,7 +30,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
-import org.dash.wallet.features.exploredash.repository.DataSyncStatus
+import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -58,7 +58,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
     interface ExploreSyncWorkerEntryPoint {
         fun exploreRepository(): ExploreRepository
         fun analytics(): AnalyticsService
-        fun syncStatus(): DataSyncStatus
+        fun syncStatus(): DataSyncStatusService
     }
 
     private val entryPoint by lazy {

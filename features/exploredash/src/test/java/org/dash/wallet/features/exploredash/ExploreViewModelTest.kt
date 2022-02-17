@@ -29,7 +29,7 @@ import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.Merchant
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.PaymentMethod
-import org.dash.wallet.features.exploredash.repository.DataSyncStatus
+import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.FilterMode
@@ -74,7 +74,7 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val dataSyncStatus = mock<DataSyncStatus> {
+            val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
             }
 
@@ -118,7 +118,7 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val dataSyncStatus = mock<DataSyncStatus> {
+            val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
             }
 
@@ -163,7 +163,7 @@ class ExploreViewModelTest {
                 on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
             }
 
-            val dataSyncStatus = mock<DataSyncStatus> {
+            val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
             }
 
@@ -212,7 +212,7 @@ class ExploreViewModelTest {
             val locationMock = mock<UserLocationStateInt> {
                 on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn bounds
             }
-            val dataSyncStatus = mock<DataSyncStatus> {
+            val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
             }
             val viewModel = ExploreViewModel(dataSource, locationMock, dataSyncStatus)
@@ -243,7 +243,7 @@ class ExploreViewModelTest {
         runBlocking {
             val locationMock = mock<UserLocationStateInt>()
             val dataSource = mock<ExploreDataSource>()
-            val dataSyncStatus = mock<DataSyncStatus>{
+            val dataSyncStatus = mock<DataSyncStatusService>{
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
             }
             val viewModel = ExploreViewModel(dataSource, locationMock, dataSyncStatus)

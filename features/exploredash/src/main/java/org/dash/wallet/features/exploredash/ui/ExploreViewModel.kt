@@ -29,7 +29,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
-import org.dash.wallet.features.exploredash.repository.DataSyncStatus
+import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.extensions.Const
@@ -71,7 +71,7 @@ data class FilterOptions(
 class ExploreViewModel @Inject constructor(
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
-    private val dataSyncStatus: DataSyncStatus
+    private val syncStatusService: DataSyncStatusService
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -651,6 +651,6 @@ class ExploreViewModel @Inject constructor(
     }
 
     var syncProgressLiveDataFromFlow: LiveData<Resource<Double>> = MediatorLiveData<Resource<Double>>().apply {
-        addSource(dataSyncStatus.getSyncProgressFlow().asLiveData(), this::setValue)
+        addSource(syncStatusService.getSyncProgressFlow().asLiveData(), this::setValue)
     }
 }

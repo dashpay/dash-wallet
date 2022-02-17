@@ -3,14 +3,14 @@ package de.schildbach.wallet
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.features.exploredash.repository.DataSyncStatus
+import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.slf4j.LoggerFactory
 import java.lang.Exception
 import javax.inject.Inject
 
-class ExploreDataSyncProgress @Inject constructor(): DataSyncStatus {
+class ExploreDataSyncStatus @Inject constructor(): DataSyncStatusService {
     companion object {
-        val log = LoggerFactory.getLogger(ExploreDataSyncProgress::class.java)
+        val log = LoggerFactory.getLogger(ExploreDataSyncStatus::class.java)
     }
 
     private val _syncProgressFlow = MutableStateFlow(Resource.loading(0.00))
