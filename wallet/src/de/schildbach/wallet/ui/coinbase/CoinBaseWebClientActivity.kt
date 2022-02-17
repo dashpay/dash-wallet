@@ -71,7 +71,10 @@ class CoinBaseWebClientActivity : InteractionAwareActivity() {
                 "=code&scope=wallet:accounts:read,wallet:user:read,wallet:payment-methods:read," +
                 "wallet:buys:read,wallet:buys:create,wallet:transactions:transfer,wallet:" +
                 "transactions:request,wallet:transactions:read,wallet:trades:create,wallet:supported-assets:read,wallet:transactions:" +
-                "send&meta[send_limit_amount]=1&meta[send_limit_currency]=USD&meta[send_limit_period]=month&account=all"
+                "send&meta[send_limit_amount]=1&" +
+                "meta[send_limit_currency]=USD&" +
+                "meta[send_limit_period]=month" +
+                "&account=all"
 
         binding.webView.loadUrl(loginUrl)
     }
