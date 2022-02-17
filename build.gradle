@@ -3,7 +3,7 @@ buildscript {
         kotlin_version = '1.5.30'
         coroutines_version = '1.5.2'
         ok_http_version = '3.12.12'
-        dashjVersion = '0.17.10'
+        dashjVersion = '0.17.11-SNAPSHOT'
         hiltVersion = '2.38.1'
         firebaseVersion = '28.4.2'
         roomVersion = '2.3.0'
