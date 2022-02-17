@@ -23,21 +23,28 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.AppDatabase
-import de.schildbach.wallet.data.BlockchainStateDao
+import de.schildbach.wallet.AppExploreDatabase
+import org.dash.wallet.features.exploredash.data.AtmDao
+import org.dash.wallet.features.exploredash.data.MerchantDao
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DatabaseModule {
+object ExploreDatabaseModule {
+
     @Singleton
     @Provides
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        return AppDatabase.getAppDatabase()
+    fun provideDatabase(@ApplicationContext context: Context): AppExploreDatabase {
+        return AppExploreDatabase.getAppDatabase()
     }
 
     @Provides
-    fun provideBlockchainStateDao(database: AppDatabase): BlockchainStateDao {
-        return database.blockchainStateDao()
+    fun provideMerchantDao(a2Database: AppExploreDatabase): MerchantDao {
+        return a2Database.merchantDao()
+    }
+
+    @Provides
+    fun provideAtmDao(a2Database: AppExploreDatabase): AtmDao {
+        return a2Database.atmDao()
     }
 }

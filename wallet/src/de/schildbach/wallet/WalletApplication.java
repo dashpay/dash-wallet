@@ -912,4 +912,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
         return wrappedTransactions;
     }
+
+    // wallets from v5.17.5 and earlier do not have a BIP44 path
+    public boolean isWalletUpgradedToBIP44() {
+        return wallet != null && wallet.hasKeyChain(Constants.BIP44_PATH);
+    }
 }
