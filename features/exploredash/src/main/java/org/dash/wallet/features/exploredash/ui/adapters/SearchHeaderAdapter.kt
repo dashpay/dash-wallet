@@ -80,9 +80,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     var allowSpaceForMessage: Boolean = false
         set(value) {
             field = value
-            println("allowSpaceForMessage value is now2 $value ${::binding.isInitialized}")
             if (::binding.isInitialized) {
-                println("allowSpaceForMessage value is now $value ${::binding.isInitialized}")
                 refreshSpaceForMessage(value)
             }
         }
