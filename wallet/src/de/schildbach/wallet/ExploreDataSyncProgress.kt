@@ -18,12 +18,12 @@ class ExploreDataSyncProgress @Inject constructor(): DataSyncStatus {
     override fun getSyncProgressFlow(): Flow<Resource<Double>> = _syncProgressFlow
 
     override suspend fun setSyncError(exception: Exception) {
-        log.info("explore data sync failure", exception)
+        log.info("sync explore data failure", exception)
         _syncProgressFlow.emit(Resource.error(exception))
     }
 
     override suspend fun setSyncProgress(progress: Double) {
-        log.info("explore data sync progress: {}", progress)
+        log.info("sync explore data progress: {}", progress)
         _syncProgressFlow.emit(if (progress < 100.0) {
             Resource.loading(progress)
         } else {

@@ -88,7 +88,7 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
             remoteDataRef = storage.reference.child(GC_FILE_PATH)
             remoteDataRef!!.metadata.await()
         } catch (ex: Exception) {
-            log.warn("error getting remote data timestamp")
+            log.warn("error getting remote data timestamp", ex)
             null
         }
         val dataTimestamp = remoteDataInfo?.getCustomMetadata("Data-Timestamp")?.toLong()

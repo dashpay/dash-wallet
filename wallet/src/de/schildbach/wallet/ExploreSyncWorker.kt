@@ -98,6 +98,7 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
 
         } catch (ex: FirebaseNetworkException) {
             log.warn("sync explore no network", ex)
+            syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         } catch (ex: Exception) {
             analytics.logError(ex, "syncing from $localDataTimestamp, $remoteDataTimestamp")
