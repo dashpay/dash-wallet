@@ -204,13 +204,12 @@ class ExploreViewModel @Inject constructor(
                             _filterMode.flatMapLatest { mode ->
                                 clearSearchResults()
                                 _searchBounds
-                                    .filterNotNull()
                                     .filter {
                                         (mode != FilterMode.Nearby || _isLocationEnabled.value == true)
                                                 && screenState.value == ScreenState.SearchResults
                                     }
                                     .map { bounds ->
-                                        if (isLocationEnabled.value == true &&
+                                        if (bounds != null && isLocationEnabled.value == true &&
                                             (exploreTopic == ExploreTopic.ATMs || mode == FilterMode.Nearby)
                                         ) {
                                             val radiusBounds = locationProvider.getRadiusBounds(
