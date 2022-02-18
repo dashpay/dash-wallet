@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.payments
 
+import android.os.Looper
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -26,7 +27,9 @@ import org.bitcoinj.core.*
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.wallet.*
+import org.bitcoinj.wallet.SendRequest
+import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
@@ -40,6 +43,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
     override suspend fun sendCoins(address: Address, amount: Coin, constrainInputsTo: Address?): Transaction {
         val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        ensureContext(wallet.context)
         val sendRequest = createSendRequest(address, amount, constrainInputsTo)
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
 
@@ -63,6 +67,8 @@ class SendCoinsTaskRunner @Inject constructor(
         exchangeRate: ExchangeRate? = null,
         txCompleted: Boolean = false
     ): Transaction = withContext(Dispatchers.IO) {
+        ensureContext(wallet.context)
+
         val securityGuard = SecurityGuard()
         val password = securityGuard.retrievePassword()
         val encryptionKey = deriveKey(wallet, password, scryptIterationsTarget)
@@ -72,7 +78,6 @@ class SendCoinsTaskRunner @Inject constructor(
 
         try {
             log.info("sending: {}", sendRequest)
-            Context.propagate(Constants.CONTEXT)
 
             if (txCompleted) {
                 wallet.commitTx(sendRequest.tx)
@@ -82,6 +87,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
             val transaction = sendRequest.tx
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
+
             walletApplication.broadcastTransaction(transaction)
             transaction
         } catch (ex: Exception) {
@@ -129,5 +135,13 @@ class SendCoinsTaskRunner @Inject constructor(
 
         // Hand back the (possibly changed) encryption key.
         return key
+    }
+
+    private fun ensureContext(context: Context) {
+        Context.propagate(context)
+
+        if (Looper.myLooper() == null) {
+            Looper.prepare()
+        }
     }
 }

@@ -19,13 +19,14 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.WalletDataProvider
@@ -52,10 +53,12 @@ interface CrowdNodeApi {
     val signUpStatus: StateFlow<SignUpStatus>
     val existingAccountAddress: Address?
     val apiError: Exception?
+    var notificationIntent: Intent?
+    var showNotificationOnResult: Boolean
 
-    suspend fun signUp(accountAddress: Address, continueFromAcceptTerms: Boolean = false)
+    fun persistentSignUp(accountAddress: Address)
+    suspend fun signUp(accountAddress: Address)
     fun reset()
-    fun showNotificationOnFinished(show: Boolean, clickIntent: Intent? = null)
 }
 
 class CrowdNodeException(message: String): Exception(message)
@@ -71,28 +74,45 @@ class CrowdNodeBlockchainApi @Inject constructor(
         private val log = LoggerFactory.getLogger(CrowdNodeBlockchainApi::class.java)
     }
 
-    private var showNotificationOnResult = false
-    private var notificationIntent: Intent? = null
+    private val params = walletDataProvider.networkParameters
 
     override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
     override var existingAccountAddress: Address? = null
         private set
     override var apiError: Exception? = null
         private set
+    override var notificationIntent: Intent? = null
+    override var showNotificationOnResult = false
 
     init {
         checkCrowdNodeTransactions()
     }
 
-    override suspend fun signUp(accountAddress: Address, continueFromAcceptTerms: Boolean) {
-        log.info("CrowdNode sign up")
+    override fun persistentSignUp(accountAddress: Address) {
+        log.info("CrowdNode persistent sign up")
+
+        val crowdNodeWorker = OneTimeWorkRequestBuilder<CrowdNodeWorker>()
+            .setInputData(workDataOf(
+                CrowdNodeWorker.API_REQUEST to CrowdNodeWorker.SIGNUP_CALL,
+                CrowdNodeWorker.ACCOUNT_ADDRESS to accountAddress.toBase58()
+            ))
+            .build()
+
+        WorkManager.getInstance(appContext)
+            .enqueueUniqueWork(CrowdNodeWorker.WORK_NAME, ExistingWorkPolicy.KEEP, crowdNodeWorker)
+    }
+
+    override suspend fun signUp(accountAddress: Address) {
+        log.info("CrowdNode sign up, current status: ${signUpStatus.value}")
 
         try {
-            if (!continueFromAcceptTerms) {
+            if (signUpStatus.value.ordinal < SignUpStatus.SigningUp.ordinal) {
                 signUpStatus.value = SignUpStatus.FundingWallet
                 val topUpTx = topUpAddress(accountAddress)
                 log.info("topUpTx id: ${topUpTx.txId}")
+            }
 
+            if (signUpStatus.value.ordinal < SignUpStatus.AcceptingTerms.ordinal) {
                 signUpStatus.value = SignUpStatus.SigningUp
                 val signUpResponseTx = makeSignUpRequest(accountAddress)
                 log.info("signUpResponseTx id: ${signUpResponseTx.txId}")
@@ -109,6 +129,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
                 notificationService.showNotification(
                     "crowdnode_ready",
                     appContext.getString(R.string.crowdnode_account_ready),
+                    false,
                     notificationIntent
                 )
             }
@@ -123,6 +144,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
                 notificationService.showNotification(
                     "crowdnode_error",
                     appContext.getString(R.string.crowdnode_error),
+                    false,
                     notificationIntent
                 )
             }
@@ -135,15 +157,10 @@ class CrowdNodeBlockchainApi @Inject constructor(
         apiError = null
     }
 
-    override fun showNotificationOnFinished(show: Boolean, clickIntent: Intent?) {
-        this.showNotificationOnResult = show
-        notificationIntent = if (show) clickIntent else null
-    }
-
     private fun checkCrowdNodeTransactions() {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             log.info("checking CrowdNode transactions")
-            val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet())
+            val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet(params))
             val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
             (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
                 existingAccountAddress = set.accountAddress
@@ -157,29 +174,24 @@ class CrowdNodeBlockchainApi @Inject constructor(
                 if (set.hasAcceptTermsResponse) {
                     log.info("found accept terms response")
                     signUpStatus.value = SignUpStatus.AcceptingTerms
-
-                    if (!set.hasAcceptTermsRequest && existingAccountAddress != null) {
-                        GlobalScope.launch(Dispatchers.Main) {
-                            signUp(existingAccountAddress!!, true)
-                        }
-                    }
                 }
             }
         }
     }
 
     private suspend fun topUpAddress(accountAddress: Address): Transaction {
-        val topUpTx = paymentService.sendCoins(accountAddress, CrowdNodeConstants.MINIMUM_REQUIRED_DASH)
+        val topUpTx = paymentService.sendCoins(accountAddress, CrowdNodeConstants.REQUIRED_FOR_SIGNUP)
         return walletDataProvider.observeTransactions(LockedTransaction(topUpTx.txId)).first()
     }
 
     private suspend fun makeSignUpRequest(accountAddress: Address): Transaction {
         val requestValue = CrowdNodeSignUpTx.SIGNUP_REQUEST_CODE
-        val signUpTx = paymentService.sendCoins(CrowdNodeConstants.CROWDNODE_ADDRESS, requestValue, accountAddress)
+        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
+        val signUpTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)
         log.info("signUpTx id: ${signUpTx.txId}")
-        val errorResponse = CrowdNodeErrorResponse(requestValue)
+        val errorResponse = CrowdNodeErrorResponse(params, requestValue)
         val tx = walletDataProvider.observeTransactions(
-            CrowdNodeAcceptTermsResponse(),
+            CrowdNodeAcceptTermsResponse(params),
             errorResponse
         ).first()
 
@@ -192,11 +204,12 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
     private suspend fun acceptTerms(accountAddress: Address): Transaction {
         val requestValue = CrowdNodeAcceptTermsTx.ACCEPT_TERMS_REQUEST_CODE
-        val acceptTx = paymentService.sendCoins(CrowdNodeConstants.CROWDNODE_ADDRESS, requestValue, accountAddress)
+        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
+        val acceptTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)
         log.info("acceptTx id: ${acceptTx.txId}")
-        val errorResponse = CrowdNodeErrorResponse(requestValue)
+        val errorResponse = CrowdNodeErrorResponse(params, requestValue)
         val tx = walletDataProvider.observeTransactions(
-            CrowdNodeWelcomeToApiResponse(),
+            CrowdNodeWelcomeToApiResponse(params),
             errorResponse
         ).first()
 

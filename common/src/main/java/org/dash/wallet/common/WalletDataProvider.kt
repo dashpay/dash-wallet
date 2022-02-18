@@ -30,6 +30,8 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 
 interface WalletDataProvider {
 
+    val networkParameters: NetworkParameters
+
     fun currentReceiveAddress(): Address
 
     fun freshReceiveAddress(): Address

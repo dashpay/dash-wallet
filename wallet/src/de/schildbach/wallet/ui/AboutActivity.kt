@@ -27,7 +27,6 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.installations.FirebaseInstallations
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ExploreSyncWorker
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.BuildConfig

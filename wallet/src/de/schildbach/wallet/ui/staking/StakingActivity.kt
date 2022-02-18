@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.staking
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -64,6 +65,9 @@ class StakingActivity : LockScreenActivity() {
             }
         }
 
+        val intent = Intent(this, StakingActivity::class.java)
+        viewModel.setNotificationIntent(intent)
+
         setContentView(binding.root)
     }
 
@@ -92,5 +96,15 @@ class StakingActivity : LockScreenActivity() {
             }
 
         navController.graph = navGraph
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.changeNotifyWhenDone(true)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.changeNotifyWhenDone(false)
     }
 }
