@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Buwagin</string>
     <string name="network_unavailable_return">Bumalik sa Wallet</string>
+    <string name="button_continue">Ipagpatuloy</string>
 
+    <string name="max">Max</string>
+    <string name="select_currency">Piliin ang Pera</string>
 </resources>

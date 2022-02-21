@@ -29,5 +29,7 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">忽略</string>
     <string name="network_unavailable_return">返回到钱包</string>
+    <string name="button_continue">继续</string>
 
+    <string name="max">最大</string>
 </resources>

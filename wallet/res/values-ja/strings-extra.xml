@@ -15,6 +15,7 @@
     <string name="set_pin_decrypting">ウォレットを復号しています</string>
     <string name="set_pin_verifying_pin">PINを検証中</string>
     <string name="set_pin_message">このアプリをアンロックして使用するときは必ずこのPINが必要となります</string>
+    <string name="set_pin_confirm_pin_incorrect">不正な暗証番号</string>
 
     <string name="home_available_balance">ご利用可能な残高</string>
     <string name="home_balance_hidden">非表示にされた残高</string>
@@ -90,6 +91,9 @@
     <string name="forgot_pin_instruction_2">新しいPINを設定する</string>
     <string name="forgot_pin_instruction_3">新しいPINでログインしてウォレットにアクセスする</string>
     <string name="forgot_pin_warning">自分のPINを忘れたり、復元フレーズを紛失した場合は、あなたのウォレットと資金にアクセスできなくなります。</string>
+    <string name="forgot_pin_recover">リカバリーフレーズを入力する</string>
+    <string name="forgot_pin_passphrase_doesnt_match">リカバリーフレーズは、このウォレットに設定されたものと一致しません。</string>
+
     <string name="send_coins_auto_lock_feasible">この取引は追加手数料なしで即座に完了するはずです</string>
     <string name="send_coins_auto_lock_not_feasible">このトランザクションは決済に数分かかるかもしれません。 %1$s%2$sの追加で即時に完了させますか ？</string>
     <string name="send_coins_instant_send_not_feasible">このトランザクションは決済に数分がかかります。</string>
@@ -198,6 +202,7 @@
     <string name="verify_it_is_important">それは大切です</string>
     <string name="verify_it_is_important_subtitle">これからあなたのウォレットの秘密鍵を表示します</string>
     <string name="verify_info_text_1">この復元フレーズがあれば、このウォレットの中の資金へのアクセスできます</string>
+    <string name="verify_info_text_2">このリカバリーフレーズは保存されません。</string>
     <string name="verify_info_text_3">この端末を紛失したり故障した場合やこの端末からDashウォレットを
 誤まってアンインストールしてしまった場合に、あなたの資金にアクセス
 するためには、この復元フレーズが必要となります。</string>
@@ -213,8 +218,14 @@
     <string name="verify_seed_success_message">現在あなたのウォレットは安全です。復元フレーズを使えばいつでも
 他の端末であなたのアカウントを復元できます。</string>
     <string name="verify_no_screenshot_title">スクリーンショット厳禁</string>
+    <string name="verify_no_screenshot_message">その代わりとして、リカバリーフレーズを安全なところに書きとめておいてください。</string>
     <string name="verify_why_no_screenshot">なぜスクリーンショットを撮ってはいけませんか？</string>
     <string name="verify_warning_title">警告</string>
+    <string name="verify_warning_message">このリカバリーフレーズは、ウォレット内の資金にアクセスするためのものです。</string>
+    <string name="verify_warning_screenshots_title">スクリーンショットを撮らないでください</string>
+    <string name="verify_warning_screenshots_message">スクリーンショットは、他のアプリやデバイスから見えるようになっています。</string>
+    <string name="verify_warning_do_not_show">リカバリーフレーズは絶対に他者に見せないでください。</string>
+    <string name="verify_warning_do_not_type">パスワード管理ソフトなどにリカバリーフレーズを入力しないでください。</string>
     <string name="view_seed_done">完了</string>
     <string name="view_seed_title">復元フレーズ</string>
     <string name="transaction_result_view_on_explorer">ブロックエクスプローラーで見る</string>
@@ -247,6 +258,10 @@
     <string name="menu_local_currency">通貨表示</string>
     <string name="menu_rescan_blockchain">ブロックチェーンの再スキャン</string>
     <string name="menu_contact_support_title">サポートへ連絡する</string>
+    <string name="menu_contact_support_subtitle">問題を報告する</string>
+    <string name="menu_explore_title">探求する</string>
+    <string name="menu_explore_subtitle">155,000以上の加盟店でDASHでショッピング</string>
+
     <string name="tools_address_book">アドレスブック</string>
     <string name="tools_import_private_key">秘密鍵をインポート</string>
     <string name="tools_network_monitor">ネットワークモニター</string>
@@ -258,6 +273,9 @@
     <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dashウォレット %s</string>
+    <string name="about_last_explore_dash_sync">%1$s\nLast sync:%2$sで更新されたDashデータを確認します</string>
+    <string name="about_last_explore_dash_update_error">取り出しできません</string>
+    <string name="about_last_explore_dash_sync_never">全く</string>
 
     <string name="block">ブロック</string>
     <string name="time">時間</string>
@@ -305,6 +323,7 @@
     <string name="welcome_screen_subtitle_3">自分のウォレットを完全に制御していて、ニーズに基づいてカスタマイズする</string>
 
     <string name="sync_status_wait">同期が完了するまでお待ちください</string>
+    <string name="sync_status_syncing_title">%1$dを同期していません</string>
     <string name="sync_status_syncing_sub_title">Dashのブロックチェーンで</string>
     <string name="sync_status_unable_to_connect">接続できません</string>
     <string name="sync_status_check_connection">接続を確認してください</string>
@@ -320,13 +339,29 @@
     <string name="payment_request_please_try_again">もう一度お試しください</string>
     <string name="payment_request_try_again">再試行する</string>
     <string name="payment_request_problem_title">お支払いが確認されませんでした</string>
+    <string name="payment_request_problem_message">お客様のお支払いがサーバーで処理されませんでしたので、加盟店にお問い合わせください。</string>
     <string name="payment_request_expired_title">お支払いの請求は消滅しました</string>
     <string name="payment_request_close">閉じる</string>
     <string name="payment_request_skip">スキップする</string>
     <string name="payment_request_paid_to">お支払い済</string>
 
+    <string name="import_image_not_valid_qr_code">有効なQRコードではありません</string>
+    <string name="import_image_please_use_valid_qr_code">有効なDashのQRコードをご使用ください。</string>
+    <string name="import_image_no_private_key_copied">非公開キーがコピーされていません</string>
+    <string name="import_image_import_valid_private_key">有効な非公開キーをコピーして、そこからDashをインポートします。</string>
+    <string name="import_image_invalid_private">無効な非公開キー</string>
+
     <string name="syncing">同期中</string>
+    <string name="syncing_balance">同期バランス</string>
+
     <string name="all_transactions">全て</string>
     <string name="received_transactions">受取済み</string>
     <string name="sent_transactions">送信済み</string>
+    <string name="set_pin_error_missing_wallet_title">ウォレット紛失のエラー</string>
+    <string name="set_pin_error_missing_wallet_message">ウォレットが行方不明です。 サポートデスクにご報告ください。</string>
+    <string name="wallet_encryption_error_title">ウォレット作成時のエラー</string>
+    <string name="wallet_encryption_error_message">ウォレットの作成に問題があります。この問題をサポートデスクにご報告ください。</string>
+    <string name="wallet_not_encrypted_error_message">お客様のウォレットに問題があります。\n\nこのウォレットにDashがない場合、このアプリをアンインストールして再インストールしてください。その後、新しいウォレットを作成してください。\n\nリカバリーフレーズやバックアップファイルがある場合は、本アプリをアンインストール後、再インストールしてください。\n\nそれ以外の場合は、この問題をサポートデスクにご報告ください。</string>
+
+
 </resources>

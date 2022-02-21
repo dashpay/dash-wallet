@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">تجاهل</string>
     <string name="network_unavailable_return">العودة إلى المحفظة</string>
+    <string name="button_continue">استمر</string>
 
+    <string name="max">الحد الأقصى</string>
+    <string name="select_currency">اختر العملة</string>
 </resources>
