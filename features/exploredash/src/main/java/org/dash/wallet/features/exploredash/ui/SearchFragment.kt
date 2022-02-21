@@ -197,7 +197,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     }
                 }
                 Status.SUCCESS -> {
-                    clearSyncStatus()
+                    clearSyncStatus(binding)
                 }
                 Status.ERROR -> {
                     binding.apply {
@@ -213,7 +213,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                                 syncMessage.text =
                                     getString(R.string.sync_in_progress_network_error)
                                 Handler(Looper.getMainLooper()).postDelayed(
-                                    { clearSyncStatus() },
+                                    { clearSyncStatus(binding) },
                                     15000
                                 )
                             }
@@ -234,7 +234,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun clearSyncStatus() {
+    // passing binding avoids IllegalStateException in onStateChanged callback
+    private fun clearSyncStatus(binding: FragmentSearchBinding) {
         binding.apply {
             syncStatus.isVisible = false
             searchHeaderAdapter.allowSpaceForMessage = false
