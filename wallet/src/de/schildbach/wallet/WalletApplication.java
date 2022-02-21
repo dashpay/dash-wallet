@@ -118,6 +118,8 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
 import kotlinx.coroutines.flow.Flow;
 
 /**
@@ -129,6 +131,7 @@ public class WalletApplication extends BaseWalletApplication
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
+    private List<Function0<Unit>> wipeListeners = new ArrayList<>();
 
     private boolean basicWalletInitalizationFinished = false;
 
@@ -821,6 +824,7 @@ public class WalletApplication extends BaseWalletApplication
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
+        notifyWalletWipe();
         PinRetryController.getInstance().clearPinFailPrefs();
         MnemonicCodeExt.clearWordlistPath(this);
         try {
@@ -836,6 +840,12 @@ public class WalletApplication extends BaseWalletApplication
         }
         // wallet must be null for the OnboardingActivity flow
         wallet = null;
+    }
+
+    private void notifyWalletWipe() {
+        for (Function0<Unit> listener : wipeListeners) {
+            listener.invoke();
+        }
     }
 
     @NonNull
@@ -940,5 +950,16 @@ public class WalletApplication extends BaseWalletApplication
     @Override
     public NetworkParameters getNetworkParameters() {
         return Constants.NETWORK_PARAMETERS;
+    }
+
+
+    @Override
+    public void attachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
+        wipeListeners.add(listener);
+    }
+
+    @Override
+    public void detachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
+        wipeListeners.remove(listener);
     }
 }

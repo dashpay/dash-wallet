@@ -88,6 +88,9 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
     init {
         restoreStatus()
+        walletDataProvider.attachOnWalletWipedListener {
+            reset()
+        }
     }
 
     override fun persistentSignUp(accountAddress: Address) {
@@ -155,6 +158,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     }
 
     override fun reset() {
+        log.info("reset is triggered")
         signUpStatus.value = SignUpStatus.NotStarted
         existingAccountAddress = null
         apiError = null
