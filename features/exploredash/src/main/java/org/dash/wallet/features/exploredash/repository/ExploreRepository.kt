@@ -53,6 +53,7 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
 
     companion object {
         const val DATA_FILE_NAME = "explore.db"
+        const val DATA_TMP_FILE_NAME = "explore.tmp"
         private const val GC_FILE_PATH = "explore/explore.db"
         private const val DB_ASSET_FILE_NAME = "explore/$DATA_FILE_NAME"
 
@@ -96,15 +97,24 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
 
     override suspend fun download() {
         ensureAuthenticated()
+
         val context = contextRef.get()!!
         val cacheDir = context.cacheDir
-        val exploreDatFile = File(cacheDir, DATA_FILE_NAME)
 
-        log.info("downloading explore db from server")
+        val tmpFile = File(cacheDir, DATA_TMP_FILE_NAME)
+        val tmpFileDelete = tmpFile.delete()
+
+        log.info("downloading explore db from server ($tmpFileDelete)")
         val startTime = currentTimeMillis()
-        val result = remoteDataRef!!.getFile(exploreDatFile).await()
+        val result = remoteDataRef!!.getFile(tmpFile).await()
         val totalTime = (currentTimeMillis() - startTime).toFloat() / 1000
-        log.info("downloaded $remoteDataRef (${result.bytesTransferred} as $exploreDatFile [$totalTime s]")
+        log.info("downloaded $remoteDataRef (${result.bytesTransferred} as $tmpFile [$totalTime s]")
+
+        val updateFile = File(cacheDir, DATA_FILE_NAME)
+        val updateFileDelete = updateFile.delete()
+        val tmpFileRename = tmpFile.renameTo(updateFile)
+
+        log.info("update file $updateFile created ($updateFileDelete, $tmpFileRename)")
     }
 
     private suspend fun ensureAuthenticated() {

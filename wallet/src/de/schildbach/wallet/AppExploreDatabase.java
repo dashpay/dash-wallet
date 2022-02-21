@@ -84,7 +84,12 @@ public abstract class AppExploreDatabase extends RoomDatabase {
                     });
         }
 
-        return dbBuilder.fallbackToDestructiveMigration().build();
+        AppExploreDatabase database = dbBuilder.fallbackToDestructiveMigration().build();
+        if (!dbFile.exists()) {
+            // execute simple query to trigger database opening (onOpenPrepackagedDatabase)
+            database.query("SELECT * FROM sqlite_master", null);
+        }
+        return database;
     }
 
     public static void forceUpdate() {
@@ -93,7 +98,5 @@ public abstract class AppExploreDatabase extends RoomDatabase {
             instance.close();
         }
         instance = create();
-        // execute simple query to trigger database opening
-        instance.query("SELECT * FROM sqlite_master", null);
     }
 }
