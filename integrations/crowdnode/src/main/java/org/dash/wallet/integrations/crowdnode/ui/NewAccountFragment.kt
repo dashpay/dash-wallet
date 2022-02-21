@@ -20,7 +20,6 @@ package org.dash.wallet.integrations.crowdnode.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -80,7 +79,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         binding.createAccountBtn.setOnClickListener {
             lifecycleScope.launch {
                 securityModel.requestPinCode(requireActivity())?.let {
-                    viewModel.signUpInBackground()
+                    viewModel.signUp()
                 }
             }
         }

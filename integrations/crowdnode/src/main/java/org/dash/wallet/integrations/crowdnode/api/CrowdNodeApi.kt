@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
@@ -68,6 +69,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val notificationService: NotificationService,
     private val analyticsService: AnalyticsService,
+    private val configuration: Configuration,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     companion object {
@@ -85,7 +87,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     override var showNotificationOnResult = false
 
     init {
-        checkCrowdNodeTransactions()
+        restoreStatus()
     }
 
     override fun persistentSignUp(accountAddress: Address) {
@@ -139,6 +141,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
             apiError = ex
             signUpStatus.value = SignUpStatus.Error
+            configuration.crowdNodeError = ex.message
 
             if (showNotificationOnResult) {
                 notificationService.showNotification(
@@ -155,11 +158,22 @@ class CrowdNodeBlockchainApi @Inject constructor(
         signUpStatus.value = SignUpStatus.NotStarted
         existingAccountAddress = null
         apiError = null
+        configuration.crowdNodeError = ""
     }
 
-    private fun checkCrowdNodeTransactions() {
+    private fun restoreStatus() {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
-            log.info("checking CrowdNode transactions")
+            log.info("restoring CrowdNode status")
+            val savedError = configuration.crowdNodeError
+
+            if (!savedError.isNullOrEmpty()) {
+                signUpStatus.value = SignUpStatus.Error
+                apiError = CrowdNodeException(savedError)
+                configuration.crowdNodeError = ""
+                log.info("found an error: $savedError")
+                return
+            }
+
             val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet(params))
             val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
             (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
@@ -174,6 +188,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
                 if (set.hasAcceptTermsResponse) {
                     log.info("found accept terms response")
                     signUpStatus.value = SignUpStatus.AcceptingTerms
+                    persistentSignUp(existingAccountAddress!!)
                 }
             }
         }

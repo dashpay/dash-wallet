@@ -19,14 +19,14 @@ package org.dash.wallet.integrations.crowdnode.ui
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
@@ -35,6 +35,10 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class ErrorFragment : Fragment(R.layout.fragment_error) {
+    companion object {
+        private const val INSUFFICIENT_MONEY_PREFIX = "Insufficient money"
+    }
+
     private val binding by viewBinding(FragmentErrorBinding::bind)
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
@@ -49,8 +53,17 @@ class ErrorFragment : Fragment(R.layout.fragment_error) {
         binding.sendReportBtn.setOnClickListener {
             viewModel.sendReport()
         }
+
+        viewModel.crowdNodeError?.let { ex ->
+            if (ex is InsufficientMoneyException ||
+                ex.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true
+            ) {
+                binding.positiveBtn.isVisible = false
+            }
+        }
+
         binding.positiveBtn.setOnClickListener {
-            GlobalScope.launch(Dispatchers.Main) {
+            lifecycleScope.launch {
                 securityModel.requestPinCode(requireActivity())?.let {
                     findNavController().popBackStack()
                     viewModel.retry()

@@ -99,7 +99,7 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.SendReport)
     }
 
-    fun signUpInBackground() {
+    fun signUp() {
         crowdNodeApi.persistentSignUp(_accountAddress.value!!)
     }
 
@@ -110,7 +110,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     fun retry() {
         reset()
-        signUpInBackground()
+        signUp()
     }
 
     fun changeNotifyWhenDone(toNotify: Boolean) {

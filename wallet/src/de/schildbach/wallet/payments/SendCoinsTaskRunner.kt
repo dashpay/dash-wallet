@@ -43,7 +43,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
     override suspend fun sendCoins(address: Address, amount: Coin, constrainInputsTo: Address?): Transaction {
         val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
-        ensureContext(wallet.context)
+        Context.propagate(wallet.context)
         val sendRequest = createSendRequest(address, amount, constrainInputsTo)
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
 
@@ -67,7 +67,7 @@ class SendCoinsTaskRunner @Inject constructor(
         exchangeRate: ExchangeRate? = null,
         txCompleted: Boolean = false
     ): Transaction = withContext(Dispatchers.IO) {
-        ensureContext(wallet.context)
+        Context.propagate(wallet.context)
 
         val securityGuard = SecurityGuard()
         val password = securityGuard.retrievePassword()
@@ -135,13 +135,5 @@ class SendCoinsTaskRunner @Inject constructor(
 
         // Hand back the (possibly changed) encryption key.
         return key
-    }
-
-    private fun ensureContext(context: Context) {
-        Context.propagate(context)
-
-        if (Looper.myLooper() == null) {
-            Looper.prepare()
-        }
     }
 }
