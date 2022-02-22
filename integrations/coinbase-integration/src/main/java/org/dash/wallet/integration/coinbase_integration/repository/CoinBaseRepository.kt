@@ -25,7 +25,7 @@ import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import java.math.BigDecimal
 import javax.inject.Inject
-
+const val TEMP_ACCESS_TOKEN = "7250bbd975d0e0ac6a8997f1e2d30df0564f5ca7e352c227187b427c7d0449be"
 class CoinBaseRepository @Inject constructor(
     private val servicesApi: CoinBaseServicesApi,
     private val authApi: CoinBaseAuthApi,
@@ -120,7 +120,7 @@ class CoinBaseRepository @Inject constructor(
     override suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean> = safeApiCall {
         authApi.getToken(code = authorizationCode).also {
             it.body()?.let { tokenResponse ->
-                userPreferences.setLastCoinBaseAccessToken(tokenResponse.accessToken)
+                userPreferences.setLastCoinBaseAccessToken(TEMP_ACCESS_TOKEN)
                 userPreferences.setLastCoinBaseRefreshToken(tokenResponse.refreshToken)
             }
         }
