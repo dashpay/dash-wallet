@@ -100,10 +100,10 @@ class CoinBaseRepository @Inject constructor(
     override suspend fun getWithdrawalLimit() = safeApiCall {
         val apiResponse = servicesApi.getAuthorizationInformation()
         apiResponse?.data?.oauth_meta?.let { meta_data ->
-            userPreferences.coinbaseUserWithdrawalLimit = meta_data.send_limit_amount
+            userPreferences.coinbaseUserWithdrawalLimitAmount = meta_data.send_limit_amount
             userPreferences.coinbaseSendLimitCurrency = meta_data.send_limit_currency
         }
-        WithdrawalLimitUIModel(userPreferences.coinbaseUserWithdrawalLimit, userPreferences.coinbaseSendLimitCurrency)
+        WithdrawalLimitUIModel(userPreferences.coinbaseUserWithdrawalLimitAmount, userPreferences.coinbaseSendLimitCurrency)
     }
 }
 

@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
@@ -32,11 +33,12 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
-import org.dash.wallet.integration.coinbase_integration.repository.WithdrawalLimitUIModel
+import java.lang.NumberFormatException
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepository: CoinBaseRepository,
+                                                   private val userPreference: Configuration,
                                                    var exchangeRates: ExchangeRatesProvider
 ) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
@@ -52,8 +54,8 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
         get() = _placeBuyOrder
 
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
-    private var withdrawalLimit = WithdrawalLimitUIModel("","")
     lateinit var exchangeRate: ExchangeRate
+    private var inputAmountInDash: Coin = Coin.ZERO
     fun onContinueClicked(fiat: Fiat, paymentMethodIndex: Int) {
         _activePaymentMethods.value?.let {
             if (paymentMethodIndex < it.size) {
@@ -73,6 +75,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                 } else {
                     _showLoading.value = false
                     _placeBuyOrder.value = Event(result.value)
+                    userPreference.coinbaseUserInputAmount = inputAmountInDash.toPlainString().toDoubleOrZero.toString()
                 }
             }
             is ResponseResource.Failure -> {
@@ -104,7 +107,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     private fun getWithdrawalLimit() = viewModelScope.launch(Dispatchers.Main){
         when (val response = coinBaseRepository.getWithdrawalLimit()){
             is ResponseResource.Success -> {
-                withdrawalLimit = response.value
+                val withdrawalLimit = response.value
                 exchangeRate = getCurrencyExchangeRate(withdrawalLimit.currency)
             }
             is ResponseResource.Failure -> {
@@ -114,18 +117,19 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     }
 
     fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        return amountInDash.toPlainString().toDouble().minus(withdrawalLimitInDash()) > 0
+        inputAmountInDash = amountInDash
+        return inputAmountInDash.toPlainString().toDoubleOrZero.minus(withdrawalLimitInDash()) > 0
     }
 
     private fun withdrawalLimitInDash(): Double {
-        return if (withdrawalLimit.amount.isNullOrEmpty()){
+        return if (userPreference.coinbaseUserWithdrawalRemaining.isNullOrEmpty()){
             0.0
         } else {
-            val formattedAmount = GenericUtils.formatFiatWithoutComma(withdrawalLimit.amount)
-            val fiatAmount = Fiat.parseFiat(withdrawalLimit.currency, formattedAmount)
+            val formattedAmount = GenericUtils.formatFiatWithoutComma(userPreference.coinbaseUserWithdrawalRemaining)
+            val fiatAmount = Fiat.parseFiat(userPreference.coinbaseSendLimitCurrency, formattedAmount)
             val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate.fiat)
             val amountInDash = newRate.fiatToCoin(fiatAmount)
-            amountInDash.toPlainString().toDouble()
+            amountInDash.toPlainString().toDoubleOrZero
         }
     }
 
@@ -133,3 +137,10 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
         return exchangeRates.observeExchangeRate(currency).first()
     }
 }
+
+val String.toDoubleOrZero: Double
+ get() = try {
+     this.toDouble()
+ }catch (e: NumberFormatException){
+     0.0
+ }
