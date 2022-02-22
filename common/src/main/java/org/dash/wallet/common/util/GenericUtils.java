@@ -199,4 +199,9 @@ public class GenericUtils {
             return format.format(fiat) + " " + currencySymbol;
         }
     }
+
+    public static String getLocaleCurrencyCode(){
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        return  numberFormat.getCurrency().getCurrencyCode();
+    }
 }

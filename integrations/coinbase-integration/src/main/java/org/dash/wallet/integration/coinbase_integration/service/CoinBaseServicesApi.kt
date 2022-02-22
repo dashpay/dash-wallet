@@ -60,4 +60,9 @@ interface CoinBaseServicesApi {
         @Path("account_id") accountId: String,
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
         ): Response<SendTransactionToWalletResponse?>
+
+    @GET("/v2/user/auth")
+    suspend fun getAuthorizationInformation(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE
+    ): UserAuthorizationInfoResponse?
 }

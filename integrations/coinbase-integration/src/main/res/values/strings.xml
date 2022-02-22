@@ -59,4 +59,10 @@
     <string name="learn_more">Learn More</string>
     <string name="something_wrong_title">Something went wrong!</string>
     <string name="retry_later_message">Please retry a little bit later or contact our support center to get help</string>
+    <string name="auth_limit_description">You exceeded the authorization limit on Coinbase.</string>
+    <string name="debit_money">Debit money from your account</string>
+    <string name="change_limit">Change this limit</string>
+    <string name="set_auth_limit">Make sure you set up the right authorization limit on Coinbase</string>
+    <string name="change_withdrawal_limit">You can change it anytime by logging out of your Coinbase account in Dash Wallet and logging back in.</string>
+    <string name="got_it">I got it</string>
 </resources>

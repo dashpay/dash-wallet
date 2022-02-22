@@ -94,8 +94,16 @@ class CoinBaseRepository @Inject constructor(
                 userPreferences.setLastCoinBaseRefreshToken(tokenResponse.refreshToken)
             }
         }
-
         userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+    }
+
+    override suspend fun getWithdrawalLimit() = safeApiCall {
+        val apiResponse = servicesApi.getAuthorizationInformation()
+        apiResponse?.data?.oauth_meta?.let { meta_data ->
+            userPreferences.coinbaseUserWithdrawalLimit = meta_data.send_limit_amount
+            userPreferences.coinbaseSendLimitCurrency = meta_data.send_limit_currency
+        }
+        WithdrawalLimitUIModel(userPreferences.coinbaseUserWithdrawalLimit, userPreferences.coinbaseSendLimitCurrency)
     }
 }
 
@@ -112,4 +120,10 @@ interface CoinBaseRepositoryInt {
     fun getUserLastCoinbaseBalance(): String
     fun isUserConnected(): Boolean
     suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
+    suspend fun getWithdrawalLimit(): ResponseResource<WithdrawalLimitUIModel?>
 }
+
+data class WithdrawalLimitUIModel(
+    val amount: String?,
+    val currency: String
+)
