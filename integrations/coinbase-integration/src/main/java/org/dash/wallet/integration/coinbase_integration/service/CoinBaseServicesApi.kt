@@ -18,6 +18,7 @@ package org.dash.wallet.integration.coinbase_integration.service
 
 import org.dash.wallet.integration.coinbase_integration.CB_VERSION_KEY
 import org.dash.wallet.integration.coinbase_integration.CB_VERSION_VALUE
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
 import retrofit2.Response
 import retrofit2.http.*
@@ -25,15 +26,15 @@ import retrofit2.http.*
 interface CoinBaseServicesApi {
 
     @GET("v2/accounts")
-    suspend fun getUserAccount(
+    suspend fun getUserAccounts(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Query("limit") limit: Int = 300
     ): Response<CoinBaseUserAccountInfo>
 
     @GET("v2/exchange-rates")
     suspend fun getExchangeRates(
-        @Query("currency")currency: String = "DASH"
-    ): Response<CoinBaseUserAccountInfo>
+        @Query("currency")currency: String = DASH_CURRENCY
+    ): CoinBaseExchangeRates?
 
     @GET("v2/payment-methods")
     suspend fun getActivePaymentMethods(
@@ -59,6 +60,25 @@ interface CoinBaseServicesApi {
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Path("account_id") accountId: String,
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
+    ): Response<SendTransactionToWalletResponse?>
+
+    @GET("v2/assets/prices?filter=holdable&resolution=latest")
+    suspend fun getBaseIdForUSDModel(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Query("base") baseCurrency: String,
+    ): Response<BaseIdForUSDModel?>
+
+    @POST("v2/trades")
+    suspend fun swapTrade(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Body tradesRequest: TradesRequest
+    ): SwapTradeResponse?
+
+    @POST("v2/trades/{trade_id}/commit")
+    suspend fun commitSwapTrade(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Path("trade_id") tradeId: String,
+    ): SwapTradeResponse?
         ): Response<SendTransactionToWalletResponse?>
 
     @GET("/v2/user/auth")

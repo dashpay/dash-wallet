@@ -200,6 +200,15 @@ public class GenericUtils {
         }
     }
 
+    public static String fiatToStringWithoutCurrencyCode(Fiat fiat) {
+        MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
+        return  format.format(fiat).toString();
+    }
+
+    public static String getCoinIcon(String code) {
+        return  "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/"+code.toLowerCase()+".png";
+    }
+
     public static String getLocaleCurrencyCode(){
         NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
         return  numberFormat.getCurrency().getCurrencyCode();

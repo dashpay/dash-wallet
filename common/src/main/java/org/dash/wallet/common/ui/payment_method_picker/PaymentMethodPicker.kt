@@ -40,6 +40,7 @@ import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 
 class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayout(context, attrs) {
     private val binding = ViewPaymentMethodBinding.inflate(LayoutInflater.from(context), this)
+    private var onPaymentMethodSelected: (() -> Unit)? = null
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     var paymentMethods: List<PaymentMethod> = listOf()
@@ -95,6 +96,7 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
                 ) { _, index, dialog ->
                     dialog.dismiss()
                     analytics.logEvent(AnalyticsConstants.Coinbase.CHANGE_PAYMENT_METHOD, bundleOf())
+                    onPaymentMethodSelected?.invoke()
                     selectedMethodIndex = index
                 }.show(fragmentManager, "payment_method")
             }
@@ -135,5 +137,9 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
             is ViewComponentManager.FragmentContextWrapper -> getFragmentManager(context.baseContext)
             else -> null
         }
+    }
+
+    fun setOnPaymentMethodSelected(listener: () -> Unit){
+        onPaymentMethodSelected = listener
     }
 }

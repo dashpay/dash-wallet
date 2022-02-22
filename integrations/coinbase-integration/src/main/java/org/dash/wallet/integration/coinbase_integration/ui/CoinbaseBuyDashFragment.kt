@@ -47,7 +47,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
-class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
+class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val binding by viewBinding(FragmentCoinbaseBuyDashBinding::bind)
         private val viewModel by viewModels<CoinbaseBuyDashViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
@@ -116,7 +116,7 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
                 R.string.error,
                 it,
                 R.drawable.ic_info_red,
-                negativeButtonText= R.string.close
+                negativeButtonText = R.string.close
             )
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
         }
@@ -160,5 +160,4 @@ class CoinbaseBuyDashFragment: Fragment(R.layout.fragment_coinbase_buy_dash) {
             loadingDialog?.dismissAllowingStateLoss()
         }
     }
-
 }
