@@ -4,7 +4,7 @@
     <string name="toast_wallet_reset">Je portemonnee is gereset!\\nHerstel zal enige tijd duren.</string>
     <string name="toast_start_storage_provider_selector_failed">Er is geen geschikte cloudopslagprovider geïnstalleerd.\nJe hebt iets nodig als \"Nextcloud\" of \"Google Drive\".</string>
     <string name="wallet_disclaimer_fragment_remind_safety">Gebruik op eigen risico. Lees de &lt;u&gt;veiligheidsvoorschriften&lt;/u&gt;.</string>
-    <string name="wallet_disclaimer_fragment_remind_backup">Je moet je portomonnee back-uppen!</string>
+    <string name="wallet_disclaimer_fragment_remind_backup">Je moet je portemonnee back-uppen!</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d uur achter</string>
     <string name="blockchain_state_progress_days">%1$s, %2$d dagen achter</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d weken achter</string>
@@ -49,7 +49,7 @@
     <string name="wallet_version_dialog_button_market">Google Play</string>
     <string name="wallet_version_dialog_button_binary">Downloaden</string>
     <string name="wallet_old_sdk_dialog_title">Verouderde Androidversie</string>
-    <string name="wallet_old_sdk_dialog_message">De kans bestaat dat één van de volgende versies van Dash Wallet je apparaat niet langer ondersteunen zal. In sommige gevallen kan het lastig worden nog met Dash te kunnen betalen vanaf dit apparaat.\n\nTenzij Je weet wat je aan het doen bent wordt het je aanbevolen om je huidige aanwezige Dash saldo snel elders onder te brengen.</string>
+    <string name="wallet_old_sdk_dialog_message">De kans bestaat dat één van de volgende versies van Dash Wallet je apparaat niet langer ondersteunen zal. In sommige gevallen kan het lastig worden nog met Dash te kunnen betalen vanaf dit apparaat.\n\nTenzij je weet wat je aan het doen bent wordt het je aanbevolen om je huidige aanwezige Dash saldo snel elders onder te brengen.</string>
     <string name="send_coins_activity_title">Dash versturen</string>
     <string name="send_coins_fragment_request_payment_request_progress">Bezig met ophalen van handtekening van %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Het ophalen van de handtekening is mislukt</string>
@@ -107,7 +107,7 @@
     <string name="sweep_wallet_fragment_insufficient_money_msg">De hoeveelheid munten in je portemonnee is te laag om te worden overgedragen.</string>
     <string name="sweep_wallet_options_reload">Saldo herladen</string>
     <string name="maintenance_dialog_title">Onderhoud is aanbevolen</string>
-    <string name="maintenance_dialog_message">Je ontving %1$s op onveilige adressen. Wil u deze Dash overbrengen naar veilige adressen? Kleine netwerkkosten ter hoogte van %2$s zullen worden afgedragen.</string>
+    <string name="maintenance_dialog_message">Je ontving %1$s op onveilige adressen. Wil je deze Dash overbrengen naar veilige adressen? Kleine netwerkkosten ter hoogte van %2$s zullen worden afgedragen.</string>
     <string name="maintenance_dialog_state_decrypting">Bezig met ontgrendelen...</string>
     <string name="maintenance_dialog_state_done">Klaar.</string>
     <string name="maintenance_dialog_button_move">Verplaatsen</string>
@@ -187,14 +187,14 @@
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blokken</string>
     <string name="block_row_mining_difficulty_adjustment">Aanpassing van de moeilijkheid van het genereren van munten</string>
-    <string name="block_row_mining_reward_adjustment">Halvering van de beloning voor het genereren van miunten</string>
+    <string name="block_row_mining_reward_adjustment">Halvering van de beloning voor het genereren van munten</string>
     <string name="block_row_now">op dit moment</string>
     <string name="peer_list_fragment_empty">Geen connecties</string>
     <string name="peer_list_row_ping_time">⇆ %d&#x2009;ms</string>
     <string name="restore_wallet_permission_dialog_title">Leestoegang mist.</string>
     <string name="restore_wallet_permission_dialog_message">Om back-ups van je portemonnee op externe opslag op te slaan, dient je leestoegang te geven. </string>
     <string name="import_keys_dialog_title">Krijg portemonnee terug</string>
-    <string name="import_keys_dialog_message">Kies een portemonneeback-up bestand van externe opslag (%s):</string>
+    <string name="import_keys_dialog_message">Kies een portemonneeback-upbestand van externe opslag (%s):</string>
     <string name="restore_wallet_dialog_replace_warning">Je staat op het punt je huidige portemonnee te vervangen. Tenzij je een losse back-up van uw portemonnee hebt gemaakt zullen alle Dash die nog in je huidige portemonnee aanwezig zijn verloren gaan!</string>
     <string name="import_keys_dialog_warning">Belangrijk: Laad geen privésleutels van twijfelachtige bronnen! Anderen kunnen anders wellicht over je saldo beschikken.</string>
     <string name="import_keys_dialog_file_security_encrypted">wachtwoord is versleuteld</string>
@@ -211,7 +211,7 @@
     <string name="backup_wallet_permission_dialog_title">Schrijftoegang ontbreekt</string>
     <string name="backup_wallet_permission_dialog_message">Je hebt schrijftoegang nodig om je portemonnee op externe opslag op te slaan.</string>
     <string name="export_keys_dialog_title">Back-upportemonnee</string>
-    <string name="backup_wallet_dialog_message">Je back-up zal versleuteld worden met het gekozen wachtwoord en weggeschreven naar een externe opslag ocatie.</string>
+    <string name="backup_wallet_dialog_message">Je back-up zal versleuteld worden met het gekozen wachtwoord en weggeschreven naar een externe opslaglocatie.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Je portemonnee is beveiligd met een pincode om te kunnen betalen. Onthoud deze pincode net als je back-upwachtwoord! </string>
     <string name="export_keys_dialog_button_export">Back-up</string>
     <string name="export_keys_dialog_success"><![CDATA[<p>Je portemonnee is gebackupt naar  <tt>%s</tt></p><p><b>Als er alleen een backup op dit apparaat is opgeslagen, loop je het gevaar zowel portemonnee als de backup te verliezen!</b></p><p>In elk geval, onthoud het wachtwoord van je backup.</p>]]></string>
