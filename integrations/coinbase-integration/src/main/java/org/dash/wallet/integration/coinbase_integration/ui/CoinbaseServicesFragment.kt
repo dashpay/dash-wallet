@@ -36,8 +36,6 @@ import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseServicesBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
-import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -54,10 +52,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         binding.titleBar.connected.setText(R.string.connected)
         binding.titleBar.toolbarTitle.setText(R.string.coinbase)
         binding.titleBar.toolbar.setNavigationOnClickListener {
-            requireActivity().finish()
-        }
-
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
             requireActivity().finish()
         }
 
