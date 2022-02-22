@@ -24,14 +24,12 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.fragment.app.FragmentManager
 import dagger.hilt.android.internal.managers.ViewComponentManager
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.ViewPaymentMethodBinding
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
@@ -95,7 +93,6 @@ class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayo
                     showSearch = false
                 ) { _, index, dialog ->
                     dialog.dismiss()
-                    analytics.logEvent(AnalyticsConstants.Coinbase.CHANGE_PAYMENT_METHOD, bundleOf())
                     onPaymentMethodSelected?.invoke()
                     selectedMethodIndex = index
                 }.show(fragmentManager, "payment_method")

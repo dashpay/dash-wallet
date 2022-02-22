@@ -131,6 +131,9 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 bundleOf()
             )
         }
+        binding.paymentMethodPicker.setOnPaymentMethodSelected {
+            analyticsService.logEvent(AnalyticsConstants.Coinbase.CHANGE_PAYMENT_METHOD, bundleOf())
+        }
 
         binding.authLimitBanner.warningLimitInfo.setOnClickListener {
             safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToWithdrawalInfo())
