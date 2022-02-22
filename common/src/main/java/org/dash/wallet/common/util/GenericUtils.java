@@ -27,6 +27,7 @@ import android.widget.Toast;
 import org.bitcoinj.utils.Fiat;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.Constants;
+import org.dash.wallet.common.data.CurrencyInfo;
 
 import java.text.NumberFormat;
 import java.util.Currency;
@@ -210,7 +211,12 @@ public class GenericUtils {
     }
 
     public static String getLocaleCurrencyCode(){
-        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
-        return  numberFormat.getCurrency().getCurrencyCode();
+        Currency currency = Currency.getInstance(getDeviceLocale());
+        String newCurrencyCode = currency.getCurrencyCode();
+        if (CurrencyInfo.hasObsoleteCurrency(newCurrencyCode)) {
+            newCurrencyCode = CurrencyInfo.getUpdatedCurrency(newCurrencyCode);
+        }
+        newCurrencyCode = CurrencyInfo.getOtherName(newCurrencyCode);
+        return newCurrencyCode;
     }
 }
