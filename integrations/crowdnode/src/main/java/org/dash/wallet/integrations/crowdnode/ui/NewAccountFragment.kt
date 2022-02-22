@@ -20,23 +20,20 @@ package org.dash.wallet.integrations.crowdnode.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
@@ -80,9 +77,8 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.createAccountBtn.setOnClickListener {
-            GlobalScope.launch(Dispatchers.Main) {
+            lifecycleScope.launch {
                 securityModel.requestPinCode(requireActivity())?.let {
-                    // Launching in the global scope so that signup doesn't stop when staking is exited.
                     viewModel.signUp()
                 }
             }
@@ -95,8 +91,6 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.notifyWhenDone.setOnClickListener {
-            val intent = Intent(requireContext(), requireActivity()::class.java)
-            viewModel.changeNotifyWhenDone(true, intent)
             requireActivity().finish()
         }
 

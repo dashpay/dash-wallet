@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.notifications
 
+import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -36,11 +37,25 @@ class NotificationManagerWrapper @Inject constructor(
         Context.NOTIFICATION_SERVICE
     ) as NotificationManager
 
-    override fun showNotification(tag: String, message: String, intent: Intent?) {
+    override fun showNotification(
+        tag: String,
+        message: String,
+        isOngoing: Boolean,
+        intent: Intent?
+    ) {
+        val notification = buildNotification(message, isOngoing, intent)
+        notificationManager.notify(tag.hashCode(), notification)
+    }
+
+    override fun buildNotification(
+        message: String,
+        isOngoing: Boolean,
+        intent: Intent?
+    ): Notification {
         val appName = appContext.getString(R.string.app_name)
         val notification: NotificationCompat.Builder = NotificationCompat.Builder(
             appContext,
-            Constants.NOTIFICATION_CHANNEL_ID_GENERIC
+            if (isOngoing) Constants.NOTIFICATION_CHANNEL_ID_ONGOING else Constants.NOTIFICATION_CHANNEL_ID_GENERIC
         ).setSmallIcon(R.drawable.ic_dash_d_white_bottom)
             .setTicker(appName)
             .setContentTitle(appName)
@@ -54,6 +69,6 @@ class NotificationManagerWrapper @Inject constructor(
             notification.setContentIntent(pendingIntent).setAutoCancel(true)
         }
 
-        notificationManager.notify(tag.hashCode(), notification.build())
+        return notification.build()
     }
 }

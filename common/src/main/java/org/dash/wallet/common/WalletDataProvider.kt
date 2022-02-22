@@ -30,6 +30,8 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 
 interface WalletDataProvider {
 
+    val networkParameters: NetworkParameters
+
     fun currentReceiveAddress(): Address
 
     fun freshReceiveAddress(): Address
@@ -50,4 +52,8 @@ interface WalletDataProvider {
     fun observeTransactions(vararg filters: TransactionFilter): Flow<Transaction>
 
     fun wrapAllTransactions(vararg wrappers: TransactionWrapper): Iterable<TransactionWrapper>
+
+    fun attachOnWalletWipedListener(listener: () -> Unit)
+
+    fun detachOnWalletWipedListener(listener: () -> Unit)
 }

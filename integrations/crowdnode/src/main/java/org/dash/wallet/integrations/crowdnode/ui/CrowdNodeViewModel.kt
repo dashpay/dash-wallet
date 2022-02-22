@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
@@ -100,8 +99,8 @@ class CrowdNodeViewModel @Inject constructor(
         navigationCallback.postValue(NavigationRequest.SendReport)
     }
 
-    suspend fun signUp() {
-        crowdNodeApi.signUp(_accountAddress.value!!)
+    fun signUp() {
+        crowdNodeApi.persistentSignUp(_accountAddress.value!!)
     }
 
     fun reset() {
@@ -109,13 +108,17 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.reset()
     }
 
-    suspend fun retry() {
+    fun retry() {
         reset()
         signUp()
     }
 
-    fun changeNotifyWhenDone(toNotify: Boolean, intent: Intent?) {
-        crowdNodeApi.showNotificationOnFinished(toNotify, intent)
+    fun changeNotifyWhenDone(toNotify: Boolean) {
+        crowdNodeApi.showNotificationOnResult = toNotify
+    }
+
+    fun setNotificationIntent(intent: Intent?) {
+        crowdNodeApi.notificationIntent = intent
     }
 
     private fun getOrCreateAccountAddress(): Address {
@@ -131,8 +134,7 @@ class CrowdNodeViewModel @Inject constructor(
         return if (savedAddress.isNullOrEmpty()) {
             return createNewAccountAddress()
         } else {
-            // TODO: replace with networkParameters getter in the WalletDataProvider
-            Address.fromString(Context.get().params, savedAddress)
+            Address.fromString(walletDataProvider.networkParameters, savedAddress)
         }
     }
 

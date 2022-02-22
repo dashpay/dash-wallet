@@ -5,6 +5,8 @@ buildscript {
         ok_http_version = '3.12.12'
         dashjVersion = '0.17.10'
         hiltVersion = '2.38.1'
+        hiltWorkVersion = '1.0.0'
+        workRuntimeVersion='2.6.0'
         firebaseVersion = '28.4.2'
         roomVersion = '2.3.0'
         lifecycleVersion = '2.3.1'

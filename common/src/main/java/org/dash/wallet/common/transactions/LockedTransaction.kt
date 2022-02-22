@@ -19,12 +19,16 @@ package org.dash.wallet.common.transactions
 
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.transactions.TransactionFilter
+import org.bitcoinj.core.TransactionConfidence
 
-// TODO: In the event that InstantSend is not working, then we may want to broaden the definition of
-// lock as is done in other parts of the app (seen by other peers && confidence is BUILDING)
 class LockedTransaction(private val topUpTxId: Sha256Hash): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
-        return tx.txId == topUpTxId && tx.confidence.isTransactionLocked
+        val confidence = tx.confidence
+        val type = confidence.confidenceType
+        val isLocked = confidence.isTransactionLocked ||
+                type == TransactionConfidence.ConfidenceType.BUILDING ||
+                (type == TransactionConfidence.ConfidenceType.PENDING && confidence.numBroadcastPeers() > 1)
+
+        return tx.txId == topUpTxId && isLocked
     }
 }

@@ -38,11 +38,13 @@ import android.os.Build;
 import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.hilt.work.HiltWorkerFactory;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.work.BackoffPolicy;
 import androidx.work.ExistingWorkPolicy;
@@ -56,6 +58,7 @@ import com.jakewharton.processphoenix.ProcessPhoenix;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.CoinDefinition;
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
@@ -93,6 +96,8 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.android.LogcatAppender;
@@ -113,16 +118,20 @@ import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.MnemonicCodeExt;
 import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
 import kotlinx.coroutines.flow.Flow;
 
 /**
  * @author Andreas Schildbach
  */
 @HiltAndroidApp
-public class WalletApplication extends BaseWalletApplication implements AutoLogoutTimerHandler, WalletDataProvider {
+public class WalletApplication extends BaseWalletApplication
+        implements androidx.work.Configuration.Provider, AutoLogoutTimerHandler, WalletDataProvider {
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
+    private List<Function0<Unit>> wipeListeners = new ArrayList<>();
 
     private boolean basicWalletInitalizationFinished = false;
 
@@ -146,6 +155,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     public boolean myPackageReplaced = false;
 
     private AutoLogout autoLogout;
+
+    @Inject
+    HiltWorkerFactory workerFactory;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -812,6 +824,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         shutdownAndDeleteWallet();
         cleanupFiles();
         config.clear();
+        notifyWalletWipe();
         PinRetryController.getInstance().clearPinFailPrefs();
         MnemonicCodeExt.clearWordlistPath(this);
         try {
@@ -827,6 +840,21 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         }
         // wallet must be null for the OnboardingActivity flow
         wallet = null;
+    }
+
+    private void notifyWalletWipe() {
+        for (Function0<Unit> listener : wipeListeners) {
+            listener.invoke();
+        }
+    }
+
+    @NonNull
+    @Override
+    public androidx.work.Configuration getWorkManagerConfiguration() {
+        return new androidx.work.Configuration.Builder()
+                .setWorkerFactory(workerFactory)
+                .setMinimumLoggingLevel(Log.VERBOSE)
+                .build();
     }
 
     public static WalletApplication getInstance() {
@@ -916,5 +944,22 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     // wallets from v5.17.5 and earlier do not have a BIP44 path
     public boolean isWalletUpgradedToBIP44() {
         return wallet != null && wallet.hasKeyChain(Constants.BIP44_PATH);
+    }
+
+    @NonNull
+    @Override
+    public NetworkParameters getNetworkParameters() {
+        return Constants.NETWORK_PARAMETERS;
+    }
+
+
+    @Override
+    public void attachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
+        wipeListeners.add(listener);
+    }
+
+    @Override
+    public void detachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
+        wipeListeners.remove(listener);
     }
 }

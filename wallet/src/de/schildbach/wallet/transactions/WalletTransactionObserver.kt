@@ -17,7 +17,8 @@
 
 package de.schildbach.wallet.transactions
 
-import de.schildbach.wallet.Constants
+import android.os.Looper
+import android.util.Log
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -33,7 +34,11 @@ import org.dash.wallet.common.transactions.TransactionFilter
 @ExperimentalCoroutinesApi
 class WalletTransactionObserver(private val wallet: Wallet) {
     fun observe(vararg filters: TransactionFilter): Flow<Transaction> = callbackFlow {
-        Context.propagate(Context(Constants.NETWORK_PARAMETERS)) // TODO: use wallet.context instead?
+        Context.propagate(wallet.context)
+
+        if (Looper.myLooper() == null) {
+            Looper.prepare()
+        }
 
         val walletChangeListener = object : ThrottlingWalletChangeListener() {
             override fun onThrottledWalletChanged() { }

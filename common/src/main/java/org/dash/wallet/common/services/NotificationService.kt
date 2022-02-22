@@ -17,8 +17,20 @@
 
 package org.dash.wallet.common.services
 
+import android.app.Notification
 import android.content.Intent
 
 interface NotificationService {
-    fun showNotification(tag: String, message: String, intent: Intent? = null)
+    fun showNotification(
+        tag: String,
+        message: String,
+        isOngoing: Boolean = false,
+        intent: Intent? = null
+    )
+
+    fun buildNotification(
+        message: String,
+        isOngoing: Boolean = false,
+        intent: Intent? = null
+    ): Notification
 }
