@@ -97,6 +97,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
 
         viewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) {
+            maxAmountSelected = false
             resetViewSelection(it)
         }
 
