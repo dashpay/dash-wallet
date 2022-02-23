@@ -2,7 +2,6 @@
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -11,16 +10,18 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:layout_marginEnd="24dp"
-        android:background="@drawable/rounded_corner_grey_bgd"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/DialogWindowBackground"
         android:orientation="vertical">
 
         <View
             android:id="@+id/top_background"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:background="@drawable/round_corner_bgd_white"
             android:layout_marginHorizontal="40dp"
             android:layout_marginTop="60dp"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/TopRoundedCornerWhiteBackground"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/white_container"
             />
@@ -42,6 +43,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/coinbase"
+            android:textSize="12sp"
             app:layout_constraintBottom_toBottomOf="@id/top_left_arrow"
             app:layout_constraintEnd_toEndOf="@id/top_background"
             app:layout_constraintStart_toStartOf="@id/top_background"
@@ -124,13 +126,13 @@
 
         <TextView
             android:id="@+id/change_limit_label"
-            style="@style/MontserratRegular"
+            style="@style/Caption.SemiBold"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
-            android:lineSpacingExtra="4sp"
             android:paddingVertical="2dp"
             android:text="@string/change_limit"
+            android:textSize="10sp"
             android:textColor="@color/deep_blue"
             app:layout_constraintBottom_toBottomOf="@id/rectangle_five"
             app:layout_constraintStart_toEndOf="@id/rectangle_five"
@@ -151,7 +153,8 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="30dp"
-            android:background="@drawable/bottom_round_corners_white_bgd"
+            android:background="@drawable/rounded_background"
+            android:theme="@style/BottomRoundedCornerWhiteBackground"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toBottomOf="@id/change_limit_label"
             />
@@ -178,8 +181,9 @@
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@id/set_auth_limit_label"
             app:layout_constraintStart_toStartOf="@id/set_auth_limit_label"
-            app:layout_constraintEnd_toEndOf="@id/white_container"
+            app:layout_constraintEnd_toEndOf="@id/set_auth_limit_label"
             android:paddingTop="5dp"
+            android:layout_marginTop="5dp"
             android:fontFamily="@font/montserrat_regular"
             android:text="@string/change_withdrawal_limit" />
 

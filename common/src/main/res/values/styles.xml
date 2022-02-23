@@ -821,4 +821,26 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowCloseOnTouchOutside">false</item>
     </style>
+
+    <style name="SteelGrayBackground">
+        <item name="backgroundColor">@color/steel_gray_50</item>
+        <item name="strokeColor">@color/steel_gray_50</item>
+    </style>
+
+    <style name="DialogWindowBackground" parent="SteelGrayBackground">
+        <item name="cornerRadius">14dp</item>
+    </style>
+
+    <style name="TopRoundedCornerWhiteBackground" parent="WhiteBackground">
+        <item name="android:topLeftRadius">15dp</item>
+        <item name="android:topRightRadius">15dp</item>
+        <item name="android:bottomLeftRadius">0dp</item>
+        <item name="android:bottomRightRadius">0dp</item>
+    </style>
+    <style name="BottomRoundedCornerWhiteBackground" parent="WhiteBackground">
+        <item name="android:bottomLeftRadius">14dp</item>
+        <item name="android:bottomRightRadius">14dp</item>
+        <item name="android:topLeftRadius">0dp</item>
+        <item name="android:topRightRadius">0dp</item>
+    </style>
 </resources>

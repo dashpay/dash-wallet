@@ -12,7 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingVertical="16dp"
-        android:paddingLeft="12dp"
+        android:paddingLeft="15dp"
         app:layout_constraintWidth_default="percent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -42,7 +42,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:paddingRight="16dp"
+        android:paddingRight="8dp"
         android:paddingVertical="16dp"
         android:src="@drawable/ic_warning_grey_bgd"
         />
