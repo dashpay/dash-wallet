@@ -21,6 +21,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -32,6 +33,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
+    private val userPreference: Configuration,
     private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
@@ -58,6 +60,8 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                     _showLoading.value = false
                     commitBuyOrderFailedCallback.call()
                 } else {
+                    userPreference.coinbaseUserWithdrawalRemaining =
+                        userPreference.coinbaseUserWithdrawalRemaining.toDoubleOrZero.minus(userPreference.coinbaseUserInputAmount.toDoubleOrZero).toString()
                     sendFundToWalletParams = SendTransactionToWalletParams(
                         amount = result.value.dashAmount,
                         currency = result.value.dashCurrency,
@@ -135,5 +139,9 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
 
     fun onRefreshOrderClicked(fiat: Fiat?, paymentMethodId: String) {
         placeBuyOrder(PlaceBuyOrderParams(fiat?.toPlainString(), fiat?.currencyCode, paymentMethodId))
+    }
+
+    fun resetWithdrawalAmount(){
+        userPreference.coinbaseUserInputAmount = null
     }
 }

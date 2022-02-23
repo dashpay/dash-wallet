@@ -49,6 +49,15 @@
         android:layout_marginTop="15dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
+    <include
+        android:id="@+id/auth_limit_banner"
+        android:layout_height="46dp"
+        android:layout_width="match_parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        layout="@layout/authorization_limit_banner"
+        android:visibility="gone"
+        />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/amount_view_guide"
         android:layout_width="wrap_content"

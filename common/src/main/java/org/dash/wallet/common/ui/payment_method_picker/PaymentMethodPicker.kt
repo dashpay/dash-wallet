@@ -30,6 +30,7 @@ import androidx.fragment.app.FragmentManager
 import dagger.hilt.android.internal.managers.ViewComponentManager
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.ViewPaymentMethodBinding
+import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.getRoundedRippleBackground
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
@@ -38,6 +39,8 @@ import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 class PaymentMethodPicker(context: Context, attrs: AttributeSet): ConstraintLayout(context, attrs) {
     private val binding = ViewPaymentMethodBinding.inflate(LayoutInflater.from(context), this)
     private var onPaymentMethodSelected: (() -> Unit)? = null
+    private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
+
     var paymentMethods: List<PaymentMethod> = listOf()
         set(value) {
             field = value

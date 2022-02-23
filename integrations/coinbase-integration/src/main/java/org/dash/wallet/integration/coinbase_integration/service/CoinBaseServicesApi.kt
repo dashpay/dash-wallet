@@ -79,4 +79,9 @@ interface CoinBaseServicesApi {
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Path("trade_id") tradeId: String,
     ): SwapTradeResponse?
+
+    @GET("/v2/user/auth")
+    suspend fun getAuthorizationInformation(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE
+    ): UserAuthorizationInfoResponse?
 }

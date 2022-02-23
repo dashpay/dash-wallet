@@ -63,6 +63,7 @@
     <color name="blue_300">#3CA9EE</color>
     <color name="blue_50">#F0F8FE</color>
     <color name="shadow_color">#33000000</color>
+    <color name="deep_blue">#0052FF</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>

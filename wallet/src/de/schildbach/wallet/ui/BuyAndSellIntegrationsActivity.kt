@@ -182,7 +182,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
                     viewModel.shouldShowAuthInfoPopup = false
 
                     AdaptiveDialog.custom(
-                        R_coinbase.layout.dialog_coinbase_auth_info,
+                        R_coinbase.layout.dialog_withdrawal_limit_info,
                         null,
                         getString(R_coinbase.string.coinbase_ensure_auth_limit_title),
                         getString(R_coinbase.string.coinbase_ensure_auth_limit_message),

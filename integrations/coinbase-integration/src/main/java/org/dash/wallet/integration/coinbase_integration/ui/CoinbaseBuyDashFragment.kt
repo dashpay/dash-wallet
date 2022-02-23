@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.addCallback
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
@@ -89,7 +90,10 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
 
         amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
-            viewModel.onContinueClicked(pair.second, binding.paymentMethodPicker.selectedMethodIndex)
+            binding.authLimitBanner.root.isVisible = viewModel.isInputGreaterThanLimit(pair.first)
+            if (!binding.authLimitBanner.root.isVisible) {
+                viewModel.onContinueClicked(pair.second, binding.paymentMethodPicker.selectedMethodIndex)
+            }
         }
 
         viewModel.placeBuyOrder.observe(viewLifecycleOwner) { placeBuyOrderEvent ->
@@ -107,7 +111,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 dismissProgress()
         }
 
-        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner) {
+        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner){
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                 R.string.error,
                 it,
@@ -130,10 +134,14 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         binding.paymentMethodPicker.setOnPaymentMethodSelected {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CHANGE_PAYMENT_METHOD, bundleOf())
         }
+
+        binding.authLimitBanner.warningLimitInfo.setOnClickListener {
+            safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToWithdrawalInfo())
+        }
     }
 
     private fun setupPaymentMethodPayment() {
-        viewModel.activePaymentMethods.observe(viewLifecycleOwner) {
+        viewModel.activePaymentMethods.observe(viewLifecycleOwner){
             binding.paymentMethodPicker.paymentMethods = it
         }
 
