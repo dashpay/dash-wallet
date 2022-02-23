@@ -33,6 +33,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -42,6 +43,7 @@ import org.dash.wallet.integration.coinbase_integration.databinding.FragmentConv
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
 import java.math.RoundingMode
+import java.text.DecimalFormatSymbols
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
@@ -63,7 +65,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
     private val binding by viewBinding(FragmentConvertCurrencyBinding::bind)
     private val viewModel by activityViewModels<ConvertViewViewModel>()
-
+    private val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()
+    private val decimalSeparator = DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxAmountSelected: Boolean = false
     var selectedCurrencyCodeExchangeRate: ExchangeRate? = null
     var currencyConversionOptionList: List<String> = emptyList()
@@ -213,8 +216,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
         fun refreshValue() {
             value.clear()
-            val inputValue = binding.inputAmount.text.split(" ")
-                .first { it != binding.currencyOptions.pickedOption }
+            val inputValue = if (viewModel.selectedLocalCurrencyCode == binding.currencyOptions.pickedOption) {
+                val localCurrencySymbol = GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
+                binding.inputAmount.text.split(" ")
+                    .first { it != localCurrencySymbol }
+            } else {
+                binding.inputAmount.text.split(" ")
+                    .first { it != binding.currencyOptions.pickedOption }
+            }
             if (inputValue != "0")
                 value.append(inputValue)
         }
@@ -275,22 +284,40 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     fun applyNewValue(value: String, currencyCode: String) {
         // Create a new spannable with the two strings
         val balance = value.ifEmpty { "0" }
-        val text = "$balance $currencyCode"
+        val spannableString = if (viewModel.selectedLocalCurrencyCode == currencyCode) {
+            val cleanedValue = GenericUtils.formatFiatWithoutComma(balance)
+            val fiatAmount = Fiat.parseFiat(viewModel.selectedLocalCurrencyCode, cleanedValue)
+            val localCurrencySymbol = GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
 
-        val spannable: Spannable = SpannableString(text)
-        val textSize = 21.0f / binding.inputAmount.paint.textSize
 
-        spannable.setSpan(
-            RelativeSizeSpan(textSize), balance.length,
-            text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
+            val isFraction = balance.indexOf(decimalSeparator) > -1
+            val lengthOfDecimalPart = balance.length - balance.indexOf(decimalSeparator)
 
-        spannable.setSpan(
-            context?.resources?.getColor(R.color.gray_900)?.let { ForegroundColorSpan(it) }, balance.length,
-            text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
+            val faitBalance = if (isFraction && lengthOfDecimalPart > 2) {
+                format.format(fiatAmount).toString()
+            } else {
+                balance
+            }
+            val text = if (GenericUtils.isCurrencyFirst(fiatAmount)) {
+                "$localCurrencySymbol $faitBalance"
+            } else {
+                "$faitBalance $localCurrencySymbol"
+            }
+            SpannableString(text).apply {
+                if (GenericUtils.isCurrencyFirst(fiatAmount) && text.length - faitBalance.length> 0) {
+                    setAmountFormatIfCurrencyNotFirst(this, 0, text.length - faitBalance.length)
+                } else {
+                    setAmountFormatIfCurrencyNotFirst(this, balance.length, text.length)
+                }
+            }
+        } else {
+            val text = "$balance $currencyCode"
+            SpannableString(text).apply {
+                setAmountFormatIfCurrencyNotFirst(this, balance.length, text.length)
+            }
+        }
 
-        binding.inputAmount.text = spannable
+        binding.inputAmount.text = spannableString
         viewModel.enteredConvertAmount = balance
 
         val hasBalance = balance.isNotEmpty() && balance != "0"
@@ -341,6 +368,26 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             }
         } else {
             viewModel.setEnteredConvertDashAmount(Coin.ZERO)
+        }
+    }
+
+    private fun setAmountFormatIfCurrencyNotFirst(
+        spannable: Spannable,
+        from: Int,
+        to: Int
+    ): Spannable {
+        val textSize = 21.0f / binding.inputAmount.paint.textSize
+        return spannable.apply {
+            setSpan(
+                RelativeSizeSpan(textSize), from,
+                to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            setSpan(
+                context?.resources?.getColor(R.color.gray_900)
+                    ?.let { ForegroundColorSpan(it) },
+                from,
+                to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
         }
     }
 
