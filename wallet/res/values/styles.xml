@@ -190,10 +190,6 @@
         <item name="android:textSize">14sp</item>
     </style>
 
-    <style name="MontserratSemiBold">
-        <item name="fontFamily">@font/montserrat_semibold</item>
-    </style>
-
     <style name="MontserratSemiBold.DB">
         <item name="android:textColor">@color/darkest_blue</item>
     </style>

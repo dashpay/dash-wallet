@@ -159,6 +159,10 @@
         <item name="android:minHeight">@dimen/keyboard_button_min_height</item>
     </style>
 
+    <style name="MontserratSemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
     <style name="MontserratMedium.DB">
         <item name="android:textColor">@color/darkest_blue</item>
     </style>
