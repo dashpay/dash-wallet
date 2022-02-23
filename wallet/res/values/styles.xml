@@ -126,17 +126,6 @@
         <item name="cornerRadius">8dp</item>
     </style>
 
-
-
-
-
-
-
-
-
-
-
-
     <style name="MontserratRegular.DB">
         <item name="android:textColor">@color/darkest_blue</item>
     </style>

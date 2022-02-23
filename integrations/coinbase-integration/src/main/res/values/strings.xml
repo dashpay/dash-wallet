@@ -81,13 +81,4 @@
     <string name="set_auth_limit">Make sure you set up the right authorization limit on Coinbase</string>
     <string name="change_withdrawal_limit">You can change it anytime by logging out of your Coinbase account in Dash Wallet and logging back in.</string>
     <string name="got_it">I got it</string>
-
-
-
-
-
-    <string name="coinbase_ensure_auth_limit_title">Make sure you set up the right authorization limit on Coinbase</string>
-    <string name="coinbase_ensure_auth_limit_message">You can change it anytime by logging out of your Coinbase account in Dash Wallet and logging back in.</string>
-    <string name="got_it_btn">I got it</string>
-    <string name="debit_from_account">Debit money from your account</string>
 </resources>

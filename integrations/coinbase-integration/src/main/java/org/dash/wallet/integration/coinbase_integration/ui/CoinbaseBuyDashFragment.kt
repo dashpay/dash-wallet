@@ -33,6 +33,7 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -136,7 +137,14 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
 
         binding.authLimitBanner.warningLimitInfo.setOnClickListener {
-            safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToWithdrawalInfo())
+            AdaptiveDialog.custom(
+                R.layout.dialog_withdrawal_limit_info,
+                null,
+                getString(R.string.set_auth_limit),
+                getString(R.string.change_withdrawal_limit),
+                "",
+                getString(R.string.got_it)
+            ).show(requireActivity()) { }
         }
     }
 

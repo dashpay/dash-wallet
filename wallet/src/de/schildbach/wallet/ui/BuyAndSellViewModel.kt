@@ -51,7 +51,11 @@ class BuyAndSellViewModel @Inject constructor(
 
     private val upholdClient = UpholdClient.getInstance()
 
-    var shouldShowAuthInfoPopup: Boolean = !config.hasCoinbaseAuthInfoBeenShown
+    var shouldShowAuthInfoPopup: Boolean
+        get() = !config.hasCoinbaseAuthInfoBeenShown
+        set(value) {
+            config.hasCoinbaseAuthInfoBeenShown = !value
+        }
 
     private val _coinbaseIsConnected: MutableLiveData<Boolean> = MutableLiveData()
     val coinbaseIsConnected: LiveData<Boolean>

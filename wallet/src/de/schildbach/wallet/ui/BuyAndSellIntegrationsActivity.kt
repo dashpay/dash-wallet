@@ -177,21 +177,19 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
             analytics.logEvent(AnalyticsConstants.Coinbase.ENTER_CONNECTED, bundleOf())
         } else {
             lifecycleScope.launch {
-//              val goodToGo =   if (viewModel.shouldShowAuthInfoPopup) {
-                val goodToGo = if (true) {
-                    viewModel.shouldShowAuthInfoPopup = false
-
+              val goodToGo = if (viewModel.shouldShowAuthInfoPopup) {
                     AdaptiveDialog.custom(
                         R_coinbase.layout.dialog_withdrawal_limit_info,
                         null,
-                        getString(R_coinbase.string.coinbase_ensure_auth_limit_title),
-                        getString(R_coinbase.string.coinbase_ensure_auth_limit_message),
+                        getString(R_coinbase.string.set_auth_limit),
+                        getString(R_coinbase.string.change_withdrawal_limit),
                         "",
-                        getString(R_coinbase.string.got_it_btn)
+                        getString(R_coinbase.string.got_it)
                     ).showAsync(this@BuyAndSellIntegrationsActivity) ?: false
                 } else true
 
                 if (goodToGo) {
+                    viewModel.shouldShowAuthInfoPopup = false
                     startActivityForResult(
                         Intent(
                             this@BuyAndSellIntegrationsActivity,

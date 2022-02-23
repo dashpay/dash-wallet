@@ -293,8 +293,13 @@
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
+
+    <style name="ViewRaised">
+        <item name="android:elevation">5dp</item>
+    </style>
+
     <style name="CardViewRaised" parent="Base.CardView">
-        <item name="android:background">@color/dash_white</item>
+        <item name="android:background">@color/background_secondary</item>
         <item name="cardCornerRadius">10dp</item>
         <item name="cardElevation">5dp</item>
     </style>
@@ -428,6 +433,7 @@
     <style name="Subtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
         <item name="android:textColor">@color/gray_900</item>
         <item name="fontFamily">@font/montserrat_semibold</item>
+        <item name="android:lineSpacingExtra">4sp</item>
     </style>
 
     <style name="Subtitle1.Bold">
@@ -437,6 +443,7 @@
     <style name="Subtitle2" parent="TextAppearance.MaterialComponents.Subtitle2">
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:textColor">@color/gray_900</item>
+        <item name="android:letterSpacing">0.0</item>
         <item name="android:lineSpacingExtra">5sp</item>
     </style>
 
@@ -525,6 +532,10 @@
 
     <style name="Overline.SteelGray">
         <item name="android:textColor">@color/steel_gray_500</item>
+    </style>
+
+    <style name="Overline.Bold">
+        <item name="fontFamily">@font/montserrat_bold</item>
     </style>
 
     <style name="Overline.SemiBold">

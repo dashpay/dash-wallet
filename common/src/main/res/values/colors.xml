@@ -76,6 +76,7 @@
     <color name="fg_network_insignificant">#ffa0a0a0</color>
     <color name="fg_shortcut">#ffa0a0a0</color>
     <color name="gift_card_orange">#FA9269</color>
+    <color name="content_primary">@color/gray_900</color>
 
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
