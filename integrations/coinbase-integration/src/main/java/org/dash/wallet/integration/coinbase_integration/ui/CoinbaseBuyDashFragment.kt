@@ -72,7 +72,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             }
         }
 
-        //setupPaymentMethodPayment()
+        setupPaymentMethodPayment()
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }

@@ -65,8 +65,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
 
         binding.buyDashBtn.setOnClickListener {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.BUY_DASH, bundleOf())
-            //viewModel.getPaymentMethods()
-            safeNavigate(CoinbaseServicesFragmentDirections.servicesToBuyDash(emptyArray()))
+            viewModel.getPaymentMethods()
         }
 
         binding.convertDashBtn.setOnClickListener {
