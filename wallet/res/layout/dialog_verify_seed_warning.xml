@@ -21,7 +21,7 @@
 
     <TextView
         android:id="@+id/title"
-        style="@style/MontserratBold.Heading"
+        style="@style/Headline4.Bold"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="36dp"
@@ -57,7 +57,7 @@
 
     <TextView
         android:id="@+id/info_text_1_title"
-        style="@style/MontserratSemiBold.G900.13"
+        style="@style/Caption.SemiBold"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"

@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
@@ -37,7 +38,9 @@ import kotlin.coroutines.suspendCoroutine
  */
 @HiltViewModel
 class BuyAndSellViewModel @Inject constructor(
-    private val coinBaseRepository: CoinBaseAuthRepository) : ViewModel() {
+    private val coinBaseRepository: CoinBaseAuthRepository,
+    private val config: Configuration
+) : ViewModel() {
 
     // TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
@@ -47,6 +50,8 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     private val upholdClient = UpholdClient.getInstance()
+
+    var shouldShowAuthInfoPopup: Boolean = !config.hasCoinbaseAuthInfoBeenShown
 
     private val _coinbaseIsConnected: MutableLiveData<Boolean> = MutableLiveData()
     val coinbaseIsConnected: LiveData<Boolean>

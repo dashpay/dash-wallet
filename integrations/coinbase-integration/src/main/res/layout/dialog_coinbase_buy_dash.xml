@@ -14,11 +14,11 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:src="@drawable/ic_succes_green" />
+        tools:src="@drawable/ic_success_green" />
 
     <TextView
         android:id="@+id/coinbase_buy_dialog_title"
-        style="@style/Headline5.Bold.green"
+        style="@style/Headline5.Bold.Green"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
@@ -43,46 +43,24 @@
         app:layout_constraintTop_toBottomOf="@+id/coinbase_buy_dialog_title"
         tools:text="@string/it_could_take_up_to_2_3_minutes" />
 
-    <View
-        android:id="@+id/buy_dialog_contact_coinbase_support_bg"
-        android:layout_width="0dp"
-        android:layout_height="30dp"
-        android:background="@drawable/blue_50_button_background"
-        android:paddingHorizontal="24dp"
-        app:layout_constraintBottom_toBottomOf="@+id/buy_dialog_contact_coinbase_support"
-        app:layout_constraintEnd_toEndOf="@+id/buy_dialog_contact_coinbase_support"
-        app:layout_constraintStart_toStartOf="@+id/buy_dialog_contact_coinbase_support_icon"
-        app:layout_constraintTop_toTopOf="@+id/buy_dialog_contact_coinbase_support" />
-
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/buy_dialog_contact_coinbase_support_icon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingStart="12dp"
-        android:paddingEnd="8dp"
-        android:src="@drawable/ic_blue_support"
-        app:layout_constraintBottom_toBottomOf="@+id/buy_dialog_contact_coinbase_support"
-        app:layout_constraintEnd_toStartOf="@+id/buy_dialog_contact_coinbase_support"
-        app:layout_constraintTop_toTopOf="@+id/buy_dialog_contact_coinbase_support" />
-
     <Button
         android:id="@+id/buy_dialog_contact_coinbase_support"
-        style="@style/DashButton.White.Borderedless"
+        style="@style/Button.Primary.Small.Blue"
         android:layout_width="wrap_content"
-        android:layout_height="30dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:paddingEnd="12dp"
-        android:text="@string/contact_coinbase_support"
+        android:drawableStart="@drawable/ic_blue_support"
+        android:drawablePadding="8dp"
         android:visibility="gone"
+        android:text="@string/contact_coinbase_support"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/coinbase_buy_dialog_message"
-        tools:text="@string/contact_coinbase_support"
         tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/coinbase_buy_dialog_positive_button"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
@@ -94,7 +72,7 @@
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/coinbase_buy_dialog_negative_button"
-        style="@style/DashButton.grey.Bordered"
+        style="@style/Button.Tertiary.Large.Blue"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
@@ -103,11 +81,4 @@
         app:layout_constraintEnd_toStartOf="@+id/coinbase_buy_dialog_positive_button"
         app:layout_constraintStart_toStartOf="parent"
         tools:text="Cancel" />
-
-    <androidx.constraintlayout.widget.Group
-        android:id="@+id/buy_dialog_contact_coinbase_support_group"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:constraint_referenced_ids="buy_dialog_contact_coinbase_support_icon,buy_dialog_contact_coinbase_support,buy_dialog_contact_coinbase_support_bg" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

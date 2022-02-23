@@ -32,7 +32,7 @@
 
         <TextView
             android:id="@+id/from_label"
-            style="@style/MontserratRegular.G500.10"
+            style="@style/Overline.SteelGray"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
@@ -110,7 +110,7 @@
 
         <TextView
             android:id="@+id/to_label"
-            style="@style/MontserratRegular.G500.10"
+            style="@style/Overline.SteelGray"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/to"

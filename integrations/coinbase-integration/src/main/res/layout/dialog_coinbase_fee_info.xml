@@ -49,7 +49,7 @@
             app:layout_constraintTop_toBottomOf="@id/coinbase_fee_info_title"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            style="@style/MontserratSemiBold"
+            style="@style/Caption.SteelGray700"
             android:layout_marginTop="5dp"
             android:textSize="12sp"
             android:text="@string/coinbase_fee_info_msg_content"
@@ -66,8 +66,7 @@
             app:layout_constraintTop_toBottomOf="@id/coinbase_fee_info_msg"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            style="@style/MontserratSemiBold"
-            android:textColor="@color/dash_blue"
+            style="@style/Caption.SemiBold.Blue"
             android:text="@string/learn_more"
             android:textSize="12sp"
             />
@@ -81,7 +80,7 @@
             android:layout_marginRight="20dp"
             android:layout_marginTop="36dp"
             android:background="@drawable/round_corner_grey_border"
-            style="@style/Body1"
+            style="@style/Button.Secondary"
             android:text="@string/close"
             android:textAllCaps="false"
             />

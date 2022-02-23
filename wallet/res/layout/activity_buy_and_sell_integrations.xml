@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:background="@color/dash_lighter_gray"
     android:fitsSystemWindows="true"
-    tools:context="de.schildbach.wallet.ui.BuyAndSellLiquidUpholdActivity">
+    tools:context="de.schildbach.wallet.ui.BuyAndSellIntegrationsActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"

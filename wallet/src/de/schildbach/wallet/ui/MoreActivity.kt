@@ -22,9 +22,7 @@ import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.BlockchainState
 import de.schildbach.wallet.ui.explore.ExploreActivity
-import de.schildbach.wallet.util.showBlockchainSyncingMessage
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_more.*
 import org.dash.wallet.common.Constants.REQUEST_CODE_BUY_SELL
@@ -87,7 +85,7 @@ class MoreActivity : GlobalFooterActivity() {
 
     private fun startBuyAndSellActivity() {
         analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_MORE, bundleOf())
-        startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(this), REQUEST_CODE_BUY_SELL);
+        startActivityForResult(BuyAndSellIntegrationsActivity.createIntent(this), REQUEST_CODE_BUY_SELL);
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
