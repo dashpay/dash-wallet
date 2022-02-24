@@ -653,4 +653,12 @@ class ExploreViewModel @Inject constructor(
     var syncStatus: LiveData<Resource<Double>> = MediatorLiveData<Resource<Double>>().apply {
         addSource(syncStatusService.getSyncProgressFlow().asLiveData(), this::setValue)
     }
+
+    // this is a hack. it was added to clear the exception so the SearchFragment
+    // would stop displaying a Red Error
+    fun clearSyncStatus() {
+        viewModelScope.launch {
+            syncStatusService.setSyncProgress(100.0)
+        }
+    }
 }

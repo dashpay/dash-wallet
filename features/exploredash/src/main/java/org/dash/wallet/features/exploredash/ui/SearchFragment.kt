@@ -36,6 +36,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.preference.Preference
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -56,7 +57,9 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapt
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
+import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import javax.inject.Inject
@@ -213,7 +216,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                                 syncMessage.text =
                                     getString(R.string.sync_in_progress_network_error)
                                 Handler(Looper.getMainLooper()).postDelayed(
-                                    { clearSyncStatus(binding) },
+                                    {
+                                        clearSyncStatus(binding)
+                                        viewModel.clearSyncStatus()
+                                    },
                                     15000
                                 )
                             }
