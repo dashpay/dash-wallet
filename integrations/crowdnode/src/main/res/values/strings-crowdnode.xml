@@ -44,6 +44,15 @@
     <string name="crowdnode_creating">Your CrowdNode account is creating…</string>
     <string name="accepting_terms">Accepting terms of use…</string>
     <string name="crowdnode_error">We couldn’t create your CrowdNode account.</string>
+    <string name="deposit">Deposit</string>
+    <string name="crowdnode_deposit_from_wallet">From Dash Wallet to CrowdNode</string>
+    <string name="withdraw">Withdraw</string>
+    <string name="crowdnode_withdraw_to_wallet">From CrowdNode to Dash Wallet</string>
+    <string name="online_account">Online Account</string>
+    <string name="secure_online_account">Make it as secure as possible</string>
+    <string name="crowdnode_support">CrowdNode Support</string>
+    <string name="support_troubleshoot">Troubleshoot an issue you’re having</string>
+    <string name="unlink_account">Unlink Account</string>
 
     <string name="terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
     <string name="privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>`

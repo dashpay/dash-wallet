@@ -34,7 +34,7 @@
     <string name="explore_option_buy">Comprar</string>
     <string name="explore_option_sell">Vender</string>
     <string name="explore_option_buy_sell">Comprar y Vender</string>
-    <string name="explore_menu_info">Información</string>
+    <string name="button_info">Información</string>
     <string name="explore_where_to_spend">Donde gastar?</string>
     <string name="explore_atms">Cajeros automáticos</string>
     <string name="explore_all_states">Todos los estados</string>

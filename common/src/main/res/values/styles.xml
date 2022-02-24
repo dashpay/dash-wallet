@@ -592,16 +592,16 @@
 
     <!-- Backgrounds -->
 
-    <style name="WhiteBackground">
-        <item name="backgroundColor">@android:color/white</item>
-        <item name="strokeColor">@android:color/white</item>
+    <style name="SecondaryBackground">
+        <item name="backgroundColor">@color/background_secondary</item>
+        <item name="strokeColor">@color/background_secondary</item>
     </style>
 
-    <style name="ScreenshotWarningBackground" parent="WhiteBackground">
+    <style name="ScreenshotWarningBackground" parent="SecondaryBackground">
         <item name="cornerRadius">10dp</item>
     </style>
 
-    <style name="VerifySeedTextViewBackground" parent="WhiteBackground">
+    <style name="VerifySeedTextViewBackground" parent="SecondaryBackground">
         <item name="cornerRadius">8dp</item>
     </style>
 
@@ -628,11 +628,11 @@
         <item name="android:elevation">6dp</item>
     </style>
 
-    <style name="SegmentedPickerThumbBackground" parent="WhiteBackground">
+    <style name="SegmentedPickerThumbBackground" parent="SecondaryBackground">
         <item name="cornerRadius">7dp</item>
     </style>
 
-    <style name="ListViewButtonBackground" parent="WhiteBackground">
+    <style name="ListViewButtonBackground" parent="SecondaryBackground">
         <item name="cornerRadius">10dp</item>
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
@@ -659,9 +659,7 @@
         <item name="cornerRadius">15dp</item>
     </style>
 
-    <style name="DialogBackground">
-        <item name="backgroundColor">@color/white</item>
-        <item name="strokeColor">@color/white</item>
+    <style name="DialogBackground" parent="SecondaryBackground">
         <item name="cornerRadius">14dp</item>
     </style>
 
@@ -751,8 +749,12 @@
     </style>
 
     <style name="Subtitle1" parent="TextAppearance.MaterialComponents.Subtitle1">
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
         <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
+    <style name="Subtitle1.White">
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="Subtitle1.Bold">
@@ -761,7 +763,7 @@
 
     <style name="Subtitle2" parent="TextAppearance.MaterialComponents.Subtitle2">
         <item name="fontFamily">@font/montserrat_semibold</item>
-        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:textColor">@color/content_primary</item>
         <item name="android:lineSpacingExtra">5sp</item>
     </style>
 
