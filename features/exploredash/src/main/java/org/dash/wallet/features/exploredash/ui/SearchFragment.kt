@@ -56,9 +56,7 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapt
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
-import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import javax.inject.Inject
