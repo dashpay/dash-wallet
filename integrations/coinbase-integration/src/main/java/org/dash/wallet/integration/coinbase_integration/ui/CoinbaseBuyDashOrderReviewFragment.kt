@@ -88,6 +88,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
         binding.cancelBtn.setOnClickListener {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE, bundleOf())
+            viewModel.resetWithdrawalAmount()
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.confirmCancelBuyDashTransaction())
         }
 

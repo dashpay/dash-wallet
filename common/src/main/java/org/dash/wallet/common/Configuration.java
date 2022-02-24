@@ -25,7 +25,6 @@ import android.content.res.Resources;
 import android.net.Uri;
 import android.text.format.DateUtils;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.common.base.Strings;
@@ -33,7 +32,7 @@ import com.google.common.base.Strings;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.data.CurrencyInfo;
-import org.jetbrains.annotations.NotNull;
+import org.dash.wallet.common.util.GenericUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +94,10 @@ public class Configuration {
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
     public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
     public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
+    public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
+    public static final String PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY = "send_limit_currency";
+    public static final String PREFS_KEY_COINBASE_USER_INPUT_AMOUNT = "input_amount";
+    public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_REMAINING = "withdrawal_limit_remaining";
 
 
 
@@ -578,5 +581,37 @@ public class Configuration {
 
     public String getCoinbaseUserAccountId(){
         return prefs.getString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, null);
+    }
+
+    public void setCoinbaseUserWithdrawalLimitAmount(String amount){
+        prefs.edit().putString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT, amount).apply();
+    }
+
+    public String getCoinbaseUserWithdrawalLimitAmount() {
+        return prefs.getString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT, null);
+    }
+
+    public void setCoinbaseSendLimitCurrency(String currency){
+        prefs.edit().putString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, currency).apply();
+    }
+
+    public String getCoinbaseSendLimitCurrency(){
+        return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.getLocaleCurrencyCode());
+    }
+
+    public void setCoinbaseUserInputAmount(String amount){
+        prefs.edit().putString(PREFS_KEY_COINBASE_USER_INPUT_AMOUNT, amount).apply();
+    }
+
+    public String getCoinbaseUserInputAmount() {
+        return prefs.getString(PREFS_KEY_COINBASE_USER_INPUT_AMOUNT, null);
+    }
+
+    public void setCoinbaseUserWithdrawalRemaining(String amount){
+        prefs.edit().putString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_REMAINING, amount).apply();
+    }
+
+    public String getCoinbaseUserWithdrawalRemaining() {
+        return prefs.getString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_REMAINING, getCoinbaseUserWithdrawalLimitAmount());
     }
 }

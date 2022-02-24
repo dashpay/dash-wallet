@@ -25,7 +25,6 @@ import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import java.math.BigDecimal
 import javax.inject.Inject
-
 class CoinBaseRepository @Inject constructor(
     private val servicesApi: CoinBaseServicesApi,
     private val authApi: CoinBaseAuthApi,
@@ -40,8 +39,8 @@ class CoinBaseRepository @Inject constructor(
             it.balance?.currency?.equals(DASH_CURRENCY) ?: false
         }
         userAccountData?.also {
-            saveLastCoinbaseDashAccountBalance(it.balance?.amount)
-            saveUserAccountId(it.id)
+            userPreferences.setCoinBaseUserAccountId(it.id)
+            userPreferences.setLastCoinBaseBalance(it.balance?.amount)
         }
     }
 
@@ -116,6 +115,25 @@ class CoinBaseRepository @Inject constructor(
 
     override fun getUserLastCoinbaseBalance(): String = userPreferences.lastCoinbaseBalance ?: ""
     override fun isUserConnected(): Boolean = userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+
+    override suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean> = safeApiCall {
+        authApi.getToken(code = authorizationCode).also {
+            it.body()?.let { tokenResponse ->
+                userPreferences.setLastCoinBaseAccessToken(tokenResponse.accessToken)
+                userPreferences.setLastCoinBaseRefreshToken(tokenResponse.refreshToken)
+            }
+        }
+        userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()
+    }
+
+    override suspend fun getWithdrawalLimit() = safeApiCall {
+        val apiResponse = servicesApi.getAuthorizationInformation()
+        apiResponse?.data?.oauth_meta?.let { meta_data ->
+            userPreferences.coinbaseUserWithdrawalLimitAmount = meta_data.send_limit_amount
+            userPreferences.coinbaseSendLimitCurrency = meta_data.send_limit_currency
+        }
+        WithdrawalLimitUIModel(userPreferences.coinbaseUserWithdrawalLimitAmount, userPreferences.coinbaseSendLimitCurrency)
+    }
 }
 
 interface CoinBaseRepositoryInt {
@@ -134,4 +152,11 @@ interface CoinBaseRepositoryInt {
     fun isUserConnected(): Boolean
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
     suspend fun commitSwapTrade(buyOrderId: String): ResponseResource<SwapTradeUIModel>
+    suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
+    suspend fun getWithdrawalLimit(): ResponseResource<WithdrawalLimitUIModel?>
 }
+
+data class WithdrawalLimitUIModel(
+    val amount: String?,
+    val currency: String
+)
