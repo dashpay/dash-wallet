@@ -76,6 +76,7 @@ class ExploreViewModelTest {
 
             val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+                on { hasObservedLastError() } doReturn flow { emit(false) }
             }
 
             val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
@@ -120,6 +121,7 @@ class ExploreViewModelTest {
 
             val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+                on { hasObservedLastError() } doReturn flow { emit(false) }
             }
 
             val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
@@ -165,6 +167,7 @@ class ExploreViewModelTest {
 
             val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+                on { hasObservedLastError() } doReturn flow { emit(false) }
             }
 
             val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
@@ -214,6 +217,7 @@ class ExploreViewModelTest {
             }
             val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+                on { hasObservedLastError() } doReturn flow { emit(false) }
             }
             val viewModel = ExploreViewModel(dataSource, locationMock, dataSyncStatus)
             viewModel.searchBounds = GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng)
@@ -245,6 +249,7 @@ class ExploreViewModelTest {
             val dataSource = mock<ExploreDataSource>()
             val dataSyncStatus = mock<DataSyncStatusService>{
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
+                on { hasObservedLastError() } doReturn flow { emit(false) }
             }
             val viewModel = ExploreViewModel(dataSource, locationMock, dataSyncStatus)
             viewModel.setPhysicalResults(merchants)
