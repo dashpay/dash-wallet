@@ -71,7 +71,6 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
     var controlsVisible: Boolean = true
         set(value) {
             field = value
-            println("controlsVisible value is now2 $value ${::binding.isInitialized}")
             if (::binding.isInitialized) {
                 refreshControls(value)
             }

@@ -23,6 +23,7 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
@@ -56,6 +57,7 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapt
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
@@ -127,6 +129,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var savedSearchScrollPosition: Int = -1
     private var savedLocationsScrollPosition: Int = -1
 
+    private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
+    private var observedLastError: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -184,7 +189,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.allMerchantLocations.observe(viewLifecycleOwner) { merchantLocations ->
             merchantLocationsAdapter.submitList(merchantLocations)
         }
+        viewModel.observedLastError.observe(viewLifecycleOwner) {
+            observedLastError = it == true
+            showError(binding)
+        }
         viewModel.syncStatus.observe(viewLifecycleOwner) { syncProgress ->
+            Log.i("SYNC", syncProgress.status.name)
+            lastSyncProgress = syncProgress
             when (syncProgress.status) {
                 Status.LOADING -> {
                     binding.apply {
@@ -200,29 +211,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     clearSyncStatus(binding)
                 }
                 Status.ERROR -> {
-                    binding.apply {
-                        syncStatus.isVisible = true
-                        syncStatus.setBackgroundResource(R.color.dash_red)
-                        syncStatus.alpha = 1.0f
-                        progress.isVisible = false
-                        searchHeaderAdapter.allowSpaceForMessage = true
-                        recenterMapBtnSpacer.isVisible = true
-                        when (syncProgress.exception) {
-                            is FirebaseNetworkException -> {
-                                // if the network is unreachable, show the error for 15 seconds
-                                syncMessage.text =
-                                    getString(R.string.sync_in_progress_network_error)
-                                Handler(Looper.getMainLooper()).postDelayed(
-                                    {
-                                        clearSyncStatus(binding)
-                                        viewModel.clearSyncStatus()
-                                    },
-                                    15000
-                                )
-                            }
-                            else -> syncMessage.text = getString(R.string.sync_in_progress_error)
-                        }
-                    }
+                    showError(binding)
                 }
                 Status.CANCELED -> {
                     // this is not currently used
@@ -232,6 +221,41 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         recenterMapBtnSpacer.isVisible = true
                         syncMessage.text = getString(R.string.sync_in_progress_canceled)
                     }
+                }
+            }
+        }
+    }
+
+    private fun showError(
+        binding: FragmentSearchBinding
+    ) {
+        Log.i(
+            "SYNC",
+            "error: " + lastSyncProgress.exception + " -- " + observedLastError
+        )
+        if (!observedLastError) {
+            binding.apply {
+                syncStatus.isVisible = true
+                syncStatus.setBackgroundResource(R.color.dash_red)
+                syncStatus.alpha = 1.0f
+                progress.isVisible = false
+                searchHeaderAdapter.allowSpaceForMessage = true
+                recenterMapBtnSpacer.isVisible = true
+                when (lastSyncProgress.exception) {
+                    is FirebaseNetworkException -> {
+                        // if the network is unreachable, show the error for 15 seconds
+                        syncMessage.text =
+                            getString(R.string.sync_in_progress_network_error)
+                        Handler(Looper.getMainLooper()).postDelayed(
+                            {
+                                clearSyncStatus(binding)
+                                viewModel.setObservedLastError()
+                            },
+                            15000
+                        )
+                    }
+                    else -> syncMessage.text =
+                        getString(R.string.sync_in_progress_error)
                 }
             }
         }

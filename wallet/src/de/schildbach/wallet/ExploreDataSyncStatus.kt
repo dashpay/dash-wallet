@@ -14,13 +14,21 @@ class ExploreDataSyncStatus @Inject constructor(): DataSyncStatusService {
     }
 
     private val _syncProgressFlow = MutableStateFlow(Resource.loading(0.00))
+    private val _hasObservedLastError = MutableStateFlow(false)
 
     override fun getSyncProgressFlow(): Flow<Resource<Double>> = _syncProgressFlow
 
     override suspend fun setSyncError(exception: Exception) {
         log.info("sync explore data failure", exception)
+        _hasObservedLastError.emit(false)
         _syncProgressFlow.emit(Resource.error(exception))
     }
+
+    override suspend fun setObservedLastError() {
+        _hasObservedLastError.emit(true)
+    }
+
+    override fun hasObservedLastError(): Flow<Boolean> = _hasObservedLastError
 
     override suspend fun setSyncProgress(progress: Double) {
         log.info("sync explore data progress: {}", progress)

@@ -200,7 +200,7 @@
         android:background="@color/dash_blue"
         android:gravity="center_horizontal"
         android:orientation="horizontal"
-        android:visibility="visible"
+        android:visibility="gone"
         tools:visibility="visible">
 
         <ProgressBar

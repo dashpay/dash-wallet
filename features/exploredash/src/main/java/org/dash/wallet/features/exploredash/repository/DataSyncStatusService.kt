@@ -24,5 +24,7 @@ import java.lang.Exception
 interface DataSyncStatusService {
     suspend fun setSyncProgress(progress: Double)
     suspend fun setSyncError(exception: Exception)
+    suspend fun setObservedLastError()
+    fun hasObservedLastError(): Flow<Boolean>
     fun getSyncProgressFlow(): Flow<Resource<Double>>
 }
