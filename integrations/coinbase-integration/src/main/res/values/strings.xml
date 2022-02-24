@@ -75,4 +75,10 @@
     <string name="we_didnt_find_any_assets" > We didn’t find any assets on your Coinbase account.</string>
     <string name="you_dont_own_any_crypto" > You don’t own any crypto. Buy some crypto to get started..</string>
     <string name="buy_crypto_on_coinbase" >Buy Crypto on Coinbase</string>
+    <string name="auth_limit_description">You exceeded the authorization limit on Coinbase.</string>
+    <string name="debit_money">Debit money from your account</string>
+    <string name="change_limit">Change this limit</string>
+    <string name="set_auth_limit">Make sure you set up the right authorization limit on Coinbase</string>
+    <string name="change_withdrawal_limit">You can change it anytime by logging out of your Coinbase account in Dash Wallet and logging back in.</string>
+    <string name="got_it">I got it</string>
 </resources>
