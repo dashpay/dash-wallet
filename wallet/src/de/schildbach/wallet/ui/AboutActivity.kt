@@ -137,7 +137,7 @@ class AboutActivity : BaseMenuActivity() {
     private fun TextView.setCopyable(label: String) {
         this.setOnClickListener {
             (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
-                setPrimaryClip(ClipData.newPlainText(label, this.text))
+                setPrimaryClip(ClipData.newPlainText(label, this@setCopyable.text))
             }
             Toast(this@AboutActivity).toast("Copied")
         }
