@@ -897,7 +897,7 @@ public final class WalletActivity extends AbstractBindServiceActivity
     }
 
     private void startUpholdActivity() {
-        startActivity(BuyAndSellLiquidUpholdActivity.Companion.createIntent(this));
+        startActivity(BuyAndSellIntegrationsActivity.Companion.createIntent(this));
     }
 
     //Dash Specific

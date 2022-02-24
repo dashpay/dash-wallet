@@ -339,7 +339,7 @@
 
 
         <activity
-            android:name="de.schildbach.wallet.ui.BuyAndSellLiquidUpholdActivity"
+            android:name="de.schildbach.wallet.ui.BuyAndSellIntegrationsActivity"
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity

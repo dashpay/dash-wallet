@@ -23,12 +23,11 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.viewModels
-import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.adapter.BuyAndSellDashServicesAdapter
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
@@ -36,7 +35,9 @@ import de.schildbach.wallet.rates.ExchangeRatesViewModel
 import de.schildbach.wallet.ui.coinbase.CoinBaseWebClientActivity
 import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
-import kotlinx.android.synthetic.main.activity_buy_and_sell_liquid_uphold.*
+import org.dash.wallet.integration.coinbase_integration.R as R_coinbase
+import de.schildbach.wallet_test.databinding.ActivityBuyAndSellIntegrationsBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants.*
 import org.dash.wallet.common.data.ExchangeRate
@@ -45,6 +46,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.data.LiquidUnauthorizedException
@@ -61,17 +63,18 @@ import java.util.*
 import kotlin.concurrent.schedule
 
 @AndroidEntryPoint
-class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
+class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
     private var liquidClient: LiquidClient? = null
     private var loadingDialog: ProgressDialog? = null
-    private var bottomSheetDialog: BottomSheetDialog? = null
     private lateinit var application: WalletApplication
     private lateinit var config: Configuration
     private var currentExchangeRate: ExchangeRate? = null
 
+    private lateinit var binding: ActivityBuyAndSellIntegrationsBinding
     private val viewModel by viewModels<BuyAndSellViewModel>()
     private val liquidViewModel by viewModels<LiquidViewModel>()
+
     private var isDeviceConnectedToInternet: Boolean = true
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
@@ -85,18 +88,18 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     companion object {
-        val log: Logger = LoggerFactory.getLogger(BuyAndSellLiquidUpholdActivity::class.java)
+        val log: Logger = LoggerFactory.getLogger(BuyAndSellIntegrationsActivity::class.java)
         fun createIntent(context: Context?): Intent {
-            return Intent(context, BuyAndSellLiquidUpholdActivity::class.java)
+            return Intent(context, BuyAndSellIntegrationsActivity::class.java)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         log.info("starting Buy and Sell Dash activity")
-        setContentView(R.layout.activity_buy_and_sell_liquid_uphold)
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
+        binding = ActivityBuyAndSellIntegrationsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setSupportActionBar(binding.toolbar)
 
         application = WalletApplication.getInstance()
         config = application.configuration
@@ -122,13 +125,13 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
         supportFragmentManager.beginTransaction()
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commitNow()
-        network_status_container.isVisible = false
+        binding.networkStatusContainer.isVisible = false
 
         // check for missing keys from service.properties
         if (!LiquidConstants.hasValidCredentials() || !UpholdConstants.hasValidCredentials()) {
-            keys_missing_error.isVisible = true
+            binding.keysMissingError.isVisible = true
         }
-        dash_services_list.adapter = buyAndSellDashServicesAdapter
+        binding.dashServicesList.adapter = buyAndSellDashServicesAdapter
 
         viewModel.showLoading.observe(this){ showDialog ->
             if (showDialog) loadingDialog?.show()
@@ -167,14 +170,31 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onCoinBaseItemClicked() {
-        viewModel.coinbaseIsConnected.value?.let {
-            if (isDeviceConnectedToInternet) {
-                if (it) {
-                    launchCoinBasePortal()
-                    analytics.logEvent(AnalyticsConstants.Coinbase.ENTER_CONNECTED, bundleOf())
-                } else {
+        val isConnected = viewModel.coinbaseIsConnected.value == true
+
+        if (isConnected) {
+            launchCoinBasePortal()
+            analytics.logEvent(AnalyticsConstants.Coinbase.ENTER_CONNECTED, bundleOf())
+        } else {
+            lifecycleScope.launch {
+              val goodToGo = if (viewModel.shouldShowAuthInfoPopup) {
+                    AdaptiveDialog.custom(
+                        R_coinbase.layout.dialog_withdrawal_limit_info,
+                        null,
+                        getString(R_coinbase.string.set_auth_limit),
+                        getString(R_coinbase.string.change_withdrawal_limit),
+                        "",
+                        getString(R_coinbase.string.got_it)
+                    ).showAsync(this@BuyAndSellIntegrationsActivity) ?: false
+                } else true
+
+                if (goodToGo) {
+                    viewModel.shouldShowAuthInfoPopup = false
                     startActivityForResult(
-                        Intent(this, CoinBaseWebClientActivity::class.java),
+                        Intent(
+                            this@BuyAndSellIntegrationsActivity,
+                            CoinBaseWebClientActivity::class.java
+                        ),
                         COIN_BASE_AUTH
                     )
                     analytics.logEvent(AnalyticsConstants.Coinbase.ENTER_DISCONNECTED, bundleOf())
@@ -293,37 +313,36 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
         // for getting currency exchange rates
         val exchangeRatesViewModel = ViewModelProvider(this)[ExchangeRatesViewModel::class.java]
         exchangeRatesViewModel.getRate(config.exchangeCurrencyCode).observe(
-            this,
-            { exchangeRate ->
-                if (exchangeRate != null) {
-                    currentExchangeRate = exchangeRate
-                    liquidViewModel.lastLiquidBalance?.let {
+            this
+        ) { exchangeRate ->
+            if (exchangeRate != null) {
+                currentExchangeRate = exchangeRate
+                liquidViewModel.lastLiquidBalance?.let {
+                    viewModel.showRowBalance(
+                        BuyAndSellDashServicesModel.ServiceType.LIQUID,
+                        currentExchangeRate,
+                        it
+                    )
+                }
+
+                config.lastUpholdBalance?.let {
+                    viewModel.showRowBalance(
+                        BuyAndSellDashServicesModel.ServiceType.UPHOLD,
+                        currentExchangeRate,
+                        config.lastUpholdBalance
+                    )
+                }
+
+                config.lastCoinbaseBalance
+                    ?.let {
                         viewModel.showRowBalance(
-                            BuyAndSellDashServicesModel.ServiceType.LIQUID,
+                            BuyAndSellDashServicesModel.ServiceType.COINBASE,
                             currentExchangeRate,
                             it
                         )
                     }
-
-                    config.lastUpholdBalance?.let {
-                        viewModel.showRowBalance(
-                            BuyAndSellDashServicesModel.ServiceType.UPHOLD,
-                            currentExchangeRate,
-                            config.lastUpholdBalance
-                        )
-                    }
-
-                    config.lastCoinbaseBalance
-                        ?.let {
-                            viewModel.showRowBalance(
-                                BuyAndSellDashServicesModel.ServiceType.COINBASE,
-                                currentExchangeRate,
-                                it
-                            )
-                        }
-                }
             }
-        )
+        }
 
         viewModel.coinbaseIsConnected.observe(this){ setLoginStatus(isDeviceConnectedToInternet) }
 
@@ -334,8 +353,8 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
         }
     }
 
-    fun setNetworkState(online: Boolean) {
-        network_status_container.isVisible = !online
+    private fun setNetworkState(online: Boolean) {
+        binding.networkStatusContainer.isVisible = !online
         setLoginStatus(online)
         if (!isDeviceConnectedToInternet && online) {
             updateBalances()
@@ -430,13 +449,7 @@ class BuyAndSellLiquidUpholdActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     override fun onPositiveButtonClick() {
-        startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellLiquidUpholdActivity))
-    }
-
-    override fun onLockScreenActivated() {
-        super.onLockScreenActivated()
-        // TODO: replace with BottomSheetDialogFragment to dismiss automatically
-        bottomSheetDialog?.dismiss()
+        startActivity(LiquidSplashActivity.createIntent(this@BuyAndSellIntegrationsActivity))
     }
 
     override fun onNegativeButtonClick() {}

@@ -45,7 +45,7 @@
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/coinbase_dialog_positive_button"
-        style="@style/DashButton.Blue"
+        style="@style/Button.Primary.Blue"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
@@ -58,9 +58,10 @@
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/coinbase_dialog_negative_button"
-        style="@style/DashButton.White.Borderedless"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/Button.Tertiary.Blue"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginTop="5dp"
         android:layout_marginHorizontal="20dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

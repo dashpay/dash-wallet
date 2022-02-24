@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/transparent_button_background"
     android:orientation="vertical"
-    tools:context="org.dash.wallet.common.ui.LockScreenButton"
+    tools:context="de.schildbach.wallet.ui.LockScreenButton"
     tools:ignore="UseCompoundDrawables"
     tools:parentTag="android.widget.LinearLayout">
 

@@ -37,6 +37,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         tools:text="Not a valid QR Code" />
 
     <TextView
@@ -47,6 +48,7 @@
         android:layout_marginTop="10dp"
         android:layout_marginBottom="25dp"
         android:gravity="center"
+        android:textAlignment="gravity"
         app:layout_constraintTop_toTopOf="@id/title"
         tools:text="Please use a valid Dash QR code" />
 

@@ -53,6 +53,7 @@
     <color name="steel_gray_250">#A3ADB8</color>
     <color name="steel_gray_200">#AEB7C2</color>
     <color name="steel_gray_150">#B8C1CC</color>
+    <color name="steel_gray_50">#E7EAEE</color>
     <color name="steel_gray_40">#F3F5F6</color>
     <color name="black_text">#ff171717</color>
     <color name="gray_white">#C4C8CC</color>
@@ -62,6 +63,7 @@
     <color name="blue_300">#3CA9EE</color>
     <color name="blue_50">#F0F8FE</color>
     <color name="shadow_color">#33000000</color>
+    <color name="deep_blue">#0052FF</color>
 
     <!-- foreground -->
     <color name="fg_significant">#66000000</color>
@@ -74,6 +76,7 @@
     <color name="fg_network_insignificant">#ffa0a0a0</color>
     <color name="fg_shortcut">#ffa0a0a0</color>
     <color name="gift_card_orange">#FA9269</color>
+    <color name="content_primary">@color/gray_900</color>
 
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
@@ -97,6 +100,6 @@
     <color name="disabled_button_bg">#eeeeee</color>
     <color name="extra_small_btn_bg">#f2f9fd</color>
     <color name="secondary_btn_border_color">#e1e3e6</color>
-    <color name="steel_gray_50">#E7EAEE</color>
-    <color name="deep_blue">#0052FF</color>
+    <color name="gray_background">@color/steel_gray_50</color>
+    <color name="background_secondary">@color/white</color>
 </resources>

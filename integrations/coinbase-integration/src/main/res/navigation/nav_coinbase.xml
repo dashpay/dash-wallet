@@ -63,10 +63,6 @@
             android:id="@+id/coinbaseBuyDashToError"
             app:destination="@id/coinbaseErrorDialog"
             />
-        <action
-            android:id="@+id/buyDashToWithdrawalInfo"
-            app:destination="@id/withdrawalLimitInfoDialog"
-            />
     </fragment>
 
     <fragment
@@ -146,10 +142,4 @@
             android:name="swapModel"
             app:argType="org.dash.wallet.integration.coinbase_integration.model.SwapTradeUIModel" />
     </fragment>
-    <dialog
-        android:id="@+id/withdrawalLimitInfoDialog"
-        android:name="org.dash.wallet.integration.coinbase_integration.ui.dialogs.WithdrawalLimitInfoDialog"
-        android:label="withdrawal_limit_info"
-        tools:layout="@layout/dialog_withdrawal_limit_info"
-        />
 </navigation>

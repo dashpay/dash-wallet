@@ -90,10 +90,13 @@ public class Configuration {
     public static final String PREFS_KEY_LAST_LIQUID_BALANCE = "last_liquid_balance";
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
+    // Coinbase
+
     public static final String PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN = "last_coinbase_access_token";
     public static final String PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN = "last_coinbase_refresh_token";
     public static final String PREFS_KEY_LAST_COINBASE_BALANCE = "last_coinbase_balance";
     public static final String PREFS_KEY_COINBASE_USER_ACCOUNT_ID = "coinbase_account_id";
+    public static final String PREFS_KEY_COINBASE_AUTH_INFO_SHOWN = "coinbase_auth_info_shown";
     public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
     public static final String PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY = "send_limit_currency";
     public static final String PREFS_KEY_COINBASE_USER_INPUT_AMOUNT = "input_amount";
@@ -534,31 +537,7 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, isChanged).apply();
     }
 
-    public void setLastCoinBaseAccessToken(String token) {
-        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
-    }
-
-    public String getLastCoinbaseAccessToken() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, null);
-    }
-
-    public void setLastCoinBaseRefreshToken(String token) {
-        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, token).apply();
-    }
-
-    public String getLastCoinbaseRefreshToken() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, null);
-    }
-
-
-    public void setLastCoinBaseBalance(String balance) {
-        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, balance).apply();
-    }
-
-    @Nullable
-    public String getLastCoinbaseBalance() {
-        return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
-    }
+    // Explore Dash
 
     public boolean hasExploreDashInfoScreenBeenShown() {
         return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
@@ -575,6 +554,43 @@ public class Configuration {
     public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
         prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
     }
+
+
+    // Coinbase
+
+    public void setLastCoinBaseAccessToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, token).apply();
+    }
+
+    public String getLastCoinbaseAccessToken() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_ACCESS_TOKEN, null);
+    }
+
+    public void setLastCoinBaseRefreshToken(String token) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, token).apply();
+    }
+
+    public String getLastCoinbaseRefreshToken() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_REFRESH_TOKEN, null);
+    }
+
+    public void setLastCoinBaseBalance(String balance) {
+        prefs.edit().putString(PREFS_KEY_LAST_COINBASE_BALANCE, balance).apply();
+    }
+
+    @Nullable
+    public String getLastCoinbaseBalance() {
+        return prefs.getString(PREFS_KEY_LAST_COINBASE_BALANCE, null);
+    }
+
+    public Boolean getHasCoinbaseAuthInfoBeenShown() {
+        return prefs.getBoolean(PREFS_KEY_COINBASE_AUTH_INFO_SHOWN, false);
+    }
+
+    public void setHasCoinbaseAuthInfoBeenShown(boolean isShown) {
+        prefs.edit().putBoolean(PREFS_KEY_COINBASE_AUTH_INFO_SHOWN, isShown).apply();
+    }
+
     public void setCoinBaseUserAccountId(String accountId) {
         prefs.edit().putString(PREFS_KEY_COINBASE_USER_ACCOUNT_ID, accountId).apply();
     }

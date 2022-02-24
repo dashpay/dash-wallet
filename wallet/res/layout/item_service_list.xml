@@ -17,7 +17,7 @@
         android:contentDescription="@string/app_name"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:srcCompat="@drawable/ic_coinbase" />
+        tools:srcCompat="@drawable/ic_coinbase_full" />
 
     <TextView
         android:id="@+id/service_name"

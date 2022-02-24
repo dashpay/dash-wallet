@@ -23,7 +23,7 @@
 
     <TextView
        android:id="@+id/name"
-        style="@style/MontserratRegular.G900.10"
+        style="@style/Overline"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingVertical="4dp"

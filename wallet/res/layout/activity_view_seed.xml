@@ -46,7 +46,7 @@
         app:layout_constraintBottom_toTopOf="@id/confirm_btn">
 
         <TextView
-            style="@style/MontserratSemiBold.B.14"
+            style="@style/Subtitle2.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/verify_why_no_screenshot"

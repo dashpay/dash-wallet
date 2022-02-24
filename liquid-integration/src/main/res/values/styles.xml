@@ -32,4 +32,9 @@
     <style name="bottomSheetStyleWrapper" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
     </style>
+
+    <style name="DashButton.White.NoDisabled" parent="DashButton.Blue">
+        <item name="android:textColor">@drawable/white_button_text</item>
+        <item name="android:background">@drawable/white_button_background_no_disabled</item>
+    </style>
 </resources>
