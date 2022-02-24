@@ -1,4 +1,15 @@
 Dash Wallet
+v7.4.6
+* Fix Scan QR Code crash on Android 6
+* Fix crash related to Unencrypted Wallets
+* Improve Autoloading of Updated Explore Dash Database System
+* Fix Reset Wallet Crash
+* Fix startup crash
+* Fix About screen copy text
+
+v7.4.5
+* Fix crash
+
 v7.4.4
 * Fix crash when starting app
 
