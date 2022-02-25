@@ -89,7 +89,17 @@ class CoinBaseBuyDashDialog : DialogFragment() {
     private fun setTransferError() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
-        binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
+        val errorMessage = arguments?.getString(ARG_MESSAGE)
+        when {
+            errorMessage.isNullOrEmpty() -> {
+                binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
+            }
+            errorMessage.contains(getString(R.string.send_to_wallet_error)) -> {
+                binding.coinbaseBuyDialogMessage.setText(errorMessage)
+            }
+            else -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
+        }
+
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
         binding.buyDialogContactCoinbaseSupport.isVisible = true
         binding.coinbaseBuyDialogNegativeButton.isVisible = true
@@ -126,12 +136,14 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
     }
     companion object {
-
+        const val ARG_MESSAGE: String = "ARG_RESPONSE_MESSAGE"
         fun newInstance(
-            type: Type
+            type: Type,
+            responseMessage: String?
         ): CoinBaseBuyDashDialog {
             val args = Bundle().apply {
                 putInt("Type", type.ordinal)
+                putString(ARG_MESSAGE, responseMessage)
             }
             return CoinBaseBuyDashDialog().apply {
                 arguments = args

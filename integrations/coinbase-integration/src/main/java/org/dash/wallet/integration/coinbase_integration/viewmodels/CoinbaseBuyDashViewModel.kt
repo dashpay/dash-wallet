@@ -55,7 +55,6 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
 
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
     lateinit var exchangeRate: ExchangeRate
-    private var inputAmountInDash: Coin = Coin.ZERO
     fun onContinueClicked(fiat: Fiat, paymentMethodIndex: Int) {
         _activePaymentMethods.value?.let {
             if (paymentMethodIndex < it.size) {
@@ -75,7 +74,6 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                 } else {
                     _showLoading.value = false
                     _placeBuyOrder.value = Event(result.value)
-                    userPreference.coinbaseUserInputAmount = inputAmountInDash.toPlainString().toDoubleOrZero.toString()
                 }
             }
             is ResponseResource.Failure -> {
@@ -117,21 +115,25 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
     }
 
     fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
-        inputAmountInDash = amountInDash
-        return inputAmountInDash.toPlainString().toDoubleOrZero.minus(withdrawalLimitInDash()) > 0
+        return amountInDash.toPlainString().toDoubleOrZero.compareTo(withdrawalLimitInDash) > 0
     }
 
-    private fun withdrawalLimitInDash(): Double {
-        return if (userPreference.coinbaseUserWithdrawalRemaining.isNullOrEmpty()){
-            0.0
-        } else {
-            val formattedAmount = GenericUtils.formatFiatWithoutComma(userPreference.coinbaseUserWithdrawalRemaining)
-            val fiatAmount = Fiat.parseFiat(userPreference.coinbaseSendLimitCurrency, formattedAmount)
-            val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate.fiat)
-            val amountInDash = newRate.fiatToCoin(fiatAmount)
-            amountInDash.toPlainString().toDoubleOrZero
+    private val withdrawalLimitInDash: Double
+        get() {
+            return if (userPreference.coinbaseUserWithdrawalLimitAmount.isNullOrEmpty()){
+                0.0
+            } else {
+                val formattedAmount = GenericUtils.formatFiatWithoutComma(userPreference.coinbaseUserWithdrawalLimitAmount)
+                val fiatAmount = try {
+                    Fiat.parseFiat(userPreference.coinbaseSendLimitCurrency, formattedAmount)
+                }catch (x: Exception) {
+                    Fiat.valueOf(userPreference.coinbaseSendLimitCurrency, 0)
+                }
+                val newRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, exchangeRate.fiat)
+                val amountInDash = newRate.fiatToCoin(fiatAmount)
+                amountInDash.toPlainString().toDoubleOrZero
+            }
         }
-    }
 
     private suspend fun getCurrencyExchangeRate(currency: String): ExchangeRate {
         return exchangeRates.observeExchangeRate(currency).first()
