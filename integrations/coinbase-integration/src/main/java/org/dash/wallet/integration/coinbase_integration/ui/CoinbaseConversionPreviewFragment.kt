@@ -217,7 +217,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     ) {
         if (transactionStateDialog?.dialog?.isShowing == true)
             transactionStateDialog?.dismissAllowingStateLoss()
-        transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type, responseMessage).apply {
+        transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type, null).apply {
             this.onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
                     when (type) {
