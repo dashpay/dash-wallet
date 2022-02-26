@@ -33,6 +33,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
@@ -41,7 +42,9 @@ import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentConvertCurrencyBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
+import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.DecimalFormatSymbols
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
@@ -63,7 +66,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
     private val binding by viewBinding(FragmentConvertCurrencyBinding::bind)
     private val viewModel by activityViewModels<ConvertViewViewModel>()
-
+    private val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()
+    private val decimalSeparator = DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxAmountSelected: Boolean = false
     var selectedCurrencyCodeExchangeRate: ExchangeRate? = null
     var currencyConversionOptionList: List<String> = emptyList()
@@ -93,6 +97,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
 
         viewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) {
+            maxAmountSelected = false
             resetViewSelection(it)
         }
 
@@ -157,7 +162,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         val userAccountData = viewModel.selectedCryptoCurrencyAccount.value
 
         val cleanedValue =
-            if (viewModel.selectedPickerCurrencyCode !== pickedCurrencyOption && viewModel.enteredConvertAmount != "0") {
+            if (viewModel.selectedPickerCurrencyCode !== pickedCurrencyOption &&
+                (viewModel.enteredConvertAmount.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+            ) {
                 when {
                     (userAccountData?.coinBaseUserAccountData?.balance?.currency == viewModel.selectedPickerCurrencyCode) -> {
                         if (pickedCurrencyOption == viewModel.selectedLocalCurrencyCode) {
@@ -213,8 +220,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
         fun refreshValue() {
             value.clear()
-            val inputValue = binding.inputAmount.text.split(" ")
-                .first { it != binding.currencyOptions.pickedOption }
+            val inputValue = if (viewModel.selectedLocalCurrencyCode == binding.currencyOptions.pickedOption) {
+                val localCurrencySymbol = GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
+                binding.inputAmount.text.split(" ")
+                    .first { it != localCurrencySymbol }
+            } else {
+                binding.inputAmount.text.split(" ")
+                    .first { it != binding.currencyOptions.pickedOption }
+            }
             if (inputValue != "0")
                 value.append(inputValue)
         }
@@ -225,7 +238,18 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 // avoid entering leading zeros without decimal separator
                 return
             }
-            val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
+
+            val isFraction = value.toString().indexOf(decimalSeparator) > -1
+
+            if (isFraction) {
+                val lengthOfDecimalPart = value.toString().length - value.toString().indexOf(decimalSeparator)
+                val decimalsThreshold = if (viewModel.selectedLocalCurrencyCode == binding.currencyOptions.pickedOption) 2 else 8
+
+                if (lengthOfDecimalPart > decimalsThreshold) {
+                    return
+                }
+            }
+
             if (!maxAmountSelected) {
                 try {
                     appendIfValidAfter(number.toString())
@@ -255,8 +279,12 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             }
             refreshValue()
             if (value.indexOf(DECIMAL_SEPARATOR) == -1) {
+                if (value.isEmpty()) {
+                    value.append("0")
+                }
                 value.append(DECIMAL_SEPARATOR)
             }
+
             applyNewValue(value.toString(), binding.currencyOptions.pickedOption)
         }
 
@@ -275,25 +303,42 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     fun applyNewValue(value: String, currencyCode: String) {
         // Create a new spannable with the two strings
         val balance = value.ifEmpty { "0" }
-        val text = "$balance $currencyCode"
+        val isFraction = balance.indexOf(decimalSeparator) > -1
+        val lengthOfDecimalPart = balance.length - balance.indexOf(decimalSeparator)
+        val spannableString = if (viewModel.selectedLocalCurrencyCode == currencyCode) {
+            val cleanedValue = GenericUtils.formatFiatWithoutComma(balance)
+            val fiatAmount = Fiat.parseFiat(viewModel.selectedLocalCurrencyCode, cleanedValue)
+            val localCurrencySymbol = GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
 
-        val spannable: Spannable = SpannableString(text)
-        val textSize = 21.0f / binding.inputAmount.paint.textSize
+            val faitBalance = if (isFraction && lengthOfDecimalPart > 2) {
+                format.format(fiatAmount).toString()
+            } else {
+                balance
+            }
+            val text = if (GenericUtils.isCurrencyFirst(fiatAmount)) {
+                "$localCurrencySymbol $faitBalance"
+            } else {
+                "$faitBalance $localCurrencySymbol"
+            }
+            SpannableString(text).apply {
+                if (GenericUtils.isCurrencyFirst(fiatAmount) && text.length - faitBalance.length> 0) {
+                    setAmountFormat(this, 0, text.length - faitBalance.length)
+                } else {
+                    setAmountFormat(this, balance.length, text.length)
+                }
+            }
+        } else {
+            val text = "$balance $currencyCode"
+            SpannableString(text).apply {
+                setAmountFormat(this, balance.length, text.length)
+            }
+        }
 
-        spannable.setSpan(
-            RelativeSizeSpan(textSize), balance.length,
-            text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-
-        spannable.setSpan(
-            context?.resources?.getColor(R.color.gray_900)?.let { ForegroundColorSpan(it) }, balance.length,
-            text.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-
-        binding.inputAmount.text = spannable
+        binding.inputAmount.text = spannableString
         viewModel.enteredConvertAmount = balance
 
-        val hasBalance = balance.isNotEmpty() && balance != "0"
+        val hasBalance = balance.isNotEmpty() &&
+            (balance.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
         binding.continueBtn.isEnabled = hasBalance
 
         if (hasBalance) {
@@ -341,6 +386,26 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             }
         } else {
             viewModel.setEnteredConvertDashAmount(Coin.ZERO)
+        }
+    }
+
+    private fun setAmountFormat(
+        spannable: Spannable,
+        from: Int,
+        to: Int
+    ): Spannable {
+        val textSize = 21.0f / binding.inputAmount.paint.textSize
+        return spannable.apply {
+            setSpan(
+                RelativeSizeSpan(textSize), from,
+                to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            setSpan(
+                context?.resources?.getColor(R.color.gray_900)
+                    ?.let { ForegroundColorSpan(it) },
+                from,
+                to, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
         }
     }
 
