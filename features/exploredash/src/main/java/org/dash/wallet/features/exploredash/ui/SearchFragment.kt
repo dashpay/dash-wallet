@@ -202,6 +202,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         syncStatus.isVisible = true
                         progress.isVisible = true
                         progress.progress = syncProgress.data?.toInt() ?: 0
+                        syncStatus.setBackgroundResource(R.color.dash_blue)
+                        syncStatus.alpha = 0.90f
                         syncMessage.text = getString(R.string.sync_in_progress_not_complete)
                         searchHeaderAdapter.allowSpaceForMessage = true
                         recenterMapBtnSpacer.isVisible = true
