@@ -53,6 +53,14 @@
     <string name="crowdnode_support">CrowdNode Support</string>
     <string name="support_troubleshoot">Troubleshoot an issue you’re having</string>
     <string name="unlink_account">Unlink Account</string>
+    <string name="online_account_title">What is online account and why do you need it?</string>
+    <string name="account_recovery">Account Recovery</string>
+    <string name="crowdnode_recovery_info">If you ever lose your passphrase, you can verify yourself by other means to regain access to your CrowdNode funds.</string>
+    <string name="transaction_history">Transaction History</string>
+    <string name="see_staking_details">You can see detailed information about your deposits, withdrawals and reward earnings.</string>
+    <string name="payout_options">Payout Options</string>
+    <string name="payout_options_details">You can change how / when your reward earnings are paid to you.</string>
+    <string name="crowdnode_balance">Balance on CrowdNode</string>
 
     <string name="terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
     <string name="privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>`

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui
+package org.dash.wallet.integrations.crowdnode.ui.entry_point
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -46,7 +46,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     private val binding by viewBinding(FragmentNewAccountBinding::bind)
-    private val viewModel: CrowdNodeViewModel by activityViewModels()
+    private val viewModel: EntryPointViewModel by activityViewModels()
 
     @Inject
     lateinit var securityModel: SecurityModel

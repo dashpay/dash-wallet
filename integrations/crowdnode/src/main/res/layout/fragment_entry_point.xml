@@ -20,7 +20,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_primary"
-    tools:context=".ui.EntryPointFragment">
+    tools:context=".ui.entry_point.EntryPointFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/title_bar"

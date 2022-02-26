@@ -637,6 +637,10 @@
         <item name="rippleColor">@color/button_ripple_color</item>
     </style>
 
+    <style name="ViewRaised">
+        <item name="android:elevation">5dp</item>
+    </style>
+
     <style name="CardViewRaised" parent="Base.CardView">
         <item name="android:background">@color/dash_white</item>
         <item name="cardCornerRadius">10dp</item>
@@ -687,6 +691,26 @@
         <item name="android:letterSpacing">0.0</item>
     </style>
 
+    <style name="Headline5.White">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Headline5.Medium">
+        <item name="fontFamily">@font/montserrat_medium</item>
+    </style>
+
+    <style name="Headline5.Medium.White">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Headline5.SemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+
+    <style name="Headline5.SemiBold.White">
+        <item name="android:textColor">@color/white</item>
+    </style>
+
     <style name="Headline5.Bold">
         <item name="fontFamily">@font/montserrat_bold</item>
     </style>
@@ -698,6 +722,7 @@
     <style name="Headline5.Bold.Red">
         <item name="android:textColor">@color/red_300</item>
     </style>
+
 
     <style name="Headline6" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="fontFamily">@font/montserrat_medium</item>
@@ -714,6 +739,10 @@
         <item name="fontFamily">@font/montserrat_regular</item>
         <item name="android:textColor">@color/content_primary</item>
         <item name="android:letterSpacing">0.0</item>
+    </style>
+
+    <style name="Body1.White">
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="Body1.SteelGray">
@@ -761,6 +790,11 @@
         <item name="fontFamily">@font/montserrat_bold</item>
     </style>
 
+    <style name="Subtitle1.Bold.White">
+        <item name="fontFamily">@color/white</item>
+    </style>
+
+
     <style name="Subtitle2" parent="TextAppearance.MaterialComponents.Subtitle2">
         <item name="fontFamily">@font/montserrat_semibold</item>
         <item name="android:textColor">@color/content_primary</item>
@@ -776,6 +810,10 @@
         <item name="android:textColor">@color/gray_900</item>
         <item name="android:letterSpacing">0.0</item>
         <item name="android:lineSpacingExtra">3sp</item>
+    </style>
+
+    <style name="Caption.White">
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="Caption.Medium">

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui
+package org.dash.wallet.integrations.crowdnode.ui.entry_point
 
 import android.content.Intent
 import androidx.lifecycle.*
@@ -38,7 +38,7 @@ enum class NavigationRequest {
 }
 
 @HiltViewModel
-class CrowdNodeViewModel @Inject constructor(
+class EntryPointViewModel @Inject constructor(
     private val config: Configuration,
     private val walletDataProvider: WalletDataProvider,
     private val crowdNodeApi: CrowdNodeApi
@@ -122,7 +122,7 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     private fun getOrCreateAccountAddress(): Address {
-        val existingAddress = crowdNodeApi.existingAccountAddress
+        val existingAddress = crowdNodeApi.accountAddress
 
         if (existingAddress != null) {
             config.crowdNodeAccountAddress = existingAddress.toBase58()

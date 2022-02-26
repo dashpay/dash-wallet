@@ -20,7 +20,6 @@
     <item
         android:id="@+id/menu_info"
         android:title="@string/button_info"
-        android:icon="@drawable/ic_info"
-        android:iconTint="@color/white"
-        app:showAsAction="always"/>
+        android:icon="@drawable/ic_info_white"
+        app:showAsAction="always" />
 </menu>
