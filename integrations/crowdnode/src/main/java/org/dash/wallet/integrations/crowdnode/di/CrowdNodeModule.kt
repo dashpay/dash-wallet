@@ -19,14 +19,34 @@ package org.dash.wallet.integrations.crowdnode.di
 
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.integrations.crowdnode.api.*
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class CrowdNodeModule {
+    companion object {
+        @Singleton
+        @Provides
+        fun provideRemoteDataSource(
+            userPreferences: Configuration
+        ): RemoteDataSource {
+            return RemoteDataSource(userPreferences)
+        }
+
+        @Singleton
+        @Provides
+        fun provideWebApi(
+            remoteDataSource: RemoteDataSource,
+        ): CrowdNodeWebApi {
+            return remoteDataSource.buildApi(CrowdNodeWebApi::class.java)
+        }
+    }
+
     @Binds
     @Singleton
     abstract fun bindCrowdNodeApi(crowdNodeApi: CrowdNodeBlockchainApi): CrowdNodeApi

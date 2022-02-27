@@ -33,6 +33,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -58,6 +59,7 @@ interface CrowdNodeApi {
     val apiError: Exception?
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
+    val balance: Resource<Coin>
 
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
@@ -69,6 +71,7 @@ interface CrowdNodeApi {
 class CrowdNodeException(message: String): Exception(message)
 
 class CrowdNodeBlockchainApi @Inject constructor(
+    private val crowdNodeWebApi: CrowdNodeWebApi,
     private val paymentService: SendPaymentService,
     private val walletDataProvider: WalletDataProvider,
     private val notificationService: NotificationService,
@@ -89,6 +92,8 @@ class CrowdNodeBlockchainApi @Inject constructor(
         private set
     override var notificationIntent: Intent? = null
     override var showNotificationOnResult = false
+    override var balance: Resource<Coin> = Resource.loading(Coin.ZERO)
+        private set
 
     init {
         restoreStatus()
@@ -173,8 +178,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     override suspend fun deposit(accountAddress: Address) {
         val topUpTx = topUpAddress(accountAddress, Coin.COIN)
         Log.i("CROWDNODE", "topUpTx: ${topUpTx}")
-//        val requestValue = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(65536)
-        val requestValue = Coin.COIN
+        val requestValue = Coin.valueOf((Coin.COIN.value * 0.248372).toLong())
 
         val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
         val depositTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)

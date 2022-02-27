@@ -59,14 +59,14 @@ class PortalViewModel @Inject constructor(
         get() = walletDataProvider.networkParameters
 
     val account: Address
-            get() = crowdNodeApi.accountAddress!!
+        get() = crowdNodeApi.accountAddress!!
 
     init {
         exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
-        _balance.value = Coin.ZERO //Coin.valueOf((Coin.COIN.value * 1.648372).toLong())
+        _balance.value = Coin.ZERO
     }
 
     fun deposit() {
