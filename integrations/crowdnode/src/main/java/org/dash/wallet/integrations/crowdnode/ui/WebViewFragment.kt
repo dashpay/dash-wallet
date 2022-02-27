@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui.entry_point
+package org.dash.wallet.integrations.crowdnode.ui
 
 import android.os.Bundle
 import android.view.View

@@ -25,8 +25,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
@@ -36,7 +40,8 @@ import javax.inject.Inject
 class PortalViewModel @Inject constructor(
     private val config: Configuration,
     private val exchangeRatesProvider: ExchangeRatesProvider,
-    private val crowdNodeApi: CrowdNodeApi
+    private val crowdNodeApi: CrowdNodeApi,
+    private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
@@ -47,12 +52,21 @@ class PortalViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
+    val dashFormat: MonetaryFormat
+        get() = config.format.noCode()
+
+    val networkParameters: NetworkParameters
+        get() = walletDataProvider.networkParameters
+
+    val account: Address
+            get() = crowdNodeApi.accountAddress!!
+
     init {
         exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
-        _balance.value = Coin.valueOf((Coin.COIN.value * 1.64).toLong())
+        _balance.value = Coin.ZERO //Coin.valueOf((Coin.COIN.value * 1.648372).toLong())
     }
 
     fun deposit() {

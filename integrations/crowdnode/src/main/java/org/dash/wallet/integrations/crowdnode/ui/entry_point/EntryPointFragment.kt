@@ -66,7 +66,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         binding.backupPassphraseHint.setOnClickListener {
-            val dialog = AdaptiveDialog.new(
+            val dialog = AdaptiveDialog.create(
                 R.drawable.ic_info_blue_encircled,
                 getString(R.string.crowdnode_secure_wallet),
                 getString(R.string.crowdnode_secure_wallet_explainer),
@@ -82,7 +82,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         binding.requiredDashHint.setOnClickListener {
-            val dialog = AdaptiveDialog.new(
+            val dialog = AdaptiveDialog.create(
                 R.drawable.ic_info_blue_encircled,
                 getString(R.string.insufficient_funds),
                 getString(
@@ -101,7 +101,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         binding.crowdnodeTransactionHint.setOnClickListener {
-            val dialog = AdaptiveDialog.new(
+            val dialog = AdaptiveDialog.create(
                 R.drawable.ic_dialog_arrows,
                 getString(R.string.crowdnode_required_transaction),
                 getString(R.string.crowdnode_restore_wallet),

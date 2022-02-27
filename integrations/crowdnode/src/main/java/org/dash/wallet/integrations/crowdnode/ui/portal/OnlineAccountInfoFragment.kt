@@ -17,11 +17,14 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
@@ -30,13 +33,18 @@ import org.dash.wallet.integrations.crowdnode.databinding.FragmentOnlineAccountI
 @AndroidEntryPoint
 class OnlineAccountInfoFragment : Fragment(R.layout.fragment_online_account_info) {
     private val binding by viewBinding(FragmentOnlineAccountInfoBinding::bind)
-    private val viewModel by viewModels<PortalViewModel>()
+    private val args by navArgs<OnlineAccountInfoFragmentArgs>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
+        }
+
+        binding.createAccountBtn.setOnClickListener {
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(args.crowdNodeUrl))
+            startActivity(browserIntent)
         }
     }
 }

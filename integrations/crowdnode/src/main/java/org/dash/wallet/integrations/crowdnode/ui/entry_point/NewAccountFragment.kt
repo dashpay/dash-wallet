@@ -37,6 +37,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
@@ -95,12 +96,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.copyAddressBtn.setOnClickListener {
-            viewModel.accountAddress.value?.let { address ->
-                (requireActivity().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
-                    setPrimaryClip(ClipData.newPlainText("dash address", address))
-                }
-                Toast.makeText(requireContext(), getString(R.string.copied), Toast.LENGTH_SHORT).show()
-            }
+            viewModel.accountAddress.value?.copy(requireActivity(), "dash address")
         }
 
         viewModel.termsAccepted.observe(viewLifecycleOwner) {

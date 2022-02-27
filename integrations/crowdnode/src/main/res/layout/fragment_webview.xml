@@ -21,7 +21,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".ui.entry_point.WebViewFragment">
+    tools:context=".ui.WebViewFragment">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar"

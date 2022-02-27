@@ -31,9 +31,7 @@
         android:orientation="vertical"
         android:paddingHorizontal="20dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintHeight_percent="0.342">
-
-    </LinearLayout>
+        app:layout_constraintHeight_percent="0.342"/>
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"

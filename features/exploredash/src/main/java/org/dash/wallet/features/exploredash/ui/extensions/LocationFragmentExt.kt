@@ -89,7 +89,7 @@ suspend fun Fragment.showPermissionExplainerDialog(exploreTopic: ExploreTopic): 
         R.string.explore_atm_location_explainer_message
     }
 
-    val dialog = AdaptiveDialog.new(
+    val dialog = AdaptiveDialog.create(
         R.drawable.ic_location,
         getString(title),
         getString(message),

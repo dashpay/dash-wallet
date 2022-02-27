@@ -41,6 +41,7 @@
     <string name="button_retry">Retry</string>
     <string name="button_send_report">Send Report</string>
     <string name="button_info">info</string>
+    <string name="button_copy_address">Copy address</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

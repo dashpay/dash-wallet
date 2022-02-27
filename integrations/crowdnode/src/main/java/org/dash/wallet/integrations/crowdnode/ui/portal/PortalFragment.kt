@@ -17,6 +17,8 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
@@ -24,10 +26,12 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
@@ -37,9 +41,6 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     private val binding by viewBinding(FragmentPortalBinding::bind)
     private val viewModel by viewModels<PortalViewModel>()
 
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -47,7 +48,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             findNavController().popBackStack()
         }
 
-        binding.walletBalanceDash.setFormat(dashFormat)
+        binding.walletBalanceDash.setFormat(viewModel.dashFormat)
         binding.walletBalanceDash.setApplyMarkup(false)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
@@ -56,7 +57,40 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
 
         binding.onlineAccountBtn.setOnClickListener {
-            safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo())
+            val url = if (viewModel.networkParameters == MainNetParams.get()) {
+                getString(R.string.crowdnode_login_page, viewModel.account.toBase58())
+            } else {
+                getString(R.string.crowdnode_login_test_page, viewModel.account.toBase58())
+            }
+            safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo(url))
+        }
+
+        binding.supportBtn.setOnClickListener {
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_support_url)))
+            startActivity(browserIntent)
+        }
+
+        binding.unlinkAccountBtn.setOnClickListener {
+            // TODO: online account
+            findNavController().popBackStack()
+        }
+
+        binding.toolbar.setOnMenuItemClickListener {
+            if (it.itemId == R.id.menu_info) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_info_blue_encircled,
+                    getString(R.string.crowdnode_your_address_title),
+                    viewModel.account.toBase58(),
+                    getString(R.string.button_close),
+                    getString(R.string.button_copy_address)
+                ).show(requireActivity()) { toCopy ->
+                    if (toCopy == true) {
+                        viewModel.account.toBase58().copy(requireActivity(), "dash address")
+                    }
+                }
+            }
+
+            true
         }
 
         viewModel.balance.observe(viewLifecycleOwner) { balance ->
