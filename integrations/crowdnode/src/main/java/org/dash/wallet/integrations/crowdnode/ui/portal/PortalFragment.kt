@@ -17,10 +17,12 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
+import android.animation.ObjectAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -40,6 +42,7 @@ import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
 class PortalFragment : Fragment(R.layout.fragment_portal) {
     private val binding by viewBinding(FragmentPortalBinding::bind)
     private val viewModel by viewModels<PortalViewModel>()
+    private var balanceAnimator: ObjectAnimator? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -49,11 +52,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
 
         binding.walletBalanceDash.setFormat(viewModel.dashFormat)
-        binding.walletBalanceDash.setApplyMarkup(false)
+        binding.walletBalanceDash.setApplyMarkup(true)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
         binding.depositBtn.setOnClickListener {
             viewModel.deposit()
+            // TODO: for QA
+            Toast.makeText(requireContext(), "Depositing...", Toast.LENGTH_SHORT).show()
         }
 
         binding.onlineAccountBtn.setOnClickListener {
@@ -93,14 +98,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             true
         }
 
-        viewModel.balance.observe(viewLifecycleOwner) { balance ->
-            binding.walletBalanceDash.setAmount(balance)
-            updateFiatAmount(balance, viewModel.exchangeRate.value)
-        }
-
-        viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
-            updateFiatAmount(viewModel.balance.value, rate)
-        }
+        handleBalance(binding)
     }
 
     private fun updateFiatAmount(balance: Coin?, exchangeRate: ExchangeRate?) {
@@ -111,5 +109,39 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             val fiatValue = rate.coinToFiat(balance)
             binding.walletBalanceLocal.text = GenericUtils.fiatToString(fiatValue)
         }
+    }
+
+    private fun handleBalance(binding: FragmentPortalBinding) {
+        this.balanceAnimator = ObjectAnimator.ofFloat(
+            binding.balanceLabel,
+            View.ALPHA.name,
+            0f, 0.5f
+        ).apply {
+            duration = 500
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+        }
+
+        viewModel.balanceLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                this.balanceAnimator?.start()
+            } else {
+                this.balanceAnimator?.end()
+            }
+        }
+
+        viewModel.balance.observe(viewLifecycleOwner) { balance ->
+            binding.walletBalanceDash.setAmount(balance)
+            updateFiatAmount(balance, viewModel.exchangeRate.value)
+        }
+
+        viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
+            updateFiatAmount(viewModel.balance.value ?: Coin.ZERO, rate)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        this.balanceAnimator = null
     }
 }

@@ -22,7 +22,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.integrations.crowdnode.api.*
 import javax.inject.Singleton
 
@@ -30,15 +29,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class CrowdNodeModule {
     companion object {
-        @Singleton
         @Provides
-        fun provideRemoteDataSource(
-            userPreferences: Configuration
-        ): RemoteDataSource {
-            return RemoteDataSource(userPreferences)
-        }
+        fun provideRemoteDataSource() = RemoteDataSource()
 
-        @Singleton
         @Provides
         fun provideWebApi(
             remoteDataSource: RemoteDataSource,

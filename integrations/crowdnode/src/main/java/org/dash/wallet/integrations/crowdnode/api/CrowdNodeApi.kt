@@ -19,7 +19,6 @@ package org.dash.wallet.integrations.crowdnode.api
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -33,7 +32,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -42,6 +40,8 @@ import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
+import java.math.RoundingMode
 import javax.inject.Inject
 
 enum class SignUpStatus {
@@ -59,13 +59,12 @@ interface CrowdNodeApi {
     val apiError: Exception?
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
-    val balance: Resource<Coin>
 
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
+    suspend fun deposit(accountAddress: Address, amount: Coin)
+    suspend fun loadBalance(): Coin
     fun reset()
-
-    suspend fun deposit(accountAddress: Address)
 }
 
 class CrowdNodeException(message: String): Exception(message)
@@ -92,8 +91,6 @@ class CrowdNodeBlockchainApi @Inject constructor(
         private set
     override var notificationIntent: Intent? = null
     override var showNotificationOnResult = false
-    override var balance: Resource<Coin> = Resource.loading(Coin.ZERO)
-        private set
 
     init {
         restoreStatus()
@@ -167,33 +164,47 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
+    // TODO: this is for QA, might require modifications
+    override suspend fun deposit(accountAddress: Address, amount: Coin) {
+        val topUpTx = topUpAddress(accountAddress, Coin.COIN)
+        log.info("topUpTx id: ${topUpTx.txId}")
+        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
+        val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress)
+        log.info("depositTx id: ${depositTx.txId}")
+        val errorResponse = CrowdNodeErrorResponse(params, amount)
+        val tx = walletDataProvider.observeTransactions(
+            CrowdNodeDepositReceivedResponse(params),
+            errorResponse
+        ).first()
+        log.info("got deposit response: ${tx.txId}")
+
+        if (errorResponse.matches(tx)) {
+            throw CrowdNodeException("Deposit request returned an error")
+        }
+    }
+
+    override suspend fun loadBalance(): Coin {
+        val address = accountAddress
+
+        return if (address != null) {
+            val response = crowdNodeWebApi.getTransactions(address.toBase58())
+            var total = BigDecimal.ZERO
+            response.body()?.value?.forEach { tx ->
+                total += BigDecimal.valueOf(tx.amount)
+            }
+            val balance = total.setScale(8, RoundingMode.HALF_UP).toString()
+            Coin.parseCoin(balance)
+        } else {
+            Coin.ZERO
+        }
+    }
+
     override fun reset() {
         log.info("reset is triggered")
         signUpStatus.value = SignUpStatus.NotStarted
         accountAddress = null
         apiError = null
         configuration.crowdNodeError = ""
-    }
-
-    override suspend fun deposit(accountAddress: Address) {
-        val topUpTx = topUpAddress(accountAddress, Coin.COIN)
-        Log.i("CROWDNODE", "topUpTx: ${topUpTx}")
-        val requestValue = Coin.valueOf((Coin.COIN.value * 0.248372).toLong())
-
-        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
-        val depositTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)
-        Log.i("CROWDNODE", "Deposit tx: ${depositTx.toString()}")
-        val errorResponse = CrowdNodeErrorResponse(params, requestValue)
-        val tx = walletDataProvider.observeTransactions(
-            CrowdNodeDepositReceivedResponse(params),
-            errorResponse
-        ).first()
-
-        if (errorResponse.matches(tx)) {
-            throw CrowdNodeException("Deposit request returned an error")
-        }
-
-        Log.i("CROWDNODE", "Deposit response: ${tx}")
     }
 
     private fun restoreStatus() {

@@ -17,11 +17,10 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.annotation.MainThread
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -52,6 +51,10 @@ class PortalViewModel @Inject constructor(
     val balance: LiveData<Coin>
         get() = _balance
 
+    private val _balanceLoading: MutableLiveData<Boolean> = MutableLiveData()
+    val balanceLoading: LiveData<Boolean>
+        get() = _balanceLoading
+
     val dashFormat: MonetaryFormat
         get() = config.format.noCode()
 
@@ -66,12 +69,38 @@ class PortalViewModel @Inject constructor(
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
-        _balance.value = Coin.ZERO
+        viewModelScope.launch {
+            _balance.value = Coin.valueOf(config.lastCrowdNodeBalance)
+            updateBalance()
+        }
     }
 
+    // TODO: this is for QA, needs to be changed
     fun deposit() {
         viewModelScope.launch {
-            crowdNodeApi.deposit(crowdNodeApi.accountAddress!!)
+            val amount = Coin.valueOf((Coin.COIN.value * 0.024837).toLong())
+            crowdNodeApi.deposit(crowdNodeApi.accountAddress!!, amount)
+            delay(2000)
+            updateBalance()
         }
+    }
+
+    private fun updateBalance() {
+        viewModelScope.launch {
+            withProgress {
+                val balance = crowdNodeApi.loadBalance()
+                _balance.value = balance
+                config.lastCrowdNodeBalance = balance.value
+            }
+        }
+    }
+
+    @MainThread
+    private suspend fun withProgress(action: suspend () -> Unit) {
+        if (_balanceLoading.value == true) return
+
+        _balanceLoading.value = true
+        action.invoke()
+        _balanceLoading.value = false
     }
 }
