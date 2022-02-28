@@ -201,6 +201,21 @@ public class GenericUtils {
         }
     }
 
+    public static boolean isCurrencyFirst(Fiat fiat) {
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        Currency currency = Currency.getInstance(fiat.currencyCode);
+        numberFormat.setCurrency(currency);
+        String currencySymbol = currency.getSymbol(getDeviceLocale());
+       return numberFormat.format(1.0).startsWith(currencySymbol);
+    }
+
+    public static String getLocalCurrencySymbol(String currencyCode) {
+        NumberFormat numberFormat = NumberFormat.getCurrencyInstance(getDeviceLocale());
+        Currency currency = Currency.getInstance(currencyCode);
+        numberFormat.setCurrency(currency);
+        return currency.getSymbol(getDeviceLocale());
+    }
+
     public static String fiatToStringWithoutCurrencyCode(Fiat fiat) {
         MonetaryFormat format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode();
         return  format.format(fiat).toString();
