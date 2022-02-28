@@ -23,6 +23,7 @@ import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
+import retrofit2.Response
 import java.math.BigDecimal
 import javax.inject.Inject
 class CoinBaseRepository @Inject constructor(
@@ -109,8 +110,7 @@ class CoinBaseRepository @Inject constructor(
     }
 
     override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams) = safeApiCall {
-        val apiResult = servicesApi.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams)
-        apiResult.code()
+        servicesApi.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams)
     }
 
     override fun getUserLastCoinbaseBalance(): String = userPreferences.lastCoinbaseBalance ?: ""
@@ -147,7 +147,7 @@ interface CoinBaseRepositoryInt {
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
-    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<Int>
+    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<Response<SendTransactionToWalletResponse?>>
     fun getUserLastCoinbaseBalance(): String
     fun isUserConnected(): Boolean
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
