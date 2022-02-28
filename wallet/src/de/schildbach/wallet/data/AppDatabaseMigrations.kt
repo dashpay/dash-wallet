@@ -22,7 +22,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 class AppDatabaseMigrations {
     companion object {
         @JvmStatic
-        val migration3To9 = object : Migration(3, 9) {
+        val migration3To9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("DROP TABLE IF EXISTS `merchant`")
                 database.execSQL("DROP TABLE IF EXISTS `atm`")
