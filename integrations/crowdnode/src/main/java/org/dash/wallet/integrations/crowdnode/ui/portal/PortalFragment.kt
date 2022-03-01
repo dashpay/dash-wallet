@@ -48,7 +48,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationOnClickListener {
-            findNavController().popBackStack()
+            requireActivity().finish()
         }
 
         binding.walletBalanceDash.setFormat(viewModel.dashFormat)
@@ -77,7 +77,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
         binding.unlinkAccountBtn.setOnClickListener {
             // TODO: online account
-            findNavController().popBackStack()
+            requireActivity().finish()
         }
 
         binding.toolbar.setOnMenuItemClickListener {
