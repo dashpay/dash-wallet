@@ -226,12 +226,6 @@ android {
                 buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv('INTERNAL_SUPPORT_EMAIL')}\"")
             }
         }
-        release {
-            def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
-            if (supportEmail == null) {
-                throw new StopExecutionException("SUPPORT_EMAIL is not defined in local.properties or environment on this release build")
-            }
-        }
     }
     sourceSets {
         main {
