@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.ui
+package org.dash.wallet.integrations.crowdnode.ui.entry_point
 
 import android.os.Bundle
 import android.util.Log
@@ -34,7 +34,7 @@ import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 @AndroidEntryPoint
 class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
     private val binding by viewBinding(FragmentEntryPointBinding::bind)
-    private val viewModel: CrowdNodeViewModel by activityViewModels()
+    private val viewModel: EntryPointViewModel by activityViewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -66,7 +66,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         binding.backupPassphraseHint.setOnClickListener {
-            val dialog = AdaptiveDialog.new(
+            val dialog = AdaptiveDialog.create(
                 R.drawable.ic_info_blue_encircled,
                 getString(R.string.crowdnode_secure_wallet),
                 getString(R.string.crowdnode_secure_wallet_explainer),
@@ -82,7 +82,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         binding.requiredDashHint.setOnClickListener {
-            val dialog = AdaptiveDialog.new(
+            val dialog = AdaptiveDialog.create(
                 R.drawable.ic_info_blue_encircled,
                 getString(R.string.insufficient_funds),
                 getString(
@@ -101,7 +101,7 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         binding.crowdnodeTransactionHint.setOnClickListener {
-            val dialog = AdaptiveDialog.new(
+            val dialog = AdaptiveDialog.create(
                 R.drawable.ic_dialog_arrows,
                 getString(R.string.crowdnode_required_transaction),
                 getString(R.string.crowdnode_restore_wallet),

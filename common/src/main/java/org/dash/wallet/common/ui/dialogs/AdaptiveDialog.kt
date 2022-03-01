@@ -62,8 +62,8 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
                 positiveButtonText
             )
         }
-        // not usable from Java
-        fun new(
+
+        fun create(
             @DrawableRes icon: Int,
             title: String,
             message: String,

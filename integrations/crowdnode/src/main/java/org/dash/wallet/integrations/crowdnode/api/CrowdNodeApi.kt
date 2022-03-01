@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -39,6 +40,8 @@ import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
+import java.math.RoundingMode
 import javax.inject.Inject
 
 enum class SignUpStatus {
@@ -52,19 +55,22 @@ enum class SignUpStatus {
 
 interface CrowdNodeApi {
     val signUpStatus: StateFlow<SignUpStatus>
-    val existingAccountAddress: Address?
+    val accountAddress: Address?
     val apiError: Exception?
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
 
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
+    suspend fun deposit(accountAddress: Address, amount: Coin)
+    suspend fun loadBalance(): Coin
     fun reset()
 }
 
 class CrowdNodeException(message: String): Exception(message)
 
 class CrowdNodeBlockchainApi @Inject constructor(
+    private val crowdNodeWebApi: CrowdNodeWebApi,
     private val paymentService: SendPaymentService,
     private val walletDataProvider: WalletDataProvider,
     private val notificationService: NotificationService,
@@ -79,7 +85,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private val params = walletDataProvider.networkParameters
 
     override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
-    override var existingAccountAddress: Address? = null
+    override var accountAddress: Address? = null
         private set
     override var apiError: Exception? = null
         private set
@@ -109,11 +115,12 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
     override suspend fun signUp(accountAddress: Address) {
         log.info("CrowdNode sign up, current status: ${signUpStatus.value}")
+        this.accountAddress = accountAddress
 
         try {
             if (signUpStatus.value.ordinal < SignUpStatus.SigningUp.ordinal) {
                 signUpStatus.value = SignUpStatus.FundingWallet
-                val topUpTx = topUpAddress(accountAddress)
+                val topUpTx = topUpAddress(accountAddress, CrowdNodeConstants.REQUIRED_FOR_SIGNUP)
                 log.info("topUpTx id: ${topUpTx.txId}")
             }
 
@@ -157,10 +164,45 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
+    // TODO: this is for QA, might require modifications
+    override suspend fun deposit(accountAddress: Address, amount: Coin) {
+        val topUpTx = topUpAddress(accountAddress, Coin.COIN)
+        log.info("topUpTx id: ${topUpTx.txId}")
+        val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
+        val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress)
+        log.info("depositTx id: ${depositTx.txId}")
+        val errorResponse = CrowdNodeErrorResponse(params, amount)
+        val tx = walletDataProvider.observeTransactions(
+            CrowdNodeDepositReceivedResponse(params),
+            errorResponse
+        ).first()
+        log.info("got deposit response: ${tx.txId}")
+
+        if (errorResponse.matches(tx)) {
+            throw CrowdNodeException("Deposit request returned an error")
+        }
+    }
+
+    override suspend fun loadBalance(): Coin {
+        val address = accountAddress
+
+        return if (address != null) {
+            val response = crowdNodeWebApi.getTransactions(address.toBase58())
+            var total = BigDecimal.ZERO
+            response.body()?.value?.forEach { tx ->
+                total += BigDecimal.valueOf(tx.amount)
+            }
+            val balance = total.setScale(8, RoundingMode.HALF_UP).toString()
+            Coin.parseCoin(balance)
+        } else {
+            Coin.ZERO
+        }
+    }
+
     override fun reset() {
         log.info("reset is triggered")
         signUpStatus.value = SignUpStatus.NotStarted
-        existingAccountAddress = null
+        accountAddress = null
         apiError = null
         configuration.crowdNodeError = ""
     }
@@ -181,7 +223,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
             val wrappedTransactions = walletDataProvider.wrapAllTransactions(CrowdNodeFullTxSet(params))
             val crowdNodeFullSet = wrappedTransactions.firstOrNull { it is CrowdNodeFullTxSet }
             (crowdNodeFullSet as? CrowdNodeFullTxSet)?.let { set ->
-                existingAccountAddress = set.accountAddress
+                accountAddress = set.accountAddress
 
                 if (set.hasWelcomeToApiResponse) {
                     log.info("found finished sign up")
@@ -192,14 +234,14 @@ class CrowdNodeBlockchainApi @Inject constructor(
                 if (set.hasAcceptTermsResponse) {
                     log.info("found accept terms response")
                     signUpStatus.value = SignUpStatus.AcceptingTerms
-                    persistentSignUp(existingAccountAddress!!)
+                    persistentSignUp(accountAddress!!)
                 }
             }
         }
     }
 
-    private suspend fun topUpAddress(accountAddress: Address): Transaction {
-        val topUpTx = paymentService.sendCoins(accountAddress, CrowdNodeConstants.REQUIRED_FOR_SIGNUP)
+    private suspend fun topUpAddress(accountAddress: Address, amount: Coin): Transaction {
+        val topUpTx = paymentService.sendCoins(accountAddress, amount)
         return walletDataProvider.observeTransactions(LockedTransaction(topUpTx.txId)).first()
     }
 

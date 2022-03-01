@@ -116,7 +116,6 @@
     <string name="import_export_keys_dialog_password_phrase">Recovery phrase goes here.</string>
     <string name="preferences_report_issue_summary">Collect information about your issue and email your report to the developers.</string>
     <string name="navigation_configuration">Configuration</string>
-    <string name="button_copy_address">Copy address</string>
     <string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is not a recovery phrase word</string>

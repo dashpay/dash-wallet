@@ -30,13 +30,13 @@ import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
-import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
-import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
+import org.dash.wallet.integrations.crowdnode.ui.entry_point.EntryPointViewModel
+import org.dash.wallet.integrations.crowdnode.ui.entry_point.NavigationRequest
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class StakingActivity : LockScreenActivity() {
-    private val viewModel: CrowdNodeViewModel by viewModels()
+    private val viewModel: EntryPointViewModel by viewModels()
     private lateinit var binding: ActivityStakingBinding
 
     @Inject

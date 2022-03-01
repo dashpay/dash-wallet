@@ -12,6 +12,7 @@
     <string name="zero_fiat_balance_with_currency" translatable="false">%s 0.00</string>
     <string name="buy_dash">Buy Dash</string>
     <string name="copied">Copied</string>
+    <string name="staking_title">Staking</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -39,6 +40,8 @@
     <string name="button_close">Close</string>
     <string name="button_retry">Retry</string>
     <string name="button_send_report">Send Report</string>
+    <string name="button_info">info</string>
+    <string name="button_copy_address">Copy address</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

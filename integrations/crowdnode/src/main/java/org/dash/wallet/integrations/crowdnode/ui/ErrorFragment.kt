@@ -31,6 +31,7 @@ import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentErrorBinding
+import org.dash.wallet.integrations.crowdnode.ui.entry_point.EntryPointViewModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -40,7 +41,7 @@ class ErrorFragment : Fragment(R.layout.fragment_error) {
     }
 
     private val binding by viewBinding(FragmentErrorBinding::bind)
-    private val viewModel by activityViewModels<CrowdNodeViewModel>()
+    private val viewModel by activityViewModels<EntryPointViewModel>()
 
     @Inject
     lateinit var securityModel: SecurityModel

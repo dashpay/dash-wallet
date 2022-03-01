@@ -1,0 +1,40 @@
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="30dp"
+    android:height="30dp"
+    android:viewportWidth="30"
+    android:viewportHeight="30">
+  <path
+      android:pathData="M14.9907,30C17.0464,30 18.9783,29.6097 20.7864,28.829C22.5944,28.0483 24.1888,26.9641 25.5697,25.5762C26.9505,24.1883 28.034,22.5898 28.8204,20.7807C29.6068,18.9715 30,17.0446 30,15C30,12.9554 29.6068,11.0285 28.8204,9.2193C28.034,7.4102 26.9474,5.8116 25.5603,4.4238C24.1734,3.0359 22.5758,1.9517 20.7678,1.171C18.9598,0.3903 17.0279,0 14.9721,0C12.9288,0 11.0031,0.3903 9.1951,1.171C7.387,1.9517 5.7957,3.0359 4.421,4.4238C3.0464,5.8116 1.9659,7.4102 1.1796,9.2193C0.3932,11.0285 0,12.9554 0,15C0,17.0446 0.3932,18.9715 1.1796,20.7807C1.9659,22.5898 3.0495,24.1883 4.4303,25.5762C5.8111,26.9641 7.4056,28.0483 9.2136,28.829C11.0217,29.6097 12.9474,30 14.9907,30Z">
+    <aapt:attr name="android:fillColor">
+      <gradient 
+          android:startY="0"
+          android:startX="15"
+          android:endY="30"
+          android:endX="15"
+          android:type="linear">
+        <item android:offset="0" android:color="#FF147BC6"/>
+        <item android:offset="1" android:color="#FF55AAE5"/>
+      </gradient>
+    </aapt:attr>
+  </path>
+  <path
+      android:pathData="M14.9905,27.4907C13.9255,27.4907 12.8635,27.3513 11.8047,27.0725C10.7459,26.7937 9.7366,26.3817 8.7769,25.8364C7.8171,25.2912 6.9595,24.6221 6.2041,23.829C6.7242,23.0236 7.4239,22.3358 8.3032,21.7658C9.1824,21.1958 10.1917,20.759 11.331,20.4554C12.4704,20.1518 13.6902,20 14.9905,20C16.266,20 17.4734,20.1487 18.6128,20.4461C19.7521,20.7435 20.7645,21.1772 21.6499,21.7472C22.5354,22.3172 23.2443,23.0112 23.7768,23.829C23.0214,24.6221 22.1638,25.2912 21.2041,25.8364C20.2444,26.3817 19.232,26.7937 18.1669,27.0725C17.1019,27.3513 16.0431,27.4907 14.9905,27.4907ZM14.9905,17.5465C14.0493,17.5341 13.201,17.2893 12.4456,16.8123C11.6902,16.3352 11.0896,15.6847 10.6438,14.8606C10.1979,14.0366 9.975,13.0979 9.975,12.0446C9.975,11.0657 10.1979,10.1673 10.6438,9.3494C11.0896,8.5316 11.6902,7.878 12.4456,7.3885C13.201,6.899 14.0493,6.6543 14.9905,6.6543C15.9193,6.6543 16.7614,6.899 17.5168,7.3885C18.2722,7.878 18.8728,8.5316 19.3187,9.3494C19.7645,10.1673 19.9874,11.0657 19.9874,12.0446C19.9874,13.0979 19.7676,14.0397 19.3279,14.8699C18.8883,15.7001 18.2877,16.3569 17.5261,16.8402C16.7645,17.3234 15.9193,17.5589 14.9905,17.5465Z"
+      android:fillColor="#ffffff"/>
+</vector>

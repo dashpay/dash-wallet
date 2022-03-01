@@ -105,6 +105,7 @@ public class Configuration {
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_ERROR = "crowdnode_error";
+    public static final String PREFS_KEY_LAST_CROWDNODE_BALANCE = "crowdnode_balance";
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -554,5 +555,14 @@ public class Configuration {
 
     public void setCrowdNodeError(String error) {
         prefs.edit().putString(PREFS_KEY_CROWDNODE_ERROR, error).apply();
+    }
+
+    public void setLastCrowdNodeBalance(Long balance) {
+        prefs.edit().putLong(PREFS_KEY_LAST_CROWDNODE_BALANCE, balance).apply();
+    }
+
+    @NonNull
+    public Long getLastCrowdNodeBalance() {
+        return prefs.getLong(PREFS_KEY_LAST_CROWDNODE_BALANCE, 0);
     }
 }
