@@ -265,7 +265,6 @@
     <string name="about_review_and_rate">Rezensiere &amp; bewerte die App</string>
     <string name="about_contact_support">Support kontaktieren</string>
     <string name="about_fork_disclaimer">Dies ist eine Open Source App, die von der Bitcoin Wallet geforked wurde</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
 

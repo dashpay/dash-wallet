@@ -75,12 +75,20 @@ class ExploreSyncWorker constructor(val appContext: Context, workerParams: Worke
             syncStatus.setSyncProgress(0.0)
             val tableSyncWatch = Stopwatch.createStarted()
 
-            localDataTimestamp = exploreRepository.localTimestamp
+            localDataTimestamp = exploreRepository.localTimestamp.run {
+                if (this == 0L) {
+                    // force data preloading for fresh installs
+                    AppExploreDatabase.getAppDatabase()
+                }
+                exploreRepository.localTimestamp
+            }
+            log.info("local data timestamp: $localDataTimestamp (${Date(localDataTimestamp)})")
+
             remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
             log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
 
             if (localDataTimestamp >= remoteDataTimestamp) {
-                log.info("data timestamp $localDataTimestamp, nothing to sync (${Date(localDataTimestamp)})")
+                log.info("explore db is up to date, nothing to sync")
                 syncStatus.setSyncProgress(100.0)
                 return@withContext Result.success()
             }

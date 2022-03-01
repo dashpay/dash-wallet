@@ -176,8 +176,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 30
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70445
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "7.4.5"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 70471
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "7.4.7"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -224,6 +224,12 @@ android {
                 buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
             } else if(System.getenv('INTERNAL_SUPPORT_EMAIL') != null) {
                 buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv('INTERNAL_SUPPORT_EMAIL')}\"")
+            }
+        }
+        release {
+            def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
+            if (supportEmail == null) {
+                throw new StopExecutionException("SUPPORT_EMAIL is not defined in local.properties or environment on this release build")
             }
         }
     }

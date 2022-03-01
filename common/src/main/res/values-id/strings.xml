@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Tolak</string>
     <string name="network_unavailable_return">Kembali ke dompet</string>
+    <string name="button_continue">Teruskan</string>
 
+    <string name="max">Max</string>
+    <string name="select_currency">Pilih mata uang</string>
 </resources>

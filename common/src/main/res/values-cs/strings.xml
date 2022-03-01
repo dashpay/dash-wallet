@@ -29,5 +29,7 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Zavřít</string>
     <string name="network_unavailable_return">Zpět do pěněženky</string>
+    <string name="button_continue">Pokračovat</string>
 
+    <string name="max">Max</string>
 </resources>
