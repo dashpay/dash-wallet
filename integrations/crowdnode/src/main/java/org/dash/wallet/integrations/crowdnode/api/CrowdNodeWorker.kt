@@ -68,7 +68,6 @@ class CrowdNodeWorker @AssistedInject constructor(
                         log.info("calling setForeground")
                         setForeground(ForegroundInfo(operation.hashCode(), notification))
                         crowdNodeApi.signUp(address)
-
                     }
                 }
             }

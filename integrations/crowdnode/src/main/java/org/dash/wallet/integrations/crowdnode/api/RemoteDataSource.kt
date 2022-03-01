@@ -26,7 +26,6 @@ import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
 
 class RemoteDataSource {
-
     companion object {
         private const val BASE_URL = "https://test.crowdnode.io/"
     }
