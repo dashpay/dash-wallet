@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.network
 
+import android.content.Context
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -29,7 +30,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
 
 class RemoteDataSource @Inject constructor(
-    private val userPreferences: Configuration
+    private val userPreferences: Configuration,
+    private val context: Context
 ) {
 
     companion object {
@@ -39,7 +41,7 @@ class RemoteDataSource @Inject constructor(
     fun <Api> buildApi(
         api: Class<Api>,
     ): Api {
-        val authenticator = TokenAuthenticator(buildTokenApi(), userPreferences)
+        val authenticator = TokenAuthenticator(buildTokenApi(), userPreferences, context)
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(getRetrofitClient(authenticator))

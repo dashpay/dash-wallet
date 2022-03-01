@@ -16,10 +16,12 @@
  */
 package org.dash.wallet.integration.coinbase_integration.di
 
+import android.content.Context
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
@@ -28,6 +30,7 @@ import org.dash.wallet.integration.coinbase_integration.SwapTradeMapper
 import org.dash.wallet.integration.coinbase_integration.network.RemoteDataSource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import javax.inject.Singleton
@@ -38,9 +41,9 @@ object CoinBaseModule {
     @Singleton
     @Provides
     fun provideRemoteDataSource(
-        userPreferences: Configuration
+        userPreferences: Configuration, @ApplicationContext context: Context
     ): RemoteDataSource {
-        return RemoteDataSource(userPreferences)
+        return RemoteDataSource(userPreferences, context)
     }
 
     @Singleton
@@ -72,4 +75,10 @@ object CoinBaseModule {
 abstract class AbstractBindingProvision {
     @Binds
     abstract fun bindCoinbaseRepository(coinBaseRepository: CoinBaseRepository): CoinBaseRepositoryInt
+
+    companion object {
+        @Singleton
+        @Provides
+        fun provideCloseCoinbaseBroadcaster(): CloseCoinbasePortalBroadcaster = CloseCoinbasePortalBroadcaster()
+    }
 }
