@@ -1,4 +1,8 @@
 Dash Wallet
+v7.4.7
+* Fix Explore Dash sync system (prevent downloads if explore.db in access its same as cloud)
+* Remove old Explore Dash data from database
+
 v7.4.6
 * Fix Scan QR Code crash on Android 6
 * Fix crash related to Unencrypted Wallets
