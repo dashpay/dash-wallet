@@ -79,6 +79,7 @@ import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.slf4j.Logger;
@@ -112,6 +113,7 @@ import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
@@ -171,6 +173,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
 
     private Executor executor = Executors.newSingleThreadExecutor();
     private int syncPercentage = 0; // 0 to 100%
+
+    // Risk Analyser for Transactions that is PeerGroup Aware
+    AllowLockTimeRiskAnalysis.Analyzer riskAnalyzer;
+    DefaultRiskAnalysis.Analyzer defaultRiskAnalyzer = DefaultRiskAnalysis.FACTORY;
 
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
@@ -566,6 +572,10 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                     }
                 });
 
+                // Use our custom risk analysis that allows v2 tx with absolute LockTime
+                riskAnalyzer = new AllowLockTimeRiskAnalysis.Analyzer(peerGroup);
+                wallet.setRiskAnalyzer(riskAnalyzer);
+
                 // start peergroup
                 peerGroup.startAsync();
                 peerGroup.startBlockChainDownload(blockchainDownloadListener);
@@ -575,6 +585,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 peerGroup.removeConnectedEventListener(peerConnectivityListener);
                 peerGroup.removeWallet(wallet);
                 peerGroup.stopAsync();
+                wallet.setRiskAnalyzer(defaultRiskAnalyzer);
+                riskAnalyzer.shutdown();
                 peerGroup = null;
 
                 log.debug("releasing wakelock");
@@ -873,6 +885,8 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
             peerGroup.removeConnectedEventListener(peerConnectivityListener);
             peerGroup.removeWallet(application.getWallet());
             peerGroup.stop();
+            application.getWallet().setRiskAnalyzer(defaultRiskAnalyzer);
+            riskAnalyzer.shutdown();
 
             log.info("peergroup stopped");
         }
