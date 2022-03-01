@@ -46,7 +46,6 @@ class TokenAuthenticator @Inject constructor(
         return runBlocking {
             when (val tokenResponse = getUpdatedToken()) {
                 is ResponseResource.Success -> {
-                    closeCoinbasePortal(response)
                     tokenResponse.value?.let {
                         userPreferences.setLastCoinBaseAccessToken(it.accessToken)
                         userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
@@ -56,21 +55,15 @@ class TokenAuthenticator @Inject constructor(
                     }
                 }
                 else -> {
-                    closeCoinbasePortal(response)
+                    userPreferences.setLastCoinBaseAccessToken(null)
+                    userPreferences.setLastCoinBaseRefreshToken(null)
+                    userPreferences.setLastCoinBaseBalance(null)
+                    val broadcast = entryPoint.provideReceiver()
+                    broadcast.closeCoinbasePortal.postCall()
                     null
                 }
 
             }
-        }
-    }
-
-    private fun closeCoinbasePortal(response: Response) {
-        if (response.code() == 401) {
-            userPreferences.setLastCoinBaseAccessToken(null)
-            userPreferences.setLastCoinBaseRefreshToken(null)
-            userPreferences.setLastCoinBaseBalance(null)
-            val broadcast = entryPoint.provideReceiver()
-            broadcast.closeCoinbasePortal.postCall()
         }
     }
 
