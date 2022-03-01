@@ -21,7 +21,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -33,7 +32,6 @@ import javax.inject.Inject
 @HiltViewModel
 class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
-    private val userPreference: Configuration,
     private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
@@ -42,8 +40,8 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
 
     val commitBuyOrderFailedCallback = SingleLiveEvent<Unit>()
 
-    private val _transactionCompleted: MutableLiveData<Boolean> = MutableLiveData()
-    val transactionCompleted: LiveData<Boolean>
+    private val _transactionCompleted: MutableLiveData<TransactionState> = MutableLiveData()
+    val transactionCompleted: LiveData<TransactionState>
         get() = _transactionCompleted
 
     var sendFundToWalletParams: SendTransactionToWalletParams ? = null
@@ -60,8 +58,6 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                     _showLoading.value = false
                     commitBuyOrderFailedCallback.call()
                 } else {
-                    userPreference.coinbaseUserWithdrawalRemaining =
-                        userPreference.coinbaseUserWithdrawalRemaining.toDoubleOrZero.minus(userPreference.coinbaseUserInputAmount.toDoubleOrZero).toString()
                     sendFundToWalletParams = SendTransactionToWalletParams(
                         amount = result.value.dashAmount,
                         currency = result.value.dashCurrency,
@@ -80,22 +76,38 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
         }
     }
 
-    fun sendDashToWallet(params: SendTransactionToWalletParams) = viewModelScope.launch(Dispatchers.Main) {
+    private fun sendDashToWallet(params: SendTransactionToWalletParams) = viewModelScope.launch(Dispatchers.Main) {
         if (_showLoading.value == false)
             _showLoading.value = true
         when (val result = coinBaseRepository.sendFundsToWallet(params)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                when (result.value) {
+                val response = result.value
+                when (response.code()) {
                     200, 201 -> {
-                        _transactionCompleted.value = true
+                        _transactionCompleted.value = TransactionState(true, null)
                     }
-                    else -> _transactionCompleted.value = false
+                    400 -> {
+                        val error = response.errorBody()?.string()
+                        error?.let {
+                            val message = CoinbaseErrorResponse.getErrorMessage(it)
+                            _transactionCompleted.value = TransactionState(false, message)
+                        }
+                    }
+                    else -> _transactionCompleted.value = TransactionState(false, null)
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                _transactionCompleted.value = false
+                val error = result.errorBody?.string()
+                if (result.errorCode == 400){
+                    error?.let {
+                        val message = CoinbaseErrorResponse.getErrorMessage(it)
+                        _transactionCompleted.value = TransactionState(false, message)
+                    }
+                } else {
+                    _transactionCompleted.value = TransactionState(false, null)
+                }
             }
         }
     }
@@ -140,8 +152,9 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     fun onRefreshOrderClicked(fiat: Fiat?, paymentMethodId: String) {
         placeBuyOrder(PlaceBuyOrderParams(fiat?.toPlainString(), fiat?.currencyCode, paymentMethodId))
     }
-
-    fun resetWithdrawalAmount(){
-        userPreference.coinbaseUserInputAmount = null
-    }
 }
+
+data class TransactionState(
+    val isTransactionSuccessful: Boolean,
+    val responseMessage: String?
+)

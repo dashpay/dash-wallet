@@ -103,13 +103,13 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.commitBuyOrderFailedCallback.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR)
+            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, null)
         }
 
-        viewModel.transactionCompleted.observe(viewLifecycleOwner) { isTransactionCompleted ->
-            showBuyOrderDialog(
-                if (isTransactionCompleted)
-                    CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR
+        viewModel.transactionCompleted.observe(viewLifecycleOwner) { transactionStatus ->
+            showBuyOrderDialog(if (transactionStatus.isTransactionSuccessful)
+                    CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR,
+                transactionStatus.responseMessage
             )
         }
 
@@ -212,12 +212,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
     }
 
-    private fun showBuyOrderDialog(
-        type: CoinBaseBuyDashDialog.Type
-    ) {
+    private fun showBuyOrderDialog(type: CoinBaseBuyDashDialog.Type, responseMessage: String?) {
         if (transactionStateDialog?.dialog?.isShowing == true)
             transactionStateDialog?.dismissAllowingStateLoss()
-        transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type).apply {
+        transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type, responseMessage).apply {
             this.onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
                     when (type) {

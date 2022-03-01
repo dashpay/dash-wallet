@@ -42,8 +42,8 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
     val commitBuyOrderFailedCallback = SingleLiveEvent<Unit>()
 
-    private val _transactionCompleted: MutableLiveData<Boolean> = MutableLiveData()
-    val transactionCompleted: LiveData<Boolean>
+    private val _transactionCompleted: MutableLiveData<TransactionState> = MutableLiveData()
+    val transactionCompleted: LiveData<TransactionState>
         get() = _transactionCompleted
 
     var sendFundToWalletParams: SendTransactionToWalletParams? = null
@@ -85,16 +85,24 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         when (val result = coinBaseRepository.sendFundsToWallet(params)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                when (result.value) {
+                val response = result.value
+                when (result.value.code()) {
                     200, 201 -> {
-                        _transactionCompleted.value = true
+                        _transactionCompleted.value = TransactionState(true, null)
                     }
-                    else -> _transactionCompleted.value = false
+                    400 -> {
+                        val error = response.errorBody()?.string()
+                        error?.let {
+                            val message = CoinbaseErrorResponse.getErrorMessage(it)
+                            _transactionCompleted.value = TransactionState(false, message)
+                        }
+                    }
+                    else -> _transactionCompleted.value = TransactionState(false, null)
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                _transactionCompleted.value = false
+                _transactionCompleted.value = TransactionState(false, null)
             }
         }
     }

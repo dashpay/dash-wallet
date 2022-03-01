@@ -88,7 +88,6 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
         binding.cancelBtn.setOnClickListener {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE, bundleOf())
-            viewModel.resetWithdrawalAmount()
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.confirmCancelBuyDashTransaction())
         }
 
@@ -132,13 +131,13 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
 
 
         viewModel.commitBuyOrderFailedCallback.observe(viewLifecycleOwner){
-            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.PURCHASE_ERROR)
+            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.PURCHASE_ERROR, null)
         }
 
 
-        viewModel.transactionCompleted.observe(viewLifecycleOwner){ isTransactionCompleted ->
-            showBuyOrderDialog(if (isTransactionCompleted)
-                CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR)
+        viewModel.transactionCompleted.observe(viewLifecycleOwner){ transactionStatus ->
+            showBuyOrderDialog(if (transactionStatus.isTransactionSuccessful)
+                CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR, transactionStatus.responseMessage)
         }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
@@ -201,12 +200,10 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
     }
 
-    private fun showBuyOrderDialog(
-        type: CoinBaseBuyDashDialog.Type
-    ) {
+    private fun showBuyOrderDialog(type: CoinBaseBuyDashDialog.Type, responseMessage: String?) {
         if (transactionStateDialog?.dialog?.isShowing == true)
             transactionStateDialog?.dismissAllowingStateLoss()
-        transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type).apply {
+        transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type, responseMessage).apply {
             this.onCoinBaseBuyDashDialogButtonsClickListener = object : CoinBaseBuyDashDialog.CoinBaseBuyDashDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseBuyDashDialog.Type) {
                     when (type) {

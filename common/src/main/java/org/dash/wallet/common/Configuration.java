@@ -99,8 +99,6 @@ public class Configuration {
     public static final String PREFS_KEY_COINBASE_AUTH_INFO_SHOWN = "coinbase_auth_info_shown";
     public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_LIMIT = "withdrawal_limit";
     public static final String PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY = "send_limit_currency";
-    public static final String PREFS_KEY_COINBASE_USER_INPUT_AMOUNT = "input_amount";
-    public static final String PREFS_KEY_COINBASE_USER_WITHDRAWAL_REMAINING = "withdrawal_limit_remaining";
 
 
 
@@ -613,21 +611,5 @@ public class Configuration {
 
     public String getCoinbaseSendLimitCurrency(){
         return prefs.getString(PREFS_KEY_COINBASE_SEND_LIMIT_CURRENCY, GenericUtils.getLocaleCurrencyCode());
-    }
-
-    public void setCoinbaseUserInputAmount(String amount){
-        prefs.edit().putString(PREFS_KEY_COINBASE_USER_INPUT_AMOUNT, amount).apply();
-    }
-
-    public String getCoinbaseUserInputAmount() {
-        return prefs.getString(PREFS_KEY_COINBASE_USER_INPUT_AMOUNT, null);
-    }
-
-    public void setCoinbaseUserWithdrawalRemaining(String amount){
-        prefs.edit().putString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_REMAINING, amount).apply();
-    }
-
-    public String getCoinbaseUserWithdrawalRemaining() {
-        return prefs.getString(PREFS_KEY_COINBASE_USER_WITHDRAWAL_REMAINING, getCoinbaseUserWithdrawalLimitAmount());
     }
 }

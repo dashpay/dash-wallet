@@ -81,4 +81,5 @@
     <string name="set_auth_limit">Make sure you set up the right authorization limit on Coinbase</string>
     <string name="change_withdrawal_limit">You can change it anytime by logging out of your Coinbase account in Dash Wallet and logging back in.</string>
     <string name="got_it">I got it</string>
+    <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
 </resources>

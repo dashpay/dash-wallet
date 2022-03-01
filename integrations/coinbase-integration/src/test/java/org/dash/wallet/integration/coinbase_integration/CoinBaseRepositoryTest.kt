@@ -90,13 +90,12 @@ class CoinBaseRepositoryTest {
     }
 
     @Test
-    fun `when sending funds to dash wallet, repository returns success response code`() {
+    fun `when sending funds to dash wallet, repository returns success response `() {
         val params = SendTransactionToWalletParams("0.5", "usd", "9316dd16-0c05", "XfVe4NAHTp6NwWuM3PGpmUSwuZuWWE9qY3", "send")
         val expectedSendFundsToWalletResponse = TestUtils.sendFundsToWalletApiResponse()
-
         coEvery { coinBaseServicesApi.sendCoinsToWallet(accountId = accountId, sendTransactionToWalletParams = params) } returns Response.success(expectedSendFundsToWalletResponse)
 
-        val actualSuccessResponse = runBlocking { coinBaseRepository.sendFundsToWallet(params) }
-        assertThat(actualSuccessResponse, `is`(ResponseResource.Success(200)))
+        runBlocking { coinBaseRepository.sendFundsToWallet(params) }
+        coVerify { coinBaseServicesApi.sendCoinsToWallet(accountId = accountId, sendTransactionToWalletParams = params) }
     }
 }
