@@ -16,6 +16,11 @@
  */
 package org.dash.wallet.integration.coinbase_integration.repository.remote
 
+import android.content.Context
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
@@ -25,19 +30,24 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.model.TokenResponse
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
+import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
 import javax.inject.Inject
 
 class TokenAuthenticator @Inject constructor(
     private val tokenApi: CoinBaseTokenRefreshApi,
-    private val userPreferences: Configuration
+    private val userPreferences: Configuration,
+    context: Context
 ) : Authenticator {
+
+    val entryPoint = EntryPointAccessors.fromApplication(context, CoinbasePortalEntryPoint::class.java)
 
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
             when (val tokenResponse = getUpdatedToken()) {
                 is ResponseResource.Success -> {
-                    tokenResponse.value.body()?.let {
+                    closeCoinbasePortal(response)
+                    tokenResponse.value?.let {
                         userPreferences.setLastCoinBaseAccessToken(it.accessToken)
                         userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
                         response.request().newBuilder()
@@ -45,13 +55,33 @@ class TokenAuthenticator @Inject constructor(
                             .build()
                     }
                 }
-                else -> null
+                else -> {
+                    closeCoinbasePortal(response)
+                    null
+                }
+
             }
         }
     }
 
-    private suspend fun getUpdatedToken(): ResponseResource<retrofit2.Response<TokenResponse>> {
+    private fun closeCoinbasePortal(response: Response) {
+        if (response.code() == 401) {
+            userPreferences.setLastCoinBaseAccessToken(null)
+            userPreferences.setLastCoinBaseRefreshToken(null)
+            userPreferences.setLastCoinBaseBalance(null)
+            val broadcast = entryPoint.provideReceiver()
+            broadcast.closeCoinbasePortal.postCall()
+        }
+    }
+
+    private suspend fun getUpdatedToken(): ResponseResource<TokenResponse?> {
         val refreshToken = userPreferences.lastCoinbaseRefreshToken
         return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
     }
+}
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface CoinbasePortalEntryPoint {
+    fun provideReceiver(): CloseCoinbasePortalBroadcaster
 }

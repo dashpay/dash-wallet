@@ -30,5 +30,5 @@ interface CoinBaseTokenRefreshApi {
         @Field("grant_type") grant_type: String = "refresh_token",
         @Field("client_secret") client_secret: String = "4d394e9d2f169a6ad2b16287131a4113c36b35cf38b3d020b75e425055e10c84",
         @Field("refresh_token") refreshToken: String?
-    ): Response<TokenResponse>
+    ): TokenResponse
 }
