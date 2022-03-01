@@ -147,7 +147,7 @@ interface CoinBaseRepositoryInt {
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
-    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<Response<SendTransactionToWalletResponse?>>
+    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<SendTransactionToWalletResponse?>
     fun getUserLastCoinbaseBalance(): String
     fun isUserConnected(): Boolean
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
