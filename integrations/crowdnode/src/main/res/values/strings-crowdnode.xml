@@ -62,9 +62,13 @@
     <string name="payout_options_details">You can change how / when your reward earnings are paid to you.</string>
     <string name="crowdnode_balance">Balance on CrowdNode</string>
     <string name="crowdnode_your_address_title">Here is the Dash address you used in integration with CrowdNode</string>
+    <string name="chain_syncing">The chain is syncing…</string>
+    <string name="crowdnode_wait_for_sync">Please wait until the chain is fully synced so we can review your transaction history.\n\nYou can visit CrowdNode website and log in/sign up there.</string>
+    <string name="crowdnode_open_website">Go to CrowdNode website</string>
 
-    <string name="terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
-    <string name="privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>
+    <string name="crowdnode_website" translatable="false">https://crowdnode.io/</string>
+    <string name="crowdnode_terms_of_use_url" translatable="false">https://crowdnode.io/terms/</string>
+    <string name="crowdnode_privacy_policy_url" translatable="false">https://crowdnode.io/privacy/</string>
     <string name="crowdnode_login_page" translatable="false">https://app.crowdnode.io/FundsOpen/%s</string>
     <string name="crowdnode_login_test_page" translatable="false">https://test.crowdnode.io/FundsOpen/%s</string>
     <string name="crowdnode_support_url" translatable="false">https://knowledge.crowdnode.io/</string>
