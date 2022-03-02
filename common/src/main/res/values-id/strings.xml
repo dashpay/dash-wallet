@@ -34,4 +34,7 @@
     <string name="network_unavailable_return">Kembali ke dompet</string>
     <string name="button_retry">Coba lagi</string>
     <string name="button_close">Tutup</string>
+    <string name="button_continue">Teruskan</string>
+    <string name="max">Max</string>
+    <string name="select_currency">Pilih mata uang</string>
 </resources>

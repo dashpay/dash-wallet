@@ -34,4 +34,7 @@
     <string name="network_unavailable_return">بازگشت به کیف‌ پول</string>
     <string name="button_retry">تلاش دوباره</string>
     <string name="button_close">بستن</string>
+    <string name="button_continue">ادامه</string>
+    <string name="max">حداکثر</string>
+    <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
 </resources>

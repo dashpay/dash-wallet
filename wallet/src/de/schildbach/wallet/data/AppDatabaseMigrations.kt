@@ -21,8 +21,22 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 class AppDatabaseMigrations {
     companion object {
+        // v7.4.1 to 7.4.5 (version 8) held Explore Dash Data in these tables
+        // In v7.4.6 (version 9), Explore Dash data was moved to a different DB,
+        // but the migration to drop these tables was set at 3 to 9 which did not work.
         @JvmStatic
-        val migration3To9 = object : Migration(4, 9) {
+        val migration8To10 = object : Migration(8, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DROP TABLE IF EXISTS `merchant`")
+                database.execSQL("DROP TABLE IF EXISTS `atm`")
+                database.execSQL("DROP TABLE IF EXISTS `merchant_fts`")
+                database.execSQL("DROP TABLE IF EXISTS `atm_fts`")
+            }
+        }
+
+        // v7.4.6 (version 9) still had Explore Dash Data in this DB
+        @JvmStatic
+        val migration9To10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("DROP TABLE IF EXISTS `merchant`")
                 database.execSQL("DROP TABLE IF EXISTS `atm`")

@@ -383,4 +383,6 @@
     <string name="select_a_service">서비스를 선택하십시오</string>
     <string name="activity_buy_and_sell_dash_filter">필터</string>
     <string name="clear_filter">필터 초기화</string>
-    </resources>
+    <string name="select_currency">통화 선택</string>
+
+</resources>

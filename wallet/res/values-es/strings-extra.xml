@@ -264,9 +264,12 @@
     <string name="about_review_and_rate">Evaluar la app</string>
     <string name="about_contact_support">Contactar Soporte</string>
     <string name="about_fork_disclaimer">Esta es una aplicación de código abierto derivada de una billetera de Bitcoin</string>
-    <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_copyright"> Dash Core 2022 Derechos reservados ©</string>
     <string name="about_license">Licencia pública general GNU v3.0</string>
     <string name="about_version_name">Billetera de Dash %s</string>
+    <string name="about_last_explore_dash_sync">Explorar la data de Dash actualizada el: %1$s\nÚltima sincronización: %2$s</string>
+    <string name="about_last_explore_dash_update_error">No se puede recuperar</string>
+    <string name="about_last_explore_dash_sync_never">Nunca</string>
 
     <string name="block">Bloque</string>
     <string name="time">Tiempo</string>
@@ -345,4 +348,11 @@
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recibido</string>
     <string name="sent_transactions">Enviado</string>
-    </resources>
+    <string name="set_pin_error_missing_wallet_title"> Error de billetera inexistente</string>
+    <string name="set_pin_error_missing_wallet_message"> No existe la billetera. Por favor escribir al centro de soporte.</string>
+    <string name="wallet_encryption_error_title"> Error de creación de billetera</string>
+    <string name="wallet_encryption_error_message"> Hay un error en la creación de la billetera. Por favor reportar al centro de soporte.</string>
+    <string name="wallet_not_encrypted_error_message"> Hay un error en su billetera.\n\nIf si ud no posee Dash en está billetera. Por favor desinstale y reinstale está app. Luego cree una nueva billetera \n\n si ud tiene se frase de recuperación, o archivo de respaldo, entonces desinstale esta app y reinstale nuevamente. \n\n de ser un caso diferentes, por favor reporte al centro de soporte  </string>
+
+
+</resources>

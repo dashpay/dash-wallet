@@ -35,4 +35,7 @@
     <string name="network_unavailable_return">Wróć do portfela</string>
     <string name="button_retry">Ponów</string>
     <string name="button_close">Zamknij</string>
+    <string name="button_continue">Dalej</string>
+    <string name="max">Max</string>
+    <string name="select_currency">Wybierz Walutę</string>
 </resources>

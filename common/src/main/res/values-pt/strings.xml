@@ -35,4 +35,7 @@
     <string name="network_unavailable_return">Voltar para a carteira</string>
     <string name="button_retry">Repetir</string>
     <string name="button_close">Fechar</string>
+    <string name="button_continue">Continuar</string>
+    <string name="max">Máximo</string>
+    <string name="select_currency">Selecione a moeda</string>
 </resources>

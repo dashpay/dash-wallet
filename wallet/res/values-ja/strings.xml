@@ -2,6 +2,7 @@
 <resources>
 
     <string name="toast_wallet_reset">ウォレットはリセットされました!\n復元には多少時間がかかります。</string>
+    <string name="toast_start_storage_provider_selector_failed">適切なクラウドストレージのプロバイダーがインストールされていません。「Nextcloud」や「Google Drive」のようなものが必要です。</string>
     <string name="wallet_disclaimer_fragment_remind_safety">自己責任でご使用下さい。&lt;u&gt;安全上の注意事項&lt;/u&gt;をお読み下さい。</string>
     <string name="wallet_disclaimer_fragment_remind_backup">ウォレットをバックアップする必要があります！</string>
     <string name="blockchain_state_progress_hours">%1$s, %2$d時間遅れ</string>
@@ -205,6 +206,7 @@
     <string name="import_keys_dialog_button_import">リストア</string>
     <string name="restore_wallet_dialog_success">ウォレットは復元されました。</string>
     <string name="restore_wallet_dialog_success_replay">あなたのウォレットは正常に復元されました。続いて残高を計算します。これには多少時間がかかる場合があります。</string>
+    <string name="restore_wallet_dialog_success_encrypted">警告: お客様の財ウォレットは支出暗証番号で保護されています。このウォレットで受け取る前に、現在でもそれを覚えているかを確認してください。</string>
     <string name="import_keys_dialog_failure">ウォレットが復元できませんでした:\n\n%s\n\nパスワード間違い？</string>
     <string name="backup_wallet_permission_dialog_title">書き込み権限がありません</string>
     <string name="backup_wallet_permission_dialog_message">あなたのウォレットを外部ストレージにバックアップするには、書き込み権限を許可する必要があります。</string>
@@ -212,6 +214,7 @@
     <string name="backup_wallet_dialog_message">バックアップはあなたが決めたパスワードで暗号化され、外部ストレージに書き込まれます。</string>
     <string name="backup_wallet_dialog_warning_encrypted">あなたのウォレットは送金用PINで保護されています。バックアップ用パスワードに加えてPINも忘れないようにしてください。</string>
     <string name="export_keys_dialog_button_export">バックアップ</string>
+    <string name="export_keys_dialog_success"><![CDATA[<p>お客様のウォレットは、<tt>%s</tt>にバックアップされています。<p><b>バックアップがお客様のデバイス上にしか存在しない場合、同時に両方を失う危険性があります！</b></p><p>いずれの場合でも、バックアップパスワードを覚えているかを確認してください</p>]]>。</string>
     <string name="export_keys_dialog_failure">ウォレットをバックアップできませんでした:\n%s</string>
     <string name="export_keys_dialog_button_archive">アーカイブ</string>
     <string name="export_keys_dialog_mail_subject">Dashウォレットのバックアップ</string>
@@ -377,5 +380,9 @@
 
 
 
+    <string name="select_a_service">サービスを選択する</string>
     <string name="activity_buy_and_sell_dash_filter">絞り込み</string>
-    </resources>
+    <string name="clear_filter">フィルターをクリアする</string>
+    <string name="select_currency">通貨を選択する</string>
+
+</resources>

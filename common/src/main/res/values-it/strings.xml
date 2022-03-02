@@ -34,4 +34,7 @@
     <string name="network_unavailable_return">Torna al Portafoglio</string>
     <string name="button_retry">Riprova</string>
     <string name="button_close">Chiudi</string>
+    <string name="button_continue">Continua</string>
+    <string name="max">Massimo</string>
+    <string name="select_currency">Seleziona Valuta</string>
 </resources>

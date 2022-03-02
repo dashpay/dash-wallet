@@ -4,6 +4,39 @@
     <string name="loading_error">エラーが発生しました。後でもう一度お試しください。</string>
     <string name="please_wait_title">お待ちください</string>
     <string name="dash_available">%1$s 利用可能</string>
+    <string name="network_unavailable_title">ネットワークが利用できません</string>
+    <string name="network_unavailable_check_connection">ネットワーク接続を確認してください</string>
+    <string name="network_unavailable_balance_not_accurate">切断されているため、残高が正確でない可能性があります</string>
+    <!-- Local Currency List: GGP -->
+    <string name="currency_GGP">ガーンジー・ポンド</string>
+    <!-- Local Currency List: JEP -->
+    <string name="currency_JEP">ジャージー・ポンド</string>
+    <!-- Local Currency List: IMP -->
+    <string name="currency_IMP">マンクス・ポンド</string>
+    <!-- Local Currency List: USDC is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_USDC">米ドル硬貨</string>
+    <!-- Local Currency List: Litecoin cryptocurrency -->
+    <string name="currency_LTC">ライトコイン</string>
+    <!-- Local Currency List: Ethereum cryptocurrency -->
+    <string name="currency_ETH">イーサリアム</string>
+    <!-- Local Currency List: Bitcoin cryptocurrency -->
+    <string name="currency_BTC">ビットコイン</string>
+    <!-- Local Currency List: PAX is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_PAX">パクソス</string>
+    <!-- Local Currency List: GUSD is a stablecoin that is pegged to the United States dollar -->
+    <string name="currency_GUSD">ジェミニドル</string>
+
+    <!-- Generic Buttons -->
+    <string name="button_dismiss">閉じる</string>
+    <string name="network_unavailable_return">ウォレットに返金</string>
+    <string name="button_continue">続ける</string>
+
+    <!-- Design system UI elements -->
+    <string name="search_hint">検索</string>
+    <string name="permission_allow">許可する</string>
+    <string name="permission_deny">拒否する</string>
+    <string name="max">最大</string>
+    <string name="select_currency">通貨を選択する</string>
     <string name="copied">コピーされた</string>
     <string name="button_retry">リトライ</string>
 </resources>

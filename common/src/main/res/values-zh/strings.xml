@@ -35,4 +35,6 @@
     <string name="network_unavailable_return">返回到钱包</string>
     <string name="button_retry">重试</string>
     <string name="button_close">关闭</string>
+    <string name="button_continue">继续</string>
+    <string name="max">最大</string>
 </resources>

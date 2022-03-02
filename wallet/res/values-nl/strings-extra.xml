@@ -14,8 +14,7 @@
     <string name="set_pin_encrypting">portemonnee aan het versleutelen</string>
     <string name="set_pin_decrypting">Ontgrendelen van portemonnee</string>
     <string name="set_pin_verifying_pin">Verifieer pin</string>
-    <string name="set_pin_message">Deze PIN is vereist om uw app elke keer te ontgrendelen wanneer u deze gebruikt.</string>
-
+    <string name="set_pin_message">Deze PIN is vereist om je app elke keer te ontgrendelen wanneer je deze gebruikt.</string>
     <string name="home_available_balance">Beschikbaar saldo</string>
     <string name="home_balance_hidden">Saldo verborgen</string>
     <string name="home_balance_show_hint">Tik om saldo te zien</string>
@@ -87,8 +86,8 @@
     <string name="forgot_pin_message">Je kan een nieuwe pin instellen met behulp van je herstelzin</string>
     <string name="forgot_pin_instruction_1">Voer herstelzin in om je wallet te herstellen</string>
     <string name="forgot_pin_instruction_2">Stel een nieuwe pin in</string>
-    <string name="forgot_pin_instruction_3">Log in met uw nieuwe PIN om toegang te krijgen tot uw portemonnee</string>
-    <string name="forgot_pin_warning">Als u uw PIN bent vergeten en uw herstelzin bent kwijtgeraakt, kunt u geen toegang meer krijgen tot uw portemonnee en het saldo.</string>
+    <string name="forgot_pin_instruction_3">Log in met je nieuwe PIN om toegang te krijgen tot jpuw portemonnee</string>
+    <string name="forgot_pin_warning">Als je je PIN bent vergeten en je herstelzin bent kwijtgeraakt, kunt je geen toegang meer krijgen tot je portemonnee en het saldo.</string>
     <string name="forgot_pin_recover">Voer herstelzin in</string>
     <string name="forgot_pin_passphrase_doesnt_match">De herstelzin komt niet overeen met waar deze portemonnee mee is ingesteld.</string>
 
@@ -113,7 +112,7 @@
     <string name="backup_to_seed_wallet_dialog_enter_pin_message">Betalingen vanuit je portemonnee zijn beschermd met een pin. Voer je pin in en kies Toon om je herstelzin te bekijken.</string>
     <string name="import_keys_from_seed_dialog_message">Voer je herstelzin hier in.</string>
     <string name="import_export_keys_dialog_password_phrase">Voer hier je herstelzin in.</string>
-    <string name="preferences_report_issue_summary">Vergaar informatie over uw probleem en verstuur via e-mail een melding aan de ontwikkelaars.</string>
+    <string name="preferences_report_issue_summary">Vergaar informatie over je probleem en verstuur via e-mail een melding aan de ontwikkelaars.</string>
     <string name="navigation_configuration">Configuratie</string>
     <string name="button_copy_address">Kopieer adres</string>
     <string name="request_coins_clipboard_address_msg">Dash-adres is gekopieerd naar het klembord</string>
@@ -138,7 +137,7 @@
     <string name="wallet_lock_unlock_dialog_title">Ontgrendel je portemonnee</string>
     <string name="wallet_lock_unlock_dialog_message">Betalingen vanuit je portemonnee zijn beschermd met een pin. Voer je pin in en kies Ontgrendel om verder te gaan.</string>
     <string name="wallet_lock_reset_wallet_title">Portemonnee resetten</string>
-    <string name="wallet_lock_reset_wallet_message">Weet je het zeker? Je portemonnee wordt verwijderd en al je Dash gaat verloren.\n\nDe enige manier om je Dash te herstellen is met een backup bestand of herstelzin.</string>
+    <string name="wallet_lock_reset_wallet_message">Weet je het zeker? Je portemonnee wordt verwijderd en al je Dash gaat verloren.\n\nDe enige manier om je Dash te herstellen is met een back-upbestand of herstelzin.</string>
 
     <string name="wallet_lock_wallet_disabled">Portemonnee uitgeschakeld</string>
     <string name="wallet_lock_try_again">Probeer nogmaals over %1$d %2$s</string>
@@ -172,7 +171,7 @@
     <string name="leave_as">%s behouden</string>
 
     <string name="remind_later">Herinner mij later</string>
-    <string name="backup_now">Nu backup maken</string>
+    <string name="backup_now">Maak nu back-up</string>
 
     <string name="notification_transactions_channel_name">Transacties</string>
     <string name="notification_transactions_channel_description">Ontvang notificaties over binnenkomende transacties.</string>
@@ -182,37 +181,37 @@
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">Gebruik je vingerafdruk om te ontgrendelen.</string>
-    <string name="unlock_with_fingerprint_error">Vingerafdruk niet herkend. Probeer het opnieuw.</string>
-    <string name="unlock_with_fingerprint_error_max_attempts">Maximum aantal vingerafdruk pogingen overschreden. Probeer het later opnieuw.</string>
+    <string name="unlock_with_fingerprint_error">Vingerafdruk niet herkend. Probeer het a.u.b. opnieuw.</string>
+    <string name="unlock_with_fingerprint_error_max_attempts">Maximum aantal vingerafdruk pogingen overschreden. Probeer het a.u.b. later opnieuw.</string>
     <string name="or_unlock_with_fingerprint">Of gebruik je vingerafdruk om te ontgrendelen.</string>
     <string name="enable_fingerprint">Vingerafdruk activeren</string>
     <string name="touch_fingerprint_sensor">Raak de vingerafdruk sensor aan.</string>
     <string name="touch_fingerprint_to_enable">Raak de vingerafdruk sensor aan om ontgrendelen met vingerafdruk te activeren.</string>
     <string name="fingerprint_changed_title">Vingerafdruk gegevens gewijzigd</string>
-    <string name="fingerprint_changed_message">We hebben een wijziging in uw vingerafdrukverificatie gedetecteerd. U moet deze keer uw PIN gebruiken.</string>
-    <string name="exchange_rate_missing">Deze betaling is te oud om de fiat-waarde te verkrijgen.</string>
+    <string name="fingerprint_changed_message">We hebben een wijziging in je vingerafdrukverificatie gedetecteerd. Je moet deze keer je PIN gebruiken.</string>
+    <string name="exchange_rate_missing">Deze betaling is te oud om de fiatwaarde te verkrijgen.</string>
 
     <string name="preferences_enable_payment_request_summary">Gebruik betalingsprotocol voor QR-code geïnitieerde betalingen</string>
     <string name="preferences_enable_payment_request_title">BIP70 voor scan-to-pay</string>
 
     <string name="verify_continue">Doorgaan</string>
     <string name="verify">Verifiëren</string>
-    <string name="verify_backup_wallet">Backup portemonnee</string>
+    <string name="verify_backup_wallet">Back-up portemonnee</string>
     <string name="verify_show_recovery_phrase">Toon herstelzin</string>
     <string name="verify_secure_now">Beveilig portemonnee nu</string>
     <string name="verify_it_is_important">Het is belangrijk</string>
-    <string name="verify_it_is_important_subtitle">We gaan u de geheime sleutel van uw portemonnee laten zien.</string>
-    <string name="verify_info_text_1">Deze herstelzin is uw toegang tot het saldo in deze portemonnee.</string>
+    <string name="verify_it_is_important_subtitle">We gaan u de geheime sleutel van je portemonnee laten zien.</string>
+    <string name="verify_info_text_1">Deze herstelzin is je toegang tot het saldo in deze portemonnee.</string>
     <string name="verify_info_text_2">Je herstelzin wordt NIET opgeslagen</string>
-    <string name="verify_info_text_3">U hebt deze herstelzin nodig om toegang te krijgen tot uw saldo als dit apparaat is verloren of beschadigd, of als Dash Wallet ooit per ongeluk van dit apparaat wordt verwijderd.</string>
+    <string name="verify_info_text_3">U hebt deze herstelzin nodig om toegang te krijgen tot je saldo als dit apparaat is verloren of beschadigd, of als Dash Wallet ooit per ongeluk van dit apparaat wordt verwijderd.</string>
     <string name="verify_skip">Overslaan</string>
     <string name="verify_secure_now_btn">Beveilig nu</string>
-    <string name="verify_secure_now_message">Als u dit apparaat verliest, verliest u uw Dash. Download de herstelzin zodat u uw portemonnee op een ander apparaat kunt herstellen.</string>
-    <string name="verify_seed_title">schrijf het alsjeblieft op</string>
+    <string name="verify_secure_now_message">Als u dit apparaat verliest, verliest je je Dash. Download de herstelzin zodat je je portemonnee op een ander apparaat kunt herstellen.</string>
+    <string name="verify_seed_title">Schrijf het a.u.b op</string>
     <string name="verify_seed_write_down_confirmation">ik heb het opgeschreven</string>
-    <string name="verify_seed_buttons_tip">Tik op de woorden van uw herstelzin in de juiste volgorde</string>
+    <string name="verify_seed_buttons_tip">Tik a.u.b. op de woorden van je herstelzin in de juiste volgorde</string>
     <string name="verify_seed_success_title">Succesvol geverifieerd </string>
-    <string name="verify_seed_success_message">Uw portemonnee is nu beveiligd. U kunt uw herstelzin op elk gewenst moment gebruiken om uw account op een ander apparaat te herstellen.</string>
+    <string name="verify_seed_success_message">Je portemonnee is nu beveiligd. U kunt je herstelzin op elk gewenst moment gebruiken om je account op een ander apparaat te herstellen.</string>
     <string name="verify_no_screenshot_title">Maak geen screenshot</string>
     <string name="verify_no_screenshot_message">noteer de herstelzin en berg hem goed op</string>
     <string name="verify_why_no_screenshot">Waarom moet ik geen screenshot maken?</string>
@@ -246,7 +245,7 @@
     <string name="menu_buy_and_sell_title">Koop &amp; verkoop Dash</string>
     <string name="menu_buy_and_sell_subtitle">Verbind met beurzen van derden</string>
     <string name="menu_security_title">Beveiliging</string>
-    <string name="menu_security_subtitle">Bekijk wachtwoord, maak backup portemonnee ...</string>
+    <string name="menu_security_subtitle">Bekijk wachtwoord, maak back-up van portemonnee...</string>
     <string name="menu_settings_title">Instellingen</string>
     <string name="menu_settings_subtitle">Standaard valuta, snelkoppelingen, over... </string>
     <string name="menu_tools_title">Gereedschap</string>
@@ -255,16 +254,17 @@
     <string name="menu_rescan_blockchain">Blockchain opnieuw scannen</string>
     <string name="menu_contact_support_title">Neem contact op</string>
     <string name="menu_contact_support_subtitle">Meld een probleem</string>
+    <string name="menu_explore_title">Verken</string>
+    <string name="menu_explore_subtitle">Winkel met DASH bij meer dan 155.000 acceptanten</string>
 
     <string name="tools_address_book">Adresboek</string>
     <string name="tools_import_private_key">Importeer persoonlijke sleutel</string>
     <string name="tools_network_monitor">Netwerk monitor</string>
 
-    <string name="about_help_us_improve">Help ons uw ervaring te verbeteren</string>
+    <string name="about_help_us_improve">Help ons je ervaring te verbeteren</string>
     <string name="about_review_and_rate">Schrijf een recensie &amp; Beoordeel de app</string>
     <string name="about_contact_support">Neem contact op</string>
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
-    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash portemonnee%s</string>
 
@@ -275,7 +275,7 @@
 
     <string name="scan_private_key">Scan persoonlijke sleutel</string>
     <string name="scan_private_key_intro_1">U staat op het punt het saldo van een papieren Dash portemonnee op te nemen.</string>
-    <string name="scan_private_key_intro_2">Hiermee worden het saldo van die portemonnee naar uw portemonnee op dit apparaat verplaatst.</string>
+    <string name="scan_private_key_intro_2">Hiermee worden het saldo van die portemonnee naar je portemonnee op dit apparaat verplaatst.</string>
     <string name="scan_private_key_intro_3">Wanneer de transactie is bevestigd, is de andere portemonnee waardeloos en mag deze om veiligheidsredenen niet opnieuw worden gebruikt.</string>
     <string name="confirm">Bevestig</string>
 
@@ -305,13 +305,13 @@
     <string name="get_started">Ga aan de slag</string>
     <string name="welcome_screen_title_1_new_install">Welkom</string>
     <string name="welcome_screen_title_1_upgrade">We hebben een upgrade uitgevoerd</string>
-    <string name="welcome_screen_subtitle_1">Een intuïtieve en vertrouwde ervaring op al uw apparaten</string>
+    <string name="welcome_screen_subtitle_1">Een intuïtieve en vertrouwde ervaring op al je apparaten</string>
     <string name="welcome_screen_title_2">Betaal met gemak</string>
     <string name="welcome_screen_subtitle_2">Betaal en word betaald met eenvoudig te gebruiken betaalverkeer</string>
     <string name="welcome_screen_title_3">Meer controle</string>
-    <string name="welcome_screen_subtitle_3">Heb volledige controle en pas uw portemonnee aan op basis van uw behoeften</string>
+    <string name="welcome_screen_subtitle_3">Heb volledige controle en pas je portemonnee aan op basis van je behoeften</string>
 
-    <string name="sync_status_wait">Wacht tot de synchronisatie is voltooid</string>
+    <string name="sync_status_wait">Wacht a.u.b. tot de synchronisatie is voltooid</string>
     <string name="sync_status_syncing_title">Aan het synchroniseren %1$d</string>
     <string name="sync_status_syncing_sub_title">met Dash blockchain</string>
     <string name="sync_status_unable_to_connect">Kan geen verbinding maken</string>
@@ -319,12 +319,12 @@
     <string name="sync_status_sync_title">Synchorniseer</string>
     <string name="sync_status_sync_completed">Voltooid</string>
 
-    <string name="appwidget_wallet_not_ready">Stel uw portemonnee in</string>
+    <string name="appwidget_wallet_not_ready">Stel a.u.b. je portemonnee in</string>
 
     <string name="payment_request_please_wait_message">Verbinding maken met betalingsserver</string>
     <string name="payment_request_unable_to_connect">Kan geen verbinding maken</string>
     <string name="payment_request_unable_to_send">Verzenden niet mogelijk</string>
-    <string name="payment_request_please_try_again">Probeer opnieuw</string>
+    <string name="payment_request_please_try_again">Probeer a.u.b. opnieuw</string>
     <string name="payment_request_try_again">Probeer opnieuw</string>
     <string name="payment_request_problem_title">Betaling werd niet bevestigd</string>
     <string name="payment_request_problem_message">Je betaling kon niet door de server worden verwerkt, doe a.u.b. navraag bij de winkelier</string>
@@ -334,7 +334,7 @@
     <string name="payment_request_paid_to">Betaald aan</string>
 
     <string name="import_image_not_valid_qr_code">Ongeldige QR-code</string>
-    <string name="import_image_please_use_valid_qr_code">Gebruik een geldige QR-code</string>
+    <string name="import_image_please_use_valid_qr_code">Gebruik a.u.b. een geldige QR-code</string>
     <string name="import_image_no_private_key_copied">persoonlijke sleutel niet gekopieerd</string>
     <string name="import_image_import_valid_private_key">Kopieer een geldige persoonlijke sleutel om de Dash er van te importeren</string>
     <string name="import_image_invalid_private">Ongeldige persoonlijke sleutel</string>
