@@ -614,62 +614,6 @@ public final class WalletActivity extends AbstractBindServiceActivity
         url.addEncodedQueryParameter("package", packageInfo.packageName);
         url.addQueryParameter("current", Integer.toString(packageInfo.versionCode));
 
-		/*new HttpGetThread(url.build(), application.httpUserAgent()) {
-			@Override
-			protected void handleLine(final String line, final long serverTime) {
-				final int serverVersionCode = Integer.parseInt(line.split("\\s+")[0]);
-
-				log.info("according to \"" + url + "\", strongly recommended minimum app version is "
-						+ serverVersionCode);
-
-				if (serverTime > 0) {
-					final long diffMinutes = Math
-							.abs((System.currentTimeMillis() - serverTime) / DateUtils.MINUTE_IN_MILLIS);
-
-					if (diffMinutes >= 60) {
-						log.info("according to \"" + url + "\", system clock is off by " + diffMinutes + " minutes");
-
-						runOnUiThread(new Runnable() {
-							@Override
-							public void run() {
-								if (!isFinishing())
-									return;
-								final Bundle args = new Bundle();
-								args.putLong("diff_minutes", diffMinutes);
-								showDialog(DIALOG_TIMESKEW_ALERT, args);
-							}
-						});
-
-						return;
-					}
-				}
-
-				if (serverVersionCode > packageInfo.versionCode) {
-					runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							if (isFinishing())
-								return;
-							showDialog(DIALOG_VERSION_ALERT);
-						}
-					});
-
-					return;
-				}
-			}
-
-			@Override
-			protected void handleException(final Exception x) {
-				if (x instanceof UnknownHostException || x instanceof SocketException
-						|| x instanceof SocketTimeoutException) {
-					// swallow
-					log.debug("problem reading", x);
-				} else {
-					CrashReporter.saveBackgroundTrace(new RuntimeException(url.toString(), x), packageInfo);
-				}
-			}
-		}.start();*/
-
         if (CrashReporter.hasSavedCrashTrace()) {
             final StringBuilder stackTrace = new StringBuilder();
 
