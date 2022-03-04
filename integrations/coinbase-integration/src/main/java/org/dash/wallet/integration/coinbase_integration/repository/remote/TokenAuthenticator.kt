@@ -16,11 +16,6 @@
  */
 package org.dash.wallet.integration.coinbase_integration.repository.remote
 
-import android.content.Context
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
@@ -37,10 +32,8 @@ import javax.inject.Inject
 class TokenAuthenticator @Inject constructor(
     private val tokenApi: CoinBaseTokenRefreshApi,
     private val userPreferences: Configuration,
-    context: Context
+    private val closeCoinbasePortalBroadcaster: CloseCoinbasePortalBroadcaster
 ) : Authenticator {
-
-    val entryPoint = EntryPointAccessors.fromApplication(context, CoinbasePortalEntryPoint::class.java)
 
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
@@ -58,8 +51,7 @@ class TokenAuthenticator @Inject constructor(
                     userPreferences.setLastCoinBaseAccessToken(null)
                     userPreferences.setLastCoinBaseRefreshToken(null)
                     userPreferences.setLastCoinBaseBalance(null)
-                    val broadcast = entryPoint.provideReceiver()
-                    broadcast.closeCoinbasePortal.postCall()
+                    closeCoinbasePortalBroadcaster.dispatchCall()
                     null
                 }
 
@@ -71,10 +63,4 @@ class TokenAuthenticator @Inject constructor(
         val refreshToken = userPreferences.lastCoinbaseRefreshToken
         return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
     }
-}
-
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface CoinbasePortalEntryPoint {
-    fun provideReceiver(): CloseCoinbasePortalBroadcaster
 }

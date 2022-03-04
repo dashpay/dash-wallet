@@ -27,13 +27,13 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseConversionPreviewViewModel @Inject constructor(
-    private val coinBaseRepository: CoinBaseRepository,
+    private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()

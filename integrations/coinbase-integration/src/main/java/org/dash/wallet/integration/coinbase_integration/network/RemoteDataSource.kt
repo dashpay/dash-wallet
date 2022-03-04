@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integration.coinbase_integration.network
 
-import android.content.Context
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -24,6 +23,7 @@ import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.integration.coinbase_integration.repository.remote.HeadersInterceptor
 import org.dash.wallet.integration.coinbase_integration.repository.remote.TokenAuthenticator
+import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseTokenRefreshApi
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -31,17 +31,15 @@ import javax.inject.Inject
 
 class RemoteDataSource @Inject constructor(
     private val userPreferences: Configuration,
-    private val context: Context
+    private val broadcaster: CloseCoinbasePortalBroadcaster
 ) {
 
     companion object {
         private const val BASE_URL = "https://api.coinbase.com/"
     }
 
-    fun <Api> buildApi(
-        api: Class<Api>,
-    ): Api {
-        val authenticator = TokenAuthenticator(buildTokenApi(), userPreferences, context)
+    fun <Api> buildApi(api: Class<Api>, ): Api {
+        val authenticator = TokenAuthenticator(buildTokenApi(), userPreferences, broadcaster)
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(getRetrofitClient(authenticator))

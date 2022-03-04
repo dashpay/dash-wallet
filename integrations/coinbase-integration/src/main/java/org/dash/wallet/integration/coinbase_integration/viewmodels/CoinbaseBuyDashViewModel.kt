@@ -32,12 +32,12 @@ import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import java.lang.NumberFormatException
 import javax.inject.Inject
 
 @HiltViewModel
-class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepository: CoinBaseRepository,
+class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepository: CoinBaseRepositoryInt,
                                                    private val userPreference: Configuration,
                                                    var exchangeRates: ExchangeRatesProvider
 ) : ViewModel() {
