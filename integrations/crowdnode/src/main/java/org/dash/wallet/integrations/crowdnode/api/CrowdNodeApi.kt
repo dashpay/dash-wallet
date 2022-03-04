@@ -24,13 +24,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
-import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.SendPaymentService
@@ -39,6 +39,7 @@ import org.dash.wallet.common.transactions.LockedTransaction
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import org.dash.wallet.integrations.crowdnode.utils.ModuleConfiguration
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -64,7 +65,7 @@ interface CrowdNodeApi {
     suspend fun signUp(accountAddress: Address)
     suspend fun deposit(accountAddress: Address, amount: Coin)
     suspend fun loadBalance(): Coin
-    fun reset()
+    suspend fun reset()
 }
 
 class CrowdNodeException(message: String): Exception(message)
@@ -75,13 +76,14 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val notificationService: NotificationService,
     private val analyticsService: AnalyticsService,
-    private val configuration: Configuration,
+    private val config: ModuleConfiguration,
     @ApplicationContext private val appContext: Context
 ): CrowdNodeApi {
     companion object {
         private val log = LoggerFactory.getLogger(CrowdNodeBlockchainApi::class.java)
     }
 
+    private val configScope = CoroutineScope(Dispatchers.IO)
     private val params = walletDataProvider.networkParameters
 
     override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
@@ -95,7 +97,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     init {
         restoreStatus()
         walletDataProvider.attachOnWalletWipedListener {
-            reset()
+            configScope.launch { reset() }
         }
     }
 
@@ -151,7 +153,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
             apiError = ex
             signUpStatus.value = SignUpStatus.Error
-            configuration.crowdNodeError = ex.message
+            config.setCrowdNodeError(ex.message ?: "")
 
             if (showNotificationOnResult) {
                 notificationService.showNotification(
@@ -199,23 +201,23 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-    override fun reset() {
+    override suspend fun reset() {
         log.info("reset is triggered")
         signUpStatus.value = SignUpStatus.NotStarted
         accountAddress = null
         apiError = null
-        configuration.crowdNodeError = ""
+        config.setCrowdNodeError("")
     }
 
     private fun restoreStatus() {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             log.info("restoring CrowdNode status")
-            val savedError = configuration.crowdNodeError
+            val savedError = runBlocking { config.crowdNodeError.first() }
 
-            if (!savedError.isNullOrEmpty()) {
+            if (savedError.isNotEmpty()) {
                 signUpStatus.value = SignUpStatus.Error
                 apiError = CrowdNodeException(savedError)
-                configuration.crowdNodeError = ""
+                configScope.launch { config.setCrowdNodeError("") }
                 log.info("found an error: $savedError")
                 return
             }
