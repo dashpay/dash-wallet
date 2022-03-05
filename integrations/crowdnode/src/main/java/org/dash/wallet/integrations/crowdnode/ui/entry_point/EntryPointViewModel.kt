@@ -132,6 +132,16 @@ class EntryPointViewModel @Inject constructor(
         crowdNodeApi.notificationIntent = intent
     }
 
+    suspend fun getIsInfoShown(): Boolean {
+        return config.isInfoShown.first()
+    }
+
+    fun setInfoShown(isShown: Boolean) {
+        viewModelScope.launch {
+            config.setIsInfoShown(isShown)
+        }
+    }
+
     private suspend fun getOrCreateAccountAddress(): Address {
         val existingAddress = crowdNodeApi.accountAddress
 

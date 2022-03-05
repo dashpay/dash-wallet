@@ -28,6 +28,7 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityStakingBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.ui.entry_point.EntryPointViewModel
@@ -91,7 +92,10 @@ class StakingActivity : LockScreenActivity() {
         navGraph.startDestination =
             when (status) {
                 SignUpStatus.Finished -> R.id.crowdNodePortalFragment
-                SignUpStatus.NotStarted -> R.id.entryPointFragment
+                SignUpStatus.NotStarted -> {
+                    val isInfoShown = runBlocking { viewModel.getIsInfoShown() }
+                    if (isInfoShown) R.id.entryPointFragment else R.id.firstTimeInfo
+                }
                 else -> R.id.newAccountFragment
             }
 

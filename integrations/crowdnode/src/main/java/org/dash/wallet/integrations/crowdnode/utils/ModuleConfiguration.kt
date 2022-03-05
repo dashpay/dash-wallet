@@ -18,7 +18,6 @@
 package org.dash.wallet.integrations.crowdnode.utils
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -31,13 +30,10 @@ import javax.inject.Singleton
 @Singleton
 class ModuleConfiguration @Inject constructor(private val context: Context) {
     companion object {
+        private val INFO_SHOWN_KEY = booleanPreferencesKey("info_shown")
         private val ACCOUNT_ADDRESS_KEY = stringPreferencesKey("account_address")
         private val CROWDNODE_ERROR_KEY = stringPreferencesKey("error")
         private val LAST_BALANCE_KEY = longPreferencesKey("last_balance")
-    }
-
-    init {
-        Log.i("CROWDNODE", "ModuleConfiguration init")
     }
 
     private val Context.dataStore by preferencesDataStore("crowdnode")
@@ -83,6 +79,18 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
     suspend fun setLastBalance(balance: Long) {
         context.dataStore.edit { settings ->
             settings[LAST_BALANCE_KEY] = balance
+        }
+    }
+
+    val isInfoShown: Flow<Boolean> = dataStore
+        .map { preferences ->
+            preferences[INFO_SHOWN_KEY] ?: false
+        }
+
+
+    suspend fun setIsInfoShown(isShown: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[INFO_SHOWN_KEY] = isShown
         }
     }
 }
