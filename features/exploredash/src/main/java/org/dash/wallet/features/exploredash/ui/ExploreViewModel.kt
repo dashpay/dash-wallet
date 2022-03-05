@@ -17,15 +17,19 @@
 
 package org.dash.wallet.features.exploredash.ui
 
+import android.app.Application
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
+import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.livedata.ConnectionLiveData
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
@@ -69,10 +73,11 @@ data class FilterOptions(
 @FlowPreview
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
+    application: Application,
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService
-) : ViewModel() {
+) : AndroidViewModel(application) {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
         const val PAGE_SIZE = 100
@@ -651,11 +656,45 @@ class ExploreViewModel @Inject constructor(
     }
 
     var syncStatus: LiveData<Resource<Double>> = MediatorLiveData<Resource<Double>>().apply {
-        addSource(syncStatusService.getSyncProgressFlow().asLiveData(), this::setValue)
-    }
+        // combine connectivity, sync status and if the last error was observed
+        val connectivityLiveData = ConnectionLiveData(application)
+        val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
+        val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
 
-    var observedLastError: LiveData<Boolean> = MediatorLiveData<Boolean>().apply {
-        addSource(syncStatusService.hasObservedLastError().asLiveData(), this::setValue)
+        fun setSyncStatus(isOnline: Boolean, progress: Resource<Double>, observedLastError: Boolean) {
+            value = when {
+                progress.exception != null -> {
+                    if (!observedLastError) {
+                        progress
+                    } else {
+                        Resource.success(100.0) // hide errors if already observed
+                    }
+                }
+                progress.status == Status.LOADING && !isOnline -> {
+                    if(!observedLastError) {
+                        Resource.error(FirebaseNetworkException("network is offline"))
+                    } else {
+                        Resource.success(100.0) // hide errors if already observed
+                    }
+                }
+                else -> progress
+            }
+        }
+        addSource(observedLastErrorLiveData) { hasObservedLastError ->
+            if (connectivityLiveData.value != null && syncStatusLiveData.value != null) {
+                setSyncStatus(connectivityLiveData.value!!, syncStatusLiveData.value!!, hasObservedLastError)
+            }
+        }
+        addSource(syncStatusLiveData) { progress ->
+            if (connectivityLiveData.value != null && observedLastErrorLiveData.value != null) {
+                setSyncStatus(connectivityLiveData.value!!, progress, observedLastErrorLiveData.value!!)
+            }
+        }
+        addSource(connectivityLiveData) { isOnline ->
+            if (syncStatusLiveData.value != null && observedLastErrorLiveData.value != null) {
+                setSyncStatus(isOnline, syncStatusLiveData.value!!, observedLastErrorLiveData.value!!)
+            }
+        }
     }
 
     fun setObservedLastError() {
