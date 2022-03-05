@@ -28,7 +28,6 @@ sealed class ResponseResource<out T> {
         val errorCode: Int?,
         val errorBody: ResponseBody?
     ) : ResponseResource<Nothing>()
-    object Loading : ResponseResource<Nothing>()
 }
 
 suspend fun <T> safeApiCall(

@@ -27,13 +27,13 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseConversionPreviewViewModel @Inject constructor(
-    private val coinBaseRepository: CoinBaseRepository,
+    private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
@@ -85,24 +85,23 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         when (val result = coinBaseRepository.sendFundsToWallet(params)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                val response = result.value
-                when (result.value.code()) {
-                    200, 201 -> {
-                        _transactionCompleted.value = TransactionState(true, null)
-                    }
-                    400 -> {
-                        val error = response.errorBody()?.string()
-                        error?.let {
-                            val message = CoinbaseErrorResponse.getErrorMessage(it)
-                            _transactionCompleted.value = TransactionState(false, message)
-                        }
-                    }
-                    else -> _transactionCompleted.value = TransactionState(false, null)
+                if (result.value == null){
+                    _transactionCompleted.value = TransactionState(false, null)
+                } else {
+                    _transactionCompleted.value = TransactionState(true, null)
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                _transactionCompleted.value = TransactionState(false, null)
+                val error = result.errorBody?.string()
+                if (result.errorCode == 400){
+                    error?.let {
+                        val message = CoinbaseErrorResponse.getErrorMessage(it)
+                        _transactionCompleted.value = TransactionState(false, message)
+                    }
+                } else {
+                    _transactionCompleted.value = TransactionState(false, null)
+                }
             }
         }
     }

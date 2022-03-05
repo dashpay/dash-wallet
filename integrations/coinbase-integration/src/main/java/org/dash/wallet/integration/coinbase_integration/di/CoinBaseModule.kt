@@ -28,6 +28,7 @@ import org.dash.wallet.integration.coinbase_integration.SwapTradeMapper
 import org.dash.wallet.integration.coinbase_integration.network.RemoteDataSource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.service.CloseCoinbasePortalBroadcaster
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
 import javax.inject.Singleton
@@ -37,10 +38,9 @@ import javax.inject.Singleton
 object CoinBaseModule {
     @Singleton
     @Provides
-    fun provideRemoteDataSource(
-        userPreferences: Configuration
-    ): RemoteDataSource {
-        return RemoteDataSource(userPreferences)
+    fun provideRemoteDataSource(userPreferences: Configuration, broadcaster: CloseCoinbasePortalBroadcaster)
+    : RemoteDataSource {
+        return RemoteDataSource(userPreferences, broadcaster)
     }
 
     @Singleton
@@ -65,6 +65,8 @@ object CoinBaseModule {
     fun provideCommitBuyOrderMapper(): CommitBuyOrderMapper = CommitBuyOrderMapper()
     @Provides
     fun provideSwapTradeMapper(): SwapTradeMapper = SwapTradeMapper()
+    @Provides
+    fun provideReceiver(): CloseCoinbasePortalBroadcaster = CloseCoinbasePortalBroadcaster()
 }
 
 @Module

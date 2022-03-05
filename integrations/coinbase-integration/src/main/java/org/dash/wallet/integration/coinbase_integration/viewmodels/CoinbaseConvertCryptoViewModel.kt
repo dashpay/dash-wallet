@@ -16,11 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.viewmodels
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,21 +24,18 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
-import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
-import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
+import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseConvertCryptoViewModel @Inject constructor(
-    application: Application,
-    private val exchangeRatesProvider: ExchangeRatesProvider,
-    private val coinBaseRepository: CoinBaseRepository,
+    private val coinBaseRepository: CoinBaseRepositoryInt,
     val config: Configuration
-) : AndroidViewModel(application) {
+) : ViewModel() {
     private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
     val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
         get() = _userAccountsInfo

@@ -23,7 +23,6 @@ import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.network.safeApiCall
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseAuthApi
 import org.dash.wallet.integration.coinbase_integration.service.CoinBaseServicesApi
-import retrofit2.Response
 import java.math.BigDecimal
 import javax.inject.Inject
 class CoinBaseRepository @Inject constructor(
@@ -32,8 +31,7 @@ class CoinBaseRepository @Inject constructor(
     private val userPreferences: Configuration,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
     private val swapTradeMapper: SwapTradeMapper,
-    private val commitBuyOrderMapper: CommitBuyOrderMapper
-) : CoinBaseRepositoryInt {
+    private val commitBuyOrderMapper: CommitBuyOrderMapper) : CoinBaseRepositoryInt {
     override suspend fun getUserAccount() = safeApiCall {
         val apiResponse = servicesApi.getUserAccounts()
         val userAccountData = apiResponse.body()?.data?.firstOrNull {
@@ -147,13 +145,13 @@ interface CoinBaseRepositoryInt {
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
-    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<Response<SendTransactionToWalletResponse?>>
+    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<SendTransactionToWalletResponse?>
     fun getUserLastCoinbaseBalance(): String
     fun isUserConnected(): Boolean
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>
     suspend fun commitSwapTrade(buyOrderId: String): ResponseResource<SwapTradeUIModel>
     suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean>
-    suspend fun getWithdrawalLimit(): ResponseResource<WithdrawalLimitUIModel?>
+    suspend fun getWithdrawalLimit(): ResponseResource<WithdrawalLimitUIModel>
 }
 
 data class WithdrawalLimitUIModel(
