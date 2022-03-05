@@ -51,6 +51,7 @@ class EnterAmountViewModel @Inject constructor(
 
     var maxAmount: Coin = Coin.ZERO
     val onContinueEvent = SingleLiveEvent<Pair<Coin, Fiat>>()
+    val convertDirectionCallback = SingleLiveEvent<Boolean>()
 
     init {
         _selectedCurrencyCode.flatMapLatest { code ->

@@ -43,6 +43,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         .noCode().minDecimals(2).optionalDecimals()
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
+    private var onConvertDirectionChanged: (() -> Unit)? = null
 
     private var currencySymbol = "$"
     private var isCurrencySymbolFirst = true
@@ -104,6 +105,9 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         updateCurrency()
         binding.convertDirectionBtn.setOnClickListener {
             dashToFiat = !dashToFiat
+            if (!showCurrencySelector){
+                onConvertDirectionChanged?.invoke()
+            }
         }
         binding.inputCurrencyToggle.setOnClickListener {
             onCurrencyToggleClicked?.invoke()
@@ -178,5 +182,9 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
             isCurrencySymbolFirst -> "$currencySymbol $input"
             else -> "$input $currencySymbol"
         }
+    }
+
+    fun setOnConvertDirectionChanged(listener: () -> Unit) {
+        onConvertDirectionChanged = listener
     }
 }
