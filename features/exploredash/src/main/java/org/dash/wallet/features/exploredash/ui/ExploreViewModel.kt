@@ -17,13 +17,14 @@
 
 package org.dash.wallet.features.exploredash.ui
 
-import android.app.Application
+import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.dash.wallet.common.data.Resource
@@ -73,11 +74,11 @@ data class FilterOptions(
 @FlowPreview
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    application: Application,
+    @ApplicationContext private val context: Context,
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
     private val syncStatusService: DataSyncStatusService
-) : AndroidViewModel(application) {
+) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
         const val PAGE_SIZE = 100
@@ -657,7 +658,7 @@ class ExploreViewModel @Inject constructor(
 
     var syncStatus: LiveData<Resource<Double>> = MediatorLiveData<Resource<Double>>().apply {
         // combine connectivity, sync status and if the last error was observed
-        val connectivityLiveData = ConnectionLiveData(application)
+        val connectivityLiveData = ConnectionLiveData(context)
         val syncStatusLiveData = syncStatusService.getSyncProgressFlow().asLiveData()
         val observedLastErrorLiveData = syncStatusService.hasObservedLastError().asLiveData()
 

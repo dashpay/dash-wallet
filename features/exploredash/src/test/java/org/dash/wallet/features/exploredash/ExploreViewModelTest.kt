@@ -17,6 +17,12 @@
 
 package org.dash.wallet.features.exploredash
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities.TRANSPORT_CELLULAR
+import android.net.NetworkCapabilities.TRANSPORT_WIFI
+import android.net.NetworkInfo
+import android.net.NetworkRequest
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -34,9 +40,13 @@ import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.FilterMode
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
+import org.mockito.Mockito
+import org.mockito.Mockito.`when`
+import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
 
 
@@ -55,10 +65,46 @@ class ExploreViewModelTest {
             Merchant(plusCode = "", addDate = "", updateDate = "", deeplink = "https://dashdirect.page.link/Applebees", paymentMethod = "gift card").apply { id = 20826; name = "Applebee's"; active = true; address1 = "New Spring Road S.E."; latitude = 33.8846705; longitude = -84.4731042; website = "http://www.applebees.com"; territory = "Georgia"; city = "Atlanta"; type = "both"; logoLocation = "https://api.giftango.com/imageservice/Images/0117472_logo_600x380.png" }
     )
 
-    private val syncStatus = Resource.loading(50.0)
-
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
+
+    //private val context = Application()
+    //private val mockContext = Mockito.mock(Context::class.java)
+
+    private val networkInfo = mock<NetworkInfo> {
+        on { isConnectedOrConnecting } doReturn true
+        on { isAvailable } doReturn true
+        on { isConnected } doReturn true
+    }
+
+    private val connectivityManager = mock<ConnectivityManager> {
+        on { getNetworkInfo( ConnectivityManager.TYPE_WIFI ) } doReturn networkInfo
+    }
+
+    private val context = mock<Context> {
+        on { getSystemService(Context.CONNECTIVITY_SERVICE) } doReturn connectivityManager
+    }
+
+    private val networkRequestBuilder = mock<NetworkRequest.Builder> {
+        on { addTransportType(TRANSPORT_CELLULAR) } doReturn mock
+        on { addTransportType(TRANSPORT_WIFI) } doReturn mock
+    }
+
+
+    @Before
+    fun before() {
+        networkRequestBuilder.addTransportType(TRANSPORT_WIFI)
+       // MockitoAnnotations.openMocks(this)
+
+        //`when`(mockContext.getSystemService(Context.CONNECTIVITY_SERVICE)).thenReturn(
+        //    mockConnectivityManager
+        //)
+        //`when`(mockConnectivityManager.activeNetworkInfo).thenReturn(mockNetworkInfo)
+        //`when`(mockNetworkInfo.isConnectedOrConnecting()).thenReturn(true)
+        //`when`( mockConnectivityManager.getNetworkInfo( ConnectivityManager.TYPE_WIFI )).thenReturn( mockNetworkInfo );
+        //`when`( mockNetworkInfo.isAvailable() ).thenReturn( true );
+        //`when`( mockNetworkInfo.isConnected() ).thenReturn( true );
+    }
 
     @Test
     fun filterByTerritoryIsCorrect() {
@@ -79,7 +125,7 @@ class ExploreViewModelTest {
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
 
-            val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus)
             viewModel.setSelectedTerritory(territory)
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
@@ -124,7 +170,7 @@ class ExploreViewModelTest {
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
 
-            val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus)
             viewModel.setFilterMode(FilterMode.Nearby)
             viewModel.searchBounds = bounds
             viewModel.paymentMethodFilter = PaymentMethod.DASH
@@ -170,7 +216,7 @@ class ExploreViewModelTest {
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
 
-            val viewModel = ExploreViewModel(dataSource, locationState, dataSyncStatus)
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus)
             viewModel.setSelectedTerritory(territory)
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
@@ -219,7 +265,7 @@ class ExploreViewModelTest {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
-            val viewModel = ExploreViewModel(dataSource, locationMock, dataSyncStatus)
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus)
             viewModel.searchBounds = GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng)
                     .apply { zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1 }
             viewModel.setFilterMode(FilterMode.Nearby)
@@ -251,7 +297,7 @@ class ExploreViewModelTest {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
-            val viewModel = ExploreViewModel(dataSource, locationMock, dataSyncStatus)
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus)
             viewModel.setPhysicalResults(merchants)
             viewModel.onMapMarkerSelected(5)
 
