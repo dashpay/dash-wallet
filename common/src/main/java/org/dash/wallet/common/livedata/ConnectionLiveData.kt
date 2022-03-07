@@ -36,10 +36,6 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
 
     private lateinit var connectivityManagerCallback: ConnectivityManager.NetworkCallback
 
-    private var networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
-        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-
     override fun onActive() {
         super.onActive()
         updateConnection()
@@ -47,10 +43,15 @@ class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.N -> connectivityManager.registerDefaultNetworkCallback(
                 getConnectivityManagerCallback()
             )
-            else -> connectivityManager.registerNetworkCallback(
-                networkRequestBuilder.build(),
-                getConnectivityManagerCallback()
-            )
+            else -> {
+                val networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
+                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                connectivityManager.registerNetworkCallback(
+                    networkRequestBuilder.build(),
+                    getConnectivityManagerCallback()
+                )
+            }
         }
     }
 
