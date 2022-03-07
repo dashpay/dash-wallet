@@ -94,4 +94,17 @@
 
         <argument android:name="crowdNodeUrl" app:argType="string" />
     </fragment>
+
+    <fragment
+        android:id="@+id/firstTimeInfo"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.entry_point.FirstTimeInfoFragment"
+        android:label="FirstTimeInfoFragment">
+
+        <action
+            android:id="@+id/infoToPortal"
+            app:destination="@id/crowdNodePortalFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
 </navigation>

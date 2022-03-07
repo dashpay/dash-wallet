@@ -128,7 +128,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
             override fun onClick(widget: View) {
                 safeNavigate(NewAccountFragmentDirections.newAccountToWebview(
                     getString(R.string.terms_of_use),
-                    getString(R.string.terms_of_use_url)
+                    getString(R.string.crowdnode_terms_of_use_url)
                 ))
             }
         }
@@ -137,7 +137,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
             override fun onClick(widget: View) {
                 safeNavigate(NewAccountFragmentDirections.newAccountToWebview(
                     getString(R.string.privacy_policy),
-                    getString(R.string.privacy_policy_url)
+                    getString(R.string.crowdnode_privacy_policy_url)
                 ))
             }
         }

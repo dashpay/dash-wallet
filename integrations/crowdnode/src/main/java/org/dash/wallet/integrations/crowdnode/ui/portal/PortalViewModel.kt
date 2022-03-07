@@ -21,6 +21,7 @@ import androidx.annotation.MainThread
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -33,11 +34,13 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.utils.ModuleConfiguration
 import javax.inject.Inject
 
 @HiltViewModel
 class PortalViewModel @Inject constructor(
-    private val config: Configuration,
+    private val globalConfig: Configuration,
+    private val config: ModuleConfiguration,
     private val exchangeRatesProvider: ExchangeRatesProvider,
     private val crowdNodeApi: CrowdNodeApi,
     private val walletDataProvider: WalletDataProvider
@@ -56,7 +59,7 @@ class PortalViewModel @Inject constructor(
         get() = _balanceLoading
 
     val dashFormat: MonetaryFormat
-        get() = config.format.noCode()
+        get() = globalConfig.format.noCode()
 
     val networkParameters: NetworkParameters
         get() = walletDataProvider.networkParameters
@@ -65,12 +68,12 @@ class PortalViewModel @Inject constructor(
         get() = crowdNodeApi.accountAddress!!
 
     init {
-        exchangeRatesProvider.observeExchangeRate(config.exchangeCurrencyCode)
+        exchangeRatesProvider.observeExchangeRate(globalConfig.exchangeCurrencyCode)
             .onEach(_exchangeRate::postValue)
             .launchIn(viewModelScope)
 
         viewModelScope.launch {
-            _balance.value = Coin.valueOf(config.lastCrowdNodeBalance)
+            _balance.value = Coin.valueOf(config.lastBalance.first())
             updateBalance()
         }
     }
@@ -90,7 +93,7 @@ class PortalViewModel @Inject constructor(
             withProgress {
                 val balance = crowdNodeApi.loadBalance()
                 _balance.value = balance
-                config.lastCrowdNodeBalance = balance.value
+                config.setLastBalance(balance.value)
             }
         }
     }

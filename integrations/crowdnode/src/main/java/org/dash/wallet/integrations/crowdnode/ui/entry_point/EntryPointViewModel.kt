@@ -21,8 +21,10 @@ import android.content.Intent
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
@@ -31,6 +33,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
+import org.dash.wallet.integrations.crowdnode.utils.ModuleConfiguration
 import javax.inject.Inject
 
 enum class NavigationRequest {
@@ -39,13 +42,14 @@ enum class NavigationRequest {
 
 @HiltViewModel
 class EntryPointViewModel @Inject constructor(
-    private val config: Configuration,
+    private val globalConfig: Configuration,
     private val walletDataProvider: WalletDataProvider,
-    private val crowdNodeApi: CrowdNodeApi
+    private val crowdNodeApi: CrowdNodeApi,
+    private val config: ModuleConfiguration
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
 
-    private val _accountAddress = MutableLiveData(getOrCreateAccountAddress())
+    private val _accountAddress = MutableLiveData<Address>()
     var accountAddress: LiveData<String> = MediatorLiveData<String>().apply {
         addSource(_accountAddress) {
             value = it.toBase58()
@@ -53,7 +57,7 @@ class EntryPointViewModel @Inject constructor(
     }
 
     val needPassphraseBackUp
-        get() = config.remindBackupSeed
+        get() = globalConfig.remindBackupSeed
 
     private val _hasEnoughBalance = MutableLiveData<Boolean>()
     val hasEnoughBalance: LiveData<Boolean>
@@ -81,6 +85,10 @@ class EntryPointViewModel @Inject constructor(
                 _hasEnoughBalance.postValue(it >= CrowdNodeConstants.MINIMUM_REQUIRED_DASH)
             }
             .launchIn(viewModelScope)
+
+        viewModelScope.launch {
+            _accountAddress.value = getOrCreateAccountAddress()
+        }
     }
     
     fun backupPassphrase() {
@@ -104,13 +112,16 @@ class EntryPointViewModel @Inject constructor(
     }
 
     fun reset() {
-        _accountAddress.value = createNewAccountAddress()
-        crowdNodeApi.reset()
+        viewModelScope.launch {
+            resetAddressAndApi()
+        }
     }
 
     fun retry() {
-        reset()
-        signUp()
+        viewModelScope.launch {
+            resetAddressAndApi()
+            signUp()
+        }
     }
 
     fun changeNotifyWhenDone(toNotify: Boolean) {
@@ -121,26 +132,42 @@ class EntryPointViewModel @Inject constructor(
         crowdNodeApi.notificationIntent = intent
     }
 
-    private fun getOrCreateAccountAddress(): Address {
+    suspend fun getIsInfoShown(): Boolean {
+        return config.isInfoShown.first()
+    }
+
+    fun setInfoShown(isShown: Boolean) {
+        viewModelScope.launch {
+            config.setIsInfoShown(isShown)
+        }
+    }
+
+    private suspend fun getOrCreateAccountAddress(): Address {
         val existingAddress = crowdNodeApi.accountAddress
 
         if (existingAddress != null) {
-            config.crowdNodeAccountAddress = existingAddress.toBase58()
+            config.setAccountAddress(existingAddress.toBase58())
             return existingAddress
         }
 
-        val savedAddress = config.crowdNodeAccountAddress
+        val savedAddress = config.accountAddress.first()
 
-        return if (savedAddress.isNullOrEmpty()) {
+        return if (savedAddress.isEmpty()) {
             return createNewAccountAddress()
         } else {
             Address.fromString(walletDataProvider.networkParameters, savedAddress)
         }
     }
 
-    private fun createNewAccountAddress(): Address {
+    private suspend fun createNewAccountAddress(): Address {
         val address = walletDataProvider.freshReceiveAddress()
-        config.crowdNodeAccountAddress = address.toBase58()
+        config.setAccountAddress(address.toBase58())
+
         return address
+    }
+
+    private suspend fun resetAddressAndApi() {
+        _accountAddress.value = createNewAccountAddress()
+        crowdNodeApi.reset()
     }
 }
