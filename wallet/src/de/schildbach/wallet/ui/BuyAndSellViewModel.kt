@@ -57,9 +57,13 @@ class BuyAndSellViewModel @Inject constructor(
             config.hasCoinbaseAuthInfoBeenShown = !value
         }
 
-    private val _coinbaseIsConnected: MutableLiveData<Boolean> = MutableLiveData()
-    val coinbaseIsConnected: LiveData<Boolean>
-        get() = _coinbaseIsConnected
+    private val _isAuthenticatedOnCoinbase: MutableLiveData<Boolean> = MutableLiveData()
+    val isAuthenticatedOnCoinbase: LiveData<Boolean>
+        get() = _isAuthenticatedOnCoinbase
+
+    private val _coinbaseBalance: MutableLiveData<String> = MutableLiveData()
+    val coinbaseBalance: LiveData<String>
+        get() = _coinbaseBalance
 
     private val _servicesList: MutableLiveData<List<BuyAndSellDashServicesModel>> = MutableLiveData()
     val servicesList: LiveData<List<BuyAndSellDashServicesModel>>
@@ -76,10 +80,6 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     val coinbaseAuthTokenCallback = SingleLiveEvent<Boolean>()
-
-    init {
-        isUserConnectedToCoinbase()
-    }
 
     val upholdBalanceLiveData = Transformations.switchMap(triggerUploadBalanceUpdate) {
         liveData {
@@ -99,9 +99,7 @@ class BuyAndSellViewModel @Inject constructor(
         }
     }
 
-    fun isUserConnectedToCoinbase() {
-        _coinbaseIsConnected.value = coinBaseRepository.isUserConnected()
-    }
+    fun isUserConnectedToCoinbase(): Boolean = coinBaseRepository.isUserConnected()
 
     private fun setDashServiceList(list: List<BuyAndSellDashServicesModel>) {
         _servicesList.value = list.sortedBy { it.serviceStatus }
@@ -166,7 +164,9 @@ class BuyAndSellViewModel @Inject constructor(
             when (val response = coinBaseRepository.completeCoinbaseAuthentication(code)) {
                 is ResponseResource.Success -> {
                     if (response.value){
-                        getUserCoinbaseBalance()
+                        _isAuthenticatedOnCoinbase.value = true
+                        _coinbaseBalance.value = config.lastCoinbaseBalance
+                        coinbaseAuthTokenCallback.call()
                     } else {
                         _showLoading.value = false
                     }
@@ -179,20 +179,15 @@ class BuyAndSellViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getUserCoinbaseBalance() {
-        when (val response = coinBaseRepository.getUserAccount()) {
-            is ResponseResource.Success -> {
-                val userAccountData = response.value
-                //TODO: Handle use-case: failure to get user data and hence no balance to display in Buy & Sell Dash UI
-                if (userAccountData == null){
-                    _showLoading.value = false
-                } else {
-                    _coinbaseIsConnected.value = true
-                    coinbaseAuthTokenCallback.call()
+    fun updateCoinbaseBalance() {
+        viewModelScope.launch(Dispatchers.Main){
+            when (val response = coinBaseRepository.getUserAccount()) {
+                is ResponseResource.Success -> {
+                    _coinbaseBalance.value = response.value?.balance?.amount
                 }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
+                is ResponseResource.Failure -> {
+                    _coinbaseBalance.value = config.lastCoinbaseBalance
+                }
             }
         }
     }

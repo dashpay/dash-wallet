@@ -20,7 +20,6 @@ import org.dash.wallet.integration.coinbase_integration.CB_VERSION_KEY
 import org.dash.wallet.integration.coinbase_integration.CB_VERSION_VALUE
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
-import retrofit2.Response
 import retrofit2.http.*
 
 interface CoinBaseServicesApi {
@@ -29,7 +28,7 @@ interface CoinBaseServicesApi {
     suspend fun getUserAccounts(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Query("limit") limit: Int = 300
-    ): Response<CoinBaseUserAccountInfo>
+    ): CoinBaseUserAccountInfo?
 
     @GET("v2/exchange-rates")
     suspend fun getExchangeRates(
@@ -66,7 +65,7 @@ interface CoinBaseServicesApi {
     suspend fun getBaseIdForUSDModel(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Query("base") baseCurrency: String,
-    ): Response<BaseIdForUSDModel?>
+    ): BaseIdForUSDModel?
 
     @POST("v2/trades")
     suspend fun swapTrade(

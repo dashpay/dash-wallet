@@ -170,9 +170,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onCoinBaseItemClicked() {
-        val isConnected = viewModel.coinbaseIsConnected.value == true
-
-        if (isConnected) {
+        if (viewModel.isUserConnectedToCoinbase()) {
             launchCoinBasePortal()
             analytics.logEvent(AnalyticsConstants.Coinbase.ENTER_CONNECTED, bundleOf())
         } else {
@@ -344,12 +342,16 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
             }
         }
 
-        viewModel.coinbaseIsConnected.observe(this){ setLoginStatus(isDeviceConnectedToInternet) }
+        viewModel.isAuthenticatedOnCoinbase.observe(this){ setLoginStatus(isDeviceConnectedToInternet) }
 
         viewModel.coinbaseAuthTokenCallback.observe(this) {
             Timer().schedule(1000) {
                 launchCoinBasePortal()
             }
+        }
+
+        viewModel.coinbaseBalance.observe(this){ balance ->
+            viewModel.showRowBalance(BuyAndSellDashServicesModel.ServiceType.COINBASE, currentExchangeRate, balance)
         }
     }
 
@@ -369,8 +371,9 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
         if (UpholdClient.getInstance().isAuthenticated) {
             viewModel.updateUpholdBalance()
         }
-
-        viewModel.isUserConnectedToCoinbase()
+        if (viewModel.isUserConnectedToCoinbase()) {
+            viewModel.updateCoinbaseBalance()
+        }
     }
 
     override fun onResume() {
