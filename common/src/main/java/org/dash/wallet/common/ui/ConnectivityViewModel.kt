@@ -17,13 +17,13 @@ import javax.inject.Inject
 open class ConnectivityViewModel @Inject constructor(private val networkStateProvider: NetworkState)
     : ViewModel(){
 
-    private var _networkStatus: MutableStateFlow<Boolean> = MutableStateFlow(true)
-    val networkStatus = _networkStatus.asLiveData()
+    private var _isDeviceConnectedToInternet: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    val isDeviceConnectedToInternet = _isDeviceConnectedToInternet.asLiveData()
 
     fun monitorNetworkStateChange(){
         viewModelScope.launch(Dispatchers.Main) {
             networkStateProvider.observeNetworkChangeState().collect {
-                _networkStatus.value = it
+                _isDeviceConnectedToInternet.value = it
             }
         }
     }

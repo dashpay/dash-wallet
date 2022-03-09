@@ -156,7 +156,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     }
 
     fun initViewModel() {
-        viewModel.networkStatus.observe(this) { isConnected ->
+        viewModel.isDeviceConnectedToInternet.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectedState(isConnected)
             }

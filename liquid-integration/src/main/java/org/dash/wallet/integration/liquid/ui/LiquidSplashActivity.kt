@@ -109,7 +109,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
     }
 
     fun initViewModel() {
-        viewModel.networkStatus.observe(this) { isConnected ->
+        viewModel.isDeviceConnectedToInternet.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectionStatus(isConnected)
             }

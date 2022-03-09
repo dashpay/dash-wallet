@@ -115,7 +115,7 @@ class BuyAndSellViewModel
 
     private fun changeItemStatus(clientIsAuthenticated: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
         return if (clientIsAuthenticated){
-            if (networkStatus.value == true){
+            if (isDeviceConnectedToInternet.value == true){
                 BuyAndSellDashServicesModel.ServiceStatus.CONNECTED
             } else {
                 BuyAndSellDashServicesModel.ServiceStatus.DISCONNECTED

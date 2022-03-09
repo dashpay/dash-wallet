@@ -151,7 +151,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialo
     }
 
     fun initViewModel() {
-        viewModel.networkStatus.observe(this) { isConnected ->
+        viewModel.isDeviceConnectedToInternet.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectivityState(isConnected)
             }
