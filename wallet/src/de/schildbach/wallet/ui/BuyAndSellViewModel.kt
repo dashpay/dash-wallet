@@ -112,9 +112,9 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
 
-    private fun changeItemStatus(isOnline: Boolean, clientIsAuthenticated: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
+    private fun changeItemStatus(clientIsAuthenticated: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
         return if (clientIsAuthenticated){
-            if (isOnline){
+            if (_connectionLiveData.value == true){
                 BuyAndSellDashServicesModel.ServiceStatus.CONNECTED
             } else {
                 BuyAndSellDashServicesModel.ServiceStatus.DISCONNECTED
@@ -122,13 +122,13 @@ class BuyAndSellViewModel @Inject constructor(
         } else BuyAndSellDashServicesModel.ServiceStatus.IDLE
     }
 
-    fun setServicesStatus(isOnline: Boolean, coinBaseClientIsAuthenticated: Boolean, liquidClientIsAuthenticated: Boolean, upHoldClientIsAuthenticated: Boolean) {
+    fun setServicesStatus(coinBaseClientIsAuthenticated: Boolean, liquidClientIsAuthenticated: Boolean, upHoldClientIsAuthenticated: Boolean) {
         setDashServiceList(
             buyAndSellDashServicesModel.toMutableList().map { model ->
                 val serviceStatus = when (model.serviceType) {
-                    BuyAndSellDashServicesModel.ServiceType.LIQUID -> changeItemStatus(isOnline, liquidClientIsAuthenticated)
-                    BuyAndSellDashServicesModel.ServiceType.UPHOLD -> changeItemStatus(isOnline, upHoldClientIsAuthenticated)
-                    BuyAndSellDashServicesModel.ServiceType.COINBASE -> changeItemStatus(isOnline, coinBaseClientIsAuthenticated)
+                    BuyAndSellDashServicesModel.ServiceType.LIQUID -> changeItemStatus(liquidClientIsAuthenticated)
+                    BuyAndSellDashServicesModel.ServiceType.UPHOLD -> changeItemStatus(upHoldClientIsAuthenticated)
+                    BuyAndSellDashServicesModel.ServiceType.COINBASE -> changeItemStatus(coinBaseClientIsAuthenticated)
                 }
                 if (serviceStatus != model.serviceStatus) {
                     model.copy(serviceStatus = serviceStatus)

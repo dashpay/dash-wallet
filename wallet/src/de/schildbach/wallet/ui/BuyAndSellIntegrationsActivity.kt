@@ -75,7 +75,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     private val viewModel by viewModels<BuyAndSellViewModel>()
     private val liquidViewModel by viewModels<LiquidViewModel>()
 
-    private var isDeviceConnectedToInternet: Boolean = true
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
         BuyAndSellDashServicesAdapter(config){ model ->
@@ -140,7 +139,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onUpHoldItemClicked() {
-        if (isDeviceConnectedToInternet && UpholdConstants.hasValidCredentials()) {
+        if (viewModel.connectionLiveData.value == true && UpholdConstants.hasValidCredentials()) {
             analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
                 AnalyticsConstants.Uphold.ENTER_CONNECTED
             } else {
@@ -152,7 +151,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onLiquidItemClicked() {
-        if (isDeviceConnectedToInternet && LiquidConstants.hasValidCredentials()) {
+        if (viewModel.connectionLiveData.value == true && LiquidConstants.hasValidCredentials()) {
             analytics.logEvent(
                 if (LiquidClient.getInstance()?.isAuthenticated == true) {
                     AnalyticsConstants.Liquid.ENTER_CONNECTED
@@ -340,7 +339,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
             }
         }
 
-        viewModel.isAuthenticatedOnCoinbase.observe(this){ setLoginStatus(isDeviceConnectedToInternet) }
+        viewModel.isAuthenticatedOnCoinbase.observe(this){ setLoginStatus() }
 
         viewModel.coinbaseAuthTokenCallback.observe(this) {
             Timer().schedule(1000) {
@@ -355,11 +354,10 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
 
     private fun setNetworkState(online: Boolean) {
         binding.networkStatusContainer.isVisible = !online
-        setLoginStatus(online)
-        if (!isDeviceConnectedToInternet && online) {
+        setLoginStatus()
+        if (online) {
             updateBalances()
         }
-        isDeviceConnectedToInternet = online
     }
 
     private fun updateBalances() {
@@ -376,12 +374,12 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
 
     override fun onResume() {
         super.onResume()
-        setLoginStatus(isDeviceConnectedToInternet)
+        setLoginStatus()
         updateBalances()
     }
 
-    private fun setLoginStatus(online: Boolean) {
-        viewModel.setServicesStatus(online, config.lastCoinbaseAccessToken.isNullOrEmpty().not(),
+    private fun setLoginStatus() {
+        viewModel.setServicesStatus(config.lastCoinbaseAccessToken.isNullOrEmpty().not(),
             LiquidClient.getInstance()!!.isAuthenticated, UpholdClient.getInstance().isAuthenticated)
     }
 
