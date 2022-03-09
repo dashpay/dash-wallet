@@ -15,8 +15,8 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
-import androidx.lifecycle.ViewModelProvider
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.integration.liquid.currency.CurrencyResponse
 import org.dash.wallet.integration.liquid.currency.PayloadItem
 import org.dash.wallet.integration.liquid.data.LiquidClient
@@ -46,6 +46,7 @@ import org.dash.wallet.integration.liquid.dialog.CountrySupportDialog
 import org.json.JSONObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
@@ -150,7 +151,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialo
     }
 
     fun initViewModel() {
-        viewModel.connectivityLiveData.observe(this) { isConnected ->
+        viewModel.networkStatus.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectivityState(isConnected)
             }
@@ -502,6 +503,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity(), FancyAlertDialo
     override fun onResume() {
         super.onResume()
         super.turnOnAutoLogout()
+        viewModel.monitorNetworkStateChange()
         viewModel.updateLiquidBalance()
         if (isClickLogoutButton) {
             isClickLogoutButton = false

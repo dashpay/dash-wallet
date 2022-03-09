@@ -1,11 +1,30 @@
 package org.dash.wallet.common.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import org.dash.wallet.common.livedata.ConnectionLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.livedata.NetworkState
+import javax.inject.Inject
 
-open class ConnectivityViewModel(application: Application) : AndroidViewModel(application) {
-    val connectivityLiveData = ConnectionLiveData(application)
-    val isConnected
-        get() = connectivityLiveData.value?: false
+@ExperimentalCoroutinesApi
+@HiltViewModel
+open class ConnectivityViewModel @Inject constructor(private val networkStateProvider: NetworkState)
+    : ViewModel(){
+
+    private var _networkStatus: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    val networkStatus = _networkStatus.asLiveData()
+
+    fun monitorNetworkStateChange(){
+        viewModelScope.launch(Dispatchers.Main) {
+            networkStateProvider.observeNetworkChangeState().collect {
+                _networkStatus.value = it
+            }
+        }
+    }
 }

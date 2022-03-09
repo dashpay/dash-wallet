@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import org.dash.wallet.integration.coinbase_integration.R as R_coinbase
 import de.schildbach.wallet_test.databinding.ActivityBuyAndSellIntegrationsBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants.*
@@ -62,6 +63,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.concurrent.schedule
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
@@ -139,7 +141,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onUpHoldItemClicked() {
-        if (viewModel.connectionLiveData.value == true && UpholdConstants.hasValidCredentials()) {
+        if (viewModel.networkStatus.value == true && UpholdConstants.hasValidCredentials()) {
             analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
                 AnalyticsConstants.Uphold.ENTER_CONNECTED
             } else {
@@ -151,7 +153,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onLiquidItemClicked() {
-        if (viewModel.connectionLiveData.value == true && LiquidConstants.hasValidCredentials()) {
+        if (viewModel.networkStatus.value == true && LiquidConstants.hasValidCredentials()) {
             analytics.logEvent(
                 if (LiquidClient.getInstance()?.isAuthenticated == true) {
                     AnalyticsConstants.Liquid.ENTER_CONNECTED
@@ -201,7 +203,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     fun initViewModel() {
-        viewModel.connectionLiveData.observe(this) { isConnected ->
+        viewModel.networkStatus.observe(this) { isConnected ->
             if (isConnected != null) {
                 setNetworkState(isConnected)
             }
@@ -374,6 +376,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
 
     override fun onResume() {
         super.onResume()
+        viewModel.monitorNetworkStateChange()
         setLoginStatus()
         updateBalances()
     }

@@ -16,7 +16,7 @@ import android.view.MenuItem
 import android.view.View
 import android.webkit.*
 import android.widget.Toast
-import androidx.appcompat.widget.Toolbar
+import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
@@ -24,6 +24,8 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
@@ -100,6 +102,8 @@ class WidgetEvent(
         var event: String?
 )
 
+@ExperimentalCoroutinesApi
+@AndroidEntryPoint
 class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
 
     companion object {
@@ -117,7 +121,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
 
     private lateinit var viewBinding: ActivityWebviewQuickExchangeBinding
-    private lateinit var viewModel: ConnectivityViewModel
+    private val viewModel by viewModels<ConnectivityViewModel>()
     private lateinit var networkUnavailableViewModel: NetworkUnavailableFragmentViewModel
     private val mJsInterfaceName = "Android"
     private var error: String? = null
@@ -152,8 +156,7 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
     }
 
     fun initViewModel() {
-        viewModel = ViewModelProvider(this)[ConnectivityViewModel::class.java]
-        viewModel.connectivityLiveData.observe(this) { isConnected ->
+        viewModel.networkStatus.observe(this) { isConnected ->
             if (isConnected != null) {
                 setConnectedState(isConnected)
             }
@@ -607,5 +610,10 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
             log.info("liquid: onBackPressed: successful transaction was not made")
             finish()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.monitorNetworkStateChange()
     }
 }

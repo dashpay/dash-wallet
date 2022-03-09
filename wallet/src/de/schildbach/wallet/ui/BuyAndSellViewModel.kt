@@ -20,13 +20,15 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.ConnectionLiveData
+import org.dash.wallet.common.livedata.NetworkState
+import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.uphold.data.UpholdClient
@@ -37,12 +39,14 @@ import kotlin.coroutines.suspendCoroutine
 /**
  * @author Eric Britten
  */
+@ExperimentalCoroutinesApi
 @HiltViewModel
-class BuyAndSellViewModel @Inject constructor(
+class BuyAndSellViewModel
+@Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
     private val config: Configuration,
-    private val _connectionLiveData: ConnectionLiveData
-) : ViewModel() {
+    networkState: NetworkState)
+    : ConnectivityViewModel(networkState) {
 
     // TODO: move this into UpholdViewModel
     private val triggerUploadBalanceUpdate = MutableLiveData<Unit>()
@@ -66,9 +70,6 @@ class BuyAndSellViewModel @Inject constructor(
     private val _coinbaseBalance: MutableLiveData<String> = MutableLiveData()
     val coinbaseBalance: LiveData<String>
         get() = _coinbaseBalance
-
-    val connectionLiveData: LiveData<Boolean>
-        get() = _connectionLiveData
 
     private val _servicesList: MutableLiveData<List<BuyAndSellDashServicesModel>> = MutableLiveData()
     val servicesList: LiveData<List<BuyAndSellDashServicesModel>>
@@ -114,7 +115,7 @@ class BuyAndSellViewModel @Inject constructor(
 
     private fun changeItemStatus(clientIsAuthenticated: Boolean): BuyAndSellDashServicesModel.ServiceStatus {
         return if (clientIsAuthenticated){
-            if (_connectionLiveData.value == true){
+            if (networkStatus.value == true){
                 BuyAndSellDashServicesModel.ServiceStatus.CONNECTED
             } else {
                 BuyAndSellDashServicesModel.ServiceStatus.DISCONNECTED
