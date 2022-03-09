@@ -202,7 +202,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     fun initViewModel() {
-        liquidViewModel.connectivityLiveData.observe(this) { isConnected ->
+        viewModel.connectionLiveData.observe(this) { isConnected ->
             if (isConnected != null) {
                 setNetworkState(isConnected)
             }
@@ -275,8 +275,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
                     Status.ERROR -> {
                         if (!isFinishing) {
                             if (it.exception is LiquidUnauthorizedException) {
-                                // do we need this
-                                setLoginStatus(isDeviceConnectedToInternet)
                                 FancyAlertDialog.newInstance(
                                     org.dash.wallet.integration.liquid.R.string.liquid_logout_title,
                                     org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,

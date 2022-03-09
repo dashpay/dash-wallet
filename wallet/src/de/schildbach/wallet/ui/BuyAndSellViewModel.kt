@@ -26,6 +26,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.ConnectionLiveData
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
 import org.dash.wallet.integration.uphold.data.UpholdClient
@@ -39,7 +40,8 @@ import kotlin.coroutines.suspendCoroutine
 @HiltViewModel
 class BuyAndSellViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
-    private val config: Configuration
+    private val config: Configuration,
+    private val _connectionLiveData: ConnectionLiveData
 ) : ViewModel() {
 
     // TODO: move this into UpholdViewModel
@@ -64,6 +66,9 @@ class BuyAndSellViewModel @Inject constructor(
     private val _coinbaseBalance: MutableLiveData<String> = MutableLiveData()
     val coinbaseBalance: LiveData<String>
         get() = _coinbaseBalance
+
+    val connectionLiveData: LiveData<Boolean>
+        get() = _connectionLiveData
 
     private val _servicesList: MutableLiveData<List<BuyAndSellDashServicesModel>> = MutableLiveData()
     val servicesList: LiveData<List<BuyAndSellDashServicesModel>>

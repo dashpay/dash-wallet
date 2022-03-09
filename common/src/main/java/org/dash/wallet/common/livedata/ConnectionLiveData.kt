@@ -17,19 +17,18 @@
 
 package org.dash.wallet.common.livedata
 
-import android.annotation.TargetApi
 import android.content.Context
 import android.content.Context.CONNECTIVITY_SERVICE
 import android.net.*
 import android.os.Build
-import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 
 /**
  * @author Kebab Krabby
  * https://stackoverflow.com/questions/36421930/connectivitymanager-connectivity-action-deprecated
  */
 
-class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
+class ConnectionLiveData(val context: Context) : MutableLiveData<Boolean>() {
 
     private var connectivityManager: ConnectivityManager =
         context.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
