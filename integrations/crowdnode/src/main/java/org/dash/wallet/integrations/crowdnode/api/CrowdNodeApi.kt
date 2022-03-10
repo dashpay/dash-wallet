@@ -26,7 +26,9 @@ import androidx.work.workDataOf
 import com.google.common.math.LongMath.pow
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -154,7 +156,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
             apiError.value = ex
             signUpStatus.value = SignUpStatus.Error
-            config.setSignUpError(ex.message ?: "")
+            config.setCrowdNodeError(ex.message ?: "")
             notifyIfNeeded(appContext.getString(R.string.crowdnode_signup_error), "crowdnode_error")
         }
     }
@@ -212,23 +214,24 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
+
     override suspend fun reset() {
         log.info("reset is triggered")
         signUpStatus.value = SignUpStatus.NotStarted
         accountAddress = null
         apiError.value = null
-        config.setSignUpError("")
+        config.setCrowdNodeError("")
     }
 
     private fun restoreStatus() {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             log.info("restoring CrowdNode status")
-            val savedError = runBlocking { config.getSignUpError() }
+            val savedError = runBlocking { config.crowdNodeError.first() }
 
             if (savedError.isNotEmpty()) {
                 signUpStatus.value = SignUpStatus.Error
                 apiError.value = CrowdNodeException(savedError)
-                configScope.launch { config.setSignUpError("") }
+                configScope.launch { config.setCrowdNodeError("") }
                 log.info("found an error: $savedError")
                 return
             }
