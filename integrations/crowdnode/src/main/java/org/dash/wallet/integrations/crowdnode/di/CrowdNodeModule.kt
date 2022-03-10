@@ -30,9 +30,6 @@ import javax.inject.Singleton
 abstract class CrowdNodeModule {
     companion object {
         @Provides
-        fun provideRemoteDataSource() = RemoteDataSource()
-
-        @Provides
         fun provideWebApi(
             remoteDataSource: RemoteDataSource,
         ): CrowdNodeWebApi {
