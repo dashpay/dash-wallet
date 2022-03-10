@@ -98,7 +98,7 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
 
         binding.maxButton.setOnClickListener {
             binding.amountView.dashToFiat = true
-            binding.amountView.input = viewModel.maxAmount.toPlainString()
+            binding.amountView.input = (viewModel.maxAmount.value ?: Coin.ZERO).toPlainString()
             maxSelected = true
         }
 
@@ -111,14 +111,23 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
             }
         }
 
+        binding.amountView.setOnConvertDirectionChanged {
+            viewModel._dashToFiatDirection.value = binding.amountView.dashToFiat
+        }
+
+        binding.amountView.setOnAmountChanged {
+            viewModel._amount.value = it
+        }
+
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
             binding.amountView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
         }
 
-        binding.amountView.setOnConvertDirectionChanged {
-            viewModel.convertDirectionCallback.value = binding.amountView.dashToFiat
+        viewModel.canContinue.observe(viewLifecycleOwner) {
+            binding.continueBtn.isEnabled = it
         }
     }
+
 
     fun setViewDetails(continueText: String, keyboardHeader: View?) {
         lifecycleScope.launchWhenStarted {

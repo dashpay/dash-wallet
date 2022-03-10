@@ -16,7 +16,6 @@
  */
 package de.schildbach.wallet.payments
 
-import android.os.Looper
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -36,30 +35,43 @@ import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+
 class SendCoinsTaskRunner @Inject constructor(
     private val walletApplication: WalletApplication
 ) : SendPaymentService {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
 
-    override suspend fun sendCoins(address: Address, amount: Coin, constrainInputsTo: Address?): Transaction {
+    override suspend fun sendCoins(
+        address: Address,
+        amount: Coin,
+        constrainInputsTo: Address?,
+        emptyWallet: Boolean
+    ): Transaction {
         val wallet = walletApplication.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
         Context.propagate(wallet.context)
-        val sendRequest = createSendRequest(address, amount, constrainInputsTo)
+        val sendRequest = createSendRequest(address, amount, constrainInputsTo, emptyWallet)
         val scryptIterationsTarget = walletApplication.scryptIterationsTarget()
 
         return sendCoins(wallet, sendRequest, scryptIterationsTarget)
     }
 
-    private fun createSendRequest(address: Address, amount: Coin, constrainInputsTo: Address? = null): SendRequest {
+    private fun createSendRequest(
+        address: Address,
+        amount: Coin,
+        constrainInputsTo: Address? = null,
+        emptyWallet: Boolean = false
+    ): SendRequest {
         return SendRequest.to(address, amount).apply {
             coinSelector = ZeroConfCoinSelector.get()
             coinSelector = if (constrainInputsTo == null) ZeroConfCoinSelector.get() else ByAddressCoinSelector(constrainInputsTo)
             feePerKb = Constants.ECONOMIC_FEE
             ensureMinRequiredFee = true
             changeAddress = constrainInputsTo
+            this.emptyWallet = emptyWallet
         }
     }
 
+    @Suppress("BlockingMethodInNonBlockingContext")
     private suspend fun sendCoins(
         wallet: Wallet,
         sendRequest: SendRequest,
@@ -87,7 +99,6 @@ class SendCoinsTaskRunner @Inject constructor(
 
             val transaction = sendRequest.tx
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
-
             walletApplication.broadcastTransaction(transaction)
             transaction
         } catch (ex: Exception) {

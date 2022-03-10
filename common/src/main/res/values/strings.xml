@@ -49,4 +49,5 @@
     <string name="permission_deny">Deny</string>
     <string name="max">Max</string>
     <string name="select_currency">Select Currency</string>
+    <string name="exchange_rate_template">%1$s DASH = %2$s</string>
 </resources>

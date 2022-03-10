@@ -22,6 +22,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
@@ -33,6 +34,7 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
         private val INFO_SHOWN_KEY = booleanPreferencesKey("info_shown")
         private val ACCOUNT_ADDRESS_KEY = stringPreferencesKey("account_address")
         private val CROWDNODE_ERROR_KEY = stringPreferencesKey("error")
+        private val SIGNUP_FAILED_KEY = booleanPreferencesKey("signup_failed")
         private val LAST_BALANCE_KEY = longPreferencesKey("last_balance")
     }
 
@@ -53,8 +55,21 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
 
 
     suspend fun setAccountAddress(address: String) {
-        context.dataStore.edit { settings ->
-            settings[ACCOUNT_ADDRESS_KEY] = address
+        context.dataStore.edit { preferences ->
+            preferences[ACCOUNT_ADDRESS_KEY] = address
+        }
+    }
+
+    suspend fun setSignUpError(error: String) {
+        setSignUpFailed(error.isNotEmpty())
+        setCrowdNodeError(error)
+    }
+
+    suspend fun getSignUpError(): String {
+        return if (signUpFailed.first()) {
+            crowdNodeError.first()
+        } else {
+            ""
         }
     }
 
@@ -64,9 +79,9 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
         }
 
 
-    suspend fun setCrowdNodeError(address: String) {
-        context.dataStore.edit { settings ->
-            settings[CROWDNODE_ERROR_KEY] = address
+    suspend fun setCrowdNodeError(error: String) {
+        context.dataStore.edit { preferences ->
+            preferences[CROWDNODE_ERROR_KEY] = error
         }
     }
 
@@ -77,8 +92,8 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
 
 
     suspend fun setLastBalance(balance: Long) {
-        context.dataStore.edit { settings ->
-            settings[LAST_BALANCE_KEY] = balance
+        context.dataStore.edit { preferences ->
+            preferences[LAST_BALANCE_KEY] = balance
         }
     }
 
@@ -89,8 +104,20 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
 
 
     suspend fun setIsInfoShown(isShown: Boolean) {
-        context.dataStore.edit { settings ->
-            settings[INFO_SHOWN_KEY] = isShown
+        context.dataStore.edit { preferences ->
+            preferences[INFO_SHOWN_KEY] = isShown
+        }
+    }
+
+    private val signUpFailed: Flow<Boolean> = dataStore
+        .map { preferences ->
+            preferences[SIGNUP_FAILED_KEY] ?: false
+        }
+
+
+    private suspend fun setSignUpFailed(signUpFailed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[SIGNUP_FAILED_KEY] = signUpFailed
         }
     }
 }

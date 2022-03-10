@@ -26,7 +26,7 @@ import org.dash.wallet.common.R
 
 fun String.copy(activity: FragmentActivity, label: String) {
     (activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
-        setPrimaryClip(ClipData.newPlainText("dash address", label))
+        setPrimaryClip(ClipData.newPlainText(label, this@copy))
     }
     Toast.makeText(activity, activity.getString(R.string.copied), Toast.LENGTH_SHORT).show()
 }

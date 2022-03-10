@@ -21,19 +21,17 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentFirstTimeInfoBinding
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 
 @AndroidEntryPoint
 class FirstTimeInfoFragment : Fragment(R.layout.fragment_first_time_info) {
     private val binding by viewBinding(FragmentFirstTimeInfoBinding::bind)
-    private val viewModel by activityViewModels<EntryPointViewModel>()
+    private val viewModel by activityViewModels<CrowdNodeViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -43,7 +41,7 @@ class FirstTimeInfoFragment : Fragment(R.layout.fragment_first_time_info) {
         }
 
         binding.continueBtn.setOnClickListener {
-            safeNavigate(FirstTimeInfoFragmentDirections.infoToPortal())
+            safeNavigate(FirstTimeInfoFragmentDirections.infoToEntryPoint())
         }
 
         viewModel.setInfoShown(true)

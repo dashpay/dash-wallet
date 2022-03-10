@@ -53,8 +53,8 @@
             app:popExitAnim="@anim/slide_out_left" />
 
         <action
-            android:id="@+id/new_account_to_error"
-            app:destination="@id/errorFragment"
+            android:id="@+id/new_account_to_result"
+            app:destination="@id/resultFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -70,9 +70,14 @@
     </fragment>
 
     <fragment
-        android:id="@+id/errorFragment"
-        android:name="org.dash.wallet.integrations.crowdnode.ui.ErrorFragment"
-        android:label="ErrorFragment" />
+        android:id="@+id/resultFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.ResultFragment"
+        android:label="ResultFragment">
+
+        <argument android:name="isError" app:argType="boolean" />
+        <argument android:name="title" app:argType="string" />
+        <argument android:name="subtitle" app:argType="string" />
+    </fragment>
 
     <fragment
         android:id="@+id/crowdNodePortalFragment"
@@ -82,6 +87,20 @@
         <action
             android:id="@+id/portalToOnlineAccountInfo"
             app:destination="@id/onlineAccountInfo"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/portalToTransfer"
+            app:destination="@id/transferFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/portalToResult"
+            app:destination="@id/resultFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
@@ -101,8 +120,23 @@
         android:label="FirstTimeInfoFragment">
 
         <action
-            android:id="@+id/infoToPortal"
-            app:destination="@id/crowdNodePortalFragment"
+            android:id="@+id/infoToEntryPoint"
+            app:destination="@id/entryPointFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/transferFragment"
+        android:name="org.dash.wallet.integrations.crowdnode.ui.portal.TransferFragment"
+        android:label="TransferFragment">
+
+        <argument android:name="withdraw" app:argType="boolean" />
+
+        <action
+            android:id="@+id/transfer_to_result"
+            app:destination="@id/resultFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />

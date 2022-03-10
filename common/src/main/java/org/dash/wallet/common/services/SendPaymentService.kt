@@ -22,5 +22,10 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 
 interface SendPaymentService {
-    suspend fun sendCoins(address: Address, amount: Coin, constrainInputsTo: Address? = null): Transaction
+    suspend fun sendCoins(
+        address: Address,
+        amount: Coin,
+        constrainInputsTo: Address? = null,
+        emptyWallet: Boolean = false
+    ): Transaction
 }

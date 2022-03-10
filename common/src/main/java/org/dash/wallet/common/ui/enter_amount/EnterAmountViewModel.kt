@@ -49,14 +49,45 @@ class EnterAmountViewModel @Inject constructor(
     val selectedExchangeRate: LiveData<ExchangeRate>
         get() = _selectedExchangeRate
 
-    var maxAmount: Coin = Coin.ZERO
     val onContinueEvent = SingleLiveEvent<Pair<Coin, Fiat>>()
-    val convertDirectionCallback = SingleLiveEvent<Boolean>()
+
+    internal val _dashToFiatDirection = MutableLiveData<Boolean>()
+    val dashToFiatDirection: LiveData<Boolean>
+        get() = _dashToFiatDirection
+
+    private val _maxAmount = MutableLiveData(Coin.ZERO)
+    val maxAmount: LiveData<Coin>
+        get() = _maxAmount
+
+    internal val _amount = MutableLiveData<Coin>()
+    val amount: LiveData<Coin>
+        get() = _amount
+
+    val canContinue: LiveData<Boolean>
+        get() = MediatorLiveData<Boolean>().also { liveData ->
+            fun getValue(amount: Coin, maxAmount: Coin): Boolean {
+                return amount > Coin.ZERO && (maxAmount == Coin.ZERO || amount <= maxAmount)
+            }
+
+            liveData.addSource(_amount) {
+                liveData.value = getValue(it, _maxAmount.value ?: Coin.ZERO)
+            }
+            liveData.addSource(_maxAmount) {
+                liveData.value = getValue(_amount.value ?: Coin.ZERO, it)
+            }
+            liveData.addSource(_dashToFiatDirection) {
+                liveData.value = getValue(_amount.value ?: Coin.ZERO, _maxAmount.value ?: Coin.ZERO)
+            }
+        }
 
     init {
         _selectedCurrencyCode.flatMapLatest { code ->
             exchangeRates.observeExchangeRate(code)
         }.onEach(_selectedExchangeRate::postValue)
             .launchIn(viewModelScope)
+    }
+
+    fun setMaxAmount(coin: Coin) {
+        _maxAmount.value = coin
     }
 }
