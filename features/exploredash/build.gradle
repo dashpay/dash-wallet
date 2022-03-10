@@ -84,6 +84,7 @@ dependencies {
     // Firebase
     implementation 'com.google.firebase:firebase-storage-ktx'
     implementation 'com.google.firebase:firebase-auth-ktx'
+    implementation 'com.google.firebase:firebase-common-ktx'
 
     // Tools
     implementation 'net.lingala.zip4j:zip4j:2.9.1'

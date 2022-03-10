@@ -29,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
+import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -37,7 +38,8 @@ class ExploreSyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val analytics: AnalyticsService,
-    private val exploreRepository: ExploreRepository
+    private val exploreRepository: ExploreRepository,
+    private val syncStatus: DataSyncStatusService
 ): CoroutineWorker(appContext, workerParams) {
     companion object {
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
@@ -50,6 +52,7 @@ class ExploreSyncWorker @AssistedInject constructor(
         var localDataTimestamp = 0L
         var remoteDataTimestamp = 0L
         try {
+            syncStatus.setSyncProgress(0.0)
             val tableSyncWatch = Stopwatch.createStarted()
 
             localDataTimestamp = exploreRepository.localTimestamp.run {
@@ -66,20 +69,29 @@ class ExploreSyncWorker @AssistedInject constructor(
 
             if (localDataTimestamp >= remoteDataTimestamp) {
                 log.info("explore db is up to date, nothing to sync")
+                syncStatus.setSyncProgress(100.0)
                 return@withContext Result.success()
             }
+            syncStatus.setSyncProgress(10.0)
 
             exploreRepository.download()
+
+            syncStatus.setSyncProgress(80.0)
+
             AppExploreDatabase.forceUpdate()
 
             log.info("sync explore db finished $tableSyncWatch")
 
+            syncStatus.setSyncProgress(100.0)
+
         } catch (ex: FirebaseNetworkException) {
             log.warn("sync explore no network", ex)
+            syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         } catch (ex: Exception) {
             analytics.logError(ex, "syncing from $localDataTimestamp, $remoteDataTimestamp")
             log.error("sync explore db crashed ${ex.message}", ex)
+            syncStatus.setSyncError(ex)
             return@withContext Result.failure()
         }
 

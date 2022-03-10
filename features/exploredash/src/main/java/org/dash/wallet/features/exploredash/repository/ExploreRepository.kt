@@ -88,7 +88,7 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
             remoteDataRef = storage.reference.child(GC_FILE_PATH)
             remoteDataRef!!.metadata.await()
         } catch (ex: Exception) {
-            log.warn("error getting remote data timestamp")
+            log.warn("error getting remote data timestamp", ex)
             null
         }
         val dataTimestamp = remoteDataInfo?.getCustomMetadata("Data-Timestamp")?.toLong()
@@ -148,7 +148,8 @@ class GCExploreDatabase @Inject constructor(@ApplicationContext context: Context
     override fun getDatabaseInputStream(file: File): InputStream? {
         val zipFile = ZipFile(file)
         val comment: Array<String> = zipFile.comment.split("#".toRegex()).toTypedArray()
-        updateTimestampCache = comment[0].toLong()
+        // use the current time instead of the file time (comment[0].toLong())
+        updateTimestampCache = currentTimeMillis()
         val checksum = comment[1]
         log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
         zipFile.setPassword(checksum.toCharArray())

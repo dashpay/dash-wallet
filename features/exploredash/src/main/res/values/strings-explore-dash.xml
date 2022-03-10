@@ -151,4 +151,12 @@
     <string name="find_merchant_text">Find a merchant.</string>
     <string name="buy_gift_card_with_dash_text">Buy a gift card with Dash.</string>
     <string name="redeem_gift_card_text">Redeem your gift card online within seconds or at the cashier.</string>
+
+    <!-- Sync Status -->
+    <string name="sync_in_progress_not_complete">Sync in progress... Results may not be complete.</string>
+    <string name="sync_in_progress_error">Sync in progress... There was an error.</string>
+    <string name="sync_in_progress_canceled">Sync canceled... Another attempt will be made later.</string>
+
+    <string name="sync_in_progress_file_not_found">Build Error: Database not found!</string>
+    <string name="sync_in_progress_network_error">Sync interrupted... Network is offline or unreachable</string>
 </resources>
