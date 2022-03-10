@@ -33,9 +33,6 @@
         tools:layout="@layout/vertical_segmented_picker"
         tools:visibility="visible" />
 
-
-
-
      <LinearLayout
         android:id="@+id/input_wrapper"
         android:layout_width="200dp"

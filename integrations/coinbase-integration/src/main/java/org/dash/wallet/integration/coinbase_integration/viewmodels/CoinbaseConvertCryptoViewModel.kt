@@ -20,21 +20,26 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.ServiceWallet
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
-    val config: Configuration
+    val config: Configuration,
+    private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
     private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
     val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
@@ -63,8 +68,11 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
 
-
+    private val _dashWalletBalance = MutableLiveData<Event<Coin>>()
+    val dashWalletBalance: LiveData<Event<Coin>>
+        get() = this._dashWalletBalance
     init {
+        setDashWalletBalance()
         getUserAccountInfo()
         getBaseIdForUSDModel()
     }
@@ -172,4 +180,11 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             !it.coinBaseUserAccountData.balance.amount.toDouble().isNaN() &&
             it.coinBaseUserAccountData.balance.currency != DASH_CURRENCY
         )
+
+    private fun setDashWalletBalance() {
+        val balance = Event(walletDataProvider.getWalletBalance())
+        _dashWalletBalance.value =balance
+
+
+    }
 }

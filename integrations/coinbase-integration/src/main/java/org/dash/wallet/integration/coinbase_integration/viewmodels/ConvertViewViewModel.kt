@@ -27,8 +27,10 @@ import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import java.math.RoundingMode
@@ -38,7 +40,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ConvertViewViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
-    var configuration: Configuration
+    var configuration: Configuration,
+    private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
 
     private val _dashToCrypto = MutableLiveData<Boolean>()
@@ -75,7 +78,12 @@ class ConvertViewViewModel @Inject constructor(
     val selectedLocalExchangeRate: LiveData<ExchangeRate>
         get() = _selectedLocalExchangeRate
 
+    private val _dashWalletBalance = MutableLiveData<Event<Coin>>()
+    val dashWalletBalance: LiveData<Event<Coin>>
+        get() = this._dashWalletBalance
+
     init {
+        setDashWalletBalance()
         _selectedLocalCurrencyCode.flatMapLatest { code ->
             exchangeRates.observeExchangeRate(code)
         }.onEach(_selectedLocalExchangeRate::postValue)
@@ -108,4 +116,8 @@ class ConvertViewViewModel @Inject constructor(
     }
 
     fun clear() { _selectedCryptoCurrencyAccount.value = null }
+
+    private fun setDashWalletBalance() {
+        _dashWalletBalance.value = Event(walletDataProvider.getWalletBalance())
+    }
 }

@@ -43,4 +43,6 @@ interface WalletDataProvider {
     fun sendCoins(address: Address, amount: Coin): LiveData<Resource<Transaction>>
 
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
+
+    fun getWalletBalance(): Coin
 }

@@ -141,8 +141,9 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         binding.convertView.setOnSwapClicked {
-            convertViewModel.setOnSwapDashFromToCryptoClicked( it)
+            convertViewModel.setOnSwapDashFromToCryptoClicked(it)
         }
+
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
             binding.convertView.exchangeRate = ExchangeRate(Coin.COIN, it.fiat)
@@ -180,6 +181,13 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 binding.youWillReceiveValue.text = context?.getString(R.string.you_will_receive_dash, dashFormat.format(balance).toString())
             }
         }
+
+        viewModel.dashWalletBalance.observe(
+            viewLifecycleOwner,
+            EventObserver {
+                binding.convertView.dashInput= it
+            }
+        )
     }
 
     private fun setConvertViewInput() {
@@ -192,6 +200,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 } else {
                     null
                 }
+
             convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
                 binding.convertView.input = ServiceWallet(
                     it.coinBaseUserAccountData.currency?.name ?: "",

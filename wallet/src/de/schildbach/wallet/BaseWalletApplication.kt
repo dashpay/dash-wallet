@@ -107,6 +107,10 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         }
     }
 
+    override fun getWalletBalance(): Coin {
+        return walletApplication.wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+    }
+
     private fun checkWalletCreated() {
         if (getWalletData() == null) {
             throw RuntimeException("this method cant't be used before creating the wallet")
