@@ -26,12 +26,14 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
 import java.math.RoundingMode
 import javax.inject.Inject
@@ -50,6 +52,7 @@ class ConvertViewViewModel @Inject constructor(
 
     var enteredConvertAmount = "0"
     var maxAmount: String = "0"
+    var maxDashAmount: String = "0"
     val onContinueEvent = SingleLiveEvent<Pair<Boolean, Fiat>>()
 
     private val _selectedCryptoCurrencyAccount = MutableLiveData<CoinBaseUserAccountDataUIModel?>()
@@ -82,6 +85,10 @@ class ConvertViewViewModel @Inject constructor(
     val dashWalletBalance: LiveData<Event<Coin>>
         get() = this._dashWalletBalance
 
+    private val _userDashAccountEmptyError: SingleLiveEvent<Boolean> = SingleLiveEvent()
+    val userDashAccountEmptyError: LiveData<Boolean>
+        get() = _userDashAccountEmptyError
+
     init {
         setDashWalletBalance()
         _selectedLocalCurrencyCode.flatMapLatest { code ->
@@ -112,12 +119,23 @@ class ConvertViewViewModel @Inject constructor(
     }
 
     fun setOnSwapDashFromToCryptoClicked(dashToCrypto: Boolean) {
+        if (dashToCrypto) {
+            if (walletDataProvider.getWalletBalance().isZero) {
+                _userDashAccountEmptyError.value = true
+                return
+            }
+        }
         _dashToCrypto.value = dashToCrypto
     }
 
     fun clear() { _selectedCryptoCurrencyAccount.value = null }
 
     private fun setDashWalletBalance() {
-        _dashWalletBalance.value = Event(walletDataProvider.getWalletBalance())
+        val balance = walletDataProvider.getWalletBalance()
+        _dashWalletBalance.value = Event(balance)
+        val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+            .noCode().minDecimals(6).optionalDecimals()
+        maxDashAmount = dashFormat.minDecimals(0)
+            .optionalDecimals(0, 8).format(balance).toString()
     }
 }

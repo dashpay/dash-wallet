@@ -28,11 +28,9 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
-import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
-import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.ServiceWallet
 import javax.inject.Inject
 
 @HiltViewModel
@@ -183,8 +181,6 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     private fun setDashWalletBalance() {
         val balance = Event(walletDataProvider.getWalletBalance())
-        _dashWalletBalance.value =balance
-
-
+        _dashWalletBalance.value = balance
     }
 }

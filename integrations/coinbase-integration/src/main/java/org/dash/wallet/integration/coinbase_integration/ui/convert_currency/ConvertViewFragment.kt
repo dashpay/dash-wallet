@@ -118,25 +118,27 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.currencyOptions.pickedOptionIndex = 0
         binding.maxButton.setOnClickListener {
             viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
-                if (viewModel.selectedPickerCurrencyCode == userAccountData.coinBaseUserAccountData.balance?.currency
-                ) {
-                    applyNewValue(viewModel.maxAmount, viewModel.selectedPickerCurrencyCode)
-                } else {
-                    val cleanedValue =
-                        if (viewModel.selectedPickerCurrencyCode == viewModel.selectedLocalCurrencyCode) {
+                getMaxAmount()?.let { maxAmount ->
+                    if (viewModel.selectedPickerCurrencyCode == userAccountData.coinBaseUserAccountData.balance?.currency
+                    ) {
+                        applyNewValue(maxAmount, viewModel.selectedPickerCurrencyCode)
+                    } else {
+                        val cleanedValue =
+                            if (viewModel.selectedPickerCurrencyCode == viewModel.selectedLocalCurrencyCode) {
 
-                            viewModel.maxAmount.toBigDecimal() /
-                                userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
-                        } else {
+                                maxAmount.toBigDecimal() /
+                                    userAccountData.currencyToCryptoCurrencyExchangeRate.toBigDecimal()
+                            } else {
 
-                            viewModel.maxAmount.toBigDecimal() *
-                                userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
-                        }.setScale(8, RoundingMode.HALF_UP).toString()
+                                maxAmount.toBigDecimal() *
+                                    userAccountData.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                            }.setScale(8, RoundingMode.HALF_UP).toString()
 
-                    applyNewValue(cleanedValue, viewModel.selectedPickerCurrencyCode)
+                        applyNewValue(cleanedValue, viewModel.selectedPickerCurrencyCode)
+                    }
+
+                    maxAmountSelected = true
                 }
-
-                maxAmountSelected = true
             }
         }
 
@@ -144,6 +146,21 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             setAmountValue(value, viewModel.enteredConvertAmount)
             viewModel.selectedPickerCurrencyCode = value
         }
+    }
+
+    private fun getMaxAmount(): String? {
+
+        if (viewModel.dashToCrypto.value == true) {
+            viewModel.selectedCryptoCurrencyAccount.value?.let { account ->
+                val cleanedValue =
+                    viewModel.maxDashAmount.toBigDecimal() /
+                        account.cryptoCurrencyToDashExchangeRate.toBigDecimal()
+                return cleanedValue.setScale(8, RoundingMode.HALF_UP).toString()
+            }
+        } else {
+            return viewModel.maxAmount
+        }
+        return null
     }
 
     private fun resetViewSelection(it: CoinBaseUserAccountDataUIModel?) {

@@ -74,11 +74,16 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
         binding.convertFromDashBalance.isVisible = input != null
         updateUiWithSwap()
+
         binding.swapBtn.setOnClickListener {
-            dashToCrypto = !dashToCrypto
+            onSwapClicked?.invoke(!dashToCrypto)
+            if (dashInput?.isZero == true && !dashToCrypto) {
+                return@setOnClickListener
+            }
             updateUiWithSwap()
-            onSwapClicked?.invoke(dashToCrypto)
+            dashToCrypto = !dashToCrypto
         }
+
         binding.convertFromBtn.convertItemClickListener = object :
             CryptoConvertItem.ConvertItemClickListener {
             override fun onConvertItemClickListener() {
@@ -169,7 +174,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
         exchangeRate?.let { currentExchangeRate ->
             val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-            val fiatAmount =   GenericUtils.fiatToString(currencyRate.coinToFiat(dashInput))
+            val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(dashInput))
             binding.convertFromDashBalance.text = "${context.getString(R.string.balance)} ${dashFormat.minDecimals(0)
                 .optionalDecimals(0,8).format(dashInput)} Dash"
 

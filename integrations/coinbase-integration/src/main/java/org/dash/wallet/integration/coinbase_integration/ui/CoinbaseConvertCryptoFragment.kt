@@ -102,6 +102,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
             if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
                 selectedCoinBaseAccount?.let { viewModel.swapTrade(pair.second, it) }
+            } else {
+                //TODO Send Dash
             }
         }
 
@@ -134,6 +136,21 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 negativeButtonText = R.string.close
             )
             safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+        }
+
+        convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
+            if (it) {
+                val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
+                    title = R.string.dont_have_any_dash,
+                    image = R.drawable.ic_info_red,
+                    negativeButtonText = R.string.close
+                )
+                safeNavigate(
+                    CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                        dashAccountEmptyError
+                    )
+                )
+            }
         }
 
         binding.convertView.setOnCurrencyChooserClicked {
@@ -185,7 +202,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         viewModel.dashWalletBalance.observe(
             viewLifecycleOwner,
             EventObserver {
-                binding.convertView.dashInput= it
+                binding.convertView.dashInput = it
             }
         )
     }
