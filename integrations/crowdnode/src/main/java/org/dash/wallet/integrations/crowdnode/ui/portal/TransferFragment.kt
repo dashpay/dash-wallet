@@ -39,7 +39,8 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentTransferBinding
-import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardHeaderBinding
+import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardDepositHeaderBinding
+import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardWithdrawHeaderBinding
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import javax.inject.Inject
 
@@ -62,12 +63,20 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
                 isMaxButtonVisible = true,
                 showCurrencySelector = true
             )
-            val headerBinding = ViewKeyboardHeaderBinding.inflate(layoutInflater, null, false)
-            fragment.setViewDetails(if (args.withdraw) {
+
+            val headerBinding = if (args.withdraw) {
+                ViewKeyboardWithdrawHeaderBinding.inflate(layoutInflater, null, false)
+            } else {
+                ViewKeyboardDepositHeaderBinding.inflate(layoutInflater, null, false)
+            }
+
+            val buttonText = if (args.withdraw) {
                 getString(R.string.withdraw)
             } else {
                 getString(R.string.deposit)
-            }, headerBinding.root)
+            }
+
+            fragment.setViewDetails(buttonText, headerBinding.root)
 
             parentFragmentManager.commit {
                 setReorderingAllowed(true)
