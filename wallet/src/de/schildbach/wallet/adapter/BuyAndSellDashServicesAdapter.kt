@@ -53,6 +53,7 @@ class BuyAndSellDashServicesAdapter( val config: Configuration,
                 if(data.localBalance!=null){
                     binding.serviceFiatAmount.text ="${Constants.PREFIX_ALMOST_EQUAL_TO} ${GenericUtils.fiatToString(data.localBalance)}"
                 }
+                binding.imgArrow.isVisible = isOnline
             }
 
         }
