@@ -53,7 +53,7 @@ class ConvertViewViewModel @Inject constructor(
     var enteredConvertAmount = "0"
     var maxAmount: String = "0"
     var maxDashAmount: String = "0"
-    val onContinueEvent = SingleLiveEvent<Pair<Boolean, Fiat>>()
+    val onContinueEvent = SingleLiveEvent<Pair<Boolean, Pair<Fiat?, Coin?>?>>()
 
     private val _selectedCryptoCurrencyAccount = MutableLiveData<CoinBaseUserAccountDataUIModel?>()
     val selectedCryptoCurrencyAccount: LiveData<CoinBaseUserAccountDataUIModel?>

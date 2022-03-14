@@ -31,6 +31,7 @@ import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
@@ -69,6 +70,9 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val _dashWalletBalance = MutableLiveData<Event<Coin>>()
     val dashWalletBalance: LiveData<Event<Coin>>
         get() = this._dashWalletBalance
+
+    val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
+
     init {
         setDashWalletBalance()
         getUserAccountInfo()
@@ -97,6 +101,27 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
             is ResponseResource.Failure -> {
                 _showLoading.value = false
+            }
+        }
+    }
+
+
+    fun sendDashToCoinBase(coin: Coin) = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
+        when (val result = coinBaseRepository.getUserAccountAddress()) {
+            is ResponseResource.Success -> {
+                if (result.value.isEmpty()) {
+                    _showLoading.value = false
+                    getUserAccountAddressFailedCallback.call()
+                } else {
+
+                    val address = walletDataProvider.createSentDashAddress(result.value)
+                    walletDataProvider.sendCoins(address, coin)
+                }
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+                getUserAccountAddressFailedCallback.call()
             }
         }
     }

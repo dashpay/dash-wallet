@@ -84,4 +84,10 @@ interface CoinBaseServicesApi {
     suspend fun getAuthorizationInformation(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE
     ): UserAuthorizationInfoResponse?
+
+    @GET("v2/accounts/{account_id}/addresses")
+    suspend fun getUserAccountAddress(
+        @Path("account_id") accountId: String,
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+    ): Response<CoinBaseAccountAddressResponse>
 }

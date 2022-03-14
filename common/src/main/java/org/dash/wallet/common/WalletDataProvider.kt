@@ -45,4 +45,6 @@ interface WalletDataProvider {
     fun startSendCoinsForResult(activity: Activity, requestCode: Int, address: Address, amount: Coin?)
 
     fun getWalletBalance(): Coin
+
+    fun createSentDashAddress(address: String): Address
 }

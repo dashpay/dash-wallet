@@ -31,7 +31,9 @@ class CoinBaseRepository @Inject constructor(
     private val userPreferences: Configuration,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
     private val swapTradeMapper: SwapTradeMapper,
-    private val commitBuyOrderMapper: CommitBuyOrderMapper) : CoinBaseRepositoryInt {
+    private val commitBuyOrderMapper: CommitBuyOrderMapper,
+    private val coinbaseAddressMapper: CoinbaseAddressMapper
+) : CoinBaseRepositoryInt {
     override suspend fun getUserAccount() = safeApiCall {
         val apiResponse = servicesApi.getUserAccounts()
         val userAccountData = apiResponse.body()?.data?.firstOrNull {
@@ -102,6 +104,12 @@ class CoinBaseRepository @Inject constructor(
         placeBuyOrderMapper.map(apiResult?.data)
     }
 
+
+    override suspend fun getUserAccountAddress(): ResponseResource<String> = safeApiCall {
+        val apiResult = servicesApi.getUserAccountAddress(accountId = userPreferences.coinbaseUserAccountId).body()
+        coinbaseAddressMapper.map(apiResult)
+    }
+
     override suspend fun commitBuyOrder(buyOrderId: String) = safeApiCall {
         val commitBuyResult = servicesApi.commitBuyOrder(accountId = userPreferences.coinbaseUserAccountId, buyOrderId = buyOrderId)
         commitBuyOrderMapper.map(commitBuyResult?.data)
@@ -142,6 +150,7 @@ interface CoinBaseRepositoryInt {
     suspend fun disconnectCoinbaseAccount()
     fun saveLastCoinbaseDashAccountBalance(amount: String?)
     fun saveUserAccountId(accountId: String?)
+    suspend fun getUserAccountAddress(): ResponseResource<String>
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>

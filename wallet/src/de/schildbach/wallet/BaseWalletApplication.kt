@@ -98,6 +98,10 @@ abstract class BaseWalletApplication : MultiDexApplication(), WalletDataProvider
         return SendCoinsTask.sendCoins(wallet, sendRequest, scryptIterationsTarget)
     }
 
+    override fun createSentDashAddress(address: String): Address {
+        return Address.fromString(Constants.NETWORK_PARAMETERS, address.toString().trim { it <= ' ' })
+    }
+
     private fun createSendRequest(address: Address, amount: Coin): SendRequest {
         return SendRequest.to(address, amount).apply {
             coinSelector = ZeroConfCoinSelector.get()

@@ -101,9 +101,15 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
             if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
-                selectedCoinBaseAccount?.let { viewModel.swapTrade(pair.second, it) }
+                selectedCoinBaseAccount?.let {
+                    pair.second?.first?.let { fait ->
+                        viewModel.swapTrade(fait, it)
+                    }
+                }
             } else {
-                //TODO Send Dash
+                pair.second?.second?.let { coin ->
+                    viewModel.sendDashToCoinBase(coin)
+                }
             }
         }
 
@@ -116,6 +122,18 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 )
             }
         )
+
+
+        viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.error,
+                getString(R.string.error),
+                R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+        }
+
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(

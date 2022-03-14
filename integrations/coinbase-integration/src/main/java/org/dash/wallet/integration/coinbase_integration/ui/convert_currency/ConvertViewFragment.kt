@@ -442,10 +442,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
     }
 
-    private fun getFaitAmount(balance: String, currencyCode: String): Fiat? {
+    private fun getFaitAmount(balance: String, currencyCode: String): Pair<Fiat?, Coin?>? {
         viewModel.selectedCryptoCurrencyAccount.value?.let {
             selectedCurrencyCodeExchangeRate?.let { rate ->
-                return when {
+                val fiatAmount = when {
                     (it.coinBaseUserAccountData.balance?.currency == currencyCode && it.coinBaseUserAccountData.balance.currency != DASH_CURRENCY) -> {
                         val cleanedValue =
                             balance.toBigDecimal() /
@@ -468,6 +468,17 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
                     }
                 }
+
+                val cleanedValue =
+                    fiatAmount.value.toBigDecimal() *
+                        it.currencyToDashExchangeRate.toBigDecimal()
+                val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
+                val coin = try {
+                    Coin.parseCoin(bd.toString())
+                } catch (x: Exception) {
+                    Coin.ZERO
+                }
+                return Pair(fiatAmount, coin)
             }
         }
         return null
