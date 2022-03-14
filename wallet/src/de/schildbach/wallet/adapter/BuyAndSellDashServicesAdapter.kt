@@ -34,7 +34,7 @@ class BuyAndSellDashServicesAdapter( val config: Configuration,
         @SuppressLint("SetTextI18n")
         override fun bindData(data: BuyAndSellDashServicesModel?) {
             data?.let {
-                binding.root.setOnClickListener { onClickListener.invoke(data) }
+                binding.root.setOnClickListener { if (isOnline) onClickListener.invoke(data) }
                 binding.serviceImg.setImageDrawable(ContextCompat.getDrawable(view.context,
                     if(isOnline) it.serviceType.serviceIcon else it.serviceType.getOfflineServiceIcon()))
                 binding.serviceName.text =view.context.getString(it.serviceType.serviceName)

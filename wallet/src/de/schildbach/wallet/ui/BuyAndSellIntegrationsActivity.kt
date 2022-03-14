@@ -140,7 +140,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onUpHoldItemClicked() {
-        if (viewModel.isDeviceConnectedToInternet.value == true && UpholdConstants.hasValidCredentials()) {
+        if (UpholdConstants.hasValidCredentials()) {
             analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
                 AnalyticsConstants.Uphold.ENTER_CONNECTED
             } else {
@@ -152,7 +152,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onLiquidItemClicked() {
-        if (viewModel.isDeviceConnectedToInternet.value == true && LiquidConstants.hasValidCredentials()) {
+        if (LiquidConstants.hasValidCredentials()) {
             analytics.logEvent(
                 if (LiquidClient.getInstance()?.isAuthenticated == true) {
                     AnalyticsConstants.Liquid.ENTER_CONNECTED
