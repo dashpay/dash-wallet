@@ -29,15 +29,18 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.ui.ConnectivityViewModel
 import javax.inject.Inject
 
 @ExperimentalCoroutinesApi
 @HiltViewModel
 class EnterAmountViewModel @Inject constructor(
     var exchangeRates: ExchangeRatesProvider,
-    var configuration: Configuration
-) : ViewModel() {
+    var configuration: Configuration,
+    var networkStateInt: NetworkStateInt
+) : ConnectivityViewModel(networkStateInt) {
     private val _selectedCurrencyCode = MutableStateFlow(configuration.exchangeCurrencyCode)
     var selectedCurrencyCode: String
         get() = _selectedCurrencyCode.value
