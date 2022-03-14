@@ -19,13 +19,6 @@ package org.dash.wallet.integrations.crowdnode.model
 
 import com.google.gson.annotations.SerializedName
 
-data class CrowdNodeResponse (
-    @SerializedName("@odata.context")
-    val dataContext : String,
-    @SerializedName("value")
-    val value : List<CrowdNodeTx>
-)
-
 data class CrowdNodeTx (
     @SerializedName("FundingType")
     val fundingType : String,

@@ -364,7 +364,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private suspend fun fetchBalance(address: String): String {
         val response = crowdNodeWebApi.getTransactions(address)
         var total = BigDecimal.ZERO
-        response.body()?.value?.forEach { tx ->
+        response.body()?.forEach { tx ->
             total += BigDecimal.valueOf(tx.amount)
         }
         return total.setScale(8, RoundingMode.HALF_UP).toString()

@@ -22,11 +22,13 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.integrations.crowdnode.api.*
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
+@ExperimentalCoroutinesApi
 abstract class CrowdNodeModule {
     companion object {
         @Provides
