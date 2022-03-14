@@ -61,8 +61,8 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
             )
         }
 
-        suspend fun withProgress(massage: String, activity: FragmentActivity, action: suspend () -> Unit) {
-            val dialog = progress(massage)
+        suspend fun withProgress(message: String, activity: FragmentActivity, action: suspend () -> Unit) {
+            val dialog = progress(message)
             dialog.show(activity) { }
             action.invoke()
             dialog.dismiss()
