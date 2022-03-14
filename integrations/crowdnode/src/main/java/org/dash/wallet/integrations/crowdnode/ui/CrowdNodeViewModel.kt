@@ -127,7 +127,6 @@ class CrowdNodeViewModel @Inject constructor(
 
         viewModelScope.launch {
             _accountAddress.value = getOrCreateAccountAddress()
-            _crowdNodeBalance.value = Coin.valueOf(config.lastBalance.first())
             crowdNodeApi.refreshBalance()
         }
     }
@@ -188,12 +187,11 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun deposit(coin: Coin): Boolean {
-        return crowdNodeApi.deposit(crowdNodeApi.accountAddress!!, coin)
+        return crowdNodeApi.deposit(coin)
     }
 
-    fun withdraw(coin: Coin): Boolean {
-        // TODO: Withdraw
-        return false
+    suspend fun withdraw(coin: Coin): Boolean {
+        return crowdNodeApi.withdraw(coin)
     }
 
     private suspend fun getOrCreateAccountAddress(): Address {

@@ -69,7 +69,8 @@ interface CrowdNodeApi {
 
     fun persistentSignUp(accountAddress: Address)
     suspend fun signUp(accountAddress: Address)
-    suspend fun deposit(accountAddress: Address, amount: Coin): Boolean
+    suspend fun deposit(amount: Coin): Boolean
+    suspend fun withdraw(amount: Coin): Boolean
     fun refreshBalance(retries: Int = 0)
     suspend fun reset()
 }
@@ -151,7 +152,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
             notifyIfNeeded(appContext.getString(R.string.crowdnode_account_ready), "crowdnode_ready")
         } catch (ex: Exception) {
-            log.info("CrowdNode error: $ex")
+            log.error("CrowdNode error: $ex")
             analyticsService.logError(ex, "status: ${signUpStatus.value}")
 
             apiError.value = ex
@@ -161,7 +162,10 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-    override suspend fun deposit(accountAddress: Address, amount: Coin): Boolean {
+    override suspend fun deposit(amount: Coin): Boolean {
+        val accountAddress = this.accountAddress
+        requireNotNull(accountAddress) { "Account address is null, make sure to sign up" }
+
         return try {
             apiError.value = null
             val topUpTx = topUpAddress(accountAddress, amount)
@@ -193,9 +197,48 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
+    override suspend fun withdraw(amount: Coin): Boolean {
+        val accountAddress = this.accountAddress
+        requireNotNull(accountAddress) { "Account address is null, make sure to sign up" }
+
+        val balance = this.balance.value.data ?: Coin.ZERO
+        require(amount <= balance) { "Amount is larger than CrowdNode balance" }
+
+        return try {
+            apiError.value = null
+            val requestCode = Coin.valueOf(amount.value * 1000 / balance.value)
+            val requestValue = CrowdNodeConstants.CROWDNODE_OFFSET + requestCode
+            val topUpTx = topUpAddress(accountAddress, requestValue) // TODO: + fee
+            log.info("topUpTx id: ${topUpTx.txId}")
+            val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
+            val withdrawTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)
+            log.info("withdrawTx id: ${withdrawTx.txId}")
+
+            responseScope.launch {
+                val errorResponse = CrowdNodeErrorResponse(params, requestValue)
+                val tx = walletDataProvider.observeTransactions(
+                    CrowdNodeWithdrawalQueueResponse(params),
+                    errorResponse
+                ).first()
+                log.info("got withdrawal queue response: ${tx.txId}")
+
+                if (errorResponse.matches(tx)) {
+                    val ex = CrowdNodeException("Withdraw error")
+                    handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
+                }
+            }
+
+            return true
+        } catch (ex: Exception) {
+            handleError(ex, appContext.getString(R.string.crowdnode_withdraw_error))
+            false
+        }
+    }
+
     override fun refreshBalance(retries: Int) {
         responseScope.launch {
             val lastBalance = config.lastBalance.first()
+            balance.value = Resource.success(Coin.valueOf(lastBalance))
 
             for (i in 0..retries) {
                 if (i != 0) {
@@ -308,6 +351,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
             } catch (ex: HttpException) {
                 Resource.error(ex)
             } catch (ex: Exception) {
+                log.error("Error while resolving balance: $ex")
                 analyticsService.logError(ex)
                 Resource.error(ex)
             }
@@ -329,6 +373,7 @@ class CrowdNodeBlockchainApi @Inject constructor(
     private fun handleError(ex: Exception, error: String) {
         apiError.value = ex
         notifyIfNeeded(error, "crowdnode_error")
+        log.error("$error: $ex")
         analyticsService.logError(ex)
     }
 

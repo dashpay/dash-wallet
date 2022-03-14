@@ -61,8 +61,8 @@
 	<string name="send_coins_fragment_receiving_address_complex">kompleks\nadresse</string>
 	<string name="send_coins_fragment_pending">(%s venter på bekreftelse)</string>
 	<string name="send_coins_fragment_amount_label">Beløp å betale</string>
-	<string name="send_coins_fragment_hint_dusty_send">Beløpet er for lite til å sende.</string>
-	<string name="send_coins_fragment_hint_insufficient_money">Ikke nok tilgjengelige mynter. Du mangler %s.</string>
+	<string name="send_coins_error_dusty_send">Beløpet er for lite til å sende.</string>
+	<string name="send_coins_error_insufficient_money">Ikke nok tilgjengelige mynter. Du mangler %s.</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">Summen av små betalinger i lommeboken er ikke en verdi stor nok til å sendes.</string>
 	<string name="send_coins_fragment_direct_payment_enable">Send betaling direkte til mottakeren.</string>
 	<string name="send_coins_fragment_direct_payment_ack">Din betaling ble sendt direkte med suksess.</string>

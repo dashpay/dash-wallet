@@ -61,8 +61,8 @@
 	<string name="send_coins_fragment_receiving_address_complex">complex\nadreça</string>
 	<string name="send_coins_fragment_pending">(%s esperant confirmació)</string>
 	<string name="send_coins_fragment_amount_label">Total a pagar</string>
-	<string name="send_coins_fragment_hint_dusty_send">La quantitat per enviar és massa petita.</string>
-	<string name="send_coins_fragment_hint_insufficient_money">No hi ha prou monedes. Et falten %s.</string>
+	<string name="send_coins_error_dusty_send">La quantitat per enviar és massa petita.</string>
+	<string name="send_coins_error_insufficient_money">No hi ha prou monedes. Et falten %s.</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">L\'import dels petits pagaments de la teva cartera no es sumen a la quantitat que es pot enviar.</string>
 	<string name="send_coins_fragment_direct_payment_enable">Enviar el pagament directament al beneficiari.</string>
 	<string name="send_coins_fragment_direct_payment_ack">El teu pagament directe s\'ha enviat correctament.</string>

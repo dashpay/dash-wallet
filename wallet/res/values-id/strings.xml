@@ -65,8 +65,8 @@
     <string name="send_coins_fragment_pin_label">Masukkan pin</string>
     <string name="send_coins_fragment_hint_fee_economic">Biaya jaringan %s akan dibayarkan.</string>
     <string name="send_coins_fragment_hint_fee_priority">Biaya prioritas %s akan dibayarkan. Jika Anda peduli dengan biaya rendah, gunakan \'prioritas\' hanya jika Anda perlu konfirmasi sesegera mungkin.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Dana tidak mencukupi</string>
+    <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
+    <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Jumlah pembayaran kecil di dompet Anda tidak menambah nilai yang dapat dikirim.</string>
     <string name="send_coins_fragment_hint_replaying">Saat ini pembayaran tidak dimungkinkan karena dompet tidak sepenuhnya disinkronkan dengan jaringan</string>
     <string name="send_coins_fragment_direct_payment_enable">Kirim pembayaran langsung ke penerima pembayaran.</string>

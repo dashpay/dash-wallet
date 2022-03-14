@@ -65,8 +65,8 @@
     <string name="send_coins_fragment_pin_label">Wpisz PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">Opłata sieci %s zostanie pobrana.</string>
     <string name="send_coins_fragment_hint_fee_priority">zostanie pobrana opłata priorytetowa  %s. Jeśli zależy ci na niskich opłatach, używaj \'opłaty priorytetowej\', jedynie gdy potrzebujesz szybkiego potwierdzenia transakcji.</string>
-    <string name="send_coins_fragment_hint_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Niewystarczająca ilość funduszy</string>
+    <string name="send_coins_error_dusty_send">Kwota jest zbyt mała, aby wysłać</string>
+    <string name="send_coins_error_insufficient_money">Niewystarczająca ilość funduszy</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ilość małych płatności w twoim portfelu nie dodaje się do wartości możliwej do wysyłki.</string>
     <string name="send_coins_fragment_hint_replaying">Obecnie, płatności nie są możliwe, ponieważ portfel nie jest w pełni zsynchronizowany z siecią. </string>
     <string name="send_coins_fragment_direct_payment_enable">Wyślij płatność bezpośrednio do odbiorcy.</string>
