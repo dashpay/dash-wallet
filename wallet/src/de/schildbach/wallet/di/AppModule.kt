@@ -22,7 +22,9 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import javax.inject.Singleton
@@ -40,4 +42,9 @@ abstract class AppModule {
     abstract fun bindAnalyticsService(
         analyticsService: FirebaseAnalyticsServiceImpl
     ): AnalyticsService
+
+    @Binds
+    abstract fun bindSendPaymentService(
+        sendCoinsTaskRunner: SendCoinsTaskRunner
+    ): SendPaymentService
 }
