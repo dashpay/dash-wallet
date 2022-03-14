@@ -20,7 +20,6 @@ package org.dash.wallet.common.ui.dialogs
 import android.content.DialogInterface
 import android.graphics.drawable.InsetDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -32,7 +31,6 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
-import kotlinx.android.synthetic.main.dialog_title.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
@@ -61,6 +59,27 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
                 negativeButtonText,
                 positiveButtonText
             )
+        }
+
+        suspend fun withProgress(message: String, activity: FragmentActivity, action: suspend () -> Unit) {
+            val dialog = progress(message)
+            dialog.show(activity) { }
+            action.invoke()
+            dialog.dismiss()
+        }
+
+        @JvmStatic
+        fun progress(
+            message: String
+        ): AdaptiveDialog {
+            return custom(
+                R.layout.dialog_progress,
+                null,
+                null,
+                message,
+                "",
+                null
+            ).apply { isCancelable = false }
         }
 
         fun create(
@@ -128,8 +147,8 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         val iconView: ImageView? = view.findViewById(R.id.dialog_icon)
         val titleView: TextView? = view.findViewById(R.id.dialog_title)
         val messageView: TextView = view.findViewById(R.id.dialog_message)
-        val positiveButton: TextView = view.findViewById(R.id.dialog_positive_button)
-        val negativeButton: TextView = view.findViewById(R.id.dialog_negative_button)
+        val positiveButton: TextView? = view.findViewById(R.id.dialog_positive_button)
+        val negativeButton: TextView? = view.findViewById(R.id.dialog_negative_button)
         val negativeButtonSecondary: TextView? = view.findViewById(R.id.dialog_negative_button_secondary)
 
         showIfNotEmpty(iconView, ICON_RES_ARG)
@@ -151,20 +170,20 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
         }
 
         if (negativeButtonSecondary != null && !isPositiveButtonShown) {
-            negativeButton.isVisible = false
+            negativeButton?.isVisible = false
             negativeButtonSecondary.isVisible = true
-            negativeButtonSecondary.text = negativeButton.text
+            negativeButtonSecondary.text = negativeButton?.text
 
             negativeButtonSecondary.setOnClickListener {
                 onNegativeAction()
             }
         }
 
-        positiveButton.setOnClickListener {
+        positiveButton?.setOnClickListener {
             onPositiveAction()
         }
 
-        negativeButton.setOnClickListener {
+        negativeButton?.setOnClickListener {
             onNegativeAction()
         }
     }

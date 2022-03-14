@@ -29,12 +29,13 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentEntryPointBinding
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 @AndroidEntryPoint
 class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
     private val binding by viewBinding(FragmentEntryPointBinding::bind)
-    private val viewModel: EntryPointViewModel by activityViewModels()
+    private val viewModel: CrowdNodeViewModel by activityViewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -117,7 +118,6 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
         }
 
         viewModel.hasEnoughBalance.observe(viewLifecycleOwner) {
-            Log.i("CROWDNODE", "Enough balance: ${it}, minimum: ${CrowdNodeConstants.MINIMUM_REQUIRED_DASH.toPlainString()}, current balance: ${viewModel.dashBalance.value?.toPlainString() ?: "null"}")
             displayNewAccountRequirements(viewModel.needPassphraseBackUp, it)
         }
 

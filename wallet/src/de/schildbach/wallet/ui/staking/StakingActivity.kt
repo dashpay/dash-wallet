@@ -31,13 +31,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
-import org.dash.wallet.integrations.crowdnode.ui.entry_point.EntryPointViewModel
-import org.dash.wallet.integrations.crowdnode.ui.entry_point.NavigationRequest
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.ui.NavigationRequest
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class StakingActivity : LockScreenActivity() {
-    private val viewModel: EntryPointViewModel by viewModels()
+    private val viewModel: CrowdNodeViewModel by viewModels()
     private lateinit var binding: ActivityStakingBinding
 
     @Inject
@@ -87,7 +87,7 @@ class StakingActivity : LockScreenActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
-        val status = viewModel.crowdNodeSignUpStatus.value
+        val status = viewModel.signUpStatus.value
 
         navGraph.startDestination =
             when (status) {

@@ -38,12 +38,13 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.api.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentNewAccountBinding
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     private val binding by viewBinding(FragmentNewAccountBinding::bind)
-    private val viewModel: EntryPointViewModel by activityViewModels()
+    private val viewModel: CrowdNodeViewModel by activityViewModels()
 
     @Inject
     lateinit var securityModel: SecurityModel
@@ -92,7 +93,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.copyAddressBtn.setOnClickListener {
-            viewModel.accountAddress.value?.copy(requireActivity(), "dash address")
+            viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
         }
 
         viewModel.termsAccepted.observe(viewLifecycleOwner) {
@@ -100,17 +101,15 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         viewModel.accountAddress.observe(viewLifecycleOwner) {
-            binding.dashAddressTxt.text = it
+            binding.dashAddressTxt.text = it.toBase58()
         }
 
-        viewModel.crowdNodeSignUpStatus.observe(viewLifecycleOwner) {
+        viewModel.signUpStatus.observe(viewLifecycleOwner) {
             binding.registerPanel.isVisible = it == SignUpStatus.NotStarted || it == SignUpStatus.Error
             binding.inProgressPanel.isVisible = it != SignUpStatus.NotStarted && it != SignUpStatus.Error
 
             when (it) {
-                SignUpStatus.Finished -> {
-                    safeNavigate(NewAccountFragmentDirections.newAccountToPortal())
-                }
+                SignUpStatus.Finished -> safeNavigate(NewAccountFragmentDirections.newAccountToPortal())
                 SignUpStatus.AcceptingTerms -> binding.progressMessage.text = getString(R.string.accepting_terms)
                 SignUpStatus.Error -> showError()
                 else -> binding.progressMessage.text = getString(R.string.crowdnode_creating)
@@ -155,6 +154,7 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
     }
 
     private fun showError() {
-        safeNavigate(NewAccountFragmentDirections.newAccountToError())
+        val title = getString(R.string.crowdnode_signup_error)
+        safeNavigate(NewAccountFragmentDirections.newAccountToResult(true, title, ""))
     }
 }

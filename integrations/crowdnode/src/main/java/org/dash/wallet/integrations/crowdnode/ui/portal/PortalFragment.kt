@@ -22,9 +22,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.params.MainNetParams
@@ -36,11 +35,12 @@ import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentPortalBinding
+import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
 
 @AndroidEntryPoint
 class PortalFragment : Fragment(R.layout.fragment_portal) {
     private val binding by viewBinding(FragmentPortalBinding::bind)
-    private val viewModel by viewModels<PortalViewModel>()
+    private val viewModel by activityViewModels<CrowdNodeViewModel>()
     private var balanceAnimator: ObjectAnimator? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -55,16 +55,18 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
         binding.depositBtn.setOnClickListener {
-            viewModel.deposit()
-            // TODO: for QA
-            Toast.makeText(requireContext(), "Depositing...", Toast.LENGTH_SHORT).show()
+            safeNavigate(PortalFragmentDirections.portalToTransfer(false))
+        }
+
+        binding.withdrawBtn.setOnClickListener {
+            safeNavigate(PortalFragmentDirections.portalToTransfer(true))
         }
 
         binding.onlineAccountBtn.setOnClickListener {
             val url = if (viewModel.networkParameters == MainNetParams.get()) {
-                getString(R.string.crowdnode_login_page, viewModel.account.toBase58())
+                getString(R.string.crowdnode_login_page, viewModel.accountAddress.value)
             } else {
-                getString(R.string.crowdnode_login_test_page, viewModel.account.toBase58())
+                getString(R.string.crowdnode_login_test_page, viewModel.accountAddress.value)
             }
             safeNavigate(PortalFragmentDirections.portalToOnlineAccountInfo(url))
         }
@@ -84,12 +86,12 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
                 AdaptiveDialog.create(
                     R.drawable.ic_info_blue_encircled,
                     getString(R.string.crowdnode_your_address_title),
-                    viewModel.account.toBase58(),
+                    viewModel.accountAddress.value?.toBase58() ?: "",
                     getString(R.string.button_close),
                     getString(R.string.button_copy_address)
                 ).show(requireActivity()) { toCopy ->
                     if (toCopy == true) {
-                        viewModel.account.toBase58().copy(requireActivity(), "dash address")
+                        viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")
                     }
                 }
             }
@@ -98,6 +100,15 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         }
 
         handleBalance(binding)
+
+        viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                // TODO: withdraw
+                safeNavigate(PortalFragmentDirections.portalToResult(
+                    true, getString(R.string.crowdnode_deposit_error), "")
+                )
+            }
+        }
     }
 
     private fun updateFiatAmount(balance: Coin?, exchangeRate: ExchangeRate?) {
@@ -121,7 +132,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             repeatMode = ObjectAnimator.REVERSE
         }
 
-        viewModel.balanceLoading.observe(viewLifecycleOwner) { isLoading ->
+        viewModel.isBalanceLoading.observe(viewLifecycleOwner) { isLoading ->
             if (isLoading) {
                 this.balanceAnimator?.start()
             } else {
@@ -129,13 +140,13 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
             }
         }
 
-        viewModel.balance.observe(viewLifecycleOwner) { balance ->
+        viewModel.crowdNodeBalance.observe(viewLifecycleOwner) { balance ->
             binding.walletBalanceDash.setAmount(balance)
             updateFiatAmount(balance, viewModel.exchangeRate.value)
         }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { rate ->
-            updateFiatAmount(viewModel.balance.value ?: Coin.ZERO, rate)
+            updateFiatAmount(viewModel.crowdNodeBalance.value ?: Coin.ZERO, rate)
         }
     }
 

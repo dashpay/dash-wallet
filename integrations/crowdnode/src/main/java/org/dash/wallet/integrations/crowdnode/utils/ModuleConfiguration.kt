@@ -53,8 +53,8 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
 
 
     suspend fun setAccountAddress(address: String) {
-        context.dataStore.edit { settings ->
-            settings[ACCOUNT_ADDRESS_KEY] = address
+        context.dataStore.edit { preferences ->
+            preferences[ACCOUNT_ADDRESS_KEY] = address
         }
     }
 
@@ -64,9 +64,9 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
         }
 
 
-    suspend fun setCrowdNodeError(address: String) {
-        context.dataStore.edit { settings ->
-            settings[CROWDNODE_ERROR_KEY] = address
+    suspend fun setCrowdNodeError(error: String) {
+        context.dataStore.edit { preferences ->
+            preferences[CROWDNODE_ERROR_KEY] = error
         }
     }
 
@@ -77,8 +77,8 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
 
 
     suspend fun setLastBalance(balance: Long) {
-        context.dataStore.edit { settings ->
-            settings[LAST_BALANCE_KEY] = balance
+        context.dataStore.edit { preferences ->
+            preferences[LAST_BALANCE_KEY] = balance
         }
     }
 
@@ -89,8 +89,8 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
 
 
     suspend fun setIsInfoShown(isShown: Boolean) {
-        context.dataStore.edit { settings ->
-            settings[INFO_SHOWN_KEY] = isShown
+        context.dataStore.edit { preferences ->
+            preferences[INFO_SHOWN_KEY] = isShown
         }
     }
 }

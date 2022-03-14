@@ -23,7 +23,14 @@
     android:orientation="vertical"
     android:padding="15dp"
     android:background="@color/background_secondary"
-    tools:context=".ui.ErrorFragment">
+    tools:context=".ui.ResultFragment">
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/top_guide"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.16" />
 
     <ImageView
         android:id="@+id/icon"
@@ -32,9 +39,7 @@
         android:src="@drawable/ic_error_red"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/title"
-        app:layout_constraintVertical_chainStyle="packed" />
+        app:layout_constraintTop_toTopOf="@id/top_guide" />
 
     <TextView
         android:id="@+id/title"
@@ -43,12 +48,11 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:layout_marginHorizontal="5dp"
-        android:text="@string/crowdnode_error"
+        android:text="@string/crowdnode_signup_error"
         android:gravity="center_horizontal"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/icon"
-        app:layout_constraintBottom_toTopOf="@id/subtitle" />
+        app:layout_constraintTop_toBottomOf="@id/icon" />
 
     <TextView
         android:id="@+id/subtitle"
@@ -61,7 +65,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/title"
-        app:layout_constraintBottom_toTopOf="@id/send_report_btn"
         tools:text="Some description about what is wrong and how it can be fixed."/>
 
     <Button
@@ -76,31 +79,26 @@
         android:text="@string/button_send_report"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/subtitle"
+        app:layout_constraintTop_toBottomOf="@id/subtitle" />
+
+    <Button
+        android:id="@+id/negative_btn"
+        style="@style/Button.Tertiary.Large.Blue"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="14dp"
+        android:text="@string/button_close"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/positive_btn"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/positive_btn"
+        style="@style/Button.Primary.Large.Blue"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:weightSum="1"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <Button
-            android:id="@+id/negative_btn"
-            style="@style/Button.Tertiary.Large.Blue"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="14dp"
-            android:layout_weight="0.5"
-            android:text="@string/button_close" />
-
-        <Button
-            android:id="@+id/positive_btn"
-            style="@style/Button.Primary.Large.Blue"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.5"
-            android:text="@string/button_retry" />
-    </LinearLayout>
+        android:text="@string/button_retry"
+        app:layout_constraintStart_toEndOf="@id/negative_btn"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>
