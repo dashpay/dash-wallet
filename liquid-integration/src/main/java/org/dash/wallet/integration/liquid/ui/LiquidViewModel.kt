@@ -25,7 +25,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.livedata.NetworkState
+import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import javax.inject.Inject
@@ -36,7 +36,7 @@ import kotlin.coroutines.suspendCoroutine
 class LiquidViewModel @Inject constructor(
     private val config: Configuration,
     walletDataProvider: WalletDataProvider,
-    networkState: NetworkState
+    networkState: NetworkStateInt
 ) : ConnectivityViewModel(networkState) {
 
     val defaultCurrency = walletDataProvider.defaultCurrencyCode()

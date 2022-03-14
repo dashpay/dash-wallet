@@ -27,7 +27,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.ExchangeRate
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
-import org.dash.wallet.common.livedata.NetworkState
+import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethod
@@ -43,7 +43,7 @@ class CoinbaseServicesViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val exchangeRatesProvider: ExchangeRatesProvider,
     val config: Configuration,
-    networkState: NetworkState
+    networkState: NetworkStateInt
 ) : ConnectivityViewModel(networkState) {
 
     private val _user: MutableLiveData<CoinBaseUserAccountData> = MutableLiveData()

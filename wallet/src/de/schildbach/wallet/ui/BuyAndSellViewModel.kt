@@ -27,7 +27,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.NetworkState
+import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepository
@@ -45,7 +45,8 @@ class BuyAndSellViewModel
 @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
     private val config: Configuration,
-    networkState: NetworkState)
+    networkState: NetworkStateInt
+)
     : ConnectivityViewModel(networkState) {
 
     // TODO: move this into UpholdViewModel
