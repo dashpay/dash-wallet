@@ -76,7 +76,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     private lateinit var binding: ActivityBuyAndSellIntegrationsBinding
     private val viewModel by viewModels<BuyAndSellViewModel>()
     private val liquidViewModel by viewModels<LiquidViewModel>()
-
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
         BuyAndSellDashServicesAdapter(config){ model ->
@@ -205,6 +204,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     fun initViewModel() {
         viewModel.isDeviceConnectedToInternet.observe(this) { isConnected ->
             if (isConnected != null) {
+                buyAndSellDashServicesAdapter.updateIconState(isConnected)
                 setNetworkState(isConnected)
             }
         }
