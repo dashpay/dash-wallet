@@ -16,9 +16,13 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.app.AlertDialog
+import android.content.DialogInterface
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.text.InputType
 import android.view.View
+import android.widget.EditText
 import androidx.activity.addCallback
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -59,24 +63,25 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private var newBuyOrderId: String? = null
     @Inject
     lateinit var analyticsService: FirebaseAnalyticsServiceImpl
-    private val countDownTimer by lazy {   object : CountDownTimer(10000, 1000) {
+    private val countDownTimer by lazy {
+        object : CountDownTimer(10000, 1000) {
 
-        override fun onTick(millisUntilFinished: Long) {
-            binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
-            binding.retryIcon.visibility = View.GONE
-        }
+            override fun onTick(millisUntilFinished: Long) {
+                binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
+                binding.retryIcon.visibility = View.GONE
+            }
 
-        override fun onFinish() {
-            binding.confirmBtn.text = getString(R.string.retry)
-            binding.retryIcon.visibility = View.VISIBLE
-            isRetrying =true
+            override fun onFinish() {
+                binding.confirmBtn.text = getString(R.string.retry)
+                binding.retryIcon.visibility = View.VISIBLE
+                isRetrying = true
+            }
         }
-     }
     }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.BOTTOM_BACK_TO_ENTER_AMOUNT, bundleOf())
             findNavController().popBackStack()
         }
@@ -114,14 +119,20 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CONFIRM_DASH_PURCHASE, bundleOf())
             countDownTimer.cancel()
             if (isRetrying) {
-                viewModel.onRefreshOrderClicked(amountViewModel.onContinueEvent.value?.second,
-                    selectedPaymentMethodId)
+                viewModel.onRefreshOrderClicked(
+                    amountViewModel.onContinueEvent.value?.second,
+                    selectedPaymentMethodId
+                )
                 isRetrying = false
             } else {
                 newBuyOrderId?.let { buyOrderId -> viewModel.commitBuyOrder(buyOrderId) }
             }
         }
 
+
+        viewModel.commitBuyOrderSuccessCallback.observe(viewLifecycleOwner) {
+            show2FADialog()
+        }
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
             if (showLoading) {
                 showProgress(R.string.loading)
@@ -130,14 +141,17 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
 
-        viewModel.commitBuyOrderFailedCallback.observe(viewLifecycleOwner){
+        viewModel.commitBuyOrderFailedCallback.observe(viewLifecycleOwner) {
             showBuyOrderDialog(CoinBaseBuyDashDialog.Type.PURCHASE_ERROR, null)
         }
 
 
-        viewModel.transactionCompleted.observe(viewLifecycleOwner){ transactionStatus ->
-            showBuyOrderDialog(if (transactionStatus.isTransactionSuccessful)
-                CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR, transactionStatus.responseMessage)
+        viewModel.transactionCompleted.observe(viewLifecycleOwner) { transactionStatus ->
+            showBuyOrderDialog(
+                if (transactionStatus.isTransactionSuccessful)
+                    CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR,
+                transactionStatus.responseMessage
+            )
         }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
@@ -145,17 +159,17 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.orderReviewToFeeInfo())
         }
 
-        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner){
+        viewModel.placeBuyOrderFailedCallback.observe(viewLifecycleOwner) {
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                 R.string.something_wrong_title,
                 getString(R.string.retry_later_message),
                 R.drawable.ic_info_red,
-                negativeButtonText= R.string.close
+                negativeButtonText = R.string.close
             )
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToError(placeBuyOrderError))
         }
 
-        viewModel.placeBuyOrder.observe(viewLifecycleOwner){
+        viewModel.placeBuyOrder.observe(viewLifecycleOwner) {
             it.updateOrderReviewUI()
             countDownTimer.start()
         }
@@ -212,7 +226,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                             findNavController().popBackStack()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
-                            viewModel.retry()
+                            show2FADialog()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_SUCCESS -> {
                             dismiss()
@@ -234,5 +248,28 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     override fun onPause() {
         countDownTimer.cancel()
         super.onPause()
+    }
+
+    private fun show2FADialog() {
+        val builder: AlertDialog.Builder = android.app.AlertDialog.Builder(requireContext())
+        builder.setTitle("Title")
+
+        val input = EditText(requireContext())
+        input.setHint("Enter Code")
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        builder.setView(input)
+
+
+        builder.setPositiveButton(
+            "OK",
+            DialogInterface.OnClickListener { dialog, which ->
+                // Here you get get input text from the Edittext
+                var m_Text = input.text.toString()
+                viewModel.sendDash(m_Text)
+            }
+        )
+        builder.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
+
+        builder.show()
     }
 }

@@ -115,8 +115,8 @@ class CoinBaseRepository @Inject constructor(
         commitBuyOrderMapper.map(commitBuyResult?.data)
     }
 
-    override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams) = safeApiCall {
-        servicesApi.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams)
+    override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams,  api2FATokenVersion: String) = safeApiCall {
+        servicesApi.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams, api2FATokenVersion = api2FATokenVersion)
     }
 
     override fun getUserLastCoinbaseBalance(): String = userPreferences.lastCoinbaseBalance ?: ""
@@ -154,7 +154,7 @@ interface CoinBaseRepositoryInt {
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
-    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<SendTransactionToWalletResponse?>
+    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams, api2FATokenVersion: String): ResponseResource<SendTransactionToWalletResponse?>
     fun getUserLastCoinbaseBalance(): String
     fun isUserConnected(): Boolean
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>

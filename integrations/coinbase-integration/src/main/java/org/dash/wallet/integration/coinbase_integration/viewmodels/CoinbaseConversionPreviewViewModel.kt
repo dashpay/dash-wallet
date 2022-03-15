@@ -51,6 +51,10 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val swapTradeOrder: LiveData<SwapTradeUIModel>
         get() = _swapTradeOrder
 
+    private val _commitBuyOrderSuccessCallback: MutableLiveData<SendTransactionToWalletParams> = MutableLiveData()
+    val commitBuyOrderSuccessCallback: LiveData<SendTransactionToWalletParams>
+        get() = _commitBuyOrderSuccessCallback
+
     val swapTradeFailedCallback = SingleLiveEvent<String>()
 
     fun commitSwapTrade(params: String) = viewModelScope.launch(Dispatchers.Main) {
@@ -68,7 +72,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                         to = walletDataProvider.freshReceiveAddress().toBase58(),
                         type = "send"
                     ).apply {
-                        sendDashToWallet(this)
+                        _commitBuyOrderSuccessCallback.value=this
                     }
                 }
             }
@@ -79,10 +83,17 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         }
     }
 
-    fun sendDashToWallet(params: SendTransactionToWalletParams) = viewModelScope.launch(Dispatchers.Main) {
+    fun sendDash( api2FATokenVersion: String)= viewModelScope.launch(Dispatchers.Main) {
+        commitBuyOrderSuccessCallback.value?.let{
+            sendDashToWallet(it,api2FATokenVersion)
+        }
+
+    }
+
+     fun sendDashToWallet(params: SendTransactionToWalletParams, api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
         if (_showLoading.value == false)
             _showLoading.value = true
-        when (val result = coinBaseRepository.sendFundsToWallet(params)) {
+        when (val result = coinBaseRepository.sendFundsToWallet(params,api2FATokenVersion)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
                 if (result.value == null){
@@ -108,7 +119,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
     fun retry() {
         sendFundToWalletParams?.let {
-            sendDashToWallet(it)
+           // sendDashToWallet(it)
         }
     }
 

@@ -470,7 +470,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 }
 
                 val cleanedValue =
-                    fiatAmount.value.toBigDecimal() *
+                    balance.toBigDecimal() *
                         it.currencyToDashExchangeRate.toBigDecimal()
                 val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
                 val coin = try {

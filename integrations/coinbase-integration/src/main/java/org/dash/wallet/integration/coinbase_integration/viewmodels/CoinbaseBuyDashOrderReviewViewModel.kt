@@ -50,6 +50,10 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     val placeBuyOrder: LiveData<PlaceBuyOrderUIModel>
         get() = _placeBuyOrder
 
+    private val _commitBuyOrderSuccessCallback: MutableLiveData<SendTransactionToWalletParams> = MutableLiveData()
+    val commitBuyOrderSuccessCallback: LiveData<SendTransactionToWalletParams>
+        get() = _commitBuyOrderSuccessCallback
+
     fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
         when (val result = coinBaseRepository.commitBuyOrder(params)) {
@@ -65,7 +69,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                         to = walletDataProvider.freshReceiveAddress().toBase58(),
                         type = result.value.transactionType
                     ).apply {
-                        sendDashToWallet(this)
+                        _commitBuyOrderSuccessCallback.value = this
                     }
                 }
             }
@@ -76,13 +80,18 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
         }
     }
 
-    private fun sendDashToWallet(params: SendTransactionToWalletParams) = viewModelScope.launch(Dispatchers.Main) {
+    fun sendDash(api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
+        sendFundToWalletParams?.apply {
+            sendDashToWallet(this, api2FATokenVersion)
+        }
+    }
+    private fun sendDashToWallet(params: SendTransactionToWalletParams, api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
         if (_showLoading.value == false)
             _showLoading.value = true
-        when (val result = coinBaseRepository.sendFundsToWallet(params)) {
+        when (val result = coinBaseRepository.sendFundsToWallet(params, api2FATokenVersion)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
-                if (result.value == null){
+                if (result.value == null) {
                     _transactionCompleted.value = TransactionState(false, null)
                 } else {
                     _transactionCompleted.value = TransactionState(true, null)
@@ -91,7 +100,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
             is ResponseResource.Failure -> {
                 _showLoading.value = false
                 val error = result.errorBody?.string()
-                if (result.errorCode == 400){
+                if (result.errorCode == 400) {
                     error?.let {
                         val message = CoinbaseErrorResponse.getErrorMessage(it)
                         _transactionCompleted.value = TransactionState(false, message)
@@ -100,12 +109,6 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                     _transactionCompleted.value = TransactionState(false, null)
                 }
             }
-        }
-    }
-
-    fun retry() {
-        sendFundToWalletParams?.let {
-            sendDashToWallet(it)
         }
     }
 

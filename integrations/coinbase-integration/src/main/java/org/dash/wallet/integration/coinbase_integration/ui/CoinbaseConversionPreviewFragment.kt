@@ -16,9 +16,13 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.app.AlertDialog
+import android.content.DialogInterface
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.text.InputType
 import android.view.View
+import android.widget.EditText
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -129,6 +133,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
             countDownTimer.start()
+        }
+
+        viewModel.commitBuyOrderSuccessCallback.observe(viewLifecycleOwner) {
+            show2FADialog()
         }
     }
 
@@ -246,5 +254,28 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     override fun onPause() {
         countDownTimer.cancel()
         super.onPause()
+    }
+
+    private fun show2FADialog() {
+        val builder: AlertDialog.Builder = android.app.AlertDialog.Builder(requireContext())
+        builder.setTitle("Title")
+
+        val input = EditText(requireContext())
+        input.setHint("Enter Code")
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        builder.setView(input)
+
+
+        builder.setPositiveButton(
+            "OK",
+            DialogInterface.OnClickListener { dialog, which ->
+                // Here you get get input text from the Edittext
+                var m_Text = input.text.toString()
+                viewModel.sendDash(m_Text)
+            }
+        )
+        builder.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
+
+        builder.show()
     }
 }
