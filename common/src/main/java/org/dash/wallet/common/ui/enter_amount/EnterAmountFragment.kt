@@ -124,13 +124,6 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         parentFragmentManager.beginTransaction()
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commit()
-
-        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
-            binding.bottomCard.isVisible = hasInternet
-            binding.networkStatusContainer.isVisible = !hasInternet
-        }
-
-        monitorNetworkChanges()
     }
 
     fun setViewDetails(continueText: String, keyboardHeader: View?) {
@@ -211,9 +204,10 @@ class EnterAmountFragment: Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
-    private fun monitorNetworkChanges(){
-        lifecycleScope.launchWhenResumed {
-            viewModel.monitorNetworkStateChange()
+    fun handleNetworkState(hasInternet: Boolean) {
+        lifecycleScope.launchWhenStarted {
+            binding.bottomCard.isVisible = hasInternet
+            binding.networkStatusContainer.isVisible = !hasInternet
         }
     }
 }

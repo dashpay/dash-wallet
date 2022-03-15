@@ -170,7 +170,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
             .commit()
 
-        amountViewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
             setNetworkState(hasInternet)
         }
     }
@@ -243,7 +243,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     override fun onResume() {
         super.onResume()
         countDownTimer.start()
-        amountViewModel.monitorNetworkStateChange()
+        viewModel.monitorNetworkStateChange()
     }
 
     override fun onPause() {
