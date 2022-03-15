@@ -17,11 +17,14 @@
 
 package de.schildbach.wallet.di
 
+import android.content.Context
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.SendPaymentService
@@ -33,6 +36,11 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class AppModule {
     companion object {
+        @Provides
+        fun provideApplication(
+            @ApplicationContext context: Context
+        ): WalletApplication = context as WalletApplication
+
         @Singleton
         @Provides
         fun provideLockScreenBroadcaster(): LockScreenBroadcaster = LockScreenBroadcaster()

@@ -32,8 +32,7 @@ class HeadersInterceptor @Inject constructor(
 
         val accessToken = userPreferences.lastCoinbaseAccessToken
         if (accessToken?.isEmpty()?.not() == true) {
-            // requestBuilder.header("Authorization", "Bearer $accessToken")
-            requestBuilder.header("Authorization", "Bearer f0dbd0a9ab731938a65ad34007042259bea884124c02b9cf4c632c8c3223dcdc")
+            requestBuilder.header("Authorization", "Bearer $accessToken")
         }
 
         requestBuilder.method(original.method(), original.body())
