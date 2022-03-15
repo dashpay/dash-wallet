@@ -36,6 +36,7 @@ import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.payment_method_picker.CardUtils
 import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
 import org.dash.wallet.common.ui.viewBinding
