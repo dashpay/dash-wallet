@@ -20,6 +20,8 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
 import androidx.activity.addCallback
+import androidx.annotation.ColorRes
+import androidx.annotation.StyleRes
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -32,9 +34,9 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
-import org.dash.wallet.common.ui.payment_method_picker.CardUtils
-import org.dash.wallet.common.ui.payment_method_picker.PaymentMethodType
+import org.dash.wallet.common.ui.getRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -64,12 +66,14 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         override fun onTick(millisUntilFinished: Long) {
             binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
             binding.retryIcon.visibility = View.GONE
+            setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_Blue, org.dash.wallet.common.R.color.dash_white)
         }
 
         override fun onFinish() {
             binding.confirmBtn.text = getString(R.string.retry)
             binding.retryIcon.visibility = View.VISIBLE
             isRetrying =true
+            setConfirmBtnStyle(org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_TransparentBlue, org.dash.wallet.common.R.color.dash_blue)
         }
      }
     }
@@ -90,7 +94,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CANCEL_DASH_PURCHASE, bundleOf())
             safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.confirmCancelBuyDashTransaction())
         }
-
+        /*
         arguments?.let {
             CoinbaseBuyDashOrderReviewFragmentArgs.fromBundle(it).paymentMethod.apply {
                 binding.contentOrderReview.paymentMethodName.text = this.name
@@ -109,6 +113,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
                 updateOrderReviewUI()
             }
         }
+        */
 
         binding.confirmBtnContainer.setOnClickListener {
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CONFIRM_DASH_PURCHASE, bundleOf())
@@ -158,6 +163,14 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         viewModel.placeBuyOrder.observe(viewLifecycleOwner){
             it.updateOrderReviewUI()
             countDownTimer.start()
+        }
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
+            .commit()
+
+        amountViewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
+            setNetworkState(hasInternet)
         }
     }
 
@@ -229,10 +242,21 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     override fun onResume() {
         super.onResume()
         countDownTimer.start()
+        amountViewModel.monitorNetworkStateChange()
     }
 
     override fun onPause() {
         countDownTimer.cancel()
         super.onPause()
+    }
+
+    private fun setNetworkState(hasInternet: Boolean){
+        binding.networkStatusContainer.isVisible = !hasInternet
+        binding.previewOfflineGroup.isVisible = hasInternet
+    }
+
+    private fun setConfirmBtnStyle(@StyleRes buttonStyle: Int, @ColorRes colorRes: Int) {
+        binding.confirmBtnContainer.background = resources.getRoundedBackground(buttonStyle)
+        binding.confirmBtn.setTextColor(resources.getColor(colorRes))
     }
 }

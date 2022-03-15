@@ -102,4 +102,5 @@
     <color name="secondary_btn_border_color">#e1e3e6</color>
     <color name="gray_background">@color/steel_gray_50</color>
     <color name="background_secondary">@color/white</color>
+    <color name="light_blue">#1A008DE4</color>
 </resources>
