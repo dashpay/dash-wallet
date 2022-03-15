@@ -20,15 +20,18 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.addCallback
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.FancyAlertDialog.Companion.newProgress
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -38,6 +41,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErr
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseServicesViewModel
 import javax.inject.Inject
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     private val binding by viewBinding(FragmentCoinbaseServicesBinding::bind)
@@ -49,7 +53,6 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.titleBar.connected.setText(R.string.connected)
         binding.titleBar.toolbarTitle.setText(R.string.coinbase)
         binding.titleBar.toolbar.setNavigationOnClickListener {
             requireActivity().finish()
@@ -139,6 +142,14 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
         viewModel.coinbaseLogOutCallback.observe(viewLifecycleOwner) {
             requireActivity().finish()
         }
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.network_status_container, NetworkUnavailableFragment.newInstance())
+            .commit()
+
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ isConnected ->
+            setNetworkState(isConnected)
+        }
     }
 
     private fun setLocalFaitAmount(balance: String) {
@@ -165,5 +176,19 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_coinbase_services) {
     override fun onStop() {
         dismissProgress()
         super.onStop()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.monitorNetworkStateChange()
+    }
+
+    private fun setNetworkState(hasInternet: Boolean){
+        binding.coinbaseServicesOfflineGroup.isVisible = !hasInternet
+        binding.coinbaseServicesGroup.isVisible = hasInternet
+        binding.titleBar.connected.setText(if (hasInternet) R.string.connected else R.string.disconnected)
+        binding.titleBar.connected.setCompoundDrawablesWithIntrinsicBounds(if (hasInternet)
+            org.dash.wallet.common.R.drawable.ic_connected else
+                org.dash.wallet.common.R.drawable.ic_disconnected, 0,0,0)
     }
 }

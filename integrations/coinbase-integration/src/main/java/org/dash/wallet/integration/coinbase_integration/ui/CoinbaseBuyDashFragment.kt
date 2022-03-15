@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -55,12 +56,12 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private var loadingDialog: FancyAlertDialog? = null
     @Inject
     lateinit var analyticsService: AnalyticsService
-
+    private lateinit var fragment: EnterAmountFragment
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         if (savedInstanceState == null) {
-            val fragment = EnterAmountFragment.newInstance(
+            fragment = EnterAmountFragment.newInstance(
                 isMaxButtonVisible = false,
                 showCurrencySelector = false
             )
@@ -146,6 +147,11 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 getString(R.string.got_it)
             ).show(requireActivity()) { }
         }
+
+        monitorNetworkChanges()
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
+            fragment.handleNetworkState(hasInternet)
+        }
     }
 
     private fun setupPaymentMethodPayment() {
@@ -169,6 +175,12 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private fun dismissProgress() {
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
+        }
+    }
+
+    private fun monitorNetworkChanges(){
+        lifecycleScope.launchWhenResumed {
+            viewModel.monitorNetworkStateChange()
         }
     }
 }

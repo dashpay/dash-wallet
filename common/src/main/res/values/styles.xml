@@ -858,4 +858,9 @@
         <item name="android:topLeftRadius">0dp</item>
         <item name="android:topRightRadius">0dp</item>
     </style>
+    <style name="PrimaryButtonTheme.Large.TransparentBlue">
+        <item name="backgroundColor">@color/light_blue</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
 </resources>

@@ -17,25 +17,27 @@
 
 package org.dash.wallet.integration.liquid.ui
 
-import android.app.Application
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.liveData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import javax.inject.Inject
 import kotlin.coroutines.suspendCoroutine
 
+@ExperimentalCoroutinesApi
 @HiltViewModel
 class LiquidViewModel @Inject constructor(
-    application: Application,
     private val config: Configuration,
-    walletDataProvider: WalletDataProvider
-) : ConnectivityViewModel(application) {
+    walletDataProvider: WalletDataProvider,
+    networkState: NetworkStateInt
+) : ConnectivityViewModel(networkState) {
 
     val defaultCurrency = walletDataProvider.defaultCurrencyCode()
 
