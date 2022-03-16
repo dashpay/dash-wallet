@@ -115,7 +115,7 @@ class CoinBaseRepository @Inject constructor(
         commitBuyOrderMapper.map(commitBuyResult?.data)
     }
 
-    override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams,  api2FATokenVersion: String) = safeApiCall {
+    override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams, api2FATokenVersion: String) = safeApiCall {
         servicesApi.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams, api2FATokenVersion = api2FATokenVersion)
     }
 
@@ -140,6 +140,10 @@ class CoinBaseRepository @Inject constructor(
         }
         WithdrawalLimitUIModel(userPreferences.coinbaseUserWithdrawalLimitAmount, userPreferences.coinbaseSendLimitCurrency)
     }
+
+    override suspend fun createAddress(): ResponseResource<String?> = safeApiCall {
+        return@safeApiCall servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId).body()?.addresses?.address
+    }
 }
 
 interface CoinBaseRepositoryInt {
@@ -150,6 +154,7 @@ interface CoinBaseRepositoryInt {
     suspend fun disconnectCoinbaseAccount()
     fun saveLastCoinbaseDashAccountBalance(amount: String?)
     fun saveUserAccountId(accountId: String?)
+    suspend fun createAddress(): ResponseResource<String?>
     suspend fun getUserAccountAddress(): ResponseResource<String>
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>

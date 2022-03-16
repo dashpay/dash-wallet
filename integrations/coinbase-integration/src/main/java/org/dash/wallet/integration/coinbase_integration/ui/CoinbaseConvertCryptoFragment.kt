@@ -46,7 +46,6 @@ import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.mode
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallets.CryptoWalletsDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConvertCryptoViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
-import java.util.*
 
 
 @AndroidEntryPoint
@@ -103,12 +102,16 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
                 selectedCoinBaseAccount?.let {
                     pair.second?.first?.let { fait ->
-                        viewModel.swapTrade(fait, it)
+                        viewModel.swapTrade(fait, it, pair.first)
                     }
                 }
             } else {
                 pair.second?.second?.let { coin ->
-                    viewModel.sendDashToCoinBase(coin)
+                    selectedCoinBaseAccount?.let {
+                        pair.second?.first?.let { fait ->
+                            viewModel.sellDashToCoinBase(coin, fait, it)
+                        }
+                    }
                 }
             }
         }

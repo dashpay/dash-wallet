@@ -26,6 +26,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -38,7 +39,8 @@ import javax.inject.Inject
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val config: Configuration,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletDataProvider,
+    private val sendPaymentService: SendPaymentService
 ) : ViewModel() {
     private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
     val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
@@ -72,7 +74,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         get() = this._dashWalletBalance
 
     val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
-
+    val sendDashToCoinBaseFailed = SingleLiveEvent<Unit>()
     init {
         setDashWalletBalance()
         getUserAccountInfo()
@@ -106,17 +108,25 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
 
-    fun sendDashToCoinBase(coin: Coin) = viewModelScope.launch(Dispatchers.Main) {
+    fun sellDashToCoinBase(coin: Coin, valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
-        when (val result = coinBaseRepository.getUserAccountAddress()) {
+
+
+        when (val result = coinBaseRepository.createAddress()) {
             is ResponseResource.Success -> {
-                if (result.value.isEmpty()) {
+                if (result.value?.isEmpty() == true) {
                     _showLoading.value = false
                     getUserAccountAddressFailedCallback.call()
                 } else {
-
-                    val address = walletDataProvider.createSentDashAddress(result.value)
-                    walletDataProvider.sendCoins(address, coin)
+                    result.value?.let {
+                        if (sendDashToCoinbase(coin, result.value)) {
+                            swapTrade(valueToConvert, selectedCoinBaseAccount, true)
+                        } else {
+                            _showLoading.value = false
+                            sendDashToCoinBaseFailed.call()
+                        }
+                    }
+                    _showLoading.value = false
                 }
             }
             is ResponseResource.Failure -> {
@@ -126,12 +136,25 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         }
     }
 
-    fun swapTrade(valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel) = viewModelScope.launch(Dispatchers.Main) {
+    private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
+        val address = walletDataProvider.createSentDashAddress(addressInfo)
+        try {
+            val transaction = sendPaymentService.sendCoins(address, coin)
+            return transaction.isPending
+        } catch (ex: Exception) {
+            return false
+        }
+        return false
+    }
+
+    fun swapTrade(valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel, dashToCrypt: Boolean) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
 
         val source_asset =
-            _baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
-        val target_asset =
+            if (dashToCrypt)_baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
+            else _baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
+        val target_asset = if (dashToCrypt)_baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == selectedCoinBaseAccount.coinBaseUserAccountData.currency?.code }?.base_id ?: ""
+        else
             _baseIdForUSDModelCoinBase.value?.firstOrNull { it.base == DASH_CURRENCY }?.base_id ?: ""
 
         val tradesRequest = TradesRequest(
@@ -152,9 +175,12 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
                     result.value.apply {
                         this.assetsBaseID = Pair(source_asset, target_asset)
-                        this.inputCurrencyName =
+                        this.inputCurrencyName = if (dashToCrypt)"Dash"
+                        else
                             selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
-                        this.outputCurrencyName = "Dash"
+                        this.outputCurrencyName = if (dashToCrypt) selectedCoinBaseAccount.coinBaseUserAccountData.currency?.name ?: ""
+                        else
+                            "Dash"
                         _swapTradeOrder.value = Event(this)
                     }
                 }

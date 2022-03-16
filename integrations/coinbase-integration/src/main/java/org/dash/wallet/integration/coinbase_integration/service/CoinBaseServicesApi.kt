@@ -92,4 +92,10 @@ interface CoinBaseServicesApi {
         @Path("account_id") accountId: String,
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
     ): Response<CoinBaseAccountAddressResponse>
+
+    @POST("v2/accounts/{account_id}/addresses")
+    suspend fun createAddress(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Path("account_id") accountId: String
+    ): Response<AddressesResponse>
 }

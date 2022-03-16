@@ -55,6 +55,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private var transactionStateDialog: CoinBaseBuyDashDialog? = null
     private var newSwapOrderId: String? = null
 
+
     private val countDownTimer by lazy {
         object : CountDownTimer(10000, 1000) {
 
@@ -95,7 +96,9 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 viewModel.onRefreshOrderClicked(swapTradeUIModel)
                 isRetrying = false
             } else {
-                newSwapOrderId?.let { buyOrderId -> viewModel.commitSwapTrade(buyOrderId) }
+                swapTradeUIModel?.let {
+                    viewModel.commitSwapTrade(it)
+                }
             }
         }
 
@@ -111,7 +114,8 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.transactionCompleted.observe(viewLifecycleOwner) { transactionStatus ->
-            showBuyOrderDialog(if (transactionStatus.isTransactionSuccessful)
+            showBuyOrderDialog(
+                if (transactionStatus.isTransactionSuccessful)
                     CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR,
                 transactionStatus.responseMessage
             )
@@ -155,11 +159,11 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.contentOrderReview.convertOutputSubtitle.text = this.outputCurrency
 
         if (this.inputCurrency == DASH_CURRENCY) {
+            binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_dash_wallet_on_this_device)
+            binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_your_coinbase_account)
+        } else {
             binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_your_coinbase_account)
             binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_dash_wallet_on_this_device)
-        } else {
-            binding.contentOrderReview.outputAccountHintLabel.setText(R.string.from_your_coinbase_account)
-            binding.contentOrderReview.inputAccountHintLabel.setText(R.string.to_dash_wallet_on_this_device)
         }
 
         binding.contentOrderReview.inputAccount.text = getString(
@@ -232,7 +236,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                             findNavController().popBackStack()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
-                            viewModel.retry()
+                            show2FADialog()
                         }
                         CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS -> {
                             dismiss()

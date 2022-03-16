@@ -70,6 +70,8 @@
     <string name="from_your_coinbase_account">From your Coinbase account</string>
     <string name="you_receive">you receive</string>
     <string name="to_dash_wallet_on_this_device">To Dash wallet on this device</string>
+    <string name="to_your_coinbase_account">to your Coinbase account</string>
+    <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
     <string name="you_will_receive">You will receive</string>
     <string name="you_will_receive_dash" translatable="false">%s DASH</string>
     <string name="we_didnt_find_any_assets" > We didn’t find any assets on your Coinbase account.</string>
