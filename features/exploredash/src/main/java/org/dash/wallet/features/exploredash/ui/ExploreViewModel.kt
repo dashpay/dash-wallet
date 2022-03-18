@@ -22,6 +22,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -709,6 +710,7 @@ class ExploreViewModel @Inject constructor(
     fun hasZoomLevelChanged(previousZoomLevel: Float, currentZoomLevel: Float): Boolean =
         previousZoomLevel != currentZoomLevel
 
-    fun hasCameraCenterChanged(previousLat: Double, previousLng: Double, currentLat: Double, currentLng: Double)
-    : Boolean = locationProvider.distanceBetween(previousLat, previousLng, currentLat, currentLng) != 0.0
+    fun hasCameraCenterChanged(previousCenterPosition: LatLng, currentCenterPosition: LatLng)
+    : Boolean = locationProvider.distanceBetween(previousCenterPosition.latitude, previousCenterPosition.longitude
+        , currentCenterPosition.latitude, currentCenterPosition.longitude) != 0.0
 }

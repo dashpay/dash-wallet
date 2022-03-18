@@ -104,11 +104,8 @@ class ExploreMapFragment : SupportMapFragment() {
                             viewModel.hasZoomLevelChanged(previousZoomLevel, map.cameraPosition.zoom) -> {
                                 viewModel.zoomLevelChangeCallback.call()
                             }
-                            viewModel.hasCameraCenterChanged(
-                                previousCameraCenterPosition.latitude,
-                                previousCameraCenterPosition.longitude,
-                                map.cameraPosition.target.latitude,
-                                map.cameraPosition.target.longitude
+                            viewModel.hasCameraCenterChanged(previousCameraCenterPosition,
+                                map.cameraPosition.target
                             ) -> {
                                 viewModel.cameraCenterChangeCallback.call()
                             }
