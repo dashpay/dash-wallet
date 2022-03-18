@@ -177,7 +177,7 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 30
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80116
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 80120
         versionName project.hasProperty('versionName') ? project.property('versionName') : "5.2.0-dashpay"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
