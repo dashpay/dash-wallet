@@ -97,7 +97,9 @@ class ExploreViewModel @Inject constructor(
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
     private var allMerchantLocationsJob: Job? = null
-
+    val zoomLevelChangeCallback = SingleLiveEvent<Unit>()
+    val cameraCenterChangeCallback = SingleLiveEvent<Unit>()
+    val markerClickCallback = SingleLiveEvent<Unit>()
     val isMetric = Locale.getDefault().isMetric
 
     private val _searchQuery = MutableStateFlow("")
@@ -703,4 +705,10 @@ class ExploreViewModel @Inject constructor(
             syncStatusService.setObservedLastError()
         }
     }
+
+    fun hasZoomLevelChanged(previousZoomLevel: Float, currentZoomLevel: Float): Boolean =
+        previousZoomLevel != currentZoomLevel
+
+    fun hasCameraCenterChanged(previousLat: Double, previousLng: Double, currentLat: Double, currentLng: Double)
+    : Boolean = locationProvider.distanceBetween(previousLat, previousLng, currentLat, currentLng) != 0.0
 }

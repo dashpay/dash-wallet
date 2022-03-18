@@ -106,5 +106,15 @@ object AnalyticsConstants {
         const val PORTAL_ATM = "portal_atm"
         const val LEARN_MORE = "info_learn_more"
         const val CONTINUE = "info_continue"
+        const val ONLINE_MERCHANTS = "online_merchants"
+        const val NEARBY_MERCHANTS = "nearby_merchants"
+        const val ALL_MERCHANTS = "all_merchants"
+        const val FILTER_MERCHANTS_TOP = "filter_merchants_top"
+        const val FILTER_MERCHANTS_BOTTOM = "filter_merchants_bottom"
+        const val SELECT_MERCHANT_LOCATION = "select_merchant_location"
+        const val SELECT_MERCHANT_MARKER = "select_merchant_marker"
+        const val INFO_EXPLORE_MERCHANT = "info_search"
+        const val PAN_MERCHANT_MAP = "pan_merchant_map"
+        const val ZOOM_MERCHANT_MAP = "zoom_merchant_map"
     }
 }

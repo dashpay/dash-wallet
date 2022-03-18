@@ -84,7 +84,9 @@ class ExploreMapFragment : SupportMapFragment() {
 
     @Inject
     lateinit var userLocationState: UserLocationStateInt
-
+    private var previousZoomLevel: Float = -1.0f
+    private var cameraMovementReason: Int = -1
+    private lateinit var previousCameraCenterPosition: LatLng
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -97,6 +99,25 @@ class ExploreMapFragment : SupportMapFragment() {
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
                     val bounds = map.projection.visibleRegion.latLngBounds
+                    if (cameraMovementReason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE){
+                        when {
+                            viewModel.hasZoomLevelChanged(previousZoomLevel, map.cameraPosition.zoom) -> {
+                                viewModel.zoomLevelChangeCallback.call()
+                            }
+                            viewModel.hasCameraCenterChanged(
+                                previousCameraCenterPosition.latitude,
+                                previousCameraCenterPosition.longitude,
+                                map.cameraPosition.target.latitude,
+                                map.cameraPosition.target.longitude
+                            ) -> {
+                                viewModel.cameraCenterChangeCallback.call()
+                            }
+                            else -> {}
+                        }
+                    }
+
+                    previousZoomLevel = map.cameraPosition.zoom
+                    previousCameraCenterPosition = map.cameraPosition.target
                     viewModel.searchBounds = GeoBounds(
                         bounds.northeast.latitude,
                         bounds.northeast.longitude,
@@ -106,6 +127,10 @@ class ExploreMapFragment : SupportMapFragment() {
                         bounds.center.longitude,
                         map.cameraPosition.zoom
                     )
+                }
+
+                map.setOnCameraMoveStartedListener { reason ->
+                    cameraMovementReason = reason
                 }
             }
         }
@@ -227,6 +252,7 @@ class ExploreMapFragment : SupportMapFragment() {
         if (isGooglePlayServicesAvailable()) {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
+                viewModel.markerClickCallback.call()
                 viewModel.onMapMarkerSelected(marker.tag as Int)
                 true
             }
@@ -351,6 +377,8 @@ class ExploreMapFragment : SupportMapFragment() {
             val radiusBounds = getRadiusBounds(mCurrentUserLocation, radius)
             map.moveCamera(radiusBounds)
             lastFocusedUserLocation = mCurrentUserLocation
+            previousZoomLevel = map.cameraPosition.zoom
+            previousCameraCenterPosition = map.cameraPosition.target
         }
     }
 
