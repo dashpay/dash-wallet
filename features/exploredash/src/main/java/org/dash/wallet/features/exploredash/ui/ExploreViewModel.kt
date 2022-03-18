@@ -711,6 +711,6 @@ class ExploreViewModel @Inject constructor(
         previousZoomLevel != currentZoomLevel
 
     fun hasCameraCenterChanged(previousCenterPosition: LatLng, currentCenterPosition: LatLng)
-    : Boolean = locationProvider.distanceBetween(previousCenterPosition.latitude, previousCenterPosition.longitude
-        , currentCenterPosition.latitude, currentCenterPosition.longitude) != 0.0
+    : Boolean = locationProvider.distanceBetween(previousCenterPosition.latitude, previousCenterPosition.longitude,
+        currentCenterPosition.latitude, currentCenterPosition.longitude) != 0.0
 }
