@@ -85,4 +85,5 @@
     <string name="got_it">I got it</string>
     <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
     <string name="dont_have_any_dash"> You don\'t have any Dash in your Dash Wallet.</string>
+    <string name="disconnected">Disconnected</string>
 </resources>

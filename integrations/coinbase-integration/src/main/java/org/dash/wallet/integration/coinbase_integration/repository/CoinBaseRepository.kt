@@ -36,7 +36,7 @@ class CoinBaseRepository @Inject constructor(
 ) : CoinBaseRepositoryInt {
     override suspend fun getUserAccount() = safeApiCall {
         val apiResponse = servicesApi.getUserAccounts()
-        val userAccountData = apiResponse.body()?.data?.firstOrNull {
+        val userAccountData = apiResponse?.data?.firstOrNull {
             it.balance?.currency?.equals(DASH_CURRENCY) ?: false
         }
         userAccountData?.also {
@@ -47,7 +47,7 @@ class CoinBaseRepository @Inject constructor(
 
     override suspend fun getUserAccounts(exchangeCurrencyCode: String): ResponseResource<List<CoinBaseUserAccountDataUIModel>> =
         safeApiCall {
-            val userAccounts = servicesApi.getUserAccounts().body()?.data ?: emptyList()
+            val userAccounts = servicesApi.getUserAccounts()?.data ?: emptyList()
             val exchangeRates = servicesApi.getExchangeRates(exchangeCurrencyCode)?.data
             return@safeApiCall userAccounts.map {
                 val currencyToCryptoCurrencyExchangeRate = exchangeRates?.rates?.get(it.currency?.code).orEmpty()
@@ -63,7 +63,7 @@ class CoinBaseRepository @Inject constructor(
         }
 
     override suspend fun getBaseIdForUSDModel(baseCurrency: String) = safeApiCall {
-        servicesApi.getBaseIdForUSDModel(baseCurrency = baseCurrency).body()
+        servicesApi.getBaseIdForUSDModel(baseCurrency = baseCurrency)
     }
 
     override suspend fun getExchangeRates() = safeApiCall { servicesApi.getExchangeRates() }
@@ -71,6 +71,8 @@ class CoinBaseRepository @Inject constructor(
     override suspend fun disconnectCoinbaseAccount() {
         userPreferences.setLastCoinBaseAccessToken(null)
         userPreferences.setLastCoinBaseRefreshToken(null)
+        userPreferences.setLastCoinBaseBalance(null)
+        userPreferences.setCoinBaseUserAccountId(null)
         safeApiCall { authApi.revokeToken() }
     }
 
@@ -124,9 +126,11 @@ class CoinBaseRepository @Inject constructor(
 
     override suspend fun completeCoinbaseAuthentication(authorizationCode: String): ResponseResource<Boolean> = safeApiCall {
         authApi.getToken(code = authorizationCode).also {
-            it.body()?.let { tokenResponse ->
+            it?.let { tokenResponse ->
                 userPreferences.setLastCoinBaseAccessToken(tokenResponse.accessToken)
                 userPreferences.setLastCoinBaseRefreshToken(tokenResponse.refreshToken)
+
+                getUserAccount()
             }
         }
         userPreferences.lastCoinbaseAccessToken.isNullOrEmpty().not()

@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.coinbase.CoinbaseActivity
 import de.schildbach.wallet_test.R
 import org.dash.wallet.integration.coinbase_integration.R as R_coinbase
 import de.schildbach.wallet_test.databinding.ActivityBuyAndSellIntegrationsBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.Constants.*
@@ -62,6 +63,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.concurrent.schedule
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.FancyAlertButtonsClickListener {
 
@@ -74,8 +76,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     private lateinit var binding: ActivityBuyAndSellIntegrationsBinding
     private val viewModel by viewModels<BuyAndSellViewModel>()
     private val liquidViewModel by viewModels<LiquidViewModel>()
-
-    private var isDeviceConnectedToInternet: Boolean = true
     private val analytics = FirebaseAnalyticsServiceImpl.getInstance()
     private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
         BuyAndSellDashServicesAdapter(config){ model ->
@@ -140,7 +140,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onUpHoldItemClicked() {
-        if (isDeviceConnectedToInternet && UpholdConstants.hasValidCredentials()) {
+        if (UpholdConstants.hasValidCredentials()) {
             analytics.logEvent(if (UpholdClient.getInstance().isAuthenticated) {
                 AnalyticsConstants.Uphold.ENTER_CONNECTED
             } else {
@@ -152,7 +152,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onLiquidItemClicked() {
-        if (isDeviceConnectedToInternet && LiquidConstants.hasValidCredentials()) {
+        if (LiquidConstants.hasValidCredentials()) {
             analytics.logEvent(
                 if (LiquidClient.getInstance()?.isAuthenticated == true) {
                     AnalyticsConstants.Liquid.ENTER_CONNECTED
@@ -170,9 +170,7 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     private fun onCoinBaseItemClicked() {
-        val isConnected = viewModel.coinbaseIsConnected.value == true
-
-        if (isConnected) {
+        if (viewModel.isUserConnectedToCoinbase()) {
             launchCoinBasePortal()
             analytics.logEvent(AnalyticsConstants.Coinbase.ENTER_CONNECTED, bundleOf())
         } else {
@@ -204,8 +202,9 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
     }
 
     fun initViewModel() {
-        liquidViewModel.connectivityLiveData.observe(this) { isConnected ->
+        viewModel.isDeviceConnectedToInternet.observe(this) { isConnected ->
             if (isConnected != null) {
+                buyAndSellDashServicesAdapter.updateIconState(isConnected)
                 setNetworkState(isConnected)
             }
         }
@@ -277,8 +276,6 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
                     Status.ERROR -> {
                         if (!isFinishing) {
                             if (it.exception is LiquidUnauthorizedException) {
-                                // do we need this
-                                setLoginStatus(isDeviceConnectedToInternet)
                                 FancyAlertDialog.newInstance(
                                     org.dash.wallet.integration.liquid.R.string.liquid_logout_title,
                                     org.dash.wallet.integration.liquid.R.string.liquid_forced_logout,
@@ -344,22 +341,25 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
             }
         }
 
-        viewModel.coinbaseIsConnected.observe(this){ setLoginStatus(isDeviceConnectedToInternet) }
+        viewModel.isAuthenticatedOnCoinbase.observe(this){ setLoginStatus() }
 
         viewModel.coinbaseAuthTokenCallback.observe(this) {
             Timer().schedule(1000) {
                 launchCoinBasePortal()
             }
         }
+
+        viewModel.coinbaseBalance.observe(this){ balance ->
+            viewModel.showRowBalance(BuyAndSellDashServicesModel.ServiceType.COINBASE, currentExchangeRate, balance)
+        }
     }
 
     private fun setNetworkState(online: Boolean) {
         binding.networkStatusContainer.isVisible = !online
-        setLoginStatus(online)
-        if (!isDeviceConnectedToInternet && online) {
+        setLoginStatus()
+        if (online) {
             updateBalances()
         }
-        isDeviceConnectedToInternet = online
     }
 
     private fun updateBalances() {
@@ -369,18 +369,20 @@ class BuyAndSellIntegrationsActivity : LockScreenActivity(), FancyAlertDialog.Fa
         if (UpholdClient.getInstance().isAuthenticated) {
             viewModel.updateUpholdBalance()
         }
-
-        viewModel.isUserConnectedToCoinbase()
+        if (viewModel.isUserConnectedToCoinbase()) {
+            viewModel.updateCoinbaseBalance()
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        setLoginStatus(isDeviceConnectedToInternet)
+        viewModel.monitorNetworkStateChange()
+        setLoginStatus()
         updateBalances()
     }
 
-    private fun setLoginStatus(online: Boolean) {
-        viewModel.setServicesStatus(online, config.lastCoinbaseAccessToken.isNullOrEmpty().not(),
+    private fun setLoginStatus() {
+        viewModel.setServicesStatus(config.lastCoinbaseAccessToken.isNullOrEmpty().not(),
             LiquidClient.getInstance()!!.isAuthenticated, UpholdClient.getInstance().isAuthenticated)
     }
 

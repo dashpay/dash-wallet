@@ -17,63 +17,57 @@
 
 package org.dash.wallet.common.livedata
 
-import android.annotation.TargetApi
-import android.content.Context
-import android.content.Context.CONNECTIVITY_SERVICE
 import android.net.*
 import android.os.Build
-import androidx.lifecycle.LiveData
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import javax.inject.Inject
 
 /**
  * @author Kebab Krabby
  * https://stackoverflow.com/questions/36421930/connectivitymanager-connectivity-action-deprecated
  */
 
-class ConnectionLiveData(val context: Context) : LiveData<Boolean>() {
+interface NetworkStateInt {
+    fun observeNetworkChangeState(): Flow<Boolean>
+}
 
-    private var connectivityManager: ConnectivityManager =
-        context.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-
-    private lateinit var connectivityManagerCallback: ConnectivityManager.NetworkCallback
+@ExperimentalCoroutinesApi
+class NetworkState @Inject constructor (private val connectivityManager: ConnectivityManager): NetworkStateInt {
 
     private var networkRequestBuilder: NetworkRequest.Builder = NetworkRequest.Builder()
         .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
 
-    override fun onActive() {
-        super.onActive()
-        updateConnection()
+    override fun observeNetworkChangeState(): Flow<Boolean> = callbackFlow {
+        val connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                super.onAvailable(network)
+                trySend(true)
+            }
+
+            override fun onLost(network: Network) {
+                trySend(false)
+                super.onLost(network)
+            }
+        }
+
+        val activeNetwork: NetworkInfo? = connectivityManager.activeNetworkInfo
+        trySend(activeNetwork?.isConnected == true)
+
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.N -> connectivityManager.registerDefaultNetworkCallback(
-                getConnectivityManagerCallback()
+                connectivityManagerCallback
             )
             else -> connectivityManager.registerNetworkCallback(
                 networkRequestBuilder.build(),
-                getConnectivityManagerCallback()
+                connectivityManagerCallback
             )
         }
-    }
-
-    override fun onInactive() {
-        super.onInactive()
-        connectivityManager.unregisterNetworkCallback(connectivityManagerCallback)
-    }
-
-    private fun getConnectivityManagerCallback(): ConnectivityManager.NetworkCallback {
-        connectivityManagerCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                postValue(true)
-            }
-
-            override fun onLost(network: Network?) {
-                postValue(false)
-            }
+        awaitClose {
+            connectivityManager.unregisterNetworkCallback(connectivityManagerCallback)
         }
-        return connectivityManagerCallback
-    }
-
-    private fun updateConnection() {
-        val activeNetwork: NetworkInfo? = connectivityManager.activeNetworkInfo
-        postValue(activeNetwork?.isConnected == true)
     }
 }
