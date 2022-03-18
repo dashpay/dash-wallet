@@ -21,7 +21,7 @@
     <fragment
         android:id="@+id/entryPointFragment"
         android:name="org.dash.wallet.integrations.crowdnode.ui.entry_point.EntryPointFragment"
-        android:label="CrowdnodeFragment">
+        android:label="EntryPointFragment">
 
         <action
             android:id="@+id/entry_point_to_new_account"

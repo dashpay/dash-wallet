@@ -22,6 +22,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
@@ -103,11 +104,20 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
         viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
             error?.let {
-                // TODO: withdraw
                 safeNavigate(PortalFragmentDirections.portalToResult(
-                    true, getString(R.string.crowdnode_deposit_error), "")
-                )
+                    true,
+                    getString(R.string.crowdnode_transfer_error),
+                    ""
+                ))
             }
+        }
+
+        viewModel.networkErrorEvent.observe(viewLifecycleOwner) {
+            Toast.makeText(
+                requireContext(),
+                R.string.network_unavailable_balance_not_accurate,
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 

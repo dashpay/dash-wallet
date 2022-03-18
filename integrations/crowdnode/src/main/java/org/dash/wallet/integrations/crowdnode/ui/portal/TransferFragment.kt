@@ -42,7 +42,9 @@ import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentTransferBinding
 import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardDepositHeaderBinding
 import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardWithdrawHeaderBinding
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -131,10 +133,15 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
             error?.let {
-                // TODO: withdraw
                 safeNavigate(TransferFragmentDirections.transferToResult(
-                    true, getString(R.string.crowdnode_deposit_error), "")
-                )
+                    true,
+                    getString(if (args.withdraw) {
+                        R.string.crowdnode_withdraw_error
+                    } else {
+                        R.string.crowdnode_deposit_error
+                    }),
+                    ""
+                ))
             }
         }
 
@@ -155,10 +162,10 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         }
 
         amountViewModel.amount.observe(viewLifecycleOwner) { amount ->
-            val maxBalance = if (args.withdraw) viewModel.crowdNodeBalance else viewModel.dashBalance
+            val maxValue = if (args.withdraw) viewModel.crowdNodeBalance else viewModel.dashBalance
 
             binding.balanceText.setTextAppearance(
-                if (amount > maxBalance.value ?: Coin.ZERO) {
+                if (amount > maxValue.value ?: Coin.ZERO) {
                     R.style.Caption_Red
                 } else {
                     R.style.Caption_SteelGray
@@ -174,24 +181,32 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     }
 
     private suspend fun continueTransfer(value: Coin) {
-        securityModel.requestPinCode(requireActivity()) ?: return
+        if (!args.withdraw) {
+            securityModel.requestPinCode(requireActivity()) ?: return
+        }
 
-        var result = false
-        AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
-            result = if (args.withdraw) {
+        val isSuccess = AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
+            if (args.withdraw) {
                 viewModel.withdraw(value)
             } else {
                 viewModel.deposit(value)
             }
         }
 
-        if (result) {
-            // TODO: withdraw
-            safeNavigate(TransferFragmentDirections.transferToResult(
-                false,
-                getString(R.string.deposit_sent),
-                getString(R.string.deposit_sent_message)
-            ))
+        if (isSuccess) {
+            if (args.withdraw) {
+                safeNavigate(TransferFragmentDirections.transferToResult(
+                    false,
+                    getString(R.string.withdrawal_requested),
+                    getString(R.string.withdrawal_requested_message)
+                ))
+            } else {
+                safeNavigate(TransferFragmentDirections.transferToResult(
+                    false,
+                    getString(R.string.deposit_sent),
+                    getString(R.string.deposit_sent_message)
+                ))
+            }
         }
     }
 
@@ -202,7 +217,15 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             viewModel.dashBalance.value
         } ?: Coin.ZERO
 
+        val minValue = if (args.withdraw) {
+            balance.div(ApiCode.MaxCode.code)
+        } else {
+            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
+        }
+
+        amountViewModel.setMinAmount(minValue)
         amountViewModel.setMaxAmount(balance)
+
         val dashToFiat = amountViewModel.dashToFiatDirection.value == true
         val rate = amountViewModel.selectedExchangeRate.value
         setAvailableBalanceText(balance, rate, dashToFiat)

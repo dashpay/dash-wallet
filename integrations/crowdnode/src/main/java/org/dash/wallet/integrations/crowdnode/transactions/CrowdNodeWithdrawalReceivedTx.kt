@@ -15,38 +15,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.transactions
+package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
+import org.dash.wallet.common.transactions.TransactionFilter
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-class IgnoreAddressTxFilter(private val ignoreAddress: Address): TransactionFilter {
+class CrowdNodeWithdrawalReceivedTx(
+    private val networkParams: NetworkParameters
+): TransactionFilter {
     override fun matches(tx: Transaction): Boolean {
-        val networkParameters = ignoreAddress.parameters
+        val fromAddress = CrowdNodeConstants.getCrowdNodeAddress(networkParams)
 
         for (input in tx.inputs) {
             input.outpoint.connectedOutput?.let { connectedOutput ->
                 val script = connectedOutput.scriptPubKey
 
                 if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                    script.getToAddress(networkParameters) == ignoreAddress
+                    script.getToAddress(networkParams) == fromAddress
                 ) {
-                    return false
+                    return !tx.outputs.any { isApiResponse(it.value) }
                 }
             }
         }
 
-        for (output in tx.outputs) {
-            val script = output.scriptPubKey
+        return false
+    }
 
-            if ((ScriptPattern.isP2PKH(script) || ScriptPattern.isP2SH(script)) &&
-                script.getToAddress(networkParameters) == ignoreAddress
-            ) {
-                return false
-            }
-        }
+    private fun isApiResponse(coin: Coin): Boolean {
+        val toCheck = (coin - CrowdNodeConstants.API_OFFSET).value
 
-        return true
+        return toCheck in 1..1024 || (toCheck <= ApiCode.MaxCode.code && isPowerOfTwo(coin.value))
+    }
+
+    private fun isPowerOfTwo(number: Long): Boolean {
+        return number and number - 1 == 0L
     }
 }

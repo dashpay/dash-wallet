@@ -82,7 +82,11 @@ import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DefaultRiskAnalysis;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.transactions.IgnoreAddressTxFilter;
+import org.dash.wallet.common.services.NotificationService;
+import org.dash.wallet.common.transactions.NotFromAddressTxFilter;
+import org.dash.wallet.common.transactions.TransactionFilter;
+import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse;
+import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWithdrawalReceivedTx;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +110,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.AppDatabase;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
@@ -115,6 +121,7 @@ import de.schildbach.wallet.data.AddressBookProvider;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet.ui.staking.StakingActivity;
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis;
 import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet.util.CrashReporter;
@@ -127,6 +134,7 @@ import static org.dash.wallet.common.Constants.PREFIX_ALMOST_EQUAL_TO;
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class BlockchainServiceImpl extends LifecycleService implements BlockchainService {
 
     private WalletApplication application;
@@ -180,13 +188,19 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
     AllowLockTimeRiskAnalysis.Analyzer riskAnalyzer;
     DefaultRiskAnalysis.Analyzer defaultRiskAnalyzer = DefaultRiskAnalysis.FACTORY;
 
+    @Inject
+    public NotificationService notificationService;
+
     private final ThrottlingWalletChangeListener walletEventListener = new ThrottlingWalletChangeListener(
             APPWIDGET_THROTTLE_MS) {
 
-        // TODO: don't filter out notifications for withdrawals from CrowdNode
-        private final IgnoreAddressTxFilter ignoreCrowdNodeFilter = new IgnoreAddressTxFilter(
-                CrowdNodeConstants.INSTANCE.getCrowdNodeAddress(Constants.NETWORK_PARAMETERS)
+        private final List<TransactionFilter> crowdnodeFilters = Arrays.asList(
+            new NotFromAddressTxFilter(CrowdNodeConstants.INSTANCE.getCrowdNodeAddress(Constants.NETWORK_PARAMETERS)),
+            new CrowdNodeWithdrawalReceivedTx(Constants.NETWORK_PARAMETERS)
         );
+
+        private final CrowdNodeDepositReceivedResponse depositReceivedResponse =
+                new CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS);
 
         @Override
         public void onThrottledWalletChanged() {
@@ -230,8 +244,16 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 final boolean isReceived = amount.signum() > 0;
                 final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && (replaying || isRestoringBackup);
 
-                if (isReceived && !isReplayedTx && ignoreCrowdNodeFilter.matches(tx))
+                if (depositReceivedResponse.matches(tx)) {
+                    notificationService.showNotification(
+                        "deposit_received",
+                        getString(R.string.crowdnode_deposit_received),
+                        false,
+                        new Intent(BlockchainServiceImpl.this, StakingActivity.class)
+                    );
+                } else if (isReceived && !isReplayedTx && passFilters(tx)) {
                     notifyCoinsReceived(address, amount, tx.getExchangeRate());
+                }
             });
             updateAppWidget();
         }
@@ -241,6 +263,19 @@ public class BlockchainServiceImpl extends LifecycleService implements Blockchai
                 final Coin newBalance) {
             transactionsReceived.incrementAndGet();
             updateAppWidget();
+        }
+
+        private Boolean passFilters(final Transaction tx) {
+            boolean passFilters = false;
+
+            for (TransactionFilter filter: crowdnodeFilters) {
+                if (filter.matches(tx)) {
+                    passFilters = true;
+                    break;
+                }
+            }
+
+            return passFilters;
         }
     };
 

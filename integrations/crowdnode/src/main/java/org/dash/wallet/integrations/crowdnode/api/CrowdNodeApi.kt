@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.NotificationService
@@ -39,6 +40,7 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.LockedTransaction
 import org.dash.wallet.integrations.crowdnode.R
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.transactions.*
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import org.dash.wallet.integrations.crowdnode.utils.ModuleConfiguration
@@ -49,6 +51,7 @@ import java.math.RoundingMode
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.math.min
 
 enum class SignUpStatus {
     NotStarted,
@@ -168,10 +171,10 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
         return try {
             apiError.value = null
-            val topUpTx = topUpAddress(accountAddress, amount)
+            val topUpTx = topUpAddress(accountAddress, amount + Constants.ECONOMIC_FEE)
             log.info("topUpTx id: ${topUpTx.txId}")
             val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
-            val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress, true)
+            val depositTx = paymentService.sendCoins(crowdNodeAddress, amount, accountAddress)
             log.info("depositTx id: ${depositTx.txId}")
 
             responseScope.launch {
@@ -206,10 +209,13 @@ class CrowdNodeBlockchainApi @Inject constructor(
 
         return try {
             apiError.value = null
-            val requestCode = Coin.valueOf(amount.value * 1000 / balance.value)
-            val requestValue = CrowdNodeConstants.CROWDNODE_OFFSET + requestCode
-            val topUpTx = topUpAddress(accountAddress, requestValue) // TODO: + fee
+
+            val maxPermil = ApiCode.WithdrawAll.code
+            val requestPermil = min(amount.value * maxPermil / balance.value, maxPermil)
+            val requestValue = CrowdNodeConstants.API_OFFSET + Coin.valueOf(requestPermil)
+            val topUpTx = topUpAddress(accountAddress, requestValue + Constants.ECONOMIC_FEE)
             log.info("topUpTx id: ${topUpTx.txId}")
+
             val crowdNodeAddress = CrowdNodeConstants.getCrowdNodeAddress(params)
             val withdrawTx = paymentService.sendCoins(crowdNodeAddress, requestValue, accountAddress)
             log.info("withdrawTx id: ${withdrawTx.txId}")
@@ -238,32 +244,32 @@ class CrowdNodeBlockchainApi @Inject constructor(
     override fun refreshBalance(retries: Int) {
         responseScope.launch {
             val lastBalance = config.lastBalance.first()
-            balance.value = Resource.success(Coin.valueOf(lastBalance))
+            var currentBalance = Resource.loading(Coin.valueOf(lastBalance))
+            balance.value = currentBalance
 
             for (i in 0..retries) {
                 if (i != 0) {
                     delay(TimeUnit.SECONDS.toMillis(pow(5, i)))
                 }
 
-                balance.value = Resource.loading()
-                val newBalance = resolveBalance()
-                balance.value = newBalance
+                currentBalance = resolveBalance()
 
-                if (lastBalance != newBalance.data?.value) {
+                if (lastBalance != currentBalance.data?.value) {
                     // balance changed, no need to retry anymore
                     break
                 }
             }
+
+            balance.value = currentBalance
         }
     }
-
 
     override suspend fun reset() {
         log.info("reset is triggered")
         signUpStatus.value = SignUpStatus.NotStarted
         accountAddress = null
         apiError.value = null
-        config.setCrowdNodeError("")
+        config.clearAll()
     }
 
     private fun restoreStatus() {
@@ -360,14 +366,11 @@ class CrowdNodeBlockchainApi @Inject constructor(
         }
     }
 
-
     private suspend fun fetchBalance(address: String): String {
-        val response = crowdNodeWebApi.getTransactions(address)
-        var total = BigDecimal.ZERO
-        response.body()?.forEach { tx ->
-            total += BigDecimal.valueOf(tx.amount)
-        }
-        return total.setScale(8, RoundingMode.HALF_UP).toString()
+        val response = crowdNodeWebApi.getBalance(address)
+        val balance = BigDecimal.valueOf(response.body()?.totalBalance ?: 0.0)
+
+        return balance.setScale(8, RoundingMode.HALF_UP).toString()
     }
 
     private fun handleError(ex: Exception, error: String) {

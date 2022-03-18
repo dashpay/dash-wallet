@@ -51,6 +51,7 @@ class CrowdNodeViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
+    val networkErrorEvent = SingleLiveEvent<Unit>()
 
     private val _accountAddress = MutableLiveData<Address>()
     val accountAddress: LiveData<Address>
@@ -71,10 +72,12 @@ class CrowdNodeViewModel @Inject constructor(
 
     var signUpStatus: LiveData<SignUpStatus> = MediatorLiveData<SignUpStatus>().apply {
         addSource(crowdNodeApi.signUpStatus.asLiveData(), this::setValue)
+        value = crowdNodeApi.signUpStatus.value
     }
 
     var crowdNodeError: LiveData<Exception?> = MediatorLiveData<Exception?>().apply {
         addSource(crowdNodeApi.apiError.asLiveData(), this::setValue)
+        value = crowdNodeApi.apiError.value
     }
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
@@ -111,14 +114,17 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.balance
             .onEach {
                 when (it.status) {
-                    Status.LOADING -> _isBalanceLoading.postValue(true)
+                    Status.LOADING -> {
+                        _isBalanceLoading.postValue(true)
+                        _crowdNodeBalance.postValue(it.data ?: Coin.ZERO)
+                    }
                     Status.SUCCESS -> {
                         _isBalanceLoading.postValue(false)
                         _crowdNodeBalance.postValue(it.data ?: Coin.ZERO)
                     }
                     Status.ERROR -> {
                         _isBalanceLoading.postValue(false)
-                        // TODO: Displaying network error
+                        networkErrorEvent.call()
                     }
                     else -> _isBalanceLoading.postValue(false)
                 }

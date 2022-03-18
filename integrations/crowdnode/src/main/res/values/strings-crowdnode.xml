@@ -46,6 +46,8 @@
     <string name="crowdnode_signup_error">We couldn’t create your CrowdNode account.</string>
     <string name="crowdnode_deposit_error">We couldn’t make a deposit to your CrowdNode account.</string>
     <string name="crowdnode_withdraw_error">We couldn’t withdraw from your CrowdNode account.</string>
+    <string name="crowdnode_transfer_error">Your CrowdNode transfer was unsuccessful.</string>
+    <string name="crowdnode_deposit_received">Your deposit to CrowdNode is received.</string>
     <string name="deposit">Deposit</string>
     <string name="deposit_sent">Deposit sent</string>
     <string name="deposit_sent_message">It can take a minute for your balance to be updated.</string>
@@ -53,6 +55,8 @@
     <string name="from_wallet">From Dash Wallet</string>
     <string name="from_crowdnode">From CrowdNode</string>
     <string name="withdraw">Withdraw</string>
+    <string name="withdrawal_requested">Withdrawal requested</string>
+    <string name="withdrawal_requested_message">It can take a minute for your funds to arrive.</string>
     <string name="crowdnode_withdraw_to_wallet">From CrowdNode to Dash Wallet</string>
     <string name="online_account">Online Account</string>
     <string name="secure_online_account">Make it as secure as possible</string>

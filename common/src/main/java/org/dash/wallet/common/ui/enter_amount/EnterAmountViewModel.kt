@@ -55,6 +55,10 @@ class EnterAmountViewModel @Inject constructor(
     val dashToFiatDirection: LiveData<Boolean>
         get() = _dashToFiatDirection
 
+    private val _minAmount = MutableLiveData(Coin.ZERO)
+    val minAmount: LiveData<Coin>
+        get() = _minAmount
+
     private val _maxAmount = MutableLiveData(Coin.ZERO)
     val maxAmount: LiveData<Coin>
         get() = _maxAmount
@@ -64,20 +68,19 @@ class EnterAmountViewModel @Inject constructor(
         get() = _amount
 
     val canContinue: LiveData<Boolean>
-        get() = MediatorLiveData<Boolean>().also { liveData ->
-            fun getValue(amount: Coin, maxAmount: Coin): Boolean {
-                return amount > Coin.ZERO && (maxAmount == Coin.ZERO || amount <= maxAmount)
+        get() = MediatorLiveData<Boolean>().apply {
+            fun canContinue(): Boolean {
+                val amount = _amount.value ?: Coin.ZERO
+                val minAmount = _minAmount.value ?: Coin.ZERO
+                val maxAmount = _maxAmount.value ?: Coin.ZERO
+
+                return amount > minAmount && (maxAmount == Coin.ZERO || amount <= maxAmount)
             }
 
-            liveData.addSource(_amount) {
-                liveData.value = getValue(it, _maxAmount.value ?: Coin.ZERO)
-            }
-            liveData.addSource(_maxAmount) {
-                liveData.value = getValue(_amount.value ?: Coin.ZERO, it)
-            }
-            liveData.addSource(_dashToFiatDirection) {
-                liveData.value = getValue(_amount.value ?: Coin.ZERO, _maxAmount.value ?: Coin.ZERO)
-            }
+            addSource(_amount) { value = canContinue() }
+            addSource(_minAmount) { value = canContinue() }
+            addSource(_maxAmount) { value = canContinue() }
+            addSource(_dashToFiatDirection) { value = canContinue() }
         }
 
     init {
@@ -89,5 +92,9 @@ class EnterAmountViewModel @Inject constructor(
 
     fun setMaxAmount(coin: Coin) {
         _maxAmount.value = coin
+    }
+
+    fun setMinAmount(coin: Coin) {
+        _minAmount.value = coin
     }
 }

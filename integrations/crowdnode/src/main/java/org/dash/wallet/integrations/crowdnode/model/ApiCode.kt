@@ -15,19 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.transactions
+package org.dash.wallet.integrations.crowdnode.model
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.NetworkParameters
-import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
-import org.dash.wallet.integrations.crowdnode.model.ApiCode
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
-
-class CrowdNodeSignUpTx(networkParams: NetworkParameters): CoinsToAddressTxFilter(
-    CrowdNodeConstants.getCrowdNodeAddress(networkParams), SIGNUP_REQUEST_CODE
-) {
-    companion object {
-        val SIGNUP_REQUEST_CODE: Coin =
-            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.SignUp.code)
-    }
+enum class ApiCode(val code: Long, val isRequest: Boolean = false) {
+    PleaseAcceptTerms(2, true),
+    WelcomeToApi(4, true),
+    DepositReceived(8, true),
+    WithdrawalQueue(16, true),
+    WithdrawAll(1000, false),
+    SignUp(131072, false),
+    AcceptTerms(65536, false),
+    MaxCode(131072, false)
 }
