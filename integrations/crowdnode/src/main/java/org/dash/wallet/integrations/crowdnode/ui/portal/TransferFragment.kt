@@ -193,6 +193,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             }
         }
 
+
         if (isSuccess) {
             if (args.withdraw) {
                 safeNavigate(TransferFragmentDirections.transferToResult(
@@ -218,7 +219,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
         } ?: Coin.ZERO
 
         val minValue = if (args.withdraw) {
-            balance.div(ApiCode.MaxCode.code)
+            balance.div(ApiCode.WithdrawAll.code)
         } else {
             CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
         }
