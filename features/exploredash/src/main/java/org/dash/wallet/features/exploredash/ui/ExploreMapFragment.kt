@@ -96,12 +96,12 @@ class ExploreMapFragment : SupportMapFragment() {
             showMap()
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
-                    viewModel.searchBounds = getGeoBounds()
+                    viewModel.searchBounds = getGeoBounds(map)
                     if (cameraMovementReason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE){
-                        viewModel.triggerPanAndZoomEvents(map.cameraPosition.zoom, getGeoBounds())
+                        viewModel.triggerPanAndZoomEvents(map.cameraPosition.zoom, getGeoBounds(map))
                     }
                     viewModel.previousZoomLevel = map.cameraPosition.zoom
-                    viewModel.previousCameraGeoBounds = getGeoBounds()
+                    viewModel.previousCameraGeoBounds = getGeoBounds(map)
                 }
 
                 map.setOnCameraMoveStartedListener { reason ->
@@ -353,7 +353,7 @@ class ExploreMapFragment : SupportMapFragment() {
             map.moveCamera(radiusBounds)
             lastFocusedUserLocation = mCurrentUserLocation
             viewModel.previousZoomLevel = map.cameraPosition.zoom
-            viewModel.previousCameraGeoBounds = getGeoBounds()
+            viewModel.previousCameraGeoBounds = getGeoBounds(map)
         }
     }
 
@@ -489,10 +489,9 @@ class ExploreMapFragment : SupportMapFragment() {
         return bitmap
     }
 
-    private fun getGeoBounds(): GeoBounds? {
-        return googleMap?.let { map ->
-            val bounds = map.projection.visibleRegion.latLngBounds
-            GeoBounds(
+    private fun getGeoBounds(map: GoogleMap): GeoBounds {
+        val bounds = map.projection.visibleRegion.latLngBounds
+        return GeoBounds(
                 bounds.northeast.latitude,
                 bounds.northeast.longitude,
                 bounds.southwest.latitude,
@@ -500,7 +499,5 @@ class ExploreMapFragment : SupportMapFragment() {
                 bounds.center.latitude,
                 bounds.center.longitude,
                 map.cameraPosition.zoom)
-        }
     }
-
 }

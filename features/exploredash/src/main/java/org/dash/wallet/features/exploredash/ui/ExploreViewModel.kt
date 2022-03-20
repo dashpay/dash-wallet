@@ -110,7 +110,7 @@ class ExploreViewModel @Inject constructor(
 
     var exploreTopic = ExploreTopic.Merchants
         private set
-    var previousCameraGeoBounds: GeoBounds? = null
+    var previousCameraGeoBounds = GeoBounds.noBounds
     var previousZoomLevel:  Float = -1.0f
     private var lastResolvedAddress: GeoBounds? = null
     private var _currentUserLocation: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
@@ -709,7 +709,7 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun triggerPanAndZoomEvents(currentZoomLevel: Float, currentGeoBounds: GeoBounds?){
+    fun triggerPanAndZoomEvents(currentZoomLevel: Float, currentGeoBounds: GeoBounds){
         when {
             hasZoomLevelChanged(currentZoomLevel) -> {
                 if (exploreTopic == ExploreTopic.Merchants){
@@ -726,8 +726,8 @@ class ExploreViewModel @Inject constructor(
     private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean =
         previousZoomLevel != currentZoomLevel
 
-    private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds?): Boolean =
-        locationProvider.distanceBetweenCenters(previousCameraGeoBounds!!, currentCenterPosition!!) != 0.0
+    private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds): Boolean =
+        locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) != 0.0
 
     fun triggerMarkerClickEvent(){
         if (exploreTopic == ExploreTopic.Merchants){
