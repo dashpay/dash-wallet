@@ -230,21 +230,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             }
         }
-        viewModel.markerClickCallback.observe(viewLifecycleOwner){
-            if (viewModel.exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER, bundleOf())
-            }
-        }
-        viewModel.zoomLevelChangeCallback.observe(viewLifecycleOwner){
-            if (viewModel.exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.ZOOM_MERCHANT_MAP, bundleOf())
-            }
-        }
-        viewModel.cameraCenterChangeCallback.observe(viewLifecycleOwner){
-            if (viewModel.exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.PAN_MERCHANT_MAP, bundleOf())
-            }
-        }
     }
 
     private fun showError(

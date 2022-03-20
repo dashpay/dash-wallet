@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash.ui
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
@@ -32,6 +33,8 @@ import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.livedata.ConnectionLiveData
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.*
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
@@ -78,7 +81,8 @@ class ExploreViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val exploreData: ExploreDataSource,
     private val locationProvider: UserLocationStateInt,
-    private val syncStatusService: DataSyncStatusService
+    private val syncStatusService: DataSyncStatusService,
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -98,9 +102,6 @@ class ExploreViewModel @Inject constructor(
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
     private var allMerchantLocationsJob: Job? = null
-    val zoomLevelChangeCallback = SingleLiveEvent<Unit>()
-    val cameraCenterChangeCallback = SingleLiveEvent<Unit>()
-    val markerClickCallback = SingleLiveEvent<Unit>()
     val isMetric = Locale.getDefault().isMetric
 
     private val _searchQuery = MutableStateFlow("")
@@ -109,7 +110,8 @@ class ExploreViewModel @Inject constructor(
 
     var exploreTopic = ExploreTopic.Merchants
         private set
-
+    var previousCameraGeoBounds: GeoBounds? = null
+    var previousZoomLevel:  Float = -1.0f
     private var lastResolvedAddress: GeoBounds? = null
     private var _currentUserLocation: MutableStateFlow<UserLocation?> = MutableStateFlow(null)
     val currentUserLocation = _currentUserLocation.asLiveData()
@@ -707,10 +709,29 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun hasZoomLevelChanged(previousZoomLevel: Float, currentZoomLevel: Float): Boolean =
+    fun triggerPanAndZoomEvents(currentZoomLevel: Float, currentGeoBounds: GeoBounds?){
+        when {
+            hasZoomLevelChanged(currentZoomLevel) -> {
+                if (exploreTopic == ExploreTopic.Merchants){
+                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.ZOOM_MERCHANT_MAP, bundleOf())
+                }
+            }
+            hasCameraCenterChanged(currentGeoBounds) -> {
+                if (exploreTopic == ExploreTopic.Merchants){
+                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.PAN_MERCHANT_MAP, bundleOf())
+                }
+            }
+        }
+    }
+    private fun hasZoomLevelChanged(currentZoomLevel: Float): Boolean =
         previousZoomLevel != currentZoomLevel
 
-    fun hasCameraCenterChanged(previousCenterPosition: LatLng, currentCenterPosition: LatLng)
-    : Boolean = locationProvider.distanceBetween(previousCenterPosition.latitude, previousCenterPosition.longitude,
-        currentCenterPosition.latitude, currentCenterPosition.longitude) != 0.0
+    private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds?): Boolean =
+        locationProvider.distanceBetweenCenters(previousCameraGeoBounds!!, currentCenterPosition!!) != 0.0
+
+    fun triggerMarkerClickEvent(){
+        if (exploreTopic == ExploreTopic.Merchants){
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER, bundleOf())
+        }
+    }
 }
