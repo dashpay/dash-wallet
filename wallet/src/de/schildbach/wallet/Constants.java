@@ -92,7 +92,7 @@ public final class Constants {
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = TestNet3Params.get();
                 // TODO: remove this next line when Platform Supports Core 0.18
-                NETWORK_PARAMETERS.setSupportsV18(false);
+                NETWORK_PARAMETERS.setSupportsV18(true);
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
@@ -107,7 +107,7 @@ public final class Constants {
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = KrupnikDevNetParams.get();
                 // TODO: remove this next line when Platform Supports Core 0.18
-                NETWORK_PARAMETERS.setSupportsV18(false);
+                NETWORK_PARAMETERS.setSupportsV18(true);
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-krupnik";
