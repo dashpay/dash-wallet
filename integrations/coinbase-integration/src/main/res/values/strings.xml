@@ -86,4 +86,8 @@
     <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
     <string name="dont_have_any_dash"> You don\'t have any Dash in your Dash Wallet.</string>
     <string name="disconnected">Disconnected</string>
+
+    <string name="insufficient_money_title">Not enough coins</string>
+    <string name="insufficient_money_msg">The amount of coins in the wallet is too small for sweeping.</string>
+    <string name="send_coins_error_msg">Problem sending coins!</string>
 </resources>

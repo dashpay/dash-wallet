@@ -21,6 +21,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -60,7 +61,6 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     val swapTradeFailedCallback = SingleLiveEvent<String>()
 
-
     private val _userAccountsWithBalance: MutableLiveData<Event<List<CoinBaseUserAccountDataUIModel>>> = MutableLiveData()
     val userAccountsWithBalance: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
         get() = _userAccountsWithBalance
@@ -74,6 +74,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         get() = this._dashWalletBalance
 
     val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
+    val onFailure = SingleLiveEvent<String>()
+    val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
     val sendDashToCoinBaseFailed = SingleLiveEvent<Unit>()
     init {
         setDashWalletBalance()
@@ -141,10 +143,15 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         try {
             val transaction = sendPaymentService.sendCoins(address, coin)
             return transaction.isPending
+        } catch (x: InsufficientMoneyException) {
+            onInsufficientMoneyCallback.call()
+            x.printStackTrace()
+            return false
         } catch (ex: Exception) {
+            onFailure.value = ex.message
+            ex.printStackTrace()
             return false
         }
-        return false
     }
 
     fun swapTrade(valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel, dashToCrypt: Boolean) = viewModelScope.launch(Dispatchers.Main) {
