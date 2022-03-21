@@ -108,7 +108,7 @@ class CoinBaseRepository @Inject constructor(
 
 
     override suspend fun getUserAccountAddress(): ResponseResource<String> = safeApiCall {
-        val apiResult = servicesApi.getUserAccountAddress(accountId = userPreferences.coinbaseUserAccountId).body()
+        val apiResult = servicesApi.getUserAccountAddress(accountId = userPreferences.coinbaseUserAccountId)
         coinbaseAddressMapper.map(apiResult)
     }
 
@@ -146,7 +146,7 @@ class CoinBaseRepository @Inject constructor(
     }
 
     override suspend fun createAddress(): ResponseResource<String?> = safeApiCall {
-        return@safeApiCall servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId).body()?.addresses?.address
+        return@safeApiCall servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId)?.addresses?.address
     }
 }
 
