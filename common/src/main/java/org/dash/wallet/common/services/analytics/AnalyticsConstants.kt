@@ -102,9 +102,9 @@ object AnalyticsConstants {
     }
 
     object ExploreDash {
-        const val WHERE_TO_SPEND = "portal_where_to_spend"
-        const val PORTAL_ATM = "portal_atm"
-        const val LEARN_MORE = "info_learn_more"
-        const val CONTINUE = "info_continue"
+        const val WHERE_TO_SPEND = "explore_portal_where_to_spend"
+        const val PORTAL_ATM = "explore_portal_atm"
+        const val LEARN_MORE = "explore_info_learn_more"
+        const val CONTINUE = "explore_info_continue"
     }
 }
