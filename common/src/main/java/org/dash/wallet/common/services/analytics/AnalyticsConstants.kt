@@ -116,5 +116,16 @@ object AnalyticsConstants {
         const val INFO_EXPLORE_MERCHANT = "explore_info_search"
         const val PAN_MERCHANT_MAP = "explore_pan_merchant_map"
         const val ZOOM_MERCHANT_MAP = "explore_zoom_merchant_map"
+
+        const val ALL_ATM = "explore_all_atm"
+        const val BUY_ATM = "explore_buy_atm"
+        const val SELL_ATM = "explore_sell_atm"
+        const val BUY_SELL_ATM = "explore_buy_sell_atm"
+        const val FILTER_ATM_BOTTOM = "explore_filter_atm_bottom"
+        const val FILTER_ATM_TOP = "explore_filter_atm_top"
+        const val SELECT_ATM_MARKER = "explore_select_atm_marker"
+        const val SELECT_ATM_LOCATION = "explore_select_atm_location"
+        const val PAN_ATM_MAP = "explore_pan_merchant_map"
+        const val ZOOM_ATM_MAP = "explore_zoom_merchant_map"
     }
 }
