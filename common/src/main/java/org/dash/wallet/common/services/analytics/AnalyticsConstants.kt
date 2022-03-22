@@ -100,4 +100,11 @@ object AnalyticsConstants {
         const val TRANSACTION_FILTER = "home_transaction_filter"
         const val SEND_RECEIVE_BUTTON = "home_send_receive_button"
     }
+
+    object ExploreDash {
+        const val WHERE_TO_SPEND = "explore_portal_where_to_spend"
+        const val PORTAL_ATM = "explore_portal_atm"
+        const val LEARN_MORE = "explore_info_learn_more"
+        const val CONTINUE = "explore_info_continue"
+    }
 }
