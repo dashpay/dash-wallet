@@ -125,7 +125,7 @@ object AnalyticsConstants {
         const val FILTER_ATM_TOP = "explore_filter_atm_top"
         const val SELECT_ATM_MARKER = "explore_select_atm_marker"
         const val SELECT_ATM_LOCATION = "explore_select_atm_location"
-        const val PAN_ATM_MAP = "explore_pan_merchant_map"
-        const val ZOOM_ATM_MAP = "explore_zoom_merchant_map"
+        const val PAN_ATM_MAP = "explore_pan_atm_map"
+        const val ZOOM_ATM_MAP = "explore_zoom_atm_map"
     }
 }
