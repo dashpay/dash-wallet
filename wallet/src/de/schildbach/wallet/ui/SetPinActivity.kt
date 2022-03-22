@@ -448,7 +448,7 @@ class SetPinActivity : InteractionAwareActivity() {
             title = R.string.set_pin_error_missing_wallet_title
             message = R.string.set_pin_error_missing_wallet_message
         }
-        val dialog = AdaptiveDialog.new(
+        val dialog = AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(title),
             getString(message),
