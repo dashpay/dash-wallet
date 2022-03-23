@@ -127,5 +127,22 @@ object AnalyticsConstants {
         const val SELECT_ATM_LOCATION = "explore_select_atm_location"
         const val PAN_ATM_MAP = "explore_pan_atm_map"
         const val ZOOM_ATM_MAP = "explore_zoom_atm_map"
+
+        const val FILTER_SELECT_DASH_ON = "explore_select_dash_on"
+        const val FILTER_SELECT_DASH_OFF = "explore_select_dash_off"
+        const val FILTER_GIFT_CARD_ON = "explore_select_card_on"
+        const val FILTER_GIFT_CARD_OFF = "explore_select_card_off"
+        const val FILTER_SORT_BY_NAME = "explore_sort_by_name"
+        const val FILTER_SORT_BY_DISTANCE = "explore_sort_by_distance"
+        const val FILTER_CURRENT_LOCATION = "explore_current_location"
+        const val FILTER_SELECTED_LOCATION = "explore_selected_location"
+        const val FILTER_ONE_MILE = "explore_one_mile"
+        const val FILTER_FIVE_MILE = "explore_five_miles"
+        const val FILTER_TWENTY_MILE = "explore_twenty_miles"
+        const val FILTER_FIFTY_MILE = "explore_fifty_miles"
+        const val FILTER_LOCATION_ALLOWED = "explore_location_allowed"
+        const val FILTER_LOCATION_DENIED = "explore_location_denied"
+        const val FILTER_APPLY_ACTION = "explore_apply_action"
+        const val FILTER_CANCEL_ACTION = "explore_cancel_action"
     }
 }

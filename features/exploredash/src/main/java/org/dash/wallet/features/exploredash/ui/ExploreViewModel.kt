@@ -23,7 +23,6 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
-import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -739,5 +738,40 @@ class ExploreViewModel @Inject constructor(
         } else {
             analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER, bundleOf())
         }
+    }
+
+    fun trackFilterEvents(dashPaymentOn: Boolean, giftCardPaymentOn: Boolean) {
+        analyticsService.logEvent(if (dashPaymentOn) AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH_ON else
+            AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH_OFF, bundleOf())
+        analyticsService.logEvent(if (giftCardPaymentOn) AnalyticsConstants.ExploreDash.FILTER_GIFT_CARD_ON else
+            AnalyticsConstants.ExploreDash.FILTER_GIFT_CARD_OFF, bundleOf())
+        analyticsService.logEvent(
+            if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE)
+            AnalyticsConstants.ExploreDash.FILTER_SORT_BY_DISTANCE else
+                AnalyticsConstants.ExploreDash.FILTER_SORT_BY_NAME,
+            bundleOf())
+        analyticsService.logEvent(
+            if ( _selectedTerritory.value.isEmpty()) AnalyticsConstants.ExploreDash.FILTER_CURRENT_LOCATION else
+                AnalyticsConstants.ExploreDash.FILTER_SELECTED_LOCATION,
+            bundleOf()
+        )
+        analyticsService.logEvent(
+            when(_selectedRadiusOption.value){
+                1 -> AnalyticsConstants.ExploreDash.FILTER_ONE_MILE
+                5 -> AnalyticsConstants.ExploreDash.FILTER_FIVE_MILE
+                50 -> AnalyticsConstants.ExploreDash.FILTER_FIFTY_MILE
+                else -> AnalyticsConstants.ExploreDash.FILTER_TWENTY_MILE
+            }, bundleOf()
+        )
+        analyticsService.logEvent(
+            if (_isLocationEnabled.value == true) AnalyticsConstants.ExploreDash.FILTER_LOCATION_ALLOWED else
+                AnalyticsConstants.ExploreDash.FILTER_LOCATION_DENIED,
+            bundleOf()
+        )
+        analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_APPLY_ACTION, bundleOf())
+    }
+
+    fun trackCloseFilterEvent() {
+        analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_CANCEL_ACTION, bundleOf())
     }
 }

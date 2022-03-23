@@ -121,6 +121,9 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         binding.resetFiltersBtn.setOnClickListener {
             resetFilters()
         }
+        binding.collapseButton.setOnClickListener {
+            viewModel.trackCloseFilterEvent()
+        }
     }
 
     private fun setupPaymentMethods() {
@@ -297,6 +300,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
             viewModel.paymentMethodFilter = paymentFilter
         }
+        viewModel.trackFilterEvents(dashPaymentOn, giftCardPaymentOn)
     }
 
     private fun checkResetButton() {
