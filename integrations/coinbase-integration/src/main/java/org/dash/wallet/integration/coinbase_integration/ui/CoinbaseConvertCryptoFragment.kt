@@ -134,7 +134,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
         }
 
 
@@ -145,7 +149,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
         }
 
         viewModel.onFailure.observe(viewLifecycleOwner) {
@@ -155,7 +163,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
@@ -165,7 +177,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
         }
 
         viewModel.userAccountError.observe(viewLifecycleOwner) {
@@ -176,7 +192,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 R.string.buy_crypto_on_coinbase,
                 negativeButtonText = R.string.close
             )
-            safeNavigate(CoinbaseServicesFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
@@ -236,16 +256,19 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             binding.youWillReceiveLabel.isVisible = hasBalance
             binding.youWillReceiveValue.isVisible = hasBalance
             if (hasBalance) {
-                binding.youWillReceiveValue.text = context?.getString(R.string.you_will_receive_dash, dashFormat.format(balance).toString())
+                binding.youWillReceiveValue.text = context?.getString(
+                    R.string.you_will_receive_dash,
+                    dashFormat.format(balance).toString()
+                )
             }
         }
 
         viewModel.dashWalletBalance.observe(
-            viewLifecycleOwner,
-            EventObserver {
-                binding.convertView.dashInput = it
-            }
-        )
+            viewLifecycleOwner
+        ) {
+
+            binding.convertView.dashInput = it
+        }
     }
 
     private fun setConvertViewInput() {

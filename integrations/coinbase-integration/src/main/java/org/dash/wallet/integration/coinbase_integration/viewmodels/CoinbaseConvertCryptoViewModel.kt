@@ -69,8 +69,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val userAccountError: LiveData<Boolean>
         get() = _userAccountError
 
-    private val _dashWalletBalance = MutableLiveData<Event<Coin>>()
-    val dashWalletBalance: LiveData<Event<Coin>>
+    private val _dashWalletBalance = MutableLiveData<Coin>()
+    val dashWalletBalance: LiveData<Coin>
         get() = this._dashWalletBalance
 
     val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
@@ -239,7 +239,6 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         )
 
     private fun setDashWalletBalance() {
-        val balance = Event(walletDataProvider.getWalletBalance())
-        _dashWalletBalance.value = balance
+        _dashWalletBalance.value = walletDataProvider.getWalletBalance()
     }
 }

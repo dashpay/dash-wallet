@@ -173,12 +173,14 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
         }
 
         exchangeRate?.let { currentExchangeRate ->
-            val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
-            val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(dashInput))
-            binding.convertFromDashBalance.text = "${context.getString(R.string.balance)} ${dashFormat.minDecimals(0)
-                .optionalDecimals(0,8).format(dashInput)} Dash"
+            dashInput?.let { dash ->
+                val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate?.fiat)
+                val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(dash))
+                binding.convertFromDashBalance.text = "${context.getString(R.string.balance)} ${dashFormat.minDecimals(0)
+                    .optionalDecimals(0,8).format(dash)} Dash"
 
-            binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
+                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
+            }
         }
     }
 
