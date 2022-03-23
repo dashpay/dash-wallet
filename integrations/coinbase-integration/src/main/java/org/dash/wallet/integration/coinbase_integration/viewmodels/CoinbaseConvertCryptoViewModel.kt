@@ -234,6 +234,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     ) = (
         it.coinBaseUserAccountData.balance?.amount?.toDouble() != null &&
             !it.coinBaseUserAccountData.balance.amount.toDouble().isNaN() &&
+            it.coinBaseUserAccountData.type != "fiat" &&
             it.coinBaseUserAccountData.balance.currency != DASH_CURRENCY
         )
 

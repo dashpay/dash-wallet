@@ -79,7 +79,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         binding.cancelBtn.setOnClickListener {
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.confirmCancelBuyDashTransaction())
+            safeNavigate(CoinbaseConversionPreviewFragmentDirections.confirmCancelBuyDashTransaction())
         }
 
         arguments?.let {
@@ -122,7 +122,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.orderReviewToFeeInfo())
+            safeNavigate(CoinbaseConversionPreviewFragmentDirections.orderReviewToFeeInfo())
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
@@ -132,7 +132,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(CoinbaseConversionPreviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
