@@ -530,7 +530,6 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                         }
                         // liquid: EventData::{"event":"ui_event","data":{"ui_event":"button_clicked","value":"next","target":"quote_view_next"}}
                         "ui_event" -> {
-
                             onUserInteraction()
                             val uiEvent = Gson().fromJson(eventData, UIEvent::class.java)
                             
