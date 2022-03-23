@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.crowdnode.utils
 
 import android.content.Context
+import androidx.datastore.dataStoreFile
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -92,5 +93,9 @@ class ModuleConfiguration @Inject constructor(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[INFO_SHOWN_KEY] = isShown
         }
+    }
+
+    suspend fun clearAll() {
+        context.dataStore.edit { it.clear() }
     }
 }

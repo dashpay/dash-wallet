@@ -17,7 +17,6 @@
 package de.schildbach.wallet.payments
 
 import com.google.common.base.Preconditions
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +29,7 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.Constants
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.slf4j.LoggerFactory

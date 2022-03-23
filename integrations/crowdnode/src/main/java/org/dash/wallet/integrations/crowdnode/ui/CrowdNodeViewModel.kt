@@ -51,6 +51,7 @@ class CrowdNodeViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider
 ) : ViewModel() {
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
+    val networkErrorEvent = SingleLiveEvent<Unit>()
 
     private val _accountAddress = MutableLiveData<Address>()
     val accountAddress: LiveData<Address>
@@ -75,6 +76,7 @@ class CrowdNodeViewModel @Inject constructor(
 
     var crowdNodeError: LiveData<Exception?> = MediatorLiveData<Exception?>().apply {
         addSource(crowdNodeApi.apiError.asLiveData(), this::setValue)
+        value = crowdNodeApi.apiError.value
     }
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
@@ -111,14 +113,17 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.balance
             .onEach {
                 when (it.status) {
-                    Status.LOADING -> _isBalanceLoading.postValue(true)
+                    Status.LOADING -> {
+                        _isBalanceLoading.postValue(true)
+                        _crowdNodeBalance.postValue(it.data ?: Coin.ZERO)
+                    }
                     Status.SUCCESS -> {
                         _isBalanceLoading.postValue(false)
                         _crowdNodeBalance.postValue(it.data ?: Coin.ZERO)
                     }
                     Status.ERROR -> {
                         _isBalanceLoading.postValue(false)
-                        // TODO: Displaying network error
+                        networkErrorEvent.call()
                     }
                     else -> _isBalanceLoading.postValue(false)
                 }
@@ -127,7 +132,6 @@ class CrowdNodeViewModel @Inject constructor(
 
         viewModelScope.launch {
             _accountAddress.value = getOrCreateAccountAddress()
-            _crowdNodeBalance.value = Coin.valueOf(config.lastBalance.first())
             crowdNodeApi.refreshBalance()
         }
     }
@@ -188,12 +192,11 @@ class CrowdNodeViewModel @Inject constructor(
     }
 
     suspend fun deposit(coin: Coin): Boolean {
-        return crowdNodeApi.deposit(crowdNodeApi.accountAddress!!, coin)
+        return crowdNodeApi.deposit(coin)
     }
 
-    fun withdraw(coin: Coin): Boolean {
-        // TODO: Withdraw
-        return false
+    suspend fun withdraw(coin: Coin): Boolean {
+        return crowdNodeApi.withdraw(coin)
     }
 
     private suspend fun getOrCreateAccountAddress(): Address {

@@ -58,7 +58,7 @@
     <string name="send_coins_fragment_pin_label">Introdu codul PIN</string>
     <string name="send_coins_fragment_hint_fee_economic">O taxă de rețea de %s va fi plătită.</string>
     <string name="send_coins_fragment_hint_fee_priority">O taxă de prioritate de %s va fi plătită. Dacă vrei taxe reduse, utilizează "prioritate" numai dacă ai nevoie de confirmare cât mai curând posibil.</string>
-    <string name="send_coins_fragment_hint_insufficient_money">Fonduri nesuficiente</string>
+    <string name="send_coins_error_insufficient_money">Fonduri nesuficiente</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Suma plăților minuscule din portofel tău nu reprezintă o valoare care poate fi trimisă.</string>
     <string name="send_coins_fragment_direct_payment_enable">Trimite plata direct beneficiarului.</string>
     <string name="send_coins_fragment_direct_payment_ack">Plata ta directă a fost trimisă cu succes. </string>

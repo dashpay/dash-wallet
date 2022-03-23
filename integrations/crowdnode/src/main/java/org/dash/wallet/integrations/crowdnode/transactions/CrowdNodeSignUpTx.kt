@@ -20,12 +20,14 @@ package org.dash.wallet.integrations.crowdnode.transactions
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.transactions.CoinsToAddressTxFilter
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeSignUpTx(networkParams: NetworkParameters): CoinsToAddressTxFilter(
     CrowdNodeConstants.getCrowdNodeAddress(networkParams), SIGNUP_REQUEST_CODE
 ) {
     companion object {
-        val SIGNUP_REQUEST_CODE: Coin = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(131072)
+        val SIGNUP_REQUEST_CODE: Coin =
+            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.SignUp.code)
     }
 }

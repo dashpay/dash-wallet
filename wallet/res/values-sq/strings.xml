@@ -61,8 +61,8 @@
 	<string name="send_coins_fragment_receiving_address_complex">kompleks\nadresa</string>
 	<string name="send_coins_fragment_pending">(%s pret konfirmimin)</string>
 	<string name="send_coins_fragment_amount_label">Shuma për të paguar</string>
-	<string name="send_coins_fragment_hint_dusty_send">Shuma është tepër e vogël për tu dërguar.</string>
-	<string name="send_coins_fragment_hint_insufficient_money">Nuk keni monedha të mjaftueshme. Jeni %s monedha mangu.</string>
+	<string name="send_coins_error_dusty_send">Shuma është tepër e vogël për tu dërguar.</string>
+	<string name="send_coins_error_insufficient_money">Nuk keni monedha të mjaftueshme. Jeni %s monedha mangu.</string>
 	<string name="send_coins_fragment_hint_empty_wallet_failed">Shuma e vogël e pagesave te vogla në kuletën tuaj nuk është e mjaftueshme të jetë e shpenzueshme.</string>
 	<string name="send_coins_fragment_direct_payment_enable">Dërgoni pagesën drejtpërdrejt tek pranuesi.</string>
 	<string name="send_coins_fragment_direct_payment_ack">Pagesa juaj e drejtpërdrejt është zbatuar me sukses.</string>

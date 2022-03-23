@@ -15,21 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.api
+package org.dash.wallet.integrations.crowdnode.transactions
 
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeBalance
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeTx
-import retrofit2.Response
-import retrofit2.http.*
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
-interface CrowdNodeWebApi {
-    @GET("odata/apifundings/GetFunds(address='{address}')")
-    suspend fun getTransactions(
-        @Path("address") address: String
-    ): Response<List<CrowdNodeTx>>
-
-    @GET("odata/apifundings/GetBalance(address='{address}')")
-    suspend fun getBalance(
-        @Path("address") address: String
-    ): Response<CrowdNodeBalance>
+class CrowdNodeWithdrawalQueueResponse(networkParams: NetworkParameters): CoinsFromAddressTxFilter(
+    CrowdNodeConstants.getCrowdNodeAddress(networkParams), WITHDRAWAL_QUEUE_RESPONSE_CODE
+) {
+    companion object {
+        val WITHDRAWAL_QUEUE_RESPONSE_CODE: Coin =
+            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.WithdrawalQueue.code)
+    }
 }

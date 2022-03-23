@@ -20,12 +20,14 @@ package org.dash.wallet.integrations.crowdnode.transactions
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 class CrowdNodeDepositReceivedResponse(networkParams: NetworkParameters): CoinsFromAddressTxFilter(
     CrowdNodeConstants.getCrowdNodeAddress(networkParams), DEPOSIT_RECEIVED_RESPONSE_CODE
 ) {
     companion object {
-        val DEPOSIT_RECEIVED_RESPONSE_CODE: Coin = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(8)
+        val DEPOSIT_RECEIVED_RESPONSE_CODE: Coin =
+            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.DepositReceived.code)
     }
 }

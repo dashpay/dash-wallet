@@ -15,21 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.crowdnode.api
+package org.dash.wallet.integrations.crowdnode.model
 
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeBalance
-import org.dash.wallet.integrations.crowdnode.model.CrowdNodeTx
-import retrofit2.Response
-import retrofit2.http.*
+import com.google.gson.annotations.SerializedName
 
-interface CrowdNodeWebApi {
-    @GET("odata/apifundings/GetFunds(address='{address}')")
-    suspend fun getTransactions(
-        @Path("address") address: String
-    ): Response<List<CrowdNodeTx>>
-
-    @GET("odata/apifundings/GetBalance(address='{address}')")
-    suspend fun getBalance(
-        @Path("address") address: String
-    ): Response<CrowdNodeBalance>
-}
+data class CrowdNodeBalance (
+    @SerializedName("DashAddress")
+    val dashAddress : String,
+    @SerializedName("TotalBalance")
+    val totalBalance : Double,
+    @SerializedName("TotalActiveBalance")
+    val totalActiveBalance : Double,
+    @SerializedName("TotalDividend")
+    val totalDividend : Double
+)

@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.transactions
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.transactions.CoinsFromAddressTxFilter
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 
 // TODO: consider making sure that `toAddress` matches our account address
@@ -27,6 +28,7 @@ class CrowdNodeWelcomeToApiResponse(networkParams: NetworkParameters): CoinsFrom
     CrowdNodeConstants.getCrowdNodeAddress(networkParams), WELCOME_TO_API_RESPONSE_CODE
 ) {
     companion object {
-        val WELCOME_TO_API_RESPONSE_CODE: Coin = CrowdNodeConstants.CROWDNODE_OFFSET + Coin.valueOf(4)
+        val WELCOME_TO_API_RESPONSE_CODE: Coin =
+            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.WelcomeToApi.code)
     }
 }

@@ -22,7 +22,6 @@ import android.os.Looper
 import android.os.Process
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
@@ -35,6 +34,7 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.Constants
 import org.slf4j.LoggerFactory
 
 open class SendCoinsBaseViewModel(application: Application) : AndroidViewModel(application) {

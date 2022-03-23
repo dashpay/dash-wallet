@@ -28,7 +28,7 @@ object CrowdNodeConstants {
 
     val MINIMUM_REQUIRED_DASH: Coin = Coin.valueOf(1000000)
     val REQUIRED_FOR_SIGNUP: Coin = MINIMUM_REQUIRED_DASH - Coin.valueOf(100000)
-    val CROWDNODE_OFFSET: Coin = Coin.valueOf(20000)
+    val API_OFFSET: Coin = Coin.valueOf(20000)
 
     fun getCrowdNodeAddress(params: NetworkParameters): Address {
         return Address.fromBase58(params, if (params == MainNetParams.get()) {

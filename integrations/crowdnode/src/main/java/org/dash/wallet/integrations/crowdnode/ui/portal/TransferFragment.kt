@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.crowdnode.ui.portal
 
+import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
@@ -39,8 +40,11 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.crowdnode.R
 import org.dash.wallet.integrations.crowdnode.databinding.FragmentTransferBinding
-import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardHeaderBinding
+import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardDepositHeaderBinding
+import org.dash.wallet.integrations.crowdnode.databinding.ViewKeyboardWithdrawHeaderBinding
+import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.ui.CrowdNodeViewModel
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -50,6 +54,7 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     private val args by navArgs<TransferFragmentArgs>()
     private val viewModel by activityViewModels<CrowdNodeViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
+    private var balanceAnimator: ObjectAnimator? = null
 
     @Inject
     lateinit var securityModel: SecurityModel
@@ -59,15 +64,24 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
 
         if (savedInstanceState == null) {
             val fragment = EnterAmountFragment.newInstance(
+                dashToFiat = amountViewModel.dashToFiatDirection.value ?: false,
                 isMaxButtonVisible = true,
                 showCurrencySelector = true
             )
-            val headerBinding = ViewKeyboardHeaderBinding.inflate(layoutInflater, null, false)
-            fragment.setViewDetails(if (args.withdraw) {
+
+            val headerBinding = if (args.withdraw) {
+                ViewKeyboardWithdrawHeaderBinding.inflate(layoutInflater, null, false)
+            } else {
+                ViewKeyboardDepositHeaderBinding.inflate(layoutInflater, null, false)
+            }
+
+            val buttonText = if (args.withdraw) {
                 getString(R.string.withdraw)
             } else {
                 getString(R.string.deposit)
-            }, headerBinding.root)
+            }
+
+            fragment.setViewDetails(buttonText, headerBinding.root)
 
             parentFragmentManager.commit {
                 setReorderingAllowed(true)
@@ -75,23 +89,59 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             }
         }
 
+        if (args.withdraw) {
+            binding.toolbarTitle.text = getString(R.string.withdraw)
+            binding.sourceIcon.setImageResource(R.drawable.ic_crowdnode_logo)
+            binding.sourceLabel.text = getString(R.string.from_crowdnode)
+        } else {
+            binding.toolbarTitle.text = getString(R.string.deposit)
+            binding.sourceIcon.setImageResource(R.drawable.ic_dash_pay)
+            binding.sourceLabel.text = getString(R.string.from_wallet)
+        }
+
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
 
-        viewModel.dashBalance.observe(viewLifecycleOwner) { balance ->
-            amountViewModel.setMaxAmount(balance)
-            val dashToFiat = amountViewModel.dashToFiatDirection.value == true
-            val rate = amountViewModel.selectedExchangeRate.value
-            setAvailableBalance(balance, rate, dashToFiat)
+        if (args.withdraw) {
+            viewModel.crowdNodeBalance.observe(viewLifecycleOwner) {
+                updateAvailableBalance()
+            }
+
+            this.balanceAnimator = ObjectAnimator.ofFloat(
+                binding.balanceText,
+                View.ALPHA.name,
+                0f, 0.5f
+            ).apply {
+                duration = 500
+                repeatCount = ObjectAnimator.INFINITE
+                repeatMode = ObjectAnimator.REVERSE
+            }
+
+            viewModel.isBalanceLoading.observe(viewLifecycleOwner) { isLoading ->
+                if (isLoading) {
+                    this.balanceAnimator?.start()
+                } else {
+                    this.balanceAnimator?.end()
+                }
+            }
+        } else {
+            viewModel.dashBalance.observe(viewLifecycleOwner) {
+                updateAvailableBalance()
+            }
         }
 
         viewModel.crowdNodeError.observe(viewLifecycleOwner) { error ->
             error?.let {
-                // TODO: withdraw
                 safeNavigate(TransferFragmentDirections.transferToResult(
-                    true, getString(R.string.crowdnode_deposit_error), "")
-                )
+                    true,
+                    getString(if (args.withdraw) {
+                        R.string.crowdnode_withdraw_error
+                    } else {
+                        R.string.crowdnode_deposit_error
+                    }),
+                    ""
+                ))
             }
         }
 
@@ -103,21 +153,19 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
             )
         }
 
-        amountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { dashToFiat ->
-            val balance = viewModel.dashBalance.value ?: Coin.ZERO
-            val rate = amountViewModel.selectedExchangeRate.value
-            setAvailableBalance(balance, rate, dashToFiat)
+        amountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) {
+            updateAvailableBalance()
         }
 
-        amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
-            val balance = viewModel.dashBalance.value ?: Coin.ZERO
-            val dashToFiat = amountViewModel.dashToFiatDirection.value == true
-            setAvailableBalance(balance, rate, dashToFiat)
+        amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
+            updateAvailableBalance()
         }
 
         amountViewModel.amount.observe(viewLifecycleOwner) { amount ->
-            binding.availableDashText.setTextAppearance(
-                if (amount > viewModel.dashBalance.value ?: Coin.ZERO) {
+            val maxValue = if (args.withdraw) viewModel.crowdNodeBalance else viewModel.dashBalance
+
+            binding.balanceText.setTextAppearance(
+                if (amount > maxValue.value ?: Coin.ZERO) {
                     R.style.Caption_Red
                 } else {
                     R.style.Caption_SteelGray
@@ -133,31 +181,61 @@ class TransferFragment : Fragment(R.layout.fragment_transfer) {
     }
 
     private suspend fun continueTransfer(value: Coin) {
-        securityModel.requestPinCode(requireActivity()) ?: return
+        if (!args.withdraw) {
+            securityModel.requestPinCode(requireActivity()) ?: return
+        }
 
-        var result = false
-        AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
-            result = if (args.withdraw) {
+        val isSuccess = AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
+            if (args.withdraw) {
                 viewModel.withdraw(value)
             } else {
                 viewModel.deposit(value)
             }
         }
 
-        if (result) {
-            // TODO: withdraw
-            safeNavigate(TransferFragmentDirections.transferToResult(
-                false,
-                getString(R.string.deposit_sent),
-                getString(R.string.deposit_sent_message)
-            ))
+
+        if (isSuccess) {
+            if (args.withdraw) {
+                safeNavigate(TransferFragmentDirections.transferToResult(
+                    false,
+                    getString(R.string.withdrawal_requested),
+                    getString(R.string.withdrawal_requested_message)
+                ))
+            } else {
+                safeNavigate(TransferFragmentDirections.transferToResult(
+                    false,
+                    getString(R.string.deposit_sent),
+                    getString(R.string.deposit_sent_message)
+                ))
+            }
         }
     }
 
-    private fun setAvailableBalance(balance: Coin, exchangeRate: ExchangeRate?, dashToFiat: Boolean) {
+    private fun updateAvailableBalance() {
+        val balance = if (args.withdraw) {
+            viewModel.crowdNodeBalance.value
+        } else {
+            viewModel.dashBalance.value
+        } ?: Coin.ZERO
+
+        val minValue = if (args.withdraw) {
+            balance.div(ApiCode.WithdrawAll.code)
+        } else {
+            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.MaxCode.code)
+        }
+
+        amountViewModel.setMinAmount(minValue)
+        amountViewModel.setMaxAmount(balance)
+
+        val dashToFiat = amountViewModel.dashToFiatDirection.value == true
+        val rate = amountViewModel.selectedExchangeRate.value
+        setAvailableBalanceText(balance, rate, dashToFiat)
+    }
+
+    private fun setAvailableBalanceText(balance: Coin, exchangeRate: ExchangeRate?, dashToFiat: Boolean) {
         val rate = exchangeRate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat) }
 
-        binding.availableDashText.text = when {
+        binding.balanceText.text = when {
             dashToFiat -> getString(R.string.available_balance, balance.toFriendlyString())
             rate != null -> getString(R.string.available_balance,
                 GenericUtils.fiatToString(rate.coinToFiat(balance)))

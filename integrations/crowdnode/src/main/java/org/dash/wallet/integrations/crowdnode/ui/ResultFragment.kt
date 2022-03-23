@@ -28,6 +28,8 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
+import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.services.SecurityModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.crowdnode.R
@@ -55,17 +57,12 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             binding.icon.setImageResource(R.drawable.ic_error_red)
             binding.title.text = args.title
             binding.title.setTextAppearance(R.style.Headline5_Bold_Red)
-            binding.subtitle.text = viewModel.crowdNodeError.value?.message
             binding.sendReportBtn.isVisible = true
             binding.negativeBtn.isVisible = true
             binding.positiveBtn.text = getString(R.string.button_retry)
 
             viewModel.crowdNodeError.value?.let { ex ->
-                if (ex is InsufficientMoneyException ||
-                    ex.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true
-                ) {
-                    binding.positiveBtn.isVisible = false
-                }
+                setErrorMessage(ex)
             }
 
             binding.sendReportBtn.setOnClickListener {
@@ -108,6 +105,20 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
             binding.positiveBtn.setOnClickListener {
                 findNavController().popBackStack(R.id.crowdNodePortalFragment, false)
             }
+        }
+    }
+
+    private fun setErrorMessage(ex: Exception) {
+        binding.subtitle.text = when (ex) {
+            is DustySendRequested, is CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
+            is InsufficientMoneyException -> getString(R.string.send_coins_error_insufficient_money)
+            else -> ex.message ?: ""
+        }
+
+        if (ex is InsufficientMoneyException ||
+            ex.message?.startsWith(INSUFFICIENT_MONEY_PREFIX) == true
+        ) {
+            binding.positiveBtn.isVisible = false
         }
     }
 }
