@@ -775,8 +775,8 @@ class ExploreViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_APPLY_ACTION, bundleOf())
         analyticsService.logEvent(
             if (isDialogFullyExpanded)
-            AnalyticsConstants.ExploreDash.FILTER_SWIPE_DOWN_ACTION_ON else
-                AnalyticsConstants.ExploreDash.FILTER_SWIPE_DOWN_ACTION_OFF, bundleOf())
+            AnalyticsConstants.ExploreDash.FILTER_SWIPE_DOWN_ACTION_OFF else
+                AnalyticsConstants.ExploreDash.FILTER_SWIPE_DOWN_ACTION_ON, bundleOf())
     }
 
     fun trackCloseFilterEvent() {
