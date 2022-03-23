@@ -714,11 +714,15 @@ class ExploreViewModel @Inject constructor(
             hasZoomLevelChanged(currentZoomLevel) -> {
                 if (exploreTopic == ExploreTopic.Merchants){
                     analyticsService.logEvent(AnalyticsConstants.ExploreDash.ZOOM_MERCHANT_MAP, bundleOf())
+                } else {
+                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.ZOOM_ATM_MAP, bundleOf())
                 }
             }
             hasCameraCenterChanged(currentGeoBounds) -> {
                 if (exploreTopic == ExploreTopic.Merchants){
                     analyticsService.logEvent(AnalyticsConstants.ExploreDash.PAN_MERCHANT_MAP, bundleOf())
+                } else {
+                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.PAN_ATM_MAP, bundleOf())
                 }
             }
         }
@@ -732,6 +736,8 @@ class ExploreViewModel @Inject constructor(
     fun triggerMarkerClickEvent(){
         if (exploreTopic == ExploreTopic.Merchants){
             analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER, bundleOf())
+        } else {
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER, bundleOf())
         }
     }
 }
