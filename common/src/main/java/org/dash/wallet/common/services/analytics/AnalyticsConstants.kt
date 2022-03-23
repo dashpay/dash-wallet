@@ -144,5 +144,7 @@ object AnalyticsConstants {
         const val FILTER_LOCATION_DENIED = "explore_location_denied"
         const val FILTER_APPLY_ACTION = "explore_apply_action"
         const val FILTER_CANCEL_ACTION = "explore_cancel_action"
+        const val FILTER_SWIPE_DOWN_ACTION_ON = "explore_swipe_down_on"
+        const val FILTER_SWIPE_DOWN_ACTION_OFF = "explore_swipe_down_off"
     }
 }

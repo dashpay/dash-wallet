@@ -740,7 +740,11 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun trackFilterEvents(dashPaymentOn: Boolean, giftCardPaymentOn: Boolean) {
+    fun trackFilterEvents(
+        dashPaymentOn: Boolean,
+        giftCardPaymentOn: Boolean,
+        isDialogFullyExpanded: Boolean
+    ) {
         analyticsService.logEvent(if (dashPaymentOn) AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH_ON else
             AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH_OFF, bundleOf())
         analyticsService.logEvent(if (giftCardPaymentOn) AnalyticsConstants.ExploreDash.FILTER_GIFT_CARD_ON else
@@ -769,6 +773,10 @@ class ExploreViewModel @Inject constructor(
             bundleOf()
         )
         analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_APPLY_ACTION, bundleOf())
+        analyticsService.logEvent(
+            if (isDialogFullyExpanded)
+            AnalyticsConstants.ExploreDash.FILTER_SWIPE_DOWN_ACTION_ON else
+                AnalyticsConstants.ExploreDash.FILTER_SWIPE_DOWN_ACTION_OFF, bundleOf())
     }
 
     fun trackCloseFilterEvent() {

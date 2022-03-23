@@ -35,6 +35,7 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
     }
 
     protected open val forceExpand: Boolean = false
+    protected open var isDialogFullyExpanded: Boolean = true
     @DrawableRes protected open val background: Int = R.drawable.white_background_rounded
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -67,10 +68,12 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
                         bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                     } else {
                         bottomSheetBehavior.peekHeight = bottomSheet.height - marginTop
+                        isDialogFullyExpanded = false
                     }
                 } else {
                     // apply wrap_content height
                     bottomSheetBehavior.peekHeight = bottomSheet.height
+                    isDialogFullyExpanded = false
                 }
 
                 coordinatorLayout.parent.requestLayout()
