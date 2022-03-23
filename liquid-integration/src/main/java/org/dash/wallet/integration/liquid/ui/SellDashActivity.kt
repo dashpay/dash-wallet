@@ -270,7 +270,7 @@ class SellDashActivity : InteractionAwareActivity() {
         )
     }
 
-    fun executeJavascriptInWebview(rawJavascript: String) {
+    private fun executeJavascriptInWebview(rawJavascript: String) {
         log.info("liquid: execute script: $rawJavascript")
         runOnUiThread {
             webview.evaluateJavascript(rawJavascript, null);
@@ -377,6 +377,4 @@ class SellDashActivity : InteractionAwareActivity() {
             finish()
         }
     }
-
-
 }

@@ -25,6 +25,8 @@
     <string name="buying_dash_not_supported_credit_cards">Buying Dash with a credit card is not supported in some countries.</string>
     <string name="buying_dash_not_supported_crypto">Buying Dash with cryptocurrency is not supported in some countries.</string>
     <string name="buying_dash_success_message">You can close this screen, your Dash will be sent to your wallet.</string>
+    <string name="liquid_contact_support">Contact Liquid Support</string>
+    <string name="liquid_something_wrong_message">Retry later or contact Liquid support center to solve the problem.</string>
 
     <string name="confirm">Confirm</string>
     <string name="card_fees">Card Fees</string>
@@ -57,4 +59,6 @@
     <string name="liquid">Liquid</string>
     <string name="transfer">Transfer</string>
     <string name="filter_by">Filtered By</string>
+
+    <string name="liquid_support_website" translatable="false">https://help.liquid.com</string>
 </resources>

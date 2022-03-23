@@ -9,6 +9,7 @@
     <string name="network_unavailable_balance_not_accurate">The balance may not be accurate because of the lost connection</string>
     <string name="fiat_balance_with_currency" translatable="false">%s %s</string>
     <string name="zero_fiat_balance_with_currency" translatable="false">%s 0.00</string>
+    <string name="something_wrong">Something went wrong</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>

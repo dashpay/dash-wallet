@@ -12,11 +12,11 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.webkit.*
 import android.widget.Toast
-import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
@@ -32,6 +32,7 @@ import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.NetworkUnavailableFragmentViewModel
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidClient
 import org.dash.wallet.integration.liquid.data.LiquidConstants
@@ -520,10 +521,16 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
                                     widgetState = "verifying"
                                     onUserInteraction()
                                 }
+                                // liquid: EventData::{"event":"step_transition","data":{"new_step":"kyc","old_step":"quoting","formPercent":42,"meta":null}}
+                                "kyc" -> {
+                                    onUserInteraction()
+                                    showContactSupportDialog()
+                                }
                             }
                         }
                         // liquid: EventData::{"event":"ui_event","data":{"ui_event":"button_clicked","value":"next","target":"quote_view_next"}}
                         "ui_event" -> {
+
                             onUserInteraction()
                             val uiEvent = Gson().fromJson(eventData, UIEvent::class.java)
                             
@@ -606,6 +613,22 @@ class BuyDashWithCreditCardActivity : InteractionAwareActivity() {
         } else {
             log.info("liquid: onBackPressed: successful transaction was not made")
             finish()
+        }
+    }
+
+    private fun showContactSupportDialog() {
+        AdaptiveDialog.create(
+            R.drawable.ic_error_red,
+            getString(R.string.something_wrong),
+            getString(R.string.liquid_something_wrong_message),
+            getString(R.string.close),
+            getString(R.string.liquid_contact_support)
+        ).show(this) {
+            if (it == true) {
+                startActivity(Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse(getString(R.string.liquid_support_website))
+                })
+            }
         }
     }
 }

@@ -276,8 +276,7 @@ class LiquidSplashActivity : InteractionAwareActivity() {
 
         val uri = Uri.parse(url)
 
-        CustomTabActivityHelper.openCustomTab(this, customTabsIntent, uri
-        ) { _, _ ->
+        CustomTabActivityHelper.openCustomTab(this, customTabsIntent, uri) { _, _ ->
             log.info("liquid: login failure because custom tabs is not available")
             log.info("liquid: using the web browser instead for $uri")
             val intent = Intent(Intent.ACTION_VIEW)

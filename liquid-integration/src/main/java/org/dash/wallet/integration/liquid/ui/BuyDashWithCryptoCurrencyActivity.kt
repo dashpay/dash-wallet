@@ -340,7 +340,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
         );
     }
 
-    fun executeJavascriptInWebview(rawJavascript: String) {
+    private fun executeJavascriptInWebview(rawJavascript: String) {
         log.info("liquid: execute script: $rawJavascript")
         runOnUiThread {
             webview.evaluateJavascript(rawJavascript, null);
