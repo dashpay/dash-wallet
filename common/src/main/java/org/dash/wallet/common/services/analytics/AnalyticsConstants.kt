@@ -128,10 +128,8 @@ object AnalyticsConstants {
         const val PAN_ATM_MAP = "explore_pan_atm_map"
         const val ZOOM_ATM_MAP = "explore_zoom_atm_map"
 
-        const val FILTER_SELECT_DASH_ON = "explore_select_dash_on"
-        const val FILTER_SELECT_DASH_OFF = "explore_select_dash_off"
-        const val FILTER_GIFT_CARD_ON = "explore_select_card_on"
-        const val FILTER_GIFT_CARD_OFF = "explore_select_card_off"
+        const val FILTER_SELECT_DASH = "explore_select_dash"
+        const val FILTER_SELECT_GIFT_CARD = "explore_select_card"
         const val FILTER_SORT_BY_NAME = "explore_sort_by_name"
         const val FILTER_SORT_BY_DISTANCE = "explore_sort_by_distance"
         const val FILTER_CURRENT_LOCATION = "explore_current_location"

@@ -745,10 +745,12 @@ class ExploreViewModel @Inject constructor(
         giftCardPaymentOn: Boolean,
         isDialogFullyExpanded: Boolean
     ) {
-        analyticsService.logEvent(if (dashPaymentOn) AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH_ON else
-            AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH_OFF, bundleOf())
-        analyticsService.logEvent(if (giftCardPaymentOn) AnalyticsConstants.ExploreDash.FILTER_GIFT_CARD_ON else
-            AnalyticsConstants.ExploreDash.FILTER_GIFT_CARD_OFF, bundleOf())
+        if (dashPaymentOn){
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH, bundleOf())
+        }
+        if (giftCardPaymentOn){
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_SELECT_GIFT_CARD, bundleOf())
+        }
         analyticsService.logEvent(
             if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE)
             AnalyticsConstants.ExploreDash.FILTER_SORT_BY_DISTANCE else
