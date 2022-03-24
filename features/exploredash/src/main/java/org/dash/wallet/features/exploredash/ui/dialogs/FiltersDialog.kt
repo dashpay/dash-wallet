@@ -123,6 +123,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         }
         binding.collapseButton.setOnClickListener {
             viewModel.trackCloseFilterEvent()
+            dismiss()
         }
 
 
