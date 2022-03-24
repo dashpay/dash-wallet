@@ -742,9 +742,7 @@ class ExploreViewModel @Inject constructor(
 
     fun trackFilterEvents(
         dashPaymentOn: Boolean,
-        giftCardPaymentOn: Boolean,
-        hasDialogBeenSwiped: Boolean
-    ) {
+        giftCardPaymentOn: Boolean) {
         if (dashPaymentOn){
             analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH, bundleOf())
         }

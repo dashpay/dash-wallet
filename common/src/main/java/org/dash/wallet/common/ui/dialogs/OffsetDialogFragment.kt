@@ -35,7 +35,6 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
     }
 
     protected open val forceExpand: Boolean = false
-    protected open var hasDialogBeenSwiped: Boolean = false
     @DrawableRes protected open val background: Int = R.drawable.white_background_rounded
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -76,13 +75,6 @@ open class OffsetDialogFragment<T: ViewGroup> : BottomSheetDialogFragment() {
 
                 coordinatorLayout.parent.requestLayout()
             }
-            d.behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
-                override fun onStateChanged(bottomSheet: View, newState: Int) {}
-
-                override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                    hasDialogBeenSwiped = true
-                }
-            })
         }
         view.findViewById<View>(R.id.collapse_button).setOnClickListener {
             dismiss()
