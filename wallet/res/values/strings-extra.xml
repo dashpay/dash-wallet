@@ -146,6 +146,8 @@
     <string name="wallet_lock_try_again">Try again in %1$d %2$s</string>
     <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">Wrong PIN! %s</string>
+    <string name="wallet_last_attempt">Last PIN attempt</string>
+    <string name="wallet_last_attempt_message">Another failed attempt will require my passphrase to recover my wallet</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d attempt remaining</item>
