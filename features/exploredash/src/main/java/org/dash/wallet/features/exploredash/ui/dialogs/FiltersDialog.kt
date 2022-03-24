@@ -302,7 +302,7 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
 
             viewModel.paymentMethodFilter = paymentFilter
         }
-        viewModel.trackFilterEvents(dashPaymentOn, giftCardPaymentOn, isDialogFullyExpanded)
+        viewModel.trackFilterEvents(dashPaymentOn, giftCardPaymentOn, hasDialogBeenSwiped)
     }
 
     private fun checkResetButton() {

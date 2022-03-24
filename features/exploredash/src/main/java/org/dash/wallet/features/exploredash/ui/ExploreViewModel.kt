@@ -743,7 +743,7 @@ class ExploreViewModel @Inject constructor(
     fun trackFilterEvents(
         dashPaymentOn: Boolean,
         giftCardPaymentOn: Boolean,
-        isDialogFullyExpanded: Boolean
+        hasDialogBeenSwiped: Boolean
     ) {
         if (dashPaymentOn){
             analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH, bundleOf())
@@ -776,9 +776,9 @@ class ExploreViewModel @Inject constructor(
         )
         analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_APPLY_ACTION, bundleOf())
         analyticsService.logEvent(
-            if (isDialogFullyExpanded)
-            AnalyticsConstants.ExploreDash.FILTER_SWIPE_DOWN_ACTION_OFF else
-                AnalyticsConstants.ExploreDash.FILTER_SWIPE_DOWN_ACTION_ON, bundleOf())
+            if (hasDialogBeenSwiped)
+            AnalyticsConstants.ExploreDash.FILTER_SWIPE_ACTION_ON else
+                AnalyticsConstants.ExploreDash.FILTER_SWIPE_ACTION_OFF, bundleOf())
     }
 
     fun trackCloseFilterEvent() {
