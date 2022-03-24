@@ -95,7 +95,7 @@ class ExploreViewModel @Inject constructor(
 
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
-
+    var isDialogDismissedOnCancel = false
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val recenterMapCallback = SingleLiveEvent<Unit>()
     private var boundedFilterJob: Job? = null
@@ -775,13 +775,13 @@ class ExploreViewModel @Inject constructor(
             bundleOf()
         )
         analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_APPLY_ACTION, bundleOf())
-        analyticsService.logEvent(
-            if (hasDialogBeenSwiped)
-            AnalyticsConstants.ExploreDash.FILTER_SWIPE_ACTION_ON else
-                AnalyticsConstants.ExploreDash.FILTER_SWIPE_ACTION_OFF, bundleOf())
     }
 
-    fun trackCloseFilterEvent() {
-        analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_CANCEL_ACTION, bundleOf())
+    fun trackDismissEvent() {
+        if (isDialogDismissedOnCancel){
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_CANCEL_ACTION, bundleOf())
+        } else {
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_SWIPE_ACTION, bundleOf())
+        }
     }
 }

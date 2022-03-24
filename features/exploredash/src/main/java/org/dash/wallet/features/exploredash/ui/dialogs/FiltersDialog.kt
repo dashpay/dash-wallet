@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.dialogs
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -122,11 +123,9 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
             resetFilters()
         }
         binding.collapseButton.setOnClickListener {
-            viewModel.trackCloseFilterEvent()
+            viewModel.isDialogDismissedOnCancel = true
             dismiss()
         }
-
-
     }
 
     private fun setupPaymentMethods() {
@@ -348,5 +347,10 @@ class FiltersDialog: OffsetDialogFragment<ConstraintLayout>() {
         sortByOptionsAdapter?.selectedIndex = if (sortByDistance) 1 else 0
 
         binding.resetFiltersBtn.isEnabled = false
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        viewModel.trackDismissEvent()
     }
 }
