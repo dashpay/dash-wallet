@@ -168,6 +168,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginTop="30dp"
                 android:gravity="center_horizontal"
+                android:textAlignment="gravity"
                 android:text="@string/please_wait_title" />
 
             <TextView
@@ -177,6 +178,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginTop="8dp"
                 android:gravity="center_horizontal"
+                android:textAlignment="gravity"
                 android:text="@string/crowdnode_creating" />
 
             <Button
