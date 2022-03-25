@@ -744,42 +744,72 @@ class ExploreViewModel @Inject constructor(
         dashPaymentOn: Boolean,
         giftCardPaymentOn: Boolean) {
         if (dashPaymentOn){
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_SELECT_DASH, bundleOf())
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_DASH, bundleOf())
+            }
         }
+
         if (giftCardPaymentOn){
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_SELECT_GIFT_CARD, bundleOf())
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_GIFT_CARD, bundleOf())
+            }
         }
-        analyticsService.logEvent(
-            if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE)
-            AnalyticsConstants.ExploreDash.FILTER_SORT_BY_DISTANCE else
-                AnalyticsConstants.ExploreDash.FILTER_SORT_BY_NAME,
-            bundleOf())
-        analyticsService.logEvent(
-            if ( _selectedTerritory.value.isEmpty()) AnalyticsConstants.ExploreDash.FILTER_CURRENT_LOCATION else
-                AnalyticsConstants.ExploreDash.FILTER_SELECTED_LOCATION,
-            bundleOf()
-        )
-        analyticsService.logEvent(
-            when(_selectedRadiusOption.value){
-                1 -> AnalyticsConstants.ExploreDash.FILTER_ONE_MILE
-                5 -> AnalyticsConstants.ExploreDash.FILTER_FIVE_MILE
-                50 -> AnalyticsConstants.ExploreDash.FILTER_FIFTY_MILE
-                else -> AnalyticsConstants.ExploreDash.FILTER_TWENTY_MILE
-            }, bundleOf()
-        )
-        analyticsService.logEvent(
-            if (_isLocationEnabled.value == true) AnalyticsConstants.ExploreDash.FILTER_LOCATION_ALLOWED else
-                AnalyticsConstants.ExploreDash.FILTER_LOCATION_DENIED,
-            bundleOf()
-        )
-        analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_APPLY_ACTION, bundleOf())
+
+        if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_DISTANCE, bundleOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_NAME, bundleOf())
+            }
+        }
+
+        if ( _selectedTerritory.value.isEmpty()){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CURRENT_LOCATION, bundleOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECTED_LOCATION, bundleOf())
+            }
+        }
+
+        if (exploreTopic == ExploreTopic.Merchants){
+            analyticsService.logEvent(
+                when(_selectedRadiusOption.value){
+                    1 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_ONE_MILE
+                    5 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIVE_MILE
+                    50 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIFTY_MILE
+                    else -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_TWENTY_MILE
+                }, bundleOf()
+            )
+        }
+
+        if (_isLocationEnabled.value == true){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_ALLOWED, bundleOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_DENIED, bundleOf())
+            }
+        }
+
+        if (exploreTopic == ExploreTopic.Merchants){
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_APPLY_ACTION, bundleOf())
+        }
     }
 
     fun trackDismissEvent() {
         if (isDialogDismissedOnCancel){
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_CANCEL_ACTION, bundleOf())
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CANCEL_ACTION, bundleOf())
+            }
         } else {
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_SWIPE_ACTION, bundleOf())
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SWIPE_ACTION, bundleOf())
+            }
         }
     }
 }
