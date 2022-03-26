@@ -31,6 +31,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.os.bundleOf
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -59,6 +60,8 @@ import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import javax.inject.Inject
@@ -73,7 +76,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     @Inject
     lateinit var configuration: Configuration
-
+    @Inject
+    lateinit var analyticsService: AnalyticsService
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel: ExploreViewModel by activityViewModels()
     private val args by navArgs<SearchFragmentArgs>()
@@ -107,8 +111,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         hideKeyboard()
 
         if (item is Merchant) {
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_LOCATION, bundleOf())
             viewModel.openMerchantDetails(item, true)
         } else if (item is Atm) {
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_LOCATION, bundleOf())
             viewModel.openAtmDetails(item)
         }
     }
@@ -150,6 +156,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbar.setOnMenuItemClickListener {
             if (it.itemId == R.id.menu_info) {
+                if (args.type == ExploreTopic.Merchants){
+                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.INFO_EXPLORE_MERCHANT, bundleOf())
+                }
                 safeNavigate(SearchFragmentDirections.exploreToInfo())
             }
             true
@@ -304,14 +313,38 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.setFilterMode(defaultMode)
 
         searchHeaderAdapter.setOnFilterOptionChosen { mode ->
+            if (topic == ExploreTopic.Merchants){
+                when(mode){
+                    FilterMode.Online ->  analyticsService.logEvent(AnalyticsConstants.ExploreDash.ONLINE_MERCHANTS, bundleOf())
+                    FilterMode.Nearby ->  analyticsService.logEvent(AnalyticsConstants.ExploreDash.NEARBY_MERCHANTS, bundleOf())
+                    else -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.ALL_MERCHANTS, bundleOf())
+                }
+            } else {
+                when(mode){
+                    FilterMode.Buy -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.BUY_ATM, bundleOf())
+                    FilterMode.Sell -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELL_ATM, bundleOf())
+                    FilterMode.BuySell -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.BUY_SELL_ATM, bundleOf())
+                    else -> analyticsService.logEvent(AnalyticsConstants.ExploreDash.ALL_ATM, bundleOf())
+                }
+            }
             viewModel.setFilterMode(mode)
         }
 
         searchHeaderAdapter.setOnFilterButtonClicked {
+            if (topic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANTS_TOP, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_TOP, bundleOf())
+            }
             openFilters()
         }
 
         binding.filterPanel.setOnClickListener {
+            if (topic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANTS_BOTTOM, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_BOTTOM, bundleOf())
+            }
             openFilters()
         }
 

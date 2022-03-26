@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.model.Merchant
@@ -124,8 +125,8 @@ class ExploreViewModelTest {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
-
-            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus)
+            val analyticsService = mock<AnalyticsService>()
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setSelectedTerritory(territory)
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
@@ -169,8 +170,8 @@ class ExploreViewModelTest {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
-
-            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus)
+            val analyticsService = mock<AnalyticsService>()
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setFilterMode(FilterMode.Nearby)
             viewModel.searchBounds = bounds
             viewModel.paymentMethodFilter = PaymentMethod.DASH
@@ -215,8 +216,9 @@ class ExploreViewModelTest {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
+            val analyticsService = mock<AnalyticsService>()
 
-            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus)
+            val viewModel = ExploreViewModel(context, dataSource, locationState, dataSyncStatus, analyticsService)
             viewModel.setSelectedTerritory(territory)
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
@@ -265,7 +267,9 @@ class ExploreViewModelTest {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
-            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus)
+            val analyticsService = mock<AnalyticsService>()
+
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus, analyticsService)
             viewModel.searchBounds = GeoBounds(90.0, 180.0, -90.0, -180.0, userLat, userLng)
                     .apply { zoomLevel = ExploreViewModel.MIN_ZOOM_LEVEL + 1 }
             viewModel.setFilterMode(FilterMode.Nearby)
@@ -297,7 +301,9 @@ class ExploreViewModelTest {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0))}
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
-            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus)
+            val analyticsService = mock<AnalyticsService>()
+
+            val viewModel = ExploreViewModel(context, dataSource, locationMock, dataSyncStatus,analyticsService)
             viewModel.setPhysicalResults(merchants)
             viewModel.onMapMarkerSelected(5)
 
