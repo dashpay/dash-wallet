@@ -23,7 +23,6 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.*
 import androidx.paging.*
 import androidx.paging.PagingData
-import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -96,7 +95,7 @@ class ExploreViewModel @Inject constructor(
 
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
-
+    var isDialogDismissedOnCancel = false
     val navigationCallback = SingleLiveEvent<NavigationRequest>()
     val recenterMapCallback = SingleLiveEvent<Unit>()
     private var boundedFilterJob: Job? = null
@@ -738,6 +737,79 @@ class ExploreViewModel @Inject constructor(
             analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER, bundleOf())
         } else {
             analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER, bundleOf())
+        }
+    }
+
+    fun trackFilterEvents(
+        dashPaymentOn: Boolean,
+        giftCardPaymentOn: Boolean) {
+        if (dashPaymentOn){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_DASH, bundleOf())
+            }
+        }
+
+        if (giftCardPaymentOn){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_GIFT_CARD, bundleOf())
+            }
+        }
+
+        if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_DISTANCE, bundleOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_NAME, bundleOf())
+            }
+        }
+
+        if ( _selectedTerritory.value.isEmpty()){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CURRENT_LOCATION, bundleOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECTED_LOCATION, bundleOf())
+            }
+        }
+
+        if (exploreTopic == ExploreTopic.Merchants){
+            analyticsService.logEvent(
+                when(_selectedRadiusOption.value){
+                    1 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_ONE_MILE
+                    5 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIVE_MILE
+                    50 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIFTY_MILE
+                    else -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_TWENTY_MILE
+                }, bundleOf()
+            )
+        }
+
+        if (_isLocationEnabled.value == true){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_ALLOWED, bundleOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_DENIED, bundleOf())
+            }
+        }
+
+        if (exploreTopic == ExploreTopic.Merchants){
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_APPLY_ACTION, bundleOf())
+        }
+    }
+
+    fun trackDismissEvent() {
+        if (isDialogDismissedOnCancel){
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CANCEL_ACTION, bundleOf())
+            }
+        } else {
+            if (exploreTopic == ExploreTopic.Merchants){
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SWIPE_ACTION, bundleOf())
+            }
         }
     }
 }
