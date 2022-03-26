@@ -341,10 +341,10 @@ public class UpholdApiException extends Exception {
                 if (requirements != null) {
                     switch (requirements) {
                         case "user-must-submit-enhanced-due-diligence":
-                            moreInfoId = 0;
+                            moreInfoId = R.string.uphold_api_error_403_due_diligence;
                             break;
                         case "user-must-submit-identity":
-                            moreInfoId = 1;
+                            moreInfoId = R.string.uphold_api_error_403_identity;
                             break;
                         default:
                             moreInfoId = R.string.uphold_api_error_403_generic;

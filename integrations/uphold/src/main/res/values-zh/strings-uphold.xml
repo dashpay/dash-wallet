@@ -28,6 +28,6 @@
     <string name="uphold_general_error_title">错误</string>
     <string name="uphold_api_error_title">Uphold错误</string>
     <string name="uphold_api_error_identity">您的Uphold账户还未被验证. 无法提取资金.</string>
-    <string name="uphold_api_error_403_description">您的Uphold账户已经被标记做审查.\n\nphold暂时限制了您的账户, 您将无法提取资金.\n\nUphold将与您联系, 帮助您尽快解决这个问题.</string>
+    <string name="uphold_api_error_403_description">您的Uphold账户已经被标记做审查.\n\nphold暂时限制了您的账户, 您将无法提取资金.\n\n%s</string>
     <string name="uphold_api_error_400_description">Uphold资金被锁定24个小时.\n\n您将于%s拥有足够资金进行此转账.</string>
 </resources>

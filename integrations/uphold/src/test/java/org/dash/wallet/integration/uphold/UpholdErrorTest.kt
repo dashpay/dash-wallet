@@ -1,13 +1,30 @@
 package org.dash.wallet.integration.uphold
 
+import android.content.Context
 import org.dash.wallet.integration.uphold.data.UpholdApiException
 import org.junit.Test
 import org.junit.Assert.*
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.kotlin.*
 
 class UpholdErrorsTest {
 
     @Test
     fun error403Test() {
+        val fake403Description = "403_FAKE_STRING_%s"
+        val fakeIdentityStr = "IDENTITY_FAKE_STRING"
+        val fakeDueDiligenceStr = "DUE_DILIGENCE_FAKE_STRING"
+        val fakeGenericStr = "GENERIC_FAKE_STRING"
+
+        val mockContext = mock<Context> {
+            on { getString(R.string.uphold_api_error_403_due_diligence) } doReturn fakeDueDiligenceStr
+            on { getString(R.string.uphold_api_error_403_identity) } doReturn fakeIdentityStr
+            on { getString(R.string.uphold_api_error_403_generic) } doReturn fakeGenericStr
+            on { getString(eq(R.string.uphold_api_error_403_description), anyString()) } doAnswer {
+                fake403Description.format(it.getArgument(1) as String)
+            }
+        }
+
         val firstError = """
             {
                 "capability": "sends",
@@ -17,11 +34,12 @@ class UpholdErrorsTest {
                 "restrictions": []
             }
         """.trimIndent()
-        val firstException = UpholdApiException(firstError, 403);
+        val firstException = UpholdApiException(firstError, 403)
         val arguments = HashMap<String, String>()
         assertTrue(firstException.isForbiddenError(arguments))
         assertEquals(403, firstException.code)
         assertEquals("user-must-submit-identity", arguments["requirements"])
+        assertEquals(fake403Description.format(fakeIdentityStr), firstException.getDescription(mockContext))
 
         val secondError = """
             {
@@ -32,11 +50,12 @@ class UpholdErrorsTest {
                 "restrictions": []
             }
         """.trimIndent()
-        val secondException = UpholdApiException(secondError, 403);
+        val secondException = UpholdApiException(secondError, 403)
         arguments.clear()
         assertTrue(secondException.isForbiddenError(arguments))
         assertEquals(403, secondException.code)
         assertEquals("user-must-submit-enhanced-due-diligence", arguments["requirements"])
+        assertEquals(fake403Description.format(fakeDueDiligenceStr), secondException.getDescription(mockContext))
 
         val thirdError = """
             {
@@ -50,11 +69,12 @@ class UpholdErrorsTest {
             }
         """.trimIndent()
 
-        val thirdException = UpholdApiException(thirdError, 403);
+        val thirdException = UpholdApiException(thirdError, 403)
         arguments.clear()
         assertTrue(thirdException.isForbiddenError(arguments))
         assertEquals(403, thirdException.code)
         assertEquals(null, arguments["requirements"])
+        assertEquals(fake403Description.format(fakeGenericStr), thirdException.getDescription(mockContext))
     }
 
     @Test
