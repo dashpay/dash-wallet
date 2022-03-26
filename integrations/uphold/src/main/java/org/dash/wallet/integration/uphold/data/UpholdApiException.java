@@ -14,6 +14,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 import retrofit2.Response;
 
@@ -338,18 +339,10 @@ public class UpholdApiException extends Exception {
                 String requirements = arguments.get("requirements");
                 // if requirements == null, then use the generic more info message
                 int moreInfoId = R.string.uphold_api_error_403_generic;
-                if (requirements != null) {
-                    switch (requirements) {
-                        case "user-must-submit-enhanced-due-diligence":
-                            moreInfoId = R.string.uphold_api_error_403_due_diligence;
-                            break;
-                        case "user-must-submit-identity":
-                            moreInfoId = R.string.uphold_api_error_403_identity;
-                            break;
-                        default:
-                            moreInfoId = R.string.uphold_api_error_403_generic;
-                            break;
-                    }
+                Map<String, Integer> map = ForbiddenError.INSTANCE.getErrorToMessageMap();
+
+                if (requirements != null && map.containsKey(requirements)) {
+                    moreInfoId = map.get(requirements);
                 }
                 return context.getString(R.string.uphold_api_error_403_description, context.getString(moreInfoId));
             } else {

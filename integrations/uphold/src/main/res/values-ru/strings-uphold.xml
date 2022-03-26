@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Выйти из Uphold</string>
     <string name="uphold_logout">Выйти</string>
     <string name="uphold_logout_explanation_text">Вам также необходимо будет выйти из своей учётной записи Uphold используя браузер</string>
-    <string name="uphold_logout_go_to_website">Перейти на сайт</string>
+    <string name="uphold_go_to_website">Перейти на сайт</string>
     <string name="uphold_error">Ошибка Uphold </string>
     <string name="uphold_error_not_logged_in">Dash Wallet больше не связан с вашим аккаунтом Uphold. На следующем экране нажмите Привязать Uphold аккаунт.</string>
     <string name="uphold_error_not_available">Сервис Uphold недоступен. Пожалуйста, попробуйте позже.</string>

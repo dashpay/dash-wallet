@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Keluar dari Uphold</string>
     <string name="uphold_logout">Keluar</string>
     <string name="uphold_logout_explanation_text">Anda juga harus keluar dari situs web Uphold menggunakan browser Anda</string>
-    <string name="uphold_logout_go_to_website">Pergi ke Situs Web</string>
+    <string name="uphold_go_to_website">Pergi ke Situs Web</string>
     <string name="uphold_error">Uphold Error</string>
     <string name="uphold_error_not_logged_in">Dash Wallet tidak lagi ditautkan ke akun Uphold Anda. Pada layar berikutnya tekan Tautkan akun Uphold.</string>
     <string name="uphold_error_not_available">Layanan Uphold tidak tersedia. Silakan coba lagi nanti.</string>

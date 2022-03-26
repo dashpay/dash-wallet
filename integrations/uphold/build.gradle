@@ -51,9 +51,11 @@ dependencies {
 
     // Tests
     testImplementation "junit:junit:$junitVersion"
-    androidTestImplementation('androidx.test.espresso:espresso-core:3.3.0', {
-        exclude group: 'com.android.support', module: 'support-annotations'
-    })
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
+    testImplementation "com.squareup.okhttp3:mockwebserver:$ok_http_version"
+
+    androidTestImplementation("androidx.test.espresso:espresso-core:$espressoVersion", {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
 }

@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Αποσύνδεση από το Uphold</string>
     <string name="uphold_logout">Αποσύνδεση</string>
     <string name="uphold_logout_explanation_text">Θα πρέπει επίσης να αποσυνδεθείτε από την ιστοσελίδα Uphold χρησιμοποιώντας το πρόγραμμα περιήγησης σας</string>
-    <string name="uphold_logout_go_to_website">Μεταβείτε στην Ιστοσελίδα</string>
+    <string name="uphold_go_to_website">Μεταβείτε στην Ιστοσελίδα</string>
     <string name="uphold_error">Σφάλμα Uphold</string>
     <string name="uphold_error_not_logged_in">Το Πορτοφόλι Dash δεν συνδέεται πλέον με τον λογαριασμό σας στο Uphold. Στην επόμενη οθόνη πατήστε σύνδεση λογαριασμού Uphold.</string>
     <string name="uphold_error_not_available">Η υπηρεσία Uphold δεν είναι διαθέσιμη. Παρακαλώ προσπαθήστε ξανά αργότερα.</string>

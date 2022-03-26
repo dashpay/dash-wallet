@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Mag-log out mula sa Uphold</string>
     <string name="uphold_logout">Mag-log out</string>
     <string name="uphold_logout_explanation_text">Kailangan mo ring mag-log out mula sa Uphold website gamit ang iyong browser.</string>
-    <string name="uphold_logout_go_to_website">Pumunta sa Website</string>
+    <string name="uphold_go_to_website">Pumunta sa Website</string>
     <string name="uphold_error">Uphold Error</string>
     <string name="uphold_error_not_logged_in">Ang iyong dash wallet ay hindi na konektado sa iyong Uphold account.  Sa susunod na screen pindutin ang Link Uphold account</string>
     <string name="uphold_error_not_available">Ang serbisyo ng uphold ay hindi maaring gamitin. Subukan ulit mamaya.</string>

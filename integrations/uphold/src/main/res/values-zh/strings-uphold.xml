@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">从Uphold退出</string>
     <string name="uphold_logout">退出</string>
     <string name="uphold_logout_explanation_text">您同样需要使用浏览器从Uphold网站退出</string>
-    <string name="uphold_logout_go_to_website">进入网站</string>
+    <string name="uphold_go_to_website">进入网站</string>
     <string name="uphold_error">Uphold错误</string>
     <string name="uphold_error_not_logged_in">Dash Wallet与您的Uphold账户已解除关联. 在下一个界面点击关联Uphold账户.</string>
     <string name="uphold_error_not_available">Uphold服务不可用. 请稍后再试.</string>

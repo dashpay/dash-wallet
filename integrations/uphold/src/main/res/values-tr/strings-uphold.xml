@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Uphold\'dan çıkış yap</string>
     <string name="uphold_logout">Çıkış Yap</string>
     <string name="uphold_logout_explanation_text">Aynı zamanda tarayıcınızda Uphold internet sitesinden çıkış yapmanız gerekecek</string>
-    <string name="uphold_logout_go_to_website">İnternet sitesine git</string>
+    <string name="uphold_go_to_website">İnternet sitesine git</string>
     <string name="uphold_error">Uphold Hatası</string>
     <string name="uphold_error_not_logged_in">Dash Cüzdan artık Uphold hesabınıza bağlı değil. Bir sonraki ekranda cüzdanınızı Uphold hesabınıza bağlayın.</string>
     <string name="uphold_error_not_available">Uphold hizmeti şuan kullanım dışı. Lütfen daha sonra tekrar deneyin.</string>

@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">تسجيل الخروج من Uphold</string>
     <string name="uphold_logout">تسجيل الخروج</string>
     <string name="uphold_logout_explanation_text">ستحتاج أيضًا إلى تسجيل الخروج من موقع Uphold باستخدام متصفحك</string>
-    <string name="uphold_logout_go_to_website">اذهب الى الموقع</string>
+    <string name="uphold_go_to_website">اذهب الى الموقع</string>
     <string name="uphold_error">خطأ Uphold</string>
     <string name="uphold_error_not_logged_in">لم تعد Dash Wallet مرتبطة بحسابك في Uphold. في الشاشة التالية ، اضغط على ربط حساب Uphold .</string>
     <string name="uphold_error_not_available">خدمة Uphold غير متوفرة. الرجاء معاودة المحاولة في وقت لاحق.</string>

@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Se déconnecter d\'Uphold</string>
     <string name="uphold_logout">Se déconnecter</string>
     <string name="uphold_logout_explanation_text">Vous devrez également vous déconnecter du site Uphold dans votre navigateur web.</string>
-    <string name="uphold_logout_go_to_website">Aller sur le site web</string>
+    <string name="uphold_go_to_website">Aller sur le site web</string>
     <string name="uphold_error">Erreur Uphold</string>
     <string name="uphold_error_not_logged_in">Dash Wallet n\'est plus lié à votre compte Uphold. Sur l\'écran suivant, touchez "Lier un compte Uphold".</string>
     <string name="uphold_error_not_available">Le service Uphold n\'est pas disponible. Veuillez réessayer plus tard.</string>

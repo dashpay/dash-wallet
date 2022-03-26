@@ -25,7 +25,6 @@ import android.text.style.ImageSpan
 import android.view.MenuItem
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
@@ -37,9 +36,12 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integration.uphold.data.RequirementsCheckResult
+import org.dash.wallet.integration.uphold.data.UpholdConstants
 import org.dash.wallet.integration.uphold.data.UpholdTransaction
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper.OnTransferListener
+import org.dash.wallet.integration.uphold.ui.openCustomTab
 import java.math.BigDecimal
 
 @AndroidEntryPoint
@@ -103,21 +105,32 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         builder.append(getText(R.string.enter_amount_available))
 
         enterAmountSharedViewModel.messageTextStringData.value = SpannableString.valueOf(builder)
-        enterAmountSharedViewModel.buttonClickEvent.observe(this, Observer {
-            val dashAmount = enterAmountSharedViewModel.dashAmount
-            showPaymentConfirmation(dashAmount)
-        })
+        enterAmountSharedViewModel.buttonClickEvent.observe(this) {
+            UpholdWithdrawalHelper.requirementsSatisfied(this) { result ->
+                when (result) {
+                    RequirementsCheckResult.Satisfied -> {
+                        val dashAmount = enterAmountSharedViewModel.dashAmount
+                        showPaymentConfirmation(dashAmount)
+                    }
+                    RequirementsCheckResult.Resolve -> {
+                        this.openCustomTab(UpholdConstants.PROFILE_URL)
+                        super.turnOffAutoLogout()
+                    }
+                    else -> {}
+                }
+            }
+        }
         enterAmountSharedViewModel.maxButtonVisibleData.value = true
-        enterAmountSharedViewModel.maxButtonClickEvent.observe(this, Observer<Boolean?> {
+        enterAmountSharedViewModel.maxButtonClickEvent.observe(this) {
             enterAmountSharedViewModel.applyMaxAmountEvent.setValue(balance)
-        })
-        enterAmountSharedViewModel.dashAmountData.observe(this, Observer<Coin> {
+        }
+        enterAmountSharedViewModel.dashAmountData.observe(this) {
             enterAmountSharedViewModel.buttonEnabledData.setValue(it.isPositive)
-        })
+        }
         val confirmTransactionSharedViewModel: SingleActionSharedViewModel = ViewModelProviders.of(this).get(SingleActionSharedViewModel::class.java)
-        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this, Observer {
+        confirmTransactionSharedViewModel.clickConfirmButtonEvent.observe(this) {
             withdrawalDialog.commitTransaction(this)
-        })
+        }
     }
 
     private fun showPaymentConfirmation(amount: Coin) {

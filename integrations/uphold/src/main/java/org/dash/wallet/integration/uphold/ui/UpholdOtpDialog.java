@@ -29,7 +29,7 @@ import androidx.fragment.app.FragmentManager;
 
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.integration.uphold.R;
-import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.api.UpholdClient;
 
 import kotlin.Unit;
 

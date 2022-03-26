@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Odhlásit z účtu Uphold</string>
     <string name="uphold_logout">Odhlásit se</string>
     <string name="uphold_logout_explanation_text">Je také nutné se odhlásit z webové stránky Uphold pomocí vašeho prohlížeče.</string>
-    <string name="uphold_logout_go_to_website">Přejít na Web</string>
+    <string name="uphold_go_to_website">Přejít na Web</string>
     <string name="uphold_error">Uphold chyba</string>
     <string name="uphold_error_not_logged_in">Peněženka Dash už není propojena s vaším účtem Uphold. Na další stránce stiskněte Připojit účet Uphold.</string>
     <string name="uphold_error_not_available">Služba Uphold není dostupná. Zkuste to prosím později.</string>

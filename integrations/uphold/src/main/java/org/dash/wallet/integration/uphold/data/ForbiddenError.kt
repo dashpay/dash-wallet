@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present the original author or authors.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integration.uphold.data;
+package org.dash.wallet.integration.uphold.data
 
-import com.squareup.moshi.FromJson;
+import org.dash.wallet.integration.uphold.R
 
-import java.util.Map;
-
-public class UpholdCardAddressAdapter {
-
-    @FromJson UpholdCardAddress fromJson(Map<String, String> json) {
-        UpholdCardAddress cardAddress = new UpholdCardAddress();
-        cardAddress.setWireId(json.get("wire"));
-        cardAddress.setCryptoAddress(json.get("dash"));
-        return cardAddress;
-    }
-
+object ForbiddenError {
+    val errorToMessageMap = mapOf(
+        "user-must-submit-enhanced-due-diligence" to R.string.uphold_api_error_403_due_diligence,
+        "user-must-submit-identity" to R.string.uphold_api_error_403_identity,
+        "user-must-submit-proof-of-address" to R.string.uphold_api_error_403_proof_of_address
+    )
 }

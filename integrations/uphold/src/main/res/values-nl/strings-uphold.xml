@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Bij Uphold uitloggen</string>
     <string name="uphold_logout">Uitloggen</string>
     <string name="uphold_logout_explanation_text">Je dient ook nog uit te loggen bij Uphold website in je webbrowser.</string>
-    <string name="uphold_logout_go_to_website">Ga naar website</string>
+    <string name="uphold_go_to_website">Ga naar website</string>
     <string name="uphold_error">Uphold fout</string>
     <string name="uphold_error_not_logged_in">Dash Wallet is niet langer gekoppeld aan uw Uphold-rekening. Druk Link Uphold-rekening in het volgende scherm.</string>
     <string name="uphold_error_not_available">De service van Uphold is niet beschikbaar. Probeer het later opnieuw.</string>

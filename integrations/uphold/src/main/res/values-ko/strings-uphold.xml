@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">업홀드에서 로그아웃</string>
     <string name="uphold_logout">로그아웃</string>
     <string name="uphold_logout_explanation_text">또한 당신의 브라우저를 이용하여 업홀드 웹사이트에서 로그아웃 하십시오.</string>
-    <string name="uphold_logout_go_to_website">웹사이트로 가기</string>
+    <string name="uphold_go_to_website">웹사이트로 가기</string>
     <string name="uphold_error">업홀드 에러</string>
     <string name="uphold_error_not_logged_in">대시 지갑은 더 이상 당신의 업홀드 계정에 연결되지 않습니다. 다음 화면에서 업홀드 계정 연결 버튼을 눌러주세요.</string>
     <string name="uphold_error_not_available">업홀드 서비스를 이용할 수 없습니다. 다시 시도해주세요.</string>

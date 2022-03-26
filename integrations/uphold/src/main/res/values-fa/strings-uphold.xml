@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">خروج از آپهولد</string>
     <string name="uphold_logout">خروج</string>
     <string name="uphold_logout_explanation_text">باید با استفاده از مرورگرتان، از وب‌سایت آپهولد خارج شوید</string>
-    <string name="uphold_logout_go_to_website">رفتن به وب‌سایت</string>
+    <string name="uphold_go_to_website">رفتن به وب‌سایت</string>
     <string name="uphold_error">خطا در آپهولد</string>
     <string name="uphold_error_not_logged_in">دش والت دیگر به حساب‌تان در آپهولد متصل نیست. در صفحه بعد، دگمه اتصال حساب کاربری در آپهلود را فشار دهید. </string>
     <string name="uphold_error_not_available">سرویس آپهولد در دسترس نیست. لطفا بعدا دوباره امتحان کنید. </string>

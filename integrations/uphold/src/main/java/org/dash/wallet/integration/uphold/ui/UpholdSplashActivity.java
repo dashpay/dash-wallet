@@ -30,16 +30,13 @@ import android.view.View;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
-import androidx.browser.customtabs.CustomTabsIntent;
-import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.integration.uphold.R;
-import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 
 import javax.inject.Inject;
@@ -182,22 +179,9 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
     }
 
     private void openLoginUrl() {
-        //Intent intent = new Intent(this, CustomTabActivity.class);
-        //startActivity(intent);
         final String url = String.format(UpholdConstants.INITIAL_URL,
                 UpholdClient.getInstance().getEncryptionKey());
-
-        CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
-        int toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary);
-        CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
-                .setToolbarColor(toolbarColor).build();
-
-        CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url),
-                (activity, uri) -> {
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setData(Uri.parse(url));
-                    startActivity(intent);
-                });
+        UpholdUtilsKt.openCustomTab(this, url);
         super.turnOffAutoLogout();
     }
 

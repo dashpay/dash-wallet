@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Aus Uphold abmelden</string>
     <string name="uphold_logout">Abmelden</string>
     <string name="uphold_logout_explanation_text">Du musst dich mit deinem Browser von der Uphold-Webseite abmelden</string>
-    <string name="uphold_logout_go_to_website">Webseite besuchen</string>
+    <string name="uphold_go_to_website">Webseite besuchen</string>
     <string name="uphold_error">Uphold Fehler</string>
     <string name="uphold_error_not_logged_in">Die Dash Wallet ist nicht mehr mit einem Uphold-Account verbunden. Auf der nächsten Seite musst du den Link Uphold-Account klicken.</string>
     <string name="uphold_error_not_available">Der Uphold-Service ist nicht verfügbar. Versuche es später erneut.</string>

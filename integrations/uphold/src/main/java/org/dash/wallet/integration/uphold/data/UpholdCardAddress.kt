@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-present the original author or authors.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,27 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integration.uphold.data;
+package org.dash.wallet.integration.uphold.data
 
-public class UpholdCardAddress {
+import com.squareup.moshi.Json
 
-    private String wireId;
-    private String cryptoAddress;
-
-    public String getWireId() {
-        return wireId;
-    }
-
-    public void setWireId(String wireId) {
-        this.wireId = wireId;
-    }
-
-    public String getCryptoAddress() {
-        return cryptoAddress;
-    }
-
-    public void setCryptoAddress(String cryptoAddress) {
-        this.cryptoAddress = cryptoAddress;
-    }
-
+class UpholdCardAddress {
+    @Json(name = "wire")
+    var wireId: String? = null
+    @Json(name = "dash")
+    var cryptoAddress: String? = null
 }

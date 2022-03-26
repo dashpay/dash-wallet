@@ -15,7 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integration.uphold.data;
+package org.dash.wallet.integration.uphold.api;
+
+import org.dash.wallet.integration.uphold.data.UpholdAccessToken;
+import org.dash.wallet.integration.uphold.data.UpholdCapability;
+import org.dash.wallet.integration.uphold.data.UpholdCard;
+import org.dash.wallet.integration.uphold.data.UpholdCryptoCardAddress;
+import org.dash.wallet.integration.uphold.data.UpholdTransaction;
 
 import java.util.List;
 import java.util.Map;
@@ -61,5 +67,6 @@ public interface UpholdService {
     @GET
     Call<String> getUpholdCurrency(@Header("Range") String range, @Url String url);
 
-
+    @GET("v0/me/capabilities/{operation}")
+    Call<UpholdCapability> getCapabilities(@Path("operation") String operation);
 }

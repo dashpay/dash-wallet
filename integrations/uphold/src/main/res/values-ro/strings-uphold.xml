@@ -18,7 +18,7 @@
     <string name="uphold_logout_title">Log out din Uphold</string>
     <string name="uphold_logout">Deconectează-te</string>
     <string name="uphold_logout_explanation_text">De asemenea, va trebui să te deconectezi de pe site-ul Uphold folosind browserul tău.</string>
-    <string name="uphold_logout_go_to_website">Mergi la Website</string>
+    <string name="uphold_go_to_website">Mergi la Website</string>
     <string name="uphold_error">Eroare Uphold</string>
     <string name="uphold_error_not_logged_in">Portofelul Dash nu mai este conectat la contul tău Uphold. Pe ecranul următor, apasă Conectează contul Uphold.</string>
     <string name="uphold_error_not_available">Serviciul Uphold nu este disponibil. Te rog să încerci din nou mai târziu.</string>

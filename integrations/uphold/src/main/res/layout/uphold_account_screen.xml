@@ -60,7 +60,7 @@
             android:orientation="horizontal">
 
             <TextView
-                style="@style/MontserratMedium.DB.14"
+                style="@style/Body2.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/uphold_account_dash_balance" />

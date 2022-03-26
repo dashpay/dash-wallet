@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Đăng xuất khỏi Uphold</string>
     <string name="uphold_logout">Thoát</string>
     <string name="uphold_logout_explanation_text">Bạn sẽ cần phải đăng xuất khỏi tài khoản từ trang web Uphold với trình duyệt của mình</string>
-    <string name="uphold_logout_go_to_website">Đến Website</string>
+    <string name="uphold_go_to_website">Đến Website</string>
     <string name="uphold_error">Lỗi Uphold </string>
     <string name="uphold_error_not_logged_in">Ví Dash của bạn không còn liên kết với tài khoản Uphold. Ở màn hình tiếp theo bấm Link Uphold account để liên kết tài khoản.</string>
     <string name="uphold_error_not_available">Dịch vụ của Uphold chưa sẵn sàng. Hãy thử lại sau đó xem sao.</string>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 the original author or authors.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,20 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integration.uphold.data;
+package org.dash.wallet.integration.uphold.api;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.securepreferences.SecurePreferences;
-import com.squareup.moshi.Moshi;
+import androidx.annotation.NonNull;
 
-import org.dash.wallet.common.data.BigDecimalAdapter;
+import com.securepreferences.SecurePreferences;
+
+import org.dash.wallet.integration.uphold.data.UpholdAccessToken;
+import org.dash.wallet.integration.uphold.data.UpholdApiException;
+import org.dash.wallet.integration.uphold.data.UpholdCapability;
+import org.dash.wallet.integration.uphold.data.UpholdCard;
+import org.dash.wallet.integration.uphold.data.UpholdConstants;
+import org.dash.wallet.integration.uphold.data.UpholdCryptoCardAddress;
+import org.dash.wallet.integration.uphold.data.UpholdException;
+import org.dash.wallet.integration.uphold.data.UpholdTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,9 +48,6 @@ import okhttp3.Request;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.moshi.MoshiConverterFactory;
-import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 public class UpholdClient {
 
@@ -52,6 +58,8 @@ public class UpholdClient {
     private String accessToken;
     private String otpToken;
     private UpholdCard dashCard;
+    private final Map<String, List<String>> requirements = new HashMap<>();
+
     private static final Logger log = LoggerFactory.getLogger(UpholdClient.class);
 
     private static final String UPHOLD_PREFS = "uphold_prefs.xml";
@@ -91,18 +99,7 @@ public class UpholdClient {
                 .addInterceptor(loggingIntercepter)
                 .build();
 
-        Moshi moshi = new Moshi.Builder()
-                .add(new BigDecimalAdapter())
-                .add(new UpholdCardAddressAdapter()).build();
-
-        Retrofit retrofit = new Retrofit.Builder()
-                .client(okClient)
-                .baseUrl(baseUrl)
-                .addConverterFactory(ScalarsConverterFactory.create())
-                .addConverterFactory(MoshiConverterFactory.create(moshi))
-                .build();
-
-        this.service = retrofit.create(UpholdService.class);
+        this.service = new RemoteDataSource().buildApi(UpholdService.class, baseUrl, okClient);
     }
 
     public static UpholdClient init(Context context, String prefsEncryptionKey) {
@@ -162,6 +159,34 @@ public class UpholdClient {
                 callback.onError(new Exception(t), false);
             }
         });
+    }
+
+    public void checkCapabilities() {
+        String operation = "withdrawals";
+        service.getCapabilities(operation).enqueue(new retrofit2.Callback<UpholdCapability>() {
+            @Override
+            public void onResponse(@NonNull Call<UpholdCapability> call, @NonNull Response<UpholdCapability> response) {
+                if (response.isSuccessful()) {
+                    UpholdCapability capability = response.body();
+
+                    if (capability != null && capability.getKey().equals(operation)) {
+                        requirements.put(capability.getKey(), capability.getRequirements());
+                    }
+                } else {
+                    log.error("Error obtaining Uphold capabilities: " + response.message() + "; code: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<UpholdCapability> call, @NonNull Throwable t) {
+                log.error("Error obtaining capabilities: " + t.getMessage());
+            }
+        });
+    }
+
+    public @NonNull List<String> getWithdrawalRequirements() {
+        List<String> result = requirements.get("withdrawals");
+        return result == null ? Collections.emptyList() : result;
     }
 
     private void storeAccessToken() {

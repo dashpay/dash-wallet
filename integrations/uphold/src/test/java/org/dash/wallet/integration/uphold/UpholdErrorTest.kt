@@ -15,10 +15,12 @@ class UpholdErrorsTest {
         val fakeIdentityStr = "IDENTITY_FAKE_STRING"
         val fakeDueDiligenceStr = "DUE_DILIGENCE_FAKE_STRING"
         val fakeGenericStr = "GENERIC_FAKE_STRING"
+        val fakeProofOfAddressStr = "PROOF_OF_ADDRESS_STRING"
 
         val mockContext = mock<Context> {
             on { getString(R.string.uphold_api_error_403_due_diligence) } doReturn fakeDueDiligenceStr
             on { getString(R.string.uphold_api_error_403_identity) } doReturn fakeIdentityStr
+            on { getString(R.string.uphold_api_error_403_proof_of_address) } doReturn fakeProofOfAddressStr
             on { getString(R.string.uphold_api_error_403_generic) } doReturn fakeGenericStr
             on { getString(eq(R.string.uphold_api_error_403_description), anyString()) } doAnswer {
                 fake403Description.format(it.getArgument(1) as String)
@@ -75,6 +77,22 @@ class UpholdErrorsTest {
         assertEquals(403, thirdException.code)
         assertEquals(null, arguments["requirements"])
         assertEquals(fake403Description.format(fakeGenericStr), thirdException.getDescription(mockContext))
+
+        val fourthError = """
+            {
+                "capability": "deposits",
+                "code": "forbidden",
+                "message": "Quote not allowed due to capability constraints",
+                "requirements": [ "user-must-submit-proof-of-address" ],
+                "restrictions": []
+            }
+        """.trimIndent()
+        val fourthException = UpholdApiException(fourthError, 403)
+        arguments.clear()
+        assertTrue(fourthException.isForbiddenError(arguments))
+        assertEquals(403, fourthException.code)
+        assertEquals("user-must-submit-proof-of-address", arguments["requirements"])
+        assertEquals(fake403Description.format(fakeProofOfAddressStr), fourthException.getDescription(mockContext))
     }
 
     @Test

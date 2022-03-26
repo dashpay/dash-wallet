@@ -17,20 +17,30 @@
 package org.dash.wallet.integration.uphold.ui;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentActivity;
+
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.data.ForbiddenError;
+import org.dash.wallet.integration.uphold.data.RequirementsCheckResult;
 import org.dash.wallet.integration.uphold.data.UpholdApiException;
-import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integration.uphold.data.UpholdTransaction;
 import java.math.BigDecimal;
-import kotlin.Unit;
+import java.util.List;
+import java.util.Map;
 
+import kotlin.Function;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 public class UpholdWithdrawalHelper {
 
@@ -98,6 +108,43 @@ public class UpholdWithdrawalHelper {
                     showLoadingError(activity, e);
                 }
             }
+        });
+    }
+
+    public static void requirementsSatisfied(
+            FragmentActivity activity,
+            Function1<RequirementsCheckResult, Unit> dialogCallback
+    ) {
+        List<String> requirements = UpholdClient.getInstance().getWithdrawalRequirements();
+
+        if (requirements.isEmpty()) {
+            dialogCallback.invoke(RequirementsCheckResult.Satisfied);
+            return;
+        }
+
+        String requirement = requirements.get(0);
+        Map<String, Integer> map = ForbiddenError.INSTANCE.getErrorToMessageMap();
+        String messageDetails = "";
+
+        if (map.containsKey(requirement)) {
+            messageDetails = activity.getString(map.get(requirement));
+        }
+
+        AdaptiveDialog dialog = AdaptiveDialog.create(
+                R.drawable.ic_info_red,
+                activity.getString(R.string.uphold_api_error_title),
+                activity.getString(R.string.uphold_requirement_not_met_base_message, messageDetails),
+                activity.getString(R.string.button_dismiss),
+                activity.getString(R.string.uphold_go_to_website)
+        );
+        dialog.show(activity, result -> {
+            if (result != null && result) {
+                dialogCallback.invoke(RequirementsCheckResult.Resolve);
+            } else {
+                dialogCallback.invoke(RequirementsCheckResult.DoNothing);
+            }
+
+            return Unit.INSTANCE;
         });
     }
 

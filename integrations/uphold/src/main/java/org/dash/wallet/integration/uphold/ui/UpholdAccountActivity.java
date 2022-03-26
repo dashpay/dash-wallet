@@ -19,7 +19,6 @@ package org.dash.wallet.integration.uphold.ui;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -28,20 +27,18 @@ import android.view.View;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
-import androidx.browser.customtabs.CustomTabsIntent;
-import androidx.core.content.ContextCompat;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
-import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.integration.uphold.R;
+import org.dash.wallet.integration.uphold.data.RequirementsCheckResult;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
-import org.dash.wallet.integration.uphold.data.UpholdClient;
+import org.dash.wallet.integration.uphold.api.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integration.uphold.data.UpholdException;
 
@@ -80,7 +77,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.uphold_account_screen);
 
-        receivingAddress = ((WalletDataProvider) getApplication()).currentReceiveAddress().toBase58();
+        receivingAddress = ((WalletDataProvider) getApplication()).freshReceiveAddress().toBase58();
 
         balanceView = findViewById(R.id.uphold_account_balance);
         balanceView.setFormat(monetaryFormat);
@@ -98,29 +95,18 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
             actionBar.setTitle(R.string.uphold_account);
         }
 
-        findViewById(R.id.uphold_transfer_to_this_wallet_button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (balance != null && receivingAddress != null) {
-                    analytics.logEvent(AnalyticsConstants.Uphold.TRANSFER_DASH, Bundle.EMPTY);
-                    showWithdrawalDialog();
-                }
+        findViewById(R.id.uphold_transfer_to_this_wallet_button).setOnClickListener(v -> {
+            if (balance != null && receivingAddress != null) {
+                analytics.logEvent(AnalyticsConstants.Uphold.TRANSFER_DASH, Bundle.EMPTY);
+                openWithdrawals();
             }
         });
-        findViewById(R.id.uphold_buy_dash_btn).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                analytics.logEvent(AnalyticsConstants.Uphold.BUY_DASH, Bundle.EMPTY);
-                openBuyDashUrl();
-            }
+        findViewById(R.id.uphold_buy_dash_btn).setOnClickListener(v -> {
+            analytics.logEvent(AnalyticsConstants.Uphold.BUY_DASH, Bundle.EMPTY);
+            openBuyDashUrl();
         });
 
-        findViewById(R.id.uphold_logout).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openLogOutUrl();
-            }
-        });
+        findViewById(R.id.uphold_logout).setOnClickListener(v -> openLogOutUrl());
 
     }
 
@@ -144,6 +130,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         super.onResume();
         super.turnOnAutoLogout();
         loadUserBalance();
+        UpholdClient.getInstance().checkCapabilities();
     }
 
     @Override
@@ -193,22 +180,15 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         UpholdCard dashCard = UpholdClient.getInstance().getCurrentDashCard();
         if (dashCard != null) {
             final String url = String.format(UpholdConstants.CARD_URL_BASE, dashCard.getId());
-
-            CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
-            int toolbarColor = ContextCompat.getColor(this, R.color.colorPrimary);
-            CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
-                    .setToolbarColor(toolbarColor).build();
-
-            CustomTabActivityHelper.openCustomTab(this, customTabsIntent, Uri.parse(url),
-                    (activity, uri) -> {
-                        Intent intent = new Intent(Intent.ACTION_VIEW);
-                        intent.setData(Uri.parse(url));
-                        startActivity(intent);
-                    });
-            super.turnOffAutoLogout();
+            openUpholdUrl(url);
         } else {
             showErrorAlert(-1);
         }
+    }
+
+    private void openUpholdUrl(String url) {
+        UpholdUtilsKt.openCustomTab(this, url);
+        super.turnOffAutoLogout();
     }
 
     private void showErrorAlert(int code) {
@@ -225,7 +205,19 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         alertDialogBuilder.buildAlertDialog().show();
     }
 
-    private void showWithdrawalDialog() {
+    private void openWithdrawals() {
+        UpholdWithdrawalHelper.requirementsSatisfied(this, result -> {
+            if (result == RequirementsCheckResult.Satisfied) {
+                openTransferActivity();
+            } else if (result == RequirementsCheckResult.Resolve) {
+                openUpholdUrl(UpholdConstants.PROFILE_URL);
+            }
+
+            return Unit.INSTANCE;
+        });
+    }
+
+    private void openTransferActivity() {
         Intent intent = new Intent();
         intent.setClassName(this, "de.schildbach.wallet.ui.UpholdTransferActivity");
         intent.putExtra("extra_title", getString(R.string.uphold_account));
@@ -239,7 +231,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         View dialogView = inflater.inflate(R.layout.uphold_logout_confirm, null);
 
         alertDialogBuilder.setTitle(getString(R.string.uphold_logout_title));
-        alertDialogBuilder.setPositiveText(getString(R.string.uphold_logout_go_to_website));
+        alertDialogBuilder.setPositiveText(getString(R.string.uphold_go_to_website));
         alertDialogBuilder.setPositiveAction(
                 () -> {
                     analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, Bundle.EMPTY);
@@ -279,18 +271,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
 
     private void openUpholdToLogout() {
         final String url = UpholdConstants.LOGOUT_URL;
-
-        CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
-        int toolbarColor = ContextCompat.getColor(UpholdAccountActivity.this, R.color.colorPrimary);
-        CustomTabsIntent customTabsIntent = builder.setShowTitle(true)
-                .setToolbarColor(toolbarColor).build();
-
-        CustomTabActivityHelper.openCustomTab(UpholdAccountActivity.this, customTabsIntent, Uri.parse(url),
-                (activity, uri) -> {
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setData(Uri.parse(url));
-                    startActivity(intent);
-                });
+        UpholdUtilsKt.openCustomTab(this, url);
         super.turnOffAutoLogout();
     }
 

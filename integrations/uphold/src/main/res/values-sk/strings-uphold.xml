@@ -19,7 +19,7 @@
     <string name="uphold_logout_title">Odhlásiť s Upholdu</string>
     <string name="uphold_logout">Odhlásiť</string>
     <string name="uphold_logout_explanation_text">Budete sa tiež musieť odhlásiť z webovej stránky Upholdu pomocou svojho prehliadača</string>
-    <string name="uphold_logout_go_to_website">Prejsť na webovú stránku</string>
+    <string name="uphold_go_to_website">Prejsť na webovú stránku</string>
     <string name="uphold_error">Chyba Upholdu</string>
     <string name="uphold_error_not_logged_in">Dash peňaženka už nie je prepojená s vaším účtom na Upholde. Na ďalšej obrazovke stlačte "Prepojiť Uphold účet".</string>
     <string name="uphold_error_not_available">Služba Uphold nie je k dispozícii. Skúste neskôr prosím.</string>
