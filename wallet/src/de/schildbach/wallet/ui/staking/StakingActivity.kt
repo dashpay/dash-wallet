@@ -87,7 +87,7 @@ class StakingActivity : LockScreenActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_crowdnode)
-        val status = viewModel.signUpStatus.value
+        val status = viewModel.signUpStatus.value ?: SignUpStatus.NotStarted
 
         navGraph.startDestination =
             when (status) {
