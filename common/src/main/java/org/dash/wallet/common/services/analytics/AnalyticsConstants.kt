@@ -143,5 +143,21 @@ object AnalyticsConstants {
         const val FILTER_MERCHANT_APPLY_ACTION = "explore_filter_merch_apply_action"
         const val FILTER_MERCHANT_CANCEL_ACTION = "explore_filter_merch_cancel_action"
         const val FILTER_MERCHANT_SWIPE_ACTION = "explore_filter_merch_swipe_action"
+
+        const val FILTER_ATM_SELECT_DASH = "explore_filter_atm_select_dash"
+        const val FILTER_ATM_SELECT_GIFT_CARD = "explore_filter_atm_select_gift_card"
+        const val FILTER_ATM_SORT_BY_NAME = "explore_filter_atm_sort_by_name"
+        const val FILTER_ATM_SORT_BY_DISTANCE = "explore_filter_atm_sort_by_distance"
+        const val FILTER_ATM_CURRENT_LOCATION = "explore_filter_atm_current_location"
+        const val FILTER_ATM_SELECTED_LOCATION = "explore_filter_atm_selected_location"
+        const val FILTER_ATM_ONE_MILE = "explore_filter_atm_one_mile"
+        const val FILTER_ATM_FIVE_MILE = "explore_filter_atm_five_miles"
+        const val FILTER_ATM_TWENTY_MILE = "explore_filter_atm_twenty_miles"
+        const val FILTER_ATM_FIFTY_MILE = "explore_filter_atm_fifty_miles"
+        const val FILTER_ATM_LOCATION_ALLOWED = "explore_filter_atm_location_allowed"
+        const val FILTER_ATM_LOCATION_DENIED = "explore_filter_atm_location_denied"
+        const val FILTER_ATM_APPLY_ACTION = "explore_filter_atm_apply_action"
+        const val FILTER_ATM_CANCEL_ACTION = "explore_filter_atm_cancel_action"
+        const val FILTER_ATM_SWIPE_ACTION = "explore_filter_atm_swipe_action"
     }
 }

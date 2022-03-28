@@ -746,58 +746,86 @@ class ExploreViewModel @Inject constructor(
         if (dashPaymentOn){
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_DASH, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_DASH, bundleOf())
             }
         }
 
         if (giftCardPaymentOn){
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_GIFT_CARD, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_GIFT_CARD, bundleOf())
             }
         }
 
         if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE){
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_DISTANCE, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SORT_BY_DISTANCE, bundleOf())
             }
         } else {
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_NAME, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SORT_BY_NAME, bundleOf())
             }
         }
 
         if ( _selectedTerritory.value.isEmpty()){
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CURRENT_LOCATION, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_CURRENT_LOCATION, bundleOf())
             }
         } else {
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECTED_LOCATION, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECTED_LOCATION, bundleOf())
             }
         }
 
-        if (exploreTopic == ExploreTopic.Merchants){
-            analyticsService.logEvent(
-                when(_selectedRadiusOption.value){
-                    1 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_ONE_MILE
-                    5 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIVE_MILE
-                    50 -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIFTY_MILE
-                    else -> AnalyticsConstants.ExploreDash.FILTER_MERCHANT_TWENTY_MILE
-                }, bundleOf()
-            )
-        }
+        analyticsService.logEvent(
+            when(_selectedRadiusOption.value){
+                1 -> {
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_ONE_MILE
+                    else AnalyticsConstants.ExploreDash.FILTER_ATM_ONE_MILE
+                }
+                5 -> {
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIVE_MILE
+                    else AnalyticsConstants.ExploreDash.FILTER_ATM_FIVE_MILE
+                }
+                50 -> {
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_FIFTY_MILE
+                    else AnalyticsConstants.ExploreDash.FILTER_ATM_FIFTY_MILE
+                }
+                else -> {
+                    if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_TWENTY_MILE
+                    else AnalyticsConstants.ExploreDash.FILTER_ATM_TWENTY_MILE
+                }
+            }, bundleOf()
+        )
 
         if (_isLocationEnabled.value == true){
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_ALLOWED, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_LOCATION_ALLOWED, bundleOf())
             }
         } else {
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_DENIED, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_LOCATION_DENIED, bundleOf())
             }
         }
 
         if (exploreTopic == ExploreTopic.Merchants){
             analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_APPLY_ACTION, bundleOf())
+        } else {
+            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_APPLY_ACTION, bundleOf())
         }
     }
 
@@ -805,10 +833,14 @@ class ExploreViewModel @Inject constructor(
         if (isDialogDismissedOnCancel){
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CANCEL_ACTION, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_CANCEL_ACTION, bundleOf())
             }
         } else {
             if (exploreTopic == ExploreTopic.Merchants){
                 analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SWIPE_ACTION, bundleOf())
+            } else {
+                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SWIPE_ACTION, bundleOf())
             }
         }
     }
