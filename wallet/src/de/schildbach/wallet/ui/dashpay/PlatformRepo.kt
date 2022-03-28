@@ -51,6 +51,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
+import org.dashj.platform.dapiclient.NoAvailableAddressesForRetryException
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.*
 import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
@@ -1490,6 +1491,8 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             }
         } catch (e: MaxRetriesReachedException) {
             null
+        } catch (e: NoAvailableAddressesForRetryException) {
+            null
         }
     }
 
@@ -1705,6 +1708,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                         }
                     } catch (e: NullPointerException) {
                         // swallow, the identity was not found for this invite
+                    } catch (e: MaxRetriesReachedException) {
+                        // swallow, the profile could not be retrieved
+                        // the invite status update function should be able to try again
                     }
                     invitationsDao.insert(invite)
                 }
