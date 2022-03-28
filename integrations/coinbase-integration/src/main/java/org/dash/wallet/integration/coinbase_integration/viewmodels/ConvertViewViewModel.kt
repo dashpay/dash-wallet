@@ -35,6 +35,7 @@ import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import java.math.RoundingMode
 import javax.inject.Inject
 
@@ -46,14 +47,21 @@ class ConvertViewViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
 
+    val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+        .noCode().minDecimals(6).optionalDecimals()
+
     private val _dashToCrypto = MutableLiveData<Boolean>()
     val dashToCrypto: LiveData<Boolean>
         get() = this._dashToCrypto
 
     var enteredConvertAmount = "0"
     var maxAmount: String = "0"
+    val minAmount: String = "2"
+
     var maxDashAmount: String = "0"
     val onContinueEvent = SingleLiveEvent<Pair<Boolean, Pair<Fiat?, Coin?>?>>()
+
+    var minDashAmount = Coin.ZERO
 
     private val _selectedCryptoCurrencyAccount = MutableLiveData<CoinBaseUserAccountDataUIModel?>()
     val selectedCryptoCurrencyAccount: LiveData<CoinBaseUserAccountDataUIModel?>
@@ -89,6 +97,10 @@ class ConvertViewViewModel @Inject constructor(
     val userDashAccountEmptyError: LiveData<Boolean>
         get() = _userDashAccountEmptyError
 
+    private val _swapValueError: SingleLiveEvent<SwapValueErrorType> = SingleLiveEvent()
+    val swapValueError: LiveData<SwapValueErrorType>
+        get() = _swapValueError
+
     init {
         setDashWalletBalance()
         _selectedLocalCurrencyCode.flatMapLatest { code ->
@@ -110,12 +122,30 @@ class ConvertViewViewModel @Inject constructor(
                 bd.toString()
             )
         }
-
         this._selectedCryptoCurrencyAccount.value = account
     }
 
     fun setEnteredConvertDashAmount(value: Coin) {
         _enteredConvertDashAmount.value = value
+        if (value.isZero)
+            SwapValueErrorType.NOError
+    }
+
+    fun checkEnteredAmountValue() {
+        val coin = try {
+            Coin.parseCoin(maxDashAmount)
+        } catch (x: Exception) {
+            Coin.ZERO
+        }
+
+        _enteredConvertDashAmount.value?.let {
+            _swapValueError.value = when {
+                it.isZero -> SwapValueErrorType.NOError
+                it.isLessThan(minDashAmount) -> SwapValueErrorType.LessThanMin
+                it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax
+                else -> SwapValueErrorType.NOError
+            }
+        }
     }
 
     fun setOnSwapDashFromToCryptoClicked(dashToCrypto: Boolean) {
@@ -133,9 +163,9 @@ class ConvertViewViewModel @Inject constructor(
     private fun setDashWalletBalance() {
         val balance = walletDataProvider.getWalletBalance()
         _dashWalletBalance.value = Event(balance)
-        val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-            .noCode().minDecimals(6).optionalDecimals()
+
         maxDashAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
     }
 }
+

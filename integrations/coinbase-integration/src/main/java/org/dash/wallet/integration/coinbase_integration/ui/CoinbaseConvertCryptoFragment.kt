@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -43,6 +44,7 @@ import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErr
 import org.dash.wallet.integration.coinbase_integration.model.getCoinBaseExchangeRateConversion
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.ConvertViewFragment
 import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.ServiceWallet
+import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallets.CryptoWalletsDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConvertCryptoViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
@@ -268,6 +270,13 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         ) {
 
             binding.convertView.dashInput = it
+        }
+        convertViewModel.swapValueError.observe(viewLifecycleOwner) {
+            binding.limitDesc.isGone = it.equals(SwapValueErrorType.NOError)
+            when (it) {
+                SwapValueErrorType.LessThanMin -> binding.limitDesc.setText(R.string.entered_amount_is_too_low)
+                SwapValueErrorType.MoreThanMax -> binding.limitDesc.setText(R.string.entered_amount_is_too_high)
+            }
         }
     }
 

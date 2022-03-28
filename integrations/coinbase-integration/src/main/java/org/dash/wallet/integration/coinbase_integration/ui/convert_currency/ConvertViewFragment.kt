@@ -116,6 +116,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.bottomCard.isVisible = false
 
         binding.currencyOptions.pickedOptionIndex = 0
+
         binding.maxButton.setOnClickListener {
             viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
                 getMaxAmount()?.let { maxAmount ->
@@ -145,6 +146,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.currencyOptions.setOnOptionPickedListener { value, index ->
             setAmountValue(value, viewModel.enteredConvertAmount)
             viewModel.selectedPickerCurrencyCode = value
+            viewModel.checkEnteredAmountValue()
+        }
+
+        viewModel.swapValueError.observe(viewLifecycleOwner) {
         }
     }
 
@@ -372,7 +377,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
         val hasBalance = balance.isNotEmpty() &&
             (balance.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
-        binding.continueBtn.isEnabled = hasBalance
+
 
         if (hasBalance) {
 
@@ -420,7 +425,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         } else {
             viewModel.setEnteredConvertDashAmount(Coin.ZERO)
         }
+
+        checkTheUserEnteredValue(hasBalance)
     }
+
+
 
     private fun setAmountFormat(
         spannable: Spannable,
@@ -482,5 +491,24 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             }
         }
         return null
+    }
+
+    private fun checkTheUserEnteredValue(hasBalance: Boolean) {
+
+        val enteredDashAmount = viewModel.enteredConvertDashAmount.value
+
+        val coin = try {
+            Coin.parseCoin(viewModel.maxDashAmount)
+        } catch (x: Exception) {
+            Coin.ZERO
+        }
+
+        if (hasBalance &&
+            enteredDashAmount?.isLessThan(viewModel.minDashAmount) == false &&
+            !enteredDashAmount.isGreaterThan(coin)
+        ) {
+
+            binding.continueBtn.isEnabled = hasBalance
+        }
     }
 }

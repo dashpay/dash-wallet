@@ -90,4 +90,7 @@
     <string name="insufficient_money_title">Not enough coins</string>
     <string name="insufficient_money_msg">The amount of coins in the wallet is too small for sweeping.</string>
     <string name="send_coins_error_msg">Problem sending coins!</string>
+    <string name="entered_amount_is_too_low">Entered amount is too low</string>
+    <string name="entered_amount_is_too_high">Entered amount is too high</string>
+
 </resources>
