@@ -73,6 +73,10 @@ class SetPinActivity : InteractionAwareActivity() {
         intent.getBooleanExtra(CHANGE_PIN, false)
     }
 
+    private val upgradingWallet by lazy {
+        intent.getBooleanExtra(UPGRADING_WALLET, false)
+    }
+
     private enum class State {
         DECRYPT,
         DECRYPTING,
@@ -91,15 +95,20 @@ class SetPinActivity : InteractionAwareActivity() {
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
         private const val CHANGE_PIN = "change_pin"
+        private const val UPGRADING_WALLET = "upgrading_wallet"
 
         @JvmOverloads
         @JvmStatic
-        fun createIntent(context: Context, titleResId: Int,
-                         changePin: Boolean = false, pin: String? = null): Intent {
+        fun createIntent(
+            context: Context, titleResId: Int,
+            changePin: Boolean = false, pin: String? = null,
+            upgradingWallet: Boolean = false
+        ): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
             intent.putExtra(CHANGE_PIN, changePin)
             intent.putExtra(EXTRA_PASSWORD, pin)
+            intent.putExtra(UPGRADING_WALLET, upgradingWallet)
             return intent
         }
 
@@ -126,31 +135,27 @@ class SetPinActivity : InteractionAwareActivity() {
 
         walletApplication = application as WalletApplication
 
-        if (walletApplication.wallet == null) {
-            showErrorDialog(false, NullPointerException("wallet is null in SetPinActivity"))
-        } else {
-            if (walletApplication.wallet.isEncrypted) {
-                if (initialPin != null) {
-                    if (changePin) {
-                        viewModel.oldPinCache = initialPin
-                        setState(State.SET_PIN)
-                    } else {
-                        viewModel.decryptKeys(initialPin)
-                    }
+        if (walletApplication.wallet.isEncrypted) {
+            if (initialPin != null) {
+                if (changePin) {
+                    viewModel.oldPinCache = initialPin
+                    setState(State.SET_PIN)
                 } else {
-                    if (changePin) {
-                        if (pinRetryController.isLocked) {
-                            setState(State.LOCKED)
-                        } else {
-                            setState(State.CHANGE_PIN)
-                        }
-                    } else {
-                        setState(State.DECRYPT)
-                    }
+                    viewModel.decryptKeys(initialPin)
                 }
             } else {
-                seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
+                if (changePin) {
+                    if (pinRetryController.isLocked) {
+                        setState(State.LOCKED)
+                    } else {
+                        setState(State.CHANGE_PIN)
+                    }
+                } else {
+                    setState(State.DECRYPT)
+                }
             }
+        } else {
+            seed = walletApplication.wallet.keyChainSeed.mnemonicCode!!
         }
     }
 
@@ -216,7 +221,7 @@ class SetPinActivity : InteractionAwareActivity() {
                     if (changePin) {
                         viewModel.changePin()
                     } else {
-                        viewModel.savePinAndEncrypt()
+                        viewModel.savePinAndEncrypt(!upgradingWallet)
                     }
                 }, 200)
             } else {
@@ -358,7 +363,6 @@ class SetPinActivity : InteractionAwareActivity() {
                                     android.widget.Toast.LENGTH_LONG).show()
                             }
                         } else {
-                            showErrorDialog(true, it.exception)
                             setState(State.CONFIRM_PIN)
                         }
                     }
@@ -433,6 +437,7 @@ class SetPinActivity : InteractionAwareActivity() {
         })
     }
 
+    @Deprecated("This error dialog may no longer be useful")
     private fun showErrorDialog(isEncryptingError: Boolean, exception: Throwable?) {
         if (exception != null) {
             analytics.logError(exception, "SetPinActivity Error")

@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Unable to load wallet!</string>
 
     <string name="set_pin_create_new_wallet">Create a New Wallet</string>
+    <string name="set_pin_upgrade_wallet">Upgrade Wallet</string>
     <string name="set_pin_restore_wallet">Restore Wallet</string>
     <string name="set_pin_enter_pin">Enter old PIN</string>
     <string name="set_pin_set_pin">Set PIN</string>
