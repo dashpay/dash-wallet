@@ -844,4 +844,77 @@ class ExploreViewModel @Inject constructor(
             }
         }
     }
+
+    fun trackAllMerchantLocationsEvents() {
+        analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SHOW_ALL_LOCATIONS, bundleOf())
+    }
+
+    fun trackNavigationIconEvent() {
+        if (exploreTopic == ExploreTopic.Merchants) {
+            analyticsService.logEvent(
+                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_NAVIGATION,
+                bundleOf()
+            )
+        }
+    }
+
+    fun trackDialPhoneCallIconEvent() {
+        if (exploreTopic == ExploreTopic.Merchants) {
+            analyticsService.logEvent(
+                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_DIAL_PHONE_CALL,
+                bundleOf()
+            )
+        }
+    }
+
+    fun trackOpenWebsiteIconEvent() {
+        if (exploreTopic == ExploreTopic.Merchants) {
+            analyticsService.logEvent(
+                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_OPEN_WEBSITE,
+                bundleOf()
+            )
+        }
+    }
+
+    fun trackBuyGiftCardEvent() {
+        analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BUY_GIFT_CARD, bundleOf())
+    }
+
+    fun trackBackToAllLocationsEvent() {
+        analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_TO_ALL_LOCATIONS, bundleOf())
+    }
+
+    fun trackTopBackPressEvent() {
+        if(exploreTopic == ExploreTopic.Merchants) {
+            analyticsService.logEvent(
+                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_TOP,
+                bundleOf()
+            )
+        }
+    }
+
+    fun trackBottomBackPressEvent() {
+        if (exploreTopic == ExploreTopic.Merchants) {
+            analyticsService.logEvent(
+                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_BOTTOM,
+                bundleOf()
+            )
+        }
+    }
+
+    fun trackScrollToTopEvent() {
+        if (exploreTopic == ExploreTopic.Merchants){
+            analyticsService.logEvent(
+                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SCROLL_UP,
+                bundleOf()
+            )
+        }
+    }
+
+    fun trackPayWithDashEvent() {
+        analyticsService.logEvent(
+            AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_PAY_WITH_DASH,
+            bundleOf()
+        )
+    }
 }

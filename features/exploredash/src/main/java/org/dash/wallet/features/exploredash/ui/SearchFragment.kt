@@ -412,6 +412,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.upButton.setOnClickListener {
             binding.searchResults.scrollToPosition(0)
+            viewModel.trackScrollToTopEvent()
         }
 
         binding.resetFiltersBtn.setOnClickListener {
@@ -453,13 +454,22 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupItemDetails() {
-        binding.itemDetails.setOnSendDashClicked { viewModel.sendDash() }
+        binding.itemDetails.setOnSendDashClicked { isPayingWithDash ->
+            if (isPayingWithDash){
+                viewModel.trackPayWithDashEvent()
+            }
+            viewModel.sendDash()
+        }
         binding.itemDetails.setOnReceiveDashClicked { viewModel.receiveDash() }
-        binding.itemDetails.setOnBackButtonClicked { viewModel.backFromMerchantLocation() }
+        binding.itemDetails.setOnBackButtonClicked {
+            viewModel.backFromMerchantLocation()
+            viewModel.trackBackToAllLocationsEvent()
+        }
         binding.itemDetails.setOnShowAllLocationsClicked {
             viewModel.selectedItem.value?.let { merchant ->
                 if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
                     viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                    viewModel.trackAllMerchantLocationsEvents()
                 }
             }
         }
@@ -472,6 +482,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 binding.toolbarTitle.text = getToolbarTitle()
             }
         }
+        binding.itemDetails.setOnNavigationButtonClicked { viewModel.trackNavigationIconEvent() }
+        binding.itemDetails.setOnDialPhoneButtonClicked { viewModel.trackDialPhoneCallIconEvent() }
+        binding.itemDetails.setOnOpenWebsiteButtonClicked { viewModel.trackOpenWebsiteIconEvent() }
+        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.trackBuyGiftCardEvent() }
     }
 
     private fun setupScreenTransitions() {
@@ -537,6 +551,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbar.setNavigationOnClickListener {
             hardBackAction.invoke()
+            viewModel.trackTopBackPressEvent()
         }
 
         requireActivity().onBackPressedDispatcher.addCallback(
@@ -544,6 +559,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     hardBackAction.invoke()
+                    viewModel.trackBottomBackPressEvent()
                 }
             })
     }

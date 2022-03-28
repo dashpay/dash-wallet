@@ -159,5 +159,18 @@ object AnalyticsConstants {
         const val FILTER_ATM_APPLY_ACTION = "explore_filter_atm_apply_action"
         const val FILTER_ATM_CANCEL_ACTION = "explore_filter_atm_cancel_action"
         const val FILTER_ATM_SWIPE_ACTION = "explore_filter_atm_swipe_action"
+
+        const val MERCHANT_DETAILS_SHOW_ALL_LOCATIONS = "explore_merchant_details_all_locations"
+        const val MERCHANT_DETAILS_NAVIGATION = "explore_merchant_details_navigation"
+        const val MERCHANT_DETAILS_DIAL_PHONE_CALL = "explore_merchant_details_dial_phone"
+        const val MERCHANT_DETAILS_OPEN_WEBSITE = "explore_merchant_details_open_website"
+        const val MERCHANT_DETAILS_BUY_GIFT_CARD = "explore_merchant_details_buy_gift_card"
+        const val MERCHANT_DETAILS_BACK_TO_ALL_LOCATIONS = "explore_merchant_details_back"
+        const val MERCHANT_DETAILS_BACK_TOP = "explore_merchant_details_back_top"
+        const val MERCHANT_DETAILS_BACK_BOTTOM = "explore_merchant_details_back_bottom"
+        const val MERCHANT_DETAILS_PAY_WITH_DASH = "explore_merchant_details_pay_with_dash"
+        const val MERCHANT_DETAILS_SCROLL_UP = "explore_merchant_details_scroll_up"
+
+
     }
 }
