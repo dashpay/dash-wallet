@@ -59,7 +59,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private var selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel? = null
     private var cryptoWalletsDialog: CryptoWalletsDialog? = null
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
+        .noCode().minDecimals(8).optionalDecimals()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -101,20 +101,25 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
-            if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
-                selectedCoinBaseAccount?.let {
-                    pair.second?.first?.let { fait ->
-                        viewModel.swapTrade(fait, it, pair.first)
-                    }
-                }
-            } else {
-                pair.second?.second?.let { coin ->
+            val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
+            if (swapValueErrorType == SwapValueErrorType.NOError) {
+                if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
                     selectedCoinBaseAccount?.let {
                         pair.second?.first?.let { fait ->
-                            viewModel.sellDashToCoinBase(coin, fait, it)
+                            viewModel.swapTrade(fait, it, pair.first)
+                        }
+                    }
+                } else {
+                    pair.second?.second?.let { coin ->
+                        selectedCoinBaseAccount?.let {
+                            pair.second?.first?.let { fait ->
+                                viewModel.sellDashToCoinBase(coin, fait, it)
+                            }
                         }
                     }
                 }
+            } else {
+                showSwapValueErrorView(swapValueErrorType)
             }
         }
 
@@ -271,12 +276,17 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
             binding.convertView.dashInput = it
         }
-        convertViewModel.swapValueError.observe(viewLifecycleOwner) {
-            binding.limitDesc.isGone = it.equals(SwapValueErrorType.NOError)
-            when (it) {
-                SwapValueErrorType.LessThanMin -> binding.limitDesc.setText(R.string.entered_amount_is_too_low)
-                SwapValueErrorType.MoreThanMax -> binding.limitDesc.setText(R.string.entered_amount_is_too_high)
-            }
+
+        convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
+            binding.limitDesc.isGone = true
+        }
+    }
+
+    private fun showSwapValueErrorView(swapValueErrorType: SwapValueErrorType) {
+        binding.limitDesc.isGone = swapValueErrorType == SwapValueErrorType.NOError
+        when (swapValueErrorType) {
+            SwapValueErrorType.LessThanMin -> binding.limitDesc.setText(R.string.entered_amount_is_too_low)
+            SwapValueErrorType.MoreThanMax -> binding.limitDesc.setText(R.string.entered_amount_is_too_high)
         }
     }
 
