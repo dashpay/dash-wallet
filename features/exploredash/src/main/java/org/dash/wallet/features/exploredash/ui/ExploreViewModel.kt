@@ -880,8 +880,8 @@ class ExploreViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BUY_GIFT_CARD, bundleOf())
     }
 
-    fun trackBackToAllLocationsEvent() {
-        analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_TO_ALL_LOCATIONS, bundleOf())
+    fun trackFromAllLocationsEvent() {
+        analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS, bundleOf())
     }
 
     fun trackTopBackPressEvent() {
