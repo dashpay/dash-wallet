@@ -712,16 +712,16 @@ class ExploreViewModel @Inject constructor(
         when {
             hasZoomLevelChanged(currentZoomLevel) -> {
                 if (exploreTopic == ExploreTopic.Merchants){
-                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.ZOOM_MERCHANT_MAP, bundleOf())
+                    trackEvent(AnalyticsConstants.ExploreDash.ZOOM_MERCHANT_MAP)
                 } else {
-                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.ZOOM_ATM_MAP, bundleOf())
+                    trackEvent(AnalyticsConstants.ExploreDash.ZOOM_ATM_MAP)
                 }
             }
             hasCameraCenterChanged(currentGeoBounds) -> {
                 if (exploreTopic == ExploreTopic.Merchants){
-                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.PAN_MERCHANT_MAP, bundleOf())
+                    trackEvent(AnalyticsConstants.ExploreDash.PAN_MERCHANT_MAP)
                 } else {
-                    analyticsService.logEvent(AnalyticsConstants.ExploreDash.PAN_ATM_MAP, bundleOf())
+                    trackEvent(AnalyticsConstants.ExploreDash.PAN_ATM_MAP)
                 }
             }
         }
@@ -734,9 +734,9 @@ class ExploreViewModel @Inject constructor(
 
     fun triggerMarkerClickEvent(){
         if (exploreTopic == ExploreTopic.Merchants){
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER, bundleOf())
+            trackEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER)
         } else {
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER, bundleOf())
+            trackEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER)
         }
     }
 
@@ -745,49 +745,49 @@ class ExploreViewModel @Inject constructor(
         giftCardPaymentOn: Boolean) {
         if (dashPaymentOn){
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_DASH, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_DASH)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_DASH, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_DASH)
             }
         }
 
         if (giftCardPaymentOn){
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_GIFT_CARD, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECT_GIFT_CARD)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_GIFT_CARD, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECT_GIFT_CARD)
             }
         }
 
         if (sortByDistance == ExploreViewModel.DEFAULT_SORT_BY_DISTANCE){
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_DISTANCE, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_DISTANCE)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SORT_BY_DISTANCE, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SORT_BY_DISTANCE)
             }
         } else {
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_NAME, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SORT_BY_NAME)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SORT_BY_NAME, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SORT_BY_NAME)
             }
         }
 
         if ( _selectedTerritory.value.isEmpty()){
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CURRENT_LOCATION, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CURRENT_LOCATION)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_CURRENT_LOCATION, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_CURRENT_LOCATION)
             }
         } else {
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECTED_LOCATION, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SELECTED_LOCATION)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECTED_LOCATION, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SELECTED_LOCATION)
             }
         }
 
-        analyticsService.logEvent(
+        trackEvent(
             when(_selectedRadiusOption.value){
                 1 -> {
                     if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_ONE_MILE
@@ -805,116 +805,47 @@ class ExploreViewModel @Inject constructor(
                     if (exploreTopic == ExploreTopic.Merchants) AnalyticsConstants.ExploreDash.FILTER_MERCHANT_TWENTY_MILE
                     else AnalyticsConstants.ExploreDash.FILTER_ATM_TWENTY_MILE
                 }
-            }, bundleOf()
+            }
         )
 
         if (_isLocationEnabled.value == true){
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_ALLOWED, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_ALLOWED)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_LOCATION_ALLOWED, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_LOCATION_ALLOWED)
             }
         } else {
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_DENIED, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_LOCATION_DENIED)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_LOCATION_DENIED, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_LOCATION_DENIED)
             }
         }
 
         if (exploreTopic == ExploreTopic.Merchants){
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_APPLY_ACTION, bundleOf())
+            trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_APPLY_ACTION)
         } else {
-            analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_APPLY_ACTION, bundleOf())
+            trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_APPLY_ACTION)
         }
     }
 
     fun trackDismissEvent() {
         if (isDialogDismissedOnCancel){
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CANCEL_ACTION, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_CANCEL_ACTION)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_CANCEL_ACTION, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_CANCEL_ACTION)
             }
         } else {
             if (exploreTopic == ExploreTopic.Merchants){
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SWIPE_ACTION, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_MERCHANT_SWIPE_ACTION)
             } else {
-                analyticsService.logEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SWIPE_ACTION, bundleOf())
+                trackEvent(AnalyticsConstants.ExploreDash.FILTER_ATM_SWIPE_ACTION)
             }
         }
     }
 
-    fun trackAllMerchantLocationsEvents() {
-        analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SHOW_ALL_LOCATIONS, bundleOf())
-    }
-
-    fun trackNavigationIconEvent() {
-        if (exploreTopic == ExploreTopic.Merchants) {
-            analyticsService.logEvent(
-                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_NAVIGATION,
-                bundleOf()
-            )
-        }
-    }
-
-    fun trackDialPhoneCallIconEvent() {
-        if (exploreTopic == ExploreTopic.Merchants) {
-            analyticsService.logEvent(
-                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_DIAL_PHONE_CALL,
-                bundleOf()
-            )
-        }
-    }
-
-    fun trackOpenWebsiteIconEvent() {
-        if (exploreTopic == ExploreTopic.Merchants) {
-            analyticsService.logEvent(
-                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_OPEN_WEBSITE,
-                bundleOf()
-            )
-        }
-    }
-
-    fun trackBuyGiftCardEvent() {
-        analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BUY_GIFT_CARD, bundleOf())
-    }
-
-    fun trackBackFromAllLocationsEvent() {
-        analyticsService.logEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS, bundleOf())
-    }
-
-    fun trackTopBackPressEvent() {
-        if(exploreTopic == ExploreTopic.Merchants) {
-            analyticsService.logEvent(
-                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_TOP,
-                bundleOf()
-            )
-        }
-    }
-
-    fun trackBottomBackPressEvent() {
-        if (exploreTopic == ExploreTopic.Merchants) {
-            analyticsService.logEvent(
-                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_BOTTOM,
-                bundleOf()
-            )
-        }
-    }
-
-    fun trackScrollToTopEvent() {
-        if (exploreTopic == ExploreTopic.Merchants){
-            analyticsService.logEvent(
-                AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SCROLL_UP,
-                bundleOf()
-            )
-        }
-    }
-
-    fun trackPayWithDashEvent() {
-        analyticsService.logEvent(
-            AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_PAY_WITH_DASH,
-            bundleOf()
-        )
+    fun trackEvent(event: String){
+        analyticsService.logEvent(event, bundleOf())
     }
 }

@@ -412,7 +412,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.upButton.setOnClickListener {
             binding.searchResults.scrollToPosition(0)
-            viewModel.trackScrollToTopEvent()
+            if (isMerchant()){
+                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SCROLL_UP)
+            }
         }
 
         binding.resetFiltersBtn.setOnClickListener {
@@ -456,20 +458,20 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setupItemDetails() {
         binding.itemDetails.setOnSendDashClicked { isPayingWithDash ->
             if (isPayingWithDash){
-                viewModel.trackPayWithDashEvent()
+                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_PAY_WITH_DASH)
             }
             viewModel.sendDash()
         }
         binding.itemDetails.setOnReceiveDashClicked { viewModel.receiveDash() }
         binding.itemDetails.setOnBackButtonClicked {
             viewModel.backFromMerchantLocation()
-            viewModel.trackBackFromAllLocationsEvent()
+            viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_FROM_ALL_LOCATIONS)
         }
         binding.itemDetails.setOnShowAllLocationsClicked {
             viewModel.selectedItem.value?.let { merchant ->
                 if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
                     viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
-                    viewModel.trackAllMerchantLocationsEvents()
+                    viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_SHOW_ALL_LOCATIONS)
                 }
             }
         }
@@ -482,10 +484,22 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 binding.toolbarTitle.text = getToolbarTitle()
             }
         }
-        binding.itemDetails.setOnNavigationButtonClicked { viewModel.trackNavigationIconEvent() }
-        binding.itemDetails.setOnDialPhoneButtonClicked { viewModel.trackDialPhoneCallIconEvent() }
-        binding.itemDetails.setOnOpenWebsiteButtonClicked { viewModel.trackOpenWebsiteIconEvent() }
-        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.trackBuyGiftCardEvent() }
+        binding.itemDetails.setOnNavigationButtonClicked {
+            if (isMerchant()){
+                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_NAVIGATION)
+            }
+        }
+        binding.itemDetails.setOnDialPhoneButtonClicked {
+            if (isMerchant()){
+                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+            }
+        }
+        binding.itemDetails.setOnOpenWebsiteButtonClicked {
+            if (isMerchant()){
+                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_OPEN_WEBSITE)
+            }
+        }
+        binding.itemDetails.setOnBuyGiftCardButtonClicked { viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BUY_GIFT_CARD) }
     }
 
     private fun setupScreenTransitions() {
@@ -551,7 +565,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbar.setNavigationOnClickListener {
             hardBackAction.invoke()
-            viewModel.trackTopBackPressEvent()
+            if (isMerchant()){
+                viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_TOP)
+            }
         }
 
         requireActivity().onBackPressedDispatcher.addCallback(
@@ -559,7 +575,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     hardBackAction.invoke()
-                    viewModel.trackBottomBackPressEvent()
+                    if (isMerchant()){
+                        viewModel.trackEvent(AnalyticsConstants.ExploreDash.MERCHANT_DETAILS_BACK_BOTTOM)
+                    }
                 }
             })
     }
@@ -826,4 +844,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             else -> BottomSheetBehavior.STATE_EXPANDED
         }
     }
+
+    private fun isMerchant(): Boolean = args.type == ExploreTopic.Merchants
 }
