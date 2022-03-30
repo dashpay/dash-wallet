@@ -732,14 +732,6 @@ class ExploreViewModel @Inject constructor(
     private fun hasCameraCenterChanged(currentCenterPosition: GeoBounds): Boolean =
         locationProvider.distanceBetweenCenters(previousCameraGeoBounds, currentCenterPosition) != 0.0
 
-    fun triggerMarkerClickEvent(){
-        if (exploreTopic == ExploreTopic.Merchants){
-            trackEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER)
-        } else {
-            trackEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER)
-        }
-    }
-
     fun trackFilterEvents(
         dashPaymentOn: Boolean,
         giftCardPaymentOn: Boolean) {
