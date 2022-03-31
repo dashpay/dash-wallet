@@ -17,12 +17,17 @@
 
 package de.schildbach.wallet.ui;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.annotation.Nullable;
 
@@ -214,9 +219,50 @@ public abstract class ReportIssueDialogBuilder extends BaseAlertDialogBuilder {
             log.info("problem writing attachment", x);
         }
 
+        try {
+            final File databasesFile = File.createTempFile("databases.", ".zip", reportDir);
+            File databasesDir = context.getDatabasePath("explore-database").getParentFile();
+            if (databasesDir != null) {
+                File[] files = databasesDir.listFiles();
+                if (files != null) {
+                    zip(files, databasesFile);
+                }
+                attachments.add(
+                        FileProvider.getUriForFile(context, context.getPackageName() + ".file_attachment", databasesFile));
+            }
+        } catch (final IOException x) {
+            log.info("problem writing attachment", x);
+        }
+
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.");
 
         startSend(subject(), text, attachments);
+    }
+
+    public static void zip(File[] files, File zipFile) throws IOException {
+
+        final int BUFFER_SIZE = 2048;
+
+        try (ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(zipFile)))) {
+
+            byte[] data = new byte[BUFFER_SIZE];
+
+            for (File file : files) {
+
+                FileInputStream fileInputStream = new FileInputStream(file);
+
+                try (BufferedInputStream origin = new BufferedInputStream(fileInputStream, BUFFER_SIZE)) {
+
+                    String filePath = file.getAbsolutePath();
+                    ZipEntry entry = new ZipEntry(filePath.substring(filePath.lastIndexOf("/") + 1));
+                    out.putNextEntry(entry);
+                    int count;
+                    while ((count = origin.read(data, 0, BUFFER_SIZE)) != -1) {
+                        out.write(data, 0, count);
+                    }
+                }
+            }
+        }
     }
 
     public static ReportIssueDialogBuilder createReportIssueDialog(final Activity context,
