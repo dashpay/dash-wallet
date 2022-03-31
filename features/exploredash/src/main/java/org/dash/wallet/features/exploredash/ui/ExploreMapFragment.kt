@@ -44,6 +44,7 @@ import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.model.MerchantType
 import org.dash.wallet.features.exploredash.data.model.SearchResult
@@ -227,7 +228,11 @@ class ExploreMapFragment : SupportMapFragment() {
         if (isGooglePlayServicesAvailable()) {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
-                viewModel.triggerMarkerClickEvent()
+                if (viewModel.exploreTopic == ExploreTopic.Merchants){
+                    viewModel.trackEvent(AnalyticsConstants.ExploreDash.SELECT_MERCHANT_MARKER)
+                } else {
+                    viewModel.trackEvent(AnalyticsConstants.ExploreDash.SELECT_ATM_MARKER)
+                }
                 viewModel.onMapMarkerSelected(marker.tag as Int)
                 true
             }
