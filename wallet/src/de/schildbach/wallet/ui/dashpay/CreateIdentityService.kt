@@ -37,7 +37,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.BlockchainIdentity
-import org.dashj.platform.dpp.errors.ErrorMetadata
+import org.dashj.platform.dpp.errors.ConcensusErrorMetadata
 import org.dashj.platform.dpp.errors.concensus.ConcensusException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
@@ -291,7 +291,7 @@ class CreateIdentityService : LifecycleService() {
             // handle case of "InvalidIdentityAssetLockProofSignatureError", where we need to start over from scratch
             val isInvalidLockProof = try {
                 val errorMetadata =
-                    ErrorMetadata(blockchainIdentityData.getErrorMetadata()!!)
+                    ConcensusErrorMetadata(blockchainIdentityData.getErrorMetadata()!!)
                 val exception = ConcensusException.create(errorMetadata)
                 exception is InvalidInstantAssetLockProofSignatureException
             } catch (e: IllegalArgumentException) {
@@ -409,7 +409,7 @@ class CreateIdentityService : LifecycleService() {
             // handle case of "InvalidIdentityAssetLockProofSignatureError", where we need to start over from scratch
             val isInvalidLockProof = try {
                 val errorMetadata =
-                    ErrorMetadata(blockchainIdentityData.getErrorMetadata()!!)
+                    ConcensusErrorMetadata(blockchainIdentityData.getErrorMetadata()!!)
                 val exception = ConcensusException.create(errorMetadata)
                 exception is InvalidInstantAssetLockProofSignatureException
             } catch (e: IllegalArgumentException) {
@@ -767,6 +767,15 @@ class CreateIdentityService : LifecycleService() {
                             // TODO: allow for received (IX_REQUEST) instantsend locks
                             // until the bug related to instantsend lock verification is fixed.
                             if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
+                                log.info("credit funding transaction verified with instantsend: ${cftx.txId}")
+                                confidence.removeEventListener(this)
+                                continuation.resumeWith(Result.success(true))
+                            }
+                        }
+
+                        TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> {
+                            if (confidence!!.isChainLocked) {
+                                log.info("credit funding transaction verified with chainlock: ${cftx.txId}")
                                 confidence.removeEventListener(this)
                                 continuation.resumeWith(Result.success(true))
                             }

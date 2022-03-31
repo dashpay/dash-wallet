@@ -30,7 +30,7 @@ import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.SchnappsDevNetParams;
+import org.bitcoinj.params.KrupnikDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
@@ -66,6 +66,8 @@ public final class Constants {
 
     public static boolean SUPPORTS_PLATFORM;
 
+    public static String FAUCET_URL;
+
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.FEATURE_FLAGS> FEATURE_FLAGS = MasternodeSync.FEATURES_SPV;
@@ -81,6 +83,7 @@ public final class Constants {
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 SUPPORTS_PLATFORM = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
+                FAUCET_URL = "";
                 break;
             }
             case "staging":
@@ -89,28 +92,30 @@ public final class Constants {
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = TestNet3Params.get();
                 // TODO: remove this next line when Platform Supports Core 0.18
-                NETWORK_PARAMETERS.setSupportsV18(false);
+                NETWORK_PARAMETERS.setSupportsV18(true);
                 IS_PROD_BUILD = false;
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                FAUCET_URL = "https://testnet-faucet.dash.org/";
                 break;
             }
             case "schnapps": {
                 // Schnapps Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
-                NETWORK_PARAMETERS = SchnappsDevNetParams.get();
+                NETWORK_PARAMETERS = KrupnikDevNetParams.get();
                 // TODO: remove this next line when Platform Supports Core 0.18
-                NETWORK_PARAMETERS.setSupportsV18(false);
+                NETWORK_PARAMETERS.setSupportsV18(true);
                 DNS_SEED = NETWORK_PARAMETERS.getDnsSeeds();
                 IS_PROD_BUILD = false;
-                FILENAME_NETWORK_SUFFIX = "-schnapps";
+                FILENAME_NETWORK_SUFFIX = "-krupnik";
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
+                FAUCET_URL = "http://faucet.krupnik.networks.dash.org/";
                 break;
             }
             default: {
@@ -302,8 +307,6 @@ public final class Constants {
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);
 
     public static boolean IS_TESTNET_BUILD = Constants.NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_TESTNET);
-
-    public static final String TESTNET_FAUCET_URL = "https://testnet-faucet.dash.org/";
 
     public interface Invitation {
 

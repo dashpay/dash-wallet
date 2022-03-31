@@ -84,7 +84,7 @@ class AboutActivity : BaseMenuActivity(), SensorEventListener {
 
     private fun showFirebaseInstallationId() {
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            firebase_installation_id.isVisible = task.isSuccessful && BuildConfig.DEBUG
+            firebase_installation_id.isVisible = task.isSuccessful
             if (task.isSuccessful) {
                 firebase_installation_id.text = task.result
             }

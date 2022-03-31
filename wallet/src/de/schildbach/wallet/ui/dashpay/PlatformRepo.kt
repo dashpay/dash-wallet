@@ -51,17 +51,19 @@ import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
+import org.dashj.platform.dapiclient.NoAvailableAddressesForRetryException
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.*
 import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_SALT
 import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_STATUS
 import org.dashj.platform.dashpay.BlockchainIdentity.Companion.BLOCKCHAIN_USERNAME_UNIQUE
 import org.dashj.platform.dpp.document.Document
-import org.dashj.platform.dpp.errors.InvalidIdentityAssetLockProofError
+import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofException
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.dpp.toHex
+import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.sdk.platform.Platform
 import org.dashj.platform.sdk.platform.multicall.MulticallQuery
@@ -553,10 +555,6 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val cr = contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
         log.info("contact request sent")
 
-        //Verify that the Contact Request was seen on the network
-        //val cr = contactRequests.watchContactRequest(Identifier.from(this.blockchainIdentity.uniqueId.bytes),
-        //        Identifier.from(toUserId), 100, 500, RetryDelayType.LINEAR)
-
         // add our receiving from this contact keychain if it doesn't exist
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
@@ -680,12 +678,12 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 try {
                     blockchainIdentity.registerIdentity(keyParameter)
                     return@withContext
-                } catch (e: InvalidIdentityAssetLockProofError) {
+                } catch (e: InvalidInstantAssetLockProofException) {
                     log.info("instantSendLock error: retry registerIdentity again ($i)")
                     delay(3000)
                 }
             }
-            throw InvalidIdentityAssetLockProofError("failed after 3 tries")
+            throw InvalidInstantAssetLockProofException("failed after 3 tries")
         }
     }
 
@@ -1393,9 +1391,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         }
     }
 
-    fun getIdentityForName(nameDocument: Document): Identifier {
-        val records = nameDocument.data["records"] as Map<*, *>
-        return Identifier.from(records["dashUniqueIdentityId"])
+    /**
+     * obtains the identity associated with the username (domain document)
+     * @throws NullPointerException if neither the unique id or alias exists
+     */
+    private fun getIdentityForName(nameDocument: Document): Identifier {
+        val domainDocument = DomainDocument(nameDocument)
+
+        // look at the unique identity first, followed by the alias
+        return domainDocument.dashUniqueIdentityId ?: domainDocument.dashAliasIdentityId!!
     }
 
     suspend fun getLocalUserProfile(): DashPayProfile? {
@@ -1479,13 +1483,15 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                 ?: return null
         val fundingKey = blockchainIdentityKeyChain.watchingKey
         return try {
-            val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash)
-            if (identityBytes != null) {
-                platform.dpp.identity.createFromBuffer(identityBytes.toByteArray())
+            val identityBytes = platform.client.getIdentityByFirstPublicKey(fundingKey.pubKeyHash, true)
+            if (identityBytes != null && identityBytes.isNotEmpty()) {
+                platform.dpp.identity.createFromBuffer(identityBytes)
             } else {
                 null
             }
         } catch (e: MaxRetriesReachedException) {
+            null
+        } catch (e: NoAvailableAddressesForRetryException) {
             null
         }
     }
@@ -1702,6 +1708,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                         }
                     } catch (e: NullPointerException) {
                         // swallow, the identity was not found for this invite
+                    } catch (e: MaxRetriesReachedException) {
+                        // swallow, the profile could not be retrieved
+                        // the invite status update function should be able to try again
                     }
                     invitationsDao.insert(invite)
                 }
