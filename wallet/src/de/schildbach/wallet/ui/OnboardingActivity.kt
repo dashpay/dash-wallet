@@ -93,7 +93,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
         viewModel = ViewModelProvider(this)[OnboardingViewModel::class.java]
 
-        initViewModel()
         if (walletApplication.walletFileExists()) {
             if (!walletApplication.wallet.isEncrypted) {
                 unencryptedFlow()
