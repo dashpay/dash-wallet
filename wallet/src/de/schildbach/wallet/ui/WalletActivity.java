@@ -64,6 +64,7 @@ import org.dash.wallet.common.data.CurrencyInfo;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
+
 import java.io.IOException;
 import java.util.Currency;
 import java.util.Locale;
@@ -194,6 +195,15 @@ public final class WalletActivity extends AbstractBindServiceActivity
         model.getOnTransactionsUpdated().observe(this, aVoid -> {
             refreshShortcutBar();
         });
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        if (!getLockScreenDisplayed() && config.getShowNotificationsExplainer()) {
+            explainPushNotifications();
+        }
     }
 
     private void initView() {
@@ -1073,4 +1083,24 @@ public final class WalletActivity extends AbstractBindServiceActivity
         finish();
         return Unit.INSTANCE;
     };
+
+    @Override
+    public void onLockScreenDeactivated() {
+        if (config.getShowNotificationsExplainer()) {
+            explainPushNotifications();
+        }
+    }
+
+    private void explainPushNotifications() {
+        AdaptiveDialog dialog = AdaptiveDialog.create(
+                null,
+                getString(R.string.notification_explainer_title),
+                getString(R.string.notification_explainer_message),
+                "",
+                getString(R.string.button_okay)
+        );
+
+        dialog.show(this, result -> Unit.INSTANCE);
+        config.setShowNotificationsExplainer(false);
+    }
 }

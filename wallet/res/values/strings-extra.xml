@@ -186,6 +186,9 @@
     <string name="notification_synchronization_channel_description">Shows a notification when the app is synchronizing with the network.</string>
     <string name="notification_push_channel_name">Push Notifications</string>
     <string name="notification_push_channel_description">Shows push notifications sent to you by Dash</string>
+    <string name="notification_settings_title">Notifications</string>
+    <string name="notification_explainer_title">Dash Wallet would like to send you notifications</string>
+    <string name="notification_explainer_message">Notifications may include alerts, sounds, and icon badges. These can be configured in phone Settings.</string>
 
     <string name="net_type_indicator" />
 

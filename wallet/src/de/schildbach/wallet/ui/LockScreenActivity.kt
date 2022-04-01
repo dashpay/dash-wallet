@@ -78,7 +78,7 @@ open class LockScreenActivity : SecureActivity() {
     private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
     private var pinLength = configuration.pinLength
 
-    private val lockScreenDisplayed: Boolean
+    protected val lockScreenDisplayed: Boolean
         get() = root_view_switcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()
@@ -200,7 +200,6 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
-            Log.e(this::class.java.simpleName, "Lock screen displayed")
             setLockState(State.USE_DEFAULT)
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
@@ -209,8 +208,9 @@ open class LockScreenActivity : SecureActivity() {
             onLockScreenActivated()
         } else {
             root_view_switcher.displayedChild = 1
-            if (!keepUnlocked)
+            if (!keepUnlocked) {
                 autoLogout.maybeStartAutoLogoutTimer()
+            }
         }
 
         startBlockchainService()
@@ -312,6 +312,8 @@ open class LockScreenActivity : SecureActivity() {
         } else {
             root_view_switcher.displayedChild = 1
         }
+
+        onLockScreenDeactivated()
     }
 
     private fun setLockState(state: State) {
@@ -521,6 +523,8 @@ open class LockScreenActivity : SecureActivity() {
         lockScreenBroadcaster.activatingLockScreen.call()
         dismissDialogFragments(supportFragmentManager)
     }
+
+    open fun onLockScreenDeactivated() { }
 
     private fun dismissDialogFragments(fragmentManager: FragmentManager) {
         fragmentManager.fragments

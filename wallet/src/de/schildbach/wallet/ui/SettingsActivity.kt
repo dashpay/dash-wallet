@@ -16,19 +16,23 @@
 
 package de.schildbach.wallet.ui
 
+import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.core.os.bundleOf
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.ui.ExchangeRatesFragment.*
+import de.schildbach.wallet.ui.about.AboutActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_settings.*
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.slf4j.LoggerFactory
-import android.app.Activity
-import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.ExchangeRatesFragment.*
 import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.openAppSettings
+import org.dash.wallet.common.util.openNotificationSettings
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 
@@ -59,7 +63,16 @@ class SettingsActivity : BaseMenuActivity() {
             intent.putExtra(ARG_CURRENCY_CODE, configuration.exchangeCurrencyCode)
             startActivityForResult(intent, RC_DEFAULT_FIAT_CURRENCY_SELECTED)
         }
+
         rescan_blockchain.setOnClickListener { resetBlockchain() }
+
+        notifications.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                openNotificationSettings()
+            } else {
+                openAppSettings()
+            }
+        }
     }
 
     override fun onStart() {

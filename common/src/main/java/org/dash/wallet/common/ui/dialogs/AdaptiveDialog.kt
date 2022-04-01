@@ -63,8 +63,9 @@ class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() {
             )
         }
 
+        @JvmStatic
         fun create(
-            @DrawableRes icon: Int,
+            @DrawableRes icon: Int?,
             title: String,
             message: String,
             negativeButtonText: String,
