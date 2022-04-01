@@ -321,6 +321,12 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 R.string.notification_synchronization_channel_name,
                 R.string.notification_synchronization_channel_description,
                 NotificationManager.IMPORTANCE_LOW);
+
+        // Push notifications
+        createNotificationChannel(getString(R.string.fcm_notification_channel_id),
+                R.string.notification_push_channel_name,
+                R.string.notification_push_channel_description,
+                NotificationManager.IMPORTANCE_HIGH);
     }
 
     @TargetApi(Build.VERSION_CODES.O)

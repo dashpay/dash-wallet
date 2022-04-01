@@ -87,20 +87,15 @@ dependencies {
 
     implementation 'com.github.MikeOrtiz:TouchImageView:3.0.3'
 
+    // Firebase
     // Import the BoM for the Firebase platform
     implementation platform("com.google.firebase:firebase-bom:$firebaseVersion")
-
+    implementation 'com.google.firebase:firebase-database-ktx:20.0.2'
+    implementation 'com.google.firebase:firebase-auth-ktx'
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-inappmessaging-display'
     implementation 'com.google.firebase:firebase-installations'
-
-    // Declare the dependency for the Performance Monitoring library
-    // When using the BoM, you don't specify versions in Firebase library dependencies
-    //implementation 'com.google.firebase:firebase-perf-ktx'
-
-    // Firebase
-    implementation 'com.google.firebase:firebase-database-ktx:20.0.2'
-    implementation 'com.google.firebase:firebase-auth-ktx'
+    implementation 'com.google.firebase:firebase-messaging-ktx'
 
     // Google Drive Dependencies
     implementation('com.google.api-client:google-api-client-android:1.26.0') {
