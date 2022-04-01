@@ -42,6 +42,7 @@ class CoinBaseRepositoryTest {
     @MockK lateinit var placeBuyOrderMapper: PlaceBuyOrderMapper
     @MockK lateinit var swapTradeMapper: SwapTradeMapper
     @MockK lateinit var commitBuyOrderMapper: CommitBuyOrderMapper
+    @MockK lateinit var coinbaseAddressMapper: CoinbaseAddressMapper
     private lateinit var coinBaseRepository: CoinBaseRepository
     private val accountId = "423095d3-bb89-5cef-b1bc-d1dfe6e13857"
 
@@ -54,7 +55,8 @@ class CoinBaseRepositoryTest {
             configuration,
             placeBuyOrderMapper,
             swapTradeMapper,
-            commitBuyOrderMapper
+            commitBuyOrderMapper,
+            coinbaseAddressMapper
         )
         coEvery { configuration.coinbaseUserAccountId } returns accountId
     }
@@ -93,9 +95,9 @@ class CoinBaseRepositoryTest {
     fun `when sending funds to dash wallet, repository returns success response `() {
         val params = SendTransactionToWalletParams("0.5", "usd", "9316dd16-0c05", "XfVe4NAHTp6NwWuM3PGpmUSwuZuWWE9qY3", "send")
         val expectedSendFundsToWalletResponse = TestUtils.sendFundsToWalletApiResponse()
-        coEvery { coinBaseServicesApi.sendCoinsToWallet(accountId = accountId, sendTransactionToWalletParams = params) } returns expectedSendFundsToWalletResponse
+        coEvery { coinBaseServicesApi.sendCoinsToWallet(api2FATokenVersion ="2345",accountId = accountId, sendTransactionToWalletParams = params) } returns expectedSendFundsToWalletResponse
 
-        runBlocking { coinBaseRepository.sendFundsToWallet(params) }
-        coVerify { coinBaseServicesApi.sendCoinsToWallet(accountId = accountId, sendTransactionToWalletParams = params) }
+        runBlocking { coinBaseRepository.sendFundsToWallet(params,"2345") }
+        coVerify { coinBaseServicesApi.sendCoinsToWallet(api2FATokenVersion = "2345",accountId = accountId, sendTransactionToWalletParams = params) }
     }
 }

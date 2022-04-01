@@ -16,9 +16,13 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.app.AlertDialog
+import android.content.DialogInterface
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.text.InputType
 import android.view.View
+import android.widget.EditText
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -51,6 +55,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private var transactionStateDialog: CoinBaseBuyDashDialog? = null
     private var newSwapOrderId: String? = null
 
+
     private val countDownTimer by lazy {
         object : CountDownTimer(10000, 1000) {
 
@@ -74,7 +79,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         binding.cancelBtn.setOnClickListener {
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.confirmCancelBuyDashTransaction())
+            safeNavigate(CoinbaseConversionPreviewFragmentDirections.confirmCancelBuyDashTransaction())
         }
 
         arguments?.let {
@@ -91,7 +96,9 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 viewModel.onRefreshOrderClicked(swapTradeUIModel)
                 isRetrying = false
             } else {
-                newSwapOrderId?.let { buyOrderId -> viewModel.commitSwapTrade(buyOrderId) }
+                swapTradeUIModel?.let {
+                    viewModel.commitSwapTrade(it)
+                }
             }
         }
 
@@ -107,14 +114,15 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.transactionCompleted.observe(viewLifecycleOwner) { transactionStatus ->
-            showBuyOrderDialog(if (transactionStatus.isTransactionSuccessful)
+            showBuyOrderDialog(
+                if (transactionStatus.isTransactionSuccessful)
                     CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR,
                 transactionStatus.responseMessage
             )
         }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.orderReviewToFeeInfo())
+            safeNavigate(CoinbaseConversionPreviewFragmentDirections.orderReviewToFeeInfo())
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
@@ -124,11 +132,15 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 R.drawable.ic_info_red,
                 negativeButtonText = R.string.close
             )
-            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
+            safeNavigate(CoinbaseConversionPreviewFragmentDirections.coinbaseServicesToError(placeBuyOrderError))
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
             countDownTimer.start()
+        }
+
+        viewModel.commitBuyOrderSuccessCallback.observe(viewLifecycleOwner) {
+            show2FADialog()
         }
     }
 
@@ -147,11 +159,11 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.contentOrderReview.convertOutputSubtitle.text = this.outputCurrency
 
         if (this.inputCurrency == DASH_CURRENCY) {
+            binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_dash_wallet_on_this_device)
+            binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_your_coinbase_account)
+        } else {
             binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_your_coinbase_account)
             binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_dash_wallet_on_this_device)
-        } else {
-            binding.contentOrderReview.outputAccountHintLabel.setText(R.string.from_your_coinbase_account)
-            binding.contentOrderReview.inputAccountHintLabel.setText(R.string.to_dash_wallet_on_this_device)
         }
 
         binding.contentOrderReview.inputAccount.text = getString(
@@ -224,7 +236,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                             findNavController().popBackStack()
                         }
                         CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
-                            viewModel.retry()
+                            show2FADialog()
                         }
                         CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS -> {
                             dismiss()
@@ -246,5 +258,28 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     override fun onPause() {
         countDownTimer.cancel()
         super.onPause()
+    }
+
+    private fun show2FADialog() {
+        val builder: AlertDialog.Builder = android.app.AlertDialog.Builder(requireContext())
+        builder.setTitle("Title")
+
+        val input = EditText(requireContext())
+        input.setHint("Enter Code")
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        builder.setView(input)
+
+
+        builder.setPositiveButton(
+            "OK",
+            DialogInterface.OnClickListener { dialog, which ->
+                // Here you get get input text from the Edittext
+                var m_Text = input.text.toString()
+                viewModel.sendDash(m_Text)
+            }
+        )
+        builder.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
+
+        builder.show()
     }
 }

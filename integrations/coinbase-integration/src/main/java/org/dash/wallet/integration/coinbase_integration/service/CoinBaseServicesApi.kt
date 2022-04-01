@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.service
 
+import org.dash.wallet.integration.coinbase_integration.CB_2FA_TOKEN_KEY
 import org.dash.wallet.integration.coinbase_integration.CB_VERSION_KEY
 import org.dash.wallet.integration.coinbase_integration.CB_VERSION_VALUE
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
@@ -57,6 +58,7 @@ interface CoinBaseServicesApi {
     @POST("v2/accounts/{account_id}/transactions")
     suspend fun sendCoinsToWallet(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Header(CB_2FA_TOKEN_KEY) api2FATokenVersion: String,
         @Path("account_id") accountId: String,
         @Body sendTransactionToWalletParams: SendTransactionToWalletParams
     ): SendTransactionToWalletResponse?
@@ -83,4 +85,16 @@ interface CoinBaseServicesApi {
     suspend fun getAuthorizationInformation(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE
     ): UserAuthorizationInfoResponse?
+
+    @GET("v2/accounts/{account_id}/addresses")
+    suspend fun getUserAccountAddress(
+        @Path("account_id") accountId: String,
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+    ): CoinBaseAccountAddressResponse
+
+    @POST("v2/accounts/{account_id}/addresses")
+    suspend fun createAddress(
+        @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
+        @Path("account_id") accountId: String
+    ): AddressesResponse
 }

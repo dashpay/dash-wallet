@@ -22,6 +22,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.integration.coinbase_integration.CoinbaseAddressMapper
 import org.dash.wallet.integration.coinbase_integration.CommitBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.PlaceBuyOrderMapper
 import org.dash.wallet.integration.coinbase_integration.SwapTradeMapper
@@ -67,6 +68,8 @@ object CoinBaseModule {
     fun provideSwapTradeMapper(): SwapTradeMapper = SwapTradeMapper()
     @Provides
     fun provideReceiver(): CloseCoinbasePortalBroadcaster = CloseCoinbasePortalBroadcaster()
+    @Provides
+    fun provideCoinbaseAddressMapper(): CoinbaseAddressMapper = CoinbaseAddressMapper()
 }
 
 @Module

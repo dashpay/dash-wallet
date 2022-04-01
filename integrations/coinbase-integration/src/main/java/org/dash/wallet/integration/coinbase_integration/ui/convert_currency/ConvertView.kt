@@ -50,6 +50,13 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
             updateAmount()
         }
 
+    private var _dashInput: Coin? = null
+    var dashInput: Coin?
+        get() = _dashInput
+        set(value) {
+            _dashInput = value
+        }
+
     var exchangeRate: ExchangeRate? = null
         set(value) {
             field = value
@@ -67,11 +74,16 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
 
         binding.convertFromDashBalance.isVisible = input != null
         updateUiWithSwap()
+
         binding.swapBtn.setOnClickListener {
-            dashToCrypto = !dashToCrypto
+            onSwapClicked?.invoke(!dashToCrypto)
+            if (dashInput?.isZero == true && !dashToCrypto) {
+                return@setOnClickListener
+            }
             updateUiWithSwap()
-            onSwapClicked?.invoke(dashToCrypto)
+            dashToCrypto = !dashToCrypto
         }
+
         binding.convertFromBtn.convertItemClickListener = object :
             CryptoConvertItem.ConvertItemClickListener {
             override fun onConvertItemClickListener() {
@@ -108,6 +120,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
         }
     }
 
+
     private fun setConvertToBtnData() {
         binding.convertToBtn.setCryptoItemArrowVisibility(dashToCrypto)
         if (!dashToCrypto) {
@@ -131,7 +144,7 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
             binding.convertFromBtn.setConvertItemTitle(it.cryptoWalletName)
             binding.convertFromBtn.setConvertItemIcon(it.icon)
 
-            exchangeRate?.let { currentExchangeRate ->
+            exchangeRate?.let { _ ->
 
                 val balance = it.balance.toBigDecimal().setScale(8, RoundingMode.HALF_UP).toString()
                 val coin = try {
@@ -148,12 +161,26 @@ class ConvertView(context: Context, attrs: AttributeSet) : ConstraintLayout(cont
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun setToBtnData() {
         binding.convertToBtn.setCryptoItemGroupVisibility(input != null)
+        binding.convertFromDashBalance.isVisible = (dashInput != null)
+        binding.convertFromDashFiatAmount.isVisible = (dashInput != null)
         input?.let {
             binding.convertToBtn.setConvertItemServiceName(it.cryptoWalletService)
             binding.convertToBtn.setConvertItemTitle(it.cryptoWalletName)
             binding.convertToBtn.setConvertItemIcon(it.icon)
+        }
+
+        exchangeRate?.let { currentExchangeRate ->
+            dashInput?.let { dash ->
+                val currencyRate = ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
+                val fiatAmount = GenericUtils.fiatToString(currencyRate.coinToFiat(dash))
+                binding.convertFromDashBalance.text = "${context.getString(R.string.balance)} ${dashFormat.minDecimals(0)
+                    .optionalDecimals(0,8).format(dash)} Dash"
+
+                binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
+            }
         }
     }
 

@@ -31,7 +31,9 @@ class CoinBaseRepository @Inject constructor(
     private val userPreferences: Configuration,
     private val placeBuyOrderMapper: PlaceBuyOrderMapper,
     private val swapTradeMapper: SwapTradeMapper,
-    private val commitBuyOrderMapper: CommitBuyOrderMapper) : CoinBaseRepositoryInt {
+    private val commitBuyOrderMapper: CommitBuyOrderMapper,
+    private val coinbaseAddressMapper: CoinbaseAddressMapper
+) : CoinBaseRepositoryInt {
     override suspend fun getUserAccount() = safeApiCall {
         val apiResponse = servicesApi.getUserAccounts()
         val userAccountData = apiResponse?.data?.firstOrNull {
@@ -104,13 +106,19 @@ class CoinBaseRepository @Inject constructor(
         placeBuyOrderMapper.map(apiResult?.data)
     }
 
+
+    override suspend fun getUserAccountAddress(): ResponseResource<String> = safeApiCall {
+        val apiResult = servicesApi.getUserAccountAddress(accountId = userPreferences.coinbaseUserAccountId)
+        coinbaseAddressMapper.map(apiResult)
+    }
+
     override suspend fun commitBuyOrder(buyOrderId: String) = safeApiCall {
         val commitBuyResult = servicesApi.commitBuyOrder(accountId = userPreferences.coinbaseUserAccountId, buyOrderId = buyOrderId)
         commitBuyOrderMapper.map(commitBuyResult?.data)
     }
 
-    override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams) = safeApiCall {
-        servicesApi.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams)
+    override suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams, api2FATokenVersion: String) = safeApiCall {
+        servicesApi.sendCoinsToWallet(accountId = userPreferences.coinbaseUserAccountId, sendTransactionToWalletParams = sendTransactionToWalletParams, api2FATokenVersion = api2FATokenVersion)
     }
 
     override fun getUserLastCoinbaseBalance(): String = userPreferences.lastCoinbaseBalance ?: ""
@@ -136,6 +144,10 @@ class CoinBaseRepository @Inject constructor(
         }
         WithdrawalLimitUIModel(userPreferences.coinbaseUserWithdrawalLimitAmount, userPreferences.coinbaseSendLimitCurrency)
     }
+
+    override suspend fun createAddress(): ResponseResource<String?> = safeApiCall {
+        return@safeApiCall servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId)?.addresses?.address
+    }
 }
 
 interface CoinBaseRepositoryInt {
@@ -146,10 +158,12 @@ interface CoinBaseRepositoryInt {
     suspend fun disconnectCoinbaseAccount()
     fun saveLastCoinbaseDashAccountBalance(amount: String?)
     fun saveUserAccountId(accountId: String?)
+    suspend fun createAddress(): ResponseResource<String?>
+    suspend fun getUserAccountAddress(): ResponseResource<String>
     suspend fun getActivePaymentMethods(): ResponseResource<List<PaymentMethodsData>>
     suspend fun placeBuyOrder(placeBuyOrderParams: PlaceBuyOrderParams): ResponseResource<PlaceBuyOrderUIModel>
     suspend fun commitBuyOrder(buyOrderId: String): ResponseResource<CommitBuyOrderUIModel>
-    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams): ResponseResource<SendTransactionToWalletResponse?>
+    suspend fun sendFundsToWallet(sendTransactionToWalletParams: SendTransactionToWalletParams, api2FATokenVersion: String): ResponseResource<SendTransactionToWalletResponse?>
     fun getUserLastCoinbaseBalance(): String
     fun isUserConnected(): Boolean
     suspend fun swapTrade(tradesRequest: TradesRequest): ResponseResource<SwapTradeUIModel>

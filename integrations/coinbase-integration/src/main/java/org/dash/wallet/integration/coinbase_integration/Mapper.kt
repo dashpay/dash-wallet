@@ -72,3 +72,14 @@ class CommitBuyOrderMapper : Mapper<BuyOrderData?, CommitBuyOrderUIModel> {
         }
     }
 }
+
+class CoinbaseAddressMapper : Mapper<CoinBaseAccountAddressResponse?, String> {
+    override fun map(input: CoinBaseAccountAddressResponse?): String {
+        return if (input == null)
+            ""
+        else {
+            input.data?.mapNotNull { it?.address }
+                ?.firstOrNull { it.isNotEmpty() } ?: ""
+        }
+    }
+}

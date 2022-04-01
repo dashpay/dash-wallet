@@ -70,6 +70,8 @@
     <string name="from_your_coinbase_account">From your Coinbase account</string>
     <string name="you_receive">you receive</string>
     <string name="to_dash_wallet_on_this_device">To Dash wallet on this device</string>
+    <string name="to_your_coinbase_account">to your Coinbase account</string>
+    <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
     <string name="you_will_receive">You will receive</string>
     <string name="you_will_receive_dash" translatable="false">%s DASH</string>
     <string name="we_didnt_find_any_assets" > We didn’t find any assets on your Coinbase account.</string>
@@ -82,5 +84,13 @@
     <string name="change_withdrawal_limit">You can change it anytime by logging out of your Coinbase account in Dash Wallet and logging back in.</string>
     <string name="got_it">I got it</string>
     <string name="send_to_wallet_error">Cannot send this amount without going over application limit</string>
+    <string name="dont_have_any_dash"> You don\'t have any Dash in your Dash Wallet.</string>
     <string name="disconnected">Disconnected</string>
+
+    <string name="insufficient_money_title">Not enough coins</string>
+    <string name="insufficient_money_msg">The amount of coins in the wallet is too small for sweeping.</string>
+    <string name="send_coins_error_msg">Problem sending coins!</string>
+    <string name="entered_amount_is_too_low">Entered amount is too low</string>
+    <string name="entered_amount_is_too_high">Entered amount is too high</string>
+
 </resources>
