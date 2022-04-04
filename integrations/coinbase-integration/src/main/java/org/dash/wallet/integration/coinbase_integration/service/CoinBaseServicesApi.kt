@@ -96,5 +96,5 @@ interface CoinBaseServicesApi {
     suspend fun createAddress(
         @Header(CB_VERSION_KEY) apiVersion: String = CB_VERSION_VALUE,
         @Path("account_id") accountId: String
-    ): AddressesResponse
+    ): AddressesResponse?
 }
