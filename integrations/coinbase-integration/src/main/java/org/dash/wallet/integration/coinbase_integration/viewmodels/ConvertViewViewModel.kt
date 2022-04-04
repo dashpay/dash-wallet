@@ -48,7 +48,7 @@ class ConvertViewViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
 
-    val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
 
     private val _dashToCrypto = MutableLiveData<Boolean>()
@@ -96,9 +96,7 @@ class ConvertViewViewModel @Inject constructor(
     val dashWalletBalance: LiveData<Event<Coin>>
         get() = this._dashWalletBalance
 
-    private val _userDashAccountEmptyError: SingleLiveEvent<Boolean> = SingleLiveEvent()
-    val userDashAccountEmptyError: LiveData<Boolean>
-        get() = _userDashAccountEmptyError
+    val userDashAccountEmptyError = SingleLiveEvent<Unit>()
 
     val validSwapValue = SingleLiveEvent<String>()
 
@@ -187,14 +185,13 @@ class ConvertViewViewModel @Inject constructor(
     fun setOnSwapDashFromToCryptoClicked(dashToCrypto: Boolean) {
         if (dashToCrypto) {
             if (walletDataProvider.getWalletBalance().isZero) {
-                _userDashAccountEmptyError.value = true
+                userDashAccountEmptyError.call()
                 return
             }
         }
         _dashToCrypto.value = dashToCrypto
     }
 
-    fun clear() { _selectedCryptoCurrencyAccount.value = null }
 
     private fun setDashWalletBalance() {
         val balance = walletDataProvider.getWalletBalance()
@@ -202,6 +199,11 @@ class ConvertViewViewModel @Inject constructor(
 
         maxForDashWalletAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        _selectedCryptoCurrencyAccount.value = null
     }
 }
 
