@@ -103,4 +103,6 @@
     <color name="gray_background">@color/steel_gray_50</color>
     <color name="background_secondary">@color/white</color>
     <color name="light_blue">#1A008DE4</color>
+    <color name="light_steel_gray_500">#92929C</color>
+    <color name="dark_steel_gray_700">#5B5B65</color>
 </resources>

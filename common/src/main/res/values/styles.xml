@@ -863,4 +863,15 @@
         <item name="strokeColor">@android:color/transparent</item>
         <item name="strokeWidth">0dp</item>
     </style>
+    <style name="Headline6.SemiBold">
+        <item name="fontFamily">@font/montserrat_semibold</item>
+    </style>
+    <style name="BlueStrokeColorWhiteBackground">
+        <item name="backgroundColor">@color/white</item>
+        <item name="strokeColor">@color/dash_blue</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+    <style name="Caption.DarkSteelGray700">
+        <item name="android:textColor">@color/dark_steel_gray_700</item>
+    </style>
 </resources>

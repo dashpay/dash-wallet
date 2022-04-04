@@ -92,5 +92,11 @@
     <string name="send_coins_error_msg">Problem sending coins!</string>
     <string name="entered_amount_is_too_low">Entered amount is too low</string>
     <string name="entered_amount_is_too_high">Entered amount is too high</string>
+    <string name="verify_continue">Verify</string>
+    <string name="enter_auth_code">Enter Coinbase 2FA code</string>
+    <string name="extra_steps_label">This extra step shows it’s really you trying to make a transaction.</string>
+    <string name="need_help">Need help ?</string>
+    <string name="coinbase_fa_code_hint">Coinbase 2FA code</string>
+    <string name="enter_code_details">It could be the code from the SMS on your phone. If not, enter the code from the authentication app.</string>
 
 </resources>
