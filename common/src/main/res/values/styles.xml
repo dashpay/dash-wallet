@@ -874,4 +874,7 @@
     <style name="Caption.DarkSteelGray700">
         <item name="android:textColor">@color/dark_steel_gray_700</item>
     </style>
+    <style name="Caption.Red300">
+        <item name="android:textColor">@color/red_300</item>
+    </style>
 </resources>

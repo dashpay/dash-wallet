@@ -5,8 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
-    tools:context=".ui.TwoFaAuthenticationFragment">
+    android:background="@color/bg_bright"
+    tools:context=".ui.EnterTwoFaCodeFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
@@ -41,17 +41,28 @@
 
     <TextView
         android:id="@+id/need_help"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/extra_steps_label"
         app:layout_constraintStart_toStartOf="@id/left_guide_line"
-        app:layout_constraintEnd_toEndOf="@id/right_guide_line"
         style="@style/Body2"
         android:layout_marginTop="10dp"
-        tools:text="@string/need_help"
+        android:text="@string/need_help"
         />
 
-    <EditText
+    <TextView
+        android:id="@+id/contact_coinbase_support"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/extra_steps_label"
+        app:layout_constraintStart_toEndOf="@id/need_help"
+        style="@style/Body2.Blue"
+        android:layout_marginTop="10dp"
+        android:text="@string/contact_coinbase_support"
+        android:layout_marginHorizontal="4dp"
+        />
+
+    <TextView
         android:id="@+id/enter_code_field"
         android:layout_width="0dp"
         android:layout_height="46dp"
@@ -61,11 +72,11 @@
         app:layout_constraintEnd_toEndOf="@id/right_guide_line"
         android:background="@drawable/rounded_background"
         android:theme="@style/BlueStrokeColorWhiteBackground"
-        android:inputType="number"
         style="@style/Body1"
         android:textCursorDrawable="@color/dash_blue"
         android:hint="@string/coinbase_fa_code_hint"
         android:paddingLeft="15dp"
+        android:gravity="center_vertical"
         android:textColorHint="@color/light_steel_gray_500"
         />
 
@@ -79,6 +90,36 @@
         android:layout_marginTop="10dp"
         android:text="@string/enter_code_details"
         style="@style/Caption.DarkSteelGray700"
+        />
+
+    <ImageView
+        android:id="@+id/incorrect_code_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="@id/left_guide_line"
+        app:layout_constraintTop_toBottomOf="@id/enter_code_field"
+        android:layout_marginTop="10dp"
+        android:src="@drawable/ic_red_circle"
+        />
+
+    <TextView
+        android:id="@+id/incorrect_code_description"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toEndOf="@id/incorrect_code_icon"
+        app:layout_constraintTop_toTopOf="@id/incorrect_code_icon"
+        app:layout_constraintBottom_toBottomOf="@id/incorrect_code_icon"
+        android:layout_marginHorizontal="6dp"
+        android:text="@string/two_fa_code_incorrect"
+        style="@style/Caption.Red300"
+        />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/incorrect_code_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="incorrect_code_icon, incorrect_code_description"
+        android:visibility="gone"
         />
 
     <androidx.constraintlayout.widget.Guideline
@@ -99,7 +140,6 @@
 
     <androidx.cardview.widget.CardView
         android:id="@+id/bottom_card"
-        style="@style/CardViewRaised.Radius15"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="-10dp"
