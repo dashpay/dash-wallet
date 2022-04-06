@@ -19,11 +19,10 @@ package de.schildbach.wallet.ui
 import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.util.WalletUtils
-import de.schildbach.wallet_test.R
-import org.bitcoinj.crypto.MnemonicCode
+import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
 import org.slf4j.LoggerFactory
@@ -36,7 +35,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
     internal val showToastAction = SingleLiveEvent<String>()
     internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
-    internal val startActivityAction = SingleLiveEvent<Intent>()
+    internal val finishCreateNewWalletAction = SingleLiveEvent<Unit>()
+    internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
 
     fun createNewWallet() {
         walletApplication.initEnvironmentIfNeeded()
@@ -44,6 +44,19 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         log.info("successfully created new wallet")
         walletApplication.wallet = wallet
         walletApplication.configuration.armBackupSeedReminder()
-        startActivityAction.call(SetPinActivity.createIntent(getApplication(), R.string.set_pin_create_new_wallet))
+        finishCreateNewWalletAction.call(Unit)
+    }
+
+    fun upgradeUnencryptedWallet() {
+        log.info("upgrading previously created wallet from version 6 or before")
+        viewModelScope.launch {
+            // Does this wallet use BIP44
+            if (!walletApplication.isWalletUpgradedToBIP44) {
+                walletApplication.wallet.addKeyChain(Constants.BIP44_PATH)
+            }
+            walletApplication.configuration.armBackupSeedReminder()
+
+            finishUnecryptedWalletUpgradeAction.call(Unit)
+        }
     }
 }
