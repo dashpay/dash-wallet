@@ -141,7 +141,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
 
-        viewModel.commitBuyOrderFailedCallback.observe(viewLifecycleOwner) {
+        viewModel.commitBuyOrderFailureState.observe(viewLifecycleOwner) {
             showBuyOrderDialog(it)
         }
 

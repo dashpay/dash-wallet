@@ -104,11 +104,11 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 dismissProgress()
         }
 
-        viewModel.commitSwapTradeFailedCallback.observe(viewLifecycleOwner) {
+        viewModel.commitSwapTradeFailureState.observe(viewLifecycleOwner) {
             showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR)
         }
 
-        viewModel.sellSwapSuccessCallback.observe(viewLifecycleOwner){
+        viewModel.sellSwapSuccessState.observe(viewLifecycleOwner){
             showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS)
         }
 
@@ -116,7 +116,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             safeNavigate(CoinbaseConversionPreviewFragmentDirections.orderReviewToFeeInfo())
         }
 
-        viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
+        viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                 R.string.something_wrong_title,
                 getString(R.string.retry_later_message),

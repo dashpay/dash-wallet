@@ -43,7 +43,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    val commitBuyOrderFailedCallback = SingleLiveEvent<String>()
+    val commitBuyOrderFailureState = SingleLiveEvent<String>()
 
     var sendFundToWalletParams: SendTransactionToWalletParams ? = null
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
@@ -59,7 +59,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
             is ResponseResource.Success -> {
                 _showLoading.value = false
                 if (result.value == BuyOrderResponse.EMPTY_COMMIT_BUY) {
-                    commitBuyOrderFailedCallback.call()
+                    commitBuyOrderFailureState.call()
                 } else {
                     sendFundToWalletParams = SendTransactionToWalletParams(
                         amount = result.value.dashAmount,
@@ -76,13 +76,13 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                 _showLoading.value = false
                 val error = result.errorBody?.string()
                 if (error.isNullOrEmpty()) {
-                    commitBuyOrderFailedCallback.call()
+                    commitBuyOrderFailureState.call()
                 } else {
                     val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
-                        commitBuyOrderFailedCallback.call()
+                        commitBuyOrderFailureState.call()
                     } else {
-                        commitBuyOrderFailedCallback.value = message
+                        commitBuyOrderFailureState.value = message
                     }
                 }
             }

@@ -25,7 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -43,7 +42,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    val commitSwapTradeFailedCallback = SingleLiveEvent<Unit>()
+    val commitSwapTradeFailureState = SingleLiveEvent<Unit>()
 
     var sendFundToWalletParams: SendTransactionToWalletParams? = null
 
@@ -52,8 +51,8 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         get() = _swapTradeOrder
 
     val commitSwapTradeSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
-    val sellSwapSuccessCallback = SingleLiveEvent<Unit>()
-    val swapTradeFailedCallback = SingleLiveEvent<String>()
+    val sellSwapSuccessState = SingleLiveEvent<Unit>()
+    val swapTradeFailureState = SingleLiveEvent<String>()
 
     fun commitSwapTrade(params: SwapTradeUIModel) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
@@ -61,10 +60,10 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             is ResponseResource.Success -> {
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false
-                    commitSwapTradeFailedCallback.call()
+                    commitSwapTradeFailureState.call()
                 } else {
                     if (params.inputCurrencyName == DASH_CURRENCY) {
-                        sellSwapSuccessCallback.call()
+                        sellSwapSuccessState.call()
                     }
                     else {
                         sendFundToWalletParams = SendTransactionToWalletParams(
@@ -81,7 +80,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                commitSwapTradeFailedCallback.call()
+                commitSwapTradeFailureState.call()
             }
         }
     }
@@ -100,7 +99,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
                     if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                         _showLoading.value = false
-                        swapTradeFailedCallback.call()
+                        swapTradeFailureState.call()
                     } else {
                         _showLoading.value = false
 
@@ -118,13 +117,13 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
                     val error = result.errorBody?.string()
                     if (error.isNullOrEmpty()) {
-                        swapTradeFailedCallback.call()
+                        swapTradeFailureState.call()
                     } else {
                         val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                         if (message.isNullOrEmpty()) {
-                            swapTradeFailedCallback.call()
+                            swapTradeFailureState.call()
                         } else {
-                            swapTradeFailedCallback.value = message
+                            swapTradeFailureState.value = message
                         }
                     }
                 }
