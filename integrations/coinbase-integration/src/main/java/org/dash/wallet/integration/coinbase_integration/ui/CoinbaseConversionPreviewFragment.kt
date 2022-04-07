@@ -130,12 +130,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             countDownTimer.start()
         }
 
-        viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) {
-            it.getContentIfNotHandled()?.let { params ->
-                safeNavigate(CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
-                    CoinbaseTransactionParams(params, TransactionType.BuySwap)
-                ))
-            }
+        viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
+            safeNavigate(CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
+                CoinbaseTransactionParams(params, TransactionType.BuySwap)
+            ))
         }
     }
 

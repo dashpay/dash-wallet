@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.livedata.Event
 import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -52,9 +51,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     val placeBuyOrder: LiveData<PlaceBuyOrderUIModel>
         get() = _placeBuyOrder
 
-    private val _commitBuyOrderSuccessCallback: MutableLiveData<Event<SendTransactionToWalletParams>> = MutableLiveData()
-    val commitBuyOrderSuccessCallback: LiveData<Event<SendTransactionToWalletParams>>
-        get() = _commitBuyOrderSuccessCallback
+    val commitBuyOrderSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
 
     fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
@@ -71,7 +68,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                         to = walletDataProvider.freshReceiveAddress().toBase58(),
                         type = result.value.transactionType
                     ).apply {
-                        _commitBuyOrderSuccessCallback.value = Event(this)
+                        commitBuyOrderSuccessState.value = this
                     }
                 }
             }

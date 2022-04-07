@@ -18,7 +18,6 @@ package org.dash.wallet.integration.coinbase_integration.ui
 
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.util.Log
 import android.view.View
 import androidx.activity.addCallback
 import androidx.annotation.ColorRes
@@ -129,12 +128,10 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         }
 
 
-        viewModel.commitBuyOrderSuccessCallback.observe(viewLifecycleOwner) {
-            it.getContentIfNotHandled()?.let { params ->
-                safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToTwoFaCode(
-                    CoinbaseTransactionParams(params, TransactionType.BuyDash)
-                ))
-            }
+        viewModel.commitBuyOrderSuccessState.observe(viewLifecycleOwner) { params ->
+            safeNavigate(CoinbaseBuyDashOrderReviewFragmentDirections.coinbaseBuyDashOrderReviewToTwoFaCode(
+                CoinbaseTransactionParams(params, TransactionType.BuyDash)
+            ))
         }
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
             if (showLoading) {

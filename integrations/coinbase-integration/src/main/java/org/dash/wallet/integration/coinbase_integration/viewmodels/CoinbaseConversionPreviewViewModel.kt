@@ -51,9 +51,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val swapTradeOrder: LiveData<SwapTradeUIModel>
         get() = _swapTradeOrder
 
-    private val _commitSwapTradeSuccessState: MutableLiveData<Event<SendTransactionToWalletParams>> = MutableLiveData()
-    val commitSwapTradeSuccessState: LiveData<Event<SendTransactionToWalletParams>>
-        get() = _commitSwapTradeSuccessState
+    val commitSwapTradeSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
     val sellSwapSuccessCallback = SingleLiveEvent<Unit>()
     val swapTradeFailedCallback = SingleLiveEvent<String>()
 
@@ -76,7 +74,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                             to = walletDataProvider.freshReceiveAddress().toBase58(),
                             type = TRANSACTION_TYPE_SEND
                         ).apply {
-                            _commitSwapTradeSuccessState.value = Event(this)
+                            commitSwapTradeSuccessState.value = this
                         }
                     }
                 }
