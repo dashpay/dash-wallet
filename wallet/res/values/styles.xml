@@ -222,18 +222,7 @@
         <item name="secondaryColor">@android:color/white</item>
     </style>
 
-    <style name="WhiteBackground">
-        <item name="primaryColor">@android:color/white</item>
-        <item name="secondaryColor">@android:color/white</item>
-    </style>
-
     <style name="VerifySeedTextViewBackground" parent="WhiteBackground">
         <item name="cornerRadius">8dp</item>
-    </style>
-
-    <style name="ExploreBottomContentBackground" parent="WhiteBackground">
-        <item name="backgroundColor">@android:color/white</item>
-        <item name="strokeColor">@android:color/white</item>
-        <item name="cornerRadius">10dp</item>
     </style>
 </resources>

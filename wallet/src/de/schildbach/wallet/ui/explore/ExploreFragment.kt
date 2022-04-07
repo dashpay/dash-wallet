@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui
+package de.schildbach.wallet.ui.explore
 
 import android.os.Bundle
 import android.view.View
@@ -25,6 +25,8 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.FragmentExploreBinding
+import org.dash.wallet.features.exploredash.ui.ExploreTopic
+import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 
 @AndroidEntryPoint
 class ExploreFragment : Fragment(R.layout.fragment_explore) {
@@ -33,17 +35,14 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.titleBar.toolbar.title = getString(R.string.explore_title)
-        binding.titleBar.toolbar.setNavigationOnClickListener {
-            requireActivity().finish()
-        }
-
         binding.merchantsBtn.setOnClickListener {
-            safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
+            val intent = ExploreActivity.createIntent(requireContext(), ExploreTopic.Merchants)
+            startActivity(intent)
         }
 
         binding.atmsBtn.setOnClickListener {
-            safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
+            val intent = ExploreActivity.createIntent(requireContext(), ExploreTopic.ATMs)
+            startActivity(intent)
         }
     }
 }

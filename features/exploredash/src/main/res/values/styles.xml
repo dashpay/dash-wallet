@@ -20,10 +20,6 @@
         <item name="android:textColor">@color/gray_900</item>
     </style>
 
-    <style name="ExploreTestBottomContentBackground" parent="WhiteBackground">
-        <item name="cornerRadius">8dp</item>
-    </style>
-
     <style name="ExploreBottomContentBackground">
         <item name="backgroundColor">@color/gray_40</item>
         <item name="strokeColor">@color/gray_40</item>

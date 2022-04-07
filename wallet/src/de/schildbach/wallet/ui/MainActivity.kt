@@ -45,8 +45,8 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SEARCH_CONTACTS
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_SELECT_CONTACT
 import de.schildbach.wallet.ui.dashpay.ContactsFragment.Companion.MODE_VIEW_REQUESTS
+import de.schildbach.wallet.ui.explore.ExploreFragment
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
-import de.schildbach.wallet.ui.explore.ExploreTestNetFragment
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
@@ -359,7 +359,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private fun showExplore() {
-        val exploreFragment = ExploreTestNetFragment.newInstance()
+        val exploreFragment = ExploreFragment()
         replaceFragment(exploreFragment)
     }
 

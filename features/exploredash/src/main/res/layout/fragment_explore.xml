@@ -17,18 +17,9 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_explore"
-    tools:context="org.dash.wallet.features.exploredash.ui.ExploreFragment">
-
-    <include
-        android:id="@+id/title_bar"
-        layout="@layout/app_bar_general"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent" />
+    android:background="@color/bg_explore">
 
     <ImageView
         android:layout_width="wrap_content"
@@ -38,7 +29,7 @@
         app:layout_constraintBottom_toTopOf="@id/explore_title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/title_bar" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/explore_title"

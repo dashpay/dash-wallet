@@ -7,7 +7,7 @@
     android:animateLayoutChanges="true"
     android:background="@color/bg_less_bright"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.MoreActivity">
+    tools:context="de.schildbach.wallet.ui.MoreFragment">
 
     <include
         layout="@layout/app_bar_general"

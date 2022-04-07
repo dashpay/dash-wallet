@@ -17,16 +17,30 @@
 
 package de.schildbach.wallet.ui.explore
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.NavigationRequest
 
 @AndroidEntryPoint
 class ExploreActivity : BaseMenuActivity() {
+    companion object {
+        private const val TOPIC_KEY = "type"
+
+        fun createIntent(context: Context, topic: ExploreTopic): Intent {
+            val intent = Intent(context, ExploreActivity::class.java)
+            intent.putExtra(TOPIC_KEY, topic)
+            return intent
+        }
+    }
+
     private val viewModel: ExploreViewModel by viewModels()
 
     override fun getLayoutId(): Int {
@@ -35,11 +49,12 @@ class ExploreActivity : BaseMenuActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setNavigationGraph()
 
         viewModel.navigationCallback.observe(this) { request ->
             when (request) {
                 NavigationRequest.SendDash -> {
-//                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 0) // TODO
+//                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 0)
 //                    startActivity(sendCoinsIntent)
                 }
                 NavigationRequest.ReceiveDash -> {
@@ -49,5 +64,12 @@ class ExploreActivity : BaseMenuActivity() {
                 else -> {}
             }
         }
+    }
+
+    private fun setNavigationGraph() {
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+        val navGraph = navController.navInflater.inflate(R.navigation.explore_dash)
+        navController.setGraph(navGraph, intent.extras)
     }
 }
