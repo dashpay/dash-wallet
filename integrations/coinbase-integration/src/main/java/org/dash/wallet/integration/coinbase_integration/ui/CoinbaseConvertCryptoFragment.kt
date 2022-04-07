@@ -36,6 +36,7 @@ import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConvertCryptoBinding
 import org.dash.wallet.integration.coinbase_integration.model.CoinBaseUserAccountDataUIModel
@@ -102,21 +103,29 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         convertViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
             val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
             if (swapValueErrorType == SwapValueErrorType.NOError) {
-                //  if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
+                if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
+
+                    pair.second?.first?.let { fait ->
+                        if (viewModel.lastCoinbaseBalance.toDouble() <fait.toPlainString().toDouble()) {
+                            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                                R.string.we_didnt_find_any_assets,
+                                image= R.drawable.ic_info_red,
+                                positiveButtonText= R.string.buy_crypto_on_coinbase,
+                                negativeButtonText = R.string.close
+                            )
+                            safeNavigate(
+                                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                                    placeBuyOrderError
+                                )
+                            )
+                        }
+                    }
+                }
                 selectedCoinBaseAccount?.let {
                     pair.second?.first?.let { fait ->
                         viewModel.swapTrade(fait, it, pair.first)
                     }
                 }
-//                } else {
-//                    pair.second?.second?.let { coin ->
-//                        selectedCoinBaseAccount?.let {
-//                            pair.second?.first?.let { fait ->
-//                                viewModel.sellDashToCoinBase(coin, fait, it)
-//                            }
-//                        }
-//                    }
-//                }
             } else {
                 showSwapValueErrorView(swapValueErrorType)
             }

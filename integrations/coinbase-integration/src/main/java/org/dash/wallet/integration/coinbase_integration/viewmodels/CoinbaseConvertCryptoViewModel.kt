@@ -39,17 +39,16 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val config: Configuration,
     private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
+
+    val lastCoinbaseBalance = coinBaseRepository.getUserLastCoinbaseBalance()
     private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
-    val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
-        get() = _userAccountsInfo
+
 
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
     private val _baseIdForUSDModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
-    val baseIdForUSDModelCoinBase: LiveData<List<BaseIdForUSDData>>
-        get() = _baseIdForUSDModelCoinBase
 
     private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
     val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>

@@ -92,10 +92,6 @@ class ConvertViewViewModel @Inject constructor(
     val selectedLocalExchangeRate: LiveData<ExchangeRate>
         get() = _selectedLocalExchangeRate
 
-    private val _dashWalletBalance = MutableLiveData<Event<Coin>>()
-    val dashWalletBalance: LiveData<Event<Coin>>
-        get() = this._dashWalletBalance
-
     val userDashAccountEmptyError: SingleLiveEvent<Boolean> = SingleLiveEvent()
 
     val validSwapValue = SingleLiveEvent<String>()
@@ -196,7 +192,6 @@ class ConvertViewViewModel @Inject constructor(
 
     private fun setDashWalletBalance() {
         val balance = walletDataProvider.getWalletBalance()
-        _dashWalletBalance.value = Event(balance)
 
         maxForDashWalletAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
