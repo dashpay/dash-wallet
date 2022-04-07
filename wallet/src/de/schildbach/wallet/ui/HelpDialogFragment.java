@@ -29,6 +29,7 @@ import org.dash.wallet.common.ui.DialogBuilder;
 /**
  * @author Andreas Schildbach
  */
+//TODO: Class unused...to be removed ??
 public final class HelpDialogFragment extends DialogFragment {
     private static final String FRAGMENT_TAG = HelpDialogFragment.class.getName();
 

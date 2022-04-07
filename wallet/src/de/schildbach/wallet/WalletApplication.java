@@ -51,6 +51,10 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.integration.liquid.data.LiquidClient;
 import androidx.work.WorkManager;
+import androidx.work.BackoffPolicy;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkRequest;
 
 import com.google.common.base.Stopwatch;
 import com.jakewharton.processphoenix.ProcessPhoenix;
@@ -66,10 +70,11 @@ import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
+import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
-import org.dash.wallet.common.AutoLogoutTimerHandler;
-import org.dash.wallet.common.util.WalletDataProvider;
+import org.dash.wallet.common.WalletDataProvider;
+import org.dash.wallet.integration.liquid.data.LiquidClient;
 import org.dash.wallet.integration.liquid.data.LiquidConstants;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
@@ -168,6 +173,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
     @Override
     public void onCreate() {
         super.onCreate();
+        initLogging();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
@@ -247,6 +253,31 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         if (walletFileExists()) {
             fullInitialization();
         }
+
+        try {
+            syncExploreData();
+        } catch (Exception ex) {
+            log.error(ex.getMessage(), ex);
+            CrashReporter.saveBackgroundTrace(ex, packageInfo);
+        }
+    }
+
+    private void syncExploreData() {
+
+        OneTimeWorkRequest syncDataWorkRequest =
+                new OneTimeWorkRequest.Builder(ExploreSyncWorker.class)
+                        .setBackoffCriteria(
+                                BackoffPolicy.EXPONENTIAL,
+                                WorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
+                                TimeUnit.MILLISECONDS
+                        )
+                        .build();
+
+        WorkManager.getInstance(this.getApplicationContext()).enqueueUniqueWork(
+                "Sync Explore Data",
+                ExistingWorkPolicy.KEEP,
+                syncDataWorkRequest
+        );
     }
 
     public void fullInitialization() {
@@ -264,7 +295,6 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         basicWalletInitalizationFinished = true;
 
         new LinuxSecureRandom(); // init proper random number generator
-        initLogging();
 
         if (!Constants.IS_PROD_BUILD) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().permitDiskReads()
@@ -282,12 +312,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
 
         CrashReporter.init(getCacheDir());
 
-        Threading.uncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(final Thread thread, final Throwable throwable) {
-                log.info("dashj uncaught exception", throwable);
-                CrashReporter.saveBackgroundTrace(throwable, packageInfo);
-            }
+        Threading.uncaughtExceptionHandler = (thread, throwable) -> {
+            log.info("dashj uncaught exception", throwable);
+            CrashReporter.saveBackgroundTrace(throwable, packageInfo);
         };
 
         MnemonicCodeExt.initMnemonicCode(this);
@@ -861,6 +888,7 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
         if (walletBackupFile.exists()) {
             walletBackupFile.delete();
         }
+
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
@@ -868,6 +896,9 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 ProcessPhoenix.triggerRebirth(WalletApplication.this);
             }
         });
+
+        // wallet must be null for the OnboardingActivity flow
+        wallet = null;
     }
 
     public AnalyticsService getAnalyticsService() {
@@ -916,5 +947,10 @@ public class WalletApplication extends BaseWalletApplication implements AutoLogo
                 .setWorkerFactory(workerFactory)
                 .setMinimumLoggingLevel(Log.VERBOSE)
                 .build();
+    }
+
+    // wallets from v5.17.5 and earlier do not have a BIP44 path
+    public boolean isWalletUpgradedtoBIP44() {
+        return wallet != null && wallet.hasKeyChain(Constants.BIP44_PATH);
     }
 }

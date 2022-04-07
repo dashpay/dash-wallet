@@ -78,7 +78,6 @@ public final class WalletAddressesFragment extends FancyListFragment {
     @Override
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
-
         this.activity = (AddressBookActivity) activity;
         this.application = (WalletApplication) activity.getApplication();
         this.config = application.getConfiguration();

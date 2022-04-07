@@ -20,9 +20,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.data.ExchangeRate
 
 class NewAccountConfirmDialogViewModel(application: Application) : AndroidViewModel(application) {
 

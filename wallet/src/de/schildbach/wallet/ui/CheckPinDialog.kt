@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.AlertDialog
 import android.app.Dialog
 import android.content.*
 import android.graphics.Color
@@ -38,12 +37,12 @@ import androidx.lifecycle.ViewModelProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_enter_pin.*
-import org.dash.wallet.common.InteractionAwareActivity
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.slf4j.LoggerFactory
 
 open class CheckPinDialog : DialogFragment() {
@@ -84,7 +83,6 @@ open class CheckPinDialog : DialogFragment() {
 
     protected lateinit var viewModel: CheckPinViewModel
     protected lateinit var sharedModel: CheckPinSharedModel
-    protected lateinit var lockScreenViewModel: LockScreenViewModel
 
     protected val pinRetryController = PinRetryController.getInstance()
     protected var fingerprintHelper: FingerprintHelper? = null
@@ -113,7 +111,6 @@ open class CheckPinDialog : DialogFragment() {
         initViewModel()
         negativeButton.setText(R.string.button_cancel)
         negativeButton.setOnClickListener {
-            sharedModel.onCancelCallback.call()
             dismiss()
         }
         positiveButton.setOnClickListener {
@@ -123,7 +120,7 @@ open class CheckPinDialog : DialogFragment() {
                 fingerprintFlow(false)
             }
         }
-        numeric_keyboard.setFunctionEnabled(false)
+        numeric_keyboard.isFunctionEnabled = false
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
@@ -220,17 +217,8 @@ open class CheckPinDialog : DialogFragment() {
         } ?: throw IllegalStateException("Invalid Activity")
     }
 
-    protected fun initLockScreenViewModel(activity: FragmentActivity) {
-        lockScreenViewModel = ViewModelProvider(activity)[LockScreenViewModel::class.java]
-        lockScreenViewModel.activatingLockScreen.observe(viewLifecycleOwner) {
-            sharedModel.onCancelCallback.call()
-            dismiss()
-        }
-    }
-
     protected open fun FragmentActivity.initSharedModel(activity: FragmentActivity) {
         sharedModel = ViewModelProvider(activity)[CheckPinSharedModel::class.java]
-        initLockScreenViewModel(activity)
     }
 
     protected fun setState(newState: State) {
@@ -273,6 +261,7 @@ open class CheckPinDialog : DialogFragment() {
         if (::fingerprintCancellationSignal.isInitialized) {
             fingerprintCancellationSignal.cancel()
         }
+        sharedModel.onCancelCallback.call()
         super.onDismiss(dialog)
     }
 
@@ -335,10 +324,10 @@ open class CheckPinDialog : DialogFragment() {
     }
 
     protected open fun showLockedAlert(context: Context) {
-        val dialogBuilder = AlertDialog.Builder(context)
-        dialogBuilder.setTitle(R.string.wallet_lock_wallet_disabled)
-        dialogBuilder.setMessage(pinRetryController.getWalletTemporaryLockedMessage(context))
-        dialogBuilder.setPositiveButton(android.R.string.ok, null)
-        dialogBuilder.show()
+        BaseAlertDialogBuilder(context).apply {
+            title = context.getString(R.string.wallet_lock_wallet_disabled)
+            message = pinRetryController.getWalletTemporaryLockedMessage(context)
+            positiveText = context.getString(android.R.string.ok)
+        }.buildAlertDialog().show()
     }
 }

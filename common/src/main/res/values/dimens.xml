@@ -36,4 +36,11 @@
     <dimen name="date_text_big">18sp</dimen>
     <dimen name="date_text_small">12sp</dimen>
 
+    <!-- Design System -->
+    <dimen name="offset_dialog_margin_top">20dp</dimen>
+    <dimen name="divider_margin_horizontal">15dp</dimen>
+    <dimen name="default_horizontal_padding">15dp</dimen>
+    <dimen name="payment_method_padding_end">5dp</dimen>
+    <dimen name="payment_method_image_height">11dp</dimen>
+    <dimen name="dialog_horizontal_inset">15dp</dimen>
 </resources>

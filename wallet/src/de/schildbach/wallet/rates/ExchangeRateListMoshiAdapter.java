@@ -4,6 +4,7 @@ import com.squareup.moshi.FromJson;
 import com.squareup.moshi.JsonReader;
 import com.squareup.moshi.ToJson;
 
+import org.dash.wallet.common.data.ExchangeRate;
 import org.json.JSONException;
 import org.json.JSONObject;
 

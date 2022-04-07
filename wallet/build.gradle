@@ -4,6 +4,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'dagger.hilt.android.plugin'
+apply plugin: 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 
 ext {
     archivesBaseName = 'dash-wallet'
@@ -18,13 +19,18 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.material:material:1.3.0'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation project(path: ':common')
+    implementation project(path: ":features:exploredash")
+    //Liquid Integration
+    implementation project(path: ':liquid-integration')
+    //Uphold Integration
+    implementation project(path: ':uphold-integration')
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
     }
-    //Liquid Integration
-    implementation project(path: ':liquid-integration')
+
+    implementation 'com.google.android.material:material:1.3.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
     implementation 'androidx.annotation:annotation:1.2.0'
     implementation 'androidx.core:core-ktx:1.5.0'
@@ -34,11 +40,13 @@ dependencies {
         exclude(group: 'com.android.support', module: 'support-media-compat')
     }
     implementation 'androidx.legacy:legacy-support-core-utils:1.0.0'
-    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    implementation 'androidx.preference:preference:1.1.1'
+
     implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
+    implementation 'androidx.preference:preference-ktx:1.1.1'
+//    implementation 'androidx.preference:preference:1.1.1' TODO
     implementation "androidx.work:work-runtime-ktx:2.4.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'org.dashj.platform:dashpay:0.22-SNAPSHOT'
@@ -53,13 +61,14 @@ dependencies {
     implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
     implementation 'io.grpc:grpc-stub:1.28.0' // CURRENT_GRPC_VERSION
     implementation 'com.google.guava:guava:29.0-android'
-    implementation 'com.google.zxing:core:3.4.1'
+    //noinspection GradleDependency
+    implementation 'com.google.zxing:core:3.3.3' // Don't update. 3.3.3 is the maximum to support Android 6.x
 
     implementation "com.squareup.okhttp3:okhttp:$ok_http_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$ok_http_version"
     implementation 'com.squareup.moshi:moshi:1.11.0'
     implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
-    implementation 'org.slf4j:slf4j-api:1.7.30'
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
     implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
         exclude(group: 'com.google.android', module: 'android')
     }
@@ -68,21 +77,17 @@ dependencies {
     implementation 'com.tbuonomo:dotsindicator:4.2'
     implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
-    implementation project(path: ':common')
     implementation 'com.google.android.gms:play-services-auth:19.0.0'
+    implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
 
     // Database
     implementation "androidx.room:room-ktx:$roomVersion"
     implementation "androidx.room:room-runtime:$roomVersion"
     kapt "androidx.room:room-compiler:$roomVersion"
 
-    // Uphold Integration
-    implementation project(path: ':uphold-integration')
-
     implementation 'androidx.multidex:multidex:2.0.1'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    def coroutines_version = "1.4.2"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
 
     implementation "com.github.bumptech.glide:glide:$glideVersion"
@@ -101,6 +106,10 @@ dependencies {
     // Declare the dependency for the Performance Monitoring library
     // When using the BoM, you don't specify versions in Firebase library dependencies
     //implementation 'com.google.firebase:firebase-perf-ktx'
+
+    // Firebase
+    implementation 'com.google.firebase:firebase-database-ktx:20.0.2'
+    implementation 'com.google.firebase:firebase-auth-ktx'
 
     // Google Drive Dependencies
     implementation ('com.google.api-client:google-api-client-android:1.26.0') {
@@ -123,11 +132,15 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
     implementation 'androidx.hilt:hilt-work:1.0.0'
-    kapt 'androidx.hilt:hilt-compiler:1.0.0'
 
-    // Tests
+
+    // Unit tests
     testImplementation 'junit:junit:4.13.2'
-    //Espresso
+
+    // Instrumental tests
+    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.0"
+    androidTestImplementation "androidx.room:room-testing:$roomVersion"
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation('androidx.test:runner:1.3.0') {
         exclude group: 'com.android.support', module: 'support-annotations'
     }
@@ -161,9 +174,22 @@ ext {
     archivesBaseName = 'dash-wallet'
 }
 
+kapt {
+    correctErrorTypes true
+}
+
+hilt {
+    enableAggregatingTask = true
+}
+
 def props = new Properties()
 if (file("../service.properties").exists()) {
     file("../service.properties").withInputStream { props.load(it) }
+}
+
+def localProps = new Properties()
+if (file("../local.properties").exists()) {
+    file("../local.properties").withInputStream { localProps.load(it) }
 }
 
 android {
@@ -192,6 +218,23 @@ android {
         buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
         buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
         buildConfigField("String", "LIQUID_PUBLIC_API_KEY", "\"LIQUID_PUBLIC_API_KEY\"")
+        buildConfigField("String", "SUPPORT_EMAIL", "\"\"")
+
+        def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
+        if (supportEmail != null) {
+            buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
+        } else if(System.getenv("SUPPORT_EMAIL") != null) {
+            buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
+        }
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('keystore/debug.keystore')
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
     }
 
     signingConfigs {
@@ -223,7 +266,20 @@ android {
         }
         debug {
             multiDexEnabled true
+            minifyEnabled false
             debuggable true
+            def supportEmail = localProps.getProperty("INTERNAL_SUPPORT_EMAIL")
+            if (supportEmail != null) {
+                buildConfigField("String", "SUPPORT_EMAIL", "\"$supportEmail\"")
+            } else if(System.getenv('INTERNAL_SUPPORT_EMAIL') != null) {
+                buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv('INTERNAL_SUPPORT_EMAIL')}\"")
+            }
+        }
+        release {
+            def supportEmail = localProps.getProperty("SUPPORT_EMAIL")
+            if (supportEmail == null) {
+                throw new StopExecutionException("SUPPORT_EMAIL is not defined in local.properties or environment on this release build")
+            }
         }
     }
     sourceSets {
@@ -238,6 +294,7 @@ android {
             resources.srcDirs = ['test']
         }
         androidTest {
+            assets.srcDirs += "$projectDir/schemas"
             java.srcDirs = ['androidTest']
             resources.srcDirs = ['androidTest/java']
             res.srcDirs = ['androidTest/testNet3/res']
@@ -328,6 +385,8 @@ android {
         exclude 'org.bitcoin.test.checkpoints.txt'
         exclude 'google/protobuf/*.proto'
         exclude 'META-INF/DEPENDENCIES'
+        exclude "META-INF/AL2.0"
+        exclude "META-INF/LGPL2.1"
     }
     dexOptions {
         preDexLibraries true

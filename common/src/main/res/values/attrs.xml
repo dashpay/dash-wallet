@@ -9,14 +9,17 @@
     <attr name="action_text_color" format="reference" />
     <attr name="action_text" format="string" />
     <attr name="action_active" format="boolean" />
+
     <declare-styleable name="LockScreenButton">
         <attr name="action_icon" />
         <attr name="text" format="reference"/>
         <attr name="action_icon_padding" format="dimension" />
     </declare-styleable>
+
     <declare-styleable name="FingerprintView">
         <attr name="custom_layout" format="reference" />
     </declare-styleable>
+
     <declare-styleable name="PlanetView">
         <attr name="drawable" format="reference" />
         <attr name="animStartDelay" format="integer" />
@@ -35,8 +38,21 @@
             <enum name="overshoot" value="7" />
         </attr>
     </declare-styleable>
+
     <declare-styleable name="OrbitView">
         <attr name="orbitColor" format="color" />
         <attr name="orbitWidth" format="dimension" />
     </declare-styleable>
+
+    <declare-styleable name="VectorColors">
+        <attr name="primaryColor" format="color" />
+        <attr name="secondaryColor" format="color" />
+    </declare-styleable>
+
+    <declare-styleable name="NumericKeyboardView">
+        <attr format="boolean" name="nk_functionEnabled" />
+        <attr format="boolean" name="nk_decSeparatorEnabled" />
+    </declare-styleable>
+
+    <attr format="color" name="disabledBackgroundColor"/>
 </resources>

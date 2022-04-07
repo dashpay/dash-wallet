@@ -108,6 +108,10 @@ public class Configuration {
 
     private static final long DISABLE_NOTIFICATIONS = -1;
 
+    // Explore Dash
+    public static final String PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY = "has_info_screen_been_shown";
+    public static final String PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN = "has_location_dialog_been_shown";
+
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
     public Configuration(final SharedPreferences prefs, final Resources res) {
@@ -611,5 +615,21 @@ public class Configuration {
 
     public void setCurrentFiatCurrencyChanged(boolean isChanged) {
         prefs.edit().putBoolean(PREFS_KEY_CURRENT_FIAT_CURRENCY_CHANGED, isChanged).apply();
+    }
+
+    public boolean hasExploreDashInfoScreenBeenShown() {
+        return prefs.getBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, false);
+    }
+
+    public void setHasExploreDashInfoScreenBeenShown(boolean isShown){
+        prefs.edit().putBoolean(PREFS_KEY_HAS_INFO_SCREEN_BEEN_SHOWN_ALREADY, isShown).apply();
+    }
+
+    public boolean hasExploreDashLocationDialogBeenShown() {
+        return prefs.getBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, false);
+    }
+
+    public void setHasExploreDashLocationDialogBeenShown(boolean isShown) {
+        prefs.edit().putBoolean(PREFS_KEY_HAS_LOCATION_DIALOG_BEEN_SHOWN, isShown).apply();
     }
 }

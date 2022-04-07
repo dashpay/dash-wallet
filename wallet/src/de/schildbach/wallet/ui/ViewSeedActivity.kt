@@ -19,12 +19,14 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_view_seed.*
 
 /**
  * @author Eric Britten
  */
+@AndroidEntryPoint
 class ViewSeedActivity : BaseMenuActivity() {
 
     companion object {
@@ -68,18 +70,13 @@ class ViewSeedActivity : BaseMenuActivity() {
         }
 
         setTitle(R.string.view_seed_title)
-
-        lockScreenViewModel.activatingLockScreen.observe(this) {
-            finish()
-        }
     }
 
     override fun onBackPressed() {
         finish()
     }
 
-    //override fun finish() {
-    //    super.finish()
-    //    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
-    //}
+    override fun onLockScreenActivated() {
+        finish()
+    }
 }

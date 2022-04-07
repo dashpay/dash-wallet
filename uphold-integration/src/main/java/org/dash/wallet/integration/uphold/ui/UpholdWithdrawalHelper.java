@@ -18,27 +18,24 @@ package org.dash.wallet.integration.uphold.ui;
 
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-
-import org.dash.wallet.common.ui.DialogBuilder;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdApiException;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 import org.dash.wallet.integration.uphold.data.UpholdTransaction;
-
 import java.math.BigDecimal;
+import kotlin.Unit;
 
 
 public class UpholdWithdrawalHelper {
 
-    private BigDecimal balance;
-    private OnTransferListener onTransferListener;
+    private final BigDecimal balance;
+    private final OnTransferListener onTransferListener;
     private UpholdTransaction transaction;
 
     public UpholdWithdrawalHelper(BigDecimal balance, OnTransferListener onTransferListener) {
@@ -105,35 +102,33 @@ public class UpholdWithdrawalHelper {
     }
 
     private void showSuccessDialog(final AppCompatActivity activity, final String txId) {
-        DialogBuilder dialogBuilder = new DialogBuilder(activity);
-        dialogBuilder.setTitle(R.string.uphold_withdrawal_success_title);
-        dialogBuilder.setMessage(activity.getString(R.string.uphold_withdrawal_success_message, txId));
-        dialogBuilder.setPositiveButton(android.R.string.ok, null);
-        dialogBuilder.setNeutralButton(R.string.uphold_see_on_uphold, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                String txUrl = String.format(UpholdConstants.TRANSACTION_URL, txId);
-                activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(txUrl)));
-            }
-        });
-        dialogBuilder.show().setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                dialog.dismiss();
-                if (onTransferListener != null) {
-                    onTransferListener.onTransfer();
+        final BaseAlertDialogBuilder upholdWithdrawSuccessAlertDialogBuilder = new BaseAlertDialogBuilder(activity);
+        upholdWithdrawSuccessAlertDialogBuilder.setTitle(activity.getString(R.string.uphold_withdrawal_success_title));
+        upholdWithdrawSuccessAlertDialogBuilder.setMessage(activity.getString(R.string.uphold_withdrawal_success_message, txId));
+        upholdWithdrawSuccessAlertDialogBuilder.setPositiveText(activity.getString(android.R.string.ok));
+        upholdWithdrawSuccessAlertDialogBuilder.setNeutralText(activity.getString(R.string.uphold_see_on_uphold));
+        upholdWithdrawSuccessAlertDialogBuilder.setNeutralAction(
+                () -> {
+                    String txUrl = String.format(UpholdConstants.TRANSACTION_URL, txId);
+                    activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(txUrl)));
+                    return Unit.INSTANCE;
                 }
-            }
-        });
+        );
+        upholdWithdrawSuccessAlertDialogBuilder.setDismissAction(
+                () -> {
+                    if (onTransferListener != null) {
+                        onTransferListener.onTransfer();
+                    }
+                    return Unit.INSTANCE;
+                }
+        );
+        upholdWithdrawSuccessAlertDialogBuilder.buildAlertDialog().show();
     }
 
     private void showOtpDialog(final AppCompatActivity activity) {
-        UpholdOtpDialog.show(activity.getSupportFragmentManager(), new UpholdOtpDialog.OnOtpSetListener() {
-            @Override
-            public void onOtpSet() {
-                if (transaction != null) {
-                    commitTransaction(activity);
-                }
+        UpholdOtpDialog.show(activity.getSupportFragmentManager(), () -> {
+            if (transaction != null) {
+                commitTransaction(activity);
             }
         });
     }
@@ -147,17 +142,17 @@ public class UpholdWithdrawalHelper {
     }
 
     private void showLoadingError(AppCompatActivity activity, Exception e) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-        if (e instanceof UpholdApiException) {
-            builder.setTitle(R.string.uphold_api_error_title);
+        BaseAlertDialogBuilder loadingErrorAlertDialogBuilder = new BaseAlertDialogBuilder(activity);
+        if (e instanceof UpholdApiException){
+            loadingErrorAlertDialogBuilder.setTitle(activity.getString(R.string.uphold_api_error_title));
             UpholdApiException upholdApiException = (UpholdApiException) e;
-            builder.setMessage(upholdApiException.getDescription(activity));
+            loadingErrorAlertDialogBuilder.setMessage(upholdApiException.getDescription(activity));
         } else {
-            builder.setTitle(R.string.uphold_general_error_title);
-            builder.setMessage(R.string.loading_error);
+            loadingErrorAlertDialogBuilder.setTitle(activity.getString(R.string.uphold_general_error_title));
+            loadingErrorAlertDialogBuilder.setMessage(activity.getString(R.string.loading_error));
         }
-        builder.setPositiveButton(android.R.string.ok, null);
-        builder.show();
+        loadingErrorAlertDialogBuilder.setPositiveText(activity.getString(android.R.string.ok));
+        loadingErrorAlertDialogBuilder.buildAlertDialog().show();
     }
 
     public interface OnTransferListener {

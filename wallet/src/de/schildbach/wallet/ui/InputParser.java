@@ -17,6 +17,39 @@
 
 package de.schildbach.wallet.ui;
 
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
+import android.net.Uri;
+
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.common.hash.Hashing;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.UninitializedMessageException;
+
+import org.bitcoin.protocols.payments.Protos;
+import org.bitcoinj.core.Address;
+import org.bitcoinj.core.AddressFormatException;
+import org.bitcoinj.core.Base58;
+import org.bitcoinj.core.DumpedPrivateKey;
+import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.PrefixedChecksummedBytes;
+import org.bitcoinj.core.ProtocolException;
+import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.crypto.BIP38PrivateKey;
+import org.bitcoinj.crypto.TrustStoreLoader;
+import org.bitcoinj.protocols.payments.PaymentProtocol;
+import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
+import org.bitcoinj.protocols.payments.PaymentProtocolException;
+import org.bitcoinj.protocols.payments.PaymentSession;
+import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.uri.BitcoinURIParseException;
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,32 +62,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import org.bitcoin.protocols.payments.Protos;
-import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.Base58;
-import org.bitcoinj.core.DumpedPrivateKey;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.ProtocolException;
-import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.core.PrefixedChecksummedBytes;
-import org.bitcoinj.crypto.BIP38PrivateKey;
-import org.bitcoinj.crypto.TrustStoreLoader;
-import org.bitcoinj.protocols.payments.PaymentProtocol;
-import org.bitcoinj.protocols.payments.PaymentProtocol.PkiVerificationData;
-import org.bitcoinj.protocols.payments.PaymentProtocolException;
-import org.bitcoinj.protocols.payments.PaymentSession;
-import org.bitcoinj.uri.BitcoinURI;
-import org.bitcoinj.uri.BitcoinURIParseException;
-import org.dash.wallet.common.ui.DialogBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.hash.Hashing;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.UninitializedMessageException;
-
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
@@ -62,10 +69,6 @@ import de.schildbach.wallet.util.AddressUtil;
 import de.schildbach.wallet.util.Io;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet_test.R;
-
-import android.content.Context;
-import android.content.DialogInterface.OnClickListener;
-import android.net.Uri;
 
 /**
  * @author Andreas Schildbach
@@ -427,19 +430,25 @@ public abstract class InputParser {
         error(null, R.string.input_parser_cannot_classify, input);
     }
 
-    public static void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
+    public static void dialog(final Context context,
+                              @Nullable final OnClickListener dismissListener,
+                              final int titleResId,
                               final int messageResId, final Object... messageArgs) {
         dialog(context, dismissListener, titleResId, context.getString(messageResId, messageArgs));
     }
 
-    public static void dialog(final Context context, @Nullable final OnClickListener dismissListener, final int titleResId,
+    public static void dialog(final Context context,
+                              @Nullable final OnClickListener dismissListener,
+                              final int titleResId,
                               String message) {
-        final DialogBuilder dialog = new DialogBuilder(context);
-        if (titleResId != 0)
-            dialog.setTitle(titleResId);
-        dialog.setMessage(message);
-        dialog.singleDismissButton(dismissListener);
-        dialog.show();
+        final BaseAlertDialogBuilder inputParserAlertDialogBuilder = new BaseAlertDialogBuilder(context);
+        if (titleResId != 0){
+            inputParserAlertDialogBuilder.setTitle(context.getString(titleResId));
+        }
+        inputParserAlertDialogBuilder.setMessage(message);
+        final AlertDialog alertDialog = inputParserAlertDialogBuilder.buildAlertDialog();
+        alertDialog.setButton(DialogInterface.BUTTON_NEUTRAL, context.getString(R.string.button_dismiss), dismissListener);
+        alertDialog.show();
     }
 
     private static final Pattern PATTERN_BITCOIN_ADDRESS = Pattern

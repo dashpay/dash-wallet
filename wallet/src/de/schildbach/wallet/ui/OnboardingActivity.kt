@@ -21,7 +21,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.LayerDrawable
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.text.TextUtils
@@ -42,7 +41,11 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_onboarding.*
 import kotlinx.android.synthetic.main.activity_onboarding_perm_lock.*
 import org.dash.wallet.common.data.OnboardingState
-import org.dash.wallet.common.ui.DialogBuilder
+import kotlinx.android.synthetic.main.activity_onboarding_invalid_wallet.*
+import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.slf4j.LoggerFactory
+import javax.inject.Inject
 
 private const val REGULAR_FLOW_TUTORIAL_REQUEST_CODE = 0
 const val SET_PIN_REQUEST_CODE = 1
@@ -53,8 +56,8 @@ private const val RESTORE_FILE_REQUEST_CODE = 3
 class OnboardingActivity : RestoreFromFileActivity() {
 
     companion object {
-
         private const val EXTRA_INVITE = "extra_invite"
+        private val log = LoggerFactory.getLogger(OnboardingActivity::class.java)
 
         @JvmStatic
         fun createIntent(context: Context): Intent {
@@ -72,12 +75,16 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private lateinit var walletApplication: WalletApplication
 
+    @Inject
+    lateinit var analytics: AnalyticsService
+
     override fun onStart() {
         super.onStart()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        walletApplication = (application as WalletApplication)
 
         if (PinRetryController.getInstance().isLockedForever) {
             setContentView(R.layout.activity_onboarding_perm_lock)
@@ -87,9 +94,11 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 finish()
             }
             wipe_wallet.setOnClickListener {
-                ResetWalletDialog.newInstance().show(supportFragmentManager, "reset_wallet_dialog")
+                ResetWalletDialog.newInstance(analytics).show(supportFragmentManager, "reset_wallet_dialog")
             }
             return
+        } else if (walletApplication.isWalletUpgradedtoBIP44 && !walletApplication.wallet.isEncrypted) {
+            unencryptedFlow()
         }
 
         setContentView(R.layout.activity_onboarding)
@@ -100,7 +109,15 @@ class OnboardingActivity : RestoreFromFileActivity() {
         OnboardingState.clear()
 
         if (walletApplication.walletFileExists()) {
-            regularFlow()
+            if (walletApplication.isWalletUpgradedtoBIP44) {
+                if (walletApplication.wallet.isEncrypted) {
+                    regularFlow()
+                } else {
+                    unencryptedFlow()
+                }
+            } else {
+                upgradeToBIP44Flow()
+            }
         } else {
             if (walletApplication.wallet == null) {
                 onboarding()
@@ -115,6 +132,33 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
 
 
+    }
+
+    // This is due to a wallet being created in an invalid way
+    // such that the wallet is not encrypted
+    private fun unencryptedFlow() {
+        log.info("the wallet is not encrypted")
+        analytics.logError(
+            Exception("the wallet is not encrypted / OnboardingActivity"),
+            "no other details are available without the user submitting a report"
+        )
+
+        setContentView(R.layout.activity_onboarding_invalid_wallet)
+        hideSlogan()
+
+        unencrypted_close_app.setOnClickListener {
+            finish()
+        }
+        unencrypted_contact_support.setOnClickListener {
+            ReportIssueDialogBuilder.createReportIssueDialog(
+                this@OnboardingActivity, walletApplication
+            ).buildAlertDialog().show()
+        }
+    }
+
+    private fun upgradeToBIP44Flow() {
+        // for now do nothing extra, it will be handled in WalletActivity
+        regularFlow()
     }
 
     private fun regularFlow() {
@@ -182,13 +226,17 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
                 else -> it.message!!
             }
-            val dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title)
-            dialog.setMessage(getString(R.string.import_keys_dialog_failure, message))
-            dialog.setPositiveButton(R.string.button_dismiss, null)
-            dialog.setNegativeButton(R.string.button_retry) { _, _ ->
-                RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-            }
-            dialog.show()
+
+            BaseAlertDialogBuilder(this).apply {
+                title = getString(R.string.import_export_keys_dialog_failure_title)
+                this.message = getString(R.string.import_keys_dialog_failure, message)
+                positiveText = getString(R.string.button_dismiss)
+                negativeText = getString(R.string.button_retry)
+                negativeAction = {
+                    RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
+                }
+                showIcon = true
+            }.buildAlertDialog().show()
         })
         viewModel.startActivityAction.observe(this, Observer {
             startActivity(it)

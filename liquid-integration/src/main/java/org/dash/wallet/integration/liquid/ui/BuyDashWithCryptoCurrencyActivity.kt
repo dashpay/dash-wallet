@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -45,12 +44,13 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
     private var isTransestionSuccessful = false
     private var error: String? = null
     private var mPermissionRequest: PermissionRequest? = null
-
+    private lateinit var countrySupportDialog: CountrySupportDialog
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         log.info("liquid: starting buy dash with crypto currency")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview_quick_exchange)
+        countrySupportDialog = CountrySupportDialog(this, false, analytics)
         webview = findViewById(R.id.webview)
         initToolBar()
     }
@@ -86,7 +86,7 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
 
 
         findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this, false, analytics).show()
+            countrySupportDialog.show()
         }
         webview.webViewClient = MyBrowser()
         webview.settings.javaScriptEnabled = true
@@ -169,25 +169,19 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
 
     @SuppressLint("NewApi")
     fun showPermissionDialog(request: PermissionRequest) {
-        val builder = AlertDialog.Builder(this)
-        //set title for alert dialog
-        builder.setTitle("Allow Permission")
-        //set message for alert dialog
-        builder.setMessage("Allow Permission to camera")
-
-        //performing positive action
-        builder.setPositiveButton("Yes") { dialogInterface, which ->
-            request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE));
-        }
-        //performing negative action
-        builder.setNegativeButton("No") { dialogInterface, which ->
-            request.deny();
-        }
-        // Create the AlertDialog
-        val alertDialog: AlertDialog = builder.create()
-        // Set other dialog properties
-        alertDialog.setCancelable(false)
-        alertDialog.show()
+        alertDialogBuilder.apply {
+            title = getString(R.string.allow_permission)
+            message = getString(R.string.allow_permission_to_camera)
+            positiveText = getString(android.R.string.yes)
+            positiveAction = {
+                request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE));
+            }
+            negativeText = getString(android.R.string.no)
+            negativeAction = {
+                request.deny()
+            }
+            cancelable = false
+        }.buildAlertDialog().show()
     }
 
     val FILE_CHOOSER_RESULT_CODE = 1
@@ -388,13 +382,14 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
     override fun onDestroy() {
         log.info("liquid: closing buy dash with crypto currency")
         webview.removeJavascriptInterface(mJsInterfaceName)
+        countrySupportDialog.dismiss()
         super.onDestroy()
     }
 
     override fun onBackPressed() {
         if (isTransestionSuccessful) {
             val intent = Intent()
-            intent.setClassName(this, "de.schildbach.wallet.ui.WalletActivity")
+            intent.setClassName(this, "de.schildbach.wallet.ui.WalletActivity") // TODO
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             startActivity(intent)
             finish()

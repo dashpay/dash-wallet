@@ -27,6 +27,7 @@ import de.schildbach.wallet_test.databinding.DialogTransactionsFilterBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
+import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 
 @AndroidEntryPoint
 class TransactionsFilterDialog : BaseBottomSheetDialogFragment() {

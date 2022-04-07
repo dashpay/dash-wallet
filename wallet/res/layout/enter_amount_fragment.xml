@@ -254,7 +254,7 @@
             android:text="John Doe" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <de.schildbach.wallet.ui.widget.NumericKeyboardView
+    <org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
         android:id="@+id/numeric_keyboard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

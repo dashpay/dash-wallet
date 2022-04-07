@@ -23,8 +23,9 @@ import androidx.fragment.app.Fragment
 import de.schildbach.wallet.ui.MainActivity
 import de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout
 import kotlinx.android.synthetic.main.activity_main.*
+import org.dash.wallet.common.ui.BaseLockScreenFragment
 
-abstract class BottomNavFragment(@LayoutRes contentLayoutId: Int) : Fragment(contentLayoutId) {
+abstract class BottomNavFragment(@LayoutRes contentLayoutId: Int) : BaseLockScreenFragment(contentLayoutId) {
 
     var forceHideBottomNav: Boolean = false
 

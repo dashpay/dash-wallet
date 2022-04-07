@@ -149,7 +149,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/backup_wallet_seed_private_key_written_down_box"
-                style="@style/CheckBox"/>
+                style="@style/OldCheckBox"/>
 
             <!--TextView
                 android:id="@+id/backup_wallet_dialog_warning_encrypted"

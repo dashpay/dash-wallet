@@ -30,7 +30,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
+import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet.ui.SingleActionSharedViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
 import de.schildbach.wallet_test.R

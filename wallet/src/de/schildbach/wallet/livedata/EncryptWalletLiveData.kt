@@ -80,6 +80,7 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
         }
 
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
+            val initialize = args[0] as Boolean
             val wallet = walletApplication.wallet
 
             val password = securityGuard.generateRandomPassword()
@@ -94,13 +95,23 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
                 // initialize the authentication key chains to allow recovery of the username
                 wallet.initializeAuthenticationKeyChains(decryptedSeed, newKey);
 
+                if (initialize) {
+                    walletApplication.saveWalletAndFinalizeInitialization()
+                }
+
                 securityGuard.savePassword(password)
 
                 log.info("wallet successfully encrypted, using key derived by new spending password (${keyCrypter.scryptParameters.n} scrypt iterations)")
 
                 Resource.success(wallet)
             } catch (x: KeyCrypterException) {
-                Resource.error(x.message!!, null)
+                log.error("There was a problem encrypting the wallet", x)
+                Resource.error(x.message ?: "Unknown encryption error")
+            } catch (x: Exception) {
+                log.error("There was a problem creating the wallet", x)
+                Resource.error(
+                    x.message ?: "Unknown error when encrypting wallet during onboarding"
+                )
             }
         }
 

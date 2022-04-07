@@ -22,7 +22,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
-import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
+import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.dialog_confirm_transaction.*
 import kotlinx.android.synthetic.main.dialog_receive_details.*
@@ -55,13 +55,15 @@ class ReceiveDetailsDialog : BaseBottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        arguments!!.apply {
+
+        requireArguments().apply {
             receive_info.setupForDialog()
+
             val dashAmount = getSerializable(ARG_DASH_AMOUNT) as Coin
             val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat?
-
             receive_info.amount = dashAmount
             dash_amount_view.text = MonetaryFormat.BTC.noCode().format(dashAmount).toString()
+
             if (fiatAmount != null) {
                 fiat_symbol_view.text = GenericUtils.currencySymbol(fiatAmount.currencyCode)
                 fiat_amount_view.text = fiatAmount.toPlainString()

@@ -27,7 +27,6 @@ import androidx.core.os.bundleOf
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.activity_advanced_security.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import java.util.concurrent.TimeUnit
 
 
@@ -115,13 +114,8 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
         updateView()
         setTitle(R.string.security_title)
 
-
         reset_to_default.setOnClickListener {
             resetToDefault()
-        }
-
-        lockScreenViewModel.activatingLockScreen.observe(this) {
-            finish()
         }
     }
 
@@ -254,5 +248,10 @@ class AdvancedSecurityActivity : BaseMenuActivity() {
             3 -> 1f
             else -> 5f
         }
+    }
+
+    override fun onLockScreenActivated() {
+        super.onLockScreenActivated()
+        finish()
     }
 }

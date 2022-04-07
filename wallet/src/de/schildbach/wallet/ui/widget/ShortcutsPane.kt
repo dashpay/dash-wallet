@@ -26,6 +26,8 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import androidx.core.view.children
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import de.schildbach.wallet_test.R
 
 class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs), View.OnClickListener {
@@ -79,10 +81,21 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
                 this)
     }
 
+    val explore: ShortcutButton by lazy {
+        ShortcutButton(
+            context,
+            R.drawable.ic_shortcut_bar_explore,
+            R.string.menu_explore_title,
+            this
+        )
+    }
+
     private var isSmallScreen = resources.displayMetrics.densityDpi <= DisplayMetrics.DENSITY_MEDIUM
     private val secondaryItems = mutableListOf<ShortcutButton>()
 
     private var showSecureNow: Boolean = true
+    private var userHasBalance: Boolean = false
+    private var showJoinDashPay: Boolean = true
     private var showPayToContact: Boolean = true
 
     private var onShortcutClickListener: OnClickListener? = null
@@ -112,39 +125,67 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
     fun setup() {
         addShortcut(secureNowButton)
         secondaryItems.add(scanToPayButton)
+
         if (isSmallScreen) {
             secondaryItems.add(receiveButton)
         }
         secondaryItems.add(payToContactButton)
+//        secondaryItems.add(payToAddressButton) // TODO
+
         secondaryItems.add(buySellButton)
         secondaryItems.forEach {
             addShortcut(it)
         }
         if (!isSmallScreen) {
-            addShortcut(receiveButton)
+            addShortcut(explore)
         }
     }
 
     private fun refresh() {
         val displayed = mutableSetOf<ShortcutButton>()
-        secureNowButton.visibility = if (showSecureNow) {
+
+        secureNowButton.isVisible = showSecureNow
+        if (secureNowButton.isVisible) {
             displayed.add(secureNowButton)
-            View.VISIBLE
-        } else View.GONE
-        if (!isSmallScreen) {
-            displayed.add(receiveButton)
         }
-        val numberOfButtons = if (isSmallScreen) 3 else 4
-        secondaryItems.forEach {
-            it.visibility = if (displayed.size < numberOfButtons) {
-                displayed.add(it)
-                View.VISIBLE
-            } else View.GONE
+
+        scanToPayButton.isVisible = userHasBalance
+        if (scanToPayButton.isVisible) {
+            displayed.add(scanToPayButton)
+        }
+
+        displayed.add(receiveButton)
+
+        buySellButton.isVisible = !userHasBalance
+        payToAddressButton.isVisible = userHasBalance
+        if (userHasBalance) {
+            displayed.add(payToAddressButton)
+        } else {
+            displayed.add(buySellButton)
+        }
+
+        explore.isGone = userHasBalance && showSecureNow
+        if (!isSmallScreen) {
+            if (explore.isVisible) {
+                displayed.add(explore)
+            }
         }
     }
 
     fun showSecureNow(showSecureNow: Boolean) {
         this.showSecureNow = showSecureNow
+        refresh()
+    }
+
+    fun userHasBalance(userHasBalance: Boolean) {
+        if (this.userHasBalance != userHasBalance) {
+            this.userHasBalance = userHasBalance
+            refresh()
+        }
+    }
+
+    fun showJoinDashPay(showJoinDashPay: Boolean) {
+        this.showJoinDashPay = showJoinDashPay
         refresh()
     }
 

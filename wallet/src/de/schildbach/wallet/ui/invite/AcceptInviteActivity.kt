@@ -67,13 +67,15 @@ class AcceptInviteActivity : InteractionAwareActivity() {
             } else {
                 val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
 
-                val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(this, invite, fromOnboarding)
-
-                if (fromOnboarding) {
-                    startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_1, createUsernameActivityIntent))
-                } else {
-                    startActivity(createUsernameActivityIntent)
+                invite?.let {
+                    val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(this, invite, fromOnboarding)
+                    if (fromOnboarding) {
+                        startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_1, createUsernameActivityIntent))
+                    } else {
+                        startActivity(createUsernameActivityIntent)
+                    }
                 }
+
                 finish()
             }
         }

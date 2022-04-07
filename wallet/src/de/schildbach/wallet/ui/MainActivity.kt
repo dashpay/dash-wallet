@@ -543,7 +543,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             } catch (x: IOException) {
                 log.info("problem appending crash info", x)
             }
-            val dialog: ReportIssueDialogBuilder = object : ReportIssueDialogBuilder(this,
+            alertDialog = object : ReportIssueDialogBuilder(this,
                     R.string.report_issue_dialog_title_crash, R.string.report_issue_dialog_message_crash) {
 
                 override fun subject(): CharSequence {
@@ -572,9 +572,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 override fun collectWalletDump(): CharSequence? {
                     return wallet.toString(false, true, true, null)
                 }
-            }
+            }.buildAlertDialog()
             if (!isFinishing) {
-                dialog.show()
+                alertDialog.show()
             }
         }
     }
@@ -624,7 +624,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 // Tell the user that the wallet is being upgraded (BIP44)
                 // and they will have to enter a PIN.
                 //
-                UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager())
+                UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager(), false)
             }
         } else {
             if (restoreBackup) {

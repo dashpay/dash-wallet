@@ -17,13 +17,9 @@
 
 package org.dash.wallet.integration.uphold.ui;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
@@ -40,11 +36,18 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
 import org.dash.wallet.integration.uphold.data.UpholdConstants;
 
+import javax.inject.Inject;
 
+import dagger.hilt.android.AndroidEntryPoint;
+import kotlin.Unit;
+
+@AndroidEntryPoint
 public class UpholdSplashActivity extends InteractionAwareActivity {
 
     public static final String FINISH_ACTION = "UpholdSplashActivity.FINISH_ACTION";
@@ -52,7 +55,8 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
     public static final String UPHOLD_EXTRA_CODE = "uphold_extra_code";
     public static final String UPHOLD_EXTRA_STATE = "uphold_extra_state";
     public static int taskId = 0;
-
+    @Inject
+    public AnalyticsService analytics;
     private ProgressDialog loadingDialog;
 
     @Override
@@ -80,6 +84,7 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
         findViewById(R.id.uphold_link_account).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                analytics.logEvent(AnalyticsConstants.Uphold.LINK_ACCOUNT, Bundle.EMPTY);
                 openLoginUrl();
             }
         });
@@ -154,17 +159,16 @@ public class UpholdSplashActivity extends InteractionAwareActivity {
     }
 
     private void showLoadingErrorAlert() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCancelable(false);
-        builder.setMessage(R.string.loading_error);
-        builder.setPositiveButton(android.R.string.ok, null);
-        Dialog dialog = builder.show();
-        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                finish();
-            }
-        });
+        alertDialogBuilder.setMessage(getString(R.string.loading_error));
+        alertDialogBuilder.setCancelable(false);
+        alertDialogBuilder.setPositiveText(getString(android.R.string.ok));
+        alertDialogBuilder.setDismissAction(
+                () -> {
+                    finish();
+                    return Unit.INSTANCE;
+                }
+        );
+        alertDialogBuilder.buildAlertDialog().show();
     }
 
     private void startUpholdAccountActivity() {

@@ -313,7 +313,7 @@ public class UpholdClient {
                 } else {
                     log.info("Error creating transaction: " + response.message() + " code: " + response.code());
                     boolean otpRequired = OTP_REQUIRED_VALUE.equals(response.headers().get(OTP_REQUIRED_KEY));
-                    callback.onError(new UpholdApiException(response.code()), otpRequired);
+                    callback.onError(new UpholdApiException(response), otpRequired);
                 }
             }
 

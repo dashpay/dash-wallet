@@ -8,6 +8,8 @@ import androidx.room.TypeConverters;
 import de.schildbach.wallet.data.BlockchainIdentityData;
 import de.schildbach.wallet.data.BlockchainIdentityDataDaoAsync;
 import de.schildbach.wallet.data.BlockchainIdentityDataDao;
+import org.dash.wallet.common.data.ExchangeRate;
+import de.schildbach.wallet.data.AppDatabaseMigrations;
 import de.schildbach.wallet.data.BlockchainState;
 import de.schildbach.wallet.data.BlockchainStateDao;
 import de.schildbach.wallet.data.DashPayContactRequest;
@@ -22,7 +24,6 @@ import de.schildbach.wallet.data.InvitationsDaoAsync;
 import de.schildbach.wallet.data.RoomConverters;
 import de.schildbach.wallet.data.UserAlertDao;
 import de.schildbach.wallet.data.UserAlertDaoAsync;
-import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesDao;
 import de.schildbach.wallet.ui.dashpay.UserAlert;
 
@@ -59,8 +60,13 @@ public abstract class AppDatabase extends RoomDatabase {
 
     public static AppDatabase getAppDatabase() {
         if (instance == null) {
-            instance = Room.databaseBuilder(WalletApplication.getInstance(), AppDatabase.class,
-                    "dash-wallet-database").fallbackToDestructiveMigration().build();
+            instance = Room.databaseBuilder(WalletApplication.getInstance(),
+                    AppDatabase.class, "dash-wallet-database")
+                    .addMigrations(
+                            AppDatabaseMigrations.getMigration8To10(),
+                            AppDatabaseMigrations.getMigration9To10()
+                    )
+                    .fallbackToDestructiveMigration().build();
         }
         return instance;
     }

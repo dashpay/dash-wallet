@@ -16,30 +16,33 @@
 
 package de.schildbach.wallet.ui
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.telephony.TelephonyManager
+import android.util.Log
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.NavHostFragment
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.preference.PinRetryController
-import de.schildbach.wallet.ui.widget.NumericKeyboardView
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet.util.FingerprintHelper
 import de.schildbach.wallet_test.R
@@ -47,11 +50,14 @@ import kotlinx.android.synthetic.main.activity_lock_screen.*
 import kotlinx.android.synthetic.main.activity_lock_screen_root.*
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.DialogBuilder
+import org.dash.wallet.common.ui.BaseAlertDialogBuilder
+import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.ui.dismissDialog
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
-
+@AndroidEntryPoint
 open class LockScreenActivity : SecureActivity() {
 
     companion object {
@@ -59,11 +65,15 @@ open class LockScreenActivity : SecureActivity() {
         private val log = LoggerFactory.getLogger(LockScreenActivity::class.java)
     }
 
+    @Inject lateinit var baseAlertDialogBuilder: BaseAlertDialogBuilder
+    protected lateinit var alertDialog: AlertDialog
+
     val walletApplication: WalletApplication = WalletApplication.getInstance()
     private val configuration = walletApplication.configuration
     private val autoLogout: AutoLogout = walletApplication.autoLogout
+    @Inject
+    lateinit var lockScreenBroadcaster: LockScreenBroadcaster
 
-    protected lateinit var lockScreenViewModel: LockScreenViewModel
     private lateinit var checkPinViewModel: CheckPinViewModel
     private lateinit var enableFingerprintViewModel: EnableFingerprintDialog.SharedViewModel
     private var pinLength = configuration.pinLength
@@ -128,9 +138,10 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
-        lockScreenViewModel.activatingLockScreen.call()
         isLocked = true
+        Log.e(this::class.java.simpleName, "OnLogoutListener")
         setLockState(State.USE_DEFAULT)
+        onLockScreenActivated()
     }
 
     open fun imitateUserInteraction() {
@@ -205,12 +216,13 @@ open class LockScreenActivity : SecureActivity() {
 
         if (!keepUnlocked && configuration.autoLogoutEnabled && (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())) {
             isLocked = true
-            lockScreenViewModel.activatingLockScreen.call()
+            Log.e(this::class.java.simpleName, "Lock screen displayed")
             setLockState(State.USE_DEFAULT)
             autoLogout.setAppWentBackground(false)
             if (autoLogout.isTimerActive) {
                 autoLogout.stopTimer()
             }
+            onLockScreenActivated()
         } else {
             root_view_switcher.displayedChild = 1
             if (!keepUnlocked)
@@ -239,7 +251,7 @@ open class LockScreenActivity : SecureActivity() {
             startActivity(SendCoinsQrActivity.createIntent(this, true))
             autoLogout.keepLockedUntilPinEntered = true
         }
-        numeric_keyboard.setFunctionEnabled(false)
+        numeric_keyboard.isFunctionEnabled = false
         numeric_keyboard.onKeyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
 
             override fun onNumber(number: Int) {
@@ -272,7 +284,6 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun initViewModel() {
-        lockScreenViewModel = ViewModelProvider(this)[LockScreenViewModel::class.java]
         checkPinViewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
         checkPinViewModel.checkPinLiveData.observe(this, Observer {
             when (it.status) {
@@ -497,13 +508,12 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun showFingerprintKeyChangedDialog() {
-        val dialogBuilder = DialogBuilder(this)
-        dialogBuilder.setTitle(R.string.fingerprint_changed_title)
-        dialogBuilder.setMessage(R.string.fingerprint_changed_message)
-        dialogBuilder.setPositiveButton(android.R.string.ok) { _, _ ->
-            setLockState(State.ENTER_PIN)
-        }
-        dialogBuilder.show()
+        baseAlertDialogBuilder.apply {
+            title = getString(R.string.fingerprint_changed_title)
+            message = getString(R.string.fingerprint_changed_message)
+            positiveText = getString(android.R.string.ok)
+            positiveAction = { setLockState(State.ENTER_PIN) }
+        }.buildAlertDialog().show()
     }
 
     private val shouldShowBackupReminder = configuration.remindBackupSeed
@@ -513,5 +523,27 @@ open class LockScreenActivity : SecureActivity() {
         if (!lockScreenDisplayed) {
             super.onBackPressed()
         }
+    }
+
+    open fun onLockScreenActivated() {
+        Log.e(this::class.java.simpleName, "Closing dialog")
+        if (this::alertDialog.isInitialized){
+            Log.e(this::class.java.simpleName, "Dialog is initialized")
+            alertDialog.dismissDialog()
+        }
+        lockScreenBroadcaster.activatingLockScreen.call()
+        dismissDialogFragments(supportFragmentManager)
+    }
+
+    private fun dismissDialogFragments(fragmentManager: FragmentManager) {
+        fragmentManager.fragments
+            .takeIf { it.isNotEmpty() }
+            ?.forEach { fragment ->
+                if (fragment is DialogFragment) {
+                    fragment.dismissAllowingStateLoss()
+                } else if (fragment is NavHostFragment) {
+                    dismissDialogFragments(fragment.childFragmentManager)
+                }
+            }
     }
 }

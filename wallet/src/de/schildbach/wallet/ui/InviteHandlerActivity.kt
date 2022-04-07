@@ -75,8 +75,10 @@ class InviteHandlerActivity : AppCompatActivity() {
         }
 
         initViewModel()
-        if (externalInvite != null) {
-            viewModel.handleInvite(externalInvite)
+        val invite = externalInvite
+
+        if (invite != null) {
+            viewModel.handleInvite(invite)
         } else {
             viewModel.handleInvite(intent)
         }

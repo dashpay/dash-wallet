@@ -16,7 +16,6 @@
 
 package de.schildbach.wallet.ui.send;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -28,16 +27,15 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
 import org.bitcoinj.protocols.payments.PaymentProtocol;
-import org.dash.wallet.common.ui.DialogBuilder;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.integration.android.BitcoinIntegration;
 import de.schildbach.wallet.livedata.Resource;
 import de.schildbach.wallet.ui.AbstractBindServiceActivity;
-import de.schildbach.wallet.ui.LockScreenActivity;
 import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet_test.R;
+import kotlin.Unit;
 
 @AndroidEntryPoint
 public class SendCoinsActivity extends AbstractBindServiceActivity {
@@ -69,10 +67,15 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
                     case ERROR: {
                         String message = paymentIntentResource.getMessage();
                         if (message != null) {
-                            final DialogBuilder dialog = new DialogBuilder(SendCoinsActivity.this);
-                            dialog.setMessage(message);
-                            dialog.singleDismissButton(activityDismissListener);
-                            dialog.show();
+                            baseAlertDialogBuilder.setMessage(message);
+                            baseAlertDialogBuilder.setNeutralText(getString(R.string.button_dismiss));
+                            baseAlertDialogBuilder.setNeutralAction(
+                                    () -> {
+                                        finish();
+                                        return Unit.INSTANCE;
+                                    });
+                            alertDialog = baseAlertDialogBuilder.buildAlertDialog();
+                            alertDialog.show();
                         }
                         break;
                     }
@@ -153,13 +156,6 @@ public class SendCoinsActivity extends AbstractBindServiceActivity {
                 .replace(R.id.container, PaymentProtocolFragment.newInstance(paymentIntent))
                 .commitNow();
     }
-
-    private final DialogInterface.OnClickListener activityDismissListener = new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(final DialogInterface dialog, final int which) {
-            finish();
-        }
-    };
 
     public boolean isUserAuthorized() {
         return false;
