@@ -88,7 +88,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
         binding.continueBtn.setOnClickListener {
-            getFaitAmount(
+            getFiatAmount(
                 viewModel.enteredConvertAmount,
                 binding.currencyOptions.pickedOption
             )?.let {
@@ -488,7 +488,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
     }
 
-    private fun getFaitAmount(balance: String, currencyCode: String): Pair<Fiat?, Coin?>? {
+    private fun getFiatAmount(balance: String, currencyCode: String): Pair<Fiat?, Coin?>? {
         viewModel.selectedCryptoCurrencyAccount.value?.let {
             selectedCurrencyCodeExchangeRate?.let { rate ->
                 val fiatAmount = when {

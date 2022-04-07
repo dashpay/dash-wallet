@@ -96,9 +96,7 @@ class ConvertViewViewModel @Inject constructor(
     val dashWalletBalance: LiveData<Event<Coin>>
         get() = this._dashWalletBalance
 
-    private val _userDashAccountEmptyError: SingleLiveEvent<Boolean> = SingleLiveEvent()
-    val userDashAccountEmptyError: LiveData<Boolean>
-        get() = _userDashAccountEmptyError
+    val userDashAccountEmptyError: SingleLiveEvent<Boolean> = SingleLiveEvent()
 
     val validSwapValue = SingleLiveEvent<String>()
 
@@ -187,7 +185,7 @@ class ConvertViewViewModel @Inject constructor(
     fun setOnSwapDashFromToCryptoClicked(dashToCrypto: Boolean) {
         if (dashToCrypto) {
             if (walletDataProvider.getWalletBalance().isZero) {
-                _userDashAccountEmptyError.value = true
+                userDashAccountEmptyError.call()
                 return
             }
         }
