@@ -197,7 +197,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                 if (error.isNullOrEmpty()) {
                     swapTradeFailedCallback.call()
                 } else {
-                    val message = CoinbaseErrorResponse.getErrorMessage(error)
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
                         swapTradeFailedCallback.call()
                     } else {

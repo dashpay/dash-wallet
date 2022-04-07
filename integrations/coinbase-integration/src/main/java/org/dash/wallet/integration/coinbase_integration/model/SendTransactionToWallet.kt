@@ -106,3 +106,15 @@ data class SendTransactionToWalletParams(
     val to: String?,
     val type: String?
 ): Parcelable
+
+sealed class TransactionType: Parcelable {
+    @Parcelize object BuyDash: TransactionType()
+    @Parcelize object SellSwap: TransactionType()
+    @Parcelize object BuySwap: TransactionType()
+}
+
+@Parcelize
+data class CoinbaseTransactionParams(
+    val params: SendTransactionToWalletParams,
+    val type: TransactionType
+): Parcelable

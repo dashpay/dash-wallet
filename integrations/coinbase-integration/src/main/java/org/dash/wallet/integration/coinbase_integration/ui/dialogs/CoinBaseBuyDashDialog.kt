@@ -81,7 +81,12 @@ class CoinBaseBuyDashDialog : DialogFragment() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_failed)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
-        binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
+        val errorMessage = arguments?.getString(ARG_MESSAGE)
+        if (errorMessage.isNullOrEmpty()){
+            binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
+        } else {
+            binding.coinbaseBuyDialogMessage.text = errorMessage
+        }
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
@@ -95,7 +100,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
                 binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
             }
             errorMessage.contains(getString(R.string.send_to_wallet_error)) -> {
-                binding.coinbaseBuyDialogMessage.setText(errorMessage)
+                binding.coinbaseBuyDialogMessage.text = errorMessage
             }
             else -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
         }

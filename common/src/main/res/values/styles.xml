@@ -877,4 +877,10 @@
     <style name="Caption.Red300">
         <item name="android:textColor">@color/red_300</item>
     </style>
+    <style name="TransparentRedBackground">
+        <item name="backgroundColor">@color/dash_light_red</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
 </resources>

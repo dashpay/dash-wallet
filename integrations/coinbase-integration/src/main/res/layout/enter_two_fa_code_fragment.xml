@@ -109,7 +109,7 @@
         app:layout_constraintStart_toEndOf="@id/incorrect_code_icon"
         app:layout_constraintTop_toTopOf="@id/incorrect_code_icon"
         app:layout_constraintBottom_toBottomOf="@id/incorrect_code_icon"
-        android:layout_marginHorizontal="6dp"
+        android:layout_marginLeft="6dp"
         android:text="@string/two_fa_code_incorrect"
         style="@style/Caption.Red300"
         />
@@ -167,7 +167,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="15dp"
                 android:layout_marginBottom="@dimen/enter_amount_keyboard_spacing"
-                app:nk_decSeparatorEnabled="true" />
+                app:nk_decSeparatorEnabled="false"
+                app:nk_functionEnabled="false"
+                />
 
             <Button
                 android:id="@+id/verify_btn"
@@ -177,7 +179,7 @@
                 android:layout_marginBottom="25dp"
                 android:layout_marginHorizontal="15dp"
                 android:enabled="false"
-                android:text="@string/verify_continue" />
+                android:text="@string/verify_code" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
