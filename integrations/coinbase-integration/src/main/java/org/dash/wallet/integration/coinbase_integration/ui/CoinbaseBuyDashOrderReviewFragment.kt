@@ -32,6 +32,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.NetworkUnavailableFragment
@@ -60,7 +61,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private var isRetrying = false
     private var newBuyOrderId: String? = null
     @Inject
-    lateinit var analyticsService: FirebaseAnalyticsServiceImpl
+    lateinit var analyticsService: AnalyticsService
     private val countDownTimer by lazy {   object : CountDownTimer(10000, 1000) {
 
         override fun onTick(millisUntilFinished: Long) {
