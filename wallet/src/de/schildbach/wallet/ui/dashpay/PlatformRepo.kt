@@ -49,7 +49,9 @@ import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import org.dashj.platform.dapiclient.NoAvailableAddressesForRetryException
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
@@ -552,7 +554,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         log.info("potential contact identity: $potentialContactIdentity")
 
         //Create Contact Request
+        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
         val cr = contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
+        timer.logTiming()
         log.info("contact request sent")
 
         // add our receiving from this contact keychain if it doesn't exist
@@ -585,7 +589,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
         val avatarUrl = if (dashPayProfile.avatarUrl.isNotEmpty()) dashPayProfile.avatarUrl else null
 
         //Create Contact Request
+        val timer: AnalyticsTimer
         val createdProfile = if (dashPayProfile.createdAt == 0L) {
+            timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_PROFILE_CREATE)
             blockchainIdentity.registerProfile(displayName,
                     publicMessage,
                     avatarUrl,
@@ -593,6 +599,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayProfile.avatarFingerprint,
                     encryptionKey)
         } else {
+            timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_PROFILE_UPDATE)
             blockchainIdentity.updateProfile(displayName,
                     publicMessage,
                     avatarUrl,
@@ -600,6 +607,7 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
                     dashPayProfile.avatarFingerprint,
                     encryptionKey)
         }
+        timer.logTiming()
         log.info("profile broadcast")
 
         //Verify that the Contact Request was seen on the network
@@ -676,7 +684,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
             Context.getOrCreate(walletApplication.wallet.params)
             for (i in 0 until 3) {
                 try {
+                    val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
                     blockchainIdentity.registerIdentity(keyParameter)
+                    timer.logTiming() // we won't log timing for failed registrations
                     return@withContext
                 } catch (e: InvalidInstantAssetLockProofException) {
                     log.info("instantSendLock error: retry registerIdentity again ($i)")
@@ -719,7 +729,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val names = blockchainIdentity.getUnregisteredUsernames()
+            val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_PREORDER_CREATE)
             blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(names, keyParameter)
+            timer.logTiming()
         }
     }
 
@@ -744,7 +756,9 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
     suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
         withContext(Dispatchers.IO) {
             val names = blockchainIdentity.preorderedUsernames()
+            val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
             blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter)
+            timer.logTiming()
         }
     }
 
