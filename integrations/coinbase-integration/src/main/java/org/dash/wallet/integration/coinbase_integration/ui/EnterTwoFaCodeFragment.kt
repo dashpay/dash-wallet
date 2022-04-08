@@ -17,6 +17,9 @@
 
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.content.Intent
+import android.content.Intent.ACTION_VIEW
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.activity.addCallback
@@ -71,6 +74,16 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
             binding.incorrectCodeGroup.isVisible = true
             binding.enterCodeDetails.isVisible = false
         }
+
+        binding.contactCoinbaseSupport.setOnClickListener {
+            openCoinbaseHelp()
+        }
+    }
+
+    private fun openCoinbaseHelp() {
+        val intent = Intent(ACTION_VIEW)
+        intent.data = Uri.parse("https://help.coinbase.com/en/contact-us")
+        startActivity(intent)
     }
 
     private fun setTransactionState(transactionType: TransactionType, state: TransactionState) {
