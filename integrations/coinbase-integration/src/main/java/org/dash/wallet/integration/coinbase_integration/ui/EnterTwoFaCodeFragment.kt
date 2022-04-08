@@ -17,11 +17,13 @@
 
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.activity.addCallback
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -81,9 +83,14 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
     }
 
     private fun openCoinbaseHelp() {
-        val intent = Intent(ACTION_VIEW)
-        intent.data = Uri.parse("https://help.coinbase.com/en/contact-us")
-        startActivity(intent)
+        val helpUrl = "https://help.coinbase.com/en/contact-us"
+        try {
+            val intent = Intent(ACTION_VIEW)
+            intent.data = Uri.parse(helpUrl)
+            startActivity(intent)
+        }catch (e: ActivityNotFoundException){
+            Toast.makeText(requireActivity(), helpUrl, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setTransactionState(transactionType: TransactionType, state: TransactionState) {
