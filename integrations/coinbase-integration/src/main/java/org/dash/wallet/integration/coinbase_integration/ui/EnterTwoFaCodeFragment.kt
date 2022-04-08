@@ -146,10 +146,12 @@ class EnterTwoFaCodeFragment : Fragment(R.layout.enter_two_fa_code_fragment) {
 
     private fun handleBackPress() {
         binding.toolbar.setNavigationOnClickListener {
+            findNavController().previousBackStackEntry?.savedStateHandle?.set("resume_review", true)
             findNavController().popBackStack()
         }
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner){
+            findNavController().previousBackStackEntry?.savedStateHandle?.set("resume_review", true)
             findNavController().popBackStack()
         }
     }

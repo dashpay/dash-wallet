@@ -117,10 +117,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
             analyticsService.logEvent(AnalyticsConstants.Coinbase.CONFIRM_DASH_PURCHASE, bundleOf())
             countDownTimer.cancel()
             if (isRetrying) {
-                viewModel.onRefreshOrderClicked(
-                    amountViewModel.onContinueEvent.value?.second,
-                    selectedPaymentMethodId
-                )
+                getNewBuyOrder()
                 isRetrying = false
             } else {
                 newBuyOrderId?.let { buyOrderId -> viewModel.commitBuyOrder(buyOrderId) }
@@ -172,6 +169,7 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
             setNetworkState(hasInternet)
         }
+        observeNavigationCallBack()
     }
 
     private fun PlaceBuyOrderUIModel.updateOrderReviewUI() {
@@ -249,5 +247,21 @@ class CoinbaseBuyDashOrderReviewFragment : Fragment(R.layout.fragment_coinbase_b
     private fun setConfirmBtnStyle(@StyleRes buttonStyle: Int, @ColorRes colorRes: Int) {
         binding.confirmBtnContainer.background = resources.getRoundedBackground(buttonStyle)
         binding.confirmBtn.setTextColor(resources.getColor(colorRes))
+    }
+
+    private fun observeNavigationCallBack() {
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>("resume_review")
+            ?.observe(viewLifecycleOwner){ isOrderReviewResumed ->
+                if (isOrderReviewResumed){
+                    getNewBuyOrder()
+                }
+            }
+    }
+
+    private fun getNewBuyOrder(){
+        viewModel.onRefreshOrderClicked(
+            amountViewModel.onContinueEvent.value?.second,
+            selectedPaymentMethodId
+        )
     }
 }
