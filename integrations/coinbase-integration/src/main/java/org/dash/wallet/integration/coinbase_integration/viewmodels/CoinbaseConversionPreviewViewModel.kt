@@ -44,7 +44,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
     val commitSwapTradeFailureState = SingleLiveEvent<Unit>()
 
-    var sendFundToWalletParams: SendTransactionToWalletParams? = null
+    private var sendFundToWalletParams: SendTransactionToWalletParams? = null
 
     private val _swapTradeOrder: MutableLiveData<SwapTradeUIModel> = MutableLiveData()
     val swapTradeOrder: LiveData<SwapTradeUIModel>
@@ -54,15 +54,15 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val sellSwapSuccessState = SingleLiveEvent<Unit>()
     val swapTradeFailureState = SingleLiveEvent<String>()
 
-    fun commitSwapTrade(params: SwapTradeUIModel) = viewModelScope.launch(Dispatchers.Main) {
+    fun commitSwapTrade(tradeId: String, inputCurrency: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
-        when (val result = coinBaseRepository.commitSwapTrade(params.swapTradeId)) {
+        when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     commitSwapTradeFailureState.call()
                 } else {
-                    if (params.inputCurrencyName == DASH_CURRENCY) {
+                    if (inputCurrency == DASH_CURRENCY) {
                         sellSwapSuccessState.call()
                     }
                     else {
@@ -96,20 +96,17 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             )
             when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
                 is ResponseResource.Success -> {
-
+                    _showLoading.value = false
                     if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
-                        _showLoading.value = false
                         swapTradeFailureState.call()
                     } else {
-                        _showLoading.value = false
-
                         result.value.apply {
                             this.assetsBaseID = swapTradeUIModel.assetsBaseID
                             this.inputCurrencyName =
                                 swapTradeUIModel.inputCurrencyName
                             this.outputCurrencyName = swapTradeUIModel.outputCurrencyName
-                            _swapTradeOrder.value = this
                         }
+                        _swapTradeOrder.value = result.value
                     }
                 }
                 is ResponseResource.Failure -> {

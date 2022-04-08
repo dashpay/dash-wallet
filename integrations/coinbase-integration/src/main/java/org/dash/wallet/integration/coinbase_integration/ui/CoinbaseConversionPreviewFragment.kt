@@ -88,11 +88,13 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.confirmBtnContainer.setOnClickListener {
             countDownTimer.cancel()
             if (isRetrying) {
-                viewModel.onRefreshOrderClicked(swapTradeUIModel)
+                getNewCommitOrder()
                 isRetrying = false
             } else {
-                swapTradeUIModel.let {
-                    viewModel.commitSwapTrade(it)
+                newSwapOrderId?.let { orderId ->
+                    swapTradeUIModel.let {
+                        viewModel.commitSwapTrade(orderId, it.inputCurrency)
+                    }
                 }
             }
         }
@@ -127,6 +129,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
+            newSwapOrderId = it.swapTradeId
             countDownTimer.start()
         }
 
@@ -135,6 +138,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 CoinbaseTransactionParams(params, TransactionType.BuySwap)
             ))
         }
+        observeNavigationCallBack()
     }
 
     private fun SwapTradeUIModel.updateConversionPreviewUI() {
@@ -249,5 +253,18 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     override fun onPause() {
         countDownTimer.cancel()
         super.onPause()
+    }
+
+    private fun observeNavigationCallBack() {
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>("resume_review")
+            ?.observe(viewLifecycleOwner){ isConversionReviewResumed ->
+                if (isConversionReviewResumed){
+                    getNewCommitOrder()
+                }
+            }
+    }
+
+    private fun getNewCommitOrder(){
+        viewModel.onRefreshOrderClicked(swapTradeUIModel)
     }
 }
