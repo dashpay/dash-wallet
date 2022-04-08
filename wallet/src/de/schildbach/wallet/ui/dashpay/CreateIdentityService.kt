@@ -35,6 +35,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.errors.ConcensusErrorMetadata
@@ -258,6 +259,9 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun createIdentity(username: String?, retryWithNewUserName: Boolean) {
         log.info("username registration starting")
+        val timerEntireProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE)
+        val timerStep1 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_1)
+
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
 
@@ -334,7 +338,9 @@ class CreateIdentityService : LifecycleService() {
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_SENDING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.CREDIT_FUNDING_TX_SENDING)
+            val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_ISLOCK)
             sendTransaction(blockchainIdentity.creditFundingTransaction!!)
+            timerIsLock.logTiming()
         }
 
         if (blockchainIdentityData.creationState <= CreationState.CREDIT_FUNDING_TX_CONFIRMED) {
@@ -342,6 +348,8 @@ class CreateIdentityService : LifecycleService() {
             // If the tx is in a block, seen by a peer, InstantSend lock, then it is considered confirmed
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
+        timerStep1.logTiming()
+        val timerStep2 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_2)
 
         if (blockchainIdentityData.creationState <= CreationState.IDENTITY_REGISTERING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.IDENTITY_REGISTERING)
@@ -358,8 +366,10 @@ class CreateIdentityService : LifecycleService() {
             }
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
+        timerStep2.logTiming()
 
         finishRegistration(blockchainIdentity, encryptionKey)
+        timerEntireProcess.logTiming()
     }
 
     private fun handleCreateIdentityFromInvitationAction(username: String?, invite: InvitationLinkData?) {
@@ -373,6 +383,7 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun createIdentityFromInvitation(username: String?, invite: InvitationLinkData?, retryWithNewUserName: Boolean = false) {
         log.info("username registration starting from invitation")
+        val timerInviteProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_INVITATION_CLAIM)
 
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
 
@@ -517,6 +528,7 @@ class CreateIdentityService : LifecycleService() {
                 }
             }
         }
+        timerInviteProcess.logTiming()
         log.info("username registration with invite complete")
     }
 
@@ -530,6 +542,7 @@ class CreateIdentityService : LifecycleService() {
             //
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
+        val timerStep3 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_3)
 
         if (blockchainIdentityData.creationState <= CreationState.PREORDER_REGISTERING) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, CreationState.PREORDER_REGISTERING)
@@ -580,6 +593,7 @@ class CreateIdentityService : LifecycleService() {
 
         PlatformRepo.getInstance().init()
 
+        timerStep3.logTiming()
         // aaaand we're done :)
         log.info("username registration complete")
     }
