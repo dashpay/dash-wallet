@@ -40,9 +40,11 @@ import org.bitcoinj.utils.Fiat;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
+import org.dash.wallet.common.services.analytics.AnalyticsTimer;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.util.GenericUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -62,6 +64,7 @@ import de.schildbach.wallet_test.R;
 @AndroidEntryPoint
 public final class HeaderBalanceFragment extends Fragment implements SharedPreferences.OnSharedPreferenceChangeListener {
 
+    private static Logger log = LoggerFactory.getLogger(HeaderBalanceFragment.class);
     private WalletApplication application;
     private AbstractBindServiceActivity activity;
     private Configuration config;
@@ -88,6 +91,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     private ExchangeRate exchangeRate = null;
     @Inject
     AnalyticsService analytics;
+    AnalyticsTimer contactRequestTimer;
 
     @Override
     public void onAttach(final Activity activity) {
@@ -104,6 +108,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     @Override
     public void onActivityCreated(@androidx.annotation.Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        contactRequestTimer = new AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE);
         initViewModel();
         setNotificationCount();
     }
@@ -245,6 +250,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
             notifications.setText(String.valueOf(notificationCount));
             notifications.setVisibility(View.VISIBLE);
             notificationBell.setVisibility(View.GONE);
+            reportContactRequestTime();
         } else if (notificationCount == 0) {
             notifications.setVisibility(View.GONE);
             notificationBell.setVisibility(View.VISIBLE);
@@ -314,6 +320,7 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         if (Configuration.PREFS_LAST_SEEN_NOTIFICATION_TIME.equals(key)) {
+            startContactRequestTimer();
             viewModel.forceUpdateNotificationCount();
         }
     }
@@ -332,5 +339,16 @@ public final class HeaderBalanceFragment extends Fragment implements SharedPrefe
     private void showExchangeRatesActivity() {
         Intent intent = new Intent(getActivity(), ExchangeRatesActivity.class);
         getActivity().startActivity(intent);
+    }
+
+    private void startContactRequestTimer() {
+        contactRequestTimer = new AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_RECEIVE);
+    }
+
+    private void reportContactRequestTime() {
+        if (contactRequestTimer != null) {
+            contactRequestTimer.logTiming();
+            contactRequestTimer = null;
+        }
     }
 }

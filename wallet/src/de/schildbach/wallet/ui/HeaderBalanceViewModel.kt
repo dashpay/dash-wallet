@@ -28,14 +28,23 @@ import kotlinx.coroutines.launch
 
 class HeaderBalanceViewModel(application: Application) : AndroidViewModel(application) {
 
+    /*companion object {
+        private val log = LoggerFactory.getLogger(HeaderBalanceViewModel::class.java)
+    }
+    @Inject
+    lateinit var analytics: AnalyticsService
+
+     */
     val walletApplication = application as WalletApplication
+
     val platformRepo = PlatformRepo.getInstance()
 
     val walletBalanceData = WalletBalanceLiveData(walletApplication)
     val walletBalance
         get() = walletBalanceData.value
 
-    val notificationCountData = NotificationCountLiveData(walletApplication, platformRepo, viewModelScope)
+    val notificationCountData =
+        NotificationCountLiveData(walletApplication, platformRepo, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -48,4 +57,28 @@ class HeaderBalanceViewModel(application: Application) : AndroidViewModel(applic
             platformRepo.updateContactRequests()
         }
     }
+
+    /*var lastChangeToContacts: Long = 0
+
+    val listener = object : SharedPreferences.OnSharedPreferenceChangeListener {
+        override fun onSharedPreferenceChanged(
+            sharedPreferences: SharedPreferences?,
+            key: String?
+        ) {
+            if (walletApplication.configuration.lastSeenNotificationTime > lastChangeToContacts) {
+                startContactRequestTimer()
+            }
+        }
+
+    }
+    fun installConfigurationChangeListener() {
+        lastChangeToContacts = walletApplication.configuration.lastSeenNotificationTime
+        walletApplication.configuration.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    fun removeConfigureationChangeListener() {
+        walletApplication.configuration.unregisterOnSharedPreferenceChangeListener(listener)
+    }*/
+
+
 }
