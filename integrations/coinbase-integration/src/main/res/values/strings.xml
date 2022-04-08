@@ -101,4 +101,5 @@
     <string name="two_fa_code_incorrect">The code is incorrect. Please check and try again!</string>
     <string name="invalid_code">That code was invalid. Please try again</string>
     <string name="verify_code">Verify</string>
+    <string name="transfer_dash">Transfer Dash</string>
 </resources>
