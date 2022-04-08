@@ -58,8 +58,8 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         _showLoading.value = true
         when (val result = coinBaseRepository.commitSwapTrade(params.swapTradeId)) {
             is ResponseResource.Success -> {
+                _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
-                    _showLoading.value = false
                     commitSwapTradeFailureState.call()
                 } else {
                     if (params.inputCurrencyName == DASH_CURRENCY) {
