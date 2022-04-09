@@ -107,7 +107,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.commitSwapTradeFailureState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR)
+            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, it)
         }
 
         viewModel.sellSwapSuccessState.observe(viewLifecycleOwner){

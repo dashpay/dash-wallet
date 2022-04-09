@@ -42,7 +42,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    val commitSwapTradeFailureState = SingleLiveEvent<Unit>()
+    val commitSwapTradeFailureState = SingleLiveEvent<String>()
 
     private var sendFundToWalletParams: SendTransactionToWalletParams? = null
 
@@ -80,7 +80,17 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                commitSwapTradeFailureState.call()
+                val error = result.errorBody?.string()
+                if (error.isNullOrEmpty()) {
+                    commitSwapTradeFailureState.call()
+                } else {
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
+                    if (message.isNullOrEmpty()) {
+                        commitSwapTradeFailureState.call()
+                    } else {
+                        commitSwapTradeFailureState.value = message
+                    }
+                }
             }
         }
     }
