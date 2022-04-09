@@ -42,9 +42,11 @@ import de.schildbach.wallet.ui.send.SweepWalletActivity
 import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.home_content.*
 import kotlinx.android.synthetic.main.sync_status_pane.*
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
@@ -100,6 +102,9 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                 updateSyncState(it)
             }
         })
+
+        val model = ViewModelProvider(requireActivity()).get(RefreshUpdateShortcutsPaneViewModel::class.java)
+        model.onTransactionsUpdated.observe(this) { refreshShortcutBar() }
     }
 
     override fun onResume() {
@@ -120,7 +125,7 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                 }
                 shortcuts_pane.buySellButton -> {
                     analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL, Bundle.EMPTY)
-                    startActivity(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()));
+                    startActivity(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()))
                 }
                 shortcuts_pane.payToAddressButton -> {
                     analytics.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS, Bundle.EMPTY)
@@ -136,16 +141,32 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
                 shortcuts_pane.importPrivateKey -> {
                     SweepWalletActivity.start(requireContext(), true)
                 }
+                shortcuts_pane.explore -> {
+                    (requireActivity() as OnSelectPaymentTabListener).onSelectExploreTab()
+                }
             }
         })
+
+        refreshShortcutBar()
     }
 
     private fun joinDashPay() {
         startActivity(Intent(requireActivity(), CreateUsernameActivity::class.java))
     }
 
+
+    private fun refreshShortcutBar() {
+        showHideSecureAction()
+        refreshIfUserHasBalance()
+    }
+
     private fun showHideSecureAction() {
-        shortcuts_pane.showSecureNow(config.remindBackupSeed)
+        shortcuts_pane.isPassphraseVerified = !config.remindBackupSeed
+    }
+
+    private fun refreshIfUserHasBalance() {
+        val balance: Coin = walletApplication.wallet.getBalance(Wallet.BalanceType.ESTIMATED)
+        shortcuts_pane.userHasBalance = balance.isPositive
     }
 
     private fun updateSyncPaneVisibility(id: Int, visible: Boolean) {
@@ -160,6 +181,10 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         }
 
         updateSyncPaneVisibility(R.id.sync_error_pane, false)
+
+        if(blockchainState.isSynced()) {
+            refreshShortcutBar()
+        }
     }
 
     private fun handleVerifySeed() {
@@ -253,5 +278,6 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
 
     interface OnSelectPaymentTabListener {
         fun onSelectPaymentTab(mode: Int)
+        fun onSelectExploreTab()
     }
 }

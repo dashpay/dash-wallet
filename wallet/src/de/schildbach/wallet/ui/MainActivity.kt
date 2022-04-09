@@ -285,7 +285,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 binding.bottomNavigation.selectedItemId = R.id.home
             }
         }
-        binding.bottomNavigation.setOnNavigationItemSelectedListener { item ->
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 binding.bottomNavigation.selectedItemId -> {
                     if (item.itemId == R.id.payments) {
@@ -832,6 +832,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onSelectPaymentTab(mode: Int) {
         showPayments(mode)
+    }
+
+    override fun onSelectExploreTab() {
+        binding.bottomNavigation.selectedItemId = R.id.discover
     }
 
     override fun onViewAllRequests() {
