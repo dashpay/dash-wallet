@@ -30,27 +30,29 @@ abstract class BottomNavFragment(@LayoutRes contentLayoutId: Int) : BaseLockScre
     var forceHideBottomNav: Boolean = false
 
     private val mainActivity by lazy {
-        requireActivity() as MainActivity
+        requireActivity() as? MainActivity
     }
 
     abstract val navigationItemId: Int
     private val navigationItem by lazy {
-        mainActivity.bottom_navigation.menu.findItem(navigationItemId)
+        mainActivity?.bottom_navigation?.menu?.findItem(navigationItemId)
     }
 
     override fun onResume() {
         super.onResume()
         // select the right button in bottom nav
-        navigationItem.isChecked = true
+        navigationItem?.isChecked = true
         showHideBottomNav()
     }
 
     private fun showHideBottomNav() {
-        val navParentView = mainActivity.bottom_navigation.parent.parent
-        if (navParentView is KeyboardResponsiveCoordinatorLayout) {
-            navParentView.forceHideViewToHide = forceHideBottomNav
-        } else {
-            mainActivity.bottom_navigation.visibility = if (forceHideBottomNav) View.VISIBLE else View.GONE
+        mainActivity?.let { activity ->
+            val navParentView = activity.bottom_navigation.parent.parent
+            if (navParentView is KeyboardResponsiveCoordinatorLayout) {
+                navParentView.forceHideViewToHide = forceHideBottomNav
+            } else {
+                activity.bottom_navigation.visibility = if (forceHideBottomNav) View.VISIBLE else View.GONE
+            }
         }
     }
 }

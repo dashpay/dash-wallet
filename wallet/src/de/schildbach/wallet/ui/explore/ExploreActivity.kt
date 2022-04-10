@@ -20,10 +20,15 @@ package de.schildbach.wallet.ui.explore
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.MenuItem
 import androidx.activity.viewModels
+import androidx.core.os.bundleOf
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.BaseMenuActivity
+import de.schildbach.wallet.ui.PaymentsFragment
 import de.schildbach.wallet_test.R
 import org.dash.wallet.features.exploredash.ui.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.ExploreViewModel
@@ -49,27 +54,59 @@ class ExploreActivity : BaseMenuActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setNavigationGraph()
+
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        setNavigationGraph(navHostFragment)
 
         viewModel.navigationCallback.observe(this) { request ->
+            val animationOptions = NavOptions.Builder()
+                .setEnterAnim(R.anim.slide_in_right)
+                .setExitAnim(R.anim.activity_stay)
+                .setPopExitAnim(R.anim.slide_out_left)
+                .build()
+
             when (request) {
                 NavigationRequest.SendDash -> {
-//                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 0)
-//                    startActivity(sendCoinsIntent)
+                    navHostFragment.navController.navigate(R.id.payments, bundleOf(
+                        PaymentsFragment.ARGS_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_PAY
+                    ), animationOptions)
                 }
                 NavigationRequest.ReceiveDash -> {
-//                    val sendCoinsIntent = PaymentsActivity.createIntent(this, 1)
-//                    startActivity(sendCoinsIntent)
+                    navHostFragment.navController.navigate(R.id.payments, bundleOf(
+                        PaymentsFragment.ARGS_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
+                    ), animationOptions)
                 }
                 else -> {}
             }
         }
     }
 
-    private fun setNavigationGraph() {
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+    private fun setNavigationGraph(navHostFragment: NavHostFragment) {
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.explore_dash)
         navController.setGraph(navGraph, intent.extras)
+
+        // Injecting PaymentsFragment into the explore nav graph manually since PaymentsFragment is
+        // in the wallet module. This can be done more gracefully in the future when we use
+        // navigation controller in the wallet and deep links for navigating between modules.
+        val paymentsDestination = navController.navigatorProvider.getNavigator(FragmentNavigator::class.java)
+            .createDestination().apply {
+                id = R.id.payments
+                className = PaymentsFragment::class.java.name
+
+            }
+        navController.graph.addDestination(paymentsDestination)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            // PaymentsFragment has a close button that needs to pop the stack
+            R.id.option_close -> {
+                val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+                navHostFragment.navController.popBackStack()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 }

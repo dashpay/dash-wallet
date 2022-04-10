@@ -31,7 +31,7 @@ class PaymentsFragment : BottomNavFragment(R.layout.activity_payments) {
 
     companion object {
         private const val PREFS_RECENT_TAB = "recent_tab"
-        private const val ARGS_ACTIVE_TAB = "extra_active_tab"
+        const val ARGS_ACTIVE_TAB = "extra_active_tab"
 
         const val ACTIVE_TAB_RECENT = -1
         const val ACTIVE_TAB_PAY = 0

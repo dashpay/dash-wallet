@@ -143,7 +143,6 @@ class ShortcutsPane(context: Context, attrs: AttributeSet) : LinearLayout(contex
             }
         }
         viewTreeObserver.addOnPreDrawListener(onPreDrawListener)
-        layoutTransition = LayoutTransition()
     }
 
     private fun refresh() {

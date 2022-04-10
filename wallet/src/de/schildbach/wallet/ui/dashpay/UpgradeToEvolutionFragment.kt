@@ -29,7 +29,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_upgrade_to_evolution.*
 
 @AndroidEntryPoint
-class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evolution) {
+class UpgradeToEvolutionFragment : BottomNavFragment(R.layout.fragment_upgrade_to_evolution) {
 
     companion object {
         @JvmStatic
@@ -38,6 +38,7 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
         }
     }
 
+    override val navigationItemId = R.id.contacts
     private lateinit var mainActivityViewModel: MainActivityViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
