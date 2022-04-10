@@ -232,7 +232,11 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         if (input != null) {
             handleString(input, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message)
         } else {
-            InputParser.dialog(requireContext(), null, R.string.scan_to_pay_error_dialog_title, R.string.scan_to_pay_error_dialog_message_no_data)
+            baseAlertDialogBuilder.title = getString(R.string.scan_to_pay_error_dialog_title)
+            baseAlertDialogBuilder.message = getString(R.string.scan_to_pay_error_dialog_message_no_data)
+            baseAlertDialogBuilder.neutralText = getString(R.string.button_dismiss)
+            alertDialog = baseAlertDialogBuilder.buildAlertDialog()
+            alertDialog.show()
         }
     }
 
@@ -252,7 +256,11 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
             }
 
             override fun error(x: Exception?, messageResId: Int, vararg messageArgs: Any) {
-                InputParser.dialog(requireContext(), null, errorDialogTitleResId, messageResId, *messageArgs)
+                baseAlertDialogBuilder.title = getString(errorDialogTitleResId)
+                baseAlertDialogBuilder.message = getString(messageResId, *messageArgs)
+                baseAlertDialogBuilder.neutralText = getString(R.string.button_dismiss)
+                alertDialog = baseAlertDialogBuilder.buildAlertDialog()
+                alertDialog.show()
             }
 
             override fun cannotClassify(input: String) {
