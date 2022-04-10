@@ -66,8 +66,6 @@ public final class Constants {
 
     public static boolean SUPPORTS_PLATFORM;
 
-    public static String FAUCET_URL;
-
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.FEATURE_FLAGS> FEATURE_FLAGS = MasternodeSync.FEATURES_SPV;
@@ -83,7 +81,7 @@ public final class Constants {
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 SUPPORTS_PLATFORM = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-                FAUCET_URL = "";
+                org.dash.wallet.common.Constants.FAUCET_URL = "";
                 break;
             }
             case "staging":
@@ -99,7 +97,7 @@ public final class Constants {
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                FAUCET_URL = "https://testnet-faucet.dash.org/";
+                org.dash.wallet.common.Constants.FAUCET_URL = "https://testnet-faucet.dash.org/";
                 break;
             }
             case "schnapps": {
@@ -115,7 +113,7 @@ public final class Constants {
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                FAUCET_URL = "http://faucet.krupnik.networks.dash.org/";
+                org.dash.wallet.common.Constants.FAUCET_URL = "http://faucet.krupnik.networks.dash.org/";
                 break;
             }
             default: {

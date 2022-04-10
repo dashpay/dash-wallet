@@ -76,8 +76,6 @@ class ContactsFragment : BottomNavFragment(R.layout.fragment_contacts_root),
         }
     }
 
-    override val navigationItemId = R.id.contacts
-
     private val binding by viewBinding(FragmentContactsRootBinding::bind)
     private lateinit var dashPayViewModel: DashPayViewModel
     private var searchHandler: Handler = Handler()

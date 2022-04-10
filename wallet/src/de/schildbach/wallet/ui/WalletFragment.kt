@@ -58,8 +58,6 @@ class WalletFragment : BottomNavFragment(R.layout.home_content) {
         private const val REQUEST_CODE_SCAN = 0
     }
 
-    override val navigationItemId = R.id.bottom_home
-
     private lateinit var mainActivityViewModel: MainActivityViewModel
 
     private var clipboardManager: ClipboardManager? = null

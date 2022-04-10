@@ -17,8 +17,7 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/explore_dash"
-    app:startDestination="@id/searchFragment">
+    android:id="@+id/explore_dash">
 
     <fragment
         android:id="@+id/searchFragment"
@@ -39,6 +38,12 @@
             android:id="@+id/search_to_filters"
             app:destination="@id/filtersDialog" />
     </fragment>
+
+    <fragment
+        android:id="@+id/exploreTestNetFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.ExploreTestNetFragment"
+        android:label="fragment_testnet"
+        tools:layout="@layout/fragment_explore_testnet"/>
 
     <dialog
         android:id="@+id/infoDialog"

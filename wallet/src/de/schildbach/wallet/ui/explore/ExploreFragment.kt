@@ -44,5 +44,10 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             val intent = ExploreActivity.createIntent(requireContext(), ExploreTopic.ATMs)
             startActivity(intent)
         }
+
+        binding.faucetBtn.setOnClickListener {
+            val intent = ExploreActivity.createIntent(requireContext(), ExploreTopic.Faucet)
+            startActivity(intent)
+        }
     }
 }

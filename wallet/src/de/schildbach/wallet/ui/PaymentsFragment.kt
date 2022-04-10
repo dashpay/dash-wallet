@@ -48,8 +48,6 @@ class PaymentsFragment : BottomNavFragment(R.layout.activity_payments) {
         }
     }
 
-    override val navigationItemId = R.id.payments
-
     private var saveRecentTab = false
 
     override fun onCreate(savedInstanceState: Bundle?) {

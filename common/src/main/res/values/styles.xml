@@ -722,6 +722,7 @@
     <style name="Headline6" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="fontFamily">@font/montserrat_medium</item>
         <item name="android:textColor">@color/gray_900</item>
+        <item name="android:letterSpacing">0</item>
     </style>
 
     <style name="Headline6.Bold">
@@ -746,6 +747,7 @@
         <item name="android:textColor">@color/gray_900</item>
         <item name="android:textColorHint">@color/gray_300</item>
         <item name="android:lineSpacingExtra">5sp</item>
+        <item name="android:letterSpacing">0</item>
     </style>
 
     <style name="Body2.White">

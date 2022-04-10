@@ -260,6 +260,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         super.onResume()
         showBackupWalletDialogIfNeeded()
         checkLowStorageAlert()
+        checkWalletEncryptionDialog()
         detectUserCountry()
         walletApplication.startBlockchainService(true)
     }
@@ -281,22 +282,32 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private fun setupBottomNavigation() {
         binding.bottomNavigation.itemIconTintList = null
         supportFragmentManager.addOnBackStackChangedListener {
-            if (supportFragmentManager.backStackEntryCount == 0) {
-                binding.bottomNavigation.selectedItemId = R.id.home
+            val lastFragment = supportFragmentManager.fragments.last()
+            val itemId = when(lastFragment::class) {
+                WalletFragment::class -> R.id.bottom_home
+                ContactsFragment::class,
+                UpgradeToEvolutionFragment::class -> R.id.contacts
+                PaymentsFragment::class -> R.id.payments
+                ExploreFragment::class -> R.id.discover
+                MoreFragment::class -> R.id.more
+                else -> binding.bottomNavigation.selectedItemId
             }
+
+            binding.bottomNavigation.menu.findItem(itemId).isChecked = true
         }
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                binding.bottomNavigation.selectedItemId -> {
-                    if (item.itemId == R.id.payments) {
-                        goBack()
-                    }
-                }
                 R.id.bottom_home -> goBack(true)
                 R.id.contacts -> showContacts()
-                R.id.payments -> showPayments()
                 R.id.discover -> showExplore()
                 R.id.more -> showMore()
+                R.id.payments -> {
+                    if (binding.bottomNavigation.selectedItemId == R.id.payments) {
+                        goBack()
+                    } else {
+                        showPayments()
+                    }
+                }
             }
             true
         }
@@ -835,7 +846,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun onSelectExploreTab() {
-        binding.bottomNavigation.selectedItemId = R.id.discover
+        showExplore()
     }
 
     override fun onViewAllRequests() {

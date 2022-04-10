@@ -38,7 +38,6 @@ class UpgradeToEvolutionFragment : BottomNavFragment(R.layout.fragment_upgrade_t
         }
     }
 
-    override val navigationItemId = R.id.contacts
     private lateinit var mainActivityViewModel: MainActivityViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

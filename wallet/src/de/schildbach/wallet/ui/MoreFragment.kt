@@ -55,8 +55,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
-    override val navigationItemId = R.id.more
-
     private var blockchainState: BlockchainState? = null
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val mainActivityViewModel: MainActivityViewModel by activityViewModels()
@@ -99,7 +97,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             startBuyAndSellActivity()
         }
         explore.setOnClickListener {
-            startActivity(Intent(requireContext(), ExploreActivity::class.java))
+            (requireActivity() as WalletFragment.OnSelectPaymentTabListener).onSelectExploreTab()
         }
         security.setOnClickListener {
             startActivity(Intent(requireContext(), SecurityActivity::class.java))

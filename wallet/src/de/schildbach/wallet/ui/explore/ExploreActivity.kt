@@ -84,6 +84,12 @@ class ExploreActivity : BaseMenuActivity() {
     private fun setNavigationGraph(navHostFragment: NavHostFragment) {
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.explore_dash)
+        val topic = intent.getSerializableExtra(TOPIC_KEY) as ExploreTopic
+        navGraph.startDestination = if (topic == ExploreTopic.Faucet) {
+            R.id.exploreTestNetFragment
+        } else {
+            R.id.searchFragment
+        }
         navController.setGraph(navGraph, intent.extras)
 
         // Injecting PaymentsFragment into the explore nav graph manually since PaymentsFragment is

@@ -38,7 +38,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 enum class ExploreTopic {
-    Merchants, ATMs
+    Merchants, ATMs, Faucet
 }
 
 enum class NavigationRequest {

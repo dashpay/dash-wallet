@@ -22,4 +22,5 @@ public class Constants {
     public static final int RESULT_CODE_GO_HOME = 100;
 
     public static final MonetaryFormat SEND_PAYMENT_LOCAL_FORMAT = new MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2).optionalDecimals();
+    public static String FAUCET_URL;
 }
