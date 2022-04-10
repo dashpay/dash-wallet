@@ -109,8 +109,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                         if (viewModel.lastCoinbaseBalance.toDouble() <fait.toPlainString().toDouble()) {
                             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                                 R.string.we_didnt_find_any_assets,
-                                image= R.drawable.ic_info_red,
-                                positiveButtonText= R.string.buy_crypto_on_coinbase,
+                                image = R.drawable.ic_info_red,
+                                positiveButtonText = R.string.buy_crypto_on_coinbase,
                                 negativeButtonText = R.string.close
                             )
                             safeNavigate(
@@ -172,18 +172,16 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
-            if (it) {
-                val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
-                    title = R.string.dont_have_any_dash,
-                    image = R.drawable.ic_info_red,
-                    negativeButtonText = R.string.close
+            val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
+                title = R.string.dont_have_any_dash,
+                image = R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    dashAccountEmptyError
                 )
-                safeNavigate(
-                    CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                        dashAccountEmptyError
-                    )
-                )
-            }
+            )
         }
 
         binding.convertView.setOnCurrencyChooserClicked {

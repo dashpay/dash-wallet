@@ -92,7 +92,7 @@ class ConvertViewViewModel @Inject constructor(
     val selectedLocalExchangeRate: LiveData<ExchangeRate>
         get() = _selectedLocalExchangeRate
 
-    val userDashAccountEmptyError: SingleLiveEvent<Boolean> = SingleLiveEvent()
+    val userDashAccountEmptyError: SingleLiveEvent<Unit> = SingleLiveEvent()
 
     val validSwapValue = SingleLiveEvent<String>()
 
