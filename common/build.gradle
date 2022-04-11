@@ -73,7 +73,7 @@ dependencies {
     // Database
     api "androidx.room:room-runtime:$roomVersion"
     api "androidx.room:room-ktx:$roomVersion"
-    annotationProcessor "androidx.room:room-compiler:$roomVersion"
+    kapt "androidx.room:room-compiler:$roomVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
