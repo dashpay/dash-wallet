@@ -119,4 +119,11 @@
         tools:visibility="visible"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
+    <FrameLayout
+        android:id="@+id/network_status_container"
+        app:layout_constraintTop_toBottomOf="@+id/you_will_receive_value"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:ignore="UselessLeaf" />
 </androidx.constraintlayout.widget.ConstraintLayout>
