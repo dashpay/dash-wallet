@@ -106,26 +106,18 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
             if (swapValueErrorType == SwapValueErrorType.NOError) {
                 if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
-
-                    pair.second?.first?.let { fait ->
-                        if (viewModel.lastCoinbaseBalance.toDouble() <fait.toPlainString().toDouble()) {
-                            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                                R.string.we_didnt_find_any_assets,
-                                image = R.drawable.ic_info_red,
-                                positiveButtonText = R.string.buy_crypto_on_coinbase,
-                                negativeButtonText = R.string.close
-                            )
-                            safeNavigate(
-                                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                                    placeBuyOrderError
-                                )
-                            )
+                    selectedCoinBaseAccount?.let {
+                        pair.second?.first?.let { fait ->
+                            viewModel.swapTrade(fait, it, pair.first)
                         }
                     }
-                }
-                selectedCoinBaseAccount?.let {
-                    pair.second?.first?.let { fait ->
-                        viewModel.swapTrade(fait, it, pair.first)
+                } else {
+                    pair.second?.second?.let { coin ->
+                        selectedCoinBaseAccount?.let {
+                            pair.second?.first?.let { fait ->
+                                viewModel.sellDashToCoinBase(coin, fait, it)
+                            }
+                        }
                     }
                 }
             } else {
@@ -143,6 +135,49 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             }
         )
 
+
+        viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.error,
+                getString(R.string.error),
+                R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
+        }
+
+
+        viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.insufficient_money_title,
+                getString(R.string.insufficient_money_msg),
+                R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
+        }
+
+        viewModel.onFailure.observe(viewLifecycleOwner) {
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.send_coins_error_msg,
+                getString(R.string.insufficient_money_msg),
+                R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
+        }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(

@@ -110,7 +110,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, it)
         }
 
-        viewModel.sellSwapSuccessState.observe(viewLifecycleOwner){
+        viewModel.sellSwapSuccessState.observe(viewLifecycleOwner) {
             showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS)
         }
 
@@ -134,9 +134,11 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
-            safeNavigate(CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
-                CoinbaseTransactionParams(params, TransactionType.BuySwap)
-            ))
+            safeNavigate(
+                CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
+                    CoinbaseTransactionParams(params, TransactionType.BuySwap)
+                )
+            )
         }
         observeNavigationCallBack()
     }
@@ -257,15 +259,14 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
     private fun observeNavigationCallBack() {
         findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>("resume_review")
-            ?.observe(viewLifecycleOwner){ isConversionReviewResumed ->
-                if (isConversionReviewResumed){
+            ?.observe(viewLifecycleOwner) { isConversionReviewResumed ->
+                if (isConversionReviewResumed) {
                     getNewCommitOrder()
                 }
             }
-        )
-        builder.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
+    }
 
-    private fun getNewCommitOrder(){
+    private fun getNewCommitOrder() {
         viewModel.onRefreshOrderClicked(swapTradeUIModel)
     }
 }
