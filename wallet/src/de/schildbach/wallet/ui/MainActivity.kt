@@ -301,17 +301,16 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.bottom_home -> goBack(true)
-                R.id.contacts -> showContacts()
-                R.id.discover -> showExplore()
-                R.id.more -> showMore()
-                R.id.payments -> {
-                    if (binding.bottomNavigation.selectedItemId == R.id.payments) {
+                binding.bottomNavigation.selectedItemId -> {
+                    if (item.itemId == R.id.payments) {
                         goBack()
-                    } else {
-                        showPayments()
                     }
                 }
+                R.id.bottom_home -> goBack(true)
+                R.id.contacts -> showContacts()
+                R.id.payments -> showPayments()
+                R.id.discover -> showExplore()
+                R.id.more -> showMore()
             }
             true
         }
