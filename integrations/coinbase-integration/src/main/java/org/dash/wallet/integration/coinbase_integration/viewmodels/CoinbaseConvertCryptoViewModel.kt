@@ -65,9 +65,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val userAccountsWithBalance: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
         get() = _userAccountsWithBalance
 
-    private val _userAccountError: SingleLiveEvent<Boolean> = SingleLiveEvent()
-    val userAccountError: LiveData<Boolean>
-        get() = _userAccountError
+    val userAccountError = SingleLiveEvent<Unit>()
 
     private val _dashWalletBalance = MutableLiveData<Coin>()
     val dashWalletBalance: LiveData<Coin>
@@ -76,7 +74,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
     val onFailure = SingleLiveEvent<String>()
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
-    val sendDashToCoinBaseFailed = SingleLiveEvent<Unit>()
+    private val sendDashToCoinBaseFailed = SingleLiveEvent<Unit>()
     init {
         setDashWalletBalance()
         getUserAccountInfo()
@@ -140,17 +138,17 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
 
     private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
         val address = walletDataProvider.createSentDashAddress(addressInfo)
-        try {
+        return try {
             val transaction = sendPaymentService.sendCoins(address, coin)
-            return transaction.isPending
+            transaction.isPending
         } catch (x: InsufficientMoneyException) {
             onInsufficientMoneyCallback.call()
             x.printStackTrace()
-            return false
+            false
         } catch (ex: Exception) {
             onFailure.value = ex.message
             ex.printStackTrace()
-            return false
+            false
         }
     }
 
@@ -167,8 +165,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         val tradesRequest = TradesRequest(
             GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),
             config.exchangeCurrencyCode,
-            source_asset = source_asset!!,
-            target_asset = target_asset!!
+            source_asset = source_asset,
+            target_asset = target_asset
         )
 
         when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
@@ -199,7 +197,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                 if (error.isNullOrEmpty()) {
                     swapTradeFailedCallback.call()
                 } else {
-                    val message = CoinbaseErrorResponse.getErrorMessage(error)
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
                         swapTradeFailedCallback.call()
                     } else {
@@ -223,7 +221,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             }
 
         if (userAccountsWithBalanceList.isNullOrEmpty()) {
-            _userAccountError.value = true
+            userAccountError.call()
         } else {
             _userAccountsWithBalance.value = Event(userAccountsWithBalanceList)
         }

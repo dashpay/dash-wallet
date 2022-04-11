@@ -16,13 +16,17 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui.dialogs
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.widget.Toast
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
@@ -75,13 +79,22 @@ class CoinBaseBuyDashDialog : DialogFragment() {
             findNavController().popBackStack()
             findNavController().popBackStack()
         }
+
+        binding.buyDialogContactCoinbaseSupport.setOnClickListener {
+            openCoinbaseHelp()
+        }
     }
 
     private fun setPurchaseError() {
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error_red)
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_failed)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Bold_Red300)
-        binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
+        val errorMessage = arguments?.getString(ARG_MESSAGE)
+        if (errorMessage.isNullOrEmpty()){
+            binding.coinbaseBuyDialogMessage.setText(R.string.purchase_failed_msg)
+        } else {
+            binding.coinbaseBuyDialogMessage.text = errorMessage
+        }
         binding.buyDialogContactCoinbaseSupport.isGone = true
         binding.coinbaseBuyDialogNegativeButton.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.close)
@@ -95,7 +108,7 @@ class CoinBaseBuyDashDialog : DialogFragment() {
                 binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
             }
             errorMessage.contains(getString(R.string.send_to_wallet_error)) -> {
-                binding.coinbaseBuyDialogMessage.setText(errorMessage)
+                binding.coinbaseBuyDialogMessage.text = errorMessage
             }
             else -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
         }
@@ -161,5 +174,16 @@ class CoinBaseBuyDashDialog : DialogFragment() {
 
     interface CoinBaseBuyDashDialogButtonsClickListener {
         fun onPositiveButtonClick(type: Type)
+    }
+
+    private fun openCoinbaseHelp() {
+        val helpUrl = "https://help.coinbase.com/en/contact-us"
+        try {
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.data = Uri.parse(helpUrl)
+            startActivity(intent)
+        }catch (e: ActivityNotFoundException){
+            Toast.makeText(requireActivity(), helpUrl, Toast.LENGTH_SHORT).show()
+        }
     }
 }

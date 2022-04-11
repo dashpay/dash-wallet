@@ -28,6 +28,7 @@ import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
@@ -50,6 +51,7 @@ import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConve
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
 
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_convert_crypto) {
     private val binding by viewBinding(FragmentCoinbaseConvertCryptoBinding::bind)
@@ -207,18 +209,16 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
-            if (it) {
-                val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
-                    title = R.string.dont_have_any_dash,
-                    image = R.drawable.ic_info_red,
-                    negativeButtonText = R.string.close
+            val dashAccountEmptyError = CoinbaseGenericErrorUIModel(
+                title = R.string.dont_have_any_dash,
+                image = R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    dashAccountEmptyError
                 )
-                safeNavigate(
-                    CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                        dashAccountEmptyError
-                    )
-                )
-            }
+            )
         }
 
         binding.convertView.setOnCurrencyChooserClicked {
@@ -339,10 +339,5 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        convertViewModel.clear()
     }
 }

@@ -43,11 +43,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    val commitBuyOrderFailedCallback = SingleLiveEvent<Unit>()
-
-    private val _transactionCompleted: MutableLiveData<TransactionState> = MutableLiveData()
-    val transactionCompleted: LiveData<TransactionState>
-        get() = _transactionCompleted
+    val commitBuyOrderFailureState = SingleLiveEvent<String>()
 
     var sendFundToWalletParams: SendTransactionToWalletParams ? = null
     val placeBuyOrderFailedCallback = SingleLiveEvent<String>()
@@ -55,17 +51,15 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
     val placeBuyOrder: LiveData<PlaceBuyOrderUIModel>
         get() = _placeBuyOrder
 
-    private val _commitBuyOrderSuccessCallback: MutableLiveData<SendTransactionToWalletParams> = MutableLiveData()
-    val commitBuyOrderSuccessCallback: LiveData<SendTransactionToWalletParams>
-        get() = _commitBuyOrderSuccessCallback
+    val commitBuyOrderSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
 
     fun commitBuyOrder(params: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
         when (val result = coinBaseRepository.commitBuyOrder(params)) {
             is ResponseResource.Success -> {
+                _showLoading.value = false
                 if (result.value == BuyOrderResponse.EMPTY_COMMIT_BUY) {
-                    _showLoading.value = false
-                    commitBuyOrderFailedCallback.call()
+                    commitBuyOrderFailureState.call()
                 } else {
                     sendFundToWalletParams = SendTransactionToWalletParams(
                         amount = result.value.dashAmount,
@@ -74,48 +68,27 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                         to = walletDataProvider.freshReceiveAddress().toBase58(),
                         type = result.value.transactionType
                     ).apply {
-                        _commitBuyOrderSuccessCallback.value = this
+                        commitBuyOrderSuccessState.value = this
                     }
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
-                commitBuyOrderFailedCallback.call()
-            }
-        }
-    }
-
-    fun sendDash(api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
-        sendFundToWalletParams?.apply {
-            sendDashToWallet(this, api2FATokenVersion)
-        }
-    }
-    private fun sendDashToWallet(params: SendTransactionToWalletParams, api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
-        if (_showLoading.value == false)
-            _showLoading.value = true
-        when (val result = coinBaseRepository.sendFundsToWallet(params, api2FATokenVersion)) {
-            is ResponseResource.Success -> {
-                _showLoading.value = false
-                if (result.value == null) {
-                    _transactionCompleted.value = TransactionState(false, null)
-                } else {
-                    _transactionCompleted.value = TransactionState(true, null)
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
                 val error = result.errorBody?.string()
-                if (result.errorCode == 400) {
-                    error?.let {
-                        val message = CoinbaseErrorResponse.getErrorMessage(it)
-                        _transactionCompleted.value = TransactionState(false, message)
-                    }
+                if (error.isNullOrEmpty()) {
+                    commitBuyOrderFailureState.call()
                 } else {
-                    _transactionCompleted.value = TransactionState(false, null)
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
+                    if (message.isNullOrEmpty()) {
+                        commitBuyOrderFailureState.call()
+                    } else {
+                        commitBuyOrderFailureState.value = message
+                    }
                 }
             }
         }
     }
+
 
     private fun placeBuyOrder(params: PlaceBuyOrderParams) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
@@ -137,7 +110,7 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
                 if (error.isNullOrEmpty()) {
                     placeBuyOrderFailedCallback.call()
                 } else {
-                    val message = CoinbaseErrorResponse.getErrorMessage(error)
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
                         placeBuyOrderFailedCallback.call()
                     } else {
@@ -152,8 +125,3 @@ class CoinbaseBuyDashOrderReviewViewModel @Inject constructor(
         placeBuyOrder(PlaceBuyOrderParams(fiat?.toPlainString(), fiat?.currencyCode, paymentMethodId))
     }
 }
-
-data class TransactionState(
-    val isTransactionSuccessful: Boolean,
-    val responseMessage: String?
-)

@@ -25,6 +25,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
@@ -40,89 +42,60 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    val commitBuyOrderFailedCallback = SingleLiveEvent<Unit>()
+    val commitSwapTradeFailureState = SingleLiveEvent<String>()
 
-    private val _transactionCompleted: MutableLiveData<TransactionState> = MutableLiveData()
-    val transactionCompleted: LiveData<TransactionState>
-        get() = _transactionCompleted
-
-    var sendFundToWalletParams: SendTransactionToWalletParams? = null
+    private var sendFundToWalletParams: SendTransactionToWalletParams? = null
 
     private val _swapTradeOrder: MutableLiveData<SwapTradeUIModel> = MutableLiveData()
     val swapTradeOrder: LiveData<SwapTradeUIModel>
         get() = _swapTradeOrder
 
-    private val _commitBuyOrderSuccessCallback: MutableLiveData<SendTransactionToWalletParams> = MutableLiveData()
-    val commitBuyOrderSuccessCallback: LiveData<SendTransactionToWalletParams>
-        get() = _commitBuyOrderSuccessCallback
+    val commitSwapTradeSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
+    val sellSwapSuccessState = SingleLiveEvent<Unit>()
+    val swapTradeFailureState = SingleLiveEvent<String>()
 
-    val swapTradeFailedCallback = SingleLiveEvent<String>()
-
-    fun commitSwapTrade(params: SwapTradeUIModel) = viewModelScope.launch(Dispatchers.Main) {
+    fun commitSwapTrade(tradeId: String, inputCurrency: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
-        when (val result = coinBaseRepository.commitSwapTrade(params.swapTradeId)) {
+        when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
             is ResponseResource.Success -> {
+                _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
-                    _showLoading.value = false
-                    commitBuyOrderFailedCallback.call()
+                    commitSwapTradeFailureState.call()
                 } else {
-                    if (params.inputCurrencyName.lowercase() == "dash") {
-                        _transactionCompleted.value = TransactionState(true, null)
-                    } else {
+                    if (inputCurrency == DASH_CURRENCY) {
+                        sellSwapSuccessState.call()
+                    }
+                    else {
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
                             to = walletDataProvider.freshReceiveAddress().toBase58(),
-                            type = "send"
+                            type = TRANSACTION_TYPE_SEND
                         ).apply {
-                            _commitBuyOrderSuccessCallback.value = this
+                            commitSwapTradeSuccessState.value = this
                         }
                     }
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                commitBuyOrderFailedCallback.call()
-            }
-        }
-    }
-
-    fun sendDash(api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
-        commitBuyOrderSuccessCallback.value?.let {
-            sendDashToWallet(it, api2FATokenVersion)
-        }
-    }
-
-    fun sendDashToWallet(params: SendTransactionToWalletParams, api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
-        if (_showLoading.value == false)
-            _showLoading.value = true
-        when (val result = coinBaseRepository.sendFundsToWallet(params, api2FATokenVersion)) {
-            is ResponseResource.Success -> {
-                _showLoading.value = false
-                if (result.value == null) {
-                    _transactionCompleted.value = TransactionState(false, null)
-                } else {
-                    _transactionCompleted.value = TransactionState(true, null)
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
                 val error = result.errorBody?.string()
-                if (result.errorCode == 400) {
-                    error?.let {
-                        val message = CoinbaseErrorResponse.getErrorMessage(it)
-                        _transactionCompleted.value = TransactionState(false, message)
-                    }
+                if (error.isNullOrEmpty()) {
+                    commitSwapTradeFailureState.call()
                 } else {
-                    _transactionCompleted.value = TransactionState(false, null)
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
+                    if (message.isNullOrEmpty()) {
+                        commitSwapTradeFailureState.call()
+                    } else {
+                        commitSwapTradeFailureState.value = message
+                    }
                 }
             }
         }
     }
 
-
-    fun swapTrade(swapTradeUIModel: SwapTradeUIModel) = viewModelScope.launch(Dispatchers.Main) {
+    private fun swapTrade(swapTradeUIModel: SwapTradeUIModel) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
         swapTradeUIModel.assetsBaseID?.let {
             val tradesRequest = TradesRequest(
@@ -133,20 +106,17 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             )
             when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
                 is ResponseResource.Success -> {
-
+                    _showLoading.value = false
                     if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
-                        _showLoading.value = false
-                        swapTradeFailedCallback.call()
+                        swapTradeFailureState.call()
                     } else {
-                        _showLoading.value = false
-
                         result.value.apply {
                             this.assetsBaseID = swapTradeUIModel.assetsBaseID
                             this.inputCurrencyName =
                                 swapTradeUIModel.inputCurrencyName
                             this.outputCurrencyName = swapTradeUIModel.outputCurrencyName
-                            _swapTradeOrder.value = this
                         }
+                        _swapTradeOrder.value = result.value
                     }
                 }
                 is ResponseResource.Failure -> {
@@ -154,13 +124,13 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
                     val error = result.errorBody?.string()
                     if (error.isNullOrEmpty()) {
-                        swapTradeFailedCallback.call()
+                        swapTradeFailureState.call()
                     } else {
-                        val message = CoinbaseErrorResponse.getErrorMessage(error)
+                        val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                         if (message.isNullOrEmpty()) {
-                            swapTradeFailedCallback.call()
+                            swapTradeFailureState.call()
                         } else {
-                            swapTradeFailedCallback.value = message
+                            swapTradeFailureState.value = message
                         }
                     }
                 }
