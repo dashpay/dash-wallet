@@ -389,7 +389,8 @@ class BuyDashWithCryptoCurrencyActivity : InteractionAwareActivity() {
     override fun onBackPressed() {
         if (isTransestionSuccessful) {
             val intent = Intent()
-            intent.setClassName(this, "de.schildbach.wallet.ui.WalletActivity") // TODO
+            // TODO: check if navigation can implemented without referencing class by string name
+            intent.setClassName(this, "de.schildbach.wallet.ui.MainActivity")
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             startActivity(intent)
             finish()

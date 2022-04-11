@@ -81,7 +81,6 @@ dependencies {
     implementation 'javax.inject:javax.inject:1'
 
     // UI
-//    api 'com.google.android.material:material:1.2.1' TODO
     implementation 'com.google.android.material:material:1.4.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
 

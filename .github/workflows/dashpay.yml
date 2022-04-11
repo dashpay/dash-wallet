@@ -82,7 +82,7 @@ jobs:
         ruby -r ./exploredata.rb
     
     - name: Test
-      run: bundle exec fastlane test flavor:"staging" type:"debug"
+      run: bundle exec fastlane test flavor:"" type:"debug"
       
     - name: Build
       if: github.event_name == 'pull_request'

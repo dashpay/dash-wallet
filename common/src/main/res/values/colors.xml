@@ -94,9 +94,6 @@
     <color name="black_liquid">#171717</color>
     <color name="grey_liquid">#9B9B9B</color>
     <color name="warning_yellow">#FFFAF0</color>
-
-    <color name="close_btn_dark_gray">#5D5F61</color> <!-- TODO -->
-    <color name="search_light_gray">#6D7885</color> <!-- TODO -->
     <!--orbitview -->
     <color name="orbit_color">#80FFFFFF</color>
 
