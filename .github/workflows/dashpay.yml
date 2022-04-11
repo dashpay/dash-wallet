@@ -90,4 +90,4 @@ jobs:
       
     - name: Build and Firebase Distribution
       if: github.event_name == 'push'
-      run: bundle exec fastlane build_distribute flavor:"staging" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}" comment:"Up to date DashPay build" app_id:"1:1039839682638:android:bbcfa8c9939ee993ea631f" test_group:"qa" SUPPORT_EMAIL:"${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
+      run: bundle exec fastlane build_distribute flavor:"staging" type:"release" store_pass:"${{ secrets.SIGNING_STORE_PASS }}" version_code:"${{ env.build_number }}" comment:"Up to date DashPay build" app_id:"1:1039839682638:android:bbcfa8c9939ee993ea631f" test_group:"qa"
