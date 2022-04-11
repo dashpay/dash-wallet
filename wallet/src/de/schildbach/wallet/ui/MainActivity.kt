@@ -617,12 +617,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     // then we will catch it here.  This scenario was found during QA tests, but in a build that does
     // not encrypt the wallet.
 
-//    private fun checkWalletEncryptionDialog() {
-//        if (!wallet.isEncrypted) {
-//            EncryptKeysDialogFragment.show(false, supportFragmentManager)
-//        }
-//    }
-
     private fun checkWalletEncryptionDialog() {
         if (!wallet.isEncrypted) {
             log.info("the wallet is not encrypted")

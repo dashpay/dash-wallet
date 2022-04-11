@@ -101,7 +101,7 @@ class DashPayUserActivity : LockScreenActivity(),
         } else {
             val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile?
 
-            if (dashPayProfile != null){
+            if (dashPayProfile != null) {
                 viewModel.updateProfileData(dashPayProfile) // save the profile to the database for non-contacts
                 viewModel.userData = UsernameSearchResult(dashPayProfile.username, dashPayProfile, null, null)
                 viewModel.initUserData(dashPayProfile.username).observe(this) {

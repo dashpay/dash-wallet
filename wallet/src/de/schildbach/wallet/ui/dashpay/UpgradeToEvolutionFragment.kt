@@ -29,7 +29,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.android.synthetic.main.fragment_upgrade_to_evolution.*
 
 @AndroidEntryPoint
-class UpgradeToEvolutionFragment : BottomNavFragment(R.layout.fragment_upgrade_to_evolution) {
+class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evolution) {
 
     companion object {
         @JvmStatic
