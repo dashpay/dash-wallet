@@ -14,18 +14,22 @@ class AnalyticsTimer (val analyticsService: AnalyticsService, val logger: Logger
         logger.info("event:$event: $stopWatch")
     }
 
-    fun logTiming(vararg args: Pair<String, Any?>) {
+    fun logTiming(args: Map<String, Any>) {
 
         val bundle = Bundle()
         bundle.putDouble("time", stopWatch.elapsed(TimeUnit.MILLISECONDS).toDouble()/1000)
 
-        args.forEach {
-            when (it.second) {
-                is Long -> bundle.putLong(it.first, it.second as Long)
-                is Int -> bundle.putLong(it.first, (it.second as Int).toLong())
+        // not all types are supported
+        args.forEach { (key, value) ->
+            when (value) {
+                is Long -> bundle.putLong(key, value)
+                is Int -> bundle.putInt(key, value)
+                is String -> bundle.putString(key, value)
+                is Float -> bundle.putFloat(key, value)
+                is Double -> bundle.putDouble(key, value)
             }
         }
         analyticsService.logEvent(event, bundle)
-        logger.info("event:$event: $stopWatch; ${args.map { "${it.first}:${it.second}"} }")
+        logger.info("event:$event: $stopWatch; ${args.map { "${it.key}:${it.value}"} }")
     }
 }

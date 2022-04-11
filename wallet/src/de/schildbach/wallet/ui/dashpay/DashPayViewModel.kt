@@ -79,8 +79,10 @@ open class DashPayViewModel @Inject constructor(
 
     fun reportUsernameSearchTime(resultSize: Int, searchTextSize: Int) {
         timerUsernameSearch?.logTiming(
-            Pair("resultCount", resultSize),
-            Pair("searchCount", searchTextSize)
+            mapOf(
+                "resultCount" to resultSize,
+                "searchCount" to searchTextSize
+            )
         )
     }
 
@@ -131,8 +133,10 @@ open class DashPayViewModel @Inject constructor(
                 emit(Resource.success(result))
                 if (search.text.length >= 3) {
                     timerIsLock.logTiming(
-                        Pair("resultCount", result.size),
-                        Pair("searchCount", search.text.length)
+                        mapOf(
+                            "resultCount" to result.size,
+                            "searchCount" to search.text.length
+                        )
                     )
                 }
             } catch (ex: Exception) {
