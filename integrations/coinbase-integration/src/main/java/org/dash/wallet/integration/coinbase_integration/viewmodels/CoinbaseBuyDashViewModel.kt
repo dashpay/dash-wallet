@@ -88,7 +88,7 @@ class CoinbaseBuyDashViewModel @Inject constructor(private val coinBaseRepositor
                 if (error.isNullOrEmpty()) {
                     placeBuyOrderFailedCallback.call()
                 } else {
-                    val message = CoinbaseErrorResponse.getErrorMessage(error)
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
                         placeBuyOrderFailedCallback.call()
                     } else {

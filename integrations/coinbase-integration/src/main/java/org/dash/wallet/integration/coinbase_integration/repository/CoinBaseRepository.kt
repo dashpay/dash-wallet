@@ -145,8 +145,8 @@ class CoinBaseRepository @Inject constructor(
         WithdrawalLimitUIModel(userPreferences.coinbaseUserWithdrawalLimitAmount, userPreferences.coinbaseSendLimitCurrency)
     }
 
-    override suspend fun createAddress(): ResponseResource<String?> = safeApiCall {
-        return@safeApiCall servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId)?.addresses?.address
+    override suspend fun createAddress() = safeApiCall {
+        servicesApi.createAddress(accountId = userPreferences.coinbaseUserAccountId)?.addresses?.address
     }
 }
 

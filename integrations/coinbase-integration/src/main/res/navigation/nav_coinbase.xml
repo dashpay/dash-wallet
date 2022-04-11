@@ -85,6 +85,13 @@
         <action
             android:id="@+id/coinbaseBuyDashOrderReviewToError"
             app:destination="@id/coinbaseErrorDialog" />
+        <action
+            android:id="@+id/coinbaseBuyDashOrderReviewToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            />
     </fragment>
 
     <fragment
@@ -141,5 +148,19 @@
         <argument
             android:name="swapModel"
             app:argType="org.dash.wallet.integration.coinbase_integration.model.SwapTradeUIModel" />
+        <action
+            android:id="@+id/conversionPreviewToTwoFaCode"
+            app:destination="@id/enterTwoFaCodeFragment"
+            />
+    </fragment>
+    <fragment
+        android:id="@+id/enterTwoFaCodeFragment"
+        android:name="org.dash.wallet.integration.coinbase_integration.ui.EnterTwoFaCodeFragment"
+        android:label="TwoFACodeFragment"
+        tools:layout="@layout/enter_two_fa_code_fragment">
+        <argument
+            android:name="transactionParams"
+            app:argType="org.dash.wallet.integration.coinbase_integration.model.CoinbaseTransactionParams"
+            />
     </fragment>
 </navigation>

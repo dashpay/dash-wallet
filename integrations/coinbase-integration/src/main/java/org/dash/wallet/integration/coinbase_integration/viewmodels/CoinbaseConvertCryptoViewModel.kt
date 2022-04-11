@@ -21,34 +21,39 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val config: Configuration,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletDataProvider,
+    private val sendPaymentService: SendPaymentService
 ) : ViewModel() {
-
-    val lastCoinbaseBalance = coinBaseRepository.getUserLastCoinbaseBalance()
     private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
-
+    val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
+        get() = _userAccountsInfo
 
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
     private val _baseIdForUSDModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
+    val baseIdForUSDModelCoinBase: LiveData<List<BaseIdForUSDData>>
+        get() = _baseIdForUSDModelCoinBase
 
     private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
     val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
@@ -60,14 +65,16 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val userAccountsWithBalance: LiveData<Event<List<CoinBaseUserAccountDataUIModel>>>
         get() = _userAccountsWithBalance
 
-    private val _userAccountError: SingleLiveEvent<Boolean> = SingleLiveEvent()
-    val userAccountError: LiveData<Boolean>
-        get() = _userAccountError
+    val userAccountError = SingleLiveEvent<Unit>()
 
     private val _dashWalletBalance = MutableLiveData<Coin>()
     val dashWalletBalance: LiveData<Coin>
         get() = this._dashWalletBalance
 
+    val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
+    val onFailure = SingleLiveEvent<String>()
+    val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
+    private val sendDashToCoinBaseFailed = SingleLiveEvent<Unit>()
     init {
         setDashWalletBalance()
         getUserAccountInfo()
@@ -101,7 +108,49 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     }
 
 
+    fun sellDashToCoinBase(coin: Coin, valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel) = viewModelScope.launch(Dispatchers.Main) {
+        _showLoading.value = true
 
+
+        when (val result = coinBaseRepository.createAddress()) {
+            is ResponseResource.Success -> {
+                if (result.value?.isEmpty() == true) {
+                    _showLoading.value = false
+                    getUserAccountAddressFailedCallback.call()
+                } else {
+                    result.value?.let {
+                        if (sendDashToCoinbase(coin, result.value)) {
+                            swapTrade(valueToConvert, selectedCoinBaseAccount, true)
+                        } else {
+                            _showLoading.value = false
+                            sendDashToCoinBaseFailed.call()
+                        }
+                    }
+                    _showLoading.value = false
+                }
+            }
+            is ResponseResource.Failure -> {
+                _showLoading.value = false
+                getUserAccountAddressFailedCallback.call()
+            }
+        }
+    }
+
+    private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
+        val address = walletDataProvider.createSentDashAddress(addressInfo)
+        return try {
+            val transaction = sendPaymentService.sendCoins(address, coin)
+            transaction.isPending
+        } catch (x: InsufficientMoneyException) {
+            onInsufficientMoneyCallback.call()
+            x.printStackTrace()
+            false
+        } catch (ex: Exception) {
+            onFailure.value = ex.message
+            ex.printStackTrace()
+            false
+        }
+    }
 
     fun swapTrade(valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel, dashToCrypt: Boolean) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
@@ -116,8 +165,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
         val tradesRequest = TradesRequest(
             GenericUtils.fiatToStringWithoutCurrencyCode(valueToConvert),
             config.exchangeCurrencyCode,
-            source_asset = source_asset!!,
-            target_asset = target_asset!!
+            source_asset = source_asset,
+            target_asset = target_asset
         )
 
         when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
@@ -148,7 +197,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
                 if (error.isNullOrEmpty()) {
                     swapTradeFailedCallback.call()
                 } else {
-                    val message = CoinbaseErrorResponse.getErrorMessage(error)
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
                         swapTradeFailedCallback.call()
                     } else {
@@ -172,7 +221,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             }
 
         if (userAccountsWithBalanceList.isNullOrEmpty()) {
-            _userAccountError.value = true
+            userAccountError.call()
         } else {
             _userAccountsWithBalance.value = Event(userAccountsWithBalanceList)
         }

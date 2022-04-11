@@ -16,13 +16,9 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
-import android.app.AlertDialog
-import android.content.DialogInterface
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.text.InputType
 import android.view.View
-import android.widget.EditText
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -39,8 +35,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.R
 import org.dash.wallet.integration.coinbase_integration.databinding.FragmentCoinbaseConversionPreviewBinding
-import org.dash.wallet.integration.coinbase_integration.model.CoinbaseGenericErrorUIModel
-import org.dash.wallet.integration.coinbase_integration.model.SwapTradeUIModel
+import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.CoinBaseBuyDashDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConversionPreviewViewModel
 
@@ -93,11 +88,13 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         binding.confirmBtnContainer.setOnClickListener {
             countDownTimer.cancel()
             if (isRetrying) {
-                viewModel.onRefreshOrderClicked(swapTradeUIModel)
+                getNewCommitOrder()
                 isRetrying = false
             } else {
-                swapTradeUIModel?.let {
-                    viewModel.commitSwapTrade(it)
+                newSwapOrderId?.let { orderId ->
+                    swapTradeUIModel.let {
+                        viewModel.commitSwapTrade(orderId, it.inputCurrency)
+                    }
                 }
             }
         }
@@ -109,23 +106,19 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 dismissProgress()
         }
 
-        viewModel.commitBuyOrderFailedCallback.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, null)
+        viewModel.commitSwapTradeFailureState.observe(viewLifecycleOwner) {
+            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_ERROR, it)
         }
 
-        viewModel.transactionCompleted.observe(viewLifecycleOwner) { transactionStatus ->
-            showBuyOrderDialog(
-                if (transactionStatus.isTransactionSuccessful)
-                    CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS else CoinBaseBuyDashDialog.Type.TRANSFER_ERROR,
-                transactionStatus.responseMessage
-            )
+        viewModel.sellSwapSuccessState.observe(viewLifecycleOwner){
+            showBuyOrderDialog(CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS)
         }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
             safeNavigate(CoinbaseConversionPreviewFragmentDirections.orderReviewToFeeInfo())
         }
 
-        viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {
+        viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {
             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                 R.string.something_wrong_title,
                 getString(R.string.retry_later_message),
@@ -136,55 +129,16 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
+            newSwapOrderId = it.swapTradeId
             countDownTimer.start()
         }
 
-        viewModel.commitBuyOrderSuccessCallback.observe(viewLifecycleOwner) {
-            show2FADialog()
+        viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
+            safeNavigate(CoinbaseConversionPreviewFragmentDirections.conversionPreviewToTwoFaCode(
+                CoinbaseTransactionParams(params, TransactionType.BuySwap)
+            ))
         }
-
-        viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.error,
-                getString(R.string.error),
-                R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
-        }
-
-
-        viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.insufficient_money_title,
-                getString(R.string.insufficient_money_msg),
-                R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
-        }
-
-        viewModel.onFailure.observe(viewLifecycleOwner) {
-            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
-                R.string.send_coins_error_msg,
-                getString(R.string.insufficient_money_msg),
-                R.drawable.ic_info_red,
-                negativeButtonText = R.string.close
-            )
-            safeNavigate(
-                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
-                    placeBuyOrderError
-                )
-            )
-        }
+        observeNavigationCallBack()
     }
 
     private fun SwapTradeUIModel.updateConversionPreviewUI() {
@@ -267,7 +221,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
     }
 
-    private fun showBuyOrderDialog(type: CoinBaseBuyDashDialog.Type, responseMessage: String?) {
+    private fun showBuyOrderDialog(type: CoinBaseBuyDashDialog.Type, responseMessage: String? = null) {
         if (transactionStateDialog?.dialog?.isShowing == true)
             transactionStateDialog?.dismissAllowingStateLoss()
         transactionStateDialog = CoinBaseBuyDashDialog.newInstance(type, responseMessage).apply {
@@ -278,14 +232,12 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                             dismiss()
                             findNavController().popBackStack()
                         }
-                        CoinBaseBuyDashDialog.Type.TRANSFER_ERROR -> {
-                            show2FADialog()
-                        }
                         CoinBaseBuyDashDialog.Type.CONVERSION_SUCCESS -> {
                             dismiss()
                             requireActivity().setResult(Constants.RESULT_CODE_GO_HOME)
                             requireActivity().finish()
                         }
+                        else -> {}
                     }
                 }
             }
@@ -303,26 +255,17 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         super.onPause()
     }
 
-    private fun show2FADialog() {
-        val builder: AlertDialog.Builder = android.app.AlertDialog.Builder(requireContext())
-        builder.setTitle("Title")
-
-        val input = EditText(requireContext())
-        input.setHint("Enter Code")
-        input.inputType = InputType.TYPE_CLASS_NUMBER
-        builder.setView(input)
-
-
-        builder.setPositiveButton(
-            "OK",
-            DialogInterface.OnClickListener { dialog, which ->
-                // Here you get get input text from the Edittext
-                var m_Text = input.text.toString()
-                viewModel.sendDash(m_Text)
+    private fun observeNavigationCallBack() {
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>("resume_review")
+            ?.observe(viewLifecycleOwner){ isConversionReviewResumed ->
+                if (isConversionReviewResumed){
+                    getNewCommitOrder()
+                }
             }
         )
         builder.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
 
-        builder.show()
+    private fun getNewCommitOrder(){
+        viewModel.onRefreshOrderClicked(swapTradeUIModel)
     }
 }

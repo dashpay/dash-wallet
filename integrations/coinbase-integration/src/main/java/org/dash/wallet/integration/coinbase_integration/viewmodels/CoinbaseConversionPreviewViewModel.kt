@@ -23,11 +23,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
+import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
 import org.dash.wallet.integration.coinbase_integration.model.*
 import org.dash.wallet.integration.coinbase_integration.network.ResponseResource
 import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepositoryInt
@@ -37,106 +36,66 @@ import javax.inject.Inject
 @HiltViewModel
 class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
-    private val walletDataProvider: WalletDataProvider,
-    private val sendPaymentService: SendPaymentService
+    private val walletDataProvider: WalletDataProvider
 ) : ViewModel() {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
-    val commitBuyOrderFailedCallback = SingleLiveEvent<Unit>()
+    val commitSwapTradeFailureState = SingleLiveEvent<String>()
 
-    private val _transactionCompleted: MutableLiveData<TransactionState> = MutableLiveData()
-    val transactionCompleted: LiveData<TransactionState>
-        get() = _transactionCompleted
-
-    var sendFundToWalletParams: SendTransactionToWalletParams? = null
+    private var sendFundToWalletParams: SendTransactionToWalletParams? = null
 
     private val _swapTradeOrder: MutableLiveData<SwapTradeUIModel> = MutableLiveData()
     val swapTradeOrder: LiveData<SwapTradeUIModel>
         get() = _swapTradeOrder
 
-    private val _commitBuyOrderSuccessCallback: MutableLiveData<SendTransactionToWalletParams> = MutableLiveData()
-    val commitBuyOrderSuccessCallback: LiveData<SendTransactionToWalletParams>
-        get() = _commitBuyOrderSuccessCallback
+    val commitSwapTradeSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
+    val sellSwapSuccessState = SingleLiveEvent<Unit>()
+    val swapTradeFailureState = SingleLiveEvent<String>()
 
-    val swapTradeFailedCallback = SingleLiveEvent<String>()
-
-    val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
-    val sendDashToCoinBaseFailed = SingleLiveEvent<Unit>()
-    val onFailure = SingleLiveEvent<String>()
-    val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
-
-    fun commitSwapTrade(params: SwapTradeUIModel) = viewModelScope.launch(Dispatchers.Main) {
+    fun commitSwapTrade(tradeId: String, inputCurrency: String) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
-        when (val result = coinBaseRepository.commitSwapTrade(params.swapTradeId)) {
+        when (val result = coinBaseRepository.commitSwapTrade(tradeId)) {
             is ResponseResource.Success -> {
+                _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
-                    _showLoading.value = false
-                    commitBuyOrderFailedCallback.call()
+                    commitSwapTradeFailureState.call()
                 } else {
-                    if (params.inputCurrencyName.lowercase() == "dash") {
-                        try {
-                            val coin = Coin.parseCoin(params.inputAmount.toString())
-                            sellDashToCoinBase(coin)
-                        } catch (x: Exception) {
-                            Coin.ZERO
-                        }
-                    } else {
+                    if (inputCurrency == DASH_CURRENCY) {
+                        sellSwapSuccessState.call()
+                    }
+                    else {
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
                             currency = result.value.displayInputCurrency,
                             idem = UUID.randomUUID().toString(),
                             to = walletDataProvider.freshReceiveAddress().toBase58(),
-                            type = "send"
+                            type = TRANSACTION_TYPE_SEND
                         ).apply {
-                            _commitBuyOrderSuccessCallback.value = this
+                            commitSwapTradeSuccessState.value = this
                         }
                     }
                 }
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
-                commitBuyOrderFailedCallback.call()
-            }
-        }
-    }
-
-    fun sendDash(api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
-        commitBuyOrderSuccessCallback.value?.let {
-            sendDashToWallet(it, api2FATokenVersion)
-        }
-    }
-
-    fun sendDashToWallet(params: SendTransactionToWalletParams, api2FATokenVersion: String) = viewModelScope.launch(Dispatchers.Main) {
-        if (_showLoading.value == false)
-            _showLoading.value = true
-        when (val result = coinBaseRepository.sendFundsToWallet(params, api2FATokenVersion)) {
-            is ResponseResource.Success -> {
-                _showLoading.value = false
-                if (result.value == null) {
-                    _transactionCompleted.value = TransactionState(false, null)
-                } else {
-                    _transactionCompleted.value = TransactionState(true, null)
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
                 val error = result.errorBody?.string()
-                if (result.errorCode == 400) {
-                    error?.let {
-                        val message = CoinbaseErrorResponse.getErrorMessage(it)
-                        _transactionCompleted.value = TransactionState(false, message)
-                    }
+                if (error.isNullOrEmpty()) {
+                    commitSwapTradeFailureState.call()
                 } else {
-                    _transactionCompleted.value = TransactionState(false, null)
+                    val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
+                    if (message.isNullOrEmpty()) {
+                        commitSwapTradeFailureState.call()
+                    } else {
+                        commitSwapTradeFailureState.value = message
+                    }
                 }
             }
         }
     }
 
-
-    fun swapTrade(swapTradeUIModel: SwapTradeUIModel) = viewModelScope.launch(Dispatchers.Main) {
+    private fun swapTrade(swapTradeUIModel: SwapTradeUIModel) = viewModelScope.launch(Dispatchers.Main) {
         _showLoading.value = true
         swapTradeUIModel.assetsBaseID?.let {
             val tradesRequest = TradesRequest(
@@ -147,20 +106,17 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             )
             when (val result = coinBaseRepository.swapTrade(tradesRequest)) {
                 is ResponseResource.Success -> {
-
+                    _showLoading.value = false
                     if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
-                        _showLoading.value = false
-                        swapTradeFailedCallback.call()
+                        swapTradeFailureState.call()
                     } else {
-                        _showLoading.value = false
-
                         result.value.apply {
                             this.assetsBaseID = swapTradeUIModel.assetsBaseID
                             this.inputCurrencyName =
                                 swapTradeUIModel.inputCurrencyName
                             this.outputCurrencyName = swapTradeUIModel.outputCurrencyName
-                            _swapTradeOrder.value = this
                         }
+                        _swapTradeOrder.value = result.value
                     }
                 }
                 is ResponseResource.Failure -> {
@@ -168,13 +124,13 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
                     val error = result.errorBody?.string()
                     if (error.isNullOrEmpty()) {
-                        swapTradeFailedCallback.call()
+                        swapTradeFailureState.call()
                     } else {
-                        val message = CoinbaseErrorResponse.getErrorMessage(error)
+                        val message = CoinbaseErrorResponse.getErrorMessage(error)?.message
                         if (message.isNullOrEmpty()) {
-                            swapTradeFailedCallback.call()
+                            swapTradeFailureState.call()
                         } else {
-                            swapTradeFailedCallback.value = message
+                            swapTradeFailureState.value = message
                         }
                     }
                 }
@@ -184,46 +140,5 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
     fun onRefreshOrderClicked(swapTradeUIModel: SwapTradeUIModel) {
         swapTrade(swapTradeUIModel)
-    }
-
-    fun sellDashToCoinBase(coin: Coin) = viewModelScope.launch(Dispatchers.Main) {
-        _showLoading.value = true
-
-
-        when (val result = coinBaseRepository.createAddress()) {
-            is ResponseResource.Success -> {
-                if (result.value?.isEmpty() == true) {
-                    _showLoading.value = false
-                    getUserAccountAddressFailedCallback.call()
-                } else {
-                    result.value?.let {
-                        sendDashToCoinbase(coin, result.value)
-                        _transactionCompleted.value = TransactionState(true, null)
-                        _showLoading.value = false
-                    }
-                    _showLoading.value = false
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
-                getUserAccountAddressFailedCallback.call()
-            }
-        }
-    }
-
-    private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
-        val address = walletDataProvider.createSentDashAddress(addressInfo)
-        try {
-            val transaction = sendPaymentService.sendCoins(address, coin)
-            return transaction.isPending
-        } catch (x: InsufficientMoneyException) {
-            onInsufficientMoneyCallback.call()
-            x.printStackTrace()
-            return false
-        } catch (ex: Exception) {
-            onFailure.value = ex.message
-            ex.printStackTrace()
-            return false
-        }
     }
 }

@@ -26,14 +26,14 @@ data class CoinbaseErrorResponse(
     val errors: List<Error>? = null
 ) : Parcelable {
     companion object {
-        fun getErrorMessage(json: String): String? {
+        fun getErrorMessage(json: String): Error? {
             return try {
                 val gson = Gson()
                 val errorResponse: CoinbaseErrorResponse = gson.fromJson(
                     json,
                     CoinbaseErrorResponse::class.java
                 )
-                errorResponse.errors?.firstOrNull()?.message
+                errorResponse.errors?.firstOrNull()
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
