@@ -41,19 +41,15 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val config: Configuration,
     private val walletDataProvider: WalletDataProvider,
-    private val sendPaymentService: SendPaymentService
+
 ) : ViewModel() {
     private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
-    val userAccountsInfo: LiveData<List<CoinBaseUserAccountDataUIModel>>
-        get() = _userAccountsInfo
 
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
     private val _baseIdForUSDModelCoinBase: MutableLiveData<List<BaseIdForUSDData>> = MutableLiveData()
-    val baseIdForUSDModelCoinBase: LiveData<List<BaseIdForUSDData>>
-        get() = _baseIdForUSDModelCoinBase
 
     private val _swapTradeOrder: MutableLiveData<Event<SwapTradeUIModel>> = MutableLiveData()
     val swapTradeOrder: LiveData<Event<SwapTradeUIModel>>
@@ -71,10 +67,7 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     val dashWalletBalance: LiveData<Coin>
         get() = this._dashWalletBalance
 
-    val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
-    val onFailure = SingleLiveEvent<String>()
-    val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
-    private val sendDashToCoinBaseFailed = SingleLiveEvent<Unit>()
+
     init {
         setDashWalletBalance()
         getUserAccountInfo()
@@ -104,51 +97,6 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
             is ResponseResource.Failure -> {
                 _showLoading.value = false
             }
-        }
-    }
-
-
-    fun sellDashToCoinBase(coin: Coin, valueToConvert: Fiat, selectedCoinBaseAccount: CoinBaseUserAccountDataUIModel) = viewModelScope.launch(Dispatchers.Main) {
-        _showLoading.value = true
-
-
-        when (val result = coinBaseRepository.createAddress()) {
-            is ResponseResource.Success -> {
-                if (result.value?.isEmpty() == true) {
-                    _showLoading.value = false
-                    getUserAccountAddressFailedCallback.call()
-                } else {
-                    result.value?.let {
-                        if (sendDashToCoinbase(coin, result.value)) {
-                            swapTrade(valueToConvert, selectedCoinBaseAccount, true)
-                        } else {
-                            _showLoading.value = false
-                            sendDashToCoinBaseFailed.call()
-                        }
-                    }
-                    _showLoading.value = false
-                }
-            }
-            is ResponseResource.Failure -> {
-                _showLoading.value = false
-                getUserAccountAddressFailedCallback.call()
-            }
-        }
-    }
-
-    private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
-        val address = walletDataProvider.createSentDashAddress(addressInfo)
-        return try {
-            val transaction = sendPaymentService.sendCoins(address, coin)
-            transaction.isPending
-        } catch (x: InsufficientMoneyException) {
-            onInsufficientMoneyCallback.call()
-            x.printStackTrace()
-            false
-        } catch (ex: Exception) {
-            onFailure.value = ex.message
-            ex.printStackTrace()
-            false
         }
     }
 

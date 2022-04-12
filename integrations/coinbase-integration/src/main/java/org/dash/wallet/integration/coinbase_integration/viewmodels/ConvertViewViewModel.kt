@@ -192,6 +192,7 @@ class ConvertViewViewModel @Inject constructor(
         _dashToCrypto.value = dashToCrypto
     }
 
+    fun clear() { _selectedCryptoCurrencyAccount.value = null }
 
     private fun setDashWalletBalance() {
         val balance = walletDataProvider.getWalletBalance()
@@ -199,11 +200,6 @@ class ConvertViewViewModel @Inject constructor(
 
         maxForDashWalletAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        _selectedCryptoCurrencyAccount.value = null
     }
 }
 

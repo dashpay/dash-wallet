@@ -98,6 +98,14 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             )
         }
 
+        convertViewModel.dashToCrypto.value?.let {
+            if (it) {
+                viewModel.dashWalletBalance.value?.let { dashInput ->
+                    binding.convertView.dashInput = dashInput
+                }
+                binding.convertView.dashToCrypto = it
+            }
+        }
         convertViewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) { account ->
             selectedCoinBaseAccount = account
         }
@@ -108,7 +116,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
 
                     pair.second?.first?.let { fait ->
-                        if (viewModel.lastCoinbaseBalance.toDouble() <fait.toPlainString().toDouble()) {
+                        if ((viewModel.config.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
                             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                                 R.string.we_didnt_find_any_assets,
                                 image = R.drawable.ic_info_red,
@@ -238,7 +246,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         viewModel.dashWalletBalance.observe(
             viewLifecycleOwner
         ) {
-
             binding.convertView.dashInput = it
         }
 
@@ -304,5 +311,10 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         if (loadingDialog != null && loadingDialog?.isAdded == true) {
             loadingDialog?.dismissAllowingStateLoss()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        convertViewModel.clear()
     }
 }

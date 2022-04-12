@@ -33,7 +33,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
@@ -56,14 +55,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         private const val DECIMAL_SEPARATOR = '.'
 
         @JvmStatic
-        fun newInstance(
-            dashToCrypto: Boolean = false,
-        ): ConvertViewFragment {
-            val args = bundleOf(ARG_DASH_TO_FIAT to dashToCrypto)
-
-            return ConvertViewFragment().apply {
-                arguments = args
-            }
+        fun newInstance(): ConvertViewFragment {
+            return ConvertViewFragment()
         }
     }
 
@@ -75,15 +68,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     private var maxAmountSelected: Boolean = false
     var selectedCurrencyCodeExchangeRate: ExchangeRate? = null
     var currencyConversionOptionList: List<String> = emptyList()
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-        .noCode().minDecimals(6).optionalDecimals()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val args = requireArguments()
-
-        val dashToCrypto = args.getBoolean(ARG_DASH_TO_FIAT)
-        viewModel.setOnSwapDashFromToCryptoClicked(dashToCrypto)
 
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
