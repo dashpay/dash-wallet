@@ -22,12 +22,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.TRANSACTION_TYPE_SEND
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -36,12 +39,14 @@ import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepos
 import java.util.*
 import javax.inject.Inject
 
+@ExperimentalCoroutinesApi
 @HiltViewModel
 class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     private val walletDataProvider: WalletDataProvider,
-    private val sendPaymentService: SendPaymentService
-) : ViewModel() {
+    private val sendPaymentService: SendPaymentService,
+    val networkState: NetworkStateInt
+) : ConnectivityViewModel(networkState) {
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading

@@ -41,6 +41,14 @@
         android:layout_marginTop="30dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
+    <FrameLayout
+        android:id="@+id/preview_network_status_container"
+        app:layout_constraintTop_toBottomOf="@id/content_order_review"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        tools:ignore="UselessLeaf" />
     <TextView
         android:id="@+id/cancel_btn"
         style="@style/Caption"
@@ -85,11 +93,12 @@
             app:layout_constraintStart_toEndOf="@+id/cancel_btn" />
 
     </LinearLayout>
-    <FrameLayout
-        android:id="@+id/network_status_container"
-        app:layout_constraintTop_toBottomOf="@+id/content_order_review"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:layout_width="match_parent"
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/preview_offline_group"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        tools:ignore="UselessLeaf" />
+        android:visibility="visible"
+        app:constraint_referenced_ids="cancel_btn, confirm_btn_container"
+        />
 </androidx.constraintlayout.widget.ConstraintLayout>

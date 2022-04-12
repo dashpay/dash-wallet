@@ -27,7 +27,9 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.livedata.Event
+import org.dash.wallet.common.livedata.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.ui.ConnectivityViewModel
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integration.coinbase_integration.DASH_CURRENCY
 import org.dash.wallet.integration.coinbase_integration.model.*
@@ -41,8 +43,8 @@ class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
     val config: Configuration,
     private val walletDataProvider: WalletDataProvider,
-
-) : ViewModel() {
+    var networkState: NetworkStateInt
+) : ConnectivityViewModel(networkState) {
     private val _userAccountsInfo: MutableLiveData<List<CoinBaseUserAccountDataUIModel>> = MutableLiveData()
 
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()

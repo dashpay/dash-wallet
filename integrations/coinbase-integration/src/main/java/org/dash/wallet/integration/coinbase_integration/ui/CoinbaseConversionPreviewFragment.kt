@@ -19,6 +19,7 @@ package org.dash.wallet.integration.coinbase_integration.ui
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -29,6 +30,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.Constants
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.NetworkUnavailableFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -71,6 +73,10 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
+        }
+
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
+            setNetworkState(hasInternet)
         }
 
         binding.cancelBtn.setOnClickListener {
@@ -184,6 +190,15 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 )
             )
         }
+
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.preview_network_status_container, NetworkUnavailableFragment.newInstance())
+            .commit()
+    }
+
+    private fun setNetworkState(hasInternet: Boolean) {
+        binding.previewNetworkStatusContainer.isVisible = !hasInternet
+        binding.previewOfflineGroup.isVisible = hasInternet
     }
 
     private fun SwapTradeUIModel.updateConversionPreviewUI() {
@@ -293,6 +308,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     override fun onResume() {
         super.onResume()
         countDownTimer.start()
+        viewModel.monitorNetworkStateChange()
     }
 
     override fun onPause() {

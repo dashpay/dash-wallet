@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,6 +35,7 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
+import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -63,6 +65,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(8).optionalDecimals()
 
+    private lateinit var fragment: ConvertViewFragment
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -71,7 +74,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
 
         if (savedInstanceState == null) {
-            val fragment = ConvertViewFragment.newInstance()
+            fragment = ConvertViewFragment.newInstance()
             fragment.setViewDetails(getString(R.string.get_quote), null)
 
             parentFragmentManager.commit {
@@ -79,6 +82,10 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 add(R.id.enter_amount_fragment_placeholder, fragment)
                 // addToBackStack(null)
             }
+        }
+
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
+            fragment.handleNetworkState(hasInternet)
         }
 
         viewModel.showLoading.observe(
@@ -252,6 +259,8 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
             binding.limitDesc.isGone = true
         }
+
+        monitorNetworkChanges()
     }
 
     private fun showSwapValueErrorView(swapValueErrorType: SwapValueErrorType) {
@@ -316,5 +325,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     override fun onDestroy() {
         super.onDestroy()
         convertViewModel.clear()
+    }
+
+    private fun monitorNetworkChanges(){
+        lifecycleScope.launchWhenResumed {
+            viewModel.monitorNetworkStateChange()
+        }
     }
 }
