@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integration.coinbase_integration.ui
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
@@ -32,6 +33,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
@@ -50,6 +52,7 @@ import org.dash.wallet.integration.coinbase_integration.ui.convert_currency.mode
 import org.dash.wallet.integration.coinbase_integration.ui.dialogs.crypto_wallets.CryptoWalletsDialog
 import org.dash.wallet.integration.coinbase_integration.viewmodels.CoinbaseConvertCryptoViewModel
 import org.dash.wallet.integration.coinbase_integration.viewmodels.ConvertViewViewModel
+import java.math.RoundingMode
 
 
 @ExperimentalCoroutinesApi
@@ -263,16 +266,61 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
             binding.limitDesc.isGone = true
+            setGuidelinePercent(true)
         }
 
         monitorNetworkChanges()
     }
 
+    private fun setGuidelinePercent(isErrorHidden: Boolean) {
+        val guideLine = binding.amountViewGuide
+        val params = guideLine.layoutParams as ConstraintLayout.LayoutParams
+        if (isErrorHidden) {
+            params.guidePercent = 0.08f // 45% // range: 0 <-> 1
+        } else {
+            params.guidePercent = 0.12f
+        }
+        guideLine.layoutParams = params
+    }
+
     private fun showSwapValueErrorView(swapValueErrorType: SwapValueErrorType) {
         binding.limitDesc.isGone = swapValueErrorType == SwapValueErrorType.NOError
+        setGuidelinePercent(binding.limitDesc.isGone)
         when (swapValueErrorType) {
-            SwapValueErrorType.LessThanMin -> binding.limitDesc.setText(R.string.entered_amount_is_too_low)
-            SwapValueErrorType.MoreThanMax -> binding.limitDesc.setText(R.string.entered_amount_is_too_high)
+            SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
+            SwapValueErrorType.MoreThanMax -> setMaxAmountError()
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun setMaxAmountError() {
+        convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+            selectedCoinBaseAccount?.getCoinBaseExchangeRateConversion(rate)?.first?.let {
+                binding.limitDesc.text = "${getString(
+                    R.string.entered_amount_is_too_high
+                )} $it"
+            }
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun setMinAmountErrorMessage() {
+
+        convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
+            selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { currencyToDashExchangeRate ->
+                val cleanedValue =
+                    (
+                        "0.01909299".toBigDecimal() /
+                            currencyToDashExchangeRate.toBigDecimal()
+                        )
+                val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
+
+                val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
+                val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, bd.toString())
+                binding.limitDesc.text = "${getString(
+                    R.string.entered_amount_is_too_low
+                )} ${GenericUtils.fiatToString(fiatAmount)}"
+            }
         }
     }
 

@@ -66,6 +66,7 @@ class ConvertViewViewModel @Inject constructor(
     var minAllowedSwapDashCoin: Coin = Coin.ZERO
     private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
 
+
     private val _selectedCryptoCurrencyAccount = MutableLiveData<CoinBaseUserAccountDataUIModel?>()
     val selectedCryptoCurrencyAccount: LiveData<CoinBaseUserAccountDataUIModel?>
         get() = this._selectedCryptoCurrencyAccount
@@ -175,7 +176,9 @@ class ConvertViewViewModel @Inject constructor(
             return when {
                 it.isZero -> SwapValueErrorType.NOError
                 it.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.LessThanMin
-                it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax
+                it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax.apply {
+                    amount = maxCoinBaseAccountAmount
+                }
                 else -> SwapValueErrorType.NOError
             }
         }
@@ -194,7 +197,7 @@ class ConvertViewViewModel @Inject constructor(
 
     fun clear() {
         _selectedCryptoCurrencyAccount.value = null
-        _dashToCrypto.value=false
+        _dashToCrypto.value = false
     }
 
     private fun setDashWalletBalance() {
