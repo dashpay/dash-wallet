@@ -126,7 +126,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                 if (!pair.first && selectedCoinBaseAccount?.coinBaseUserAccountData?.currency?.code != DASH_CURRENCY) {
 
                     pair.second?.first?.let { fait ->
-                        if ((viewModel.config.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
+                        if ((viewModel.userPreference.lastCoinbaseBalance?.toDouble() ?: 0.0) <fait.toPlainString().toDouble()) {
                             val placeBuyOrderError = CoinbaseGenericErrorUIModel(
                                 R.string.we_didnt_find_any_assets,
                                 image = R.drawable.ic_info_red,
@@ -305,7 +305,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
 
     @SuppressLint("SetTextI18n")
     private fun setMinAmountErrorMessage() {
-
         convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
             selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { currencyToDashExchangeRate ->
                 val cleanedValue =
