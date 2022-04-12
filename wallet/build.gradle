@@ -46,7 +46,7 @@ dependencies {
 
     implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
     implementation 'androidx.preference:preference-ktx:1.1.1'
-    implementation "androidx.work:work-runtime-ktx:2.4.0"
+    implementation "androidx.work:work-runtime-ktx:2.6.0"
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'org.dashj.platform:dashpay:0.22-SNAPSHOT'
     implementation 'org.dashj.platform:platform-core:0.22-SNAPSHOT'
@@ -130,6 +130,7 @@ dependencies {
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
+    kapt 'androidx.hilt:hilt-compiler:1.0.0'
     implementation 'androidx.hilt:hilt-work:1.0.0'
 
 

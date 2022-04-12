@@ -18,10 +18,13 @@ package de.schildbach.wallet
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.common.base.Stopwatch
 import com.google.firebase.FirebaseNetworkException
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -33,30 +36,16 @@ import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.slf4j.LoggerFactory
 import java.util.*
 
-class ExploreSyncWorker constructor(val appContext: Context, workerParams: WorkerParameters) :
-    CoroutineWorker(appContext, workerParams) {
+@HiltWorker
+class ExploreSyncWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val analytics: AnalyticsService,
+    private val exploreRepository: ExploreRepository
+): CoroutineWorker(appContext, workerParams) {
 
     companion object {
         private val log = LoggerFactory.getLogger(ExploreSyncWorker::class.java)
-    }
-
-    private val exploreRepository by lazy {
-        entryPoint.exploreRepository()
-    }
-
-    private val analytics by lazy {
-        entryPoint.analytics()
-    }
-
-    @EntryPoint
-    @InstallIn(SingletonComponent::class)
-    interface ExploreSyncWorkerEntryPoint {
-        fun exploreRepository(): ExploreRepository
-        fun analytics(): AnalyticsService
-    }
-
-    private val entryPoint by lazy {
-        EntryPointAccessors.fromApplication(appContext, ExploreSyncWorkerEntryPoint::class.java)
     }
 
     @SuppressLint("CommitPrefEdits")
