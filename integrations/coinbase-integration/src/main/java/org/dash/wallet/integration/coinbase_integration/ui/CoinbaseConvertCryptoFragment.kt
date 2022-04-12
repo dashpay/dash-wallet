@@ -35,7 +35,6 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.livedata.EventObserver
 import org.dash.wallet.common.ui.FancyAlertDialog
-import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -84,8 +83,9 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             }
         }
 
-        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner){ hasInternet ->
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             fragment.handleNetworkState(hasInternet)
+            cryptoWalletsDialog?.handleNetworkState(hasInternet)
         }
 
         viewModel.showLoading.observe(
@@ -231,6 +231,11 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
                             dialog.dismiss()
                         }
                         if (this.cryptoWalletsDialog?.isVisible == false) {
+
+                            viewModel.isDeviceConnectedToInternet.value?.let { hasInternet ->
+                                cryptoWalletsDialog?.handleNetworkState(hasInternet)
+                            }
+
                             cryptoWalletsDialog?.show(fragmentManager, "payment_method")
                         }
                     }
@@ -327,7 +332,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         convertViewModel.clear()
     }
 
-    private fun monitorNetworkChanges(){
+    private fun monitorNetworkChanges() {
         lifecycleScope.launchWhenResumed {
             viewModel.monitorNetworkStateChange()
         }

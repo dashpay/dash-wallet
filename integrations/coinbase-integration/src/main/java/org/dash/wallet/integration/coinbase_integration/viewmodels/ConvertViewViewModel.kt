@@ -192,7 +192,10 @@ class ConvertViewViewModel @Inject constructor(
         _dashToCrypto.value = dashToCrypto
     }
 
-    fun clear() { _selectedCryptoCurrencyAccount.value = null }
+    fun clear() {
+        _selectedCryptoCurrencyAccount.value = null
+        _dashToCrypto.value=false
+    }
 
     private fun setDashWalletBalance() {
         val balance = walletDataProvider.getWalletBalance()

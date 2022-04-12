@@ -69,7 +69,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     private var maxAmountSelected: Boolean = false
     var selectedCurrencyCodeExchangeRate: ExchangeRate? = null
     var currencyConversionOptionList: List<String> = emptyList()
-
+    private var hasInternet: Boolean = true
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -175,6 +175,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             binding.currencyOptions.isVisible = true
             binding.maxButtonWrapper.isVisible = true
             binding.inputWrapper.isVisible = true
+            if(hasInternet)
             binding.bottomCard.isVisible = true
         }
     }
@@ -541,7 +542,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
     fun handleNetworkState(hasInternet: Boolean) {
         lifecycleScope.launchWhenStarted {
-            binding.bottomCard.isVisible = hasInternet
+            this@ConvertViewFragment.hasInternet=hasInternet
+            viewModel.selectedCryptoCurrencyAccount.value?.let {
+                binding.bottomCard.isVisible = hasInternet
+            }
             binding.convertViewNetworkStatusContainer.isVisible = !hasInternet
         }
     }

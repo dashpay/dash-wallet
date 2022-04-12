@@ -19,6 +19,7 @@ package org.dash.wallet.integration.coinbase_integration.viewmodels
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -38,6 +39,7 @@ import org.dash.wallet.integration.coinbase_integration.repository.CoinBaseRepos
 import java.util.*
 import javax.inject.Inject
 
+@ExperimentalCoroutinesApi
 @HiltViewModel
 class CoinbaseConvertCryptoViewModel @Inject constructor(
     private val coinBaseRepository: CoinBaseRepositoryInt,
