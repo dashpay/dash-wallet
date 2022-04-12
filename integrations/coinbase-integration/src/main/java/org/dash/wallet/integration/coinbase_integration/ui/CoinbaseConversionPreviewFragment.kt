@@ -141,6 +141,49 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             )
         }
         observeNavigationCallBack()
+
+        viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.error,
+                getString(R.string.error),
+                R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
+        }
+
+
+        viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.insufficient_money_title,
+                getString(R.string.insufficient_money_msg),
+                R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
+        }
+
+        viewModel.onFailure.observe(viewLifecycleOwner) {
+            val placeBuyOrderError = CoinbaseGenericErrorUIModel(
+                R.string.send_coins_error_msg,
+                getString(R.string.insufficient_money_msg),
+                R.drawable.ic_info_red,
+                negativeButtonText = R.string.close
+            )
+            safeNavigate(
+                CoinbaseServicesFragmentDirections.coinbaseServicesToError(
+                    placeBuyOrderError
+                )
+            )
+        }
     }
 
     private fun SwapTradeUIModel.updateConversionPreviewUI() {
