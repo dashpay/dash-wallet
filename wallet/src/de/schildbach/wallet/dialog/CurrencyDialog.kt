@@ -1,6 +1,7 @@
 package de.schildbach.wallet.dialog
 
 import android.content.Context
+import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -8,26 +9,20 @@ import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.integration.liquid.listener.CurrencySelectListener
 import org.dash.wallet.integration.liquid.listener.ValueSelectListener
 import org.dash.wallet.integration.liquid.currency.PayloadItem
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import de.schildbach.wallet.adapter.CurrencyAdapter
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.BaseBottomSheetDialog
 import org.dash.wallet.integration.uphold.currencyModel.UpholdCurrencyResponse
 import java.util.*
 import kotlin.collections.ArrayList
 
 
-class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList: ArrayList<PayloadItem>, private val upholdCurrencyArrayList: ArrayList<UpholdCurrencyResponse>, val selectedFilterCurrencyItem: PayloadItem?, val listener: CurrencySelectListener) : BottomSheetDialog(_context) {
+class CurrencyDialog(private val _context: Context, private val liquidCurrencyArrayList: ArrayList<PayloadItem>, private val upholdCurrencyArrayList: ArrayList<UpholdCurrencyResponse>, val selectedFilterCurrencyItem: PayloadItem?, val listener: CurrencySelectListener) : BaseBottomSheetDialog(_context) {
     private var rvCurrency: RecyclerView? = null
     private var txtClearFilter: TextView? = null
 
-    init {
-        setCancelable(true)
-        setCanceledOnTouchOutside(true)
-        create()
-    }
-
-    override fun create() {
-
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         val currencyArrayList = ArrayList<PayloadItem>()
 
         for (i in liquidCurrencyArrayList.indices) {
@@ -53,13 +48,8 @@ class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList:
             }
         }
 
-
         val bottomSheetView = layoutInflater.inflate(R.layout.dialog_liquid_all_curriencies, null)
-        val dialog = BottomSheetDialog(_context, R.style.BottomSheetDialog) // Style here
-        dialog.setContentView(bottomSheetView);
-        dialog.show()
-
-
+        setContentView(bottomSheetView)
         rvCurrency = bottomSheetView.findViewById(R.id.rvCurrency)
         txtClearFilter = bottomSheetView.findViewById(R.id.txtClearFilter)
         rvCurrency?.layoutManager = LinearLayoutManager(_context)
@@ -95,7 +85,7 @@ class CurrencyDialog(val _context: Context, private val liquidCurrencyArrayList:
                 listener.onCurrencySelected(isLiquidSupport, isUpholdSupport, item)
                 Timer().schedule(object : TimerTask() {
                     override fun run() {
-                        dialog.dismiss()
+                        this@CurrencyDialog.dismiss()
                     }
                 }, 1000)
 

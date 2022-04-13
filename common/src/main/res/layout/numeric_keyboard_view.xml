@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2019 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp"
+    android:stretchColumns="*"
+    tools:context="org.dash.wallet.common.ui.enter_amount.NumericKeyboardView"
+    tools:parentTag="android.widget.TableLayout"
+    tools:ignore="HardcodedText">
+
+    <TableRow>
+
+        <Button
+            android:id="@+id/btn_1"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="1"
+            android:text="1"
+            android:textColor="@color/keyboard_button" />
+
+        <Button
+            android:id="@+id/btn_2"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="2"
+            android:text="2"
+            android:textColor="@color/keyboard_button" />
+
+        <Button
+            android:id="@+id/btn_3"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="3"
+            android:text="3"
+            android:textColor="@color/keyboard_button" />
+    </TableRow>
+
+    <TableRow>
+
+        <Button
+            android:id="@+id/btn_4"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="4"
+            android:text="4"
+            android:textColor="@color/keyboard_button" />
+
+        <Button
+            android:id="@+id/btn_5"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="5"
+            android:text="5"
+            android:textColor="@color/keyboard_button" />
+
+        <Button
+            android:id="@+id/btn_6"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="6"
+            android:text="6"
+            android:textColor="@color/keyboard_button" />
+    </TableRow>
+
+    <TableRow>
+
+        <Button
+            android:id="@+id/btn_7"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="7"
+            android:text="7"
+            android:textColor="@color/keyboard_button" />
+
+        <Button
+            android:id="@+id/btn_8"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="8"
+            android:text="8"
+            android:textColor="@color/keyboard_button" />
+
+        <Button
+            android:id="@+id/btn_9"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="9"
+            android:text="9"
+            android:textColor="@color/keyboard_button" />
+    </TableRow>
+
+    <TableRow>
+
+        <Button
+            android:id="@+id/btn_function"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@android:string/cancel"
+            android:textColor="@color/keyboard_button" />
+
+        <Button
+            android:id="@+id/btn_0"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:tag="0"
+            android:text="0"
+            android:textColor="@color/keyboard_button" />
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            style="@style/NewMontserratButton.Secondary.Inverted.Large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:srcCompat="@drawable/ic_delete_backward"
+            android:textColor="@color/keyboard_button"
+            app:tint="@color/keyboard_button"
+            tools:ignore="ContentDescription" />
+    </TableRow>
+
+</merge>

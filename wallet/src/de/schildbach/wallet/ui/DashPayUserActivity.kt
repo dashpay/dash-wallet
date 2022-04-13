@@ -99,11 +99,14 @@ class DashPayUserActivity : LockScreenActivity(),
             viewModel.updateProfileData(viewModel.userData.dashPayProfile) // save the profile to the database for non-contacts
             updateContactRelationUi()
         } else {
-            val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile
-            viewModel.updateProfileData(dashPayProfile) // save the profile to the database for non-contacts
-            viewModel.userData = UsernameSearchResult(dashPayProfile.username, dashPayProfile, null, null)
-            viewModel.initUserData(dashPayProfile.username).observe(this) {
-                updateContactRelationUi()
+            val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile?
+
+            if (dashPayProfile != null) {
+                viewModel.updateProfileData(dashPayProfile) // save the profile to the database for non-contacts
+                viewModel.userData = UsernameSearchResult(dashPayProfile.username, dashPayProfile, null, null)
+                viewModel.initUserData(dashPayProfile.username).observe(this) {
+                    updateContactRelationUi()
+                }
             }
         }
 

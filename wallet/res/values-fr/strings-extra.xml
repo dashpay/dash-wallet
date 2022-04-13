@@ -265,7 +265,6 @@
     <string name="about_review_and_rate">Évaluer &amp; noter cette appli</string>
     <string name="about_contact_support">Contacter le service d\'aide</string>
     <string name="about_fork_disclaimer">Ceci est une application open source forkée de Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2020 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dash Wallet %s</string>
 

@@ -1,7 +1,6 @@
 package org.dash.wallet.integration.liquid.ui
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
@@ -9,7 +8,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
-import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
@@ -34,7 +32,7 @@ import org.dash.wallet.common.Constants
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
-import org.dash.wallet.common.data.ExchangeRate
+import org.dash.wallet.common.data.ExchangeRateData
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -73,7 +71,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private lateinit var viewBinding: ActivityLiquidBuyAndSellDashBinding
     @Inject
     lateinit var analytics: AnalyticsService
-
+    private var countrySupportDialog: CountrySupportDialog? = null
     private lateinit var context: Context
     private var loadingDialog: ProgressDialog? = null
 
@@ -82,7 +80,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private var isSelectFiatCurrency = false
     private var isClickLogoutButton = false
 
-    var currentExchangeRate: ExchangeRate? = null
+    var currentExchangeRate: ExchangeRateData? = null
 
     override
     fun onCreate(savedInstanceState: Bundle?) {
@@ -90,7 +88,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityLiquidBuyAndSellDashBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
-
+        countrySupportDialog = CountrySupportDialog(this, true, analytics)
         this.context = this@LiquidBuyAndSellDashActivity
         liquidClient = LiquidClient.getInstance()
 
@@ -121,7 +119,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
             ivInfo.apply {
                 isVisible = false
                 setOnClickListener {
-                    CountrySupportDialog(this@LiquidBuyAndSellDashActivity, true, analytics).show()
+                    countrySupportDialog?.show()
                 }
             }
 
@@ -273,7 +271,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                     }
                 }
             }
-        })
+        }).show()
     }
 
     /**
@@ -282,25 +280,25 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     private fun showSellDashCurrencyDialog() {
         log.info("liquid: starting sell dash currency dialog")
         if (isSelectFiatCurrency) {
-            SellDashCryptoCurrencyDialog(context, "FiatCurrency", fiatCurrencyList, object : ValueSelectListener {
+            SellDashCryptoCurrencyDialog(this, "FiatCurrency", fiatCurrencyList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
                     super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
-                    val intent = Intent(context, SellDashActivity::class.java)
+                    val intent = Intent(this@LiquidBuyAndSellDashActivity, SellDashActivity::class.java)
                     intent.putExtra("CurrencySelected", fiatCurrencyList[value].ccyCode)
                     intent.putExtra("CurrencyType", "FIAT")
                     startActivity(intent)
                 }
-            })
+            }).show()
         } else {
-            SellDashCryptoCurrencyDialog(context, "CryptoCurrency", cryptoCurrencyArrayList, object : ValueSelectListener {
+            SellDashCryptoCurrencyDialog(this,"CryptoCurrency", cryptoCurrencyArrayList, object : ValueSelectListener {
                 override fun onItemSelected(value: Int) {
                     super@LiquidBuyAndSellDashActivity.turnOffAutoLogout()
-                    val intent = Intent(context, SellDashActivity::class.java)
+                    val intent = Intent(this@LiquidBuyAndSellDashActivity, SellDashActivity::class.java)
                     intent.putExtra("CurrencySelected", cryptoCurrencyArrayList[value].ccyCode)
                     intent.putExtra("CurrencyType", "CRYPTO")
                     startActivity(intent)
                 }
-            })
+            }).show()
         }
     }
 
@@ -345,7 +343,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
                     }
                 }
             }
-        })
+        }).show()
     }
 
     /**
@@ -462,15 +460,14 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
      */
     private fun revokeAccessToken() {
         log.info("liquid: revoking access token")
-        val dialogBuilder = AlertDialog.Builder(this)
-        dialogBuilder.setMessage(R.string.liquid_logout_title)
-        dialogBuilder.setPositiveButton(android.R.string.ok) { dialog, button ->
-            openLogoutUrl()
-        }
-        dialogBuilder.setNegativeButton(android.R.string.cancel) { dialog, which ->
-
-        }
-        dialogBuilder.show()
+        alertDialogBuilder.apply {
+            message = getString(R.string.liquid_logout_title)
+            positiveText = getString(android.R.string.ok)
+            positiveAction = {
+                openLogoutUrl()
+            }
+            negativeText = getString(android.R.string.cancel)
+        }.buildAlertDialog().show()
     }
 
     private fun appAvailable(packageName: String): Boolean {
@@ -615,6 +612,7 @@ class LiquidBuyAndSellDashActivity : InteractionAwareActivity() {
     override fun onDestroy() {
         log.info("liquid: closing buy/sell dash activity")
         loadingDialog?.dismiss()
+        countrySupportDialog?.dismiss()
         super.onDestroy()
     }
 }

@@ -6,7 +6,8 @@
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
     android:background="@color/bg_less_bright"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.MoreFragment">
 
     <include
         layout="@layout/app_bar_general"
@@ -237,6 +238,34 @@
                         app:layout_constraintStart_toStartOf="@+id/buy_dash_title"
                         app:layout_constraintTop_toBottomOf="@+id/buy_dash_title" />
 
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/explore"
+                    style="@style/MenuRow">
+
+                    <!-- TODO: need to change back ic_explore colors when doing redesign of this screen -->
+                    <ImageView
+                        android:id="@+id/explore_icon"
+                        style="@style/MenuRowIcon"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:srcCompat="@drawable/ic_explore" />
+
+                    <TextView
+                        android:id="@+id/explore_title"
+                        style="@style/MontserratMedium.MenuRowTitle"
+                        android:text="@string/menu_explore_title"
+                        app:layout_constraintStart_toEndOf="@+id/explore_icon"
+                        app:layout_constraintTop_toTopOf="@+id/explore_icon" />
+
+                    <TextView
+                        android:id="@+id/explore_subtitle"
+                        style="@style/MontserratRegular.MenuRowSubTitle"
+                        android:text="@string/menu_explore_subtitle"
+                        app:layout_constraintStart_toStartOf="@+id/explore_title"
+                        app:layout_constraintTop_toBottomOf="@+id/explore_title" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
                 <androidx.constraintlayout.widget.ConstraintLayout

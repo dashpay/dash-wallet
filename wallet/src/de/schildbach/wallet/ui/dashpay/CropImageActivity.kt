@@ -89,14 +89,15 @@ class CropImageActivity : LockScreenActivity() {
                         background.setImageDrawable(resource)
                         circle_crop.setImageDrawable(resource)
                         circle_crop.maxZoom = 5f
-                        if (initZoomedRect != null) {
+
+                        initZoomedRect?.let { rect ->
                             circle_crop.post {
-                                val focusX = (initZoomedRect.left + initZoomedRect.right) / 2
-                                val focusY = (initZoomedRect.top + initZoomedRect.bottom) / 2
-                                val zoomX = 1f / (initZoomedRect.right - initZoomedRect.left)
-                                val zoomY = 1f / (initZoomedRect.bottom - initZoomedRect.top)
+                                val focusX = (rect.left + rect.right) / 2
+                                val focusY = (rect.top + rect.bottom) / 2
+                                val zoomX = 1f / (rect.right - rect.left)
+                                val zoomY = 1f / (rect.bottom - rect.top)
                                 val bitmap = (resource as BitmapDrawable).bitmap
-                                log.info("bitmap: ${bitmap.width}x${bitmap.height}, zoomRect:${initZoomedRect}, zoomX = $zoomX, zoomY = $zoomY")
+                                log.info("bitmap: ${bitmap.width}x${bitmap.height}, zoomRect:${rect}, zoomX = $zoomX, zoomY = $zoomY")
                                 circle_crop.setZoom(zoomX, focusX, focusY)
                             }
                         }

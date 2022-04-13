@@ -100,7 +100,13 @@ class EncryptWalletLiveData(application: Application) : MutableLiveData<Resource
 
                 Resource.success(wallet)
             } catch (x: KeyCrypterException) {
-                Resource.error(x.message!!, null)
+                log.error("There was a problem encrypting the wallet", x)
+                Resource.error(x.message ?: "Unknown encryption error")
+            } catch (x: Exception) {
+                log.error("There was a problem creating the wallet", x)
+                Resource.error(
+                    x.message ?: "Unknown error when encrypting wallet during onboarding"
+                )
             }
         }
 

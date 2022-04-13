@@ -211,7 +211,7 @@
     <style name="SwitchCompat">
         <item name="colorControlActivated">@color/dash_blue</item>
     </style>
-
+    
     <style name="ScreenshotWarningPanel">
         <item name="android:background">@drawable/rounded_background</item>
         <item name="android:theme">@style/ScreenshotWarningBackground</item>
@@ -222,16 +222,7 @@
         <item name="secondaryColor">@android:color/white</item>
     </style>
 
-    <style name="WhiteBackground">
-        <item name="primaryColor">@android:color/white</item>
-        <item name="secondaryColor">@android:color/white</item>
-    </style>
-
     <style name="VerifySeedTextViewBackground" parent="WhiteBackground">
-        <item name="cornerRadius">8dp</item>
-    </style>
-
-    <style name="ExploreBottomContentBackground" parent="WhiteBackground">
         <item name="cornerRadius">8dp</item>
     </style>
 </resources>

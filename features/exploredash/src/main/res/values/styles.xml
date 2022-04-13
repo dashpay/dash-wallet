@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <style name="Explore.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:background">@color/white</item>
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+    <style name="ExploreBottomContentBackground">
+        <item name="backgroundColor">@color/gray_40</item>
+        <item name="strokeColor">@color/gray_40</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="ExploreSearchResultsBackground" parent="WhiteBackground">
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="DialogIconBackground">
+        <item name="backgroundColor">@color/blue_50</item>
+        <item name="strokeColor">@color/blue_50</item>
+        <item name="cornerRadius">25dp</item>
+    </style>
+
+    <style name="MerchantLocationBackground">
+        <item name="backgroundColor">@color/steel_gray_40</item>
+        <item name="strokeColor">@color/steel_gray_40</item>
+        <item name="rippleColor">@color/button_ripple_color</item>
+        <item name="cornerRadius">10dp</item>
+    </style>
+
+    <style name="UpButtonBackground">
+        <item name="backgroundColor">@color/gray_900_0.7</item>
+        <item name="strokeColor">@android:color/transparent</item>
+        <item name="cornerRadius">22dp</item>
+    </style>
+
+    <style name="FilterIconBackground">
+        <item name="backgroundColor">@color/dash_blue</item>
+        <item name="strokeColor">@color/dash_blue</item>
+        <item name="cornerRadius">13dp</item>
+    </style>
+</resources>

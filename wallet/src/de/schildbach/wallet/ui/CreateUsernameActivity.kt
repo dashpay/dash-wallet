@@ -289,7 +289,9 @@ class CreateUsernameActivity : InteractionAwareActivity(), TextWatcher {
                     }
                 })
                 showProcessingState()
-                startService(CreateIdentityService.createIntentFromInvite(this, username, invite))
+                invite?.let {
+                    startService(CreateIdentityService.createIntentFromInvite(this, username, it))
+                }
             }
         }
         showProcessingState()

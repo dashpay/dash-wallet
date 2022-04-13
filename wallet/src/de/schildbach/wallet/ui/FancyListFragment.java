@@ -17,19 +17,43 @@
 
 package de.schildbach.wallet.ui;
 
+import dagger.hilt.android.AndroidEntryPoint;
+import org.dash.wallet.common.services.LockScreenBroadcaster;
 import de.schildbach.wallet_test.R;
 
 import android.os.Bundle;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.ListFragment;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import javax.inject.Inject;
+
+
 /**
  * @author Andreas Schildbach
  */
+@AndroidEntryPoint
 public class FancyListFragment extends ListFragment {
+    protected AlertDialog alertDialog;
+    @Inject
+    LockScreenBroadcaster lockScreenBroadcaster;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        lockScreenBroadcaster.getActivatingLockScreen().observe(this, unused -> {
+            if (alertDialog != null) {
+                alertDialog.dismiss();
+            }
+        });
+    }
+
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
             final Bundle savedInstanceState) {

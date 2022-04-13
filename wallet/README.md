@@ -190,6 +190,20 @@ LIQUID_PUBLIC_API_KEY="<liquid sandbox public api key>"
 LIQUID_PUBLIC_API_KEY_SANDBOX="<liquid sandbox public api key>"
 ```
 
+### CONFIGURATION FOR SUPPORT EMAIL
+
+The default support email used by Dash Wallet will be an empty string.  However, this can be 
+customized.  `build.gradle` will assign a value `BuildConfig.SUPPORT_EMAIL` will be assigned 
+according to the following:
+
+The email will be determined by looking in `local.properties` followed by the environment for these
+two variables:
+- SUPPORT_EMAIL
+- INTERNAL_SUPPORT_EMAIL - if the build is debug or SUPPORT_EMAIL is empty, then this will be used.
+
+This allows `local.properties` to specify a support email for debug builds and a different support 
+email for release/production builds. 
+
 ### SETTING UP FOR DEVELOPMENT
 
 You should be able to import the project into Android Studio, as it uses Gradle for building.

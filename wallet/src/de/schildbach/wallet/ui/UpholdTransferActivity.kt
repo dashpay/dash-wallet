@@ -27,6 +27,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
@@ -41,6 +42,7 @@ import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper
 import org.dash.wallet.integration.uphold.ui.UpholdWithdrawalHelper.OnTransferListener
 import java.math.BigDecimal
 
+@AndroidEntryPoint
 class UpholdTransferActivity : InteractionAwareActivity() {
 
     companion object {
@@ -60,7 +62,6 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
     private lateinit var enterAmountSharedViewModel: EnterAmountSharedViewModel
     private lateinit var balance: Coin
-
     private lateinit var withdrawalDialog: UpholdWithdrawalHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {

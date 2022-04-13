@@ -24,7 +24,6 @@ import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.offline.DirectPaymentTask
 import de.schildbach.wallet.offline.DirectPaymentTask.HttpPaymentTask
-import de.schildbach.wallet.rates.ExchangeRate
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.ui.send.RequestPaymentRequestTask.HttpRequestTask
 import de.schildbach.wallet_test.BuildConfig
@@ -34,6 +33,7 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.wallet.KeyChain.KeyPurpose
 import org.bitcoinj.wallet.SendRequest
+import org.dash.wallet.common.data.ExchangeRate
 import org.slf4j.LoggerFactory
 
 class PaymentProtocolViewModel(application: Application) : SendCoinsBaseViewModel(application) {

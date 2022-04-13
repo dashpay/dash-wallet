@@ -24,9 +24,9 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelStoreOwner
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInviteFilterBinding
+import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 
 @AndroidEntryPoint
 class InviteFilterSelectionDialog(private val owner: ViewModelStoreOwner) :

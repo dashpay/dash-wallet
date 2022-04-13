@@ -258,7 +258,6 @@
     <string name="menu_rescan_blockchain">اسکن دوباره بلاکچین</string>
     <string name="menu_contact_support_title">تماس با پشتیبانی</string>
     <string name="menu_contact_support_subtitle">گزارش مشکل</string>
-
     <string name="tools_address_book">دفترچه نشانی‌ها</string>
     <string name="tools_import_private_key">وارد کردن کلید خصوصی</string>
     <string name="tools_network_monitor">پایش شبکه</string>
@@ -267,7 +266,6 @@
     <string name="about_review_and_rate">نقد و بررسی &amp;؛ نمره‌دهی به اپلیکیشن</string>
     <string name="about_contact_support">تماس با پشتیبانی</string>
     <string name="about_fork_disclaimer">این یک اپلیکیشن متن‌ باز است که از بیت کوین والت انشعاب گرفته است</string>
-    <string name="about_copyright">کپی رایت © ۲۰۲۰ دش کر</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">دش والت %s</string>
 
@@ -349,4 +347,4 @@
     <string name="all_transactions">همه</string>
     <string name="received_transactions">دریافتی</string>
     <string name="sent_transactions">ارسالی</string>
-</resources>
+    </resources>

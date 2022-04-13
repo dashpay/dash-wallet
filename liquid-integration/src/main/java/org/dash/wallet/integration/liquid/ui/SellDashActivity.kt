@@ -14,7 +14,6 @@ import android.view.MenuItem
 import android.view.View
 import android.webkit.*
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -49,12 +48,13 @@ class SellDashActivity : InteractionAwareActivity() {
     val FILE_CHOOSER_RESULT_CODE = 1
     var uploadMessage: ValueCallback<Uri?>? = null
     var uploadMessageAboveL: ValueCallback<Array<Uri?>?>? = null
-
+    private lateinit var countrySupportDialog: CountrySupportDialog
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         log.info("liquid: starting sell dash activity")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_webview_quick_exchange)
+        countrySupportDialog = CountrySupportDialog(this, false, analytics)
         webview = findViewById(R.id.webview)
         loadWebView()
     }
@@ -165,7 +165,7 @@ class SellDashActivity : InteractionAwareActivity() {
         webview.loadUrl(LiquidConstants.BUY_WITH_CREDIT_CARD_URL)
 
         findViewById<View>(R.id.ivInfo).setOnClickListener {
-            CountrySupportDialog(this, false, analytics).show()
+            countrySupportDialog.show()
         }
 
     }
@@ -369,6 +369,7 @@ class SellDashActivity : InteractionAwareActivity() {
     override fun onDestroy() {
         log.info("liquid: closing sell dash")
         webview.removeJavascriptInterface(mJsInterfaceName)
+        countrySupportDialog.dismiss()
         super.onDestroy()
     }
 

@@ -3,6 +3,8 @@ package de.schildbach.wallet.rates;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.ViewModel;
 
+import org.dash.wallet.common.data.ExchangeRate;
+
 import java.util.List;
 
 /**

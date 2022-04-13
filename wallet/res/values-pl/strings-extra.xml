@@ -271,7 +271,6 @@
     <string name="about_review_and_rate">Wyraź swoją opinię o Aplikacj &amp;i Oceń ją</string>
     <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
     <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
-    <string name="about_copyright">Prawa autorskie © 2020 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Portfel Dash %s</string>
 

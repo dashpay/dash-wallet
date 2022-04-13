@@ -1,5 +1,6 @@
 package org.dash.wallet.integration.liquid.dialog
 
+import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
@@ -10,17 +11,14 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.os.bundleOf
-import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.UserInteractionAwareCallback
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integration.liquid.R
 import org.dash.wallet.integration.liquid.data.LiquidConstants
 import org.dash.wallet.integration.liquid.ui.WebViewActivity
-import javax.inject.Inject
 
 class CountrySupportDialog(val contexts: Context, val isCreditCard: Boolean, val analytics: AnalyticsService) : Dialog(contexts, R.style.Theme_Dialog) {
-
     init {
         setCanceledOnTouchOutside(false)
         setCancelable(false)
@@ -68,6 +66,7 @@ class CountrySupportDialog(val contexts: Context, val isCreditCard: Boolean, val
                 R.drawable.ic_cryptocurrency
             }))
         }
+        window?.callback = UserInteractionAwareCallback(window?.callback, contexts as Activity?)
     }
 
 }

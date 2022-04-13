@@ -55,11 +55,10 @@
 
     <Button
         android:id="@+id/confirm_btn"
-        style="@style/NewMontserratButton.Primary.SemiBold"
+        style="@style/Button.Primary.Large.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:text="@string/view_seed_done"
-        android:textSize="15sp"
         app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

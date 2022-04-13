@@ -18,6 +18,7 @@ import com.bumptech.glide.request.RequestOptions;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
+import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import java.util.List;
@@ -25,7 +26,6 @@ import java.util.Locale;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
-import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet_test.R;
 
 public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, ExchangeRatesAdapter.ExchangeRateViewHolder> {
@@ -127,7 +127,7 @@ public class ExchangeRatesAdapter extends BaseFilterAdapter<ExchangeRate, Exchan
         }
 
         int i = 0;
-        for (de.schildbach.wallet.rates.ExchangeRate rate : getFilteredList()) {
+        for (ExchangeRate rate : getFilteredList()) {
             if (rate.getCurrencyCode().equalsIgnoreCase(defaultCurrency)) {
                 return i;
             }

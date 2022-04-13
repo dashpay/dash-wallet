@@ -66,8 +66,6 @@ public final class Constants {
 
     public static boolean SUPPORTS_PLATFORM;
 
-    public static String FAUCET_URL;
-
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.FEATURE_FLAGS> FEATURE_FLAGS = MasternodeSync.FEATURES_SPV;
@@ -83,7 +81,7 @@ public final class Constants {
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 SUPPORTS_PLATFORM = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
-                FAUCET_URL = "";
+                org.dash.wallet.common.Constants.FAUCET_URL = "";
                 break;
             }
             case "staging":
@@ -99,7 +97,7 @@ public final class Constants {
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                FAUCET_URL = "https://testnet-faucet.dash.org/";
+                org.dash.wallet.common.Constants.FAUCET_URL = "https://testnet-faucet.dash.org/";
                 break;
             }
             case "schnapps": {
@@ -115,7 +113,7 @@ public final class Constants {
                 SUPPORTS_PLATFORM = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
-                FAUCET_URL = "http://faucet.krupnik.networks.dash.org/";
+                org.dash.wallet.common.Constants.FAUCET_URL = "http://faucet.krupnik.networks.dash.org/";
                 break;
             }
             default: {
@@ -202,7 +200,7 @@ public final class Constants {
     public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
 
     /** Recipient e-mail address for reports. */
-    public static final String REPORT_EMAIL = "support@dash.org";
+    public static final String REPORT_EMAIL = BuildConfig.SUPPORT_EMAIL;
 
     /** Subject line for manually reported issues. */
     public static final String REPORT_SUBJECT_BEGIN = "Android Dash Wallet:  ";
@@ -219,7 +217,6 @@ public final class Constants {
     public static final String ADDRESS_FORMAT_SECTION_SEPARATOR = "…";
 
     public static final MonetaryFormat LOCAL_FORMAT = new MonetaryFormat().noCode().minDecimals(2).optionalDecimals();
-    public static final MonetaryFormat SEND_PAYMENT_LOCAL_FORMAT = new MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2).optionalDecimals();
     public static final BaseEncoding HEX = BaseEncoding.base16().lowerCase();
 
     public static final String SOURCE_URL = "https://github.com/dashevo/dash-wallet";

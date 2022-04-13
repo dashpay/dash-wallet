@@ -16,11 +16,8 @@
 
 package org.dash.wallet.integration.uphold.ui;
 
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -37,10 +34,11 @@ import androidx.core.content.ContextCompat;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.MonetaryFormat;
 import org.dash.wallet.common.InteractionAwareActivity;
+import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.DialogBuilder;
-import org.dash.wallet.common.util.WalletDataProvider;
 import org.dash.wallet.integration.uphold.R;
 import org.dash.wallet.integration.uphold.data.UpholdCard;
 import org.dash.wallet.integration.uphold.data.UpholdClient;
@@ -49,6 +47,12 @@ import org.dash.wallet.integration.uphold.data.UpholdException;
 
 import java.math.BigDecimal;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import kotlin.Unit;
+
+@AndroidEntryPoint
 public class UpholdAccountActivity extends InteractionAwareActivity {
 
     public static final int REQUEST_CODE_TRANSFER = 1;
@@ -57,6 +61,9 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     private BigDecimal balance;
     private String receivingAddress;
     private final MonetaryFormat monetaryFormat = new MonetaryFormat().noCode().minDecimals(8);
+
+    @Inject
+    public AnalyticsService analytics;
 
     public static Intent createIntent(Context context) {
         Intent intent;
@@ -95,6 +102,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
             @Override
             public void onClick(View v) {
                 if (balance != null && receivingAddress != null) {
+                    analytics.logEvent(AnalyticsConstants.Uphold.TRANSFER_DASH, Bundle.EMPTY);
                     showWithdrawalDialog();
                 }
             }
@@ -102,6 +110,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         findViewById(R.id.uphold_buy_dash_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                analytics.logEvent(AnalyticsConstants.Uphold.BUY_DASH, Bundle.EMPTY);
                 openBuyDashUrl();
             }
         });
@@ -172,7 +181,7 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
                     UpholdException ue = (UpholdException)e;
                     if(ue.getCode() == 401) {
                         //we don't have the correct access token
-                        showAutoLogoutAlert();
+                        showUpholdBalanceErrorDialog();
                     } else
                         showErrorAlert(ue.getCode());
                 } else showErrorAlert(-1);
@@ -210,10 +219,10 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         if(code == 400 || code == 403 || code >= 400)
                 messageId = R.string.uphold_error_report_issue;
 
-        new DialogBuilder(this)
-                .setMessage(messageId)
-                .setTitle(R.string.uphold_error)
-                .show();
+        alertDialogBuilder.setTitle(getString(R.string.uphold_error));
+        alertDialogBuilder.setMessage(getString(messageId));
+
+        alertDialogBuilder.buildAlertDialog().show();
     }
 
     private void showWithdrawalDialog() {
@@ -226,47 +235,46 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
     }
 
     private void revokeAccessToken() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.uphold_logout_title);
-        builder.setPositiveButton(R.string.uphold_logout_go_to_website, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int button) {
-                UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
-                    @Override
-                    public void onSuccess(String result) {
-                        if (isFinishing()) {
-                            return;
-                        }
-                        startUpholdSplashActivity();
-                        openUpholdToLogout();
-                    }
-
-                    @Override
-                    public void onError(Exception e, boolean otpRequired) {
-                        if (isFinishing()) {
-                            return;
-                        }
-                        if(e instanceof UpholdException) {
-                            UpholdException ue = (UpholdException)e;
-                            showErrorAlert(ue.getCode());
-                        } else
-                            showErrorAlert(-1);
-                    }
-                });
-            }
-        });
-        builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-
-            }
-        });
-
         LayoutInflater inflater = this.getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.uphold_logout_confirm, null);
-        builder.setView(dialogView);
-        AlertDialog alertDialog = builder.create();
-        alertDialog.show();
+
+        alertDialogBuilder.setTitle(getString(R.string.uphold_logout_title));
+        alertDialogBuilder.setPositiveText(getString(R.string.uphold_logout_go_to_website));
+        alertDialogBuilder.setPositiveAction(
+                () -> {
+                    analytics.logEvent(AnalyticsConstants.Uphold.DISCONNECT, Bundle.EMPTY);
+                    revokeUpholdAccessToken();
+                    return Unit.INSTANCE;
+                }
+        );
+        alertDialogBuilder.setNegativeText(getString(android.R.string.cancel));
+        alertDialogBuilder.setView(dialogView);
+        alertDialogBuilder.buildAlertDialog().show();
+    }
+
+    private void revokeUpholdAccessToken() {
+        UpholdClient.getInstance().revokeAccessToken(new UpholdClient.Callback<String>() {
+            @Override
+            public void onSuccess(String result) {
+                if (isFinishing()) {
+                    return;
+                }
+                startUpholdSplashActivity();
+                openUpholdToLogout();
+            }
+
+            @Override
+            public void onError(Exception e, boolean otpRequired) {
+                if (isFinishing()) {
+                    return;
+                }
+                if(e instanceof UpholdException) {
+                    UpholdException ue = (UpholdException)e;
+                    showErrorAlert(ue.getCode());
+                } else
+                    showErrorAlert(-1);
+            }
+        });
     }
 
     private void openUpholdToLogout() {
@@ -291,18 +299,18 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         revokeAccessToken();
     }
 
-    private void showAutoLogoutAlert() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.My_Theme_Dialog);
-        builder.setTitle(R.string.uphold_error);
-        builder.setMessage(R.string.uphold_error_not_logged_in);
-        builder.setCancelable(false);
-        builder.setPositiveButton(R.string.uphold_link_account, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                startUpholdSplashActivity();
-            }
-        });
-        builder.show();
+    private void showUpholdBalanceErrorDialog() {
+        alertDialogBuilder.setTitle(getString(R.string.uphold_error));
+        alertDialogBuilder.setMessage(getString(R.string.uphold_error_not_logged_in));
+        alertDialogBuilder.setCancelable(false);
+        alertDialogBuilder.setPositiveText(getString(R.string.uphold_link_account));
+        alertDialogBuilder.setPositiveAction(
+                () -> {
+                    startUpholdSplashActivity();
+                    return Unit.INSTANCE;
+                }
+        );
+        alertDialogBuilder.buildAlertDialog().show();
     }
 
     private void startUpholdSplashActivity() {
@@ -314,4 +322,5 @@ public class UpholdAccountActivity extends InteractionAwareActivity {
         startActivity(intent);
         finish();
     }
+
 }

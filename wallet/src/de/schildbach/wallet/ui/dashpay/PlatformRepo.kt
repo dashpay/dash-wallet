@@ -132,12 +132,13 @@ class PlatformRepo private constructor(val walletApplication: WalletApplication)
 
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
 
-    private val analytics: AnalyticsService
+    private val analytics: AnalyticsService by lazy {
+        walletApplication.analyticsService
+    }
 
     init {
         backgroundThread.start()
         backgroundHandler = Handler(backgroundThread.looper)
-        analytics = walletApplication.analyticsService
     }
 
     fun initGlobal() {

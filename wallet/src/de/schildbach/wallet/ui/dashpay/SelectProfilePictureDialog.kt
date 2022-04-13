@@ -22,12 +22,9 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
-import de.schildbach.wallet.ui.BaseBottomSheetDialogFragment
-import de.schildbach.wallet.ui.invite.InvitesHistoryFilterViewModel
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.DialogInviteFilterBinding
 import de.schildbach.wallet_test.databinding.DialogSelectPictureBinding
+import org.dash.wallet.common.ui.BaseBottomSheetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 
 class SelectProfilePictureDialog : BaseBottomSheetDialogFragment() {

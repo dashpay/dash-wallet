@@ -34,6 +34,7 @@ import de.schildbach.wallet.observeOnce
 import de.schildbach.wallet.ui.dashpay.BottomNavFragment
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.ProfilePictureDisplay
+import de.schildbach.wallet.ui.explore.ExploreActivity
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.invite.InviteFriendActivity
 import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
@@ -54,13 +55,10 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MoreFragment : BottomNavFragment(R.layout.activity_more) {
 
-    override val navigationItemId = R.id.more
-
     private var blockchainState: BlockchainState? = null
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val mainActivityViewModel: MainActivityViewModel by activityViewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
-    private val walletApplication = WalletApplication.getInstance()
     private var showInviteSection = false
 
     @Inject
@@ -96,8 +94,10 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             })
         }
         buy_and_sell.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_MORE, bundleOf())
             startBuyAndSellActivity()
+        }
+        explore.setOnClickListener {
+            (requireActivity() as WalletFragment.OnSelectPaymentTabListener).onSelectExploreTab()
         }
         security.setOnClickListener {
             startActivity(Intent(requireContext(), SecurityActivity::class.java))
@@ -109,8 +109,9 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
             startActivity(Intent(requireContext(), ToolsActivity::class.java))
         }
         contact_support.setOnClickListener {
-            ReportIssueDialogBuilder.createReportIssueDialog(requireActivity(),
-                    WalletApplication.getInstance()).show()
+            alertDialog = ReportIssueDialogBuilder.createReportIssueDialog(requireActivity(),
+                    WalletApplication.getInstance()).buildAlertDialog()
+            alertDialog.show()
         }
         error_try_again.setOnClickListener {
             editProfileViewModel.retryBroadcastProfile()
@@ -255,6 +256,7 @@ class MoreFragment : BottomNavFragment(R.layout.activity_more) {
     }
 
     private fun startBuyAndSellActivity() {
+        analytics.logEvent(AnalyticsConstants.Liquid.BUY_SELL_MORE, bundleOf())
         startActivityForResult(BuyAndSellLiquidUpholdActivity.createIntent(requireContext()), REQUEST_CODE_BUY_SELL);
     }
 

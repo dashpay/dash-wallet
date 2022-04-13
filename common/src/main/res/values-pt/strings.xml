@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Dispensar</string>
     <string name="network_unavailable_return">Voltar para a carteira</string>
+    <string name="button_continue">Continuar</string>
 
+    <string name="max">Máximo</string>
+    <string name="select_currency">Selecione a moeda</string>
 </resources>

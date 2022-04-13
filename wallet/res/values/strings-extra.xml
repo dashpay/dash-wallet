@@ -15,6 +15,7 @@
     <string name="set_pin_decrypting">Decrypting wallet</string>
     <string name="set_pin_verifying_pin">Verifying PIN</string>
     <string name="set_pin_message">This PIN will be required to unlock your app every time when you use it.</string>
+    <string name="set_pin_confirm_pin_incorrect">Incorrect PIN</string>
 
     <string name="home_available_balance">Available balance</string>
     <string name="home_balance_hidden">Balance hidden</string>
@@ -272,6 +273,8 @@
     <string name="menu_rescan_blockchain">Rescan Blockchain</string>
     <string name="menu_contact_support_title">Contact Support</string>
     <string name="menu_contact_support_subtitle">Report an issue</string>
+    <string name="menu_explore_title">Explore</string>
+    <string name="menu_explore_subtitle">Shop with DASH at over 155,000 merchants</string>
 
     <string name="tools_address_book">Address Book</string>
     <string name="tools_import_private_key">Import Private Key</string>
@@ -281,11 +284,14 @@
     <string name="about_review_and_rate">Review &amp; Rate the app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2020 Dash Core</string>
+    <string name="about_copyright">Copyright © 2022 Dash Core</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">DashPay %s</string>
     <string name="about_version_extra">code: %d / flavor: %s</string>
+    <string name="about_last_explore_dash_sync">Explore Dash data updated at: %1$s\nLast sync: %2$s</string>
+    <string name="about_last_explore_dash_update_error">cannot fetch</string>
+    <string name="about_last_explore_dash_sync_never">never</string>
 
     <string name="block">Block</string>
     <string name="time">Time</string>
@@ -492,16 +498,6 @@
         <item>Name</item>
     </string-array>
 
-    <!-- Explore screen -->
-    <string name="explore_dash">Explore Dash</string>
-
-    <!-- Explore TestNet -->
-    <string name="explore_test_subtitle">Test Dash doesn’t have any value in the real world but you can send and receive it with other DashPay Alpha users.</string>
-    <string name="explore_test_dash_title">How do I get Test Dash?</string>
-    <string name="explore_test_dash_text_1">Test Dash is free and can be obtained from what is called a faucet.</string>
-    <string name="explore_test_dash_text_2">Click on the button below to copy a Dash address from this wallet so you can get your test Dash..</string>
-    <string name="explore_get_test_dash">Get Test Dash</string>
-
     <string name="notifications_title">Notifications</string>
     <string name="notifications_title_with_count">Notifications (%d)</string>
     <string name="notifications_profile_activity">Activity</string>
@@ -639,4 +635,9 @@
     <string name="serious_error_title">Serious Error</string>
     <string name="serious_error_unknown">Please contact support.</string>
     <string name="serious_error_security_missing_iv" translatable="false">Invalid security state detected.\n\nSee if you can view your recovery phrase under the Security Settings. After that send a report to the support desk with Contact Support.\n\nLastly, restart this app and try again.</string>
+    <string name="set_pin_error_missing_wallet_title">Missing Wallet Error</string>
+    <string name="set_pin_error_missing_wallet_message">The wallet is missing.  Please report this to the Support Desk.</string>
+    <string name="wallet_encryption_error_title">Wallet Creation Error</string>
+    <string name="wallet_encryption_error_message">There is a problem creating the wallet.  Please report this to the Support Desk.</string>
+    <string name="wallet_not_encrypted_error_message">There is a problem with your wallet.\n\nIf you have no Dash in this wallet, then uninstall and reinstall this app. Then create a new wallet.\n\nIf you have a recovery phrase or a backup file, then uninstall this app and reinstall it.\n\nOtherwise, please report this to the Support Desk.</string>
 </resources>

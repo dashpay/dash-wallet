@@ -26,4 +26,22 @@
     <string name="uphold_error_report_issue">メインメニューの「問題の報告」からこの問題をDashウォレットサポートチームに報告してください。</string>
 
     <string name="uphold_general_error_title">エラー</string>
-    </resources>
+    <string name="uphold_api_error_title">Upholdのエラー</string>
+    <string name="uphold_api_error_identity">お客様のUpholdアカウントはまだ認証されていません。資金を引き出せません。</string>
+    <string name="uphold_api_error_403_description">お客様のUpholdアカウントは、審査のためにフラグが立てられました。\n\nUpholdは一時的にお客様のアカウントを制限していますので、資金を引き出せません。\n\n%s</string>
+    <string name="uphold_api_error_403_generic">Upholdは、連絡を取り合ってこの問題を迅速に分類します。</string>
+    <string name="uphold_api_error_403_due_diligence">Upholdのアカウントにアクセスし、お客様に関するいくつかの質問にお答えください。</string>
+    <string name="uphold_api_error_403_identity">Upholdのアカウントにアクセスし、本人確認を行ってください。</string>
+    <string name="uphold_api_error_400_description">Upholdの資金は24時間ロックされます。\n\n%sにこの送金のための十分な資金を入れておいてください。</string>
+    <string name="uphold_api_error_400_locked">Upholdの資金(%1$s%2$s)は、最大65日間ロックされます。\n\n%3$sにこの送金のための十分な資金を入れておく必要があります。</string>
+    <string name="uphold_api_error_400_tx_insufficentfunds">この送金に必要な資金が不足しています</string>
+    <string name="uphold_api_error_400_less_than_or_equal_to">移動金額は、%sDASH未満でなければなりません。</string>
+    <string name="uphold_api_error_400_greater_than_or_equal_to">移動金額は、%sDASH以上でなければなりません。</string>
+    <string name="uphold_api_error_400_tx_validation">このアプリでは、(最大3000ドルまでしか)移動できません。</string>
+    <string name="uphold_api_error_400_password_reset">近日中に行われたパスワード変更により、Upholdの資金がロックされています。資金移動ができるようになる%s前までお待ちください。</string>
+    <string name="uphold_api_error_400_authentication_change">近日中に行われた認証方法の変更により、Upholdの資金がロックされています。資金移動ができるようになる%s前までお待ちください。</string>
+
+    <string name="uphold_api_error_400_invalid_beneficiary">このアプリでは、(最大3000ドルまでしか)移動できません。\n\nUpholdのアカウントで送金してください。</string>
+    <string name="uphold_api_error_400_required">このアプリでは、(最大3000ドルまでしか)移動できません。\n\nUpholdのアカウントで送金してください。</string>
+
+</resources>

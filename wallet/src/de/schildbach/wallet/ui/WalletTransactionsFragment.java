@@ -34,7 +34,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -43,8 +42,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.bitcoinj.wallet.Wallet;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
-import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
+import org.dash.wallet.common.ui.BaseLockScreenFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,8 +66,8 @@ import kotlin.Unit;
  * @author Andreas Schildbach
  */
 @AndroidEntryPoint
-public class WalletTransactionsFragment extends Fragment
-        implements TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
+public class WalletTransactionsFragment extends BaseLockScreenFragment implements
+        TransactionsAdapter.OnClickListener, OnSharedPreferenceChangeListener {
 
     private AbstractWalletActivity activity;
 
@@ -82,10 +81,9 @@ public class WalletTransactionsFragment extends Fragment
     private TransactionsAdapter adapter;
     private TextView syncingText;
 
-    private final Handler handler = new Handler();
+    private RefreshUpdateShortcutsPaneViewModel refreshShortcutsPaneViewModel;
 
-    private static final int SHOW_QR_THRESHOLD_BYTES = 2500;
-    private static final Logger log = LoggerFactory.getLogger(WalletTransactionsFragment.class);
+    private final Handler handler = new Handler();
 
     private final ContentObserver addressBookObserver = new ContentObserver(handler) {
         @Override
@@ -131,8 +129,11 @@ public class WalletTransactionsFragment extends Fragment
 
         syncingText = view.findViewById(R.id.syncing);
         view.findViewById(R.id.transaction_filter_btn).setOnClickListener(v -> {
-            new TransactionsFilterDialog().show(getChildFragmentManager(), null);
+            dialogFragment = new TransactionsFilterDialog();
+            dialogFragment.show(getChildFragmentManager(), null);
         });
+
+        refreshShortcutsPaneViewModel = new ViewModelProvider(requireActivity()).get(RefreshUpdateShortcutsPaneViewModel.class);
 
         recyclerView = view.findViewById(R.id.wallet_transactions_list);
         recyclerView.setHasFixedSize(true);
@@ -185,7 +186,7 @@ public class WalletTransactionsFragment extends Fragment
             adapter.setCanJoinDashPay(canJoinDashPay);
         });
         mainActivityViewModel.getBlockchainStateData().observe(getViewLifecycleOwner(), new Observer<BlockchainState>() {
-
+            @Override
             public void onChanged(de.schildbach.wallet.data.BlockchainState blockchainState) {
                 updateSyncState(blockchainState);
             }
@@ -299,6 +300,7 @@ public class WalletTransactionsFragment extends Fragment
 
     private void updateView() {
         adapter.setFormat(config.getFormat());
+        refreshShortcutsPaneViewModel.getOnTransactionsUpdated().call();
     }
 
     public boolean isHistoryEmpty() {

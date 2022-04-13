@@ -41,6 +41,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.utils.Fiat;
+import org.dash.wallet.common.data.ExchangeRate;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import javax.annotation.Nullable;
@@ -48,9 +49,7 @@ import javax.annotation.Nullable;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.rates.ExchangeRate;
 import de.schildbach.wallet.rates.ExchangeRatesViewModel;
-import de.schildbach.wallet.util.BlockchainStateUtils;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -171,9 +170,9 @@ public final class WalletBalanceToolbarFragment extends Fragment {
 		loaderManager.initLoader(ID_BALANCE_LOADER, null, balanceLoaderCallbacks);
 
 		exchangeRatesViewModel.getRate(config.getExchangeCurrencyCode()).observe(this,
-				new Observer<de.schildbach.wallet.rates.ExchangeRate>() {
+				new Observer<ExchangeRate>() {
 			@Override
-			public void onChanged(de.schildbach.wallet.rates.ExchangeRate rate) {
+			public void onChanged(ExchangeRate rate) {
 				if (rate != null) {
 					exchangeRate = rate;
 					updateView();

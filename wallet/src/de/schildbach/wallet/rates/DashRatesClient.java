@@ -4,6 +4,8 @@ import androidx.annotation.Nullable;
 
 import com.squareup.moshi.Moshi;
 
+import org.dash.wallet.common.data.ExchangeRate;
+
 import java.util.List;
 
 import retrofit2.Call;

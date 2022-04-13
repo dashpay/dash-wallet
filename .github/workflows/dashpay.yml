@@ -4,7 +4,7 @@ on:
   push:
     branches: [ dashpay ]
   pull_request:
-    branches: [ dashpay ]
+    branches: [ dashpay, dashpay-* ]
 
 jobs:
   build:
@@ -15,6 +15,12 @@ jobs:
     - name: Get build number from run id
       run: |
           echo "build_number=$((80000))" >> $GITHUB_ENV
+          
+    - name: Get the support email
+      env:
+        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
+      run: |
+        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
     
     - uses: actions/checkout@v2
     - name: set up JDK 8
@@ -66,9 +72,17 @@ jobs:
         gpg -d --passphrase "${{ secrets.SERVICE_PROPERTIES_KEY }}" --batch .deploy/service.properties.gpg > service.properties
         gpg -d --passphrase "${{ secrets.APP_DISTRIBUTION_KEY }}" --batch .deploy/app-distribution-key.json.gpg > .deploy/app-distribution-key.json
         gpg -d --passphrase "${{ secrets.KEYSTORE_KEY }}" --batch .deploy/keystore.jks.gpg > .deploy/keystore.jks
+        gpg -d --passphrase "${{ secrets.LOCAL_PROPERTIES_KEY }}" --batch .deploy/local.properties.gpg > local.properties
+        gpg -d --passphrase "${{ secrets.GC_STORAGE_SERVICE_ACCOUNT_KEY }}" --batch .deploy/gc-storage-service-account.json.gpg > .deploy/gc-storage-service-account.json
+        
+    - name: Copy explore.db from GC Storage
+      run: |
+        gem install google-cloud-storage
+        rm  -rf wallet/assets/explore/*
+        ruby -r ./exploredata.rb
     
     - name: Test
-      run: bundle exec fastlane test flavor:"staging" type:"debug"
+      run: bundle exec fastlane test flavor:"" type:"debug"
       
     - name: Build
       if: github.event_name == 'pull_request'

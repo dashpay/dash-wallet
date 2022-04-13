@@ -1,4 +1,44 @@
 Dash Wallet
+v7.4.7
+* Fix Explore Dash sync system (prevent downloads if explore.db in access its same as cloud)
+* Remove old Explore Dash data from database
+
+v7.4.6
+* Fix Scan QR Code crash on Android 6
+* Fix crash related to Unencrypted Wallets
+* Improve Autoloading of Updated Explore Dash Database System
+* Fix Reset Wallet Crash
+* Fix startup crash
+* Fix About screen copy text
+
+v7.4.5
+* Fix crash
+
+v7.4.4
+* Fix crash when starting app
+
+v7.4.4
+* support interruptions when processing explore-dash data from a protobuf file (not json)
+
+v7.4.3
+* disable explore-dash sync
+* allow for local database for explore dash
+* Fix crashes on Lock Screen
+* Ask user to send a report if the wallet is missing
+
+v7.4.2
+* Fix crash when syncing Explore Dash database
+
+v7.4.1
+* add Explore Dash
+* Better error support for Uphold
+* Close all dialogs on autologout
+* Minimum Android version is 6.0
+* Improvements on Enter Amount Screen
+
+v7.4.0
+* Beta Program for Explore Dash
+
 v7.3.5
 * The 7.3.4 build on Google Play left out several fixes
 
@@ -530,7 +570,6 @@ v5.15
 
 * Block sending payments while blockchain replay is in progress.
 
->>>>>>> v5.17
 v5.14
 
 * Update translations from Transifex.
@@ -765,7 +804,6 @@ v4.41
 * Add blockexplorer.com to block explorers used for browsing transactions, addresses and blocks.
 * Update Dutch, Italian and Russian translations.
 
->>>>>>> c7022b0381011ed8a85b305909f2133882edb0bb
 v4.40
 
 * Bugfixes.
@@ -1180,7 +1218,6 @@ v3.24
 
 * fixed issue with stuck outgoing transactions
 
->>>>>>> upstream/prod
 v3.23
 
 * fixed issue with detecting online state

@@ -32,11 +32,14 @@ import androidx.annotation.StringRes
 import androidx.core.text.HtmlCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
 import kotlinx.android.synthetic.main.fancy_alert_dialog.*
 import org.dash.wallet.common.R
+import org.dash.wallet.common.UserInteractionAwareCallback
 
+@Deprecated("Use AdaptiveDialog")
 open class FancyAlertDialog : DialogFragment() {
+    private val sharedViewModel by activityViewModels<FancyAlertDialogViewModel>()
 
     enum class Type {
         INFO,
@@ -112,9 +115,8 @@ open class FancyAlertDialog : DialogFragment() {
         }
     }
 
-    private lateinit var sharedViewModel: FancyAlertDialogViewModel
     private val type by lazy {
-        Type.valueOf(arguments!!.getString("type")!!)
+        Type.valueOf(requireArguments().getString("type")!!)
     }
 
     @IntegerRes
@@ -200,18 +202,14 @@ open class FancyAlertDialog : DialogFragment() {
     override fun onStart() {
         super.onStart()
         dialog?.apply {
-            window?.setLayout(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+            window?.apply {
+                setLayout(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+                callback = UserInteractionAwareCallback(this.callback, requireActivity())
+            }
             if (type == Type.PROGRESS) {
                 setCancelable(false)
                 setCanceledOnTouchOutside(false)
             }
         }
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        sharedViewModel = activity?.run {
-            ViewModelProvider(this)[FancyAlertDialogViewModel::class.java]
-        } ?: throw IllegalStateException("Invalid Activity")
     }
 }

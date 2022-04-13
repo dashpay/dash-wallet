@@ -1,0 +1,38 @@
+<!--
+  ~ Copyright 2022 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="51dp"
+    android:height="51dp"
+    android:viewportWidth="51"
+    android:viewportHeight="51">
+  <path
+      android:pathData="M25.5602,25.5602m-25.4475,0a25.4475,25.4475 0,1 1,50.895 0a25.4475,25.4475 0,1 1,-50.895 0"
+      android:strokeLineJoin="miter"
+      android:strokeWidth="0"
+      android:fillColor="#F0F8FE"
+      android:fillType="nonZero"
+      android:strokeColor="#00000000"
+      android:strokeLineCap="butt"/>
+  <path
+      android:pathData="M16.9823,26.3758L24.5074,26.4172C24.5989,26.4172 24.6607,26.4332 24.6928,26.4654C24.7248,26.4976 24.7408,26.5551 24.7408,26.6377L24.7683,34.1523C24.7683,34.5934 24.8804,34.9497 25.1047,35.2208C25.329,35.4919 25.6082,35.6575 25.9424,35.7172C26.2765,35.777 26.6084,35.7172 26.9379,35.538C27.2675,35.3587 27.533,35.0484 27.7344,34.6073L35.5067,17.7583C35.6989,17.3263 35.7722,16.9356 35.7264,16.5863C35.6807,16.237 35.541,15.9567 35.3076,15.7453C35.0741,15.5338 34.7789,15.4144 34.4218,15.3868C34.0648,15.3592 33.6757,15.4419 33.2546,15.635L16.3643,23.4803C15.9798,23.655 15.7098,23.9009 15.5541,24.218C15.3985,24.5351 15.3482,24.8591 15.4031,25.19C15.458,25.521 15.6182,25.799 15.8837,26.0243C16.1492,26.2494 16.5154,26.3667 16.9823,26.3758Z"
+      android:strokeLineJoin="miter"
+      android:strokeWidth="0"
+      android:fillColor="#008DE4"
+      android:fillType="nonZero"
+      android:strokeColor="#00000000"
+      android:strokeLineCap="butt"/>
+</vector>
