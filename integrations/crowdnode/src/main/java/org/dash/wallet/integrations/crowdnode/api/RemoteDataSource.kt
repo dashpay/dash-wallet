@@ -27,7 +27,9 @@ import javax.inject.Inject
 
 class RemoteDataSource @Inject constructor() {
     companion object {
-        private const val BASE_URL = "https://test.crowdnode.io/"
+        // TODO: testnet/mainnet
+        private const val BASE_URL = "https://app.crowdnode.io/"
+//        private const val BASE_URL = "https://test.crowdnode.io/"
     }
 
     fun <Api> buildApi(
