@@ -32,7 +32,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bouncycastle.crypto.params.KeyParameter
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -68,6 +70,21 @@ open class DashPayViewModel @Inject constructor(
     private var getContactJob = Job()
 
     val recentlyModifiedContactsLiveData = MutableLiveData<HashSet<String>>()
+
+    private var timerUsernameSearch: AnalyticsTimer? = null
+
+    fun startUsernameSearchTimer() {
+        timerUsernameSearch = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_UI)
+    }
+
+    fun reportUsernameSearchTime(resultSize: Int, searchTextSize: Int) {
+        timerUsernameSearch?.logTiming(
+            mapOf(
+                "resultCount" to resultSize,
+                "searchCount" to searchTextSize
+            )
+        )
+    }
 
     val getUsernameLiveData = Transformations.switchMap(usernameLiveData) { username ->
         getUsernameJob.cancel()
@@ -106,6 +123,7 @@ open class DashPayViewModel @Inject constructor(
         liveData(context = searchUsernamesJob + Dispatchers.IO) {
             emit(Resource.loading(null))
             try {
+                val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY)
                 var result = platformRepo.searchUsernames(search.text, false, search.limit)
                 result = result.filter {  !search.excludeIds.contains(it.dashPayProfile.userId) }
                 if (result.isNotEmpty()) {
@@ -113,6 +131,14 @@ open class DashPayViewModel @Inject constructor(
                     result = result.subList(0, limit)
                 }
                 emit(Resource.success(result))
+                if (search.text.length >= 3) {
+                    timerIsLock.logTiming(
+                        mapOf(
+                            "resultCount" to result.size,
+                            "searchCount" to search.text.length
+                        )
+                    )
+                }
             } catch (ex: Exception) {
                 analytics.logError(ex, "Failed to search user")
                 emit(Resource.error(formatExceptionMessage("search usernames", ex), null))

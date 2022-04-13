@@ -203,6 +203,7 @@ class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickLi
                     } else {
                         hideEmptyResult()
                     }
+                    dashPayViewModel.reportUsernameSearchTime(it.data.size, query.length)
                 } else {
                     showEmptyResult()
                 }
@@ -271,6 +272,7 @@ class SearchUserActivity : LockScreenActivity(), ContactViewHolder.OnItemClickLi
             handler.removeCallbacks(searchUserRunnable)
         }
         if (query.length >= USERNAME_MIN_LENGTH) {
+            dashPayViewModel.startUsernameSearchTimer()
             searchUserRunnable = Runnable {
                 dashPayViewModel.searchUsernames(query)
             }

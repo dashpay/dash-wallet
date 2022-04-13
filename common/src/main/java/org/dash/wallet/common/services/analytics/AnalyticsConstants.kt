@@ -138,4 +138,22 @@ object AnalyticsConstants {
         const val TAB_SEND_TO_CONTACT = "send_tab_send_to_contact"
         const val SHORTCUT_SEND_TO_CONTACT = "shortcut_send_to_contact"
     }
+
+    object Process {
+        const val PROCESS_USERNAME_CREATE_STEP_1 = "process_username_create_1"
+        const val PROCESS_USERNAME_CREATE_STEP_2 = "process_username_create_2"
+        const val PROCESS_USERNAME_CREATE_STEP_3 = "process_username_create_3"
+        const val PROCESS_USERNAME_CREATE = "process_username_create"
+        const val PROCESS_USERNAME_CREATE_ISLOCK = "process_username_create_islock"
+        const val PROCESS_USERNAME_IDENTITY_CREATE = "process_username_identity_create"
+        const val PROCESS_USERNAME_PREORDER_CREATE = "process_username_preorder_create"
+        const val PROCESS_USERNAME_DOMAIN_CREATE = "process_username_domain_create"
+        const val PROCESS_INVITATION_CLAIM = "process_invitation_claim"
+        const val PROCESS_USERNAME_SEARCH_QUERY = "process_username_search_query"
+        const val PROCESS_USERNAME_SEARCH_UI = "process_username_search_ui"
+        const val PROCESS_CONTACT_REQUEST_SEND = "process_contact_request_send"
+        const val PROCESS_CONTACT_REQUEST_RECEIVE = "process_contact_request_receive"
+        const val PROCESS_PROFILE_CREATE = "process_profile_create"
+        const val PROCESS_PROFILE_UPDATE = "process_profile_update"
+    }
 }
