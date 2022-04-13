@@ -17,10 +17,13 @@
 
 package de.schildbach.wallet.di
 
+import android.content.ClipboardManager
+import android.content.Context
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -34,6 +37,11 @@ abstract class AppModule {
         @Singleton
         @Provides
         fun provideLockScreenBroadcaster(): LockScreenBroadcaster = LockScreenBroadcaster()
+
+        @Provides
+        fun provideClipboardManager(
+            @ApplicationContext context: Context
+        ) = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     }
 
     @Binds
