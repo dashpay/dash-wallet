@@ -42,7 +42,7 @@ class TokenAuthenticator @Inject constructor(
                     tokenResponse.value?.let {
                         userPreferences.setLastCoinBaseAccessToken(it.accessToken)
                         userPreferences.setLastCoinBaseRefreshToken(it.refreshToken)
-                        response.request().newBuilder()
+                        response.request.newBuilder()
                             .header("Authorization", "Bearer ${it.accessToken}")
                             .build()
                     }

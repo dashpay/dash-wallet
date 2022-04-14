@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="link_liquid_account">リキッドアカウントと連結します</string>
+    <string name="buy_dash_with_liquid_account">Dashをクレジットカードで購入します</string>
+    <string name="liquid_logout">ログアウト</string>
+    <string name="liquid_logout_title">リキッドからログアウトします</string>
+    <string name="liquid_forced_logout">ご利用者のLiquidアカウントのリンクが機能していません。次の画面でリキッドアカウントをリンクするを選択してください。</string>
+    <string name="transfer_dash_from_your_liquid_account_to_this_wallet">Dashと他の仮想通貨をスワップします</string>
+    <string name="transfer_dash_to_and_from_account">リキッドアカウントにDashを移動、リキッドアカウントからDashを移動</string>
+
+    <string name="cryptocurrency">仮想通貨</string>
+    <string name="credit_card">クレジットカード</string>
+
+    <string name="buy">購入</string>
+    <string name="buy_dash">Dashを購入する</string>
+    <string name="sell_dash">Dashを売る</string>
+    <string name="buy_sell_dash_">Dashを買う &amp; 売る</string>
+    <string name="button_cancel">キャンセル</string>
+    <string name="choose_your_payment_method">支払い方法を選択します</string>
+    <string name="crypto_support">仮想通貨のサポート</string>
+    <string name="credit_card_support">クレジットカードのサポート</string>
+    <string name="okay">OK</string>
+    <string name="close">閉じる</string>
+    <string name="list_of_countries">非サポート対象国の一覧を見ます</string>
+    <string name="buying_dash_not_supported_credit_cards">クレジットカードでのDashの購入は、一部の国ではサポートされていません。</string>
+    <string name="buying_dash_not_supported_crypto">仮想通貨でのDashの購入は、一部の国ではサポートされていません。</string>
+    <string name="buying_dash_success_message">この画面を閉じると、ウォレットにDashが送られます。</string>
+
+    <string name="confirm">確認する</string>
+    <string name="card_fees">カード料金</string>
+    <string name="conversion_rate">換算率</string>
+    <string name="network_fee">ネットワーク料金</string>
+    <string name="total">総計</string>
+    <string name="connect">接続する</string>
+    <string name="connected">接続しました</string>
+    <string name="disconnected">切断されました</string>
+    <string name="buy_sell_dash">Dashを売買して、新規アカウントを作ります</string>
+
+
+    <string name="transfer_to_liquid">リキッドに移動します</string>
+    <string name="transfer_from_liquid">リキッドから移動します</string>
+    <string name="disconnect">切断</string>
+    <string name="select_crypto_currency">仮想通貨を選択します</string>
+    <string name="select_sell_currency">売却する通貨を選択します</string>
+    <string name="select_buy_currency">購入する通貨を選択します</string>
+    <string name="select_fiat_currency">フィアット通貨を選択します</string>
+    <string name="show_payment_qr_code">支払いのQRコードを表示します</string>
+    <string name="pay_with_btc_from_liquid">リキッドからBTCで支払います</string>
+    <string name="or">または</string>
+
+    <string name="internet_connected">インターネットに接続してください</string>
+    <string name="please_enter_amount">金額を入力してください</string>
+
+    <string name="choose_what_you_receive">受け取るものを選んでください</string>
+    <string name="fiat_currency">フィアット通貨</string>
+
+    <string name="liquid">リキッド</string>
+    <string name="transfer">移す</string>
+    <string name="filter_by">でフィルタリングします</string>
+</resources>

@@ -124,6 +124,10 @@ public class PinRetryController {
         return prefs.getStringSet(PREFS_FAILED_PINS, new HashSet<String>()).size();
     }
 
+    public int getRemainingAttempts() {
+        return FAIL_LIMIT - failCount();
+    }
+
     public String getRemainingAttemptsMessage(Context context) {
         int attemptsRemaining = FAIL_LIMIT - failCount();
         return context.getResources().getQuantityString(R.plurals.wallet_lock_attempts_remaining,

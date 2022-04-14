@@ -45,9 +45,9 @@ class SetPinViewModel(application: Application) : AndroidViewModel(application) 
         return pin.joinToString("")
     }
 
-    fun savePinAndEncrypt() {
+    fun savePinAndEncrypt(initialize: Boolean) {
         val pin = getPinAsString()
-        savePinAndEncrypt(pin, true)
+        savePinAndEncrypt(pin, initialize)
     }
 
     fun savePinAndEncrypt(pin: String, initialize: Boolean) {

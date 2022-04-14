@@ -38,6 +38,7 @@
     <string name="network_unavailable_return">Return to Wallet</string>
     <string name="button_continue">Continue</string>
     <string name="get_quote">Get Quote</string>
+    <string name="button_understand">I understand</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Search</string>

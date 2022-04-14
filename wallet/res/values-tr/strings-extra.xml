@@ -265,7 +265,6 @@
     <string name="about_review_and_rate">Uygulamamızı değerlendirip &amp; Puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>
     <string name="about_fork_disclaimer">Bu uygulama açık kaynak kodlu bir Bitcoin çatallanmasıdır</string>
-    <string name="about_copyright">Telif Hakkı © 2022 Dash Core</string>
     <string name="about_license">GNU Genel Kamu Lisansı v3.0</string>
     <string name="about_version_name">Dash Cüzdanı %s</string>
 

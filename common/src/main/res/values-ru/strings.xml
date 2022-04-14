@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Отклонить</string>
     <string name="network_unavailable_return">Вернуться в кошелёк</string>
+    <string name="button_continue">Продолжить</string>
 
+    <string name="max">Макс</string>
+    <string name="select_currency">Выберите валюту</string>
 </resources>

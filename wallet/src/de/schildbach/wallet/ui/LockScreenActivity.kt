@@ -34,7 +34,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.os.CancellationSignal
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -52,6 +51,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -269,7 +269,7 @@ open class LockScreenActivity : SecureActivity() {
 
     private fun initViewModel() {
         checkPinViewModel = ViewModelProvider(this)[CheckPinViewModel::class.java]
-        checkPinViewModel.checkPinLiveData.observe(this, Observer {
+        checkPinViewModel.checkPinLiveData.observe(this) {
             when (it.status) {
                 Status.ERROR -> {
                     pinRetryController.failedAttempt(it.data!!)
@@ -290,12 +290,12 @@ open class LockScreenActivity : SecureActivity() {
                     }
                 }
             }
-        })
+        }
         enableFingerprintViewModel = ViewModelProvider(this)[EnableFingerprintDialog.SharedViewModel::class.java]
-        enableFingerprintViewModel.onCorrectPinCallback.observe(this, Observer {
+        enableFingerprintViewModel.onCorrectPinCallback.observe(this) {
             val pin = it.second
             onCorrectPin(pin)
-        })
+        }
     }
 
     private fun onCorrectPin(pin: String) {
@@ -356,6 +356,18 @@ open class LockScreenActivity : SecureActivity() {
 
                 if (pinRetryController.failCount() > 0) {
                     pin_preview.badPin(pinRetryController.getRemainingAttemptsMessage(this))
+                }
+
+                if (pinRetryController.remainingAttempts == 1) {
+                    val dialog = AdaptiveDialog.create(
+                        R.drawable.ic_info_red,
+                        getString(R.string.wallet_last_attempt),
+                        getString(R.string.wallet_last_attempt_message),
+                        "",
+                        getString(R.string.button_understand)
+                    )
+                    dialog.isCancelable = false
+                    dialog.show(this) { }
                 }
             }
             State.USE_FINGERPRINT -> {

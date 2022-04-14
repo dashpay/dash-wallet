@@ -29,5 +29,8 @@
     <!-- Generic Buttons -->
     <string name="button_dismiss">Schließen</string>
     <string name="network_unavailable_return">Zur Wallet zurückkehren</string>
+    <string name="button_continue">Fortfahren</string>
 
+    <string name="max">Max</string>
+    <string name="select_currency">Währung auswählen</string>
 </resources>

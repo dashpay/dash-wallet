@@ -18,7 +18,7 @@ import de.schildbach.wallet.rates.ExchangeRatesDao;
 @Database(entities = {
         ExchangeRate.class,
         BlockchainState.class
-    }, version = 9)
+    }, version = 10)
 @TypeConverters({RoomConverters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -32,7 +32,8 @@ public abstract class AppDatabase extends RoomDatabase {
             instance = Room.databaseBuilder(WalletApplication.getInstance(),
                     AppDatabase.class, "dash-wallet-database")
                     .addMigrations(
-                            AppDatabaseMigrations.getMigration3To9()
+                            AppDatabaseMigrations.getMigration8To10(),
+                            AppDatabaseMigrations.getMigration9To10()
                     )
                     .fallbackToDestructiveMigration().build();
         }

@@ -7,6 +7,7 @@
     <string name="onboarding_load_wallet_error">Unable to load wallet!</string>
 
     <string name="set_pin_create_new_wallet">Create a New Wallet</string>
+    <string name="set_pin_upgrade_wallet">Upgrade Wallet</string>
     <string name="set_pin_restore_wallet">Restore Wallet</string>
     <string name="set_pin_enter_pin">Enter old PIN</string>
     <string name="set_pin_set_pin">Set PIN</string>
@@ -146,6 +147,8 @@
     <string name="wallet_lock_try_again">Try again in %1$d %2$s</string>
     <string name="wallet_lock_reset">Reset</string>
     <string name="wallet_lock_wrong_pin">Wrong PIN! %s</string>
+    <string name="wallet_last_attempt">Last PIN attempt</string>
+    <string name="wallet_last_attempt_message">Another failed attempt will require my passphrase to recover my wallet</string>
 
     <plurals name="wallet_lock_attempts_remaining">
         <item quantity="one">%d attempt remaining</item>
